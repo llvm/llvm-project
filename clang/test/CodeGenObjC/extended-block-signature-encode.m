@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fencode-extended-block-signature -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-BRIEF
-// rdar://12109031
 
 @class NSString, NSArray;
 

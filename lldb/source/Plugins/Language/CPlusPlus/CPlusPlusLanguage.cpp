@@ -45,6 +45,7 @@
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 #include "MSVCUndecoratedNameParser.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -332,14 +333,12 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
     return m_full.GetStringRef().contains(path);
-    
+
   llvm::StringRef identifier;
   llvm::StringRef context;
   std::string path_str = path.str();
-  bool success 
-      = CPlusPlusLanguage::ExtractContextAndIdentifier(path_str.c_str(),
-                                                       context,
-                                                       identifier);
+  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
+      path_str.c_str(), context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
@@ -372,7 +371,7 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
     return false;
   if (haystack.empty() || !isalnum(haystack.back()))
     return true;
-    
+
   return false;
 }
 
@@ -388,7 +387,7 @@ bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
   return true;
 }
 
-bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path, 
+bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
   MethodName demangled_name(demangled);
   return demangled_name.ContainsPath(path);
@@ -467,7 +466,7 @@ protected:
   }
 
   void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
-    if (!llvm::StringRef(currentParserPos(), this->numLeft()).startswith(From))
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
       return;
 
     // We found a match. Append unmodified input up to this point.
@@ -981,6 +980,57 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::unordered_map iterator synthetic children",
                   "^std::__[[:alnum:]]+::__hash_map_(const_)?iterator<.+>$",
                   stl_synth_flags, true);
+  // Chrono duration typedefs
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::nanoseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ns")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::microseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} µs")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::milliseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ms")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::minutes", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} min")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::hours", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} h")));
+
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::days", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} days")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::weeks", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} weeks")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::months", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} months")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::years", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} years")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
 }
 
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -1009,7 +1059,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::string", eFormatterMatchExact,
                                   std_string_summary_sp);
   cpp_category_sp->AddTypeSummary("std::basic_string<char>",
-                                  eFormatterMatchRegex, std_string_summary_sp);
+                                  eFormatterMatchExact, std_string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::basic_string<char,std::char_traits<char>,std::allocator<char> >",
       eFormatterMatchExact, std_string_summary_sp);
@@ -1104,6 +1154,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
+  cpp_category_sp->AddTypeSynthetic(
+      "^std::variant<.+>$", eFormatterMatchRegex,
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.VariantSynthProvider")));
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -1148,6 +1203,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new ScriptSummaryFormat(
           stl_summary_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::variant<.+>$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new ScriptSummaryFormat(
+          stl_summary_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.VariantSummaryProvider")));
 
   AddCXXSynthetic(
       cpp_category_sp,
@@ -1356,7 +1416,8 @@ CPlusPlusLanguage::GetHardcodedSummaries() {
                   lldb_private::formatters::CXXFunctionPointerSummaryProvider,
                   "Function pointer summary provider"));
           if (CompilerType CT = valobj.GetCompilerType();
-              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType()) {
+              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType() ||
+              valobj.GetValueType() == lldb::eValueTypeVTableEntry) {
             return formatter_sp;
           }
           return nullptr;

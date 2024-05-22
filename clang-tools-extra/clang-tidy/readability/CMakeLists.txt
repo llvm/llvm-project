@@ -41,6 +41,7 @@ add_clang_library(clangTidyReadabilityModule
   RedundantSmartptrGetCheck.cpp
   RedundantStringCStrCheck.cpp
   RedundantStringInitCheck.cpp
+  ReferenceToConstructedTemporaryCheck.cpp
   SimplifyBooleanExprCheck.cpp
   SimplifySubscriptExprCheck.cpp
   StaticAccessedThroughInstanceCheck.cpp
@@ -57,6 +58,7 @@ add_clang_library(clangTidyReadabilityModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyReadabilityModule

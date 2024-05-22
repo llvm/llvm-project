@@ -4211,13 +4211,33 @@ entry:
 }
 
 define void @store_v128i1_constant(ptr %R) {
-; CHECK-LABEL: store_v128i1_constant:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movabsq $-4611686310485172227, %rax ## imm = 0xBFFFFFBBFFFFDFFD
-; CHECK-NEXT:    movq %rax, 8(%rdi)
-; CHECK-NEXT:    movabsq $-2305843576149381123, %rax ## imm = 0xDFFFFF7BFFFFEFFD
-; CHECK-NEXT:    movq %rax, (%rdi)
-; CHECK-NEXT:    retq
+; KNL-LABEL: store_v128i1_constant:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    vmovaps {{.*#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
+; KNL-NEXT:    vmovaps %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v128i1_constant:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    movabsq $-4611686310485172227, %rax ## imm = 0xBFFFFFBBFFFFDFFD
+; SKX-NEXT:    movq %rax, 8(%rdi)
+; SKX-NEXT:    movabsq $-2305843576149381123, %rax ## imm = 0xDFFFFF7BFFFFEFFD
+; SKX-NEXT:    movq %rax, (%rdi)
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: store_v128i1_constant:
+; AVX512BW:       ## %bb.0: ## %entry
+; AVX512BW-NEXT:    movabsq $-4611686310485172227, %rax ## imm = 0xBFFFFFBBFFFFDFFD
+; AVX512BW-NEXT:    movq %rax, 8(%rdi)
+; AVX512BW-NEXT:    movabsq $-2305843576149381123, %rax ## imm = 0xDFFFFF7BFFFFEFFD
+; AVX512BW-NEXT:    movq %rax, (%rdi)
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: store_v128i1_constant:
+; AVX512DQ:       ## %bb.0: ## %entry
+; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
+; AVX512DQ-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: store_v128i1_constant:
 ; X86:       ## %bb.0: ## %entry

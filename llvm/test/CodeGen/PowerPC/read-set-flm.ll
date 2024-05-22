@@ -148,8 +148,19 @@ entry:
   ret void
 }
 
+define double @mffsl() {
+; CHECK-LABEL: mffsl:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mffsl 1
+; CHECK-NEXT:    blr
+entry:
+  %x = call double @llvm.ppc.mffsl()
+  ret double %x
+}
+
 declare void @effect_func()
 declare void @readonly_func() #1
+declare double @llvm.ppc.mffsl()
 declare double @llvm.ppc.readflm()
 declare double @llvm.ppc.setflm(double)
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -sparse-tensor-codegen -cse | FileCheck %s
 
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 // CHECK-LABEL:   func.func @for(
 // CHECK-SAME:                   %[[VAL_1:.*0]]: memref<?xindex>,

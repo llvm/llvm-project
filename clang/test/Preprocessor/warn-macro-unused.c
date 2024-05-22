@@ -10,5 +10,4 @@
 #define unused
 unused
 
-// rdar://9745065
 #undef unused_from_header // no warning

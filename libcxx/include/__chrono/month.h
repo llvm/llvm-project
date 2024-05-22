@@ -31,9 +31,9 @@ private:
 public:
     month() = default;
     _LIBCPP_HIDE_FROM_ABI explicit inline constexpr month(unsigned __val) noexcept : __m_(static_cast<unsigned char>(__val)) {}
-    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator++()    noexcept { ++__m_; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator++()    noexcept { *this += months{1}; return *this; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr month  operator++(int) noexcept { month __tmp = *this; ++(*this); return __tmp; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator--()    noexcept { --__m_; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator--()    noexcept { *this -= months{1}; return *this; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr month  operator--(int) noexcept { month __tmp = *this; --(*this); return __tmp; }
     _LIBCPP_HIDE_FROM_ABI        constexpr month& operator+=(const months& __m1) noexcept;
     _LIBCPP_HIDE_FROM_ABI        constexpr month& operator-=(const months& __m1) noexcept;
@@ -46,7 +46,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const month& __lhs, const month& __rhs) noexcept
 { return static_cast<unsigned>(__lhs) == static_cast<unsigned>(__rhs); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const month& __lhs, const month& __rhs) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const month& __lhs, const month& __rhs) noexcept {
     return static_cast<unsigned>(__lhs) <=> static_cast<unsigned>(__rhs);
 }
 

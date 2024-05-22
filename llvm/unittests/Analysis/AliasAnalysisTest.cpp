@@ -169,7 +169,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   auto *BB = BasicBlock::Create(C, "entry", F);
   auto IntType = Type::getInt32Ty(C);
-  auto PtrType = Type::getInt32PtrTy(C);
+  auto PtrType = PointerType::get(C, 0);
   auto *Value = ConstantInt::get(IntType, 42);
   auto *Addr = ConstantPointerNull::get(PtrType);
   auto Alignment = Align(IntType->getBitWidth() / 8);

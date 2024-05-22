@@ -200,5 +200,5 @@ attributes #0 = { noinline nounwind sspstrong uwtable}
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree noinline nosync nounwind sspstrong willreturn memory(none) uwtable }
-; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nofree nosync willreturn }
 ;.

@@ -198,12 +198,11 @@ OperationState::~OperationState() {
     propertiesDeleter(properties);
 }
 
-LogicalResult
-OperationState::setProperties(Operation *op,
-                              InFlightDiagnostic *diagnostic) const {
+LogicalResult OperationState::setProperties(
+    Operation *op, function_ref<InFlightDiagnostic()> emitError) const {
   if (LLVM_UNLIKELY(propertiesAttr)) {
     assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, diagnostic);
+    return op->setPropertiesFromAttribute(propertiesAttr, emitError);
   }
   if (properties)
     propertiesSetter(op->getPropertiesStorage(), properties);
@@ -438,6 +437,12 @@ MutableOperandRange::MutableOperandRange(
 MutableOperandRange::MutableOperandRange(Operation *owner)
     : MutableOperandRange(owner, /*start=*/0, owner->getNumOperands()) {}
 
+/// Construct a new mutable range for the given OpOperand.
+MutableOperandRange::MutableOperandRange(OpOperand &opOperand)
+    : MutableOperandRange(opOperand.getOwner(),
+                          /*start=*/opOperand.getOperandNumber(),
+                          /*length=*/1) {}
+
 /// Slice this range into a sub range, with the additional operand segment.
 MutableOperandRange
 MutableOperandRange::slice(unsigned subStart, unsigned subLen,
@@ -497,6 +502,10 @@ MutableOperandRange::operator OperandRange() const {
   return owner->getOperands().slice(start, length);
 }
 
+MutableOperandRange::operator MutableArrayRef<OpOperand>() const {
+  return owner->getOpOperands().slice(start, length);
+}
+
 MutableOperandRangeRange
 MutableOperandRange::split(NamedAttribute segmentSizes) const {
   return MutableOperandRangeRange(*this, segmentSizes);
@@ -516,6 +525,19 @@ void MutableOperandRange::updateLength(unsigned newLength) {
         DenseI32ArrayAttr::get(attr.getContext(), segments));
     owner->setAttr(segment.second.getName(), segment.second.getValue());
   }
+}
+
+OpOperand &MutableOperandRange::operator[](unsigned index) const {
+  assert(index < length && "index is out of bounds");
+  return owner->getOpOperand(start + index);
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::begin() const {
+  return owner->getOpOperands().slice(start, length).begin();
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
+  return owner->getOpOperands().slice(start, length).end();
 }
 
 //===----------------------------------------------------------------------===//
@@ -661,19 +683,18 @@ llvm::hash_code OperationEquivalence::computeHash(
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  ValueRange operands = op->getOperands();
-  SmallVector<Value> operandStorage;
-  if (op->hasTrait<mlir::OpTrait::IsCommutative>()) {
-    operandStorage.append(operands.begin(), operands.end());
-    llvm::sort(operandStorage, [](Value a, Value b) -> bool {
-      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-    });
-    operands = operandStorage;
+  if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
+      op->getNumOperands() > 0) {
+    size_t operandHash = hashOperands(op->getOperand(0));
+    for (auto operand : op->getOperands().drop_front())
+      operandHash += hashOperands(operand);
+    hash = llvm::hash_combine(hash, operandHash);
+  } else {
+    for (Value operand : op->getOperands())
+      hash = llvm::hash_combine(hash, hashOperands(operand));
   }
-  for (Value operand : operands)
-    hash = llvm::hash_combine(hash, hashOperands(operand));
 
-  //   - Operands
+  //   - Results
   for (Value result : op->getResults())
     hash = llvm::hash_combine(hash, hashResults(result));
   return hash;
@@ -683,7 +704,9 @@ llvm::hash_code OperationEquivalence::computeHash(
     Region *lhs, Region *rhs,
     function_ref<LogicalResult(Value, Value)> checkEquivalent,
     function_ref<void(Value, Value)> markEquivalent,
-    OperationEquivalence::Flags flags) {
+    OperationEquivalence::Flags flags,
+    function_ref<LogicalResult(ValueRange, ValueRange)>
+        checkCommutativeEquivalent) {
   DenseMap<Block *, Block *> blocksMap;
   auto blocksEquivalent = [&](Block &lBlock, Block &rBlock) {
     // Check block arguments.
@@ -712,7 +735,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     auto opsEquivalent = [&](Operation &lOp, Operation &rOp) {
       // Check for op equality (recursively).
       if (!OperationEquivalence::isEquivalentTo(&lOp, &rOp, checkEquivalent,
-                                                markEquivalent, flags))
+                                                markEquivalent, flags,
+                                                checkCommutativeEquivalent))
         return false;
       // Check successor mapping.
       for (auto successorsPair :
@@ -738,6 +762,36 @@ struct ValueEquivalenceCache {
     return success(lhsValue == rhsValue ||
                    equivalentValues.lookup(lhsValue) == rhsValue);
   }
+  LogicalResult checkCommutativeEquivalent(ValueRange lhsRange,
+                                           ValueRange rhsRange) {
+    // Handle simple case where sizes mismatch.
+    if (lhsRange.size() != rhsRange.size())
+      return failure();
+
+    // Handle where operands in order are equivalent.
+    auto lhsIt = lhsRange.begin();
+    auto rhsIt = rhsRange.begin();
+    for (; lhsIt != lhsRange.end(); ++lhsIt, ++rhsIt) {
+      if (failed(checkEquivalent(*lhsIt, *rhsIt)))
+        break;
+    }
+    if (lhsIt == lhsRange.end())
+      return success();
+
+    // Handle another simple case where operands are just a permutation.
+    // Note: This is not sufficient, this handles simple cases relatively
+    // cheaply.
+    auto sortValues = [](ValueRange values) {
+      SmallVector<Value> sortedValues = llvm::to_vector(values);
+      llvm::sort(sortedValues, [](Value a, Value b) {
+        return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+      });
+      return sortedValues;
+    };
+    auto lhsSorted = sortValues({lhsIt, lhsRange.end()});
+    auto rhsSorted = sortValues({rhsIt, rhsRange.end()});
+    return success(lhsSorted == rhsSorted);
+  }
   void markEquivalent(Value lhsResult, Value rhsResult) {
     auto insertion = equivalentValues.insert({lhsResult, rhsResult});
     // Make sure that the value was not already marked equivalent to some other
@@ -760,13 +814,18 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       [&](Value lhsResult, Value rhsResult) {
         cache.markEquivalent(lhsResult, rhsResult);
       },
-      flags);
+      flags,
+      [&](ValueRange lhs, ValueRange rhs) -> LogicalResult {
+        return cache.checkCommutativeEquivalent(lhs, rhs);
+      });
 }
 
 /*static*/ bool OperationEquivalence::isEquivalentTo(
     Operation *lhs, Operation *rhs,
     function_ref<LogicalResult(Value, Value)> checkEquivalent,
-    function_ref<void(Value, Value)> markEquivalent, Flags flags) {
+    function_ref<void(Value, Value)> markEquivalent, Flags flags,
+    function_ref<LogicalResult(ValueRange, ValueRange)>
+        checkCommutativeEquivalent) {
   if (lhs == rhs)
     return true;
 
@@ -778,55 +837,31 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
       lhs->getNumResults() != rhs->getNumResults() ||
-      lhs->hashProperties() != rhs->hashProperties())
+      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                        rhs->getPropertiesStorage()))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;
 
   // 2. Compare operands.
-  ValueRange lhsOperands = lhs->getOperands(), rhsOperands = rhs->getOperands();
-  SmallVector<Value> lhsOperandStorage, rhsOperandStorage;
-  if (lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
-    auto sortValues = [](ValueRange values) {
-      SmallVector<Value> sortedValues = llvm::to_vector(values);
-      llvm::sort(sortedValues, [](Value a, Value b) {
-        auto aArg = llvm::dyn_cast<BlockArgument>(a);
-        auto bArg = llvm::dyn_cast<BlockArgument>(b);
-
-        // Case 1. Both `a` and `b` are `BlockArgument`s.
-        if (aArg && bArg) {
-          if (aArg.getParentBlock() == bArg.getParentBlock())
-            return aArg.getArgNumber() < bArg.getArgNumber();
-          return aArg.getParentBlock() < bArg.getParentBlock();
-        }
-
-        // Case 2. One of then is a `BlockArgument` and other is not. Treat
-        // `BlockArgument` as lesser.
-        if (aArg && !bArg)
-          return true;
-        if (bArg && !aArg)
-          return false;
-
-        // Case 3. Both are values.
-        return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-      });
-      return sortedValues;
-    };
-    lhsOperandStorage = sortValues(lhsOperands);
-    lhsOperands = lhsOperandStorage;
-    rhsOperandStorage = sortValues(rhsOperands);
-    rhsOperands = rhsOperandStorage;
-  }
-
-  for (auto operandPair : llvm::zip(lhsOperands, rhsOperands)) {
-    Value curArg = std::get<0>(operandPair);
-    Value otherArg = std::get<1>(operandPair);
-    if (curArg == otherArg)
-      continue;
-    if (curArg.getType() != otherArg.getType())
+  if (checkCommutativeEquivalent &&
+      lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
+    auto lhsRange = lhs->getOperands();
+    auto rhsRange = rhs->getOperands();
+    if (failed(checkCommutativeEquivalent(lhsRange, rhsRange)))
       return false;
-    if (failed(checkEquivalent(curArg, otherArg)))
-      return false;
+  } else {
+    // Check pair wise for equivalence.
+    for (auto operandPair : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
+      Value curArg = std::get<0>(operandPair);
+      Value otherArg = std::get<1>(operandPair);
+      if (curArg == otherArg)
+        continue;
+      if (curArg.getType() != otherArg.getType())
+        return false;
+      if (failed(checkEquivalent(curArg, otherArg)))
+        return false;
+    }
   }
 
   // 3. Compare result types and mark results as equivalent.
@@ -861,7 +896,10 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       [&](Value lhsResult, Value rhsResult) {
         cache.markEquivalent(lhsResult, rhsResult);
       },
-      flags);
+      flags,
+      [&](ValueRange lhs, ValueRange rhs) -> LogicalResult {
+        return cache.checkCommutativeEquivalent(lhs, rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//

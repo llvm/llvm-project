@@ -17,6 +17,35 @@
 #define SCUDO_MALLOC_ALIGNMENT FIRST_32_SECOND_64(8U, 16U)
 #endif
 
+static void reportAllocation(void *ptr, size_t size) {
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_allocate_hook && ptr)
+      __scudo_allocate_hook(ptr, size);
+}
+static void reportDeallocation(void *ptr) {
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(ptr);
+}
+static void reportReallocAllocation(void *old_ptr, void *new_ptr, size_t size) {
+  DCHECK_NE(new_ptr, nullptr);
+
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_allocate_hook)
+      __scudo_realloc_allocate_hook(old_ptr, new_ptr, size);
+    else if (__scudo_allocate_hook)
+      __scudo_allocate_hook(new_ptr, size);
+  }
+}
+static void reportReallocDeallocation(void *old_ptr) {
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_deallocate_hook)
+      __scudo_realloc_deallocate_hook(old_ptr);
+    else if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(old_ptr);
+  }
+}
+
 extern "C" {
 
 INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
@@ -28,11 +57,14 @@ INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
     }
     scudo::reportCallocOverflow(nmemb, size);
   }
-  return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-      Product, scudo::Chunk::Origin::Malloc, SCUDO_MALLOC_ALIGNMENT, true));
+  void *Ptr = SCUDO_ALLOCATOR.allocate(Product, scudo::Chunk::Origin::Malloc,
+                                       SCUDO_MALLOC_ALIGNMENT, true);
+  reportAllocation(Ptr, Product);
+  return scudo::setErrnoOnNull(Ptr);
 }
 
 INTERFACE WEAK void SCUDO_PREFIX(free)(void *ptr) {
+  reportDeallocation(ptr);
   SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
 }
 
@@ -75,8 +107,10 @@ INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
 #endif
 
 INTERFACE WEAK void *SCUDO_PREFIX(malloc)(size_t size) {
-  return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-      size, scudo::Chunk::Origin::Malloc, SCUDO_MALLOC_ALIGNMENT));
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc,
+                                       SCUDO_MALLOC_ALIGNMENT);
+  reportAllocation(Ptr, size);
+  return scudo::setErrnoOnNull(Ptr);
 }
 
 #if SCUDO_ANDROID
@@ -105,8 +139,10 @@ INTERFACE WEAK void *SCUDO_PREFIX(memalign)(size_t alignment, size_t size) {
       scudo::reportAlignmentNotPowerOfTwo(alignment);
     }
   }
-  return SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign,
-                                  alignment);
+  void *Ptr =
+      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
+  reportAllocation(Ptr, size);
+  return Ptr;
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(posix_memalign)(void **memptr, size_t alignment,
@@ -120,6 +156,8 @@ INTERFACE WEAK int SCUDO_PREFIX(posix_memalign)(void **memptr, size_t alignment,
       SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
   if (UNLIKELY(!Ptr))
     return ENOMEM;
+  reportAllocation(Ptr, size);
+
   *memptr = Ptr;
   return 0;
 }
@@ -134,26 +172,57 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
     scudo::reportPvallocOverflow(size);
   }
   // pvalloc(0) should allocate one page.
-  return scudo::setErrnoOnNull(
+  void *Ptr =
       SCUDO_ALLOCATOR.allocate(size ? scudo::roundUp(size, PageSize) : PageSize,
-                               scudo::Chunk::Origin::Memalign, PageSize));
+                               scudo::Chunk::Origin::Memalign, PageSize);
+  reportAllocation(Ptr, scudo::roundUp(size, PageSize));
+
+  return scudo::setErrnoOnNull(Ptr);
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
-  if (!ptr)
-    return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-        size, scudo::Chunk::Origin::Malloc, SCUDO_MALLOC_ALIGNMENT));
+  if (!ptr) {
+    void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc,
+                                         SCUDO_MALLOC_ALIGNMENT);
+    reportAllocation(Ptr, size);
+    return scudo::setErrnoOnNull(Ptr);
+  }
   if (size == 0) {
+    reportDeallocation(ptr);
     SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
     return nullptr;
   }
-  return scudo::setErrnoOnNull(
-      SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT));
+
+  // Given that the reporting of deallocation and allocation are not atomic, we
+  // always pretend the old pointer will be released so that the user doesn't
+  // need to worry about the false double-use case from the view of hooks.
+  //
+  // For example, assume that `realloc` releases the old pointer and allocates a
+  // new pointer. Before the reporting of both operations has been done, another
+  // thread may get the old pointer from `malloc`. It may be misinterpreted as
+  // double-use if it's not handled properly on the hook side.
+  reportReallocDeallocation(ptr);
+  void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
+  if (NewPtr != nullptr) {
+    // Note that even if NewPtr == ptr, the size has changed. We still need to
+    // report the new size.
+    reportReallocAllocation(/*OldPtr=*/ptr, NewPtr, size);
+  } else {
+    // If `realloc` fails, the old pointer is not released. Report the old
+    // pointer as allocated again.
+    reportReallocAllocation(/*OldPtr=*/ptr, /*NewPtr=*/ptr,
+                            SCUDO_ALLOCATOR.getAllocSize(ptr));
+  }
+
+  return scudo::setErrnoOnNull(NewPtr);
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(valloc)(size_t size) {
-  return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-      size, scudo::Chunk::Origin::Memalign, scudo::getPageSizeCached()));
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign,
+                                       scudo::getPageSizeCached());
+  reportAllocation(Ptr, size);
+
+  return scudo::setErrnoOnNull(Ptr);
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(malloc_iterate)(
@@ -198,6 +267,7 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
     return 1;
   } else if (param == M_LOG_STATS) {
     SCUDO_ALLOCATOR.printStats();
+    SCUDO_ALLOCATOR.printFragmentationInfo();
     return 1;
   } else {
     scudo::Option option;
@@ -233,8 +303,12 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
     }
     scudo::reportInvalidAlignedAllocAlignment(alignment, size);
   }
-  return scudo::setErrnoOnNull(
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment));
+
+  void *Ptr =
+      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment);
+  reportAllocation(Ptr, size);
+
+  return scudo::setErrnoOnNull(Ptr);
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {

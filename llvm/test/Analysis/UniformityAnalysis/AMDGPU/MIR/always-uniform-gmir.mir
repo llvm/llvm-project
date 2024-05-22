@@ -10,7 +10,7 @@ body:             |
     ; CHECK-NOT: DIVERGENT: {{.*}}llvm.amdgcn.readfirstlane
     %6:_(p1) = G_IMPLICIT_DEF
     %4:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
-    %5:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %4(s32)
+    %5:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %4(s32)
     G_STORE %5(s32), %6(p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
     S_ENDPGM 0
 ...
@@ -29,7 +29,7 @@ body:             |
     %9:_(s64) = G_CONSTANT i64 8
     %10:_(p4) = G_PTR_ADD %7, %9(s64)
     %11:_(p1) = G_LOAD %10(p4) :: (dereferenceable invariant load (p1), addrspace 4)
-    %12:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), %8(s32), %13(s32), 33
+    %12:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.icmp), %8(s32), %13(s32), 33
     G_STORE %12(s64), %11(p1) :: (volatile store (s64) , addrspace 1)
     S_ENDPGM 0
 
@@ -52,7 +52,7 @@ body:             |
     %11:_(s32) = G_EXTRACT_VECTOR_ELT %8(<2 x s32>), %12(s32)
     %13:_(s64) = G_CONSTANT i64 4
     %14:_(p4) = G_PTR_ADD %7, %13(s64)
-    %15:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %9(s32), %11(s32), 33
+    %15:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %9(s32), %11(s32), 33
     G_STORE %15(s64), %16(p1) :: (volatile store (s64) into `i64 addrspace(1)* undef`, addrspace 1)
     S_ENDPGM 0
 
@@ -70,7 +70,7 @@ body:             |
     %6:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
     %7:_(s32) = G_LOAD %6(p4) :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %8:_(s1) = G_TRUNC %7(s32)
-    %9:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), %8(s1)
+    %9:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %8(s1)
     G_STORE %9(s64), %10(p1) :: (volatile store (s64) into `i64 addrspace(1)* undef`, addrspace 1)
     S_ENDPGM 0
 

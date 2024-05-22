@@ -156,6 +156,10 @@ private:
       });
       CheckOptDict.parse(N);
     });
+    Dict.handle("FastCheckFilter", [&](Node &N) {
+      if (auto FastCheckFilter = scalarValue(N, "FastCheckFilter"))
+        F.FastCheckFilter = *FastCheckFilter;
+    });
     Dict.parse(N);
   }
 
@@ -251,6 +255,10 @@ private:
     Dict.handle("Designators", [&](Node &N) {
       if (auto Value = boolValue(N, "Designators"))
         F.Designators = *Value;
+    });
+    Dict.handle("BlockEnd", [&](Node &N) {
+      if (auto Value = boolValue(N, "BlockEnd"))
+        F.BlockEnd = *Value;
     });
     Dict.handle("TypeNameLimit", [&](Node &N) {
       if (auto Value = uint32Value(N, "TypeNameLimit"))

@@ -8,10 +8,6 @@
 
 #include "../assembly.h"
 
-#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
-#error big endian support not implemented
-#endif
-
 #define APSR_Z (1 << 30)
 #define APSR_C (1 << 29)
 

@@ -22,8 +22,10 @@
 
 #include "Config.h"
 #include "InputSection.h"
+#include "Symbols.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -776,6 +778,16 @@ public:
   size_t getSize() const override;
 };
 
+// Used to align the end of the PT_GNU_RELRO segment and the associated PT_LOAD
+// segment to a common-page-size boundary. This padding section ensures that all
+// pages in the PT_LOAD segment is covered by at least one section.
+class RelroPaddingSection final : public SyntheticSection {
+public:
+  RelroPaddingSection();
+  size_t getSize() const override { return 0; }
+  void writeTo(uint8_t *buf) override {}
+};
+
 class GdbIndexSection final : public SyntheticSection {
 public:
   struct AddressEntry {
@@ -1245,6 +1257,32 @@ public:
   size_t getSize() const override;
 };
 
+class MemtagDescriptors final : public SyntheticSection {
+public:
+  MemtagDescriptors()
+      : SyntheticSection(llvm::ELF::SHF_ALLOC,
+                         llvm::ELF::SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC,
+                         /*alignment=*/4, ".memtag.globals.dynamic") {}
+  void writeTo(uint8_t *buf) override;
+  // The size of the section is non-computable until all addresses are
+  // synthetized, because the section's contents contain a sorted
+  // varint-compressed list of pointers to global variables. We only know the
+  // final size after `finalizeAddressDependentContent()`.
+  size_t getSize() const override;
+  bool updateAllocSize() override;
+
+  void addSymbol(const Symbol &sym) {
+    symbols.push_back(&sym);
+  }
+
+  bool isNeeded() const override {
+    return !symbols.empty();
+  }
+
+private:
+  SmallVector<const Symbol *, 0> symbols;
+};
+
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
@@ -1277,6 +1315,7 @@ struct Partition {
   std::unique_ptr<GnuHashTableSection> gnuHashTab;
   std::unique_ptr<HashTableSection> hashTab;
   std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
+  std::unique_ptr<MemtagDescriptors> memtagDescriptors;
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;
@@ -1304,6 +1343,7 @@ struct InStruct {
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<RelroPaddingSection> relroPadding;
   std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;

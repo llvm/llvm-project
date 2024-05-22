@@ -110,7 +110,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month_day& __lhs, const year_month_day& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.day() == __rhs.day(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering
 operator<=>(const year_month_day& __lhs, const year_month_day& __rhs) noexcept {
     if (auto __c = __lhs.year() <=> __rhs.year(); __c != 0)
       return __c;

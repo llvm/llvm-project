@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder clang-c  --cflags "-O2 -glldb" -- %s
+// RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 //
 //// Check that once-escaped variable 'param' can still be read after we
 //// perform inlining + mem2reg, and that we see the DSE'd value 255.

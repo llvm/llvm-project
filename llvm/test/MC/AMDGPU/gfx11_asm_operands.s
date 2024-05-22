@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR %s
 
 // On GFX11+, EXECZ and VCCZ are no longer allowed to be used as sources to SALU and VALU instructions.
 // The inline constants are removed. VCCZ and EXECZ still exist and can be use for conditional branches.

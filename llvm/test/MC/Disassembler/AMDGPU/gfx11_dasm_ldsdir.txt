@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
 
 # GFX11: lds_direct_load v10 wait_vdst:6         ; encoding: [0x0a,0x00,0x16,0xce]
 0x0a,0x00,0x16,0xce
@@ -19,10 +19,10 @@
 # GFX11: lds_direct_load v15 wait_vdst:1         ; encoding: [0x0f,0x00,0x11,0xce]
 0x0f,0x00,0x11,0xce
 
-# GFX11: lds_direct_load v16                     ; encoding: [0x10,0x00,0x10,0xce]
+# GFX11: lds_direct_load v16 wait_vdst:0         ; encoding: [0x10,0x00,0x10,0xce]
 0x10,0x00,0x10,0xce
 
-# GFX11: lds_direct_load v17                     ; encoding: [0x11,0x00,0x10,0xce]
+# GFX11: lds_direct_load v17 wait_vdst:0         ; encoding: [0x11,0x00,0x10,0xce]
 0x11,0x00,0x10,0xce
 
 # GFX11: lds_direct_load v1 wait_vdst:15         ; encoding: [0x01,0x00,0x1f,0xce]
@@ -70,10 +70,10 @@
 # GFX11: lds_param_load v15, attr63.z wait_vdst:1 ; encoding: [0x0f,0xfe,0x01,0xce]
 0x0f,0xfe,0x01,0xce
 
-# GFX11: lds_param_load v16, attr63.w            ; encoding: [0x10,0xff,0x00,0xce]
+# GFX11: lds_param_load v16, attr63.w wait_vdst:0 ; encoding: [0x10,0xff,0x00,0xce]
 0x10,0xff,0x00,0xce
 
-# GFX11: lds_param_load v17, attr63.w            ; encoding: [0x11,0xff,0x00,0xce]
+# GFX11: lds_param_load v17, attr63.w wait_vdst:0 ; encoding: [0x11,0xff,0x00,0xce]
 0x11,0xff,0x00,0xce
 
 # GFX11: lds_param_load v1, attr0.x wait_vdst:15 ; encoding: [0x01,0x00,0x0f,0xce]

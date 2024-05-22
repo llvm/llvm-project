@@ -964,6 +964,28 @@ define i32 @PR57278_mul_assume(i32 %a) {
 
 declare void @llvm.assume(i1)
 
+define i32 @PR57278_or_disjoint_nuw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nuw i32 %add, 3
+  ret i32 %mul
+}
+
+define i32 @PR57278_or_disjoint_nsw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nsw i32 %add, 3
+  ret i32 %mul
+}
+
 ; https://alive2.llvm.org/ce/z/XYpv9q
 define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec(
@@ -981,8 +1003,8 @@ define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec_poison(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i32> [[SHL]], <i32 3, i32 poison>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[ADD]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw <2 x i32> [[TMP1]], <i32 9, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl = shl nuw <2 x i32> %v1, <i32 2, i32 poison>
@@ -1131,10 +1153,13 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32)
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
 ; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
-  %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
+  %ext = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+  %shl = shl i32 1, %ext
+  %mul = mul i32 %V, %shl
   ret i32 %mul
 }
 
@@ -1247,8 +1272,7 @@ define i64 @test_mul_canonicalize_neg_is_not_undone(i64 %L1) {
 ; Check we do not undo the canonicalization of 0 - (X * Y), if Y is a constant
 ; expr.
 ; CHECK-LABEL: @test_mul_canonicalize_neg_is_not_undone(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[L1:%.*]], ptrtoint (ptr @X to i64)
-; CHECK-NEXT:    [[B4:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[B4:%.*]] = mul i64 [[L1:%.*]], sub (i64 0, i64 ptrtoint (ptr @X to i64))
 ; CHECK-NEXT:    ret i64 [[B4]]
 ;
   %v1 = ptrtoint ptr @X to i64
@@ -1544,6 +1568,30 @@ define <2 x i32> @mulsub2_vec_nonuniform_undef(<2 x i32> %a0) {
   ret <2 x i32> %mul
 }
 
+define i8 @mulsub_nsw(i8 %a1, i8 %a2) {
+; CHECK-LABEL: @mulsub_nsw(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i8 [[A_NEG]], 1
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %mul = mul nsw i8 %a, -2
+  ret i8 %mul
+}
+
+; It would be safe to keep the nsw on the shl here, but only because the mul
+; to shl transform happens to replace undef with 0.
+define <2 x i8> @mulsub_nsw_undef(<2 x i8> %a1, <2 x i8> %a2) {
+; CHECK-LABEL: @mulsub_nsw_undef(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i8> [[A_NEG]], <i8 1, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[MUL]]
+;
+  %a = sub nsw <2 x i8> %a1, %a2
+  %mul = mul nsw <2 x i8> %a, <i8 -2, i8 undef>
+  ret <2 x i8> %mul
+}
+
 define i32 @muladd2(i32 %a0) {
 ; CHECK-LABEL: @muladd2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], 2
@@ -1739,7 +1787,7 @@ define <2 x i16> @sext_negpow2_vec(<2 x i8> %x) {
 define <2 x i16> @sext_negpow2_too_small_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sext_negpow2_too_small_vec(
 ; CHECK-NEXT:    [[SX:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[SX]], <i16 -128, i16 poison>
+; CHECK-NEXT:    [[R:%.*]] = mul nsw <2 x i16> [[SX]], <i16 -128, i16 poison>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %sx = sext <2 x i8> %x to <2 x i16>

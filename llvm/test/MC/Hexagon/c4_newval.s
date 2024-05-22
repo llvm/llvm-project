@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon %s 2>%t; FileCheck --implicit-check-not=error: %s <%t
+# RUN: not llvm-mc -triple=hexagon %s 2>%t; FileCheck --implicit-check-not=error: %s <%t
 
 .Lfoo:
 { p3:0 = r0

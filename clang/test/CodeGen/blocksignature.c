@@ -13,9 +13,6 @@
 // X32: @__block_descriptor_tmp{{.*}} = internal constant [[FULL_DESCRIPTOR_T]] { i32 0, i32 24, ptr [[STR2]], ptr null }
 // X32:   store i32 1073741824, ptr
 
-// rdar://7635294
-
-
 int globalInt;
 void (^global)(void) = ^{ ++globalInt; };
 

@@ -12,9 +12,11 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h"
@@ -133,11 +135,26 @@ TEST(Decl, MangleDependentSizedArray) {
   std::unique_ptr<ItaniumMangleContext> MC(
       ItaniumMangleContext::create(Ctx, Diags));
 
-  MC->mangleTypeName(DeclA->getType(), OS_A);
-  MC->mangleTypeName(DeclB->getType(), OS_B);
+  MC->mangleCanonicalTypeName(DeclA->getType(), OS_A);
+  MC->mangleCanonicalTypeName(DeclB->getType(), OS_B);
 
   ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
   ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
+}
+
+TEST(Decl, ConceptDecl) {
+  llvm::StringRef Code(R"(
+    template<class T>
+    concept integral = __is_integral(T);
+  )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto *Decl =
+      selectFirst<ConceptDecl>("decl", match(conceptDecl().bind("decl"), Ctx));
+  ASSERT_TRUE(Decl != nullptr);
+  EXPECT_EQ(Decl->getName(), "integral");
 }
 
 TEST(Decl, EnumDeclRange) {
@@ -230,16 +247,16 @@ TEST(Decl, ModuleAndInternalLinkage) {
   const auto *f = selectFirst<FunctionDecl>(
       "f", match(functionDecl(hasName("f")).bind("f"), Ctx));
 
-  EXPECT_EQ(a->getFormalLinkage(), InternalLinkage);
-  EXPECT_EQ(f->getFormalLinkage(), InternalLinkage);
+  EXPECT_EQ(a->getFormalLinkage(), Linkage::Internal);
+  EXPECT_EQ(f->getFormalLinkage(), Linkage::Internal);
 
   const auto *b =
       selectFirst<VarDecl>("b", match(varDecl(hasName("b")).bind("b"), Ctx));
   const auto *g = selectFirst<FunctionDecl>(
       "g", match(functionDecl(hasName("g")).bind("g"), Ctx));
 
-  EXPECT_EQ(b->getFormalLinkage(), ModuleLinkage);
-  EXPECT_EQ(g->getFormalLinkage(), ModuleLinkage);
+  EXPECT_EQ(b->getFormalLinkage(), Linkage::Module);
+  EXPECT_EQ(g->getFormalLinkage(), Linkage::Module);
 }
 
 TEST(Decl, GetNonTransparentDeclContext) {
@@ -334,6 +351,32 @@ TEST(Decl, FriendFunctionWithinClassInHeaderUnit) {
       match(functionDecl(hasName("getFooValue")).bind("getFooValue"), Ctx));
 
   EXPECT_TRUE(getFooValue->isInlined());
+}
+
+TEST(Decl, FunctionDeclBitsShouldNotOverlapWithCXXConstructorDeclBits) {
+  llvm::Annotations Code(R"(
+    struct A {
+      A() : m() {}
+      int m;
+    };
+
+    A f() { return A(); }
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), {"-std=c++14"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto HasCtorInit =
+      hasAnyConstructorInitializer(cxxCtorInitializer(isMemberInitializer()));
+  auto ImpMoveCtor =
+      cxxConstructorDecl(isMoveConstructor(), isImplicit(), HasCtorInit)
+          .bind("MoveCtor");
+
+  auto *ToImpMoveCtor =
+      selectFirst<CXXConstructorDecl>("MoveCtor", match(ImpMoveCtor, Ctx));
+
+  EXPECT_TRUE(ToImpMoveCtor->getNumCtorInitializers() == 1);
+  EXPECT_FALSE(ToImpMoveCtor->FriendConstraintRefersToEnclosingTemplate());
 }
 
 TEST(Decl, NoProtoFunctionDeclAttributes) {

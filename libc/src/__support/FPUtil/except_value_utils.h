@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
@@ -15,7 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace fputil {
 
@@ -26,7 +26,7 @@ namespace fputil {
 //
 // Define list of exceptional inputs and outputs:
 //   static constexpr int N = ...;  // Number of exceptional values.
-//   static constexpr fputil::ExceptValues<UIntType, N> Excepts {
+//   static constexpr fputil::ExceptValues<StorageType, N> Excepts {
 //     <list of input bits, output bits and offsets>
 //   };
 //
@@ -37,22 +37,22 @@ namespace fputil {
 template <typename T, size_t N> struct ExceptValues {
   static_assert(cpp::is_floating_point_v<T>, "Must be a floating point type.");
 
-  using UIntType = typename FPBits<T>::UIntType;
+  using StorageType = typename FPBits<T>::StorageType;
 
   struct Mapping {
-    UIntType input;
-    UIntType rnd_towardzero_result;
-    UIntType rnd_upward_offset;
-    UIntType rnd_downward_offset;
-    UIntType rnd_tonearest_offset;
+    StorageType input;
+    StorageType rnd_towardzero_result;
+    StorageType rnd_upward_offset;
+    StorageType rnd_downward_offset;
+    StorageType rnd_tonearest_offset;
   };
 
   Mapping values[N];
 
-  LIBC_INLINE constexpr cpp::optional<T> lookup(UIntType x_bits) const {
+  LIBC_INLINE constexpr cpp::optional<T> lookup(StorageType x_bits) const {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_bits == values[i].input)) {
-        UIntType out_bits = values[i].rnd_towardzero_result;
+        StorageType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           out_bits += values[i].rnd_upward_offset;
@@ -70,11 +70,11 @@ template <typename T, size_t N> struct ExceptValues {
     return cpp::nullopt;
   }
 
-  LIBC_INLINE constexpr cpp::optional<T> lookup_odd(UIntType x_abs,
+  LIBC_INLINE constexpr cpp::optional<T> lookup_odd(StorageType x_abs,
                                                     bool sign) const {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_abs == values[i].input)) {
-        UIntType out_bits = values[i].rnd_towardzero_result;
+        StorageType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           out_bits += sign ? values[i].rnd_downward_offset
@@ -100,20 +100,22 @@ template <typename T, size_t N> struct ExceptValues {
 };
 
 // Helper functions to set results for exceptional cases.
-LIBC_INLINE float round_result_slightly_down(float value_rn) {
-  volatile float tmp = value_rn;
-  tmp = tmp - 0x1.0p-100f;
+template <typename T> LIBC_INLINE T round_result_slightly_down(T value_rn) {
+  volatile T tmp = value_rn;
+  const T MIN_NORMAL = FPBits<T>::min_normal();
+  tmp = tmp - MIN_NORMAL;
   return tmp;
 }
 
-LIBC_INLINE float round_result_slightly_up(float value_rn) {
-  volatile float tmp = value_rn;
-  tmp = tmp + 0x1.0p-100f;
+template <typename T> LIBC_INLINE T round_result_slightly_up(T value_rn) {
+  volatile T tmp = value_rn;
+  const T MIN_NORMAL = FPBits<T>::min_normal();
+  tmp = tmp + MIN_NORMAL;
   return tmp;
 }
 
 } // namespace fputil
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H

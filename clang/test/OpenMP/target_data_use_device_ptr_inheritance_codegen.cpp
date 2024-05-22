@@ -110,35 +110,35 @@ void foo() {
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 8
-// CHECK1-NEXT:    [[PTR4:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[CLASS_A]], ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[PTR3:%.*]] = getelementptr inbounds [[CLASS_A]], ptr [[THIS1]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR3]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK1-NEXT:    store ptr [[THIS1]], ptr [[TMP1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR3]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[THIS1]], ptr [[TMP2]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
-// CHECK1-NEXT:    store ptr null, ptr [[TMP3]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK1-NEXT:    store ptr [[PTR2]], ptr [[TMP4]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
-// CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP5]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
-// CHECK1-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK1-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[TMP7]], ptr [[TMP8]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
-// CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP4]], align 8
-// CHECK1-NEXT:    store ptr [[TMP9]], ptr [[PTR4]], align 8
-// CHECK1-NEXT:    store ptr [[PTR4]], ptr [[TMP]], align 8
-// CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK1-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[TMP10]], ptr [[TMP11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK1-NEXT:    store ptr [[THIS1]], ptr [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
+// CHECK1-NEXT:    store ptr null, ptr [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK1-NEXT:    store ptr [[PTR2]], ptr [[TMP5]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK1-NEXT:    store ptr [[TMP1]], ptr [[TMP6]], align 8
+// CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
+// CHECK1-NEXT:    store ptr null, ptr [[TMP7]], align 8
+// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK1-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[TMP8]], ptr [[TMP9]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP5]], align 8
+// CHECK1-NEXT:    store ptr [[TMP10]], ptr [[TMP0]], align 8
+// CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
+// CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK1-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[TMP11]], ptr [[TMP12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -191,35 +191,35 @@ void foo() {
 // CHECK2-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
 // CHECK2-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
 // CHECK2-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
-// CHECK2-NEXT:    [[PTR4:%.*]] = alloca ptr, align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK2-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[CLASS_A]], ptr [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[PTR3:%.*]] = getelementptr inbounds [[CLASS_A]], ptr [[THIS1]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR3]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK2-NEXT:    store ptr [[THIS1]], ptr [[TMP1]], align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR3]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[THIS1]], ptr [[TMP2]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
-// CHECK2-NEXT:    store ptr null, ptr [[TMP3]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK2-NEXT:    store ptr [[PTR2]], ptr [[TMP4]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
-// CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP5]], align 4
-// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
-// CHECK2-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK2-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[TMP7]], ptr [[TMP8]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
-// CHECK2-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP4]], align 4
-// CHECK2-NEXT:    store ptr [[TMP9]], ptr [[PTR4]], align 4
-// CHECK2-NEXT:    store ptr [[PTR4]], ptr [[TMP]], align 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK2-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[TMP10]], ptr [[TMP11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK2-NEXT:    store ptr [[THIS1]], ptr [[TMP3]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// CHECK2-NEXT:    store ptr null, ptr [[TMP4]], align 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK2-NEXT:    store ptr [[PTR2]], ptr [[TMP5]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK2-NEXT:    store ptr [[TMP1]], ptr [[TMP6]], align 4
+// CHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// CHECK2-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK2-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[TMP8]], ptr [[TMP9]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP5]], align 4
+// CHECK2-NEXT:    store ptr [[TMP10]], ptr [[TMP0]], align 4
+// CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 4
+// CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK2-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[TMP11]], ptr [[TMP12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK2-NEXT:    ret void
 //
 //

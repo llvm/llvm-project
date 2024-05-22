@@ -46,7 +46,6 @@ int e = 'abcd';  // still warn: expected-warning {{multi-character character con
 
 int f = 'abcd';  // ignored.
 
-// rdar://problem/6974641
 float t0[] = {
   1.9e20f,
   1.9e-20f,

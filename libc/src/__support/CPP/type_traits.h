@@ -1,4 +1,4 @@
-//===-- Self contained C++ type traits --------------------------*- C++ -*-===//
+//===-- Self contained C++ type_traits --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,195 +6,56 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
 
-#include "src/__support/macros/attributes.h"
+#include "src/__support/CPP/type_traits/add_lvalue_reference.h"
+#include "src/__support/CPP/type_traits/add_pointer.h"
+#include "src/__support/CPP/type_traits/add_rvalue_reference.h"
+#include "src/__support/CPP/type_traits/bool_constant.h"
+#include "src/__support/CPP/type_traits/conditional.h"
+#include "src/__support/CPP/type_traits/decay.h"
+#include "src/__support/CPP/type_traits/enable_if.h"
+#include "src/__support/CPP/type_traits/false_type.h"
+#include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/type_traits/invoke.h"
+#include "src/__support/CPP/type_traits/invoke_result.h"
+#include "src/__support/CPP/type_traits/is_arithmetic.h"
+#include "src/__support/CPP/type_traits/is_array.h"
+#include "src/__support/CPP/type_traits/is_base_of.h"
+#include "src/__support/CPP/type_traits/is_class.h"
+#include "src/__support/CPP/type_traits/is_const.h"
+#include "src/__support/CPP/type_traits/is_convertible.h"
+#include "src/__support/CPP/type_traits/is_destructible.h"
+#include "src/__support/CPP/type_traits/is_enum.h"
+#include "src/__support/CPP/type_traits/is_floating_point.h"
+#include "src/__support/CPP/type_traits/is_function.h"
+#include "src/__support/CPP/type_traits/is_integral.h"
+#include "src/__support/CPP/type_traits/is_lvalue_reference.h"
+#include "src/__support/CPP/type_traits/is_member_pointer.h"
+#include "src/__support/CPP/type_traits/is_null_pointer.h"
+#include "src/__support/CPP/type_traits/is_object.h"
+#include "src/__support/CPP/type_traits/is_pointer.h"
+#include "src/__support/CPP/type_traits/is_reference.h"
+#include "src/__support/CPP/type_traits/is_rvalue_reference.h"
+#include "src/__support/CPP/type_traits/is_same.h"
+#include "src/__support/CPP/type_traits/is_scalar.h"
+#include "src/__support/CPP/type_traits/is_signed.h"
+#include "src/__support/CPP/type_traits/is_trivially_constructible.h"
+#include "src/__support/CPP/type_traits/is_trivially_copyable.h"
+#include "src/__support/CPP/type_traits/is_trivially_destructible.h"
+#include "src/__support/CPP/type_traits/is_union.h"
+#include "src/__support/CPP/type_traits/is_unsigned.h"
+#include "src/__support/CPP/type_traits/is_void.h"
+#include "src/__support/CPP/type_traits/make_signed.h"
+#include "src/__support/CPP/type_traits/make_unsigned.h"
+#include "src/__support/CPP/type_traits/remove_all_extents.h"
+#include "src/__support/CPP/type_traits/remove_cv.h"
+#include "src/__support/CPP/type_traits/remove_cvref.h"
+#include "src/__support/CPP/type_traits/remove_extent.h"
+#include "src/__support/CPP/type_traits/remove_reference.h"
+#include "src/__support/CPP/type_traits/true_type.h"
+#include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/CPP/type_traits/void_t.h"
 
-namespace __llvm_libc {
-namespace cpp {
-
-template <typename T> struct type_identity {
-  using type = T;
-};
-
-template <bool B, typename T> struct enable_if;
-template <typename T> struct enable_if<true, T> : type_identity<T> {};
-template <bool B, typename T = void>
-using enable_if_t = typename enable_if<B, T>::type;
-
-template <typename T, T v> struct integral_constant {
-  using value_type = T;
-  LIBC_INLINE_VAR static constexpr T value = v;
-};
-using true_type = cpp::integral_constant<bool, true>;
-using false_type = cpp::integral_constant<bool, false>;
-
-template <class T>
-struct is_trivially_copyable
-    : public integral_constant<bool, __is_trivially_copyable(T)> {};
-
-template <class T, class... Args>
-struct is_trivially_constructible
-    : integral_constant<bool, __is_trivially_constructible(T, Args...)> {};
-
-template <typename T, typename U> struct is_same : cpp::false_type {};
-template <typename T> struct is_same<T, T> : cpp::true_type {};
-template <typename T, typename U>
-LIBC_INLINE_VAR constexpr bool is_same_v = is_same<T, U>::value;
-
-template <class T> struct is_const : cpp::false_type {};
-template <class T> struct is_const<const T> : cpp::true_type {};
-template <class T>
-LIBC_INLINE_VAR constexpr bool is_const_v = is_const<T>::value;
-
-template <typename T> struct remove_cv : type_identity<T> {};
-template <typename T> struct remove_cv<const T> : type_identity<T> {};
-template <typename T> struct remove_cv<volatile T> : type_identity<T> {};
-template <typename T> struct remove_cv<const volatile T> : type_identity<T> {};
-template <typename T> using remove_cv_t = typename remove_cv<T>::type;
-
-template <typename T> struct remove_reference : type_identity<T> {};
-template <typename T> struct remove_reference<T &> : type_identity<T> {};
-template <typename T> struct remove_reference<T &&> : type_identity<T> {};
-template <typename T>
-using remove_reference_t = typename remove_reference<T>::type;
-
-template <typename T> struct add_rvalue_reference : type_identity<T &&> {};
-
-template <typename T> struct remove_cvref {
-  using type = remove_cv_t<remove_reference_t<T>>;
-};
-template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
-
-namespace details {
-template <typename T, typename... Args> constexpr bool is_unqualified_any_of() {
-  return (... || is_same_v<remove_cv_t<T>, Args>);
-}
-} // namespace details
-
-template <typename T> struct is_integral {
-  LIBC_INLINE_VAR static constexpr bool value = details::is_unqualified_any_of<
-      T,
-#ifdef __SIZEOF_INT128__
-      __int128_t, __uint128_t,
-#endif
-      char, signed char, unsigned char, short, unsigned short, int,
-      unsigned int, long, unsigned long, long long, unsigned long long, bool>();
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_integral_v = is_integral<T>::value;
-
-template <typename T> struct is_enum {
-  LIBC_INLINE_VAR static constexpr bool value = __is_enum(T);
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_enum_v = is_enum<T>::value;
-
-template <typename T> struct is_pointer : cpp::false_type {};
-template <typename T> struct is_pointer<T *> : cpp::true_type {};
-template <typename T> struct is_pointer<T *const> : cpp::true_type {};
-template <typename T> struct is_pointer<T *volatile> : cpp::true_type {};
-template <typename T> struct is_pointer<T *const volatile> : cpp::true_type {};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_pointer_v = is_pointer<T>::value;
-
-template <typename T> struct is_floating_point {
-  LIBC_INLINE_VAR static constexpr bool value =
-      details::is_unqualified_any_of<T, float, double, long double>();
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_floating_point_v =
-    is_floating_point<T>::value;
-
-template <typename T> struct is_arithmetic {
-  LIBC_INLINE_VAR static constexpr bool value =
-      is_integral<T>::value || is_floating_point<T>::value;
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
-
-namespace details {
-template <typename T, bool = is_arithmetic<T>::value>
-struct is_signed : integral_constant<bool, (T(-1) < T(0))> {};
-template <typename T> struct is_signed<T, false> : false_type {};
-
-template <typename T, bool = is_arithmetic<T>::value>
-struct is_unsigned : integral_constant<bool, (T(-1) > T(0))> {};
-template <typename T> struct is_unsigned<T, false> : false_type {};
-} // namespace details
-
-template <typename T> struct is_signed {
-  LIBC_INLINE_VAR static constexpr bool value = details::is_signed<T>::value;
-  LIBC_INLINE constexpr operator bool() const { return value; }
-  LIBC_INLINE constexpr bool operator()() const { return value; }
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_signed_v = is_signed<T>::value;
-
-template <typename T> struct is_unsigned {
-  LIBC_INLINE_VAR static constexpr bool value = details::is_unsigned<T>::value;
-  LIBC_INLINE constexpr operator bool() const { return value; }
-  LIBC_INLINE constexpr bool operator()() const { return value; }
-};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_unsigned_v = is_unsigned<T>::value;
-
-template <typename T> struct make_unsigned;
-template <> struct make_unsigned<char> : type_identity<unsigned char> {};
-template <> struct make_unsigned<signed char> : type_identity<unsigned char> {};
-template <> struct make_unsigned<short> : type_identity<unsigned short> {};
-template <> struct make_unsigned<int> : type_identity<unsigned int> {};
-template <> struct make_unsigned<long> : type_identity<unsigned long> {};
-template <>
-struct make_unsigned<long long> : type_identity<unsigned long long> {};
-template <>
-struct make_unsigned<unsigned char> : type_identity<unsigned char> {};
-template <>
-struct make_unsigned<unsigned short> : type_identity<unsigned short> {};
-template <> struct make_unsigned<unsigned int> : type_identity<unsigned int> {};
-template <>
-struct make_unsigned<unsigned long> : type_identity<unsigned long> {};
-template <>
-struct make_unsigned<unsigned long long> : type_identity<unsigned long long> {};
-#ifdef __SIZEOF_INT128__
-template <> struct make_unsigned<__int128_t> : type_identity<__uint128_t> {};
-template <> struct make_unsigned<__uint128_t> : type_identity<__uint128_t> {};
-#endif
-template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
-
-// Compile time type selection.
-template <bool B, typename T, typename F>
-struct conditional : type_identity<T> {};
-template <typename T, typename F>
-struct conditional<false, T, F> : type_identity<F> {};
-template <bool B, typename T, typename F>
-using conditional_t = typename conditional<B, T, F>::type;
-
-template <typename T>
-struct is_void : is_same<void, typename remove_cv<T>::type> {};
-template <typename T>
-LIBC_INLINE_VAR constexpr bool is_void_v = is_void<T>::value;
-template <class T> T declval();
-
-// Compile time checks on implicit conversions.
-namespace details {
-template <typename...> using void_t = void;
-template <typename T> void convertible_to_helper(T);
-} // namespace details
-
-template <typename F, typename T, typename = void>
-LIBC_INLINE_VAR constexpr bool is_convertible_v = false;
-
-// FIXME: This should use LIBC_INLINE_VAR, but clang buggily complains about
-// this when LIBC_INLINE_VAR uses [[clang::internal_linkage]].
-template <typename F, typename T>
-constexpr bool
-    is_convertible_v<F, T,
-                     details::void_t<decltype(details::convertible_to_helper<T>(
-                         declval<F>()))>> = true;
-
-} // namespace cpp
-} // namespace __llvm_libc
-
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H

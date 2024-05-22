@@ -31,9 +31,9 @@ struct __not_fn_op {
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 auto operator()(_Args&&... __args) const
-        noexcept(noexcept(!_VSTD::invoke(_VSTD::forward<_Args>(__args)...)))
-        -> decltype(      !_VSTD::invoke(_VSTD::forward<_Args>(__args)...))
-        { return          !_VSTD::invoke(_VSTD::forward<_Args>(__args)...); }
+        noexcept(noexcept(!std::invoke(std::forward<_Args>(__args)...)))
+        -> decltype(      !std::invoke(std::forward<_Args>(__args)...))
+        { return          !std::invoke(std::forward<_Args>(__args)...); }
 };
 
 template <class _Fn>
@@ -47,7 +47,7 @@ template <class _Fn, class = enable_if_t<
 >>
 _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 auto not_fn(_Fn&& __f) {
-    return __not_fn_t<decay_t<_Fn>>(_VSTD::forward<_Fn>(__f));
+    return __not_fn_t<decay_t<_Fn>>(std::forward<_Fn>(__f));
 }
 
 #endif // _LIBCPP_STD_VER >= 17

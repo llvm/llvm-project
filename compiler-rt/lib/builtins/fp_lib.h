@@ -105,13 +105,11 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 
 #elif defined QUAD_PRECISION
-#if __LDBL_MANT_DIG__ == 113 && defined(__SIZEOF_INT128__)
-#define CRT_LDBL_128BIT
-#define TF_C(c) c##L
+#if defined(CRT_HAS_TF_MODE)
 typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
 typedef __int128_t srep_t;
-typedef long double fp_t;
+typedef tf_float fp_t;
 #define HALF_REP_C UINT64_C
 #define REP_C (__uint128_t)
 // Note: Since there is no explicit way to tell compiler the constant is a
@@ -202,13 +200,13 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #undef Word_HiMask
 #undef Word_LoMask
 #undef Word_FullMask
-#endif // __LDBL_MANT_DIG__ == 113 && __SIZEOF_INT128__
+#endif // defined(CRT_HAS_TF_MODE)
 #else
 #error SINGLE_PRECISION, DOUBLE_PRECISION or QUAD_PRECISION must be defined.
 #endif
 
 #if defined(SINGLE_PRECISION) || defined(DOUBLE_PRECISION) ||                  \
-    defined(CRT_LDBL_128BIT)
+    (defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE))
 #define typeWidth (sizeof(rep_t) * CHAR_BIT)
 #define exponentBits (typeWidth - significandBits - 1)
 #define maxExponent ((1 << exponentBits) - 1)
@@ -388,31 +386,40 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 #endif
 }
 
-#elif defined(QUAD_PRECISION)
-
-#if defined(CRT_LDBL_128BIT)
-static __inline fp_t __compiler_rt_logbl(fp_t x) {
-  return __compiler_rt_logbX(x);
-}
-static __inline fp_t __compiler_rt_scalbnl(fp_t x, int y) {
-  return __compiler_rt_scalbnX(x, y);
-}
-static __inline fp_t __compiler_rt_fmaxl(fp_t x, fp_t y) {
-  return __compiler_rt_fmaxX(x, y);
-}
-#else
+#elif defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE)
 // The generic implementation only works for ieee754 floating point. For other
 // floating point types, continue to rely on the libm implementation for now.
-static __inline long double __compiler_rt_logbl(long double x) {
+#if defined(CRT_HAS_IEEE_TF)
+static __inline tf_float __compiler_rt_logbtf(tf_float x) {
+  return __compiler_rt_logbX(x);
+}
+static __inline tf_float __compiler_rt_scalbntf(tf_float x, int y) {
+  return __compiler_rt_scalbnX(x, y);
+}
+static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
+  return __compiler_rt_fmaxX(x, y);
+}
+#define __compiler_rt_logbl __compiler_rt_logbtf
+#define __compiler_rt_scalbnl __compiler_rt_scalbntf
+#define __compiler_rt_fmaxl __compiler_rt_fmaxtf
+#define crt_fabstf crt_fabsf128
+#define crt_copysigntf crt_copysignf128
+#elif defined(CRT_LDBL_128BIT)
+static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return crt_logbl(x);
 }
-static __inline long double __compiler_rt_scalbnl(long double x, int y) {
+static __inline tf_float __compiler_rt_scalbntf(tf_float x, int y) {
   return crt_scalbnl(x, y);
 }
-static __inline long double __compiler_rt_fmaxl(long double x, long double y) {
+static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
   return crt_fmaxl(x, y);
 }
-#endif // CRT_LDBL_128BIT
+#define __compiler_rt_logbl crt_logbl
+#define __compiler_rt_scalbnl crt_scalbnl
+#define __compiler_rt_fmaxl crt_fmaxl
+#else
+#error Unsupported TF mode type
+#endif
 
 #endif // *_PRECISION
 

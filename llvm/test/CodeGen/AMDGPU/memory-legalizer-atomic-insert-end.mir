@@ -43,7 +43,7 @@
 
 # CHECK-LABEL: bb.1.atomic:
 # CHECK:       BUFFER_ATOMIC_SMAX_ADDR64
-# CHECK-NEXT:  S_WAITCNT 3952
+# CHECK-NEXT:  S_WAITCNT_soft 3952
 # CHECK-NEXT:  BUFFER_WBINVL1_VOL
 
 name:            atomic_max_i32_noret

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-pointer-to-int-cast -Wno-objc-root-class -Wno-strict-prototypes %s
-// rdar://5986251
 
 @protocol SomeProtocol
 - (void) bar;
@@ -33,7 +32,6 @@ typedef struct objc_class *Class;
 
 Class <SomeProtocol> UnfortunateGCCExtension;
 
-// rdar://10238337
 @protocol Broken @end
 @interface Crash @end
 @implementation Crash

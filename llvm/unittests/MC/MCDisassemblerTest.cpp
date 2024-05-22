@@ -12,13 +12,12 @@
 using namespace llvm;
 
 TEST(MCDisassembler, XCOFFSymbolPriorityTest) {
-
-  SymbolInfoTy SIT1(0x100000, "sym1", std::nullopt, 1, false);
-  SymbolInfoTy SIT2(0x110000, "sym2", std::nullopt, 2, false);
-  SymbolInfoTy SIT3(0x120000, ".func", XCOFF::XMC_PR, 3, true);
-  SymbolInfoTy SIT4(0x120000, ".text", XCOFF::XMC_PR, 4, false);
-  SymbolInfoTy SIT5(0x130000, "TOC", XCOFF::XMC_TC0, 5, false);
-  SymbolInfoTy SIT6(0x130000, "func", XCOFF::XMC_TC, 6, false);
+  SymbolInfoTy SIT1(std::nullopt, 0x100000, "sym1", 1, false);
+  SymbolInfoTy SIT2(std::nullopt, 0x110000, "sym2", 2, false);
+  SymbolInfoTy SIT3(XCOFF::XMC_PR, 0x120000, ".func", 3, true);
+  SymbolInfoTy SIT4(XCOFF::XMC_PR, 0x120000, ".text", 4, false);
+  SymbolInfoTy SIT5(XCOFF::XMC_TC0, 0x130000, "TOC", 5, false);
+  SymbolInfoTy SIT6(XCOFF::XMC_TC, 0x130000, "func", 6, false);
 
   // Test that higher addresses would appear later than lower ones when symbols
   // are sorted in ascending order.

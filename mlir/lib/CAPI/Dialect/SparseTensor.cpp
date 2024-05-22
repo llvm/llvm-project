@@ -20,26 +20,25 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor,
                                       mlir::sparse_tensor::SparseTensorDialect)
 
 // Ensure the C-API enums are int-castable to C++ equivalents.
-static_assert(
-    static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE) ==
-            static_cast<int>(DimLevelType::Dense) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED) ==
-            static_cast<int>(DimLevelType::Compressed) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU) ==
-            static_cast<int>(DimLevelType::CompressedNu) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO) ==
-            static_cast<int>(DimLevelType::CompressedNo) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO) ==
-            static_cast<int>(DimLevelType::CompressedNuNo) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON) ==
-            static_cast<int>(DimLevelType::Singleton) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU) ==
-            static_cast<int>(DimLevelType::SingletonNu) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO) ==
-            static_cast<int>(DimLevelType::SingletonNo) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO) ==
-            static_cast<int>(DimLevelType::SingletonNuNo),
-    "MlirSparseTensorDimLevelType (C-API) and DimLevelType (C++) mismatch");
+static_assert(static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_DENSE) ==
+                      static_cast<int>(LevelType::Dense) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED) ==
+                      static_cast<int>(LevelType::Compressed) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU) ==
+                      static_cast<int>(LevelType::CompressedNu) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO) ==
+                      static_cast<int>(LevelType::CompressedNo) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO) ==
+                      static_cast<int>(LevelType::CompressedNuNo) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON) ==
+                      static_cast<int>(LevelType::Singleton) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU) ==
+                      static_cast<int>(LevelType::SingletonNu) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO) ==
+                      static_cast<int>(LevelType::SingletonNo) &&
+                  static_cast<int>(MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO) ==
+                      static_cast<int>(LevelType::SingletonNuNo),
+              "MlirSparseTensorLevelType (C-API) and LevelType (C++) mismatch");
 
 bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
   return isa<SparseTensorEncodingAttr>(unwrap(attr));
@@ -47,28 +46,33 @@ bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
 
 MlirAttribute
 mlirSparseTensorEncodingAttrGet(MlirContext ctx, intptr_t lvlRank,
-                                MlirSparseTensorDimLevelType const *lvlTypes,
-                                MlirAffineMap dimToLvl, int posWidth,
-                                int crdWidth) {
-  SmallVector<DimLevelType> cppLvlTypes;
+                                MlirSparseTensorLevelType const *lvlTypes,
+                                MlirAffineMap dimToLvl, MlirAffineMap lvlToDim,
+                                int posWidth, int crdWidth) {
+  SmallVector<LevelType> cppLvlTypes;
   cppLvlTypes.reserve(lvlRank);
   for (intptr_t l = 0; l < lvlRank; ++l)
-    cppLvlTypes.push_back(static_cast<DimLevelType>(lvlTypes[l]));
-  return wrap(SparseTensorEncodingAttr::get(
-      unwrap(ctx), cppLvlTypes, unwrap(dimToLvl), posWidth, crdWidth));
+    cppLvlTypes.push_back(static_cast<LevelType>(lvlTypes[l]));
+  return wrap(SparseTensorEncodingAttr::get(unwrap(ctx), cppLvlTypes,
+                                            unwrap(dimToLvl), unwrap(lvlToDim),
+                                            posWidth, crdWidth));
 }
 
 MlirAffineMap mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr) {
   return wrap(cast<SparseTensorEncodingAttr>(unwrap(attr)).getDimToLvl());
 }
 
+MlirAffineMap mlirSparseTensorEncodingAttrGetLvlToDim(MlirAttribute attr) {
+  return wrap(cast<SparseTensorEncodingAttr>(unwrap(attr)).getLvlToDim());
+}
+
 intptr_t mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr) {
   return cast<SparseTensorEncodingAttr>(unwrap(attr)).getLvlRank();
 }
 
-MlirSparseTensorDimLevelType
+MlirSparseTensorLevelType
 mlirSparseTensorEncodingAttrGetLvlType(MlirAttribute attr, intptr_t lvl) {
-  return static_cast<MlirSparseTensorDimLevelType>(
+  return static_cast<MlirSparseTensorLevelType>(
       cast<SparseTensorEncodingAttr>(unwrap(attr)).getLvlType(lvl));
 }
 

@@ -16,9 +16,10 @@ using namespace mlir::transform;
 
 void mlir::transform::printPackedOrDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, Value packed, Type packedType,
-    OperandRange values, TypeRange valueTypes, ArrayRef<int64_t> integers) {
+    OperandRange values, TypeRange valueTypes, DenseI64ArrayAttr integers) {
   if (packed) {
-    assert(values.empty() && integers.empty() && "expected no values/integers");
+    assert(values.empty() && (!integers || integers.empty()) &&
+           "expected no values/integers");
     printer << "*(" << packed << " : " << packedType << ")";
     return;
   }

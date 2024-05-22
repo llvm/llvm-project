@@ -124,6 +124,45 @@ char isnormal_inf_neg[!__builtin_isnormal(-__builtin_inf()) ? 1 : -1];
 char isnormal_nan    [!__builtin_isnormal(__builtin_nan("")) ? 1 : -1];
 char isnormal_snan   [!__builtin_isnormal(__builtin_nans("")) ? 1 : -1];
 
+char iszero_inf_pos[!__builtin_iszero(__builtin_inf()) ? 1 : -1];
+char iszero_pos    [!__builtin_iszero(1.0) ? 1 : -1];
+char iszero_normf  [!__builtin_iszero(1e-37f) ? 1 : -1];
+char iszero_denormf[!__builtin_iszero(1e-38f) ? 1 : -1];
+char iszero_norm   [!__builtin_iszero(1e-307) ? 1 : -1];
+char iszero_denorm [!__builtin_iszero(1e-308) ? 1 : -1];
+char iszero_zero   [__builtin_iszero(0.0) ? 1 : -1];
+char iszero_negzero[__builtin_iszero(-0.0) ? 1 : -1];
+char iszero_neg    [!__builtin_iszero(-1.0) ? 1 : -1];
+char iszero_inf_neg[!__builtin_iszero(-__builtin_inf()) ? 1 : -1];
+char iszero_nan    [!__builtin_iszero(__builtin_nan("")) ? 1 : -1];
+char iszero_snan   [!__builtin_iszero(__builtin_nans("")) ? 1 : -1];
+
+char issubnormal_inf_pos[!__builtin_issubnormal(__builtin_inf()) ? 1 : -1];
+char issubnormal_pos    [!__builtin_issubnormal(1.0) ? 1 : -1];
+char issubnormal_normf  [!__builtin_issubnormal(1e-37f) ? 1 : -1];
+char issubnormal_denormf[__builtin_issubnormal(1e-38f) ? 1 : -1];
+char issubnormal_norm   [!__builtin_issubnormal(1e-307) ? 1 : -1];
+char issubnormal_denorm [__builtin_issubnormal(1e-308) ? 1 : -1];
+char issubnormal_zero   [!__builtin_issubnormal(0.0) ? 1 : -1];
+char issubnormal_negzero[!__builtin_issubnormal(-0.0) ? 1 : -1];
+char issubnormal_neg    [!__builtin_issubnormal(-1.0) ? 1 : -1];
+char issubnormal_inf_neg[!__builtin_issubnormal(-__builtin_inf()) ? 1 : -1];
+char issubnormal_nan    [!__builtin_issubnormal(__builtin_nan("")) ? 1 : -1];
+char issubnormal_snan   [!__builtin_issubnormal(__builtin_nans("")) ? 1 : -1];
+
+char issignaling_inf_pos[!__builtin_issignaling(__builtin_inf()) ? 1 : -1];
+char issignaling_pos    [!__builtin_issignaling(1.0) ? 1 : -1];
+char issignaling_normf  [!__builtin_issignaling(1e-37f) ? 1 : -1];
+char issignaling_denormf[!__builtin_issignaling(1e-38f) ? 1 : -1];
+char issignaling_norm   [!__builtin_issignaling(1e-307) ? 1 : -1];
+char issignaling_denorm [!__builtin_issignaling(1e-308) ? 1 : -1];
+char issignaling_zero   [!__builtin_issignaling(0.0) ? 1 : -1];
+char issignaling_negzero[!__builtin_issignaling(-0.0) ? 1 : -1];
+char issignaling_neg    [!__builtin_issignaling(-1.0) ? 1 : -1];
+char issignaling_inf_neg[!__builtin_issignaling(-__builtin_inf()) ? 1 : -1];
+char issignaling_nan    [!__builtin_issignaling(__builtin_nan("")) ? 1 : -1];
+char issignaling_snan   [__builtin_issignaling(__builtin_nans("")) ? 1 : -1];
+
 char isfpclass_inf_pos_0[__builtin_isfpclass(__builtin_inf(), 0x0200) ? 1 : -1]; // fcPosInf
 char isfpclass_inf_pos_1[!__builtin_isfpclass(__builtin_inff(), 0x0004) ? 1 : -1]; // fcNegInf
 char isfpclass_inf_pos_2[__builtin_isfpclass(__builtin_infl(), 0x0207) ? 1 : -1]; // fcSNan|fcQNan|fcNegInf|fcPosInf
@@ -217,13 +256,13 @@ char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2
 
 char rotateleft1[__builtin_rotateleft8(0x01, 5) == 0x20 ? 1 : -1];
 char rotateleft2[__builtin_rotateleft16(0x3210, 11) == 0x8190 ? 1 : -1];
-char rotateleft2[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
-char rotateleft2[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
+char rotateleft3[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
+char rotateleft4[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
 
 char rotateright1[__builtin_rotateright8(0x01, 5) == 0x08 ? 1 : -1];
 char rotateright2[__builtin_rotateright16(0x3210, 11) == 0x4206 ? 1 : -1];
-char rotateright2[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
-char rotateright2[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
+char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
+char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
 
 char ffs1[__builtin_ffs(0) == 0 ? 1 : -1];
 char ffs2[__builtin_ffs(1) == 1 ? 1 : -1];

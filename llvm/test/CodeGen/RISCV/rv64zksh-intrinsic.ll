@@ -2,24 +2,24 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zksh -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKSH
 
-declare i64 @llvm.riscv.sm3p0.i64(i64);
+declare i32 @llvm.riscv.sm3p0(i32);
 
-define i64 @sm3p0_i64(i64 %a) nounwind {
-; RV64ZKSH-LABEL: sm3p0_i64:
+define signext i32 @sm3p0_i32(i32 signext %a) nounwind {
+; RV64ZKSH-LABEL: sm3p0_i32:
 ; RV64ZKSH:       # %bb.0:
 ; RV64ZKSH-NEXT:    sm3p0 a0, a0
 ; RV64ZKSH-NEXT:    ret
-  %val = call i64 @llvm.riscv.sm3p0.i64(i64 %a)
-  ret i64 %val
+  %val = call i32 @llvm.riscv.sm3p0(i32 signext %a)
+  ret i32 %val
 }
 
-declare i64 @llvm.riscv.sm3p1.i64(i64);
+declare i32 @llvm.riscv.sm3p1(i32);
 
-define i64 @sm3p1_i64(i64 %a) nounwind {
-; RV64ZKSH-LABEL: sm3p1_i64:
+define signext i32 @sm3p1_i32(i32 signext %a) nounwind {
+; RV64ZKSH-LABEL: sm3p1_i32:
 ; RV64ZKSH:       # %bb.0:
 ; RV64ZKSH-NEXT:    sm3p1 a0, a0
 ; RV64ZKSH-NEXT:    ret
-  %val = call i64 @llvm.riscv.sm3p1.i64(i64 %a)
-  ret i64 %val
+  %val = call i32 @llvm.riscv.sm3p1(i32 signext %a)
+  ret i32 %val
 }

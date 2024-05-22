@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -fdouble-square-bracket-attributes %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
 
 void threeClauses(void) __attribute__((external_source_symbol(language="Swift", defined_in="module", generated_declaration)));
 

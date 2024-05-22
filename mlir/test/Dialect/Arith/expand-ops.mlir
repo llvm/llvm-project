@@ -178,7 +178,7 @@ func.func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
 
 // CHECK-LABEL: func @maxf
 func.func @maxf(%a: f32, %b: f32) -> f32 {
-  %result = arith.maxf %a, %b : f32
+  %result = arith.maximumf %a, %b : f32
   return %result : f32
 }
 // CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
@@ -192,7 +192,7 @@ func.func @maxf(%a: f32, %b: f32) -> f32 {
 
 // CHECK-LABEL: func @maxf_vector
 func.func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
-  %result = arith.maxf %a, %b : vector<4xf16>
+  %result = arith.maximumf %a, %b : vector<4xf16>
   return %result : vector<4xf16>
 }
 // CHECK-SAME: %[[LHS:.*]]: vector<4xf16>, %[[RHS:.*]]: vector<4xf16>)
@@ -206,7 +206,7 @@ func.func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
 
 // CHECK-LABEL: func @minf
 func.func @minf(%a: f32, %b: f32) -> f32 {
-  %result = arith.minf %a, %b : f32
+  %result = arith.minimumf %a, %b : f32
   return %result : f32
 }
 

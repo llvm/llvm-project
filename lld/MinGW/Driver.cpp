@@ -51,12 +51,13 @@
 #endif
 
 using namespace lld;
+using namespace llvm::opt;
 using namespace llvm;
 
 // Create OptTable
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -71,9 +72,13 @@ enum {
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -277,6 +282,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-align:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_heap))
     add("-heap:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_threads))
+    add("-threads:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -290,10 +297,30 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef v = a->getValue();
     if (!v.empty())
       add("-pdb:" + v);
+    if (args.hasArg(OPT_strip_all)) {
+      add("-debug:nodwarf,nosymtab");
+    } else if (args.hasArg(OPT_strip_debug)) {
+      add("-debug:nodwarf,symtab");
+    }
   } else if (args.hasArg(OPT_strip_debug)) {
     add("-debug:symtab");
   } else if (!args.hasArg(OPT_strip_all)) {
     add("-debug:dwarf");
+  }
+  if (auto *a = args.getLastArg(OPT_build_id)) {
+    StringRef v = a->getValue();
+    if (v == "none")
+      add("-build-id:no");
+    else {
+      if (!v.empty())
+        warn("unsupported build id hashing: " + v + ", using default hashing.");
+      add("-build-id");
+    }
+  } else {
+    if (args.hasArg(OPT_strip_debug) || args.hasArg(OPT_strip_all))
+      add("-build-id:no");
+    else
+      add("-build-id");
   }
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
@@ -368,7 +395,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (s == "all")
       add("-opt:icf");
-    else if (s == "safe" || s == "none")
+    else if (s == "safe")
+      add("-opt:safeicf");
+    else if (s == "none")
       add("-opt:noicf");
     else
       error("unknown parameter: --icf=" + s);
@@ -412,6 +441,35 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
+
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
+    add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_O))
+    add("-opt:lldlto=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_CGO))
+    add("-opt:lldltocgo=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_dwo_dir_eq))
+    add("-dwodir:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_lto_cs_profile_generate))
+    add("-lto-cs-profile-generate");
+  if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
+    add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+
+  for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
+    add("-mllvm:-" + StringRef(a->getValue()));
+
+  // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
+  // relative path. Just ignore. If not ended with "lto-wrapper" (or
+  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
+  // unsupported LLVMgold.so option and error.
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
+    StringRef v(arg->getValue());
+    if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
+      error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
+            "'");
+  }
 
   for (auto *a : args.filtered(OPT_Xlink))
     add(a->getValue());

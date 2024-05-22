@@ -128,6 +128,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.vprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.scanf
+    libc.src.stdio.fscanf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -146,9 +153,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
-
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
@@ -166,6 +170,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -252,9 +259,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.erff
+    libc.src.math.exp
     libc.src.math.expf
+    libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
@@ -318,6 +329,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -347,6 +362,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncf
     libc.src.math.truncl
 )
+
+if(LIBC_COMPILER_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float128 entrypoints
+    libc.src.math.copysignf128
+  )
+endif()
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
@@ -438,9 +460,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
-    libc.src.stdio.sscanf
-    libc.src.stdio.scanf
-    libc.src.stdio.fscanf
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -477,6 +496,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.spawn.posix_spawn_file_actions_addopen
     libc.src.spawn.posix_spawn_file_actions_destroy
     libc.src.spawn.posix_spawn_file_actions_init
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
@@ -527,6 +554,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
   )
 endif()
 

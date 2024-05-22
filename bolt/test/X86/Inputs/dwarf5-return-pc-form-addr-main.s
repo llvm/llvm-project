@@ -429,7 +429,7 @@ fooVar0:
 	.byte	11                              # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	161                             # DW_AT_type
+	.long	162                             # DW_AT_type
 	.byte	8                               # Abbrev [8] 0x68:0x1d DW_TAG_lexical_block
 	.byte	3                               # DW_AT_low_pc
 	.long	.Ltmp8-.Ltmp4                   # DW_AT_high_pc
@@ -469,9 +469,9 @@ fooVar0:
 	.long	50                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	15                              # Abbrev [15] 0xa1:0x5 DW_TAG_pointer_type
-	.long	166                             # DW_AT_type
+	.long	162                             # DW_AT_type
 	.byte	15                              # Abbrev [15] 0xa6:0x5 DW_TAG_pointer_type
-	.long	171                             # DW_AT_type
+	.long	168                             # DW_AT_type
 	.byte	3                               # Abbrev [3] 0xab:0x4 DW_TAG_base_type
 	.byte	12                              # DW_AT_name
 	.byte	6                               # DW_AT_encoding

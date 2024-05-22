@@ -43,8 +43,8 @@ public:
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
-  bool legalizeFrint(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B) const;
+  bool legalizeFroundeven(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B) const;
   bool legalizeFrem(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -68,6 +68,10 @@ public:
                                const GlobalValue *GV, int64_t Offset,
                                unsigned GAFlags = SIInstrInfo::MO_NONE) const;
 
+  void buildAbsGlobalAddress(Register DstReg, LLT PtrTy, MachineIRBuilder &B,
+                             const GlobalValue *GV,
+                             MachineRegisterInfo &MRI) const;
+
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
   bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
@@ -85,7 +89,7 @@ public:
   bool legalizeFlog2(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFlogCommon(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
-                          double Log2BaseInverted, unsigned Flags) const;
+                          bool IsLog10, unsigned Flags) const;
   bool legalizeFExp2(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           unsigned Flags) const;
@@ -157,6 +161,15 @@ public:
   bool legalizeFDIVFastIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
+  bool legalizeFSQRTF16(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B) const;
+  bool legalizeFSQRTF32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B) const;
+  bool legalizeFSQRTF64(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B) const;
+  bool legalizeFSQRT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &B) const;
+
   bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  MachineIRBuilder &B) const;
 
@@ -198,6 +211,7 @@ public:
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,

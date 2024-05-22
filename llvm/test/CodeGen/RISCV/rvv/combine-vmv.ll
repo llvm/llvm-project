@@ -80,10 +80,8 @@ declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32(<vscale x 4 x i32>, ptr, iXLe
 define <vscale x 4 x i32> @foldable_load(<vscale x 4 x i32> %passthru, ptr %p) {
 ; CHECK-LABEL: foldable_load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32(<vscale x 4 x i32> poison, ptr %p, iXLen 4)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen 2)
@@ -106,7 +104,7 @@ define <vscale x 4 x i32> @unfoldable_load(<vscale x 4 x i32> %passthru, ptr %p,
 
 declare <vscale x 4 x float> @llvm.riscv.vmv.v.v.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, iXLen)
 
-declare <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, iXLen)
+declare <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, iXLen, iXLen)
 
 define <vscale x 4 x float> @vfadd(<vscale x 4 x float> %passthru, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: vfadd:
@@ -116,7 +114,7 @@ define <vscale x 4 x float> @vfadd(<vscale x 4 x float> %passthru, <vscale x 4 x
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl1)
+  %v = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen 7, iXLen %vl1)
   %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v.nxv4f32(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl2)
   ret <vscale x 4 x float> %w
 }

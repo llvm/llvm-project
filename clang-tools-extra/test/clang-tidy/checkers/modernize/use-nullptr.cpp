@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-nullptr %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-nullptr.NullMacros, value: 'MY_NULL,NULL'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-nullptr.NullMacros: 'MY_NULL,NULL'}}"
 
 #define NULL 0
 

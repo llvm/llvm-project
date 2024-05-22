@@ -10,9 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef VECTOR_OPS
-#define VECTOR_OPS
+#ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
+#define MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 
+include "mlir/Dialect/Vector/IR/Vector.td"
+include "mlir/Dialect/Vector/IR/VectorAttributes.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
 include "mlir/IR/EnumAttr.td"
@@ -22,67 +26,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-
-def Vector_Dialect : Dialect {
-  let name = "vector";
-  let cppNamespace = "::mlir::vector";
-
-  let useDefaultAttributePrinterParser = 1;
-  let hasConstantMaterializer = 1;
-  let usePropertiesForAttributes = 1;
-  let dependentDialects = ["arith::ArithDialect"];
-}
-
-// Base class for Vector dialect ops.
-class Vector_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Vector_Dialect, mnemonic, traits>;
-
-// The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : I32BitEnumAttrCaseBit<"ADD", 0, "add">;
-def COMBINING_KIND_MUL : I32BitEnumAttrCaseBit<"MUL", 1, "mul">;
-def COMBINING_KIND_MINUI : I32BitEnumAttrCaseBit<"MINUI", 2, "minui">;
-def COMBINING_KIND_MINSI : I32BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
-def COMBINING_KIND_MINF : I32BitEnumAttrCaseBit<"MINF", 4, "minf">;
-def COMBINING_KIND_MAXUI : I32BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
-def COMBINING_KIND_MAXSI : I32BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
-def COMBINING_KIND_MAXF : I32BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
-def COMBINING_KIND_AND : I32BitEnumAttrCaseBit<"AND", 8, "and">;
-def COMBINING_KIND_OR  : I32BitEnumAttrCaseBit<"OR", 9, "or">;
-def COMBINING_KIND_XOR : I32BitEnumAttrCaseBit<"XOR", 10, "xor">;
-
-def CombiningKind : I32BitEnumAttr<
-    "CombiningKind",
-    "Kind of combining function for contractions and reductions",
-    [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,
-     COMBINING_KIND_MINSI, COMBINING_KIND_MINF, COMBINING_KIND_MAXUI,
-     COMBINING_KIND_MAXSI, COMBINING_KIND_MAXF, COMBINING_KIND_AND,
-     COMBINING_KIND_OR, COMBINING_KIND_XOR]> {
-  let cppNamespace = "::mlir::vector";
-  let genSpecializedAttr = 0;
-}
-
-/// An attribute that specifies the combining function for `vector.contract`,
-/// and `vector.reduction`.
-def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
-  I32EnumAttrCase<"parallel", 0>,
-  I32EnumAttrCase<"reduction", 1>
-]> {
-    let genSpecializedAttr = 0;
-    let cppNamespace = "::mlir::vector";
-}
-
-def Vector_IteratorTypeEnum
-    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type"> {
-    let assemblyFormat = "`<` $value `>`";
-}
-
-def Vector_IteratorTypeArrayAttr
-    : TypedArrayAttrBase<Vector_IteratorTypeEnum,
-                         "Iterator type should be an enum.">;
+include "mlir/IR/BuiltinAttributes.td"
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -142,8 +86,9 @@ def Vector_ContractionOp :
 
     An optional kind attribute may be used to specify the combining function
     between the intermediate result and accumulator argument of rank K. This
-    attribute can take the values add/mul/min/max for int/fp, and/or/xor for
-    int only. The default is "add".
+    attribute can take the values `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
+    /`maximumf` for floats. The default is `add`.
 
     Example:
 
@@ -205,7 +150,7 @@ def Vector_ContractionOp :
     #contraction_trait = {
       indexing_maps = #contraction_accesses,
       iterator_types = ["reduction"],
-      kind = #vector.kind<max>
+      kind = #vector.kind<maxf>
     }
     %6 = vector.contract #contraction_trait %0, %1, %2
       : vector<10xf32>, vector<10xf32> into f32
@@ -272,17 +217,24 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     OptionalTypesMatchWith<"dest and acc have the same type",
+                            "dest", "acc", "::llvm::cast<Type>($_self)">,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface,
-                               ["getShapeForUnroll"]>]>,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfAnyRank:$vector,
-               Optional<AnyType>:$acc)>,
+               Optional<AnyType>:$acc,
+               DefaultValuedAttr<
+                 Arith_FastMathAttr,
+                 "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs AnyType:$dest)> {
   let summary = "reduction operation";
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
-    operation (add/mul/min/max for int/fp and and/or/xor for int only).
+    operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
+    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats.
     Reductions also allow an optional fused accumulator.
 
     Note that these operations are restricted to 1-D vectors to remain
@@ -307,14 +259,17 @@ def Vector_ReductionOp :
   }];
   let builders = [
     // Builder that infers the type of `dest`.
-    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc)>,
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc,
+                    CArg<"::mlir::arith::FastMathFlags",
+                         "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>,
     // Builder that infers the type of `dest` and has no accumulator.
-    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector)>
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector,
+                    CArg<"::mlir::arith::FastMathFlags",
+                         "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
 
-  // TODO: Migrate to assemblyFormat once `AllTypesMatch` supports optional
-  // operands.
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "$kind `,` $vector (`,` $acc^)? (`fastmath` `` $fastmath^)?"
+                       " attr-dict `:` type($vector) `into` type($dest)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
@@ -336,8 +291,9 @@ def Vector_MultiDimReductionOp :
   let summary = "Multi-dimensional reduction operation";
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
-    using the given operation (add/mul/min/max for int/fp and and/or/xor for
-    int only).
+    using the given operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
+    /`maximumf` for floats.
     Takes an initial accumulator operand.
 
     Example:
@@ -354,9 +310,6 @@ def Vector_MultiDimReductionOp :
                    "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrStrName() { return "kind"; }
-    static StringRef getReductionDimsAttrStrName() { return "reduction_dims"; }
-
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -466,7 +419,7 @@ def Vector_ShuffleOp :
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
+     InferTypeOpAdaptor]>,
      Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
@@ -510,7 +463,6 @@ def Vector_ShuffleOp :
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let extraClassDeclaration = [{
-    static StringRef getMaskAttrStrName() { return "mask"; }
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
@@ -576,35 +528,65 @@ def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$position)>,
-    Results<(outs AnyType)> {
+     InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "extract operation";
   let description = [{
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
-    the proper position. Degenerates to an element type in the 0-D case.
+    the proper position. Degenerates to an element type if n-k is zero.
 
     Example:
 
     ```mlir
-    %1 = vector.extract %0[3]: vector<4x8x16xf32>
-    %2 = vector.extract %0[3, 3, 3]: vector<4x8x16xf32>
+    %1 = vector.extract %0[3]: vector<8x16xf32> from vector<4x8x16xf32>
+    %2 = vector.extract %0[2, 1, 3]: f32 from vector<4x8x16xf32>
+    %3 = vector.extract %1[]: vector<f32> from vector<f32>
+    %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
+    %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
   }];
+
+  let arguments = (ins
+    AnyVectorOfAnyRank:$vector,
+    Variadic<Index>:$dynamic_position,
+    DenseI64ArrayAttr:$static_position
+  );
+  let results = (outs AnyType:$result);
+
   let builders = [
+    OpBuilder<(ins "Value":$source, "int64_t":$position)>,
+    OpBuilder<(ins "Value":$source, "OpFoldResult":$position)>,
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$position)>,
-    // Convenience builder which assumes the values in `position` are defined by
-    // ConstantIndexOp.
-    OpBuilder<(ins "Value":$source, "ValueRange":$position)>
+    OpBuilder<(ins "Value":$source, "ArrayRef<OpFoldResult>":$position)>,
   ];
+
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrStrName() { return "position"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
+
+    /// Return a vector with all the static and dynamic position indices.
+    SmallVector<OpFoldResult> getMixedPosition() {
+      OpBuilder builder(getContext());
+      return getMixedValues(getStaticPosition(), getDynamicPosition(), builder);
+    }
+
+    unsigned getNumIndices() {
+      return getStaticPosition().size();
+    }
+
+    bool hasDynamicPosition() {
+      auto dynPos = getDynamicPosition();
+      return std::any_of(dynPos.begin(), dynPos.end(),
+                         [](Value operand) { return operand != nullptr; });
+    }
   }];
-  let assemblyFormat = "$vector `` $position attr-dict `:` type($vector)";
+
+  let assemblyFormat = [{
+    $vector ``
+    custom<DynamicIndexList>($dynamic_position, $static_position)
+    attr-dict `:` type($result) `from` type($vector)
+  }];
+
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -693,38 +675,64 @@ def Vector_InsertOp :
   Vector_Op<"insert", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     AllTypesMatch<["dest", "res"]>]>,
-     Arguments<(ins AnyType:$source, AnyVector:$dest, I64ArrayAttr:$position)>,
-     Results<(outs AnyVector:$res)> {
+     AllTypesMatch<["dest", "result"]>]> {
   let summary = "insert operation";
   let description = [{
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
-    position. Degenerates to a scalar source type when n = 0.
+    position. Degenerates to a scalar or a 0-d vector source type when n = 0.
 
     Example:
 
     ```mlir
     %2 = vector.insert %0, %1[3] : vector<8x16xf32> into vector<4x8x16xf32>
-    %5 = vector.insert %3, %4[3, 3, 3] : f32 into vector<4x8x16xf32>
+    %5 = vector.insert %3, %4[2, 1, 3] : f32 into vector<4x8x16xf32>
+    %8 = vector.insert %6, %7[] : f32 into vector<f32>
+    %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
+    %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     ```
   }];
-  let assemblyFormat = [{
-    $source `,` $dest $position attr-dict `:` type($source) `into` type($dest)
-  }];
+
+  let arguments = (ins
+    AnyType:$source,
+    AnyVectorOfAnyRank:$dest,
+    Variadic<Index>:$dynamic_position,
+    DenseI64ArrayAttr:$static_position
+  );
+  let results = (outs AnyVectorOfAnyRank:$result);
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$dest,
-      "ArrayRef<int64_t>":$position)>,
-    // Convenience builder which assumes all values are constant indices.
-    OpBuilder<(ins "Value":$source, "Value":$dest, "ValueRange":$position)>
+    OpBuilder<(ins "Value":$source, "Value":$dest, "int64_t":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "OpFoldResult":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<int64_t>":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<OpFoldResult>":$position)>,
   ];
+
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrStrName() { return "position"; }
     Type getSourceType() { return getSource().getType(); }
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
+
+    /// Return a vector with all the static and dynamic position indices.
+    SmallVector<OpFoldResult> getMixedPosition() {
+      OpBuilder builder(getContext());
+      return getMixedValues(getStaticPosition(), getDynamicPosition(), builder);
+    }
+
+    unsigned getNumIndices() {
+      return getStaticPosition().size();
+    }
+
+    bool hasDynamicPosition() {
+      return llvm::any_of(getDynamicPosition(),
+                          [](Value operand) { return operand != nullptr; });
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source `,` $dest custom<DynamicIndexList>($dynamic_position, $static_position)
+    attr-dict `:` type($source) `into` type($dest)
   }];
 
   let hasCanonicalizer = 1;
@@ -879,8 +887,6 @@ def Vector_InsertStridedSliceOp :
       "ArrayRef<int64_t>":$offsets, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrStrName() { return "offsets"; }
-    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -907,7 +913,7 @@ def Vector_OuterProductOp :
                 TCresVTEtIsSameAsOpBase<0, 1>>,
     DeclareOpInterfaceMethods<MaskableOpInterface>]>,
     Arguments<(ins AnyVector:$lhs, AnyType:$rhs,
-               Variadic<AnyVector>:$acc,
+               Optional<AnyVector>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyVector)> {
   let summary = "vector outerproduct with optional fused add";
@@ -934,11 +940,9 @@ def Vector_OuterProductOp :
     lowered to the LLVMIR dialect, this form emits `llvm.intr.fma`, which
     is guaranteed to lower to actual `fma` instructions on x86.
 
-    An optional kind attribute may be specified to be add/mul/min/max
-    for int/fp, and and/or/xor for int only. The default is "add", in which
-    case the operation returns a fused multiply-add. In other cases it returns
-    a multiply followed by the appropriate operation (for example, a compare and
-    select for "max").
+    An optional kind attribute may be specified to be: `add`/`mul`/`minsi`
+    /`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for integers, and `add`/`mul`
+    /`minf`/`maxf`/`minimumf`/`maximumf` for floats. The default is `add`.
 
     Example:
 
@@ -950,7 +954,7 @@ def Vector_OuterProductOp :
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
-    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<max>}:
+    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxf>}:
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
@@ -971,15 +975,12 @@ def Vector_OuterProductOp :
       return getRhs().getType();
     }
     VectorType getOperandVectorTypeACC() {
-      return getAcc().empty()
-        ? VectorType()
-        : ::llvm::cast<VectorType>((*getAcc().begin()).getType());
+      return getAcc()
+        ? ::llvm::cast<VectorType>(getAcc().getType())
+        : VectorType();
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
-    }
-    static constexpr StringRef getKindAttrStrName() {
-      return "kind";
     }
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
@@ -1096,12 +1097,6 @@ def Vector_ReshapeOp :
     int64_t getNumOutputShapeSizes() { return getOutputShape().size(); }
 
     void getFixedVectorSizes(SmallVectorImpl<int64_t> &results);
-
-    static StringRef getFixedVectorSizesAttrStrName() {
-      return "fixed_vector_sizes";
-    }
-    static StringRef getInputShapeAttrStrName() { return "input_shape"; }
-    static StringRef getOutputShapeAttrStrName() { return "output_shape"; }
   }];
 
   let assemblyFormat = [{
@@ -1148,9 +1143,6 @@ def Vector_ExtractStridedSliceOp :
       "ArrayRef<int64_t>":$sizes, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrStrName() { return "offsets"; }
-    static StringRef getSizesAttrStrName() { return "sizes"; }
-    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
@@ -1175,7 +1167,8 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-      AttrSizedOperandSegments
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
     ]>,
     Arguments<(ins AnyShaped:$source,
                    Variadic<Index>:$indices,
@@ -1221,14 +1214,15 @@ def Vector_TransferReadOp :
     `0` are masked out and replaced with `padding`.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. Broadcast dimensions must always be
-    in-bounds. If specified, the `in_bounds` array length has to be equal to the
-    vector rank. In absence of the attribute, accesses along all dimensions
-    (except for broadcasts) may run out-of-bounds. A `vector.transfer_read` can
-    be lowered to a simple load if all dimensions are specified to be within
-    bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    Broadcast dimensions must always be in-bounds. In absence of the attribute,
+    accesses along all vector dimensions (except for broadcasts) may run
+    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1397,6 +1391,10 @@ def Vector_TransferReadOp :
   let extraClassDeclaration = [{
     // MaskableOpInterface methods.
     bool supportsPassthru() { return true; }
+
+    MutableOperandRange getDpsInitsMutable() {
+      return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -1457,18 +1455,15 @@ def Vector_TransferWriteOp :
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
 
-    An optional SSA value `mask` of the same shape as the vector type may be
-    specified to mask out elements. Elements whose corresponding mask element
-    is `0` are masked out.
-
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. If specified, the `in_bounds` array
-    length has to be equal to the vector rank. In absence of the attribute,
-    accesses along all dimensions may run out-of-bounds. A
-    `vector.transfer_write` can be lowered to a simple store if all dimensions
-    are specified to be within bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    In absence of the attribute, accesses along all vector dimensions may run
+    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -1557,9 +1552,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {1, 2};  // `source` operand
-    }
+    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
   }];
 
   let hasFolder = 1;
@@ -2210,12 +2203,6 @@ def Vector_TypeCastOp :
     super-vectorization operational. It can be seen as a special case of the
     `view` operation but scoped in the super-vectorization context.
 
-    Syntax:
-
-    ```
-    operation ::= `vector.type_cast` ssa-use : memref-type to memref-type
-    ```
-
     Example:
 
     ```mlir
@@ -2260,7 +2247,10 @@ def Vector_ConstantMaskOp :
     define a hyper-rectangular region within which elements values are set to 1
     (otherwise element values are set to 0). Each value of 'mask_dim_sizes' must
     be non-negative and not greater than the size of the corresponding vector
-    dimension (as opposed to vector.create_mask which allows this).
+    dimension (as opposed to vector.create_mask which allows this). Sizes that
+    correspond to scalable dimensions are implicitly multiplied by vscale,
+    though currently only zero (none set) or the size of the dim/vscale
+    (all set) are supported.
 
     Example:
 
@@ -2281,8 +2271,15 @@ def Vector_ConstantMaskOp :
   }];
 
   let extraClassDeclaration = [{
-    static StringRef getMaskDimSizesAttrStrName() { return "mask_dim_sizes"; }
+    /// Return the result type of this op.
+    VectorType getVectorType() {
+      return cast<VectorType>(getOperation()->getResultTypes()[0]);
+    }
+
+    /// Return whether the mask is a uniform vector of `1`s.
+    bool isAllOnesMask();
   }];
+
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
 }
@@ -2325,6 +2322,13 @@ def Vector_CreateMaskOp :
     // Build with mixed static/dynamic operands.
     OpBuilder<(ins "VectorType":$type, "ArrayRef<OpFoldResult>":$mixedOperands)>
   ];
+
+  let extraClassDeclaration = [{
+    /// Return the result type of this op.
+    VectorType getVectorType() {
+      return cast<VectorType>(getOperation()->getResultTypes()[0]);
+    }
+  }];
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -2426,14 +2430,13 @@ def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector, I64ArrayAttr:$transp)>,
-    Results<(outs AnyVectorOfAnyRank:$result)> {
+                 TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";
   let description = [{
     Takes a n-D vector and returns the transposed n-D vector defined by
     the permutation of ranks in the n-sized integer array attribute (in case
     of 0-D vectors the array attribute must be empty).
+
     In the operation
 
     ```mlir
@@ -2442,7 +2445,7 @@ def Vector_TransposeOp :
       to vector<d_trans[0] x .. x d_trans[n-1] x f32>
     ```
 
-    the transp array [i_1, .., i_n] must be a permutation of [0, .., n-1].
+    the `permutation` array [i_1, .., i_n] must be a permutation of [0, .., n-1].
 
     Example:
 
@@ -2454,8 +2457,13 @@ def Vector_TransposeOp :
                           [c, f] ]
     ```
   }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$vector,
+                       DenseI64ArrayAttr:$permutation);
+  let results = (outs AnyVectorOfAnyRank:$result);
+
   let builders = [
-    OpBuilder<(ins "Value":$vector, "ArrayRef<int64_t>":$transp)>
+    OpBuilder<(ins "Value":$vector, "ArrayRef<int64_t>":$permutation)>
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
@@ -2464,11 +2472,9 @@ def Vector_TransposeOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
-    void getTransp(SmallVectorImpl<int64_t> &results);
-    static StringRef getTranspAttrStrName() { return "transp"; }
   }];
   let assemblyFormat = [{
-    $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
+    $vector `,` $permutation attr-dict `:` type($vector) `to` type($result)
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -2476,32 +2482,62 @@ def Vector_TransposeOp :
 }
 
 def Vector_PrintOp :
-  Vector_Op<"print", []>,
-  Arguments<(ins Type<Or<[
+  Vector_Op<"print", [
+    PredOpTrait<
+      "`source` or `punctuation` are not set when printing strings",
+      CPred<"!getStringLiteral() || (!getSource() && getPunctuation() == PrintPunctuation::NewLine)">
+    >,
+  ]>,
+  Arguments<(ins Optional<Type<Or<[
     AnyVectorOfAnyRank.predicate,
     AnyInteger.predicate, Index.predicate, AnyFloat.predicate
-  ]>>:$source)> {
+  ]>>>:$source, DefaultValuedAttr<Vector_PrintPunctuation,
+                      "::mlir::vector::PrintPunctuation::NewLine">:$punctuation,
+                OptionalAttr<Builtin_StringAttr>:$stringLiteral)
+  > {
   let summary = "print operation (for testing and debugging)";
   let description = [{
-    Prints the source vector (or scalar) to stdout in human readable
-    format (for testing and debugging). No return value.
+    Prints the source vector (or scalar) to stdout in a human-readable format
+    (for testing and debugging). No return value.
 
     Example:
 
     ```mlir
-    %0 = arith.constant 0.0 : f32
-    %1 = vector.broadcast %0 : f32 to vector<4xf32>
-    vector.print %1 : vector<4xf32>
+    %v = arith.constant dense<0.0> : vector<4xf32>
+    vector.print %v : vector<4xf32>
+    ```
 
-    when lowered to LLVM, the vector print is unrolled into
-    elementary printing method calls that at runtime will yield
+    When lowered to LLVM, the vector print is decomposed into elementary
+    printing method calls that at runtime will yield:
 
+    ```
     ( 0.0, 0.0, 0.0, 0.0 )
+    ```
 
-    on stdout when linked with a small runtime support library,
-    which only needs to provide a few printing methods (single
-    value for all data types, opening/closing bracket, comma,
-    newline).
+    This is printed to stdout via a small runtime support library, which only
+    needs to provide a few printing methods (single value for all data
+    types, opening/closing bracket, comma, newline).
+
+    By default `vector.print` adds a newline after the vector, but this can be
+    controlled by the `punctuation` attribute. For example, to print a comma
+    after instead do:
+
+    ```mlir
+    vector.print %v : vector<4xf32> punctuation <comma>
+    ```
+
+    Note that it is possible to use the punctuation attribute alone. The
+    following will print a single newline:
+
+    ```mlir
+    vector.print punctuation <newline>
+    ```
+
+    Additionally, to aid with debugging and testing `vector.print` can also
+    print constant strings:
+
+    ```mlir
+    vector.print str "Hello, World!"
     ```
   }];
   let extraClassDeclaration = [{
@@ -2509,7 +2545,28 @@ def Vector_PrintOp :
       return getSource().getType();
     }
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source)";
+  let builders = [
+    OpBuilder<(ins "PrintPunctuation":$punctuation), [{
+      build($_builder, $_state, {}, punctuation, {});
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$source), [{
+      build($_builder, $_state, source, PrintPunctuation::NewLine);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$source, "PrintPunctuation":$punctuation), [{
+      build($_builder, $_state, source, punctuation, {});
+    }]>,
+    OpBuilder<(ins "::llvm::StringRef":$string), [{
+      build($_builder, $_state, {}, PrintPunctuation::NewLine, $_builder.getStringAttr(string));
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+      ($source^ `:` type($source))?
+        oilist(
+            `str` $stringLiteral
+          | `punctuation` $punctuation)
+        attr-dict
+    }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2711,10 +2768,10 @@ def Vector_ScanOp :
   let description = [{
     Performs an inclusive/exclusive scan on an n-D vector along a single
     dimension returning an n-D result vector using the given
-    operation (add/mul/min/max for int/fp and and/or/xor for
-    int only) and a specified value for the initial value. The operator
-    returns the result of scan as well as the result of the last
-    reduction in the scan.
+    operation (`add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
+    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats),
+    and a specified value for the initial value. The operator returns the
+    result of scan as well as the result of the last reduction in the scan.
 
     Example:
 
@@ -2730,8 +2787,6 @@ def Vector_ScanOp :
                    CArg<"bool", "true">:$inclusive)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrStrName() { return "kind"; }
-    static StringRef getReductionDimAttrStrName() { return "reduction_dim"; }
     VectorType getSourceType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -2908,4 +2963,4 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
   }];
 }
 
-#endif // VECTOR_OPS
+#endif // MLIR_DIALECT_VECTOR_IR_VECTOR_OPS

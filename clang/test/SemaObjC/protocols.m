@@ -44,8 +44,6 @@
 @protocol PROTO4 <p1, p2, PROTO, PROTO3, p3> 
 @end
 
-
-// rdar://6771034
 @protocol XX;
 @protocol YY <XX>  // Use of declaration of XX here should not cause a warning.
 - zz;

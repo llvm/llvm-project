@@ -38,7 +38,8 @@ public:
 
   ~GDBRemoteDynamicRegisterInfo() override = default;
 
-  bool UpdateARM64SVERegistersInfos(uint64_t vg);
+  void UpdateARM64SVERegistersInfos(uint64_t vg);
+  void UpdateARM64SMERegistersInfos(uint64_t svg);
 };
 
 class GDBRemoteRegisterContext : public RegisterContext {
@@ -77,7 +78,9 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
-  bool AArch64SVEReconfigure();
+  bool RegisterWriteCausesReconfigure(const llvm::StringRef name) override;
+
+  bool ReconfigureRegisterInfo() override;
 
 protected:
   friend class ThreadGDBRemote;

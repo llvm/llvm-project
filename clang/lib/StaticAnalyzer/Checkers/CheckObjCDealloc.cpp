@@ -754,7 +754,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
 
 ObjCDeallocChecker::ObjCDeallocChecker()
     : NSObjectII(nullptr), SenTestCaseII(nullptr), XCTestCaseII(nullptr),
-      CIFilterII(nullptr) {
+      Block_releaseII(nullptr), CIFilterII(nullptr) {
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
@@ -1045,8 +1045,8 @@ bool ObjCDeallocChecker::isReleasedByCIFilterDealloc(
   StringRef IvarName = PropImpl->getPropertyIvarDecl()->getName();
 
   const char *ReleasePrefix = "input";
-  if (!(PropName.startswith(ReleasePrefix) ||
-        IvarName.startswith(ReleasePrefix))) {
+  if (!(PropName.starts_with(ReleasePrefix) ||
+        IvarName.starts_with(ReleasePrefix))) {
     return false;
   }
 

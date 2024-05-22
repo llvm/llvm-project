@@ -407,7 +407,6 @@ namespace rdar8018245 {
 
 }
 
-// <rdar://problem/8248780>
 namespace Instantiate {
   template<typename T> struct X {
     operator T*();
@@ -455,7 +454,6 @@ namespace DeleteParam {
   };
 }
 
-// <rdar://problem/8427878>
 // Test that the correct 'operator delete' is selected to pair with
 // the unexpected placement 'operator new'.
 namespace PairedDelete {
@@ -646,4 +644,5 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
 #elif __cplusplus < 201103L
 // expected-error@-5 {{cannot allocate object of variably modified type}}
+// expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
 #endif

@@ -96,8 +96,8 @@ entry:
 define void @test_concat_fptrunc_v4f64_to_v4f32(<vscale x 4 x float>* %ptr) #1 {
 ; CHECK-LABEL: test_concat_fptrunc_v4f64_to_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:

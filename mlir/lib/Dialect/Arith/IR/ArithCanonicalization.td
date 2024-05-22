@@ -18,8 +18,11 @@ def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
-// Subtract two integer attributes and createa a new one with the result.
+// Subtract two integer attributes and create a new one with the result.
 def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Multiply two integer attributes and create a new one with the result.
+def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 
@@ -71,6 +74,13 @@ def AddIMulNegativeOneLhs :
            $y),
         (Arith_SubIOp $y, $x),
         [(IsScalarOrSplatNegativeOne $c0)]>;
+
+// muli(muli(x, c0), c1) -> muli(x, c0 * c1)
+def MulIMulIConstant :
+    Pat<(Arith_MulIOp:$res
+          (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)))>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp
@@ -222,6 +232,55 @@ def CmpIExtUI :
          (Constraint<
             CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
                   "$0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+def GetScalarOrVectorTrueAttribute :
+  NativeCodeCall<"cast<TypedAttr>(getBoolAttribute($0.getType(), true))">;
+
+// select(not(pred), a, b) => select(pred, b, a)
+def SelectNotCond :
+    Pat<(SelectOp (Arith_XOrIOp $pred, (ConstantLikeMatcher APIntAttr:$ones)), $a, $b),
+        (SelectOp $pred, $b, $a),
+        [(IsScalarOrSplatNegativeOne $ones)]>;
+
+// select(pred, select(pred, a, b), c) => select(pred, a, c)
+def RedundantSelectTrue :
+    Pat<(SelectOp $pred, (SelectOp $pred, $a, $b), $c),
+        (SelectOp $pred, $a, $c)>;
+
+// select(pred, a, select(pred, b, c)) => select(pred, a, c)
+def RedundantSelectFalse :
+    Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
+        (SelectOp $pred, $a, $c)>;
+
+// select(predA, select(predB, x, y), y) => select(and(predA, predB), x, y)
+def SelectAndCond :
+    Pat<(SelectOp $predA, (SelectOp $predB, $x, $y), $y),
+        (SelectOp (Arith_AndIOp $predA, $predB), $x, $y)>;
+
+// select(predA, select(predB, y, x), y) => select(and(predA, not(predB)), x, y)
+def SelectAndNotCond :
+    Pat<(SelectOp $predA, (SelectOp $predB, $y, $x), $y),
+        (SelectOp (Arith_AndIOp $predA,
+                                (Arith_XOrIOp $predB,
+                                (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
+                  $x, $y)>;
+
+// select(predA, x, select(predB, x, y)) => select(or(predA, predB), x, y)
+def SelectOrCond :
+    Pat<(SelectOp $predA, $x, (SelectOp $predB, $x, $y)),
+        (SelectOp (Arith_OrIOp $predA, $predB), $x, $y)>;
+
+// select(predA, x, select(predB, y, x)) => select(or(predA, not(predB)), x, y)
+def SelectOrNotCond :
+    Pat<(SelectOp $predA, $x, (SelectOp $predB, $y, $x)),
+        (SelectOp (Arith_OrIOp $predA,
+                               (Arith_XOrIOp $predB,
+                               (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
+                  $x, $y)>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastOp

@@ -4,8 +4,8 @@ declare hidden i1 @compare(ptr) align 2
 declare hidden { i8, ptr } @getType(ptr) align 2
 
 ; CHECK-LABEL: @foo
-; CHECK-LABEL: @foo.1
-; CHECK-LABEL: @foo.2
+; CHECK-LABEL: @foo.specialized.1
+; CHECK-LABEL: @foo.specialized.2
 
 define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset) {
 entry:

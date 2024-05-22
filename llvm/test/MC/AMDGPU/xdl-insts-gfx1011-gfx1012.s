@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1011 -show-encoding %s | FileCheck %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1012 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1011 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1012 -show-encoding %s | FileCheck %s
 
 v_dot2c_f32_f16_e32 v5, v1, v2
 // CHECK: encoding: [0x01,0x05,0x0a,0x04]

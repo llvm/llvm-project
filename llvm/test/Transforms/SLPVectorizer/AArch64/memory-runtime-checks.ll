@@ -654,18 +654,17 @@ bb23:
 define void @single_membound(ptr %arg, ptr %arg1, double %x) {
 ; CHECK-LABEL: @single_membound(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = fsub double [[X:%.*]], 9.900000e+01
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[TMP:%.*]] = fsub double [[X:%.*]], 9.900000e+01
 ; CHECK-NEXT:    store double [[TMP]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARG1:%.*]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub double 1.000000e+00, [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[ARG]], i64 2
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb15:
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP]], 2.000000e+01
-; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP13]], 3.000000e+01
-; CHECK-NEXT:    store double [[TMP17]], ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 2.000000e+01, double 3.000000e+01>
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1232,27 +1231,25 @@ define void @crash_no_tracked_instructions(ptr %arg, ptr %arg.2, ptr %arg.3, i1 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T19:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[T20:%.*]] = load float, ptr [[ARG_3:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[T20]], i32 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB22:%.*]], label [[BB30:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[T23:%.*]] = fmul float [[T20]], 9.900000e+01
-; CHECK-NEXT:    [[T24:%.*]] = fmul float [[T23]], 9.900000e+01
 ; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds float, ptr [[T19]], i64 2
-; CHECK-NEXT:    [[T26:%.*]] = fmul float [[T23]], 1.000000e+01
-; CHECK-NEXT:    store float [[T26]], ptr [[T25]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[T23]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 9.900000e+01, float 1.000000e+01>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    store float [[TMP4]], ptr [[T25]], align 4
 ; CHECK-NEXT:    [[T27:%.*]] = load float, ptr [[ARG_2:%.*]], align 8
-; CHECK-NEXT:    [[T28:%.*]] = fadd float [[T24]], 2.000000e+01
-; CHECK-NEXT:    [[T29:%.*]] = fadd float [[T26]], 2.000000e+01
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP3]], <float 2.000000e+01, float 2.000000e+01>
 ; CHECK-NEXT:    br label [[BB30]]
 ; CHECK:       bb30:
-; CHECK-NEXT:    [[T31:%.*]] = phi float [ [[T28]], [[BB22]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T32:%.*]] = phi float [ [[T29]], [[BB22]] ], [ [[T20]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[BB22]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]
 ; CHECK:       bb36:
-; CHECK-NEXT:    [[T37:%.*]] = fmul float [[T31]], 3.000000e+00
-; CHECK-NEXT:    store float [[T37]], ptr [[ARG_3]], align 4
-; CHECK-NEXT:    [[T39:%.*]] = fmul float [[T32]], 3.000000e+00
-; CHECK-NEXT:    [[T40:%.*]] = getelementptr inbounds float, ptr [[ARG_3]], i64 1
-; CHECK-NEXT:    store float [[T39]], ptr [[T40]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[ARG_3]], align 4
 ; CHECK-NEXT:    br label [[BB41:%.*]]
 ; CHECK:       bb41:
 ; CHECK-NEXT:    ret void

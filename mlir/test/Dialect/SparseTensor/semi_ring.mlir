@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
-#SM = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 #trait = {
   indexing_maps = [
@@ -19,13 +19,13 @@ module {
   // operation, and the values can be change "in-place".
   //
   // CHECK-LABEL: func.func @add_only_where_nonzero(
-  // CHECK-SAME:    %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> {
+  // CHECK-SAME:    %[[VAL_0:.*]]: tensor<8x8xf64, #sparse{{[0-9]*}}>) -> tensor<8x8xf64, #sparse{{[0-9]*}}> {
   // CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 8 : index
   // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
   // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
   // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 2.000000e+00 : f64
-  // CHECK-DAG:     %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-  // CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
+  // CHECK-DAG:     %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+  // CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
   // CHECK:         scf.for %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_1]] step %[[VAL_3]] {
   // CHECK:           %[[VAL_8:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_7]]] : memref<?xindex>
   // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_7]], %[[VAL_3]] : index
@@ -36,8 +36,8 @@ module {
   // CHECK:             memref.store %[[VAL_13]], %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xf64>
   // CHECK:           } {"Emitted from" = "linalg.generic"}
   // CHECK:         } {"Emitted from" = "linalg.generic"}
-  // CHECK:         %[[VAL_14:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>
-  // CHECK:         return %[[VAL_14]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>
+  // CHECK:         %[[VAL_14:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
+  // CHECK:         return %[[VAL_14]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
   // CHECK:       }
   func.func @add_only_where_nonzero(%argA: tensor<8x8xf64, #SM>) -> tensor<8x8xf64, #SM> {
     %c = arith.constant 2.0 : f64

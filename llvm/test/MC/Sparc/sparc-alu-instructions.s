@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s
 
         ! CHECK: add %g0, %g0, %g0    ! encoding: [0x80,0x00,0x00,0x00]
         add %g0, %g0, %g0

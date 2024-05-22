@@ -24,7 +24,7 @@ static void computeEHOnlyBlocks(FunctionT &F, DenseSet<BlockT *> &EHBlocks) {
   DenseMap<BlockT *, Status> Statuses;
 
   auto GetStatus = [&](BlockT *BB) {
-    if (Statuses.find(BB) != Statuses.end())
+    if (Statuses.contains(BB))
       return Statuses[BB];
     else
       return Unknown;

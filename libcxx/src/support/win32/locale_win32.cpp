@@ -17,8 +17,8 @@ int __libcpp_vasprintf(char **sptr, const char *__restrict fmt, va_list ap);
 
 using std::__libcpp_locale_guard;
 
-// FIXME: base currently unused. Needs manual work to construct the new locale
-locale_t newlocale( int mask, const char * locale, locale_t /*base*/ )
+// FIXME: base and mask currently unused. Needs manual work to construct the new locale
+locale_t newlocale(int /*mask*/, const char * locale, locale_t /*base*/)
 {
     return {_create_locale( LC_ALL, locale ), locale};
 }

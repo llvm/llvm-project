@@ -50,20 +50,40 @@ void Broadcaster::CheckInWithManager() {
 }
 
 llvm::SmallVector<std::pair<ListenerSP, uint32_t &>, 4>
-Broadcaster::BroadcasterImpl::GetListeners() {
+Broadcaster::BroadcasterImpl::GetListeners(uint32_t event_mask,
+                                           bool include_primary) {
   llvm::SmallVector<std::pair<ListenerSP, uint32_t &>, 4> listeners;
-  listeners.reserve(m_listeners.size());
+  size_t max_count = m_listeners.size();
+  if (include_primary)
+    max_count++;
+  listeners.reserve(max_count);
 
   for (auto it = m_listeners.begin(); it != m_listeners.end();) {
     lldb::ListenerSP curr_listener_sp(it->first.lock());
-    if (curr_listener_sp && it->second) {
-      listeners.emplace_back(std::move(curr_listener_sp), it->second);
+    if (curr_listener_sp) {
+      if (it->second & event_mask)
+        listeners.emplace_back(std::move(curr_listener_sp), it->second);
       ++it;
     } else
+      // If our listener_wp didn't resolve, then we should remove this entry.
       it = m_listeners.erase(it);
   }
+  if (include_primary && m_primary_listener_sp)
+    listeners.emplace_back(m_primary_listener_sp, m_primary_listener_mask);
 
   return listeners;
+}
+
+bool Broadcaster::BroadcasterImpl::HasListeners(uint32_t event_mask) {
+  if (m_primary_listener_sp)
+    return true;
+  for (auto it = m_listeners.begin(); it != m_listeners.end(); it++) {
+    // Don't return a listener if the other end of the WP is gone:
+    lldb::ListenerSP curr_listener_sp(it->first.lock());
+    if (curr_listener_sp && (it->second & event_mask))
+      return true;
+  }
+  return false;
 }
 
 void Broadcaster::BroadcasterImpl::Clear() {
@@ -75,6 +95,7 @@ void Broadcaster::BroadcasterImpl::Clear() {
     pair.first->BroadcasterWillDestruct(&m_broadcaster);
 
   m_listeners.clear();
+  m_primary_listener_sp.reset();
 }
 
 Broadcaster *Broadcaster::BroadcasterImpl::GetBroadcaster() {
@@ -122,7 +143,11 @@ Broadcaster::BroadcasterImpl::AddListener(const lldb::ListenerSP &listener_sp,
 
   bool handled = false;
 
-  for (auto &pair : GetListeners()) {
+  if (listener_sp == m_primary_listener_sp)
+    // This already handles all bits so just return the mask:
+    return event_mask;
+
+  for (auto &pair : GetListeners(UINT32_MAX, false)) {
     if (pair.first == listener_sp) {
       handled = true;
       pair.second |= event_mask;
@@ -151,11 +176,11 @@ bool Broadcaster::BroadcasterImpl::EventTypeHasListeners(uint32_t event_type) {
   if (!m_hijacking_listeners.empty() && event_type & m_hijacking_masks.back())
     return true;
 
-  for (auto &pair : GetListeners()) {
-    if (pair.second & event_type)
-      return true;
-  }
-  return false;
+  // The primary listener listens for all event bits:
+  if (m_primary_listener_sp)
+    return true;
+
+  return HasListeners(event_type);
 }
 
 bool Broadcaster::BroadcasterImpl::RemoveListener(
@@ -163,12 +188,33 @@ bool Broadcaster::BroadcasterImpl::RemoveListener(
   if (!listener)
     return false;
 
+  if (listener == m_primary_listener_sp.get()) {
+    // Primary listeners listen for all the event bits for their broadcaster,
+    // so remove this altogether if asked:
+    m_primary_listener_sp.reset();
+    return true;
+  }
+
   std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
-  for (auto &pair : GetListeners()) {
-    if (pair.first.get() == listener) {
-      pair.second &= ~event_mask;
-      return true;
+  for (auto it = m_listeners.begin(); it != m_listeners.end();) {
+    lldb::ListenerSP curr_listener_sp(it->first.lock());
+
+    if (!curr_listener_sp) {
+      // The weak pointer for this listener didn't resolve, lets' prune it
+      // as we go.
+      m_listeners.erase(it);
+      continue;
     }
+
+    if (curr_listener_sp.get() == listener) {
+      it->second &= ~event_mask;
+      // If we removed all the event bits from a listener, remove it from
+      // the list as well.
+      if (!it->second)
+        m_listeners.erase(it);
+      return true;
+    } else
+      it++;
   }
   return false;
 }
@@ -222,25 +268,34 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
              event_description.GetData(), unique,
              static_cast<void *>(hijacking_listener_sp.get()));
   }
+  ListenerSP primary_listener_sp
+      = hijacking_listener_sp ? hijacking_listener_sp : m_primary_listener_sp;
 
-  if (hijacking_listener_sp) {
-    if (unique && hijacking_listener_sp->PeekAtNextEventForBroadcasterWithType(
+  if (primary_listener_sp) {
+    if (unique && primary_listener_sp->PeekAtNextEventForBroadcasterWithType(
                       &m_broadcaster, event_type))
       return;
-    hijacking_listener_sp->AddEvent(event_sp);
-    if (m_shadow_listener)
-      m_shadow_listener->AddEvent(event_sp);
+    // Add the pending listeners but not if the event is hijacked, since that
+    // is given sole access to the event stream it is hijacking.
+    // Make sure to do this before adding the event to the primary or it might
+    // start handling the event before we're done adding all the pending
+    // listeners.
+    // Also, don't redo the check for unique here, since otherwise that could
+    // be racy, and if we send the event to the primary listener then we SHOULD 
+    // send it to the secondary listeners or they will get out of sync with the
+    // primary listener.
+    if (!hijacking_listener_sp) {
+      for (auto &pair : GetListeners(event_type, false))
+        event_sp->AddPendingListener(pair.first);
+    }
+    primary_listener_sp->AddEvent(event_sp);
   } else {
-    for (auto &pair : GetListeners()) {
-      if (!(pair.second & event_type))
-        continue;
+    for (auto &pair : GetListeners(event_type)) {
       if (unique && pair.first->PeekAtNextEventForBroadcasterWithType(
                         &m_broadcaster, event_type))
         continue;
 
       pair.first->AddEvent(event_sp);
-      if (m_shadow_listener)
-        m_shadow_listener->AddEvent(event_sp);
     }
   }
 }
@@ -261,6 +316,15 @@ void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
     uint32_t event_type, EventData *event_data) {
   auto event_sp = std::make_shared<Event>(event_type, event_data);
   PrivateBroadcastEvent(event_sp, true);
+}
+
+void Broadcaster::BroadcasterImpl::SetPrimaryListener(lldb::ListenerSP
+                                                      listener_sp) {
+  // This might have already been added as a normal listener, make sure we
+  // don't hold two copies.
+  RemoveListener(listener_sp.get(), UINT32_MAX);
+  m_primary_listener_sp = listener_sp;
+                                                      
 }
 
 bool Broadcaster::BroadcasterImpl::HijackBroadcaster(

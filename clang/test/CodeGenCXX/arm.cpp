@@ -20,7 +20,6 @@ public:
 };
 
 // The global dtor needs the right calling conv with -fno-use-cxa-atexit
-// rdar://7817590
 bar baz;
 
 // PR9593
@@ -245,7 +244,6 @@ namespace test4 {
   }
 }
 
-// <rdar://problem/8386802>: don't crash
 namespace test5 {
   struct A {
     ~A();
@@ -356,7 +354,6 @@ namespace test8 {
   }
 }
 
-//   rdar://12836470
 // Use a larger-than-mandated array cookie when allocating an
 // array whose type is overaligned.
 namespace test9 {

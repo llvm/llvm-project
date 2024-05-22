@@ -149,7 +149,15 @@ B {
 }
 )"[1]);
 
+class Incomplete; // #incomplete-type
+
+template <class T>
+class Class {
+  T value = {};
+};
+
 void errors(B b) {
+  ConstexprString cs;
   __builtin_dump_struct(); // expected-error {{too few arguments to function call, expected 2, have 0}}
   __builtin_dump_struct(1); // expected-error {{too few arguments to function call, expected 2, have 1}}
   __builtin_dump_struct(1, 2); // expected-error {{expected pointer to struct as 1st argument to '__builtin_dump_struct', found 'int'}}
@@ -157,5 +165,34 @@ void errors(B b) {
   __builtin_dump_struct(&b, Format, 0); // expected-error {{no matching function for call to 'Format'}}
                                         // expected-note@-1 {{in call to printing function with arguments '(0, "%s", "B")' while dumping struct}}
                                         // expected-note@#Format {{no known conversion from 'int' to 'ConstexprString &' for 1st argument}}
+  __builtin_dump_struct((Incomplete *)nullptr, Format, cs); // expected-error {{incomplete type 'Incomplete' where a complete type is required}}
+                                        // expected-note@#incomplete-type {{forward declaration of 'Incomplete'}}
+  // Ensure the Class<int> gets instantiated; otherwise crash happens.
+  __builtin_dump_struct((Class<int> *)nullptr, Format, cs);
 }
 #endif
+
+// Check that PseudoObjectExprBitfields:NumSubExprs doesn't overflow. This
+// would previously cause a crash.
+struct t1 {
+  int v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16,
+      v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31,
+      v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46,
+      v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61,
+      v62, v63, v64, v65, v66, v67, v68, v69, v70, v71, v72, v73, v74, v75, v76,
+      v77, v78, v79, v80, v81, v82, v83, v84, v85, v86, v87, v88, v89, v90, v91,
+      v92, v93, v94, v95, v96, v97, v98, v99;
+};
+
+struct t2 {
+  t1 v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16,
+      v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31,
+      v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46,
+      v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61,
+      v62, v63, v64, v65, v66, v67, v68, v69, v70, v71, v72, v73, v74, v75, v76,
+      v77, v78, v79, v80, v81, v82, v83, v84, v85, v86, v87, v88, v89, v90, v91,
+      v92, v93, v94, v95, v96, v97, v98, v99;
+};
+
+int printf(const char *, ...);
+void f1(t2 w) { __builtin_dump_struct(&w, printf); }

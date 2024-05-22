@@ -7,7 +7,7 @@ import os
 import sys
 
 from lit.TestingConfig import TestingConfig
-from lit import LitConfig, Test
+from lit import LitConfig, Test, util
 
 
 def chooseConfigFileFromDir(dir, config_names):
@@ -56,7 +56,7 @@ def getTestSuite(item, litConfig, cache):
         # configuration to load instead.
         config_map = litConfig.params.get("config_map")
         if config_map:
-            cfgpath = os.path.realpath(cfgpath)
+            cfgpath = util.abs_path_preserve_drive(cfgpath)
             target = config_map.get(os.path.normcase(cfgpath))
             if target:
                 cfgpath = target
@@ -67,13 +67,13 @@ def getTestSuite(item, litConfig, cache):
 
         cfg = TestingConfig.fromdefaults(litConfig)
         cfg.load_from_path(cfgpath, litConfig)
-        source_root = os.path.realpath(cfg.test_source_root or path)
-        exec_root = os.path.realpath(cfg.test_exec_root or path)
+        source_root = util.abs_path_preserve_drive(cfg.test_source_root or path)
+        exec_root = util.abs_path_preserve_drive(cfg.test_exec_root or path)
         return Test.TestSuite(cfg.name, source_root, exec_root, cfg), ()
 
     def search(path):
         # Check for an already instantiated test suite.
-        real_path = os.path.realpath(path)
+        real_path = util.abs_path_preserve_drive(path)
         res = cache.get(real_path)
         if res is None:
             cache[real_path] = res = search1(path)
@@ -130,7 +130,7 @@ def getLocalConfig(ts, path_in_suite, litConfig, cache):
     return search(path_in_suite)
 
 
-def getTests(path, litConfig, testSuiteCache, localConfigCache, indirectlyRunCheck):
+def getTests(path, litConfig, testSuiteCache, localConfigCache):
     # Find the test suite for this input and its relative path.
     ts, path_in_suite = getTestSuite(path, litConfig, testSuiteCache)
     if ts is None:
@@ -146,12 +146,11 @@ def getTests(path, litConfig, testSuiteCache, localConfigCache, indirectlyRunChe
         litConfig,
         testSuiteCache,
         localConfigCache,
-        indirectlyRunCheck,
     )
 
 
 def getTestsInSuite(
-    ts, path_in_suite, litConfig, testSuiteCache, localConfigCache, indirectlyRunCheck
+    ts, path_in_suite, litConfig, testSuiteCache, localConfigCache
 ):
     # Check that the source path exists (errors here are reported by the
     # caller).
@@ -164,41 +163,14 @@ def getTestsInSuite(
         test_dir_in_suite = path_in_suite[:-1]
         lc = getLocalConfig(ts, test_dir_in_suite, litConfig, localConfigCache)
 
-        # TODO: Stop checking for indirectlyRunCheck and lc.standalone_tests here
-        #       once we remove --no-indirectly-run-check, which is not needed anymore
-        #       now that we error out when trying to run a test that wouldn't be
-        #       discovered in the directory.
-        fallbackOnSingleTest = lc.test_format is None or not indirectlyRunCheck or lc.standalone_tests
-        tests = [Test.Test(ts, path_in_suite, lc)] if fallbackOnSingleTest else \
+        # If we don't have a test format or if we are running standalone tests,
+        # always "find" the test itself. Otherwise, we might find no tests at
+        # all, which is considered an error but isn't an error with standalone
+        # tests.
+        tests = [Test.Test(ts, path_in_suite, lc)] if lc.test_format is None or lc.standalone_tests else \
                 lc.test_format.getTestsForPath(ts, path_in_suite, litConfig, lc)
 
         for test in tests:
-            # Issue a error if the specified test would not be run if
-            # the user had specified the containing directory instead of
-            # of naming the test directly. This helps to avoid writing
-            # tests which are not executed. The check adds some performance
-            # overhead which might be important if a large number of tests
-            # are being run directly.
-            # This check can be disabled by using --no-indirectly-run-check or
-            # setting the standalone_tests variable in the suite's configuration.
-            if (
-                indirectlyRunCheck
-                and lc.test_format is not None
-                and not lc.standalone_tests
-            ):
-                found = False
-                for res in lc.test_format.getTestsInDirectory(
-                    ts, test_dir_in_suite, litConfig, lc
-                ):
-                    if test.getFullName() == res.getFullName():
-                        found = True
-                        break
-                if not found:
-                    litConfig.error(
-                        "%r would not be run indirectly: change name or LIT config"
-                        "(e.g. suffixes or standalone_tests variables)" % test.getFullName()
-                    )
-
             yield test
         return
 
@@ -260,7 +232,6 @@ def getTestsInSuite(
                 litConfig,
                 testSuiteCache,
                 localConfigCache,
-                indirectlyRunCheck,
             )
         else:
             subiter = getTestsInSuite(
@@ -269,7 +240,6 @@ def getTestsInSuite(
                 litConfig,
                 testSuiteCache,
                 localConfigCache,
-                indirectlyRunCheck,
             )
 
         N = 0
@@ -280,7 +250,7 @@ def getTestsInSuite(
             litConfig.warning("test suite %r contained no tests" % sub_ts.name)
 
 
-def find_tests_for_inputs(lit_config, inputs, indirectlyRunCheck):
+def find_tests_for_inputs(lit_config, inputs):
     """
     find_tests_for_inputs(lit_config, inputs) -> [Test]
 
@@ -288,26 +258,11 @@ def find_tests_for_inputs(lit_config, inputs, indirectlyRunCheck):
     tests to execute.
     """
 
-    # Expand '@...' form in inputs.
-    actual_inputs = []
-    for input in inputs:
-        if input.startswith("@"):
-            f = open(input[1:])
-            try:
-                for ln in f:
-                    ln = ln.strip()
-                    if ln:
-                        actual_inputs.append(ln)
-            finally:
-                f.close()
-        else:
-            actual_inputs.append(input)
-
     # Load the tests from the inputs.
     tests = []
     test_suite_cache = {}
     local_config_cache = {}
-    for input in actual_inputs:
+    for input in inputs:
         prev = len(tests)
         tests.extend(
             getTests(
@@ -315,7 +270,6 @@ def find_tests_for_inputs(lit_config, inputs, indirectlyRunCheck):
                 lit_config,
                 test_suite_cache,
                 local_config_cache,
-                indirectlyRunCheck,
             )[1]
         )
         if prev == len(tests):

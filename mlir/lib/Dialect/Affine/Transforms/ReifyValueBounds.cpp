@@ -70,9 +70,9 @@ OpFoldResult affine::materializeComputedBound(
         b.getIndexAttr(boundMap.getSingleConstantResult()));
   }
   // No affine.apply op is needed if the bound is a single SSA value.
-  if (auto expr = boundMap.getResult(0).dyn_cast<AffineDimExpr>())
+  if (auto expr = dyn_cast<AffineDimExpr>(boundMap.getResult(0)))
     return static_cast<OpFoldResult>(operands[expr.getPosition()]);
-  if (auto expr = boundMap.getResult(0).dyn_cast<AffineSymbolExpr>())
+  if (auto expr = dyn_cast<AffineSymbolExpr>(boundMap.getResult(0)))
     return static_cast<OpFoldResult>(
         operands[expr.getPosition() + boundMap.getNumDims()]);
   // General case: build affine.apply op.

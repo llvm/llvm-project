@@ -11,10 +11,10 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long ftell(::FILE *f);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FTELL_H

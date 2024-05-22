@@ -138,28 +138,32 @@ __rorl(unsigned long __x, uint32_t __y) {
 
 
 /* CLZ */
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clz(uint32_t __t) {
-  return (uint32_t)__builtin_clz(__t);
+  return __builtin_arm_clz(__t);
 }
 
-static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzl(unsigned long __t) {
-  return (unsigned long)__builtin_clzl(__t);
+#if __SIZEOF_LONG__ == 4
+  return __builtin_arm_clz(__t);
+#else
+  return __builtin_arm_clz64(__t);
+#endif
 }
 
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzll(uint64_t __t) {
-  return (uint64_t)__builtin_clzll(__t);
+  return __builtin_arm_clz64(__t);
 }
 
 /* CLS */
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __cls(uint32_t __t) {
   return __builtin_arm_cls(__t);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clsl(unsigned long __t) {
 #if __SIZEOF_LONG__ == 4
   return __builtin_arm_cls(__t);
@@ -168,7 +172,7 @@ __clsl(unsigned long __t) {
 #endif
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clsll(uint64_t __t) {
   return __builtin_arm_cls64(__t);
 }
@@ -585,6 +589,21 @@ __smusd(int16x2_t __a, int16x2_t __b) {
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __smusdx(int16x2_t __a, int16x2_t __b) {
   return __builtin_arm_smusdx(__a, __b);
+}
+#endif
+
+/* 8.6 Floating-point data-processing intrinsics */
+#if (defined(__ARM_FEATURE_DIRECTED_ROUNDING)    &&                         \
+  (__ARM_FEATURE_DIRECTED_ROUNDING))             &&                         \
+  (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
+static __inline__ double __attribute__((__always_inline__, __nodebug__))
+__rintn(double __a) {
+  return __builtin_roundeven(__a);
+}
+
+static __inline__ float __attribute__((__always_inline__, __nodebug__))
+__rintnf(float __a) {
+  return __builtin_roundevenf(__a);
 }
 #endif
 

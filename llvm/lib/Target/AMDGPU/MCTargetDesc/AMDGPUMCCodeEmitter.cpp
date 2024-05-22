@@ -49,6 +49,14 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueT16(const MCInst &MI, unsigned OpNo, APInt &Op,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+
+  void getMachineOpValueT16Lo128(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -254,6 +262,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -345,7 +354,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   // However, dst is encoded as EXEC for compatibility with SP3.
   if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
     assert((Encoding & 0xFF) == 0);
-    Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO);
+    Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
+                AMDGPU::HWEncoding::REG_IDX_MASK;
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -403,7 +413,10 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
-    support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
+    if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
+      Imm = Hi_32(Imm);
+
+    support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
 
     // Only one literal value allowed
     break;
@@ -488,11 +501,14 @@ void AMDGPUMCCodeEmitter::getAVOperandEncoding(
     const MCInst &MI, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
   unsigned Reg = MI.getOperand(OpNo).getReg();
-  uint64_t Enc = MRI.getEncodingValue(Reg);
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  bool IsVGPROrAGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
 
   // VGPR and AGPR have the same encoding, but SrcA and SrcB operands of mfma
   // instructions use acc[0:1] modifier bits to distinguish. These bits are
   // encoded as a virtual 9th bit of the register for these operands.
+  bool IsAGPR = false;
   if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_96RegClassID).contains(Reg) ||
@@ -507,9 +523,9 @@ void AMDGPUMCCodeEmitter::getAVOperandEncoding(
       MRI.getRegClass(AMDGPU::AReg_384RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AGPR_LO16RegClassID).contains(Reg))
-    Enc |= 512;
+    IsAGPR = true;
 
-  Op = Enc;
+  Op = Idx | (IsVGPROrAGPR << 8) | (IsAGPR << 9);
 }
 
 static bool needsPCRel(const MCExpr *Expr) {
@@ -540,10 +556,35 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg()){
-    Op = MRI.getEncodingValue(MO.getReg());
+    unsigned Enc = MRI.getEncodingValue(MO.getReg());
+    unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+    bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+    Op = Idx | (IsVGPR << 8);
     return;
   }
   unsigned OpNo = &MO - MI.begin();
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::getMachineOpValueT16(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  llvm_unreachable("TODO: Implement getMachineOpValueT16().");
+}
+
+void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg()) {
+    uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
+    unsigned RegIdx = Encoding & AMDGPU::HWEncoding::REG_IDX_MASK;
+    bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI;
+    bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+    assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
+    Op = (IsVGPR ? 0x100 : 0) | (IsHi ? 0x80 : 0) | RegIdx;
+    return;
+  }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
 }
 

@@ -158,4 +158,4 @@ declare void @llvm.trap() nounwind noreturn
 declare void @bees.a() nounwind
 declare void @bees.b() nounwind
 
-; CHECK: attributes #1 = { cold noreturn nounwind }
+; CHECK: attributes #1 = { cold noreturn nounwind memory(inaccessiblemem: write) }

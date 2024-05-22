@@ -7,29 +7,29 @@ define internal i32 @table_switch(i32 %x) {
 ; CHECK-NEXT:    bti
 ; CHECK-NEXT:    subs r1, r0, #1
 ; CHECK-NEXT:    cmp r1, #3
-; CHECK-NEXT:    bhi .LBB0_4
+; CHECK-NEXT:    bhi .LBB0_6
 ; CHECK-NEXT:  @ %bb.1: @ %entry
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    tbb [pc, r1]
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LJTI0_0:
-; CHECK-NEXT:    .byte (.LBB0_5-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .byte (.LBB0_3-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .byte (.LBB0_6-(.LCPI0_0+4))/2
 ; CHECK-NEXT:    .byte (.LBB0_7-(.LCPI0_0+4))/2
+; CHECK-NEXT:    .byte (.LBB0_3-(.LCPI0_0+4))/2
+; CHECK-NEXT:    .byte (.LBB0_4-(.LCPI0_0+4))/2
+; CHECK-NEXT:    .byte (.LBB0_5-(.LCPI0_0+4))/2
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB0_3: @ %bb2
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_4: @ %sw.epilog
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:  .LBB0_5: @ %return
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_6: @ %bb3
+; CHECK-NEXT:  .LBB0_4: @ %bb3
 ; CHECK-NEXT:    movs r0, #3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_7: @ %bb4
+; CHECK-NEXT:  .LBB0_5: @ %bb4
 ; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB0_6: @ %sw.epilog
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:  .LBB0_7: @ %return
 ; CHECK-NEXT:    bx lr
 entry:
   switch i32 %x, label %sw.epilog [

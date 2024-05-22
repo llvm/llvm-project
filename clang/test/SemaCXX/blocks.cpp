@@ -42,7 +42,6 @@ namespace test2 {
   }
 }
 
-// rdar: // 8382559
 namespace radar8382559 {
   void func(bool& outHasProperty);
 
@@ -102,8 +101,6 @@ namespace test5 {
 }
 
 
-// rdar://16356628
-//
 // Ensure that we can end function bodies while parsing an
 // expression that requires an explicitly-tracked cleanup object
 // (i.e. a block literal).

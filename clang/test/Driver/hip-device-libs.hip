@@ -168,12 +168,6 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI4
 
-// Test -mcode-object-version=3
-// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
-// RUN:   -mcode-object-version=3 \
-// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
-
 // Test -mcode-object-version=4
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=4 \
@@ -194,7 +188,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
 
 // Test -mcode-object-version=5 with old device library without abi_version_400.bc
-// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: not %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=5 \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \

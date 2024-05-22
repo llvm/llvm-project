@@ -37,6 +37,7 @@ for.end:
 ; Check for crash exposed by D76992.
 ; CHECK-LABEL: 'test'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: Live-in ir<14> = original trip-count
@@ -48,7 +49,7 @@ for.end:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
+; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
 ; CHECK-NEXT: Successor(s): pred.store
@@ -70,8 +71,8 @@ for.end:
 ; CHECK-NEXT:  Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
-; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successor
 ; CHECK-NEXT: }
 define void @test(ptr %ptr) {

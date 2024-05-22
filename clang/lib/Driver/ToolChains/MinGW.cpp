@@ -86,9 +86,9 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") ||
-        StringRef(Lib).startswith("ucrt") ||
-        StringRef(Lib).startswith("crtdll"))
+    if (StringRef(Lib).starts_with("msvcr") ||
+        StringRef(Lib).starts_with("ucrt") ||
+        StringRef(Lib).starts_with("crtdll"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -169,6 +169,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  if (!Args.hasFlag(options::OPT_fauto_import, options::OPT_fno_auto_import,
+                    true))
+    CmdArgs.push_back("--disable-auto-import");
+
   if (Arg *A = Args.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none")
@@ -192,13 +196,11 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else
     CmdArgs.push_back(OutputFile);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
   Args.AddLastArg(CmdArgs, options::OPT_r);
   Args.AddLastArg(CmdArgs, options::OPT_s);
   Args.AddLastArg(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
-  Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
 
   // Add asan_dynamic as the first import lib before other libs. This allows
   // asan to be initialized as early as possible to increase its instrumentation
@@ -239,9 +241,15 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
+
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, CmdArgs);
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
 
   // TODO: Add profile stuff here
@@ -519,8 +527,6 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
           .equals_insensitive("lld");
 }
 
-bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
-
 Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::PreprocessJobClass:
@@ -702,8 +708,13 @@ void toolchains::MinGW::addClangTargetOptions(
     }
   }
 
-  if (Arg *A = DriverArgs.getLastArgNoClaim(options::OPT_mthreads))
-    A->ignoreTargetSpecific();
+  CC1Args.push_back("-fno-use-init-array");
+
+  for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
+                   options::OPT_mconsole, options::OPT_mdll}) {
+    if (Arg *A = DriverArgs.getLastArgNoClaim(Opt))
+      A->ignoreTargetSpecific();
+  }
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

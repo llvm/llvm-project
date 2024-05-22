@@ -2289,10 +2289,7 @@ bool ARMPreAllocLoadStoreOpt::CanFormLdStDWord(
     return false;
 
   Align Alignment = (*Op0->memoperands_begin())->getAlign();
-  const Function &Func = MF->getFunction();
-  Align ReqAlign =
-      STI->hasV6Ops() ? TD->getABITypeAlign(Type::getInt64Ty(Func.getContext()))
-                      : Align(8); // Pre-v6 need 8-byte align
+  Align ReqAlign = STI->getDualLoadStoreAlignment();
   if (Alignment < ReqAlign)
     return false;
 
@@ -2832,9 +2829,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
               return Var == DbgVar;
             };
 
-            InstrVec.erase(
-                std::remove_if(InstrVec.begin(), InstrVec.end(), IsDbgVar),
-                InstrVec.end());
+            llvm::erase_if(InstrVec, IsDbgVar);
           }
           forEachDbgRegOperand(Instr,
                                [&](MachineOperand &Op) { Op.setReg(0); });

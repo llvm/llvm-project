@@ -24,6 +24,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 
 class CommandObjectObjC_ClassTable_Dump;
@@ -84,6 +85,11 @@ public:
                                strcmp(class_name, "NSCFType") == 0);
       }
       return (m_is_cf == eLazyBoolYes);
+    }
+
+    /// Determine whether this class is implemented in Swift.
+    virtual lldb::LanguageType GetImplementationLanguage() const {
+      return lldb::eLanguageTypeObjC;
     }
 
     virtual bool IsValid() = 0;

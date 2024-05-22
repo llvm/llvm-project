@@ -193,7 +193,7 @@ Offload Device Compilation
 The input file is compiled for each active device toolchain. The device
 compilation stage is performed differently from the host stage. Namely, we do
 not generate any offloading entries. This is set by passing the
-``-fopenmp-is-device`` flag to the front-end. We use the host bitcode to
+``-fopenmp-is-target-device`` flag to the front-end. We use the host bitcode to
 determine which symbols to export from the device. The bitcode file is passed in
 from the previous stage using the ``-fopenmp-host-ir-file-path`` flag.
 Compilation is otherwise performed as it would be for any other target triple.

@@ -204,11 +204,12 @@ M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
   return M68k::D1;
 }
 
-unsigned
+InlineAsm::ConstraintCode
 M68kTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  return StringSwitch<unsigned>(ConstraintCode)
-      .Case("Q", InlineAsm::Constraint_Q)
-      .Case("U", InlineAsm::Constraint_Um) // We borrow Constraint_Um for 'U'.
+  return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
+      .Case("Q", InlineAsm::ConstraintCode::Q)
+      // We borrow ConstraintCode::Um for 'U'.
+      .Case("U", InlineAsm::ConstraintCode::Um)
       .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
@@ -2896,7 +2897,7 @@ M68kTargetLowering::getConstraintType(StringRef Constraint) const {
 }
 
 void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                      std::string &Constraint,
+                                                      StringRef Constraint,
                                                       std::vector<SDValue> &Ops,
                                                       SelectionDAG &DAG) const {
   SDValue Result;
@@ -3049,9 +3050,8 @@ M68kTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
 /// Determines whether the callee is required to pop its own arguments.
 /// Callee pop is necessary to support tail calls.
-bool M68k::isCalleePop(CallingConv::ID CallingConv, bool IsVarArg,
-                       bool GuaranteeTCO) {
-  return false;
+bool M68k::isCalleePop(CallingConv::ID CC, bool IsVarArg, bool GuaranteeTCO) {
+  return CC == CallingConv::M68k_RTD && !IsVarArg;
 }
 
 // Return true if it is OK for this CMOV pseudo-opcode to be cascaded
@@ -3203,6 +3203,11 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   MachineBasicBlock *SinkMBB = F->CreateMachineBasicBlock(BB);
   F->insert(It, Copy0MBB);
   F->insert(It, SinkMBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+  Copy0MBB->setCallFrameSize(CallFrameSize);
+  SinkMBB->setCallFrameSize(CallFrameSize);
 
   // If the CCR register isn't dead in the terminator, then claim that it's
   // live into the sink and copy blocks.

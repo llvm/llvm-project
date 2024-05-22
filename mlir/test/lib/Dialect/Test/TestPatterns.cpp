@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace mlir;
 using namespace test;
@@ -238,6 +239,12 @@ struct TestPatternDriver
       llvm::cl::init(GreedyRewriteConfig().maxIterations)};
 };
 
+struct DumpNotifications : public RewriterBase::Listener {
+  void notifyOperationRemoved(Operation *op) override {
+    llvm::outs() << "notifyOperationRemoved: " << op->getName() << "\n";
+  }
+};
+
 struct TestStrictPatternDriver
     : public PassWrapper<TestStrictPatternDriver, OperationPass<func::FuncOp>> {
 public:
@@ -274,7 +281,9 @@ public:
       }
     });
 
+    DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
+    config.listener = &dumpNotifications;
     if (strictMode == "AnyOp") {
       config.strictMode = GreedyRewriteStrictness::AnyOp;
     } else if (strictMode == "ExistingAndNewOps") {
@@ -485,6 +494,8 @@ struct TestReturnTypeDriver
         // output would be in reverse order underneath `op` from which
         // the attributes and regions are used.
         invokeCreateWithInferredReturnType<OpWithInferTypeInterfaceOp>(op);
+        invokeCreateWithInferredReturnType<OpWithInferTypeAdaptorInterfaceOp>(
+            op);
         invokeCreateWithInferredReturnType<
             OpWithShapedTypeInferTypeInterfaceOp>(op);
       };
@@ -548,12 +559,12 @@ struct TestRegionRewriteBlockMovement : public ConversionPattern {
     // Inline this region into the parent region.
     auto &parentRegion = *op->getParentRegion();
     auto &opRegion = op->getRegion(0);
-    if (op->getAttr("legalizer.should_clone"))
+    if (op->getDiscardableAttr("legalizer.should_clone"))
       rewriter.cloneRegionBefore(opRegion, parentRegion, parentRegion.end());
     else
       rewriter.inlineRegionBefore(opRegion, parentRegion, parentRegion.end());
 
-    if (op->getAttr("legalizer.erase_old_blocks")) {
+    if (op->getDiscardableAttr("legalizer.erase_old_blocks")) {
       while (!opRegion.empty())
         rewriter.eraseBlock(&opRegion.front());
     }
@@ -666,7 +677,8 @@ struct TestUndoBlockErase : public ConversionPattern {
 
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
-  TestDropOpSignatureConversion(MLIRContext *ctx, TypeConverter &converter)
+  TestDropOpSignatureConversion(MLIRContext *ctx,
+                                const TypeConverter &converter)
       : ConversionPattern(converter, "test.drop_region_op", 1, ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -675,7 +687,7 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
     Block *entry = &region.front();
 
     // Convert the original entry arguments.
-    TypeConverter &converter = *getTypeConverter();
+    const TypeConverter &converter = *getTypeConverter();
     TypeConverter::SignatureConversion result(entry->getNumArguments());
     if (failed(converter.convertSignatureArgs(entry->getArgumentTypes(),
                                               result)) ||
@@ -1305,7 +1317,7 @@ struct TestSignatureConversionUndo
 /// materializations.
 struct TestTestSignatureConversionNoConverter
     : public OpConversionPattern<TestSignatureConversionNoConverterOp> {
-  TestTestSignatureConversionNoConverter(TypeConverter &converter,
+  TestTestSignatureConversionNoConverter(const TypeConverter &converter,
                                          MLIRContext *context)
       : OpConversionPattern<TestSignatureConversionNoConverterOp>(context),
         converter(converter) {}
@@ -1326,7 +1338,7 @@ struct TestTestSignatureConversionNoConverter
     return success();
   }
 
-  TypeConverter &converter;
+  const TypeConverter &converter;
 };
 
 /// Just forward the operands to the root op. This is essentially a no-op
@@ -1371,6 +1383,7 @@ struct TestTypeConversionDriver
 
   void runOnOperation() override {
     // Initialize the type converter.
+    SmallVector<Type, 2> conversionCallStack;
     TypeConverter converter;
 
     /// Add the legal set of type conversions.
@@ -1391,8 +1404,8 @@ struct TestTypeConversionDriver
     converter.addConversion(
         // Convert a recursive self-referring type into a non-self-referring
         // type named "outer_converted_type" that contains a SimpleAType.
-        [&](test::TestRecursiveType type, SmallVectorImpl<Type> &results,
-            ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
+        [&](test::TestRecursiveType type,
+            SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
           // If the type is already converted, return it to indicate that it is
           // legal.
           if (type.getName() == "outer_converted_type") {
@@ -1400,11 +1413,16 @@ struct TestTypeConversionDriver
             return success();
           }
 
+          conversionCallStack.push_back(type);
+          auto popConversionCallStack = llvm::make_scope_exit(
+              [&conversionCallStack]() { conversionCallStack.pop_back(); });
+
           // If the type is on the call stack more than once (it is there at
           // least once because of the _current_ call, which is always the last
           // element on the stack), we've hit the recursive case. Just return
           // SimpleAType here to create a non-recursive type as a result.
-          if (llvm::is_contained(callStack.drop_back(), type)) {
+          if (llvm::is_contained(ArrayRef(conversionCallStack).drop_back(),
+                                 type)) {
             results.push_back(test::SimpleAType::get(type.getContext()));
             return success();
           }

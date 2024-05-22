@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32 %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32 %s 2>&1 | FileCheck %s
 
 # We don't support the bopt option in the integrated assembler. Given it's
 # single pass nature, it would be quite difficult to implement currently.

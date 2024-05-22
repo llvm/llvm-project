@@ -29,24 +29,35 @@ config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
+config.gpu_compilation_format = "@MLIR_GPU_COMPILATION_TEST_FORMAT@"
 config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
+config.enable_sycl_runner = @MLIR_ENABLE_SYCL_RUNNER@
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
 config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
 config.mlir_run_arm_sve_tests = @MLIR_RUN_ARM_SVE_TESTS@
+# This is a workaround for the fact that LIT's:
+#   %if <cond>
+# requires <cond> to be in the set of available features. 
+# TODO: Update LIT's TestRunner so that this is not required.
+if config.mlir_run_arm_sve_tests:
+    config.available_features.add("mlir_arm_sve_tests")
 config.mlir_run_arm_sme_tests = @MLIR_RUN_ARM_SME_TESTS@
 config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
 config.mlir_run_riscv_vector_tests = "@MLIR_RUN_RISCV_VECTOR_TESTS@"
 config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
 config.mlir_run_cuda_sm80_tests = @MLIR_RUN_CUDA_SM80_TESTS@
 config.mlir_run_cuda_sm80_lt_tests = @MLIR_RUN_CUDA_SM80_LT_TESTS@
+config.mlir_run_cuda_sm90_tests = @MLIR_RUN_CUDA_SM90_TESTS@
 config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
 config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
 config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
+config.arm_emulator_mlir_cpu_runner_executable = "@ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE@"
 config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"
 config.arm_emulator_utils_lib_dir = "@ARM_EMULATOR_UTILS_LIB_DIR@"
+config.arm_sme_abi_routines_shlib = "@ARM_SME_ABI_ROUTINES_SHLIB@"
 config.riscv_vector_emulator_executable = "@RISCV_VECTOR_EMULATOR_EXECUTABLE@"
 config.riscv_vector_emulator_options = "@RISCV_VECTOR_EMULATOR_OPTIONS@"
 config.riscv_emulator_lli_executable = "@RISCV_EMULATOR_LLI_EXECUTABLE@"

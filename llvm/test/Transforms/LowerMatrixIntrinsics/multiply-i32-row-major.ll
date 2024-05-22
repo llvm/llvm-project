@@ -23,7 +23,7 @@ define <4 x i32> @multiply_2x2(<4 x i32> %a, <4 x i32> %b) {
 ; RM-NEXT:    [[TMP3:%.*]] = mul <1 x i32> [[SPLAT_SPLAT6]], [[BLOCK4]]
 ; RM-NEXT:    [[TMP4:%.*]] = add <1 x i32> [[TMP1]], [[TMP3]]
 ; RM-NEXT:    [[TMP5:%.*]] = shufflevector <1 x i32> [[TMP4]], <1 x i32> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP5]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[TMP5]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK7:%.*]] = shufflevector <2 x i32> [[SPLIT2]], <2 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT8:%.*]] = insertelement <1 x i32> poison, i32 [[TMP7]], i64 0
@@ -49,7 +49,7 @@ define <4 x i32> @multiply_2x2(<4 x i32> %a, <4 x i32> %b) {
 ; RM-NEXT:    [[TMP17:%.*]] = mul <1 x i32> [[SPLAT_SPLAT18]], [[BLOCK16]]
 ; RM-NEXT:    [[TMP18:%.*]] = add <1 x i32> [[TMP15]], [[TMP17]]
 ; RM-NEXT:    [[TMP19:%.*]] = shufflevector <1 x i32> [[TMP18]], <1 x i32> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP19]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[TMP19]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK19:%.*]] = shufflevector <2 x i32> [[SPLIT2]], <2 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP21:%.*]] = extractelement <2 x i32> [[SPLIT1]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT20:%.*]] = insertelement <1 x i32> poison, i32 [[TMP21]], i64 0
@@ -85,7 +85,7 @@ define <4 x i32> @multiply_1x2(<2 x i32> %a, <2 x i32> %b) {
 ; RM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT]], <1 x i32> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP1:%.*]] = mul <1 x i32> [[SPLAT_SPLAT]], [[BLOCK]]
 ; RM-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP2]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[TMP2]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK3:%.*]] = shufflevector <2 x i32> [[SPLIT2]], <2 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP4:%.*]] = extractelement <1 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT4:%.*]] = insertelement <1 x i32> poison, i32 [[TMP4]], i64 0
@@ -99,7 +99,7 @@ define <4 x i32> @multiply_1x2(<2 x i32> %a, <2 x i32> %b) {
 ; RM-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT7]], <1 x i32> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP9:%.*]] = mul <1 x i32> [[SPLAT_SPLAT8]], [[BLOCK6]]
 ; RM-NEXT:    [[TMP10:%.*]] = shufflevector <1 x i32> [[TMP9]], <1 x i32> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP10]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[TMP10]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK9:%.*]] = shufflevector <2 x i32> [[SPLIT2]], <2 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP12:%.*]] = extractelement <1 x i32> [[SPLIT1]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT10:%.*]] = insertelement <1 x i32> poison, i32 [[TMP12]], i64 0
@@ -137,7 +137,7 @@ define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; RM-NEXT:    [[TMP3:%.*]] = mul <1 x i32> [[SPLAT_SPLAT7]], [[BLOCK5]]
 ; RM-NEXT:    [[TMP4:%.*]] = add <1 x i32> [[TMP1]], [[TMP3]]
 ; RM-NEXT:    [[TMP5:%.*]] = shufflevector <1 x i32> [[TMP4]], <1 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
-; RM-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i32> undef, <3 x i32> [[TMP5]], <3 x i32> <i32 3, i32 1, i32 2>
+; RM-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i32> poison, <3 x i32> [[TMP5]], <3 x i32> <i32 3, i32 1, i32 2>
 ; RM-NEXT:    [[BLOCK8:%.*]] = shufflevector <3 x i32> [[SPLIT3]], <3 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT9:%.*]] = insertelement <1 x i32> poison, i32 [[TMP7]], i64 0
@@ -176,7 +176,7 @@ define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; RM-NEXT:    [[TMP24:%.*]] = mul <1 x i32> [[SPLAT_SPLAT25]], [[BLOCK23]]
 ; RM-NEXT:    [[TMP25:%.*]] = add <1 x i32> [[TMP22]], [[TMP24]]
 ; RM-NEXT:    [[TMP26:%.*]] = shufflevector <1 x i32> [[TMP25]], <1 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
-; RM-NEXT:    [[TMP27:%.*]] = shufflevector <3 x i32> undef, <3 x i32> [[TMP26]], <3 x i32> <i32 3, i32 1, i32 2>
+; RM-NEXT:    [[TMP27:%.*]] = shufflevector <3 x i32> poison, <3 x i32> [[TMP26]], <3 x i32> <i32 3, i32 1, i32 2>
 ; RM-NEXT:    [[BLOCK26:%.*]] = shufflevector <3 x i32> [[SPLIT3]], <3 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP28:%.*]] = extractelement <2 x i32> [[SPLIT1]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT27:%.*]] = insertelement <1 x i32> poison, i32 [[TMP28]], i64 0
@@ -215,7 +215,7 @@ define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; RM-NEXT:    [[TMP45:%.*]] = mul <1 x i32> [[SPLAT_SPLAT43]], [[BLOCK41]]
 ; RM-NEXT:    [[TMP46:%.*]] = add <1 x i32> [[TMP43]], [[TMP45]]
 ; RM-NEXT:    [[TMP47:%.*]] = shufflevector <1 x i32> [[TMP46]], <1 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
-; RM-NEXT:    [[TMP48:%.*]] = shufflevector <3 x i32> undef, <3 x i32> [[TMP47]], <3 x i32> <i32 3, i32 1, i32 2>
+; RM-NEXT:    [[TMP48:%.*]] = shufflevector <3 x i32> poison, <3 x i32> [[TMP47]], <3 x i32> <i32 3, i32 1, i32 2>
 ; RM-NEXT:    [[BLOCK44:%.*]] = shufflevector <3 x i32> [[SPLIT3]], <3 x i32> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP49:%.*]] = extractelement <2 x i32> [[SPLIT2]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT45:%.*]] = insertelement <1 x i32> poison, i32 [[TMP49]], i64 0

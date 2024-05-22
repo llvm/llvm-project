@@ -175,6 +175,7 @@ namespace {
 /// PrintRawCompoundStmt - Print a compound stmt without indenting the {, and
 /// with no newline after the }.
 void StmtPrinter::PrintRawCompoundStmt(CompoundStmt *Node) {
+  assert(Node && "Compound statement cannot be null");
   OS << "{" << NL;
   PrintFPPragmas(Node);
   for (auto *I : Node->body())
@@ -599,8 +600,10 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
 
   if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
     Indent() << "@finally";
-    PrintRawCompoundStmt(dyn_cast<CompoundStmt>(FS->getFinallyBody()));
-    OS << NL;
+    if (auto *CS = dyn_cast<CompoundStmt>(FS->getFinallyBody())) {
+      PrintRawCompoundStmt(CS);
+      OS << NL;
+    }
   }
 }
 
@@ -635,7 +638,7 @@ void StmtPrinter::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Node) {
 
 void StmtPrinter::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *Node) {
   Indent() << "@autoreleasepool";
-  PrintRawCompoundStmt(dyn_cast<CompoundStmt>(Node->getSubStmt()));
+  PrintRawCompoundStmt(cast<CompoundStmt>(Node->getSubStmt()));
   OS << NL;
 }
 
@@ -774,6 +777,11 @@ void StmtPrinter::VisitOMPSectionsDirective(OMPSectionsDirective *Node) {
 
 void StmtPrinter::VisitOMPSectionDirective(OMPSectionDirective *Node) {
   Indent() << "#pragma omp section";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPScopeDirective(OMPScopeDirective *Node) {
+  Indent() << "#pragma omp scope";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1193,7 +1201,7 @@ void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
 static bool isImplicitSelf(const Expr *E) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     if (const auto *PD = dyn_cast<ImplicitParamDecl>(DRE->getDecl())) {
-      if (PD->getParameterKind() == ImplicitParamDecl::ObjCSelf &&
+      if (PD->getParameterKind() == ImplicitParamKind::ObjCSelf &&
           DRE->getBeginLoc().isInvalid())
         return true;
     }
@@ -1833,6 +1841,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   PrintExpr(Node->getPtr());
   if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
       Node->getOp() != AtomicExpr::AO__atomic_load_n &&
+      Node->getOp() != AtomicExpr::AO__scoped_atomic_load_n &&
       Node->getOp() != AtomicExpr::AO__opencl_atomic_load &&
       Node->getOp() != AtomicExpr::AO__hip_atomic_load) {
     OS << ", ";
@@ -2290,9 +2299,10 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
   if (E->isParenTypeId())
     OS << ")";
 
-  CXXNewExpr::InitializationStyle InitStyle = E->getInitializationStyle();
-  if (InitStyle != CXXNewExpr::NoInit) {
-    bool Bare = InitStyle == CXXNewExpr::CallInit &&
+  CXXNewInitializationStyle InitStyle = E->getInitializationStyle();
+  if (InitStyle != CXXNewInitializationStyle::None &&
+      InitStyle != CXXNewInitializationStyle::Implicit) {
+    bool Bare = InitStyle == CXXNewInitializationStyle::Call &&
                 !isa<ParenListExpr>(E->getInitializer());
     if (Bare)
       OS << "(";

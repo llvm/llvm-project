@@ -31,6 +31,7 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/repeat_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
@@ -179,10 +180,9 @@ public:
     return __lhs.count() == 0 || __lhs.base() == __rhs.__end_;
   }
 
-  template<bool _OtherConst = !_Const>
+  template <bool _OtherConst = !_Const>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(const _Iter<_Const>& __lhs, const __sentinel& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const _Iter<_OtherConst>& __lhs, const __sentinel& __rhs) {
     return __lhs.count() == 0 || __lhs.base() == __rhs.__end_;
   }
 };
@@ -301,6 +301,31 @@ struct __fn {
                               *ranges::begin(__rng),
                               *ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n))
                               ); }
+// clang-format off
+#if _LIBCPP_STD_VER >= 23
+  // [range.take.overview]: the `repeat_view` "_RawRange models sized_range" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires(__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+    noexcept(noexcept(views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
+    -> decltype(      views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
+    { return          views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
+
+  // [range.take.overview]: the `repeat_view` "otherwise" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires(__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+    noexcept(noexcept(views::repeat(*__range.__value_, static_cast<_Dist>(__n))))
+    -> decltype(      views::repeat(*__range.__value_, static_cast<_Dist>(__n)))
+    { return          views::repeat(*__range.__value_, static_cast<_Dist>(__n)); }
+#endif
+// clang-format on
 
   // [range.take.overview]: the "otherwise" case.
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np,
@@ -308,6 +333,9 @@ struct __fn {
     // Note: without specifically excluding the other cases, GCC sees this overload as ambiguous with the other
     // overloads.
     requires (!(__is_empty_view<_RawRange> ||
+#if _LIBCPP_STD_VER >= 23
+                __is_repeat_specialization<_RawRange> ||
+#endif
                (__is_iota_specialization<_RawRange> &&
                 sized_range<_RawRange> &&
                 random_access_range<_RawRange>) ||

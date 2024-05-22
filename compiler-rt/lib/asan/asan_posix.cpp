@@ -138,9 +138,42 @@ void PlatformTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+#    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+        SANITIZER_SOLARIS
+  // After this point it's unsafe to execute signal handlers which may be
+  // instrumented. It's probably not just a Linux issue.
+  BlockSignals();
+#    endif
   AsanThread::TSDDtor(tsd);
 }
 #endif
+
+void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD
+  return;  // FIXME: Implement FutexWait.
+#  endif
+  auto before = []() {
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::LockGlobal();
+    }
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+    // stuff we need.
+    __lsan::LockThreads();
+    __lsan::LockAllocator();
+    StackDepotLockAll();
+  };
+  auto after = []() {
+    StackDepotUnlockAll();
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+    // the stuff we need.
+    __lsan::UnlockAllocator();
+    __lsan::UnlockThreads();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::UnlockGlobal();
+    }
+  };
+  pthread_atfork(before, after, after);
+}
 
 void InstallAtExitCheckLeaks() {
   if (CAN_SANITIZE_LEAKS) {

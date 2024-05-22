@@ -20,6 +20,8 @@ def err_drv_unsupported_opt_for_language_mode : Error<
   "unsupported option '%0' for language mode '%1'">;
 def err_drv_unsupported_option_argument : Error<
   "unsupported argument '%1' to option '%0'">;
+def err_drv_unsupported_option_argument_for_target : Error<
+  "unsupported argument '%1' to option '%0' for target '%2'">;
 def err_drv_unknown_stdin_type : Error<
   "-E or -x required when input is from standard input">;
 def err_drv_unknown_stdin_type_clang_cl : Error<
@@ -70,6 +72,16 @@ def err_drv_no_rocm_device_lib : Error<
 def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime; provide its path via '--rocm-path', or pass "
   "'-nogpuinc' to build without HIP runtime">;
+def err_drv_no_hipstdpar_lib : Error<
+  "cannot find HIP Standard Parallelism Acceleration library; provide it via "
+  "'--hipstdpar-path'">;
+def err_drv_no_hipstdpar_thrust_lib : Error<
+  "cannot find rocThrust, which is required by the HIP Standard Parallelism "
+  "Acceleration library; provide it via "
+  "'--hipstdpar-thrust-path'">;
+def err_drv_no_hipstdpar_prim_lib : Error<
+  "cannot find rocPrim, which is required by the HIP Standard Parallelism "
+  "Acceleration library; provide it via '--hipstdpar-prim-path'">;
 
 def err_drv_no_hipspv_device_lib : Error<
   "cannot find HIP device library%select{| for %1}0; provide its path via "
@@ -82,6 +94,9 @@ def err_drv_hipspv_no_hip_path : Error<
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
   "'%2'">;
+def warn_drv_multi_gpu_arch : Warning<
+  "multiple %0 architectures are detected: %1; only the first one is used for "
+  "'%2'">, InGroup<MultiGPU>;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "
@@ -169,8 +184,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
-def err_drv_minws_unsupported_input_type : Error<
-  "'-fminimize-whitespace' invalid for input of type %0">;
+def err_drv_opt_unsupported_input_type : Error<
+  "'%0' invalid for input of type %1">;
 def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
@@ -416,20 +431,26 @@ def warn_drv_assuming_mfloat_abi_is : Warning<
   "unknown platform, assuming -mfloat-abi=%0">;
 def warn_drv_unsupported_float_abi_by_lib : Warning<
   "float ABI '%0' is not supported by current library">,
-  InGroup<DiagGroup<"unsupported-abi">>;
+  InGroup<UnsupportedABI>;
 def warn_drv_no_floating_point_registers: Warning<
-  "'%0': selected processor lacks floating point registers; flag ignored">,
-  InGroup<OptionIgnored>;
+  "'%0': selected processor lacks floating point registers">,
+  InGroup<UnsupportedABI>;
 def warn_ignoring_ftabstop_value : Warning<
   "ignoring invalid -ftabstop value '%0', using default value %1">;
-def warn_drv_overriding_flag_option : Warning<
+def warn_drv_overriding_option : Warning<
   "overriding '%0' option with '%1'">,
-  InGroup<DiagGroup<"overriding-t-option">>;
+  InGroup<DiagGroup<"overriding-option">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
+def warn_drv_pch_ignoring_gch_file : Warning<
+  "precompiled header '%0' was ignored because it is not a clang PCH file">,
+  InGroup<IgnoredGCH>;
+def warn_drv_pch_ignoring_gch_dir : Warning<
+  "precompiled header directory '%0' was ignored because it contains no clang PCH files">,
+  InGroup<IgnoredGCH>;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
   InGroup<DiagGroup<"missing-sysroot">>;
 def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%1'">,
@@ -450,6 +471,9 @@ def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
+def warn_drv_large_data_threshold_invalid_code_model: Warning<
+  "'%0' only applies to medium code model">,
+  InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -507,6 +531,10 @@ def err_test_module_file_extension_format : Error<
 
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' can't be used with multiple arch options">;
+
+def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
+  "-fdelayed-template-parsing is deprecated after C++20">,
+  InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
 
 def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
@@ -572,16 +600,12 @@ def err_drv_unsupported_fpatchable_function_entry_argument : Error<
   "the second argument of '-fpatchable-function-entry' must be smaller than the first argument">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
-  "unable to find %0 directory, expected to be in '%1'">,
+  "unable to find %0 directory, expected to be in '%1' found via %2">,
   InGroup<InvalidOrNonExistentDirectory>, DefaultIgnore;
 
 def warn_drv_ps_force_pic : Warning<
   "option '%0' was ignored by the %1 toolchain, using '-fPIC'">,
   InGroup<OptionIgnored>;
-
-def warn_drv_ps_sdk_dir : Warning<
-  "environment variable '%0' is set, but points to invalid or nonexistent directory '%1'">,
-  InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
 def err_drv_defsym_invalid_symval : Error<"value is not an integer: %0">;
@@ -675,6 +699,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_drv_using_omit_rtti_component_without_no_rtti : Error<
+  "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
+
 def err_drv_ssp_missing_offset_argument : Error<
   "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
 
@@ -707,6 +734,11 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
+def err_drv_hlsl_bad_shader_required_in_target : Error<
+  "shader %select{model|stage}0 is required in target '%1' for HLSL code generation">;
+
+def err_drv_hlsl_bad_shader_unsupported : Error<
+  "shader %select{model|stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
     "Resulting DXIL will not be validated or signed for use in release environments.">,
     InGroup<DXILValidation>;
@@ -733,6 +765,12 @@ def warn_drv_loongarch_conflicting_implied_val : Warning<
   InGroup<OptionIgnored>;
 def err_drv_loongarch_invalid_mfpu_EQ : Error<
   "invalid argument '%0' to -mfpu=; must be one of: 64, 32, none, 0 (alias for none)">;
+def err_drv_loongarch_wrong_fpu_width_for_lsx : Error<
+  "wrong fpu width; LSX depends on 64-bit FPU.">;
+def err_drv_loongarch_wrong_fpu_width_for_lasx : Error<
+  "wrong fpu width; LASX depends on 64-bit FPU.">;
+def err_drv_loongarch_invalid_simd_option_combination : Error<
+  "invalid option combination; LASX depends on LSX.">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
@@ -742,4 +780,10 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+
+def warn_android_unversioned_fallback : Warning<
+  "Using unversioned Android target directory %0 for target %1. Unversioned"
+  " directories will not be used in Clang 19. Provide a versioned directory"
+  " for the target version or lower instead.">,
+  InGroup<DiagGroup<"android-unversioned-fallback">>;
 }

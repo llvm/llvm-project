@@ -162,9 +162,9 @@ ParsedAST TestTU::build() const {
 
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
-  return std::get<0>(indexHeaderSymbols(/*Version=*/"null", AST.getASTContext(),
-                                        AST.getPreprocessor(),
-                                        AST.getCanonicalIncludes()));
+  return std::get<0>(indexHeaderSymbols(
+      /*Version=*/"null", AST.getASTContext(), AST.getPreprocessor(),
+      *AST.getPragmaIncludes()));
 }
 
 RefSlab TestTU::headerRefs() const {
@@ -177,7 +177,7 @@ std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto Idx = std::make_unique<FileIndex>();
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
                       AST.getASTContext(), AST.getPreprocessor(),
-                      AST.getCanonicalIncludes());
+                      *AST.getPragmaIncludes());
   Idx->updateMain(testPath(Filename), AST);
   return std::move(Idx);
 }

@@ -371,7 +371,7 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
   InstructionCost SatCost = TTI.getIntrinsicInstrCost(
       IntrinsicCostAttributes(Intrinsic::fptosi_sat, SatTy, {In}, {FpTy}),
       TTI::TCK_RecipThroughput);
-  SatCost += TTI.getCastInstrCost(Instruction::SExt, SatTy, IntTy,
+  SatCost += TTI.getCastInstrCost(Instruction::SExt, IntTy, SatTy,
                                   TTI::CastContextHint::None,
                                   TTI::TCK_RecipThroughput);
 
@@ -400,7 +400,8 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 /// pessimistic codegen that has to account for setting errno and can enable
 /// vectorization.
 static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
-                     TargetLibraryInfo &TLI) {
+                     TargetLibraryInfo &TLI, AssumptionCache &AC,
+                     DominatorTree &DT) {
   // Match a call to sqrt mathlib function.
   auto *Call = dyn_cast<CallInst>(&I);
   if (!Call)
@@ -424,7 +425,8 @@ static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
   Value *Arg = Call->getArgOperand(0);
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
-       CannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI))) {
+       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, &I,
+                                   &DT))) {
     IRBuilder<> Builder(&I);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
@@ -491,7 +493,8 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %shr = lshr i32 %mul, 27
 // %idxprom = zext i32 %shr to i64
 // %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz1.table, i64 0,
-// i64 %idxprom %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+//     i64 %idxprom
+// %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // CASE 2:
 // %sub = sub i32 0, %x
@@ -499,8 +502,9 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %mul = mul i32 %and, 72416175
 // %shr = lshr i32 %mul, 26
 // %idxprom = zext i32 %shr to i64
-// %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table, i64
-// 0, i64 %idxprom %0 = load i16, i16* %arrayidx, align 2, !tbaa !8
+// %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table,
+//     i64 0, i64 %idxprom
+// %0 = load i16, i16* %arrayidx, align 2, !tbaa !8
 //
 // CASE 3:
 // %sub = sub i32 0, %x
@@ -508,16 +512,18 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %mul = mul i32 %and, 81224991
 // %shr = lshr i32 %mul, 27
 // %idxprom = zext i32 %shr to i64
-// %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table, i64
-// 0, i64 %idxprom %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+// %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table,
+//     i64 0, i64 %idxprom
+// %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
 //
 // CASE 4:
 // %sub = sub i64 0, %x
 // %and = and i64 %sub, %x
 // %mul = mul i64 %and, 283881067100198605
 // %shr = lshr i64 %mul, 58
-// %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @table, i64 0, i64
-// %shr %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+// %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @table, i64 0,
+//     i64 %shr
+// %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // All this can be lowered to @llvm.cttz.i32/64 intrinsic.
 static bool tryToRecognizeTableBasedCttz(Instruction &I) {
@@ -700,7 +706,10 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
        make_range(Start->getIterator(), End->getIterator())) {
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
-    if (++NumScanned > MaxInstrsToScan)
+
+    // Ignore debug info so that's not counted against MaxInstrsToScan.
+    // Otherwise debug info could affect codegen.
+    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
       return false;
   }
 
@@ -918,7 +927,8 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
 /// occur frequently and/or have more than a constant-length pattern match.
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
-                                TargetLibraryInfo &TLI, AliasAnalysis &AA) {
+                                TargetLibraryInfo &TLI, AliasAnalysis &AA,
+                                AssumptionCache &AC) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
@@ -943,7 +953,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
-      MadeChange |= foldSqrt(I, TTI, TLI);
+      MadeChange |= foldSqrt(I, TTI, TLI, AC, DT);
     }
   }
 
@@ -964,7 +974,7 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC);
   return MadeChange;
 }
 

@@ -24,7 +24,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -975,7 +974,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
     if (MinSize == 2 && Subtarget->is32Bit() &&
         Subtarget->isTargetWindowsMSVC() &&
         (Subtarget->getCPU().empty() || Subtarget->getCPU() == "pentium3")) {
-      // For compatibility reasons, when targetting MSVC, is is important to
+      // For compatibility reasons, when targetting MSVC, it is important to
       // generate a 'legacy' NOP in the form of a 8B FF MOV EDI, EDI. Some tools
       // rely specifically on this pattern to be able to patch a function.
       // This is only for 32-bit targets, when using /arch:IA32 or /arch:SSE.
@@ -1843,6 +1842,18 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVUPS##Suffix##rm:                                               \
   case X86::VMOVUPD##Suffix##rm:
 
+#define CASE_128_MOV_RM()                                                      \
+  MOV_CASE(, )   /* SSE */                                                     \
+  MOV_CASE(V, )  /* AVX-128 */                                                 \
+  MOV_AVX512_CASE(Z128)
+
+#define CASE_256_MOV_RM()                                                      \
+  MOV_CASE(V, Y) /* AVX-256 */                                                 \
+  MOV_AVX512_CASE(Z256)
+
+#define CASE_512_MOV_RM()                                                      \
+  MOV_AVX512_CASE(Z)
+
 #define CASE_ALL_MOV_RM()                                                      \
   MOV_CASE(, )   /* SSE */                                                     \
   MOV_CASE(V, )  /* AVX-128 */                                                 \
@@ -1854,8 +1865,8 @@ static void addConstantComments(const MachineInstr *MI,
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
     CASE_ALL_MOV_RM()
-  case X86::VBROADCASTF128:
-  case X86::VBROADCASTI128:
+  case X86::VBROADCASTF128rm:
+  case X86::VBROADCASTI128rm:
   case X86::VBROADCASTF32X4Z256rm:
   case X86::VBROADCASTF32X4rm:
   case X86::VBROADCASTF32X8rm:
@@ -1872,22 +1883,28 @@ static void addConstantComments(const MachineInstr *MI,
            "Unexpected number of operands!");
     if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       int NumLanes = 1;
-      // Override NumLanes for the broadcast instructions.
+      int BitWidth = 128;
+      int CstEltSize = C->getType()->getScalarSizeInBits();
+
+      // Get destination BitWidth + override NumLanes for the broadcasts.
       switch (MI->getOpcode()) {
-      case X86::VBROADCASTF128:        NumLanes = 2; break;
-      case X86::VBROADCASTI128:        NumLanes = 2; break;
-      case X86::VBROADCASTF32X4Z256rm: NumLanes = 2; break;
-      case X86::VBROADCASTF32X4rm:     NumLanes = 4; break;
-      case X86::VBROADCASTF32X8rm:     NumLanes = 2; break;
-      case X86::VBROADCASTF64X2Z128rm: NumLanes = 2; break;
-      case X86::VBROADCASTF64X2rm:     NumLanes = 4; break;
-      case X86::VBROADCASTF64X4rm:     NumLanes = 2; break;
-      case X86::VBROADCASTI32X4Z256rm: NumLanes = 2; break;
-      case X86::VBROADCASTI32X4rm:     NumLanes = 4; break;
-      case X86::VBROADCASTI32X8rm:     NumLanes = 2; break;
-      case X86::VBROADCASTI64X2Z128rm: NumLanes = 2; break;
-      case X86::VBROADCASTI64X2rm:     NumLanes = 4; break;
-      case X86::VBROADCASTI64X4rm:     NumLanes = 2; break;
+      CASE_128_MOV_RM()                NumLanes = 1; BitWidth = 128; break;
+      CASE_256_MOV_RM()                NumLanes = 1; BitWidth = 256; break;
+      CASE_512_MOV_RM()                NumLanes = 1; BitWidth = 512; break;
+      case X86::VBROADCASTF128rm:      NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTI128rm:      NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTF32X4Z256rm: NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTF32X4rm:     NumLanes = 4; BitWidth = 128; break;
+      case X86::VBROADCASTF32X8rm:     NumLanes = 2; BitWidth = 256; break;
+      case X86::VBROADCASTF64X2Z128rm: NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTF64X2rm:     NumLanes = 4; BitWidth = 128; break;
+      case X86::VBROADCASTF64X4rm:     NumLanes = 2; BitWidth = 256; break;
+      case X86::VBROADCASTI32X4Z256rm: NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTI32X4rm:     NumLanes = 4; BitWidth = 128; break;
+      case X86::VBROADCASTI32X8rm:     NumLanes = 2; BitWidth = 256; break;
+      case X86::VBROADCASTI64X2Z128rm: NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTI64X2rm:     NumLanes = 4; BitWidth = 128; break;
+      case X86::VBROADCASTI64X4rm:     NumLanes = 2; BitWidth = 256; break;
       }
 
       std::string Comment;
@@ -1895,10 +1912,12 @@ static void addConstantComments(const MachineInstr *MI,
       const MachineOperand &DstOp = MI->getOperand(0);
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+        int NumElements = CDS->getNumElements();
+        if ((BitWidth % CstEltSize) == 0)
+          NumElements = std::min<int>(NumElements, BitWidth / CstEltSize);
         CS << "[";
         for (int l = 0; l != NumLanes; ++l) {
-          for (int i = 0, NumElements = CDS->getNumElements(); i < NumElements;
-               ++i) {
+          for (int i = 0; i < NumElements; ++i) {
             if (i != 0 || l != 0)
               CS << ",";
             if (CDS->getElementType()->isIntegerTy())
@@ -1914,10 +1933,12 @@ static void addConstantComments(const MachineInstr *MI,
         CS << "]";
         OutStreamer.AddComment(CS.str());
       } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
+        int NumOperands = CV->getNumOperands();
+        if ((BitWidth % CstEltSize) == 0)
+          NumOperands = std::min<int>(NumOperands, BitWidth / CstEltSize);
         CS << "<";
         for (int l = 0; l != NumLanes; ++l) {
-          for (int i = 0, NumOperands = CV->getNumOperands(); i < NumOperands;
-               ++i) {
+          for (int i = 0; i < NumOperands; ++i) {
             if (i != 0 || l != 0)
               CS << ",";
             printConstant(CV->getOperand(i),

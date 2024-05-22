@@ -52,7 +52,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; TUNIT: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")

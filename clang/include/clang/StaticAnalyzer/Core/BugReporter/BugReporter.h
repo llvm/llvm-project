@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -26,7 +27,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -594,6 +594,9 @@ private:
 
   /// A vector of BugReports for tracking the allocated pointers and cleanup.
   std::vector<BugReportEquivClass *> EQClassesVector;
+
+  /// User-provided in-code suppressions.
+  BugSuppression UserSuppressions;
 
 public:
   BugReporter(BugReporterData &d);

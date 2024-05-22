@@ -70,6 +70,7 @@ public:
   bool IsTypeEnabled(common::TypeCategory category, std::int64_t kind) const;
 
   int SelectedIntKind(std::int64_t precision = 0) const;
+  int SelectedLogicalKind(std::int64_t bits = 1) const;
   int SelectedRealKind(std::int64_t precision = 0, std::int64_t range = 0,
       std::int64_t radix = 2) const;
 

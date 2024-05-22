@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DOUBLEDOUBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DOUBLEDOUBLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DOUBLE_DOUBLE_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DOUBLE_DOUBLE_H
 
 #include "multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/number_pair.h"
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
-using DoubleDouble = __llvm_libc::NumberPair<double>;
+using DoubleDouble = LIBC_NAMESPACE::NumberPair<double>;
 
 // The output of Dekker's FastTwoSum algorithm is correct, i.e.:
 //   r.hi + r.lo = a + b exactly
@@ -31,14 +31,15 @@ LIBC_INLINE constexpr DoubleDouble exact_add(double a, double b) {
 }
 
 // Assumption: |a.hi| >= |b.hi|
-LIBC_INLINE constexpr DoubleDouble add(DoubleDouble a, DoubleDouble b) {
+LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a,
+                                       const DoubleDouble &b) {
   DoubleDouble r = exact_add(a.hi, b.hi);
   double lo = a.lo + b.lo;
   return exact_add(r.hi, r.lo + lo);
 }
 
 // Assumption: |a.hi| >= |b|
-LIBC_INLINE constexpr DoubleDouble add(DoubleDouble a, double b) {
+LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a, double b) {
   DoubleDouble r = exact_add(a.hi, b);
   return exact_add(r.hi, r.lo + a.lo);
 }
@@ -75,14 +76,29 @@ LIBC_INLINE DoubleDouble exact_mult(double a, double b) {
   return r;
 }
 
-LIBC_INLINE DoubleDouble quick_mult(DoubleDouble a, DoubleDouble b) {
+LIBC_INLINE DoubleDouble quick_mult(double a, const DoubleDouble &b) {
+  DoubleDouble r = exact_mult(a, b.hi);
+  r.lo = multiply_add(a, b.lo, r.lo);
+  return r;
+}
+
+LIBC_INLINE DoubleDouble quick_mult(const DoubleDouble &a,
+                                    const DoubleDouble &b) {
   DoubleDouble r = exact_mult(a.hi, b.hi);
-  double t1 = fputil::multiply_add(a.hi, b.lo, r.lo);
-  double t2 = fputil::multiply_add(a.lo, b.hi, t1);
+  double t1 = multiply_add(a.hi, b.lo, r.lo);
+  double t2 = multiply_add(a.lo, b.hi, t1);
   r.lo = t2;
   return r;
 }
 
-} // namespace __llvm_libc::fputil
+// Assuming |c| >= |a * b|.
+template <>
+LIBC_INLINE DoubleDouble multiply_add<DoubleDouble>(const DoubleDouble &a,
+                                                    const DoubleDouble &b,
+                                                    const DoubleDouble &c) {
+  return add(c, quick_mult(a, b));
+}
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DOUBLEDOUBLE_H
+} // namespace LIBC_NAMESPACE::fputil
+
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DOUBLE_DOUBLE_H

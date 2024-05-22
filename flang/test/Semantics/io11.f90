@@ -80,10 +80,10 @@ module m4
 contains
   !ERROR: Dummy argument 0 of 'formattedreadproc' must be a data object
   !ERROR: Cannot use an alternate return as the passed-object dummy argument
-  subroutine formattedReadProc(*, unit, iotype, vlist, iostat, iomsg) 
+  subroutine formattedReadProc(*, unit, iotype, vlist, iostat, iomsg)
     !ERROR: Dummy argument 'unit' must be a data object
     !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
-    procedure(sin), intent(in) :: unit
+    procedure(real), intent(in) :: unit
     character(len=*), intent(in) :: iotype
     integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat

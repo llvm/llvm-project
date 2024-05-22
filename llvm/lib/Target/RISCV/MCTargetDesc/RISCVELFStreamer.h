@@ -15,9 +15,16 @@
 using namespace llvm;
 
 class RISCVELFStreamer : public MCELFStreamer {
-  static bool requiresFixups(MCContext &C, const MCExpr *Value,
-                             const MCExpr *&LHS, const MCExpr *&RHS);
   void reset() override;
+  void emitDataMappingSymbol();
+  void emitInstructionsMappingSymbol();
+  void emitMappingSymbol(StringRef Name);
+
+  enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
+
+  int64_t MappingSymbolCounter = 0;
+  DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
+  ElfMappingSymbol LastEMS = EMS_None;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
@@ -25,6 +32,10 @@ public:
                    std::unique_ptr<MCCodeEmitter> MCE)
       : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
 
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitBytes(StringRef Data) override;
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 };
 

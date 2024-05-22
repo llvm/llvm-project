@@ -123,19 +123,19 @@ define dso_local void @test_llequll_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_llequll_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzd r3, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 58, 63
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llequll_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzd r3, r3
 ; CHECK-LE-NEXT:    rldicl r3, r3, 58, 63
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b
@@ -157,19 +157,19 @@ define dso_local void @test_llequll_sext_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_llequll_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    addic r3, r3, -1
 ; CHECK-BE-NEXT:    subfe r3, r3, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llequll_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    addic r3, r3, -1
 ; CHECK-LE-NEXT:    subfe r3, r3, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b

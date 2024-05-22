@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify %s
 // RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -std=c++14 -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
 constexpr void doNothing() {}
 constexpr int gimme5() {
@@ -176,6 +180,13 @@ namespace FunctionReturnType {
 
   constexpr S s{ 12 };
   static_assert(s.fp == nullptr, ""); // zero-initialized function pointer.
+
+  constexpr int (*op)(int, int) = add;
+  constexpr bool b = op;
+  static_assert(op, "");
+  static_assert(!!op, "");
+  constexpr int (*op2)(int, int) = nullptr;
+  static_assert(!op2, "");
 }
 
 namespace Comparison {
@@ -256,4 +267,125 @@ namespace InvalidCall {
                    // ref-error {{must be initialized by a constant expression}} \
                    // ref-note {{in call to 'SS()'}}
 
+
+  /// This should not emit a diagnostic.
+  constexpr int f();
+  constexpr int a() {
+    return f();
+  }
+  constexpr int f() {
+    return 5;
+  }
+  static_assert(a() == 5, "");
+
+}
+
+namespace CallWithArgs {
+  /// This used to call problems during checkPotentialConstantExpression() runs.
+  constexpr void g(int a) {}
+  constexpr void f() {
+    g(0);
+  }
+}
+
+namespace ReturnLocalPtr {
+  constexpr int *p() {
+    int a = 12;
+    return &a; // ref-warning {{address of stack memory}} \
+               // expected-warning {{address of stack memory}}
+  }
+
+  /// GCC rejects the expression below, just like the new interpreter. The current interpreter
+  /// however accepts it and only warns about the function above returning an address to stack
+  /// memory. If we change the condition to 'p() != nullptr', it even succeeds.
+  static_assert(p() == nullptr, ""); // ref-error {{static assertion failed}} \
+                                     // expected-error {{not an integral constant expression}}
+
+  /// FIXME: The current interpreter emits diagnostics in the reference case below, but the
+  /// new one does not.
+  constexpr const int &p2() {
+    int a = 12; // ref-note {{declared here}}
+    return a; // ref-warning {{reference to stack memory associated with local variable}} \
+              // expected-warning {{reference to stack memory associated with local variable}}
+  }
+
+  static_assert(p2() == 12, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{read of variable whose lifetime has ended}} \
+                                 // expected-error {{not an integral constant expression}}
+}
+
+namespace VoidReturn {
+  /// ReturnStmt with an expression in a void function used to cause problems.
+  constexpr void bar() {}
+  constexpr void foo() {
+    return bar();
+  }
+  static_assert((foo(),1) == 1, "");
+}
+
+namespace InvalidReclRefs {
+  void param(bool b) { // ref-note {{declared here}} \
+                       // expected-note {{declared here}}
+    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{function parameter 'b' with unknown value}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{function parameter 'b' with unknown value}}
+    static_assert(true ? true : b, "");
+  }
+
+#if __cplusplus >= 202002L
+  consteval void param2(bool b) { // ref-note {{declared here}} \
+                                 // expected-note {{declared here}}
+    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{function parameter 'b' with unknown value}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{function parameter 'b' with unknown value}}
+  }
+#endif
+}
+
+namespace TemplateUndefined {
+  template<typename T> constexpr int consume(T);
+  // ok, not a constant expression.
+  const int k = consume(0);
+
+  template<typename T> constexpr int consume(T) { return 0; }
+  // ok, constant expression.
+  constexpr int l = consume(0);
+  static_assert(l == 0, "");
+}
+
+namespace PtrReturn {
+  constexpr void *a() {
+    return nullptr;
+  }
+  static_assert(a() == nullptr, "");
+}
+
+namespace Variadic {
+  struct S { int a; bool b; };
+
+  constexpr void variadic_function(int a, ...) {}
+  constexpr int f1() {
+    variadic_function(1, S{'a', false});
+    return 1;
+  }
+  static_assert(f1() == 1, "");
+
+  constexpr int variadic_function2(...) {
+    return 12;
+  }
+  static_assert(variadic_function2() == 12, "");
+  static_assert(variadic_function2(1, 2, 3, 4, 5) == 12, "");
+  static_assert(variadic_function2(1, variadic_function2()) == 12, "");
+
+  constexpr int (*VFP)(...) = variadic_function2;
+  static_assert(VFP() == 12, "");
+}
+
+namespace Packs {
+  template<typename...T>
+  constexpr int foo() { return sizeof...(T); }
+  static_assert(foo<int, char>() == 2, "");
+  static_assert(foo<>() == 0, "");
 }

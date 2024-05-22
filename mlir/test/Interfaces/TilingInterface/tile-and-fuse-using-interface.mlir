@@ -8,7 +8,7 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm = linalg.matmul {__internal_linalg_transform__ = "fusion"}
+  %gemm = linalg.matmul {__internal_transform__ = "fusion"}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %gemm : tensor<?x?xf32>
@@ -47,7 +47,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   %generic = linalg.generic {
-      __internal_linalg_transform__ = "fusion",
+      __internal_transform__ = "fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%gemm, %arg2 : tensor<?x?xf32>, tensor<?xf32>) outs(%init : tensor<?x?xf32>) {
@@ -97,7 +97,7 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
   %d2 = tensor.dim %rhs1, %c1 : tensor<?x?xf32>
   %init1 = tensor.empty(%d0, %d2) : tensor<?x?xf32>
   %fill1 = linalg.fill ins(%cst : f32) outs(%init1 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm1 = linalg.matmul  {__internal_linalg_transform__ = "gemm_fusion"}
+  %gemm1 = linalg.matmul  {__internal_transform__ = "gemm_fusion"}
       ins(%gemm0, %rhs1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%fill1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %gemm1 : tensor<?x?xf32>
 }
@@ -147,7 +147,7 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   %init1 = tensor.empty(%d1, %d0) : tensor<?x?xf32>
   %transpose = linalg.generic {
-      __internal_linalg_transform__ = "fusion",
+      __internal_transform__ = "fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%gemm : tensor<?x?xf32>) outs(%init1 : tensor<?x?xf32>) {
@@ -198,7 +198,7 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %3 = linalg.generic {
-      __internal_linalg_transform__ = "gemm_interchange_fusion",
+      __internal_transform__ = "gemm_interchange_fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%2 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) {
@@ -249,7 +249,7 @@ func.func @matmul_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                       affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d0, d1)>],
      iterator_types = ["parallel", "parallel"],
-     __internal_linalg_transform__ = "gemm_plus_gemm_fusion"}
+     __internal_transform__ = "gemm_plus_gemm_fusion"}
     ins(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%5 : tensor<?x?xf32>) {
     ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
@@ -302,7 +302,7 @@ func.func @matmul_plus_transpose_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x
                       affine_map<(d0, d1) -> (d1, d0)>,
                       affine_map<(d0, d1) -> (d0, d1)>],
      iterator_types = ["parallel", "parallel"],
-     __internal_linalg_transform__ = "gemm_plus_gemm_fusion"}
+     __internal_transform__ = "gemm_plus_gemm_fusion"}
     ins(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%5 : tensor<?x?xf32>) {
     ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
@@ -352,7 +352,7 @@ func.func @matmul_sequence_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>
   %1 = linalg.matmul ins(%0, %arg3 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%arg4 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N1] * [N1, N2]
   %2 = linalg.matmul
-    {__internal_linalg_transform__ = "gemm_sequence_fusion"}
+    {__internal_transform__ = "gemm_sequence_fusion"}
     ins(%1, %arg5 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%arg6 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N2] * [N2, N3]
   return %2 : tensor<?x?xf32>
@@ -369,15 +369,15 @@ func.func @matmul_sequence_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//   CHECK-DAG:   %[[N0:.+]] = tensor.dim %[[ARG0]], %[[C1]]
 //   CHECK-DAG:   %[[ORIG_GEMM1:.+]] = linalg.matmul ins(%[[ARG0]], %[[ARG1]] :
-//   CHECK-DAG:   %[[N1:.+]] = tensor.dim %[[ORIG_GEMM1]], %[[C1]]
 //   CHECK-DAG:   %[[ORIG_GEMM2:.+]] = linalg.matmul ins(%[[ORIG_GEMM1]], %[[ARG3]] :
 //   CHECK-DAG:   %[[M:.+]] = tensor.dim %[[ORIG_GEMM2]], %[[C0]]
 //   CHECK-DAG:   %[[N2:.+]] = tensor.dim %[[ORIG_GEMM2]], %[[C1]]
 //   CHECK-DAG:   %[[N3:.+]] = tensor.dim %[[ARG5]], %[[C1]]
 //       CHECK:   %[[R0:.+]] = scf.for %[[IV:[a-zA-Z0-9_]+]] =
 //  CHECK-SAME:       iter_args(%[[ARG8:.+]] = %[[ARG6]]) -> (tensor<?x?xf32>) {
+//   CHECK-DAG:     %[[N1:.+]] = tensor.dim %[[ORIG_GEMM1]], %[[C1]]
+//   CHECK-DAG:     %[[N0:.+]] = tensor.dim %[[ARG0]], %[[C1]]
 //   CHECK-DAG:     %[[TILE_M:.+]] = affine.min #[[MAP]](%[[IV]])[%[[M]]]
 //   CHECK-DAG:     %[[SLICE_ARG0:.+]] = tensor.extract_slice %[[ARG0]][%[[IV]], 0] [%[[TILE_M]], %[[N0]]]
 //   CHECK-DAG:     %[[SLICE_ARG1:.+]] = tensor.extract_slice %[[ARG1]][0, 0] [%[[N0]], %[[N1]]]
@@ -408,7 +408,7 @@ func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
       iterator_types = ["parallel", "reduction"]}
       ins(%arg0 : tensor<30x3xf32>) outs(%1 : tensor<30xf32>) {
     ^bb0(%arg1: f32, %arg2: f32):
-      %8 = arith.maxf %arg2, %arg1 : f32
+      %8 = arith.maximumf %arg2, %arg1 : f32
       linalg.yield %8 : f32
     } -> tensor<30xf32>
   %3 = tensor.empty() : tensor<30x3xf32>
@@ -425,7 +425,7 @@ func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
       linalg.yield %10, %9 : f32, f32
     } -> (tensor<30xf32>, tensor<30x3xf32>)
   %6 = linalg.generic {
-      __internal_linalg_transform__ = "reduction_sequence_fusion",
+      __internal_transform__ = "reduction_sequence_fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>,
                        affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}

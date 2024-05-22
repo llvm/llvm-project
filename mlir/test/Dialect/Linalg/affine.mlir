@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops | FileCheck %s
 
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
-// RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm='use-opaque-pointers=1' -o=/dev/null 2>&1
+// RUN: mlir-opt %s -convert-linalg-to-affine-loops -test-lower-to-llvm -o=/dev/null 2>&1
 
 func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = arith.constant 0 : index

@@ -369,8 +369,14 @@ static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
   if (!I->isAssociative() || !I->isCommutative())
     return false;
 
-  assert(I->getNumOperands() == 2 &&
-         "Associative/commutative operations should have 2 args!");
+  assert(I->getNumOperands() >= 2 &&
+         "Associative/commutative operations should have at least 2 args!");
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    // Accumulators must have an identity.
+    if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(), I->getType()))
+      return false;
+  }
 
   // Exactly one operand should be the result of the call instruction.
   if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
@@ -518,10 +524,10 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   // block, insert a PHI node for each argument of the function.
   // For now, we initialize each PHI to only have the real arguments
   // which are passed in.
-  Instruction *InsertPos = &HeaderBB->front();
+  BasicBlock::iterator InsertPos = HeaderBB->begin();
   for (Function::arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I) {
-    PHINode *PN =
-        PHINode::Create(I->getType(), 2, I->getName() + ".tr", InsertPos);
+    PHINode *PN = PHINode::Create(I->getType(), 2, I->getName() + ".tr");
+    PN->insertBefore(InsertPos);
     I->replaceAllUsesWith(PN); // Everyone use the PHI node now!
     PN->addIncoming(&*I, NewEntry);
     ArgumentPHIs.push_back(PN);
@@ -534,8 +540,10 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   Type *RetType = F.getReturnType();
   if (!RetType->isVoidTy()) {
     Type *BoolType = Type::getInt1Ty(F.getContext());
-    RetPN = PHINode::Create(RetType, 2, "ret.tr", InsertPos);
-    RetKnownPN = PHINode::Create(BoolType, 2, "ret.known.tr", InsertPos);
+    RetPN = PHINode::Create(RetType, 2, "ret.tr");
+    RetPN->insertBefore(InsertPos);
+    RetKnownPN = PHINode::Create(BoolType, 2, "ret.known.tr");
+    RetKnownPN->insertBefore(InsertPos);
 
     RetPN->addIncoming(PoisonValue::get(RetType), NewEntry);
     RetKnownPN->addIncoming(ConstantInt::getFalse(BoolType), NewEntry);
@@ -555,7 +563,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   // Start by inserting a new PHI node for the accumulator.
   pred_iterator PB = pred_begin(HeaderBB), PE = pred_end(HeaderBB);
   AccPN = PHINode::Create(F.getReturnType(), std::distance(PB, PE) + 1,
-                          "accumulator.tr", &HeaderBB->front());
+                          "accumulator.tr");
+  AccPN->insertBefore(HeaderBB->begin());
 
   // Loop over all of the predecessors of the tail recursion block.  For the
   // real entry into the function we seed the PHI with the identity constant for
@@ -566,8 +575,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      Constant *Identity = ConstantExpr::getBinOpIdentity(
-          AccRecInstr->getOpcode(), AccRecInstr->getType());
+      Constant *Identity =
+          ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
       AccPN->addIncoming(Identity, P);
     } else {
       AccPN->addIncoming(AccPN, P);
@@ -675,6 +684,12 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I)) {
       copyLocalTempOfByValueOperandIntoArguments(CI, I);
+      // When eliminating a tail call, we modify the values of the arguments.
+      // Therefore, if the byval parameter has a readonly attribute, we have to
+      // remove it. It is safe because, from the perspective of a caller, the
+      // byval parameter is always treated as "readonly," even if the readonly
+      // attribute is removed.
+      F.removeParamAttr(I, Attribute::ReadOnly);
       ArgumentPHIs[I]->addIncoming(F.getArg(I), BB);
     } else
       ArgumentPHIs[I]->addIncoming(CI->getArgOperand(I), BB);

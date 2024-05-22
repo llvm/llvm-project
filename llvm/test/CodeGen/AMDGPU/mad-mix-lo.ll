@@ -56,6 +56,53 @@ define half @mixlo_simple(float %src0, float %src1, float %src2) #0 {
   ret half %cvt.result
 }
 
+define half @mixlo_simpl_no_flush(float %src0, float %src1, float %src2) {
+; GFX1100-LABEL: mixlo_simpl_no_flush:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_simpl_no_flush:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_simpl_no_flush:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_simpl_no_flush:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_simpl_no_flush:
+; SDAG-CI:       ; %bb.0:
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_simpl_no_flush:
+; GISEL-CI:       ; %bb.0:
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.fmuladd.f32(float %src0, float %src1, float %src2)
+  %cvt.result = fptrunc float %result to half
+  ret half %cvt.result
+}
+
 define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
 ; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
@@ -101,6 +148,65 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+  %src0.ext = fpext half %src0 to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc float %result to half
+  ret half %cvt.result
+}
+
+define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush(half %src0, half %src1, half %src2) {
+; GFX1100-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX900-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX900-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; VI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; SDAG-CI:       ; %bb.0:
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: v_mad_mixlo_f16_f16lo_f16lo_f16lo_no_flush:
+; GISEL-CI:       ; %bb.0:
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GISEL-CI-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -2095,6 +2201,245 @@ define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %sr
   %cvt.result = fptrunc <4 x float> %clamp to <4 x half>
   ret <4 x half> %cvt.result
 }
+
+define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
+; GFX1100-LABEL: mixlo_zext:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_zext:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, v2
+; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_zext:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_zext:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_zext:
+; SDAG-CI:       ; %bb.0:
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_zext:
+; GISEL-CI:       ; %bb.0:
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.fmuladd.f32(float %src0, float %src1, float %src2)
+  %cvt.result = fptrunc float %result to half
+  %cvt.result.i16 = bitcast half %cvt.result to i16
+  %cvt.result.i32 = zext i16 %cvt.result.i16 to i32
+  ret i32 %cvt.result.i32
+}
+
+define half @mixlo_fptrunc(float %a, float %b) #0 {
+; GFX1100-LABEL: mixlo_fptrunc:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_fptrunc:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, 0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_fptrunc:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_fptrunc:
+; VI:       ; %bb.0: ; %.entry
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_fptrunc:
+; SDAG-CI:       ; %bb.0: ; %.entry
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_fptrunc:
+; GISEL-CI:       ; %bb.0: ; %.entry
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %mul = fmul float %a, %b
+  %trunc = fptrunc float %mul to half
+  ret half %trunc
+}
+
+define half @mixlo_fptrunc_no_flush(float %a, float %b) {
+; GFX1100-LABEL: mixlo_fptrunc_no_flush:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_fptrunc_no_flush:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_fptrunc_no_flush:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_fptrunc_no_flush:
+; VI:       ; %bb.0: ; %.entry
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_fptrunc_no_flush:
+; SDAG-CI:       ; %bb.0: ; %.entry
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_fptrunc_no_flush:
+; GISEL-CI:       ; %bb.0: ; %.entry
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %mul = fmul float %a, %b
+  %trunc = fptrunc float %mul to half
+  ret half %trunc
+}
+
+define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
+; GFX1100-LABEL: mixlo_fptrunc_abs_src_mod:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, 0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_fptrunc_abs_src_mod:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, |v0|, v1, 0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_fptrunc_abs_src_mod:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, 0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_fptrunc_abs_src_mod:
+; VI:       ; %bb.0: ; %.entry
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e64 v0, |v0|, v1
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_fptrunc_abs_src_mod:
+; SDAG-CI:       ; %bb.0: ; %.entry
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mul_f32_e64 v0, |v0|, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_fptrunc_abs_src_mod:
+; GISEL-CI:       ; %bb.0: ; %.entry
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mul_f32_e64 v0, |v0|, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %a.fabs = call float @llvm.fabs.f32(float %a)
+  %mul = fmul float %a.fabs, %b
+  %trunc = fptrunc float %mul to half
+  ret half %trunc
+}
+
+define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
+; GFX1100-LABEL: mixlo_fptrunc_neg_src_mod:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, 0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: mixlo_fptrunc_neg_src_mod:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, -v0, v1, 0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: mixlo_fptrunc_neg_src_mod:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, 0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mixlo_fptrunc_neg_src_mod:
+; VI:       ; %bb.0: ; %.entry
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-CI-LABEL: mixlo_fptrunc_neg_src_mod:
+; SDAG-CI:       ; %bb.0: ; %.entry
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_fptrunc_neg_src_mod:
+; GISEL-CI:       ; %bb.0: ; %.entry
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %a.fneg = fneg float %a
+  %mul = fmul float %a.fneg, %b
+  %trunc = fptrunc float %mul to half
+  ret half %trunc
+}
+
+declare float @llvm.fabs.f32(float) #1
 
 declare half @llvm.minnum.f16(half, half) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1

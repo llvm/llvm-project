@@ -77,6 +77,8 @@ public:
                 bool plugin_specified_by_name) override;
 
   CommandObject *GetPluginCommandObject() override;
+  
+  void DumpPluginHistory(Stream &s) override;
 
   // Creating a new process, or attaching to an existing one
   Status DoWillLaunch(Module *module) override;
@@ -156,9 +158,11 @@ public:
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
   // Process Watchpoints
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
 
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
 
@@ -467,6 +471,9 @@ private:
   // fork helpers
   void DidForkSwitchSoftwareBreakpoints(bool enable);
   void DidForkSwitchHardwareTraps(bool enable);
+
+  void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
+                               lldb::ThreadSP thread_sp);
 
   // Lists of register fields generated from the remote's target XML.
   // Pointers to these RegisterFlags will be set in the register info passed

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=avr -filetype=asm | FileCheck %s -check-prefix=CHECK-ASM
-; RUN: llc < %s -march=avr -filetype=obj | llvm-objdump -Dr - \
+; RUN: llc < %s -mtriple=avr -filetype=asm | FileCheck %s -check-prefix=CHECK-ASM
+; RUN: llc < %s -mtriple=avr -filetype=obj | llvm-objdump -Dr - \
 ; RUN:                                   | FileCheck %s -check-prefix=CHECK-OBJ
 
 ; Somewhat pruned test case from rustc using trait objects

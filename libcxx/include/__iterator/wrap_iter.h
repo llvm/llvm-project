@@ -45,9 +45,8 @@ public:
                 : __i_()
     {
     }
-    template <class _Up> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-        __wrap_iter(const __wrap_iter<_Up>& __u,
-            typename enable_if<is_convertible<_Up, iterator_type>::value>::type* = nullptr) _NOEXCEPT
+    template <class _Up, __enable_if_t<is_convertible<_Up, iterator_type>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_Up>& __u) _NOEXCEPT
             : __i_(__u.base())
     {
     }
@@ -57,7 +56,7 @@ public:
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT
     {
-        return _VSTD::__to_address(__i_);
+        return std::__to_address(__i_);
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter& operator++() _NOEXCEPT
     {
@@ -223,7 +222,7 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> >
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
     static element_type *to_address(pointer __w) _NOEXCEPT {
-        return _VSTD::__to_address(__w.base());
+        return std::__to_address(__w.base());
     }
 };
 

@@ -23,6 +23,8 @@
 #define KMP_OS_DARWIN 0
 #define KMP_OS_WINDOWS 0
 #define KMP_OS_HURD 0
+#define KMP_OS_SOLARIS 0
+#define KMP_OS_WASI 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
 #ifdef _WIN32
@@ -70,13 +72,25 @@
 #define KMP_OS_HURD 1
 #endif
 
+#if (defined __sun__ && defined __svr4__)
+#undef KMP_OS_SOLARIS
+#define KMP_OS_SOLARIS 1
+#endif
+
+#if (defined __wasi__) || (defined __EMSCRIPTEN__)
+#undef KMP_OS_WASI
+#define KMP_OS_WASI 1
+#endif
+
 #if (1 != KMP_OS_LINUX + KMP_OS_DRAGONFLY + KMP_OS_FREEBSD + KMP_OS_NETBSD +   \
-              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD)
+              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD +  \
+              KMP_OS_SOLARIS + KMP_OS_WASI)
 #error Unknown OS
 #endif
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD || KMP_OS_SOLARIS ||        \
+    KMP_OS_WASI
 #undef KMP_OS_UNIX
 #define KMP_OS_UNIX 1
 #endif
@@ -93,6 +107,8 @@
 #define KMP_ARCH_MIPS64 0
 #define KMP_ARCH_RISCV64 0
 #define KMP_ARCH_LOONGARCH64 0
+#define KMP_ARCH_VE 0
+#define KMP_ARCH_S390X 0
 
 #if KMP_OS_WINDOWS
 #if defined(_M_AMD64) || defined(__x86_64)
@@ -142,6 +158,12 @@
 #elif defined __loongarch__ && __loongarch_grlen == 64
 #undef KMP_ARCH_LOONGARCH64
 #define KMP_ARCH_LOONGARCH64 1
+#elif defined __ve__
+#undef KMP_ARCH_VE
+#define KMP_ARCH_VE 1
+#elif defined __s390x__
+#undef KMP_ARCH_S390X
+#define KMP_ARCH_S390X 1
 #endif
 #endif
 
@@ -181,6 +203,10 @@
 #define KMP_ARCH_ARM 1
 #endif
 
+#if defined(__wasm32__)
+#define KMP_ARCH_WASM 1
+#endif
+
 #if defined(__MIC__) || defined(__MIC2__)
 #define KMP_MIC 1
 #if __MIC2__ || __KNC__
@@ -197,7 +223,8 @@
 #endif
 
 /* Specify 32 bit architectures here */
-#define KMP_32_BIT_ARCH (KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS)
+#define KMP_32_BIT_ARCH                                                        \
+  (KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM)
 
 // Platforms which support Intel(R) Many Integrated Core Architecture
 #define KMP_MIC_SUPPORTED                                                      \
@@ -206,7 +233,8 @@
 // TODO: Fixme - This is clever, but really fugly
 #if (1 != KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 +     \
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
-              KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64)
+              KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
+              KMP_ARCH_S390X + KMP_ARCH_WASM)
 #error Unknown or unsupported architecture
 #endif
 

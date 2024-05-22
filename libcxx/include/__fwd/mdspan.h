@@ -32,24 +32,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Layout policy with a mapping which corresponds to FORTRAN-style array layouts
 struct layout_left {
-  template <class Extents>
+  template <class _Extents>
   class mapping;
 };
 
 // Layout policy with a mapping which corresponds to C-style array layouts
 struct layout_right {
-  template <class Extents>
+  template <class _Extents>
   class mapping;
 };
 
-/*
-// Will be implemented with follow on revision
 // Layout policy with a unique mapping where strides are arbitrary
 struct layout_stride {
-  template<class Extents>
-    class mapping;
+  template <class _Extents>
+  class mapping;
 };
-*/
 
 #endif // _LIBCPP_STD_VER >= 23
 

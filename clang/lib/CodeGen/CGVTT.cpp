@@ -42,8 +42,8 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
                                   llvm::GlobalVariable::LinkageTypes Linkage,
                                   const CXXRecordDecl *RD) {
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/true);
-  llvm::ArrayType *ArrayType =
-      llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
+  llvm::ArrayType *ArrayType = llvm::ArrayType::get(
+      CGM.GlobalsInt8PtrTy, Builder.getVTTComponents().size());
 
   SmallVector<llvm::GlobalVariable *, 8> VTables;
   SmallVector<VTableAddressPointsMapTy, 8> VTableAddressPoints;
@@ -81,9 +81,6 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true,
          /*InRangeIndex=*/1);
 
-     Init = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(Init,
-                                                                 CGM.Int8PtrTy);
-
      VTTComponents.push_back(Init);
   }
 
@@ -96,6 +93,11 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
 
   if (CGM.supportsCOMDAT() && VTT->isWeakForLinker())
     VTT->setComdat(CGM.getModule().getOrInsertComdat(VTT->getName()));
+
+  // Set the visibility. This will already have been set on the VTT declaration.
+  // Set it again, now that we have a definition, as the implicit visibility can
+  // apply differently to definitions.
+  CGM.setGVProperties(VTT, RD);
 }
 
 llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
@@ -112,9 +114,9 @@ llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
 
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
-  llvm::ArrayType *ArrayType =
-    llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
-  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(CGM.Int8PtrTy);
+  llvm::ArrayType *ArrayType = llvm::ArrayType::get(
+      CGM.GlobalsInt8PtrTy, Builder.getVTTComponents().size());
+  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(CGM.GlobalsInt8PtrTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, ArrayType, llvm::GlobalValue::ExternalLinkage, Align);

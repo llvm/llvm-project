@@ -59,9 +59,7 @@ using namespace object;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -73,14 +71,9 @@ enum ID {
 #include "Options.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -99,7 +92,7 @@ enum class DWARFVerify : uint8_t {
   All = Input | Output,
   Auto = Input | OutputOnValidInput,
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
-  Default = None // FIXME: Auto
+  Default = Auto
 #else
   Default = None
 #endif
@@ -114,7 +107,6 @@ struct DsymutilOptions {
   bool DumpStab = false;
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
-  bool PaperTrailWarnings = false;
   bool ForceKeepFunctionForStatic = false;
   std::string SymbolMap;
   std::string OutputFile;
@@ -203,11 +195,6 @@ static Error verifyOptions(const DsymutilOptions &Options) {
       !Options.OutputFile.empty())
     return make_error<StringError>(
         "cannot use -o with multiple inputs in flat mode.",
-        errc::invalid_argument);
-
-  if (Options.PaperTrailWarnings && Options.InputIsYAMLDebugMap)
-    return make_error<StringError>(
-        "paper trail warnings are not supported for YAML input.",
         errc::invalid_argument);
 
   if (!Options.ReproducerPath.empty() &&
@@ -311,7 +298,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
-  Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -397,9 +383,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (Options.DumpDebugMap || Options.LinkOpts.Verbose)
     Options.LinkOpts.Threads = 1;
 
-  if (getenv("RC_DEBUG_OPTIONS"))
-    Options.PaperTrailWarnings = true;
-
   if (opt::Arg *RemarksPrependPath = Args.getLastArg(OPT_remarks_prepend_path))
     Options.LinkOpts.RemarksPrependPath = RemarksPrependPath->getValue();
 
@@ -414,6 +397,12 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
+
+  if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
+    Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
+
+  for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
+    Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -498,15 +487,17 @@ static Error createBundleDir(StringRef BundleBase) {
 }
 
 static bool verifyOutput(StringRef OutputFile, StringRef Arch,
-                         DsymutilOptions Options) {
+                         DsymutilOptions Options, std::mutex &Mutex) {
 
   if (OutputFile == "-") {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because writing to stdout.\n";
     return true;
   }
 
   if (Options.LinkOpts.NoOutput) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because --no-output was passed.\n";
     return true;
@@ -514,6 +505,7 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(OutputFile);
   if (!BinOrErr) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::error() << OutputFile << ": " << toString(BinOrErr.takeError());
     return false;
   }
@@ -521,17 +513,29 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   Binary &Binary = *BinOrErr.get().getBinary();
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
-    if (DICtx->getMaxVersion() >= 5) {
-      WithColor::warning() << "verification skipped for " << Arch
-                           << " because DWARFv5 is not fully supported yet.\n";
+    if (DICtx->getMaxVersion() > 5) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      WithColor::warning()
+          << "verification skipped for " << Arch
+          << " because DWARF standard greater than v5 is not supported yet.\n";
       return true;
     }
-    raw_ostream &os = Options.LinkOpts.Verbose ? errs() : nulls();
-    os << "Verifying DWARF for architecture: " << Arch << "\n";
+
+    if (Options.LinkOpts.Verbose) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << "Verifying DWARF for architecture: " << Arch << "\n";
+    }
+
+    std::string Buffer;
+    raw_string_ostream OS(Buffer);
+
     DIDumpOptions DumpOpts;
-    bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
-    if (!success)
+    bool success = DICtx->verify(OS, DumpOpts.noImplicitRecursion());
+    if (!success) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << OS.str();
       WithColor::error() << "output verification failed for " << Arch << '\n';
+    }
     return success;
   }
 
@@ -602,7 +606,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path.str()), ResourceDir);
 }
 
-int main(int argc, char **argv) {
+int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
 
   // Parse arguments.
@@ -672,15 +676,18 @@ int main(int argc, char **argv) {
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
       if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
-                    Options.LinkOpts.PrependPath))
+                    Options.LinkOpts.DSYMSearchPaths,
+                    Options.LinkOpts.PrependPath,
+                    Options.LinkOpts.BuildVariantSuffix))
         return EXIT_FAILURE;
       continue;
     }
 
-    auto DebugMapPtrsOrErr =
-        parseDebugMap(Options.LinkOpts.VFS, InputFile, Options.Archs,
-                      Options.LinkOpts.PrependPath, Options.PaperTrailWarnings,
-                      Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
+    auto DebugMapPtrsOrErr = parseDebugMap(
+        Options.LinkOpts.VFS, InputFile, Options.Archs,
+        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
+        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
+        Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -737,15 +744,15 @@ int main(int argc, char **argv) {
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
 
-    // Set up a crash recovery context.
-    CrashRecoveryContext::Enable();
-    CrashRecoveryContext CRC;
-    CRC.DumpStackAndCleanupOnFailure = true;
-
     std::atomic_char AllOK(1);
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
 
     std::mutex ErrorHandlerMutex;
+
+    // Set up a crash recovery context.
+    CrashRecoveryContext::Enable();
+    CrashRecoveryContext CRC;
+    CRC.DumpStackAndCleanupOnFailure = true;
 
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
@@ -758,11 +765,13 @@ int main(int argc, char **argv) {
         if (!Options.SymbolMap.empty())
           Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
 
-        if (Map->begin() == Map->end())
+        if (Map->begin() == Map->end()) {
+          std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
           WithColor::warning()
               << "no debug symbols in executable (-arch "
               << MachOUtils::getArchName(Map->getTriple().getArchName())
               << ")\n";
+        }
 
         // Using a std::shared_ptr rather than std::unique_ptr because move-only
         // types don't work with std::bind in the ThreadPool implementation.
@@ -774,15 +783,16 @@ int main(int argc, char **argv) {
 
           auto E = TempFiles.back().createTempFile();
           if (E) {
+            std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
             WithColor::error() << toString(std::move(E));
             AllOK.fetch_and(false);
             return;
           }
 
-          auto &TempFile = *(TempFiles.back().File);
-          OS = std::make_shared<raw_fd_ostream>(TempFile.FD,
+          MachOUtils::ArchAndFile &AF = TempFiles.back();
+          OS = std::make_shared<raw_fd_ostream>(AF.getFD(),
                                                 /*shouldClose*/ false);
-          OutputFile = TempFile.TmpName;
+          OutputFile = AF.getPath();
         } else {
           std::error_code EC;
           OS = std::make_shared<raw_fd_ostream>(
@@ -804,8 +814,9 @@ int main(int argc, char **argv) {
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
               (flagIsSet(Options.Verify, DWARFVerify::OutputOnValidInput) &&
                !Linker.InputVerificationFailed())) {
-            AllOK.fetch_and(verifyOutput(
-                OutputFile, Map->getTriple().getArchName(), Options));
+            AllOK.fetch_and(verifyOutput(OutputFile,
+                                         Map->getTriple().getArchName(),
+                                         Options, ErrorHandlerMutex));
           }
         };
 
@@ -850,7 +861,8 @@ int main(int argc, char **argv) {
         uint64_t FileOffset =
             MagicAndCountSize + UniversalArchInfoSize * TempFiles.size();
         for (const auto &File : TempFiles) {
-          ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
+          ErrorOr<vfs::Status> stat =
+              Options.LinkOpts.VFS->status(File.getPath());
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {

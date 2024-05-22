@@ -35,10 +35,10 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
 
 Fortran::lower::SymbolBox
 Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
-  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
        jmap != jend; ++jmap) {
-    auto iter = jmap->find(&*sym);
+    auto iter = jmap->find(sym);
     if (iter != jmap->end())
       return iter->second;
   }
@@ -47,8 +47,9 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
 
 Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
     Fortran::semantics::SymbolRef symRef) {
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
   auto &map = symbolMapStack.back();
-  auto iter = map.find(&symRef.get().GetUltimate());
+  auto iter = map.find(sym);
   if (iter != map.end())
     return iter->second;
   return SymbolBox::None{};
@@ -59,14 +60,14 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
 /// host-association in OpenMP code.
 Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
     Fortran::semantics::SymbolRef symRef) {
-  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
   auto jmap = symbolMapStack.rbegin();
   auto jend = symbolMapStack.rend();
   if (jmap == jend)
     return SymbolBox::None{};
   // Skip one level in symbol map stack.
   for (++jmap; jmap != jend; ++jmap) {
-    auto iter = jmap->find(&*sym);
+    auto iter = jmap->find(sym);
     if (iter != jmap->end())
       return iter->second;
   }

@@ -36,6 +36,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include <algorithm>
 #include <optional>
 
 using namespace llvm;
@@ -189,7 +190,7 @@ public:
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
-                                            MCSymbolAttr Linakge,
+                                            MCSymbolAttr Linkage,
                                             MCSymbolAttr Visibility) override;
   void emitXCOFFRenameDirective(const MCSymbol *Name,
                                 StringRef Rename) override;
@@ -200,6 +201,7 @@ public:
                                 const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -465,12 +467,12 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
   StringRef c = T.getSingleStringRef();
   if (c.equals(StringRef(MAI->getSeparatorString())))
     return;
-  if (c.startswith(StringRef("//"))) {
+  if (c.starts_with(StringRef("//"))) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
     // drop //
     ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
-  } else if (c.startswith(StringRef("/*"))) {
+  } else if (c.starts_with(StringRef("/*"))) {
     size_t p = 2, len = c.size() - 2;
     // emit each line in comment as separate newline.
     do {
@@ -483,7 +485,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
         ExplicitCommentToEmit.append("\n");
       p = newp + 1;
     } while (p < len);
-  } else if (c.startswith(StringRef(MAI->getCommentString()))) {
+  } else if (c.starts_with(StringRef(MAI->getCommentString()))) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(c.str());
   } else if (c.front() == '#') {
@@ -627,18 +629,11 @@ void MCAsmStreamer::emitVersionMin(MCVersionMinType Type, unsigned Major,
 
 static const char *getPlatformName(MachO::PlatformType Type) {
   switch (Type) {
-  case MachO::PLATFORM_UNKNOWN: /* silence warning*/
-    break;
-  case MachO::PLATFORM_MACOS:            return "macos";
-  case MachO::PLATFORM_IOS:              return "ios";
-  case MachO::PLATFORM_TVOS:             return "tvos";
-  case MachO::PLATFORM_WATCHOS:          return "watchos";
-  case MachO::PLATFORM_BRIDGEOS:         return "bridgeos";
-  case MachO::PLATFORM_MACCATALYST:      return "macCatalyst";
-  case MachO::PLATFORM_IOSSIMULATOR:     return "iossimulator";
-  case MachO::PLATFORM_TVOSSIMULATOR:    return "tvossimulator";
-  case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
-  case MachO::PLATFORM_DRIVERKIT:        return "driverkit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case MachO::PLATFORM_##platform:                                             \
+    return #build_name;
+#include "llvm/BinaryFormat/MachO.def"
   }
   llvm_unreachable("Invalid Mach-O platform type");
 }
@@ -963,6 +958,70 @@ void MCAsmStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
   OS << "\t.except\t";
   Symbol->print(OS, MAI);
   OS << ", " << Lang << ", " << Reason;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
+  const char InfoDirective[] = "\t.info ";
+  const char *Separator = ", ";
+  constexpr int WordSize = sizeof(uint32_t);
+
+  // Start by emitting the .info pseudo-op and C_INFO symbol name.
+  OS << InfoDirective;
+  PrintQuotedString(Name, OS);
+  OS << Separator;
+
+  size_t MetadataSize = Metadata.size();
+
+  // Emit the 4-byte length of the metadata.
+  OS << format_hex(MetadataSize, 10) << Separator;
+
+  // Nothing left to do if there's no metadata.
+  if (MetadataSize == 0) {
+    EmitEOL();
+    return;
+  }
+
+  // Metadata needs to be padded out to an even word size when generating
+  // assembly because the .info pseudo-op can only generate words of data. We
+  // apply the same restriction to the object case for consistency, however the
+  // linker doesn't require padding, so it will only save bytes specified by the
+  // length and discard any padding.
+  uint32_t PaddedSize = alignTo(MetadataSize, WordSize);
+  uint32_t PaddingSize = PaddedSize - MetadataSize;
+
+  // Write out the payload a word at a time.
+  //
+  // The assembler has a limit on the number of operands in an expression,
+  // so we need multiple .info pseudo-ops. We choose a small number of words
+  // per pseudo-op to keep the assembly readable.
+  constexpr int WordsPerDirective = 5;
+  // Force emitting a new directive to keep the first directive purely about the
+  // name and size of the note.
+  int WordsBeforeNextDirective = 0;
+  auto PrintWord = [&](const uint8_t *WordPtr) {
+    if (WordsBeforeNextDirective-- == 0) {
+      EmitEOL();
+      OS << InfoDirective;
+      WordsBeforeNextDirective = WordsPerDirective;
+    }
+    OS << Separator;
+    uint32_t Word = llvm::support::endian::read32be(WordPtr);
+    OS << format_hex(Word, 10);
+  };
+
+  size_t Index = 0;
+  for (; Index + WordSize <= MetadataSize; Index += WordSize)
+    PrintWord(reinterpret_cast<const uint8_t *>(Metadata.data()) + Index);
+
+  // If there is padding, then we have at least one byte of payload left
+  // to emit.
+  if (PaddingSize) {
+    assert(PaddedSize - Index == WordSize);
+    std::array<uint8_t, WordSize> LastWord = {0};
+    ::memcpy(LastWord.data(), Metadata.data() + Index, MetadataSize - Index);
+    PrintWord(LastWord.data());
+  }
   EmitEOL();
 }
 

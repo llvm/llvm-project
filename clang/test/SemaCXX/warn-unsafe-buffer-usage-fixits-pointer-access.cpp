@@ -10,7 +10,7 @@ void m1(int* v1, int* v2, int) {
 }
 
 void condition_check_nullptr() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -21,7 +21,7 @@ void condition_check_nullptr() {
 }
 
 void condition_check() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -53,12 +53,12 @@ void condition_check() {
 }
 
 void condition_check_two_usafe_buffers() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
 
-  auto q = new int[10];
+  int* q = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> q"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -72,7 +72,7 @@ void condition_check_two_usafe_buffers() {
 }
 
 void unsafe_method_invocation_single_param() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -84,12 +84,12 @@ void unsafe_method_invocation_single_param() {
 }
 
 void safe_method_invocation_single_param() {
-  auto p = new int[10];
+  int* p = new int[10];
   foo(p);
 }
 
 void unsafe_method_invocation_double_param() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -110,3 +110,70 @@ void unsafe_method_invocation_double_param() {
   m1(q, q, 8);
 }
 
+void unsafe_access_in_lamda() {
+  int* p = new int[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+
+  auto my_lambda = [&](){
+    p[5] = 10;
+  };
+
+  foo(p);
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:8}:".data()"
+}
+
+void fixits_in_lamda() {
+  int* p = new int[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+
+  auto my_lambda = [&](){
+    foo(p);
+    // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:10}:".data()"
+  };
+
+  p[5] = 10;
+}
+
+// FIXME: Emit fixits for lambda captured variables
+void fixits_in_lambda_capture() {
+  auto p = new int[10];
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  
+  auto my_lambda = [p](){ // No fixits emitted here.
+    foo(p);
+  };
+  
+  p[5] = 10;
+}
+
+void fixits_in_lambda_capture_reference() {
+  auto p = new int[10];
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+ 
+  auto my_lambda = [&p](){ // No fixits emitted here.
+    foo(p);
+  };
+
+  p[5] = 10;
+}
+
+void fixits_in_lambda_capture_rename() {
+  auto p = new int[10];
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  
+  auto my_lambda = [x = p](){ // No fixits emitted here.
+    foo(x);
+  };
+
+  p[5] = 10;
+} 

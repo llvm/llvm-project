@@ -14,6 +14,7 @@
 #define LINALG_OPS
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -93,6 +94,8 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
     [DestinationStyleOpInterface,
      PredOpTrait<"input and output have same element type", TCopVTEtIsSameAs<0, 1>>,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     DeclareOpInterfaceMethods<AggregatedOpInterface, ["decomposeOperation"]>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TilingInterface,
       ["getIterationDomain",
        "getLoopIteratorTypes",
@@ -146,14 +149,7 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
     int64_t getOutputOperandRank() {
       return getOutputOperandType().getRank();
     }
-    // Method to implement DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      std::pair<unsigned, unsigned> outputsIndexAndLength =
-        getODSOperandIndexAndLength(1);
-      return std::make_pair<int64_t, int64_t>(
-          outputsIndexAndLength.first,
-          outputsIndexAndLength.first + outputsIndexAndLength.second);
-    }
+    MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
   }];
   let hasVerifier = 1;
 }

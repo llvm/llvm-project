@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -23,8 +25,6 @@
 
 namespace llvm {
 namespace object {
-
-using support::endianness;
 
 template <class ELFT> struct Elf_Ehdr_Impl;
 template <class ELFT> struct Elf_Shdr_Impl;
@@ -92,10 +92,10 @@ public:
   using Off = packed<uint>;
 };
 
-using ELF32LE = ELFType<support::little, false>;
-using ELF32BE = ELFType<support::big, false>;
-using ELF64LE = ELFType<support::little, true>;
-using ELF64BE = ELFType<support::big, true>;
+using ELF32LE = ELFType<llvm::endianness::little, false>;
+using ELF32BE = ELFType<llvm::endianness::big, false>;
+using ELF64LE = ELFType<llvm::endianness::little, true>;
+using ELF64BE = ELFType<llvm::endianness::big, true>;
 
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.
@@ -742,7 +742,7 @@ template <class ELFT> struct Elf_CGProfile_Impl {
 template <class ELFT>
 struct Elf_Mips_RegInfo;
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -750,7 +750,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   Elf_Addr ri_gp_value;    // gp register value
 };
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -796,7 +796,6 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 
 // Struct representing the BBAddrMap for one function.
 struct BBAddrMap {
-  uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     struct Metadata {
@@ -856,13 +855,98 @@ struct BBAddrMap {
     bool hasTailCall() const { return MD.HasTailCall; }
     bool isEHPad() const { return MD.IsEHPad; }
     bool canFallThrough() const { return MD.CanFallThrough; }
+    bool hasIndirectBranch() const { return MD.HasIndirectBranch; }
   };
-  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+
+  BBAddrMap(uint64_t Addr, std::vector<BBEntry> BBEntries)
+      : Addr(Addr), BBEntries(std::move(BBEntries)) {}
+
+  // Returns the address of the corresponding function.
+  uint64_t getFunctionAddress() const { return Addr; }
+
+  // Returns the basic block entries for this function.
+  const std::vector<BBEntry> &getBBEntries() const { return BBEntries; }
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
     return Addr == Other.Addr && std::equal(BBEntries.begin(), BBEntries.end(),
                                             Other.BBEntries.begin());
+  }
+
+  uint64_t Addr;                  // Function address
+  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+};
+
+/// A feature extension of BBAddrMap that holds information relevant to PGO.
+struct PGOAnalysisMap {
+  /// Bitfield of optional features to include in the PGO extended map.
+  struct Features {
+    bool FuncEntryCount : 1;
+    bool BBFreq : 1;
+    bool BrProb : 1;
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
+             (static_cast<uint8_t>(BBFreq) << 1) |
+             (static_cast<uint8_t>(BrProb) << 2);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{static_cast<bool>(Val & (1 << 0)),
+                    static_cast<bool>(Val & (1 << 1)),
+                    static_cast<bool>(Val & (1 << 2))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(),
+            "invalid encoding for PGOAnalysisMap::Features: 0x%x", Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return std::tie(FuncEntryCount, BBFreq, BrProb) ==
+             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb);
+    }
+  };
+
+  /// Extra basic block data with fields for block frequency and branch
+  /// probability.
+  struct PGOBBEntry {
+    /// Single successor of a given basic block that contains the tag and branch
+    /// probability associated with it.
+    struct SuccessorEntry {
+      /// Unique ID of this successor basic block.
+      uint32_t ID;
+      /// Branch Probability of the edge to this successor taken from MBPI.
+      BranchProbability Prob;
+
+      bool operator==(const SuccessorEntry &Other) const {
+        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+      }
+    };
+
+    /// Block frequency taken from MBFI
+    BlockFrequency BlockFreq;
+    /// List of successors of the current block
+    llvm::SmallVector<SuccessorEntry, 2> Successors;
+
+    bool operator==(const PGOBBEntry &Other) const {
+      return std::tie(BlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, Other.Successors);
+    }
+  };
+
+  uint64_t FuncEntryCount;           // Prof count from IR function
+  std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
+
+  // Flags to indicate if each PGO related info was enabled in this function
+  Features FeatEnable;
+
+  bool operator==(const PGOAnalysisMap &Other) const {
+    return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==
+           std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
 

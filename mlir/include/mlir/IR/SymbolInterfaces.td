@@ -31,7 +31,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "StringAttr", "getNameAttr", (ins), [{
+      "::mlir::StringAttr", "getNameAttr", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
         return mlir::SymbolTable::getSymbolName($_op);
@@ -163,7 +163,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     // If this is an optional symbol, bail out early if possible.
     auto concreteOp = cast<ConcreteOp>($_op);
     if (concreteOp.isOptionalSymbol()) {
-      if(!concreteOp->getAttr(::mlir::SymbolTable::getSymbolAttrName()))
+      if(!concreteOp->getInherentAttr(::mlir::SymbolTable::getSymbolAttrName()).value_or(Attribute{}))
         return success();
     }
     if (::mlir::failed(::mlir::detail::verifySymbol($_op)))
@@ -178,13 +178,13 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     using Visibility = mlir::SymbolTable::Visibility;
 
     /// Convenience version of `getNameAttr` that returns a StringRef.
-    StringRef getName() {
+    ::mlir::StringRef getName() {
       return getNameAttr().getValue();
     }
 
     /// Convenience version of `setName` that take a StringRef.
-    void setName(StringRef name) {
-      setName(StringAttr::get($_op->getContext(), name));
+    void setName(::mlir::StringRef name) {
+      setName(::mlir::StringAttr::get($_op->getContext(), name));
     }
   }];
 

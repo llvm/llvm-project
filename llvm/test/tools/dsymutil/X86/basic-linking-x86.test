@@ -1,12 +1,46 @@
-RUN: cat %p/../Inputs/basic.macho.x86_64 > %t1
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t1
 RUN: dsymutil -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
 RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
-RUN: dsymutil -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
+RUN: dsymutil -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
 RUN: llvm-dwarfdump -a %t2 | FileCheck %s
-RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
-RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
-RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | dsymutil -accelerator=Pub -f -y -o - - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
-RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -accelerator=Pub -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - \
+RUN:   | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | dsymutil -accelerator=Pub -f -y \
+RUN:   -o - - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -accelerator=Pub \
+RUN:   -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,ARCHIVE,PUB
+
+### ---------------------------------------
+### Repeat the same steps for --linker llvm
+
+RUN: dsymutil --linker llvm -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
+RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
+RUN: dsymutil --linker llvm  -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
+RUN: llvm-dwarfdump -a %t2 | FileCheck %s
+RUN: dsymutil --linker llvm  -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -dump-debug-map \
+RUN:  -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 \
+RUN:  | dsymutil -accelerator=Pub -f -y -o - - | llvm-dwarfdump \
+RUN:  -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -dump-debug-map \
+RUN:   -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 \
+RUN:   | dsymutil -accelerator=Pub -f -o - -y - | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
 
 CHECK: file format Mach-O 64-bit x86-64
 
@@ -156,38 +190,38 @@ CHECK: .debug_line contents:
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic1.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000ea0     23      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000eb6     24      0      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000ec4     24      0      1   0             0  is_stmt end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000ea0     23      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000eb6     24      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000ec4     24      0      1   0             0       0  is_stmt end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic2.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000ed0     19      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000ee2     20      0      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f19     20      0      1   0             0  is_stmt end_sequence
-CHECK-NEXT: 0x0000000100000f20     14      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f24     15      0      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f37     15      0      1   0             0  is_stmt end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000ed0     19      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000ee2     20      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f19     20      0      1   0             0       0  is_stmt end_sequence
+CHECK-NEXT: 0x0000000100000f20     14      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f24     15      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f37     15      0      1   0             0       0  is_stmt end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic3.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000f40     16      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f4b     17      0      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f58     18      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f6c     19      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f7b     20      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f84     20      0      1   0             0  is_stmt end_sequence
-CHECK-NEXT: 0x0000000100000f90     11      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f9b     12      0      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000fa9     12      0      1   0             0  is_stmt end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000f40     16      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f4b     17      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f58     18      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f6c     19      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f7b     20      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f84     20      0      1   0             0       0  is_stmt end_sequence
+CHECK-NEXT: 0x0000000100000f90     11      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f9b     12      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000fa9     12      0      1   0             0       0  is_stmt end_sequence
 
 PUB: .debug_pubnames contents:
 PUB-NEXT: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000081

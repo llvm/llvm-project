@@ -137,7 +137,7 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(ptr addrspace(1) %p) #1 {
 
 ; GFX900: NumVgprs: 256
 ; GFX908: NumVgprs: 252
-; GFX900: ScratchSize: 1668
+; GFX900: ScratchSize: 132
 ; GFX908: ScratchSize: 0
 ; GFX900: VGPRBlocks: 63
 ; GFX908: VGPRBlocks: 62

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_STR_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_STR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
@@ -16,7 +16,16 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
+
+namespace details {
+
+// Format T as uppercase hexadecimal number with leading zeros.
+template <typename T>
+using ZeroPaddedHexFmt = IntegerToString<
+    T, typename radix::Hex::WithWidth<(sizeof(T) * 2)>::WithPrefix::Uppercase>;
+
+} // namespace details
 
 // Converts the bits to a string in the following format:
 //    "0x<NNN...N> = S: N, E: 0xNNNN, M:0xNNN...N"
@@ -26,46 +35,40 @@ namespace __llvm_libc {
 // 3. The exponent is always 16 bits wide irrespective of the type of the
 //    floating encoding.
 template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
-  using UIntType = typename fputil::FPBits<T>::UIntType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   if (x.is_nan())
     return "(NaN)";
   if (x.is_inf())
     return x.get_sign() ? "(-Infinity)" : "(+Infinity)";
 
-  auto zerofill = [](char *arr, size_t n) {
-    for (size_t i = 0; i < n; ++i)
-      arr[i] = '0';
-  };
+  const auto sign_char = [](bool sign) -> char { return sign ? '1' : '0'; };
 
-  cpp::string s("0x");
-  char bitsbuf[IntegerToString::hex_bufsize<UIntType>()];
-  zerofill(bitsbuf, sizeof(bitsbuf));
-  IntegerToString::hex(x.bits, bitsbuf, false);
-  s += cpp::string(bitsbuf, sizeof(bitsbuf));
+  cpp::string s;
 
-  s += " = (";
-  s += cpp::string("S: ") + (x.get_sign() ? "1" : "0");
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.bits);
+  s += bits.view();
 
-  char expbuf[IntegerToString::hex_bufsize<uint16_t>()];
-  zerofill(expbuf, sizeof(expbuf));
-  IntegerToString::hex(x.get_unbiased_exponent(), expbuf, false);
-  s += cpp::string(", E: 0x") + cpp::string(expbuf, sizeof(expbuf));
+  s += " = (S: ";
+  s += sign_char(x.get_sign());
 
-  if constexpr (cpp::is_same_v<T, long double> &&
-                fputil::FloatProperties<long double>::MANTISSA_WIDTH == 63) {
-    s += cpp::string(", I: ") + (x.get_implicit_bit() ? "1" : "0");
+  s += ", E: ";
+  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
+  s += exponent.view();
+
+  if constexpr (fputil::get_fp_type<T>() == fputil::FPType::X86_Binary80) {
+    s += ", I: ";
+    s += sign_char(x.get_implicit_bit());
   }
 
-  char mantbuf[IntegerToString::hex_bufsize<UIntType>()] = {'0'};
-  zerofill(mantbuf, sizeof(mantbuf));
-  IntegerToString::hex(x.get_mantissa(), mantbuf, false);
-  s += cpp::string(", M: 0x") + cpp::string(mantbuf, sizeof(mantbuf));
+  s += ", M: ";
+  const details::ZeroPaddedHexFmt<StorageType> mantissa(x.get_mantissa());
+  s += mantissa.view();
 
-  s += ")";
+  s += ')';
   return s;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_STR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H

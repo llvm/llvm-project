@@ -15,6 +15,7 @@
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -31,19 +32,6 @@ using namespace lld::macho;
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::sys;
-
-// Creates an empty file to store a list of object files for final
-// linking of distributed ThinLTO.
-static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
-  std::error_code ec;
-  auto ret =
-      std::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
-  if (ec) {
-    error("cannot open " + file + ": " + ec.message());
-    return nullptr;
-  }
-  return ret;
-}
 
 static std::string getThinLTOOutputFile(StringRef modulePath) {
   return lto::getThinLTOOutputFile(modulePath, config->thinLTOPrefixReplaceOld,
@@ -71,6 +59,7 @@ static lto::Config createConfig() {
   c.DebugPassManager = config->ltoDebugPassManager;
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
+  c.PGOWarnMismatch = config->pgoWarnMismatch;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
@@ -305,7 +294,9 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       modTime = getModTime(filePath);
     }
     ret.push_back(make<ObjFile>(
-        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime, ""));
+        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime,
+        /*archiveName=*/"", /*lazy=*/false,
+        /*forceHidden=*/false, /*compatArch=*/true, /*builtFromBitcode=*/true));
   }
 
   return ret;

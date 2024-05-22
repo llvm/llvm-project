@@ -8,6 +8,7 @@
 #include "clang-c/Documentation.h"
 #include "clang-c/Index.h"
 #include "clang/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -231,8 +232,15 @@ void free_remapped_files(struct CXUnsavedFile *unsaved_files,
                          int num_unsaved_files) {
   int i;
   for (i = 0; i != num_unsaved_files; ++i) {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
     free((char *)unsaved_files[i].Filename);
     free((char *)unsaved_files[i].Contents);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   }
   free(unsaved_files);
 }
@@ -1831,6 +1839,8 @@ static enum CXChildVisitResult PrintMangledName(CXCursor cursor, CXCursor p,
   CXString MangledName;
   if (clang_isUnexposed(clang_getCursorKind(cursor)))
     return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
+    return CXChildVisit_Recurse;
   PrintCursor(cursor, NULL);
   MangledName = clang_Cursor_getMangling(cursor);
   printf(" [mangled=%s]\n", clang_getCString(MangledName));
@@ -1845,6 +1855,8 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
   if (clang_isUnexposed(clang_getCursorKind(cursor)))
     return CXChildVisit_Recurse;
   if (!clang_isDeclaration(clang_getCursorKind(cursor)))
+    return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
     return CXChildVisit_Recurse;
   if (clang_getCursorKind(cursor) == CXCursor_ParmDecl)
     return CXChildVisit_Continue;
@@ -3759,7 +3771,14 @@ index_startedTranslationUnit(CXClientData client_data, void *reserved) {
   printCheck(index_data);
 
   printf("[startedTranslationUnit]\n");
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
   return (CXIdxClientContainer)"TU";
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 static void index_indexDeclaration(CXClientData client_data,
@@ -5131,6 +5150,14 @@ static void flush_atexit(void) {
 
 int main(int argc, const char **argv) {
   thread_info client_data;
+
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdout)) == -1)
+    fprintf(stderr, "Setting conversion on stdout failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stderr, "Setting conversion on stderr failed\n");
+#endif
 
   atexit(flush_atexit);
 

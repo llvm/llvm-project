@@ -40,3 +40,52 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
+
+void fir::runtime::genAllocatableApplyMold(fir::FirOpBuilder &builder,
+                                           mlir::Location loc, mlir::Value desc,
+                                           mlir::Value mold, int rank) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(loc,
+                                                                  builder)};
+  mlir::FunctionType fTy = func.getFunctionType();
+  mlir::Value rankVal =
+      builder.createIntegerConstant(loc, fTy.getInput(2), rank);
+  llvm::SmallVector<mlir::Value> args{
+      fir::runtime::createArguments(builder, loc, fTy, desc, mold, rankVal)};
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void fir::runtime::genAllocatableSetBounds(fir::FirOpBuilder &builder,
+                                           mlir::Location loc, mlir::Value desc,
+                                           mlir::Value dimIndex,
+                                           mlir::Value lowerBound,
+                                           mlir::Value upperBound) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(AllocatableSetBounds)>(loc,
+                                                                  builder)};
+  mlir::FunctionType fTy{func.getFunctionType()};
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, desc, dimIndex, lowerBound, upperBound)};
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Value desc,
+                                          mlir::Value hasStat,
+                                          mlir::Value errMsg) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc, builder)};
+  mlir::FunctionType fTy{func.getFunctionType()};
+  mlir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
+  mlir::Value sourceLine{
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4))};
+  if (!hasStat)
+    hasStat = builder.createBool(loc, false);
+  if (!errMsg) {
+    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    errMsg = builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  }
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, desc, hasStat, errMsg, sourceFile, sourceLine)};
+  builder.create<fir::CallOp>(loc, func, args);
+}

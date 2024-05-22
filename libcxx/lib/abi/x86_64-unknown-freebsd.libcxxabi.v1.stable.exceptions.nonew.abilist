@@ -757,7 +757,6 @@
 {'is_defined': True, 'name': '_ZNSt3__112strstreambufD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112strstreambufD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112strstreambufD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112system_error6__initERKNS_10error_codeENS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112system_errorC1ENS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112system_errorC1ENS_10error_codeEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112system_errorC1ENS_10error_codeERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
@@ -1373,7 +1372,6 @@
 {'is_defined': True, 'name': '_ZNSt3__16gslice6__initEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale14__install_ctorERKS0_PNS0_5facetEl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale2id5__getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__16locale2id6__initEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale2id9__next_idE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale3allE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale4noneE', 'size': 4, 'type': 'OBJECT'}

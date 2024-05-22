@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-const-arg %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: performance-move-const-arg.CheckMoveToConstRef, value: false}]}'
+// RUN:  {performance-move-const-arg.CheckMoveToConstRef: false}}'
 
 namespace std {
 template <typename>

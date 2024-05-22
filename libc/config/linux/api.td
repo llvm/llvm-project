@@ -205,7 +205,12 @@ def SysSelectAPI : PublicAPI<"sys/select.h"> {
 }
 
 def SysSocketAPI : PublicAPI<"sys/socket.h"> {
-  let Types = ["struct sockaddr", "sa_family_t"];
+  let Types = [
+    "sa_family_t",
+    "socklen_t",
+    "struct sockaddr",
+    "struct sockaddr_un",
+  ];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
@@ -219,7 +224,7 @@ def SysStatAPI : PublicAPI<"sys/stat.h"> {
 }
 
 def SysWaitAPI : PublicAPI<"sys/wait.h"> {
-  let Types = ["pid_t", "struct rusage"];
+  let Types = ["pid_t", "struct rusage", "siginfo_t"];
 }
 
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
@@ -247,4 +252,8 @@ def TermiosAPI : PublicAPI<"termios.h"> {
 
 def SetJmpAPI : PublicAPI<"setjmp.h"> {
   let Types = ["jmp_buf"];
+}
+
+def SearchAPI : PublicAPI<"search.h"> {
+  let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
 }

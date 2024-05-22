@@ -112,9 +112,9 @@ define i32 @cttzlhsnot0(i32 %x) {
 ; CHECK-LABEL: cttzlhsnot0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rbit w9, w0
-; CHECK-NEXT:    mov w8, #10
-; CHECK-NEXT:    clz w9, w9
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    clz w9, w9
 ; CHECK-NEXT:    csel w0, w8, w9, eq
 ; CHECK-NEXT:    ret
 entry:

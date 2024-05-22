@@ -29,6 +29,8 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
+template <bool Signed> class IntegralAP;
+
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
 template <> struct Repr<8, false> { using Type = uint8_t; };
@@ -61,6 +63,8 @@ private:
   template <typename T> explicit Integral(T V) : V(V) {}
 
 public:
+  using AsUnsigned = Integral<Bits, false>;
+
   /// Zero-initializes an integral.
   Integral() : V(0) {}
 
@@ -84,6 +88,9 @@ public:
   }
 
   Integral operator-() const { return Integral(-V); }
+  Integral operator-(const Integral &Other) const {
+    return Integral(V - Other.V);
+  }
   Integral operator~() const { return Integral(~V); }
 
   template <unsigned DstBits, bool DstSign>
@@ -94,6 +101,7 @@ public:
   explicit operator unsigned() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator int32_t() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
@@ -127,7 +135,18 @@ public:
     return Compare(V, RHS.V);
   }
 
-  unsigned countLeadingZeros() const { return llvm::countl_zero<ReprT>(V); }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    OS << V;
+    return NameStr;
+  }
+
+  unsigned countLeadingZeros() const {
+    if constexpr (!Signed)
+      return llvm::countl_zero<ReprT>(V);
+    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+  }
 
   Integral truncate(unsigned TruncBits) const {
     if (TruncBits >= Bits)
@@ -158,13 +177,6 @@ public:
   static std::enable_if_t<SrcBits != 0, Integral>
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
   }
 
   static Integral zero() { return from(0); }

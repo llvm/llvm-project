@@ -3,14 +3,10 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -24,11 +20,13 @@ using ::llvm::DIInliningInfo;
 using ::llvm::DILineInfo;
 using ::llvm::DILineInfoSpecifier;
 using ::llvm::DILocal;
+using ::llvm::StringRef;
 using ::llvm::memprof::CallStackMap;
 using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
+using ::llvm::memprof::MemProfReader;
 using ::llvm::memprof::MemProfRecord;
 using ::llvm::memprof::MemProfSchema;
 using ::llvm::memprof::Meta;
@@ -54,6 +52,10 @@ public:
     llvm_unreachable("unused");
   }
   virtual std::vector<DILocal> symbolizeFrame(SectionedAddress) const {
+    llvm_unreachable("unused");
+  }
+  virtual std::vector<SectionedAddress> findSymbol(StringRef Symbol,
+                                                   uint64_t Offset) const {
     llvm_unreachable("unused");
   }
   virtual bool isWin32Module() const { llvm_unreachable("unused"); }
@@ -99,7 +101,7 @@ const DILineInfoSpecifier specifier() {
 MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
   const Frame &F = arg;
 
-  const uint64_t ExpectedHash = llvm::Function::getGUID(FunctionName);
+  const uint64_t ExpectedHash = IndexedMemProfRecord::getGUID(FunctionName);
   if (F.Function != ExpectedHash) {
     *result_listener << "Hash mismatch";
     return false;
@@ -147,7 +149,7 @@ TEST(MemProf, FillsValue) {
                                                 specifier(), false))
       .Times(1)
       .WillRepeatedly(Return(makeInliningInfo({
-          {"xyz", 10, 5, 30},
+          {"xyz.llvm.123", 10, 5, 30},
           {"abc", 10, 5, 30},
       })));
 
@@ -167,7 +169,7 @@ TEST(MemProf, FillsValue) {
     Records.insert({Pair.first, Pair.second});
   }
 
-  // Mock program psuedocode and expected memprof record contents.
+  // Mock program pseudocode and expected memprof record contents.
   //
   //                              AllocSite       CallSite
   // inline foo() { new(); }         Y               N
@@ -357,5 +359,39 @@ TEST(MemProf, SymbolizationFilter) {
   ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 1U);
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, false));
+}
+
+TEST(MemProf, BaseMemProfReader) {
+  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
+           /*Column=*/5, /*IsInlineFrame=*/true);
+  Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
+           /*Column=*/2, /*IsInlineFrame=*/false);
+  FrameIdMap.insert({F1.hash(), F1});
+  FrameIdMap.insert({F2.hash(), F2});
+
+  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
+  IndexedMemProfRecord FakeRecord;
+  MemInfoBlock Block;
+  Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
+  Block.TotalLifetime = 200001;
+  std::array<FrameId, 2> CallStack{F1.hash(), F2.hash()};
+  FakeRecord.AllocSites.emplace_back(/*CS=*/CallStack, /*MB=*/Block);
+  ProfData.insert({F1.hash(), FakeRecord});
+
+  MemProfReader Reader(FrameIdMap, ProfData);
+
+  llvm::SmallVector<MemProfRecord, 1> Records;
+  for (const auto &KeyRecordPair : Reader) {
+    Records.push_back(KeyRecordPair.second);
+  }
+
+  ASSERT_EQ(Records.size(), 1U);
+  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
+  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 2U);
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
+              FrameContains("foo", 20U, 5U, true));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
+              FrameContains("bar", 10U, 2U, false));
 }
 } // namespace

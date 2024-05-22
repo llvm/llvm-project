@@ -12,7 +12,7 @@ endif()
 if(flang_vc AND LLVM_APPEND_VC_REV)
   set(flang_source_dir ${FLANG_SOURCE_DIR})
 endif()
-
+ 
 # Create custom target to generate the VC revision include.
 add_custom_command(OUTPUT "${version_inc}"
   DEPENDS "${llvm_vc}" "${flang_vc}" "${generate_vcs_version_script}"
@@ -20,6 +20,8 @@ add_custom_command(OUTPUT "${version_inc}"
                            "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
                            "-DFLANG_SOURCE_DIR=${flang_source_dir}"
                            "-DHEADER_FILE=${version_inc}"
+                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                            -P "${generate_vcs_version_script}")
 
 # Mark the generated header as being generated.

@@ -165,6 +165,8 @@ class CDeleter {
 public:
   TEST_CONSTEXPR_CXX23 CDeleter() : state_(0) {}
   TEST_CONSTEXPR_CXX23 explicit CDeleter(int s) : state_(s) {}
+  TEST_CONSTEXPR_CXX23 CDeleter(const CDeleter&) = default;
+  TEST_CONSTEXPR_CXX23 CDeleter& operator=(const CDeleter&) = default;
   TEST_CONSTEXPR_CXX23 ~CDeleter() {
     assert(state_ >= 0);
     state_ = -1;
@@ -188,7 +190,8 @@ public:
   TEST_CONSTEXPR_CXX23 explicit CDeleter(int s) : state_(s) {}
   template <class U>
   TEST_CONSTEXPR_CXX23 CDeleter(const CDeleter<U>& d) : state_(d.state()) {}
-
+  TEST_CONSTEXPR_CXX23 CDeleter(const CDeleter&) = default;
+  TEST_CONSTEXPR_CXX23 CDeleter& operator=(const CDeleter&) = default;
   TEST_CONSTEXPR_CXX23 ~CDeleter() {
     assert(state_ >= 0);
     state_ = -1;

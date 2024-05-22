@@ -30,6 +30,8 @@ class SBCommandReturnObject;
 class SBValue;
 class SBStream;
 class SBStructuredData;
+class SBFileSpec;
+class SBModuleSpec;
 } // namespace lldb
 
 namespace lldb_private {
@@ -102,6 +104,10 @@ public:
   static PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb);
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBFileSpec> file_spec_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBModuleSpec> module_spec_sb);
 
   static python::ScopedPythonObject<lldb::SBCommandReturnObject>
   ToSWIGWrapper(CommandReturnObject &cmd_retobj);
@@ -109,12 +115,6 @@ public:
   // These prototypes are the Pythonic implementations of the required
   // callbacks. Although these are scripting-language specific, their definition
   // depends on the public API.
-
-  static python::PythonObject LLDBSwigPythonCreateScriptedObject(
-      const char *python_class_name, const char *session_dictionary_name,
-      lldb::ExecutionContextRefSP exe_ctx_sp,
-      const lldb_private::StructuredDataImpl &args_impl,
-      std::string &error_string);
 
   static llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
       const char *python_function_name, const char *session_dictionary_name,

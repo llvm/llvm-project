@@ -252,8 +252,7 @@ define void @non_constant_vector_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; STRIDED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; STRIDED:       middle.block:
-; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 101, 100
-; STRIDED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; STRIDED-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; STRIDED:       scalar.ph:
 ; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; STRIDED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]

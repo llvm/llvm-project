@@ -126,9 +126,7 @@ _Static_assert(EXPR_TYPE_IS(ULLONG_MAX, unsigned long long), "");
 int LLONG_MIN, LLONG_MAX, ULLONG_MAX; // Not defined.
 #endif
 
-/* FIXME: This is using the placeholder dates Clang produces for these macros
-   in C2x mode; switch to the correct values once they've been published. */
-#if __STDC_VERSION__ >= 202000L
+#if __STDC_VERSION__ >= 202311L
 /* Validate the standard requirements. */
 _Static_assert(BOOL_WIDTH >= 1);
 #if BOOL_WIDTH

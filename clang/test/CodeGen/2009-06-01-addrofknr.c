@@ -5,7 +5,7 @@ struct funcptr {
   int (*func)();
 };
 
-static int func(f) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+static int func(f) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
   void *f;
 {
   return 0;

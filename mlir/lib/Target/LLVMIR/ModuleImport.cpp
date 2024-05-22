@@ -29,6 +29,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
@@ -74,12 +75,6 @@ static constexpr StringRef getGlobalCtorsVarName() {
 /// Returns the name of the global_dtors global variables.
 static constexpr StringRef getGlobalDtorsVarName() {
   return "llvm.global_dtors";
-}
-
-/// Returns the symbol name for the module-level metadata operation. It must not
-/// conflict with the user namespace.
-static constexpr StringRef getGlobalMetadataOpName() {
-  return "__llvm_global_metadata";
 }
 
 /// Returns the symbol name for the module-level comdat operation. It must not
@@ -166,18 +161,6 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
-MetadataOp ModuleImport::getGlobalMetadataOp() {
-  if (globalMetadataOp)
-    return globalMetadataOp;
-
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(mlirModule.getBody());
-  globalMetadataOp = builder.create<MetadataOp>(mlirModule.getLoc(),
-                                                getGlobalMetadataOpName());
-  globalInsertionOp = globalMetadataOp;
-  return globalMetadataOp;
-}
-
 ComdatOp ModuleImport::getGlobalComdatOp() {
   if (globalComdatOp)
     return globalComdatOp;
@@ -192,34 +175,21 @@ ComdatOp ModuleImport::getGlobalComdatOp() {
 
 LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
-  SmallVector<const llvm::MDNode *> workList;
-  SetVector<const llvm::MDNode *> nodesToConvert;
-  workList.push_back(node);
-  while (!workList.empty()) {
-    const llvm::MDNode *current = workList.pop_back_val();
-    if (tbaaMapping.contains(current))
-      continue;
-    // Allow cycles in TBAA metadata. Just import it as-is,
-    // and diagnose the problem during LLVMIR dialect verification.
-    if (!nodesToConvert.insert(current))
-      continue;
-    for (const llvm::MDOperand &operand : current->operands())
-      if (auto *opNode = dyn_cast_or_null<const llvm::MDNode>(operand.get()))
-        workList.push_back(opNode);
-  }
 
-  // If `node` is a valid TBAA root node, then return its identity
-  // string, otherwise return std::nullopt.
+  // If `node` is a valid TBAA root node, then return its optional identity
+  // string, otherwise return failure.
   auto getIdentityIfRootNode =
-      [&](const llvm::MDNode *node) -> std::optional<StringRef> {
+      [&](const llvm::MDNode *node) -> FailureOr<std::optional<StringRef>> {
     // Root node, e.g.:
     //   !0 = !{!"Simple C/C++ TBAA"}
-    if (node->getNumOperands() != 1)
-      return std::nullopt;
+    //   !1 = !{}
+    if (node->getNumOperands() > 1)
+      return failure();
     // If the operand is MDString, then assume that this is a root node.
-    if (const auto *op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
-      return op0->getString();
-    return std::nullopt;
+    if (node->getNumOperands() == 1)
+      if (const auto *op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
+        return std::optional<StringRef>{op0->getString()};
+    return std::optional<StringRef>{};
   };
 
   // If `node` looks like a TBAA type descriptor metadata,
@@ -229,11 +199,10 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   // If `identity` and `memberTypes/Offsets` are non-null, then they will
   // contain the converted metadata operands for a valid TBAA node (i.e. when
   // true is returned).
-  auto isTypeDescriptorNode =
-      [&](const llvm::MDNode *node, StringRef *identity = nullptr,
-          SmallVectorImpl<Attribute> *memberTypes = nullptr,
-          SmallVectorImpl<int64_t> *memberOffsets =
-              nullptr) -> std::optional<bool> {
+  auto isTypeDescriptorNode = [&](const llvm::MDNode *node,
+                                  StringRef *identity = nullptr,
+                                  SmallVectorImpl<TBAAMemberAttr> *members =
+                                      nullptr) -> std::optional<bool> {
     unsigned numOperands = node->getNumOperands();
     // Type descriptor, e.g.:
     //   !1 = !{!"int", !0, /*optional*/i64 0} /* scalar int type */
@@ -280,10 +249,9 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
         offset = offsetCI->getZExtValue();
       }
 
-      if (memberTypes)
-        memberTypes->push_back(tbaaMapping.lookup(memberNode));
-      if (memberOffsets)
-        memberOffsets->push_back(offset);
+      if (members)
+        members->push_back(TBAAMemberAttr::get(
+            cast<TBAANodeAttr>(tbaaMapping.lookup(memberNode)), offset));
     }
 
     return true;
@@ -296,10 +264,11 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   // If the other arguments are non-null, then they will contain
   // the converted metadata operands for a valid TBAA node (i.e. when true is
   // returned).
-  auto isTagNode =
-      [&](const llvm::MDNode *node, SymbolRefAttr *baseSymRef = nullptr,
-          SymbolRefAttr *accessSymRef = nullptr, int64_t *offset = nullptr,
-          bool *isConstant = nullptr) -> std::optional<bool> {
+  auto isTagNode = [&](const llvm::MDNode *node,
+                       TBAATypeDescriptorAttr *baseAttr = nullptr,
+                       TBAATypeDescriptorAttr *accessAttr = nullptr,
+                       int64_t *offset = nullptr,
+                       bool *isConstant = nullptr) -> std::optional<bool> {
     // Access tag, e.g.:
     //   !3 = !{!1, !1, i64 0} /* scalar int access */
     //   !4 = !{!2, !1, i64 0} /* agg_t::x access */
@@ -335,10 +304,10 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       }
       isConst = isConstantCI->getValue()[0];
     }
-    if (baseSymRef)
-      *baseSymRef = tbaaMapping.lookup(baseMD);
-    if (accessSymRef)
-      *accessSymRef = tbaaMapping.lookup(accessMD);
+    if (baseAttr)
+      *baseAttr = cast<TBAATypeDescriptorAttr>(tbaaMapping.lookup(baseMD));
+    if (accessAttr)
+      *accessAttr = cast<TBAATypeDescriptorAttr>(tbaaMapping.lookup(accessMD));
     if (offset)
       *offset = offsetCI->getZExtValue();
     if (isConstant)
@@ -346,96 +315,91 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     return true;
   };
 
-  // Helper to compute a unique symbol name that includes the given `baseName`.
-  // Uses the size of the mapping to unique the symbol name.
-  auto getUniqueSymbolName = [&](StringRef baseName) {
-    return (Twine("tbaa_") + Twine(baseName) + Twine('_') +
-            Twine(tbaaMapping.size()))
-        .str();
-  };
+  // Do a post-order walk over the TBAA Graph. Since a correct TBAA Graph is a
+  // DAG, a post-order walk guarantees that we convert any metadata node we
+  // depend on, prior to converting the current node.
+  DenseSet<const llvm::MDNode *> seen;
+  SmallVector<const llvm::MDNode *> workList;
+  workList.push_back(node);
+  while (!workList.empty()) {
+    const llvm::MDNode *current = workList.back();
+    if (tbaaMapping.contains(current)) {
+      // Already converted. Just pop from the worklist.
+      workList.pop_back();
+      continue;
+    }
 
-  // Insert new operations at the end of the MetadataOp.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&getGlobalMetadataOp().getBody().back());
-  StringAttr metadataOpName = SymbolTable::getSymbolName(getGlobalMetadataOp());
+    // If any child of this node is not yet converted, don't pop the current
+    // node from the worklist but push the not-yet-converted children in the
+    // front of the worklist.
+    bool anyChildNotConverted = false;
+    for (const llvm::MDOperand &operand : current->operands())
+      if (auto *childNode = dyn_cast_or_null<const llvm::MDNode>(operand.get()))
+        if (!tbaaMapping.contains(childNode)) {
+          workList.push_back(childNode);
+          anyChildNotConverted = true;
+        }
 
-  // On the first walk, create SymbolRefAttr's and map them
-  // to nodes in `nodesToConvert`.
-  for (const auto *current : nodesToConvert) {
-    if (std::optional<StringRef> identity = getIdentityIfRootNode(current)) {
-      if (identity.value().empty())
-        return emitError(loc) << "TBAA root node must have non-empty identity: "
+    if (anyChildNotConverted) {
+      // If this is the second time we failed to convert an element in the
+      // worklist it must be because a child is dependent on it being converted
+      // and we have a cycle in the graph. Cycles are not allowed in TBAA
+      // graphs.
+      if (!seen.insert(current).second)
+        return emitError(loc) << "has cycle in TBAA graph: "
                               << diagMD(current, llvmModule.get());
 
+      continue;
+    }
+
+    // Otherwise simply import the current node.
+    workList.pop_back();
+
+    FailureOr<std::optional<StringRef>> rootNodeIdentity =
+        getIdentityIfRootNode(current);
+    if (succeeded(rootNodeIdentity)) {
+      StringAttr stringAttr = *rootNodeIdentity
+                                  ? builder.getStringAttr(**rootNodeIdentity)
+                                  : nullptr;
       // The root nodes do not have operands, so we can create
-      // the TBAARootMetadataOp on the first walk.
-      auto rootNode = builder.create<TBAARootMetadataOp>(
-          loc, getUniqueSymbolName("root"), identity.value());
-      tbaaMapping.try_emplace(current, FlatSymbolRefAttr::get(rootNode));
+      // the TBAARootAttr on the first walk.
+      tbaaMapping.insert({current, builder.getAttr<TBAARootAttr>(stringAttr)});
       continue;
     }
-    if (std::optional<bool> isValid = isTypeDescriptorNode(current)) {
-      if (!isValid.value())
-        return failure();
-      tbaaMapping.try_emplace(
-          current, FlatSymbolRefAttr::get(builder.getContext(),
-                                          getUniqueSymbolName("type_desc")));
+
+    StringRef identity;
+    SmallVector<TBAAMemberAttr> members;
+    if (std::optional<bool> isValid =
+            isTypeDescriptorNode(current, &identity, &members)) {
+      assert(isValid.value() && "type descriptor node must be valid");
+
+      tbaaMapping.insert({current, builder.getAttr<TBAATypeDescriptorAttr>(
+                                       identity, members)});
       continue;
     }
-    if (std::optional<bool> isValid = isTagNode(current)) {
-      if (!isValid.value())
-        return failure();
-      // TBAATagOp symbols must be referred by their fully qualified
-      // names, so create a path to TBAATagOp symbol.
-      tbaaMapping.try_emplace(
-          current, SymbolRefAttr::get(
-                       builder.getContext(), metadataOpName,
-                       FlatSymbolRefAttr::get(builder.getContext(),
-                                              getUniqueSymbolName("tag"))));
+
+    TBAATypeDescriptorAttr baseAttr, accessAttr;
+    int64_t offset;
+    bool isConstant;
+    if (std::optional<bool> isValid =
+            isTagNode(current, &baseAttr, &accessAttr, &offset, &isConstant)) {
+      assert(isValid.value() && "access tag node must be valid");
+      tbaaMapping.insert(
+          {current, builder.getAttr<TBAATagAttr>(baseAttr, accessAttr, offset,
+                                                 isConstant)});
       continue;
     }
+
     return emitError(loc) << "unsupported TBAA node format: "
                           << diagMD(current, llvmModule.get());
   }
-
-  // On the second walk, create TBAA operations using the symbol names from the
-  // map.
-  for (const auto *current : nodesToConvert) {
-    StringRef identity;
-    SmallVector<Attribute> memberTypes;
-    SmallVector<int64_t> memberOffsets;
-    if (std::optional<bool> isValid = isTypeDescriptorNode(
-            current, &identity, &memberTypes, &memberOffsets)) {
-      assert(isValid.value() && "type descriptor node must be valid");
-
-      builder.create<TBAATypeDescriptorOp>(
-          loc, tbaaMapping.lookup(current).getLeafReference(),
-          builder.getStringAttr(identity), builder.getArrayAttr(memberTypes),
-          memberOffsets);
-      continue;
-    }
-    SymbolRefAttr baseSymRef, accessSymRef;
-    int64_t offset;
-    bool isConstant;
-    if (std::optional<bool> isValid = isTagNode(
-            current, &baseSymRef, &accessSymRef, &offset, &isConstant)) {
-      assert(isValid.value() && "access tag node must be valid");
-      builder.create<TBAATagOp>(
-          loc, tbaaMapping.lookup(current).getLeafReference(),
-          baseSymRef.getLeafReference(), accessSymRef.getLeafReference(),
-          offset, isConstant);
-      continue;
-    }
-  }
-
   return success();
 }
 
 LogicalResult
 ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
-  if (failed(loopAnnotationImporter->translateAccessGroup(
-          node, loc, getGlobalMetadataOp())))
+  if (failed(loopAnnotationImporter->translateAccessGroup(node, loc)))
     return emitError(loc) << "unsupported access group node: "
                           << diagMD(node, llvmModule.get());
   return success();
@@ -454,14 +418,14 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     return idx >= node->getNumOperands() ||
            isa<llvm::MDString>(node->getOperand(idx));
   };
-  // Helper that creates an alias scope domain operation.
+  // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
     if (aliasDomain->getNumOperands() >= 2)
       if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
         description = builder.getStringAttr(operand->getString());
-    std::string name = llvm::formatv("domain_{0}", aliasScopeMapping.size());
-    return builder.create<AliasScopeDomainMetadataOp>(loc, name, description);
+    return builder.getAttr<AliasScopeDomainAttr>(
+        DistinctAttr::create(builder.getUnitAttr()), description);
   };
 
   // Collect the alias scopes and domains to translate them.
@@ -484,54 +448,60 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       if (aliasScopeMapping.contains(scope))
         continue;
 
-      // Set the insertion point to the end of the global metadata operation.
-      MetadataOp metadataOp = getGlobalMetadataOp();
-      StringAttr metadataOpName =
-          SymbolTable::getSymbolName(getGlobalMetadataOp());
-      OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToEnd(&metadataOp.getBody().back());
-
       // Convert the domain metadata node if it has not been translated before.
       auto it = aliasScopeMapping.find(aliasScope.getDomain());
       if (it == aliasScopeMapping.end()) {
         auto aliasScopeDomainOp = createAliasScopeDomainOp(domain);
-        auto symbolRef = SymbolRefAttr::get(
-            builder.getContext(), metadataOpName,
-            FlatSymbolRefAttr::get(builder.getContext(),
-                                   aliasScopeDomainOp.getSymName()));
-        it = aliasScopeMapping.try_emplace(domain, symbolRef).first;
+        it = aliasScopeMapping.try_emplace(domain, aliasScopeDomainOp).first;
       }
 
       // Convert the scope metadata node if it has not been converted before.
       StringAttr description = nullptr;
       if (!aliasScope.getName().empty())
         description = builder.getStringAttr(aliasScope.getName());
-      std::string name = llvm::formatv("scope_{0}", aliasScopeMapping.size());
-      auto aliasScopeOp = builder.create<AliasScopeMetadataOp>(
-          loc, name, it->getSecond().getLeafReference().getValue(),
-          description);
-      auto symbolRef =
-          SymbolRefAttr::get(builder.getContext(), metadataOpName,
-                             FlatSymbolRefAttr::get(builder.getContext(),
-                                                    aliasScopeOp.getSymName()));
-      aliasScopeMapping.try_emplace(aliasScope.getNode(), symbolRef);
+      auto aliasScopeOp = builder.getAttr<AliasScopeAttr>(
+          DistinctAttr::create(builder.getUnitAttr()),
+          cast<AliasScopeDomainAttr>(it->second), description);
+      aliasScopeMapping.try_emplace(aliasScope.getNode(), aliasScopeOp);
     }
   }
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::lookupAliasScopeAttrs(const llvm::MDNode *node) const {
-  SmallVector<SymbolRefAttr> aliasScopes;
+  SmallVector<AliasScopeAttr> aliasScopes;
   aliasScopes.reserve(node->getNumOperands());
   for (const llvm::MDOperand &operand : node->operands()) {
     auto *node = cast<llvm::MDNode>(operand.get());
-    aliasScopes.push_back(aliasScopeMapping.lookup(node));
+    aliasScopes.push_back(
+        dyn_cast_or_null<AliasScopeAttr>(aliasScopeMapping.lookup(node)));
   }
   // Return failure if one of the alias scope lookups failed.
   if (llvm::is_contained(aliasScopes, nullptr))
     return failure();
   return aliasScopes;
+}
+
+void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
+  debugIntrinsics.insert(intrinsic);
+}
+
+LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    if (named.getName() != "llvm.linker.options")
+      continue;
+    // llvm.linker.options operands are lists of strings.
+    for (const llvm::MDNode *md : named.operands()) {
+      SmallVector<StringRef> options;
+      options.reserve(md->getNumOperands());
+      for (const llvm::MDOperand &option : md->operands())
+        options.push_back(cast<llvm::MDString>(option)->getString());
+      builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
+                                            builder.getStrArrayAttr(options));
+    }
+  }
+  return success();
 }
 
 LogicalResult ModuleImport::convertMetadata() {
@@ -560,6 +530,8 @@ LogicalResult ModuleImport::convertMetadata() {
           return failure();
     }
   }
+  if (failed(convertLinkerOptionsMetadata()))
+    return failure();
   return success();
 }
 
@@ -647,6 +619,19 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
+void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                               Operation *op) const {
+  auto iface = cast<IntegerOverflowFlagsInterface>(op);
+
+  IntegerOverflowFlags value = {};
+  value = bitEnumSet(value, IntegerOverflowFlags::nsw, inst->hasNoSignedWrap());
+  value =
+      bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
+
+  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
+  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -728,14 +713,14 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
 
 /// Returns an integer or float attribute for the provided scalar constant
 /// `constScalar` or nullptr if the conversion fails.
-static Attribute getScalarConstantAsAttr(OpBuilder &builder,
+static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
   // Convert scalar intergers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
-        IntegerType::get(context, constInt->getType()->getBitWidth()),
+        IntegerType::get(context, constInt->getBitWidth()),
         constInt->getValue());
   }
 
@@ -881,16 +866,28 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     alignment = align.value();
   }
 
+  // Get the global expression associated with this global variable and convert
+  // it.
+  DIGlobalVariableExpressionAttr globalExpressionAttr;
+  SmallVector<llvm::DIGlobalVariableExpression *> globalExpressions;
+  globalVar->getDebugInfo(globalExpressions);
+
+  // There should only be a single global expression.
+  if (!globalExpressions.empty())
+    globalExpressionAttr =
+        debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
+
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal());
+      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExpr=*/globalExpressionAttr);
   globalInsertionOp = globalOp;
 
   if (globalVar->hasInitializer() && !valueAttr) {
-    clearBlockAndValueMapping();
+    clearRegionState();
     Block *block = builder.createBlock(&globalOp.getInitializerRegion());
     setConstantInsertionPointToStart(block);
     FailureOr<Value> initializer =
@@ -1034,7 +1031,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert null pointer constants.
   if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant)) {
     Type type = convertType(nullPtr->getType());
-    return builder.create<NullOp>(loc, type).getResult();
+    return builder.create<ZeroOp>(loc, type).getResult();
+  }
+
+  // Convert none token constants.
+  if (isa<llvm::ConstantTokenNone>(constant)) {
+    return builder.create<NoneTokenOp>(loc).getResult();
   }
 
   // Convert poison.
@@ -1124,16 +1126,9 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
         cast<LLVMTargetExtType>(convertType(constTargetNone->getType()));
     assert(targetExtType.hasProperty(LLVMTargetExtType::HasZeroInit) &&
            "target extension type does not support zero-initialization");
-    // As the number of values needed for initialization is target-specific and
-    // opaque to the compiler, use a single i64 zero-valued attribute to
-    // represent the 'zeroinitializer', which is the only constant value allowed
-    // for target extension types (besides poison and undef).
-    // TODO: Replace with 'zeroinitializer' once there is a dedicated
-    // zeroinitializer operation in the LLVM dialect.
-    return builder
-        .create<LLVM::ConstantOp>(loc, targetExtType,
-                                  builder.getI64IntegerAttr(0))
-        .getRes();
+    // Create llvm.mlir.zero operation to represent zero-initialization of
+    // target extension type.
+    return builder.create<LLVM::ZeroOp>(loc, targetExtType).getRes();
   }
 
   StringRef error = "";
@@ -1229,6 +1224,40 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+LogicalResult ModuleImport::convertIntrinsicArguments(
+    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
+    SmallVectorImpl<NamedAttribute> &attrsOut) {
+  assert(immArgPositions.size() == immArgAttrNames.size() &&
+         "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
+         "length");
+
+  SmallVector<llvm::Value *> operands(values);
+  for (auto [immArgPos, immArgName] :
+       llvm::zip(immArgPositions, immArgAttrNames)) {
+    auto &value = operands[immArgPos];
+    auto *constant = llvm::cast<llvm::Constant>(value);
+    auto attr = getScalarConstantAsAttr(builder, constant);
+    assert(attr && attr.getType().isIntOrFloat() &&
+           "expected immarg to be float or integer constant");
+    auto nameAttr = StringAttr::get(attr.getContext(), immArgName);
+    attrsOut.push_back({nameAttr, attr});
+    // Mark matched attribute values as null (so they can be removed below).
+    value = nullptr;
+  }
+
+  for (llvm::Value *value : operands) {
+    if (!value)
+      continue;
+    auto mlirValue = convertValue(value);
+    if (failed(mlirValue))
+      return failure();
+    valuesOut.push_back(*mlirValue);
+  }
+
+  return success();
+}
+
 IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
   FailureOr<Value> converted = convertValue(value);
@@ -1261,7 +1290,7 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
   auto *node = cast<llvm::MDNode>(nodeAsVal->getMetadata());
@@ -1396,12 +1425,19 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertCallTypeAndOperands(callInst, types, operands)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     CallOp callOp;
+
     if (llvm::Function *callee = callInst->getCalledFunction()) {
       callOp = builder.create<CallOp>(
-          loc, types, SymbolRefAttr::get(context, callee->getName()), operands);
+          loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
+          operands);
     } else {
-      callOp = builder.create<CallOp>(loc, types, operands);
+      callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
@@ -1460,20 +1496,25 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
     InvokeOp invokeOp;
     if (llvm::Function *callee = invokeInst->getCalledFunction()) {
       invokeOp = builder.create<InvokeOp>(
-          loc, types,
+          loc, funcTy,
           SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
           directNormalDest, ValueRange(),
           lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     } else {
       invokeOp = builder.create<InvokeOp>(
-          loc, types, operands, directNormalDest, ValueRange(),
-          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
+          ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -1542,14 +1583,11 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
   // FIXME: Add support for call / operand attributes.
   // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
-  // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
+  // callbr, vaarg, catchpad, cleanuppad instructions.
 
   // Convert LLVM intrinsics calls to MLIR intrinsics.
-  if (auto *callInst = dyn_cast<llvm::CallInst>(inst)) {
-    llvm::Function *callee = callInst->getCalledFunction();
-    if (callee && callee->isIntrinsic())
-      return convertIntrinsic(callInst);
-  }
+  if (auto *intrinsic = dyn_cast<llvm::IntrinsicInst>(inst))
+    return convertIntrinsic(intrinsic);
 
   // Convert all remaining LLVM instructions to MLIR operations.
   return convertInstruction(inst);
@@ -1569,7 +1607,7 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   // bitcast to i8* are parsed.
   if (auto *ce = dyn_cast<llvm::ConstantExpr>(pf)) {
     if (ce->getOpcode() == llvm::Instruction::BitCast &&
-        ce->getType() == llvm::Type::getInt8PtrTy(f->getContext())) {
+        ce->getType() == llvm::PointerType::getUnqual(f->getContext())) {
       if (auto *func = dyn_cast<llvm::Function>(ce->getOperand(0)))
         return SymbolRefAttr::get(builder.getContext(), func->getName());
     }
@@ -1593,6 +1631,18 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
     return;
   funcOp.setMemoryAttr(memAttr);
 }
+
+// List of LLVM IR attributes that map to an explicit attribute on the MLIR
+// LLVMFuncOp.
+static constexpr std::array ExplicitAttributes{
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("aarch64_pstate_sm_body"),
+    StringLiteral("aarch64_pstate_sm_compatible"),
+    StringLiteral("aarch64_pstate_za_new"),
+    StringLiteral("vscale_range"),
+    StringLiteral("frame-pointer"),
+    StringLiteral("target-features"),
+};
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
   MLIRContext *context = funcOp.getContext();
@@ -1619,10 +1669,8 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
       attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
     auto keyAttr = StringAttr::get(context, attrName);
 
-    // Skip the aarch64_pstate_sm_<body|enabled> since the LLVMFuncOp has an
-    // explicit attribute.
-    if (attrName == "aarch64_pstate_sm_enabled" ||
-        attrName == "aarch64_pstate_sm_body")
+    // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
+    if (llvm::is_contained(ExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1662,6 +1710,36 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+  else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
+    funcOp.setArmStreamingCompatible(true);
+
+  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+    funcOp.setArmNewZa(true);
+
+  llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
+  if (attr.isValid()) {
+    MLIRContext *context = funcOp.getContext();
+    auto intTy = IntegerType::get(context, 32);
+    funcOp.setVscaleRangeAttr(LLVM::VScaleRangeAttr::get(
+        context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
+        IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
+  }
+
+  // Process frame-pointer attribute.
+  if (func->hasFnAttribute("frame-pointer")) {
+    StringRef stringRefFramePointerKind =
+        func->getFnAttribute("frame-pointer").getValueAsString();
+    funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(
+        funcOp.getContext(), LLVM::framePointerKind::symbolizeFramePointerKind(
+                                 stringRefFramePointerKind)
+                                 .value()));
+  }
+
+  if (llvm::Attribute attr = func->getFnAttribute("target-features");
+      attr.isStringAttribute()) {
+    funcOp.setTargetFeaturesAttr(
+        LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+  }
 }
 
 DictionaryAttr
@@ -1706,7 +1784,7 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
-  clearBlockAndValueMapping();
+  clearRegionState();
 
   auto functionType =
       dyn_cast<LLVMFunctionType>(convertType(func->getFunctionType()));
@@ -1788,11 +1866,99 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // value once a block is translated.
   SetVector<llvm::BasicBlock *> blocks = getTopologicallySortedBlocks(func);
   setConstantInsertionPointToStart(lookupBlock(blocks.front()));
-  for (llvm::BasicBlock *bb : blocks) {
+  for (llvm::BasicBlock *bb : blocks)
     if (failed(processBasicBlock(bb, lookupBlock(bb))))
       return failure();
-  }
 
+  // Process the debug intrinsics that require a delayed conversion after
+  // everything else was converted.
+  if (failed(processDebugIntrinsics()))
+    return failure();
+
+  return success();
+}
+
+/// Checks if `dbgIntr` is a kill location that holds metadata instead of an SSA
+/// value.
+static bool isMetadataKillLocation(llvm::DbgVariableIntrinsic *dbgIntr) {
+  if (!dbgIntr->isKillLocation())
+    return false;
+  llvm::Value *value = dbgIntr->getArgOperand(0);
+  auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value);
+  if (!nodeAsVal)
+    return false;
+  return !isa<llvm::ValueAsMetadata>(nodeAsVal->getMetadata());
+}
+
+LogicalResult
+ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
+                                    DominanceInfo &domInfo) {
+  Location loc = translateLoc(dbgIntr->getDebugLoc());
+  auto emitUnsupportedWarning = [&]() {
+    if (emitExpensiveWarnings)
+      emitWarning(loc) << "dropped intrinsic: " << diag(*dbgIntr);
+    return success();
+  };
+  // Drop debug intrinsics with arg lists.
+  // TODO: Support debug intrinsics that have arg lists.
+  if (dbgIntr->hasArgList())
+    return emitUnsupportedWarning();
+  // Kill locations can have metadata nodes as location operand. This
+  // cannot be converted to poison as the type cannot be reconstructed.
+  // TODO: find a way to support this case.
+  if (isMetadataKillLocation(dbgIntr))
+    return emitUnsupportedWarning();
+  FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
+  if (failed(argOperand))
+    return emitError(loc) << "failed to convert a debug intrinsic operand: "
+                          << diag(*dbgIntr);
+
+  // Ensure that the debug instrinsic is inserted right after its operand is
+  // defined. Otherwise, the operand might not necessarily dominate the
+  // intrinsic. If the defining operation is a terminator, insert the intrinsic
+  // into a dominated block.
+  OpBuilder::InsertionGuard guard(builder);
+  if (Operation *op = argOperand->getDefiningOp();
+      op && op->hasTrait<OpTrait::IsTerminator>()) {
+    // Find a dominated block that can hold the debug intrinsic.
+    auto dominatedBlocks = domInfo.getNode(op->getBlock())->children();
+    // If no block is dominated by the terminator, this intrinisc cannot be
+    // converted.
+    if (dominatedBlocks.empty())
+      return emitUnsupportedWarning();
+    // Set insertion point before the terminator, to avoid inserting something
+    // before landingpads.
+    Block *dominatedBlock = (*dominatedBlocks.begin())->getBlock();
+    builder.setInsertionPoint(dominatedBlock->getTerminator());
+  } else {
+    builder.setInsertionPointAfterValue(*argOperand);
+  }
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  auto locationExprAttr =
+      debugImporter->translateExpression(dbgIntr->getExpression());
+  Operation *op =
+      llvm::TypeSwitch<llvm::DbgVariableIntrinsic *, Operation *>(dbgIntr)
+          .Case([&](llvm::DbgDeclareInst *) {
+            return builder.create<LLVM::DbgDeclareOp>(
+                loc, *argOperand, localVariableAttr, locationExprAttr);
+          })
+          .Case([&](llvm::DbgValueInst *) {
+            return builder.create<LLVM::DbgValueOp>(
+                loc, *argOperand, localVariableAttr, locationExprAttr);
+          });
+  mapNoResultOp(dbgIntr, op);
+  setNonDebugMetadataAttrs(dbgIntr, op);
+  return success();
+}
+
+LogicalResult ModuleImport::processDebugIntrinsics() {
+  DominanceInfo domInfo;
+  for (llvm::Instruction *inst : debugIntrinsics) {
+    auto *intrCall = cast<llvm::DbgVariableIntrinsic>(inst);
+    if (failed(processDebugIntrinsic(intrCall, domInfo)))
+      return failure();
+  }
   return success();
 }
 
@@ -1802,6 +1968,11 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   for (llvm::Instruction &inst : *bb) {
     if (failed(processInstruction(&inst)))
       return failure();
+
+    // Skip additional processing when the instructions is a debug intrinsics
+    // that was not yet converted.
+    if (debugIntrinsics.contains(&inst))
+      continue;
 
     // Set the non-debug metadata attributes on the imported operation and emit
     // a warning if an instruction other than a phi instruction is dropped
@@ -1818,7 +1989,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AccessGroupAttr>>
 ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
   return loopAnnotationImporter->lookupAccessGroupAttrs(node);
 }

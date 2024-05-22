@@ -101,7 +101,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   for (const auto &HFE : Check.HeaderFileExtensions) {
     SmallString<128> GuessedFileName(FileName);
     llvm::sys::path::replace_extension(GuessedFileName,
-                                       (HFE.size() ? "." : "") + HFE);
+                                       (!HFE.empty() ? "." : "") + HFE);
 
     OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,

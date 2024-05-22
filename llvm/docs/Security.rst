@@ -31,28 +31,31 @@ Group Composition
 Security Group Members
 ----------------------
 
-The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below. The list is in the format `* ${full_name} (${affiliation}) [${phabricator_username}]`. If a phabricator username for an individual isn't available, the brackets will be empty.
+The members of the group represent a wide cross-section of the community, and
+meet the criteria for inclusion below. The list is in the format
+`* ${full_name} (${affiliation}) [${github_username}]`. If a github
+username for an individual isn't available, the brackets will be empty.
 
-* Ahmed Bougacha (Apple) [ab]
-* Andy Kaylor (Intel) [andykaylor]
-* Artur Pilipenko (Azul Systems Inc) [apilipenko]
-* Boovaragavan Dasarathan (Nvidia) [mrragava]
-* Dimitry Andric (individual; FreeBSD) [dim]
-* Ed Maste (individual; FreeBSD) [emaste]
-* George Burgess IV (Google) [george.burgess.iv]
-* Josh Stone (RedHat; Rust) [cuviper]
+* Ahmed Bougacha (Apple) [@ahmedbougacha]
+* Andy Kaylor (Intel) [@andykaylor]
+* Artur Pilipenko (Azul Systems Inc) []
+* Boovaragavan Dasarathan (Nvidia) [@mrragava]
+* Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
+* Ed Maste (individual; FreeBSD) [@emaste]
+* George Burgess IV (Google) [@gburgessiv]
+* Josh Stone (Red Hat; Rust) [@cuviper]
 * Kate McInnes (Apple) []
-* Kristof Beyls (ARM) [kristof.beyls]
-* Matthew Riley (Google) [mattdr]
-* Nikhil Gupta (Nvidia) [nikhgupt]
-* Oliver Hunt (Apple) [ojhunt]
-* Paul Robinson (Sony) [probinson]
-* Peter Smith (ARM) [peter.smith]
-* Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
-* Serge Guelton (Mozilla) [serge-sans-paille]
-* Sergey Maslov (Intel) [smaslov-intel]
-* Shayne Hiet-Block (Microsoft) [Shayne]
-* Tim Penge (Sony) [tpenge]
+* Kristof Beyls (ARM) [@kbeyls]
+* Matthew Riley (Google) [@mmdriley]
+* Nikhil Gupta (Nvidia) []
+* Oliver Hunt (Apple) [@ojhunt]
+* Paul Robinson (Sony) [@pogo59]
+* Peter Smith (ARM) [@smithp35]
+* Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
+* Serge Guelton (Mozilla) [@serge-sans-paille]
+* Sergey Maslov (Intel) [@smaslov-intel]
+* Shayne Hiet-Block (Microsoft) [@GreatKeeper]
+* Tim Penge (Sony) []
 
 Criteria
 --------
@@ -208,23 +211,43 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Gr
 What is considered a security issue?
 ====================================
 
-*FUTURE*: this section will be expanded once the Security Group is formed, and it agrees on an initial security surface area.
+The LLVM Project has a significant amount of code, and not all of it is
+considered security-sensitive. This is particularly true because LLVM is used in
+a wide variety of circumstances: there are different threat models, untrusted
+inputs differ, and the environment LLVM runs in is varied. Therefore, what the
+LLVM Project considers a security issue is what its members have signed up to
+maintain securely.
 
-The LLVM Project has a significant amount of code, and not all of it is considered security-sensitive. This is particularly true because LLVM is used in a wide variety of circumstances: there are different threat models, untrusted inputs differ, and the environment LLVM runs in is varied. Therefore, what the LLVM Project considers a security issue is what its members have signed up to maintain securely.
+As this security process matures, members of the LLVM community can propose that
+a part of the codebase be designated as security-sensitive (or no longer
+security-sensitive). This requires a rationale, and buy-in from the LLVM
+community as for any RFC. In some cases, parts of the codebase could be handled
+as security-sensitive but need significant work to get to the stage where that's
+manageable. The LLVM community will need to decide whether it wants to invest in
+making these parts of the code securable, and maintain these security
+properties over time. In all cases the LLVM Security Group should be consulted,
+since they'll be responding to security issues filed against these parts of the
+codebase.
 
-As this security process matures, members of the LLVM community can propose that a part of the codebase be designated as security-sensitive (or no longer security-sensitive). This requires a rationale, and buy-in from the LLVM community as for any RFC. In some cases, parts of the codebase could be handled as security-sensitive but need significant work to get to the stage where that's manageable. The LLVM community will need to decide whether it wants to invest in making these parts of the code secure-able, and maintain these security properties over time. In all cases the LLVM Security Group should be consulted, since they'll be responding to security issues filed against these parts of the codebase.
+If you're not sure whether an issue is in-scope for this security process or
+not, err towards assuming that it is. The Security Group might agree or disagree
+and will explain its rationale in the report, as well as update this document
+through the above process.
 
-If you're not sure whether an issue is in-scope for this security process or not, err towards assuming that it is. The Security Group might agree or disagree and will explain its rationale in the report, as well as  update this document through the above process.
+The security-sensitive parts of the LLVM Project currently are the following.
+Note that this list can change over time.
 
-The security-sensitive parts of the LLVM Project currently are:
+* None are currently defined. Please don't let this stop you from reporting
+  issues to the security group that you believe are security-sensitive.
 
-* None (this process is new, the list hasn't been populated yet)
-* *FUTURE*: this section will be expanded.
+The parts of the LLVM Project which are currently treated as non-security
+sensitive are the following. Note that this list can change over time.
 
-The parts of the LLVM Project which are currently treated as non-security sensitive are:
-
-* Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously crafted C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
-* *FUTURE*: this section will be expanded.
+* Language front-ends, such as clang, for which a malicious input file can cause
+  undesirable behavior. For example, a maliciously crafted C or Rust source file
+  can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been
+  hardened, and compiling untrusted code usually also includes running utilities
+  such as `make` which can more readily perform malicious things.
 
 
 .. _CVE process: https://cve.mitre.org

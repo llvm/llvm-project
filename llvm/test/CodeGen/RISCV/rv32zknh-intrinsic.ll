@@ -3,47 +3,47 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32ZKNH
 
 
-declare i32 @llvm.riscv.sha256sig0.i32(i32);
+declare i32 @llvm.riscv.sha256sig0(i32);
 
 define i32 @sha256sig0_i32(i32 %a) nounwind {
 ; RV32ZKNH-LABEL: sha256sig0_i32:
 ; RV32ZKNH:       # %bb.0:
 ; RV32ZKNH-NEXT:    sha256sig0 a0, a0
 ; RV32ZKNH-NEXT:    ret
-    %val = call i32 @llvm.riscv.sha256sig0.i32(i32 %a)
+    %val = call i32 @llvm.riscv.sha256sig0(i32 %a)
     ret i32 %val
 }
 
-declare i32 @llvm.riscv.sha256sig1.i32(i32);
+declare i32 @llvm.riscv.sha256sig1(i32);
 
 define i32 @sha256sig1_i32(i32 %a) nounwind {
 ; RV32ZKNH-LABEL: sha256sig1_i32:
 ; RV32ZKNH:       # %bb.0:
 ; RV32ZKNH-NEXT:    sha256sig1 a0, a0
 ; RV32ZKNH-NEXT:    ret
-    %val = call i32 @llvm.riscv.sha256sig1.i32(i32 %a)
+    %val = call i32 @llvm.riscv.sha256sig1(i32 %a)
     ret i32 %val
 }
 
-declare i32 @llvm.riscv.sha256sum0.i32(i32);
+declare i32 @llvm.riscv.sha256sum0(i32);
 
 define i32 @sha256sum0_i32(i32 %a) nounwind {
 ; RV32ZKNH-LABEL: sha256sum0_i32:
 ; RV32ZKNH:       # %bb.0:
 ; RV32ZKNH-NEXT:    sha256sum0 a0, a0
 ; RV32ZKNH-NEXT:    ret
-    %val = call i32 @llvm.riscv.sha256sum0.i32(i32 %a)
+    %val = call i32 @llvm.riscv.sha256sum0(i32 %a)
     ret i32 %val
 }
 
-declare i32 @llvm.riscv.sha256sum1.i32(i32);
+declare i32 @llvm.riscv.sha256sum1(i32);
 
 define i32 @sha256sum1_i32(i32 %a) nounwind {
 ; RV32ZKNH-LABEL: sha256sum1_i32:
 ; RV32ZKNH:       # %bb.0:
 ; RV32ZKNH-NEXT:    sha256sum1 a0, a0
 ; RV32ZKNH-NEXT:    ret
-    %val = call i32 @llvm.riscv.sha256sum1.i32(i32 %a)
+    %val = call i32 @llvm.riscv.sha256sum1(i32 %a)
     ret i32 %val
 }
 

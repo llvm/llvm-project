@@ -173,14 +173,14 @@ struct TracedCopyMove {
 template <>
 struct std::uses_allocator<TracedCopyMove, test_allocator<int>> : std::true_type {};
 
-// If the constructor tuple(tuple<UTyles...>&) is not available,
+// If the constructor tuple(tuple<UTypes...>&) is not available,
 // the fallback call to `tuple(const tuple&) = default;` or any other
 // constructor that takes const ref would increment the constCopy.
 inline constexpr bool nonConstCopyCtrCalled(const TracedCopyMove& obj) {
   return obj.nonConstCopy == 1 && obj.constCopy == 0 && obj.constMove == 0 && obj.nonConstMove == 0;
 }
 
-// If the constructor tuple(const tuple<UTyles...>&&) is not available,
+// If the constructor tuple(const tuple<UTypes...>&&) is not available,
 // the fallback call to `tuple(const tuple&) = default;` or any other
 // constructor that takes const ref would increment the constCopy.
 inline constexpr bool constMoveCtrCalled(const TracedCopyMove& obj) {

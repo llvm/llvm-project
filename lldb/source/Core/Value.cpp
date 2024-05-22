@@ -98,7 +98,9 @@ void Value::AppendBytes(const void *bytes, int len) {
 }
 
 void Value::Dump(Stream *strm) {
-  m_value.GetValue(strm, true);
+  if (!strm)
+    return;
+  m_value.GetValue(*strm, true);
   strm->Printf(", value_type = %s, context = %p, context_type = %s",
                Value::GetValueTypeAsCString(m_value_type), m_context,
                Value::GetContextTypeAsCString(m_context_type));
@@ -572,7 +574,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   return error;
 }
 
-Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
+Scalar &Value::ResolveValue(ExecutionContext *exe_ctx, Module *module) {
   const CompilerType &compiler_type = GetCompilerType();
   if (compiler_type.IsValid()) {
     switch (m_value_type) {
@@ -587,7 +589,7 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     {
       DataExtractor data;
       lldb::addr_t addr = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-      Status error(GetValueAsData(exe_ctx, data, nullptr));
+      Status error(GetValueAsData(exe_ctx, data, module));
       if (error.Success()) {
         Scalar scalar;
         if (compiler_type.GetValueAsScalar(

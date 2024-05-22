@@ -39,6 +39,7 @@ def hlfir_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }
@@ -109,6 +110,16 @@ def IsFortranScalarCharacterExprPred
 def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
     "any character scalar expression type">;
 
+def isFortranArrayCharacterExprTypePred
+        : CPred<"::hlfir::isFortranArrayCharacterExprType($_self)">;
+def AnyArrayCharacterExpr : Type<isFortranArrayCharacterExprTypePred,
+    "any character array expression type">;
+
+def AnyScalarOrArrayCharacterExpr :
+    Type<Or<[AnyScalarCharacterExpr.predicate,
+             AnyArrayCharacterExpr.predicate]>,
+    "any character scalar or array expression type">;
+
 def IsFortranNumericalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalArrayObject($_self)">;
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
@@ -138,6 +149,11 @@ def IsFortranLogicalArrayPred
         : CPred<"::hlfir::isFortranLogicalArrayObject($_self)">;
 def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
     "any array-like object containing logicals">;
+
+def IsPolymorphicObjectPred
+        : CPred<"::hlfir::isPolymorphicObject($_self)">;
+def AnyPolymorphicObject : Type<IsPolymorphicObjectPred,
+    "any polymorphic object">;
 
 def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
     "CharExtremumPredicate", "",

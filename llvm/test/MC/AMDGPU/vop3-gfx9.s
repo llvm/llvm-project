@@ -1,11 +1,11 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=NOVI,NOGCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefixes=NOSICI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=NOVI,NOGCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=NOGFX9 --implicit-check-not=error: %s
 
 v_lshl_add_u32 v1, v2, v3, v4
 // GFX9: v_lshl_add_u32 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xfd,0xd1,0x02,0x07,0x12,0x04]

@@ -10,10 +10,11 @@ int scanf(const char *restrict format, ...);
 int system(const char *command);
 char* getenv( const char* env_var );
 size_t strlen( const char* str );
+int atoi( const char* str );
 void *malloc(size_t size );
 void free( void *ptr );
 char *fgets(char *str, int n, FILE *stream);
-FILE *stdin;
+extern FILE *stdin;
 
 void taintDiagnostic(void)
 {
@@ -28,8 +29,8 @@ int taintDiagnosticOutOfBound(void) {
   int Array[] = {1, 2, 3, 4, 5};
   scanf("%d", &index); // expected-note {{Taint originated here}}
                        // expected-note@-1 {{Taint propagated to the 2nd argument}}
-  return Array[index]; // expected-warning {{Out of bound memory access (index is tainted)}}
-                       // expected-note@-1 {{Out of bound memory access (index is tainted)}}
+  return Array[index]; // expected-warning {{Potential out of bound access to 'Array' with tainted index}}
+                       // expected-note@-1 {{Access of 'Array' with a tainted index that may be too large}}
 }
 
 int taintDiagnosticDivZero(int operand) {
@@ -54,11 +55,11 @@ void taintDiagnosticVLA(void) {
 // propagating through variables and expressions
 char *taintDiagnosticPropagation(){
   char *pathbuf;
-  char *pathlist=getenv("PATH"); // expected-note {{Taint originated here}}
+  char *size=getenv("SIZE"); // expected-note {{Taint originated here}}
                                  // expected-note@-1 {{Taint propagated to the return value}}
-  if (pathlist){ // expected-note {{Assuming 'pathlist' is non-null}}
+  if (size){ // expected-note {{Assuming 'size' is non-null}}
 	               // expected-note@-1 {{Taking true branch}}
-    pathbuf=(char*) malloc(strlen(pathlist)+1); // expected-warning{{Untrusted data is used to specify the buffer size}}
+    pathbuf=(char*) malloc(atoi(size)); // expected-warning{{Untrusted data is used to specify the buffer size}}
                                                 // expected-note@-1{{Untrusted data is used to specify the buffer size}}
                                                 // expected-note@-2 {{Taint propagated to the return value}}
     return pathbuf;
@@ -71,12 +72,12 @@ char *taintDiagnosticPropagation(){
 char *taintDiagnosticPropagation2(){
   char *pathbuf;
   char *user_env2=getenv("USER_ENV_VAR2");//unrelated taint source
-  char *pathlist=getenv("PATH"); // expected-note {{Taint originated here}}
+  char *size=getenv("SIZE"); // expected-note {{Taint originated here}}
                                  // expected-note@-1 {{Taint propagated to the return value}}
   char *user_env=getenv("USER_ENV_VAR");//unrelated taint source
-  if (pathlist){ // expected-note {{Assuming 'pathlist' is non-null}}
+  if (size){ // expected-note {{Assuming 'size' is non-null}}
 	               // expected-note@-1 {{Taking true branch}}
-    pathbuf=(char*) malloc(strlen(pathlist)+1); // expected-warning{{Untrusted data is used to specify the buffer size}}
+    pathbuf=(char*) malloc(atoi(size)+1); // expected-warning{{Untrusted data is used to specify the buffer size}}
                                                 // expected-note@-1{{Untrusted data is used to specify the buffer size}}
                                                 // expected-note@-2 {{Taint propagated to the return value}}
     return pathbuf;

@@ -70,21 +70,21 @@ entry:
 define void @test8elt(ptr noalias nocapture sret(<8 x double>) %agg.result, ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
+; CHECK-P8-NEXT:    li r5, 48
 ; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 48
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    xvcvuxddp vs3, vs3
 ; CHECK-P8-NEXT:    xvcvuxddp vs0, vs0
-; CHECK-P8-NEXT:    xvcvuxddp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvuxddp vs2, vs2
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvuxddp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
+; CHECK-P8-NEXT:    xvcvuxddp vs0, vs3
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt:
@@ -128,13 +128,14 @@ entry:
 define void @test16elt(ptr noalias nocapture sret(<16 x double>) %agg.result, ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
-; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 64
-; CHECK-P8-NEXT:    li r8, 96
-; CHECK-P8-NEXT:    li r9, 112
-; CHECK-P8-NEXT:    li r10, 80
-; CHECK-P8-NEXT:    li r11, 48
+; CHECK-P8-NEXT:    li r5, 112
+; CHECK-P8-NEXT:    li r6, 96
+; CHECK-P8-NEXT:    li r7, 80
+; CHECK-P8-NEXT:    li r8, 64
+; CHECK-P8-NEXT:    li r9, 48
+; CHECK-P8-NEXT:    li r10, 32
+; CHECK-P8-NEXT:    li r11, 16
+; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
@@ -142,23 +143,22 @@ define void @test16elt(ptr noalias nocapture sret(<16 x double>) %agg.result, pt
 ; CHECK-P8-NEXT:    lxvd2x vs4, r4, r9
 ; CHECK-P8-NEXT:    lxvd2x vs5, r4, r10
 ; CHECK-P8-NEXT:    lxvd2x vs6, r4, r11
-; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
 ; CHECK-P8-NEXT:    xvcvuxddp vs0, vs0
-; CHECK-P8-NEXT:    xvcvuxddp vs1, vs1
-; CHECK-P8-NEXT:    xvcvuxddp vs2, vs2
-; CHECK-P8-NEXT:    xvcvuxddp vs3, vs3
-; CHECK-P8-NEXT:    xvcvuxddp vs4, vs4
-; CHECK-P8-NEXT:    xvcvuxddp vs5, vs5
 ; CHECK-P8-NEXT:    xvcvuxddp vs6, vs6
-; CHECK-P8-NEXT:    xvcvuxddp vs7, vs7
-; CHECK-P8-NEXT:    stxvd2x vs4, r3, r9
-; CHECK-P8-NEXT:    stxvd2x vs3, r3, r8
-; CHECK-P8-NEXT:    stxvd2x vs5, r3, r10
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs6, r3, r11
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvuxddp vs5, vs5
+; CHECK-P8-NEXT:    xvcvuxddp vs4, vs4
+; CHECK-P8-NEXT:    xvcvuxddp vs3, vs3
+; CHECK-P8-NEXT:    xvcvuxddp vs2, vs2
+; CHECK-P8-NEXT:    xvcvuxddp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs7, 0, r3
+; CHECK-P8-NEXT:    xvcvuxddp vs0, vs7
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs3, r3, r8
+; CHECK-P8-NEXT:    stxvd2x vs4, r3, r9
+; CHECK-P8-NEXT:    stxvd2x vs5, r3, r10
+; CHECK-P8-NEXT:    stxvd2x vs6, r3, r11
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -284,21 +284,21 @@ entry:
 define void @test8elt_signed(ptr noalias nocapture sret(<8 x double>) %agg.result, ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
+; CHECK-P8-NEXT:    li r5, 48
 ; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 48
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    xvcvsxddp vs3, vs3
 ; CHECK-P8-NEXT:    xvcvsxddp vs0, vs0
-; CHECK-P8-NEXT:    xvcvsxddp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvsxddp vs2, vs2
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvsxddp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
+; CHECK-P8-NEXT:    xvcvsxddp vs0, vs3
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt_signed:
@@ -342,13 +342,14 @@ entry:
 define void @test16elt_signed(ptr noalias nocapture sret(<16 x double>) %agg.result, ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
-; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 64
-; CHECK-P8-NEXT:    li r8, 96
-; CHECK-P8-NEXT:    li r9, 112
-; CHECK-P8-NEXT:    li r10, 80
-; CHECK-P8-NEXT:    li r11, 48
+; CHECK-P8-NEXT:    li r5, 112
+; CHECK-P8-NEXT:    li r6, 96
+; CHECK-P8-NEXT:    li r7, 80
+; CHECK-P8-NEXT:    li r8, 64
+; CHECK-P8-NEXT:    li r9, 48
+; CHECK-P8-NEXT:    li r10, 32
+; CHECK-P8-NEXT:    li r11, 16
+; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
@@ -356,23 +357,22 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x double>) %agg.res
 ; CHECK-P8-NEXT:    lxvd2x vs4, r4, r9
 ; CHECK-P8-NEXT:    lxvd2x vs5, r4, r10
 ; CHECK-P8-NEXT:    lxvd2x vs6, r4, r11
-; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
 ; CHECK-P8-NEXT:    xvcvsxddp vs0, vs0
-; CHECK-P8-NEXT:    xvcvsxddp vs1, vs1
-; CHECK-P8-NEXT:    xvcvsxddp vs2, vs2
-; CHECK-P8-NEXT:    xvcvsxddp vs3, vs3
-; CHECK-P8-NEXT:    xvcvsxddp vs4, vs4
-; CHECK-P8-NEXT:    xvcvsxddp vs5, vs5
 ; CHECK-P8-NEXT:    xvcvsxddp vs6, vs6
-; CHECK-P8-NEXT:    xvcvsxddp vs7, vs7
-; CHECK-P8-NEXT:    stxvd2x vs4, r3, r9
-; CHECK-P8-NEXT:    stxvd2x vs3, r3, r8
-; CHECK-P8-NEXT:    stxvd2x vs5, r3, r10
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs6, r3, r11
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvsxddp vs5, vs5
+; CHECK-P8-NEXT:    xvcvsxddp vs4, vs4
+; CHECK-P8-NEXT:    xvcvsxddp vs3, vs3
+; CHECK-P8-NEXT:    xvcvsxddp vs2, vs2
+; CHECK-P8-NEXT:    xvcvsxddp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs7, 0, r3
+; CHECK-P8-NEXT:    xvcvsxddp vs0, vs7
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs3, r3, r8
+; CHECK-P8-NEXT:    stxvd2x vs4, r3, r9
+; CHECK-P8-NEXT:    stxvd2x vs5, r3, r10
+; CHECK-P8-NEXT:    stxvd2x vs6, r3, r11
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

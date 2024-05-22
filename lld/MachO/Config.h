@@ -26,9 +26,9 @@
 
 #include <vector>
 
-namespace llvm::CodeGenOpt {
-enum Level : int;
-} // namespace llvm::CodeGenOpt
+namespace llvm {
+enum class CodeGenOptLevel;
+} // namespace llvm
 
 namespace lld {
 namespace macho {
@@ -167,7 +167,7 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
   uint32_t ltoo = 2;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
@@ -208,6 +208,7 @@ struct Configuration {
   bool ltoDebugPassManager = false;
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
+  bool pgoWarnMismatch;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
@@ -227,6 +228,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
 
   bool zeroModTime = true;
+  bool generateUuid = true;
 
   llvm::StringRef osoPrefix;
 

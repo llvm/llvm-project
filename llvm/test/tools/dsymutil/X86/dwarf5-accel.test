@@ -1,5 +1,5 @@
 ## This test checks that DIE name with stripped template parameters
-## is not stored into .debug_name section.
+## is stored into .debug_name section.
 
 ## cat dwarf5-accel.cpp
 ##
@@ -19,9 +19,8 @@
 #VERIFY: No errors.
 
 #CHECK: .debug_names
-#CHECK-NOT: "foo"
+#CHECK: "foo"
 #CHECK: _Z3fooIcEvv
-#CHECK-NOT: "foo"
 #CHECK: "foo<char>"
 
 ---

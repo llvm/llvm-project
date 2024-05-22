@@ -986,6 +986,17 @@ TEST_P(ASTMatchersTest, ChooseExpr) {
                       chooseExpr()));
 }
 
+TEST_P(ASTMatchersTest, ConvertVectorExpr) {
+  EXPECT_TRUE(matches(
+      "typedef double vector4double __attribute__((__vector_size__(32)));"
+      "typedef float  vector4float  __attribute__((__vector_size__(16)));"
+      "vector4float vf;"
+      "void f() { (void)__builtin_convertvector(vf, vector4double); }",
+      convertVectorExpr()));
+  EXPECT_TRUE(notMatches("void f() { (void)__builtin_choose_expr(1, 2, 3); }",
+                         convertVectorExpr()));
+}
+
 TEST_P(ASTMatchersTest, GNUNullExpr) {
   if (!GetParam().isCXX()) {
     return;
@@ -1560,6 +1571,20 @@ TEST_P(ASTMatchersTest, DependentSizedArrayType) {
                  dependentSizedArrayType()));
 }
 
+TEST_P(ASTMatchersTest, DependentSizedExtVectorType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches("template<typename T, int Size>"
+                      "class vector {"
+                      "  typedef T __attribute__((ext_vector_type(Size))) type;"
+                      "};",
+                      dependentSizedExtVectorType()));
+  EXPECT_TRUE(
+      notMatches("int a[42]; int b[] = { 2, 3 }; void f() { int c[b[0]]; }",
+                 dependentSizedExtVectorType()));
+}
+
 TEST_P(ASTMatchersTest, IncompleteArrayType) {
   EXPECT_TRUE(matches("int a[] = { 2, 3 };", incompleteArrayType()));
   EXPECT_TRUE(matches("void f(int a[]) {}", incompleteArrayType()));
@@ -1811,6 +1836,20 @@ TEST_P(ASTMatchersTest, TypedefType) {
   EXPECT_TRUE(matches("typedef int X; X a;",
                       varDecl(hasName("a"), hasType(elaboratedType(
                                                 namesType(typedefType()))))));
+}
+
+TEST_P(ASTMatchersTest, MacroQualifiedType) {
+  EXPECT_TRUE(matches(
+      R"(
+        #define CDECL __attribute__((cdecl))
+        typedef void (CDECL *X)();
+      )",
+      typedefDecl(hasType(pointerType(pointee(macroQualifiedType()))))));
+  EXPECT_TRUE(notMatches(
+      R"(
+        typedef void (__attribute__((cdecl)) *Y)();
+      )",
+      typedefDecl(hasType(pointerType(pointee(macroQualifiedType()))))));
 }
 
 TEST_P(ASTMatchersTest, TemplateSpecializationType) {
@@ -2328,6 +2367,80 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                        "  int a;"
                        "  f(a);"
                        "}", matcher));
+}
+
+TEST_P(ASTMatchersTest, IsDerivedFromRecursion) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  // Check we don't crash on cycles in the traversal and inheritance hierarchy.
+  // Clang will normally enforce there are no cycles, but matchers opted to
+  // traverse primary template for dependent specializations, spuriously
+  // creating the cycles.
+  DeclarationMatcher matcher = cxxRecordDecl(isDerivedFrom("X"));
+  EXPECT_TRUE(notMatches(R"cpp(
+      template <typename T1, typename T2>
+      struct M;
+
+      template <typename T1>
+      struct M<T1, void> {};
+
+      template <typename T1, typename T2>
+      struct L : M<T1, T2> {};
+
+      template <typename T1, typename T2>
+      struct M : L<M<T1, T2>, M<T1, T2>> {};
+  )cpp",
+                         matcher));
+
+  // Check the running time is not exponential. The number of subojects to
+  // traverse grows as fibonacci numbers even though the number of bases to
+  // traverse is quadratic.
+  // The test will hang if implementation of matchers traverses all subojects.
+  EXPECT_TRUE(notMatches(R"cpp(
+    template <class T> struct A0 {};
+    template <class T> struct A1 : A0<T> {};
+    template <class T> struct A2 : A1<T>, A0<T> {};
+    template <class T> struct A3 : A2<T>, A1<T> {};
+    template <class T> struct A4 : A3<T>, A2<T> {};
+    template <class T> struct A5 : A4<T>, A3<T> {};
+    template <class T> struct A6 : A5<T>, A4<T> {};
+    template <class T> struct A7 : A6<T>, A5<T> {};
+    template <class T> struct A8 : A7<T>, A6<T> {};
+    template <class T> struct A9 : A8<T>, A7<T> {};
+    template <class T> struct A10 : A9<T>, A8<T> {};
+    template <class T> struct A11 : A10<T>, A9<T> {};
+    template <class T> struct A12 : A11<T>, A10<T> {};
+    template <class T> struct A13 : A12<T>, A11<T> {};
+    template <class T> struct A14 : A13<T>, A12<T> {};
+    template <class T> struct A15 : A14<T>, A13<T> {};
+    template <class T> struct A16 : A15<T>, A14<T> {};
+    template <class T> struct A17 : A16<T>, A15<T> {};
+    template <class T> struct A18 : A17<T>, A16<T> {};
+    template <class T> struct A19 : A18<T>, A17<T> {};
+    template <class T> struct A20 : A19<T>, A18<T> {};
+    template <class T> struct A21 : A20<T>, A19<T> {};
+    template <class T> struct A22 : A21<T>, A20<T> {};
+    template <class T> struct A23 : A22<T>, A21<T> {};
+    template <class T> struct A24 : A23<T>, A22<T> {};
+    template <class T> struct A25 : A24<T>, A23<T> {};
+    template <class T> struct A26 : A25<T>, A24<T> {};
+    template <class T> struct A27 : A26<T>, A25<T> {};
+    template <class T> struct A28 : A27<T>, A26<T> {};
+    template <class T> struct A29 : A28<T>, A27<T> {};
+    template <class T> struct A30 : A29<T>, A28<T> {};
+    template <class T> struct A31 : A30<T>, A29<T> {};
+    template <class T> struct A32 : A31<T>, A30<T> {};
+    template <class T> struct A33 : A32<T>, A31<T> {};
+    template <class T> struct A34 : A33<T>, A32<T> {};
+    template <class T> struct A35 : A34<T>, A33<T> {};
+    template <class T> struct A36 : A35<T>, A34<T> {};
+    template <class T> struct A37 : A36<T>, A35<T> {};
+    template <class T> struct A38 : A37<T>, A36<T> {};
+    template <class T> struct A39 : A38<T>, A37<T> {};
+    template <class T> struct A40 : A39<T>, A38<T> {};
+)cpp",
+                         matcher));
 }
 
 TEST(ASTMatchersTestObjC, ObjCMessageCalees) {

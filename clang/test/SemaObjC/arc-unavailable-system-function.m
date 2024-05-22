@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin11 -fobjc-arc -verify %s
-// rdar://10186625
 
 # 1 "<command line>"
 # 1 "/System/Library/Frameworks/Foundation.framework/Headers/Foundation.h" 1 3

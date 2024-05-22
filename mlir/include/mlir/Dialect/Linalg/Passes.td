@@ -28,10 +28,6 @@ def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
   let options = [
-    Option<"foldOneTripLoopsOnly", "fold-one-trip-loops-only", "bool",
-            /*default=*/"false",
-           "Only folds the one-trip loops from Linalg ops on tensors "
-           "(for testing purposes only)">,
     Option<"useRankReducingSlices", "use-rank-reducing-slices", "bool",
            /*default=*/"false",
            "Generate rank-reducing slices instead of reassociative reshapes">
@@ -73,6 +69,13 @@ def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops"> {
 
 def LinalgLowerToLoops : Pass<"convert-linalg-to-loops"> {
   let summary = "Lower the operations from the linalg dialect into loops";
+  let description = [{
+    Lowers the `linalg` ops to loop nests using `scf.for`.
+
+    Pre-condition: the operands used by the `linalg` ops have buffer semantics,
+    i.e., tensor operands and results must be converted to memrefs via
+    bufferization.
+  }];
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
   let dependentDialects = [
     "linalg::LinalgDialect",

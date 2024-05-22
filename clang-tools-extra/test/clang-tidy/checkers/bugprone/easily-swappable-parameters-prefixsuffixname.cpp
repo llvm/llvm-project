@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy %s bugprone-easily-swappable-parameters %t \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 1} \
-// RUN:  ]}' --
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes: "", \
+// RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
+// RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
+// RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 1 \
+// RUN:  }}' --
 
 namespace std {
 struct string {};

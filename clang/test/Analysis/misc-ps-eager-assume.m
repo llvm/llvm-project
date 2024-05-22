@@ -43,8 +43,6 @@ void handle_assign_of_condition(int x) {
   }
 }
 
-// From <rdar://problem/6619921>
-//
 // In this test case, 'needsAnArray' is a signed char.  The analyzer tracks
 // a symbolic value for this variable, but in the branch condition it is
 // promoted to 'int'.  Currently the analyzer doesn't reason well about
@@ -82,7 +80,6 @@ void pr3836(int *a, int *b) {
 
 
 //===---------------------------------------------------------------------===//
-// <rdar://problem/7342806>
 // This false positive occurred because the symbolic constraint on a short was
 // not maintained via sign extension.  The analyzer doesn't properly handle
 // the sign extension, but now tracks the constraint.  This particular

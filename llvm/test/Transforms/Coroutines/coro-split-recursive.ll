@@ -1,5 +1,4 @@
 ; RUN: opt -passes='module(coro-early),cgscc(coro-split)' -S < %s | FileCheck %s
-; RUN: opt -passes='module(coro-early),cgscc(coro-split)' -opaque-pointers=1 -S < %s | FileCheck %s
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 

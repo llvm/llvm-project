@@ -1,0 +1,181 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        4612
+  PartCount:       8
+  PartOffsets:     [ 64, 80, 148, 208, 488, 740, 2468, 2496 ]
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         false
+      ComputeShadersPlusRawAndStructuredBuffers: false
+      UAVsAtEveryStage: false
+      Max64UAVs:       false
+      MinimumPrecision: false
+      DX11_1_DoubleExtensions: false
+      DX11_1_ShaderExtensions: false
+      LEVEL9ComparisonFiltering: false
+      TiledResources:  false
+      StencilRef:      false
+      InnerCoverage:   false
+      TypedUAVLoadAdditionalFormats: false
+      ROVs:            false
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: false
+      WaveOps:         false
+      Int64Ops:        false
+      ViewID:          true
+      Barycentrics:    false
+      NativeLowPrecision: false
+      ShadingRate:     false
+      Raytracing_Tier_1_1: false
+      SamplerFeedback: false
+      AtomicInt64OnTypedResource: false
+      AtomicInt64OnGroupShared: false
+      DerivativesInMeshAndAmpShaders: false
+      ResourceDescriptorHeapIndexing: false
+      SamplerDescriptorHeapIndexing: false
+      RESERVED:        false
+      AtomicInt64OnHeapResource: false
+      AdvancedTextureOps: false
+      WriteableMSAATextures: false
+      NextUnusedBit:   false
+  - Name:            ISG1
+    Size:            60
+  - Name:            OSG1
+    Size:            52
+  - Name:            PSG1
+    Size:            272
+  - Name:            PSV0
+    Size:            244
+    PSVInfo:
+      Version:         2
+      ShaderStage:     3
+      InputControlPointCount: 32
+      OutputControlPointCount: 16
+      TessellatorDomain: 3
+      TessellatorOutputPrimitive: 3
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      1
+      SigPatchConstOrPrimVectors: 7
+      SigInputVectors: 1
+      SigOutputVectors: [ 1, 0, 0, 0 ]
+      NumThreadsX:     0
+      NumThreadsY:     0
+      NumThreadsZ:     0
+      ResourceStride:  24
+      Resources:       []
+      SigInputElements:
+        - Name:            Sem_HSFoo_Input_qq
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          0
+      SigOutputElements:
+        - Name:            Sem_HSFoo
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          0
+      SigPatchOrPrimElements:
+        - Name:            ''
+          Indices:         [ 0, 1, 2, 3 ]
+          StartRow:        0
+          Cols:            1
+          StartCol:        3
+          Allocated:       true
+          Kind:            TessFactor
+          ComponentType:   Float32
+          Interpolation:   Undefined
+          DynamicMask:     0x0
+          Stream:          0
+        - Name:            ''
+          Indices:         [ 0, 1 ]
+          StartRow:        4
+          Cols:            1
+          StartCol:        3
+          Allocated:       true
+          Kind:            InsideTessFactor
+          ComponentType:   Float32
+          Interpolation:   Undefined
+          DynamicMask:     0x0
+          Stream:          0
+        - Name:            AAA
+          Indices:         [ 0 ]
+          StartRow:        6
+          Cols:            4
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Undefined
+          DynamicMask:     0x0
+          Stream:          0
+      OutputVectorMasks:
+        - [ 0x4 ]
+        - [  ]
+        - [  ]
+        - [  ]
+      PatchOrPrimMasks: [ 0x800080 ]
+      InputOutputMap:
+        - [ 0x5, 0x2, 0x4, 0xC ]
+        - [  ]
+        - [  ]
+        - [  ]
+      InputPatchMap:   [ 0x880000, 0x8888, 0x800000, 0x880000 ]
+  - Name:            STAT
+    Size:            1720
+  - Name:            HASH
+    Size:            20
+    Hash:
+      IncludesSource:  false
+      Digest:          [ 0xF4, 0x87, 0x4C, 0x40, 0xFD, 0x7A, 0x89, 0xFE, 
+                         0x1F, 0xC3, 0xAB, 0x8C, 0xC7, 0x18, 0xA9, 0xA ]
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    1
+      ShaderKind:      3
+      Size:            5627
+      DXILMajorVersion: 1
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# Verify the vector sizes and ViewID use.
+# CHECK: UsesViewID:      1
+# CHECK-NEXT: SigPatchConstOrPrimVectors: 7
+# CHECK-NEXT: SigInputVectors: 1
+# CHECK-NEXT: SigOutputVectors: [ 1, 0, 0, 0 ]
+
+# Verify the vector encodings.
+# CHECK: OutputVectorMasks:
+# CHECK-NEXT:   - [ 0x4 ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: PatchOrPrimMasks: [ 0x800080 ]
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [ 0x5, 0x2, 0x4, 0xC ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]

@@ -15,25 +15,28 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
+#include "asan_testing.h"
 
 #if TEST_STD_VER >= 11
 // Test the noexcept specification, which is a conforming extension
 LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<std::string>::value, "");
 LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<
-                     std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value, "");
+                         std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value,
+                     "");
 LIBCPP_STATIC_ASSERT(!std::is_nothrow_default_constructible<
-                     std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>>>::value, "");
+                         std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>>>::value,
+                     "");
 #endif
 
 TEST_CONSTEXPR_CXX20 bool test() {
   std::string str;
   assert(str.empty());
+  LIBCPP_ASSERT(is_string_asan_correct(str));
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

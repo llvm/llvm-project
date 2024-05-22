@@ -24,7 +24,7 @@ declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
 declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
 declare double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
 
-define amdgpu_kernel void @buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -71,7 +71,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -107,7 +107,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -154,7 +154,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -190,7 +190,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -237,7 +237,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -273,7 +273,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -320,7 +320,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -356,7 +356,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -403,7 +403,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -439,7 +439,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -486,7 +486,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -522,7 +522,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -569,7 +569,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -605,7 +605,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -652,7 +652,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -688,7 +688,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -735,7 +735,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -771,7 +771,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -818,7 +818,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -854,7 +854,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -901,7 +901,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -937,7 +937,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -984,7 +984,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1020,7 +1020,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1067,7 +1067,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1192,7 +1192,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1211,7 +1210,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1228,7 +1227,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
@@ -1240,7 +1239,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -1264,7 +1263,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1283,7 +1281,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1300,7 +1298,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
@@ -1312,7 +1310,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -1353,7 +1351,6 @@ define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %dat
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[4:5], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1373,7 +1370,6 @@ define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %dat
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1389,7 +1385,6 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, 0x40100000
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
@@ -1400,7 +1395,6 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -1422,7 +1416,6 @@ define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, doub
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[4:5], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1442,7 +1435,6 @@ define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, doub
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1503,7 +1495,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX90A-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
@@ -1521,7 +1512,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -1534,26 +1525,25 @@ main_body:
 define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat:
 ; GFX90A:       ; %bb.0: ; %main_body
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX90A-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB53_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB53_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_endpgm
@@ -1561,12 +1551,11 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX940-LABEL: flat_atomic_fadd_f64_noret_pat:
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3] sc1
+; GFX940-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1] sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NEXT:    s_endpgm
@@ -1579,12 +1568,11 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, 0x40100000
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40100000
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    s_endpgm
@@ -1592,12 +1580,11 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX940-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1]
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
 ; GFX940-NEXT:    s_endpgm
@@ -1609,27 +1596,26 @@ main_body:
 define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat_system:
 ; GFX90A:       ; %bb.0: ; %main_body
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX90A-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB55_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB55_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_endpgm
@@ -1637,12 +1623,11 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX940-LABEL: flat_atomic_fadd_f64_noret_pat_system:
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3] sc1
+; GFX940-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1] sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NEXT:    s_endpgm
@@ -1663,7 +1648,6 @@ define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[4:5], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1683,7 +1667,6 @@ define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1699,7 +1682,6 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, 0x40100000
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
@@ -1710,7 +1692,6 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -1732,7 +1713,6 @@ define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[4:5], 4.0
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1753,7 +1733,6 @@ define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -1813,24 +1792,23 @@ main_body:
 define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX90A-LABEL: flat_atomic_fadd_f64_noret_pat_agent_safe:
 ; GFX90A:       ; %bb.0: ; %main_body
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX90A-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB61_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB61_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_endpgm
@@ -1838,12 +1816,11 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX940-LABEL: flat_atomic_fadd_f64_noret_pat_agent_safe:
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1]
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
 ; GFX940-NEXT:    s_endpgm
@@ -2048,7 +2025,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40100000
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, s0
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
@@ -2059,7 +2035,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s0
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    s_endpgm
@@ -2076,7 +2051,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40100000
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, s0
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
@@ -2087,7 +2061,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s0
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    s_endpgm
@@ -2104,17 +2077,16 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX90A-NEXT:    ds_read_b64 v[0:1], v0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX90A-NEXT:  .LBB72_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_add_f64 v[2:3], v[0:1], 4.0
-; GFX90A-NEXT:    v_mov_b32_e32 v4, s2
+; GFX90A-NEXT:    v_add_f64 v[4:5], v[0:1], 4.0
+; GFX90A-NEXT:    ds_cmpst_rtn_b64 v[4:5], v2, v[0:1], v[4:5]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    ds_cmpst_rtn_b64 v[2:3], v4, v[0:1], v[2:3]
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[0:1]
+; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[0:1]
 ; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB72_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2127,17 +2099,16 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NEXT:    ds_read_b64 v[0:1], v0
+; GFX940-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX940-NEXT:  .LBB72_1: ; %atomicrmw.start
 ; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_add_f64 v[2:3], v[0:1], 4.0
-; GFX940-NEXT:    v_mov_b32_e32 v4, s2
+; GFX940-NEXT:    v_add_f64 v[4:5], v[0:1], 4.0
+; GFX940-NEXT:    ds_cmpst_rtn_b64 v[4:5], v2, v[0:1], v[4:5]
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    ds_cmpst_rtn_b64 v[2:3], v4, v[0:1], v[2:3]
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[0:1]
+; GFX940-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[0:1]
 ; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX940-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX940-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX940-NEXT:    s_cbranch_execnz .LBB72_1
 ; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2153,7 +2124,6 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, 0x40100000
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -2162,7 +2132,6 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[2:3], 4.0
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]

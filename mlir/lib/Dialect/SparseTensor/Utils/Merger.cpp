@@ -220,23 +220,22 @@ TensorExp::TensorExp(TensorExp::Kind k, unsigned x, ExprId y, Value v,
   llvm_unreachable("unexpected kind");
 }
 
-Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-               unsigned numFilterLoops, unsigned maxLvlRank)
+Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
+               unsigned maxLvlRank)
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
-      numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
-      numLoops(numNativeLoops + numFilterLoops), hasSparseOut(false),
-      lvlTypes(numTensors,
-               std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
+      numTensors(numInputOutputTensors + 1), numLoops(numLoops),
+      hasSparseOut(false),
+      lvlTypes(numTensors, std::vector<LevelType>(numLoops, LevelType::Undef)),
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
                 std::vector<std::optional<LoopId>>(maxLvlRank, std::nullopt)),
-      loopToDependencies(
-          numLoops, std::vector<std::optional<std::pair<Level, DimLevelType>>>(
-                        numTensors, std::nullopt)),
-      levelToDependentLoop(numTensors, std::vector<std::vector<LoopId>>(
-                                           maxLvlRank, std::vector<LoopId>())),
+      loopToUnresolvedLvls(numLoops, std::vector<std::optional<LvlLTPair>>(
+                                         numTensors, std::nullopt)),
+      levelToDependentLoop(numTensors,
+                           std::vector<std::vector<LoopCoeffPair>>(
+                               maxLvlRank, std::vector<LoopCoeffPair>())),
       loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//
@@ -476,7 +475,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     // Starts resetting from a dense level, so that the first bit (if kept)
     // is not undefined level-type.
     for (unsigned b = 0; b < be; b++) {
-      if (simple[b] && isDenseDLT(getLvlType(TensorLoopId{b}))) {
+      if (simple[b] && isDenseLT(getLvlType(TensorLoopId{b}))) {
         offset = be - b - 1; // relative to the end
         break;
       }
@@ -488,9 +487,9 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
        b = b == 0 ? be - 1 : b - 1, i++) {
     // Slice on dense level has `locate` property as well, and can be optimized.
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
-      const auto dlt = getLvlType(b);
-      if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt) &&
-          !isCompressedWithHiDLT(dlt)) {
+      const auto lt = getLvlType(b);
+      if (!isCompressedLT(lt) && !isSingletonLT(lt) &&
+          !isLooseCompressedLT(lt) && !is2OutOf4LT(lt)) {
         if (reset)
           simple.reset(b);
         reset = true;
@@ -669,9 +668,9 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
 
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
-    const auto dlt = getLvlType(b);
-    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-        isCompressedWithHiDLT(dlt))
+    const auto lt = getLvlType(b);
+    if (isCompressedLT(lt) || isSingletonLT(lt) || isLooseCompressedLT(lt) ||
+        is2OutOf4LT(lt))
       return true;
   }
   return hasSparseIdxReduction(bits);
@@ -919,11 +918,11 @@ void Merger::dumpBits(const BitVector &bits) const {
     if (bits[b]) {
       const TensorId t = tensor(b);
       const LoopId i = loop(b);
-      const auto dlt = lvlTypes[t][i];
+      const auto lt = lvlTypes[t][i];
       if (isLvlWithNonTrivialIdxExp(b))
         llvm::dbgs() << " DEP_" << t << "_" << i;
       else
-        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
+        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(lt);
     }
   }
 }
@@ -1101,7 +1100,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
     }
   case TensorExp::Kind::kCmpF:
   case TensorExp::Kind::kCmpI:
-    // An comparison operation needs to be performed
+    // A comparison operation needs to be performed
     // for the disjunction of sparse iteration spaces.
     //
     //   x < y |  !y   |   y   |
@@ -1118,7 +1117,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
   case TensorExp::Kind::kShlI:
     // A shift operation by an invariant amount (viz. tensor expressions
     // can only occur at the left-hand-side of the operator) can be handled
-    // with the conjuction rule.
+    // with the conjunction rule.
     {
       const ExprId e0 = expr.children.e0;
       const ExprId e1 = expr.children.e1;
@@ -1219,7 +1218,7 @@ Type Merger::inferType(ExprId e, Value src) const {
   return dtp;
 }
 
-/// Ensures that sparse compiler can generate code for expression.
+/// Ensures that the sparsifier can generate code for expression.
 static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   // Arguments are always admissible.
   if (isa<BlockArgument>(v))
@@ -1239,7 +1238,7 @@ static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   return true;
 }
 
-/// Ensures that sparse compiler can generate code for branch.
+/// Ensures that the sparsifier can generate code for branch.
 static bool isAdmissibleBranch(Operation *op, Region &region) {
   if (region.empty())
     return true;

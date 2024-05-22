@@ -70,7 +70,7 @@ protected:
     PM.add(new AddMetadataPass(PalMDString));
     raw_svector_ostream OutStream(Elf);
     if (TM->addPassesToEmitFile(PM, OutStream, nullptr,
-                                CodeGenFileType::CGFT_ObjectFile))
+                                CodeGenFileType::ObjectFile))
       report_fatal_error("Target machine cannot emit a file of this type");
 
     PM.run(*M);

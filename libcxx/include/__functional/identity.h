@@ -41,7 +41,7 @@ struct identity {
     template<class _Tp>
     _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator()(_Tp&& __t) const noexcept
     {
-        return _VSTD::forward<_Tp>(__t);
+        return std::forward<_Tp>(__t);
     }
 
     using is_transparent = void;

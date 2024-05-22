@@ -11,18 +11,18 @@ define i16 @test() {
 ; CHECK:       while:
 ; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX5:%.*]], [[WHILE]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[A1]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[A2]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A1]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[A2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr null, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i64> [[TMP5]], i64 [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i64> [[TMP6]], i64 [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i64> [[TMP5]], i64 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i64> [[TMP6]], i64 [[TMP1]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 2, i32 3, i32 4, i32 5, i32 8, i32 8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> [[TMP10]])
-; CHECK-NEXT:    [[OP_RDX5]] = xor i64 [[TMP0]], [[TMP11]]
+; CHECK-NEXT:    [[OP_RDX5]] = xor i64 [[TMP3]], [[TMP11]]
 ; CHECK-NEXT:    br label [[WHILE]]
 ;
 entry:

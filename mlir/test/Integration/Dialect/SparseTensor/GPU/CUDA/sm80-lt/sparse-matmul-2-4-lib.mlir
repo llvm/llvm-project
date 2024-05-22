@@ -1,14 +1,15 @@
+// NOTE: this test requires gpu-sm80 and cusparselt
 //
-// NOTE: this test requires gpu-sm80
+// DEFINE: %{compile} = mlir-opt --convert-vector-to-scf --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
+// DEFINE: --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
+// DEFINE: %s
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:   --shared-libs=%mlir_cuda_runtime \
+// DEFINE:   --shared-libs=%mlir_c_runner_utils \
+// DEFINE:   --e main --entry-point-result=void \
+// DEFINE: | FileCheck %s
 //
-// RUN: mlir-opt --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
-// RUN:          --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
-// RUN:          %s \
-// RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_c_runner_utils \
-// RUN:   --e main --entry-point-result=void \
-// RUN: | FileCheck %s
+// RUN: %{compile} | %{run}
 
 module {
   llvm.func @mgpuCreateSparseLtEnv()
@@ -31,7 +32,7 @@ module {
     %token4 = gpu.memcpy async [%token3] %d_a, %a : memref<16x32xf16>, memref<16x32xf16>
     %token5 = gpu.memcpy async [%token4] %d_b, %b : memref<32x16xf16>, memref<32x16xf16>
     %token6 = gpu.memcpy async [%token5] %d_c, %c : memref<16x16xf16>, memref<16x16xf16>
-    %spmat, %token8 = gpu.create_2to4_spmat async [%token6] %c16, %c32, %d_a: memref<16x32xf16>
+    %spmat, %token8 = gpu.create_2to4_spmat async  [%token6]{PRUNE_AND_CHECK} %c16, %c32, %d_a: memref<16x32xf16>
     %dnmat, %token9 = gpu.create_dn_tensor async [%token8] %d_b, %c32, %c16: index, index into memref<32x16xf16>
     %dnmat2, %token10 = gpu.create_dn_tensor async [%token9] %d_c, %c16, %c16: index, index into memref<16x16xf16>
     %bufferSz0, %bufferSz1, %bufferSz2, %token11 = gpu.spmm_buffer_size async [%token10] %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2 : index, index,index into f16
@@ -41,7 +42,8 @@ module {
     %token15 = gpu.spmm async [%token14] %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2, %mem1, %mem2, %mem3 : memref<?xf16>, memref<?xf16>,memref<?xf16> into f16
     %token16 = gpu.destroy_sp_mat async [%token15] %spmat
     %token17 = gpu.destroy_dn_tensor async [%token16] %dnmat
-    %token19 = gpu.memcpy async [%token17] %c, %d_c : memref<16x16xf16>, memref<16x16xf16>
+    %token18 = gpu.destroy_dn_tensor async [%token17] %dnmat2
+    %token19 = gpu.memcpy async [%token18] %c, %d_c : memref<16x16xf16>, memref<16x16xf16>
     %token20 = gpu.dealloc async [%token19] %d_c : memref<16x16xf16>
     %token21 = gpu.dealloc async [%token20] %d_b : memref<32x16xf16>
     %token22 = gpu.dealloc async [%token21] %d_a : memref<16x32xf16>
@@ -69,9 +71,9 @@ module {
     %c64 = arith.constant 64  : index
 
     // Matrices A, B, C (16x32, 32x16, 16x16).
-    %a = memref.alloc() : memref<16x32xf16>  // 16x32 but 2:4, row-major
-    %b = memref.alloc() : memref<32x16xf16>   // regular dense  column-major
-    %c = memref.alloc() : memref<16x16xf16>   // accumulator    row-major
+    %a = memref.alloc() : memref<16x32xf16> // 16x32 with 2:4, row-major
+    %b = memref.alloc() : memref<32x16xf16> // regular dense   column-major
+    %c = memref.alloc() : memref<16x16xf16> // accumulator     row-major
 
     //
     // Setup matrix A.
@@ -181,27 +183,8 @@ module {
       vector.print %pb0 : vector<16xf16>
     }
 
-    // Maps the provided host buffers into the device address space.
-    // Writes from the host are guaranteed to be visible to device
-    // kernels that are launched afterwards. Writes from the device
-    // are guaranteed to be visible on the host after synchronizing
-    // with the device kernel completion.
-    %cast_a = memref.cast %a : memref<16x32xf16> to memref<*xf16>
-    gpu.host_register %cast_a : memref<*xf16>
-    %cast_b = memref.cast %b : memref<32x16xf16> to memref<*xf16>
-    gpu.host_register %cast_b : memref<*xf16>
-    %cast_c = memref.cast %c : memref<16x16xf16> to memref<*xf16>
-    gpu.host_register %cast_c : memref<*xf16>
-
     // Call the kernel.
-    %t1  = arith.constant 1  : index
-    %t32 = arith.constant 32 : index
     call @sampled_matmul (%a, %b, %c): (memref<16x32xf16>, memref<32x16xf16>, memref<16x16xf16>) -> ()
-    
-    // Unmaps the host buffers.
-    gpu.host_unregister %cast_a : memref<*xf16>
-    gpu.host_unregister %cast_b : memref<*xf16>
-    gpu.host_unregister %cast_c : memref<*xf16>
 
     //
     // Verify computed matrix C.
@@ -227,7 +210,7 @@ module {
       %pc0 = vector.transfer_read %c[%pci, %c0], %f0 : memref<16x16xf16>, vector<16xf16>
       vector.print %pc0 : vector<16xf16>
     }
-    
+
     llvm.call @mgpuDestroySparseLtEnv() : () -> ()
     return
   }

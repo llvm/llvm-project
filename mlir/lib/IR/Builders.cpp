@@ -153,6 +153,17 @@ DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
       values);
 }
 
+DenseFPElementsAttr Builder::getF32VectorAttr(ArrayRef<float> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<float>(values.size()), getF32Type()), values);
+}
+
+DenseFPElementsAttr Builder::getF64VectorAttr(ArrayRef<double> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<double>(values.size()), getF64Type()),
+      values);
+}
+
 DenseBoolArrayAttr Builder::getDenseBoolArrayAttr(ArrayRef<bool> values) {
   return DenseBoolArrayAttr::get(context, values);
 }
@@ -322,7 +333,7 @@ TypedAttr Builder::getZeroAttr(Type type) {
     return getFloatAttr(type, 0.0);
   if (llvm::isa<IndexType>(type))
     return getIndexAttr(0);
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
+  if (llvm::dyn_cast<IntegerType>(type))
     return getIntegerAttr(type,
                           APInt(llvm::cast<IntegerType>(type).getWidth(), 0));
   if (llvm::isa<RankedTensorType, VectorType>(type)) {
@@ -464,15 +475,9 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   if (matchPattern(op, m_Constant()))
     return cleanupFailure();
 
-  // Check to see if any operands to the operation is constant and whether
-  // the operation knows how to constant fold itself.
-  SmallVector<Attribute, 4> constOperands(op->getNumOperands());
-  for (unsigned i = 0, e = constOperands.size(); i != e; ++i)
-    matchPattern(op->getOperand(i), m_Constant(&constOperands[i]));
-
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
-  if (failed(op->fold(constOperands, foldResults)) || foldResults.empty())
+  if (failed(op->fold(foldResults)) || foldResults.empty())
     return cleanupFailure();
 
   // A temporary builder used for creating constants during folding.
@@ -522,7 +527,8 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
 Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
-  // The `insert` call below handles the notification for inserting `newOp`
+  newOp = insert(newOp);
+  // The `insert` call above handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
   // about any ops that got inserted inside those regions as part of cloning.
   if (listener) {
@@ -530,9 +536,9 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
       listener->notifyOperationInserted(walkedOp);
     };
     for (Region &region : newOp->getRegions())
-      region.walk(walkFn);
+      region.walk<WalkOrder::PreOrder>(walkFn);
   }
-  return insert(newOp);
+  return newOp;
 }
 
 Operation *OpBuilder::clone(Operation &op) {

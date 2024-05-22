@@ -1,4 +1,3 @@
-// __COUNTER__ support: rdar://4329310
 // RUN: %clang -E %s | FileCheck %s
 
 #define PASTE2(x,y) x##y

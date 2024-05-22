@@ -137,8 +137,9 @@ multiple file formats.
  sections.
 
  Supported flag names are `alloc`, `load`, `noload`, `readonly`, `exclude`,
- `debug`, `code`, `data`, `rom`, `share`, `contents`, `merge` and `strings`. Not
- all flags are meaningful for all object file formats.
+ `debug`, `code`, `data`, `rom`, `share`, `contents`, `merge`, `strings`, and
+ `large`. Not all flags are meaningful for all object file formats or target
+ architectures.
 
  For ELF objects, the flags have the following effects:
 
@@ -152,6 +153,8 @@ multiple file formats.
  - `strings` = add the `SHF_STRINGS` flag.
  - `contents` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
    section.
+ - `large` = add the `SHF_X86_64_LARGE` on x86_64; rejected if the target
+   architecture is not x86_64.
 
  For COFF objects, the flags have the following effects:
 
@@ -321,6 +324,11 @@ them.
 
  Extract the named partition from the output.
 
+.. option:: --gap-fill <value>
+
+ For binary outputs, fill the gaps between sections with ``<value>`` instead
+ of zero. The value must be an unsigned 8-bit integer.
+
 .. option:: --globalize-symbol <symbol>
 
  Mark any defined symbols named ``<symbol>`` as global symbols in the output.
@@ -407,6 +415,11 @@ them.
  of valid ``<format>`` values. If unspecified, the output format is assumed to
  be the same as the value specified for :option:`--input-target` or the input
  file's format if that option is also unspecified.
+
+.. option:: --pad-to <address>
+
+ For binary outputs, pad the output to the load address ``<address>`` using a value
+ of zero or the value specified by :option:`--gap-fill`.
 
 .. option:: --prefix-alloc-sections <prefix>
 

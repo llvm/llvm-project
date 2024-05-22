@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=VI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=VI --implicit-check-not=error: %s
 
 s_set_gpr_idx_on s0, s1
 // VI: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression

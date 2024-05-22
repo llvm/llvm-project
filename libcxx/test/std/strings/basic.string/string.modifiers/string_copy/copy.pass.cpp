@@ -17,35 +17,31 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S str, typename S::value_type* s, typename S::size_type n,
-     typename S::size_type pos)
-{
-    const S& cs = str;
-    if (pos <= cs.size())
-    {
-        typename S::size_type r = cs.copy(s, n, pos);
-        typename S::size_type rlen = std::min(n, cs.size() - pos);
-        assert(r == rlen);
-        for (r = 0; r < rlen; ++r)
-            assert(S::traits_type::eq(cs[pos+r], s[r]));
-    }
+TEST_CONSTEXPR_CXX20 void test(S str, typename S::value_type* s, typename S::size_type n, typename S::size_type pos) {
+  const S& cs = str;
+  if (pos <= cs.size()) {
+    typename S::size_type r    = cs.copy(s, n, pos);
+    typename S::size_type rlen = std::min(n, cs.size() - pos);
+    assert(r == rlen);
+    LIBCPP_ASSERT(is_string_asan_correct(str));
+    LIBCPP_ASSERT(is_string_asan_correct(cs));
+
+    for (r = 0; r < rlen; ++r)
+      assert(S::traits_type::eq(cs[pos + r], s[r]));
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            typename S::size_type r = cs.copy(s, n, pos);
-            ((void)r); // Prevent unused warning
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      typename S::size_type r = cs.copy(s, n, pos);
+      ((void)r); // Prevent unused warning
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
@@ -110,19 +106,21 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("abcdefghijklmnopqrst"), s, 20, 0);
   test(S("abcdefghijklmnopqrst"), s, 20, 1);
   test(S("abcdefghijklmnopqrst"), s, 21, 0);
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), s, 40, 1);
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), s, 40, 0);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

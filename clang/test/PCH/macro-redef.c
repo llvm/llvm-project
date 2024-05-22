@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -fsyntax-only %s -include-pch %t2.pch -verify
 
 // Test that a redefinition inside the PCH won't manifest as an ambiguous macro.
-// rdar://13016031
 
 #ifndef HEADER1
 #define HEADER1

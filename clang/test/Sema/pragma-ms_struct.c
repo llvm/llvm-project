@@ -38,7 +38,6 @@ enum
   C
 } __attribute__((ms_struct)) e1; // expected-warning {{'ms_struct' attribute only applies to}}
 
-// rdar://10513599
 #pragma ms_struct on
 
 typedef struct

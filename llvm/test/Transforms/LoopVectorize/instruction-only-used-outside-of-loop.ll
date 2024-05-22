@@ -20,8 +20,7 @@ define i32 @one_direct_branch(ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -79,8 +78,7 @@ define i32 @two_direct_branch(ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -152,8 +150,7 @@ define i32 @cond_branch(i32 %a, ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -218,8 +215,7 @@ define i32 @optimizable_trunc_used_outside() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

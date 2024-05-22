@@ -1,48 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file -verify-diagnostics | FileCheck %s
-
-// CHECK-LABEL: @get_parent_for_op
-func.func @get_parent_for_op(%arg0: index, %arg1: index, %arg2: index) {
-  // expected-remark @below {{first loop}}
-  scf.for %i = %arg0 to %arg1 step %arg2 {
-    // expected-remark @below {{second loop}}
-    scf.for %j = %arg0 to %arg1 step %arg2 {
-      // expected-remark @below {{third loop}}
-      scf.for %k = %arg0 to %arg1 step %arg2 {
-        arith.addi %i, %j : index
-      }
-    }
-  }
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // CHECK: = transform.loop.get_parent_for
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  %2 = transform.loop.get_parent_for %0 { num_loops = 2 } : (!transform.any_op) -> !transform.op<"scf.for">
-  %3 = transform.loop.get_parent_for %0 { num_loops = 3 } : (!transform.any_op) -> !transform.op<"scf.for">
-  transform.test_print_remark_at_operand %1, "third loop" : !transform.op<"scf.for">
-  transform.test_print_remark_at_operand %2, "second loop" : !transform.op<"scf.for">
-  transform.test_print_remark_at_operand %3, "first loop" : !transform.op<"scf.for">
-}
-
-// -----
-
-func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
-  // expected-note @below {{target op}}
-  arith.addi %arg0, %arg1 : index
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{could not find an 'scf.for' parent}}
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-}
-
-// -----
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics | FileCheck %s
 
 // Outlined functions:
 //
@@ -74,12 +30,14 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0  : (!transform.any_op) -> !transform.op<"scf.for">
-  // CHECK: = transform.loop.outline %{{.*}}
-  transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // CHECK: = transform.loop.outline %{{.*}}
+    transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -87,15 +45,50 @@ transform.sequence failures(propagate) {
 // CHECK-LABEL: @loop_peel_op
 func.func @loop_peel_op() {
   // CHECK: %[[C0:.+]] = arith.constant 0
-  // CHECK: %[[C42:.+]] = arith.constant 42
+  // CHECK: %[[C41:.+]] = arith.constant 41
   // CHECK: %[[C5:.+]] = arith.constant 5
   // CHECK: %[[C40:.+]] = arith.constant 40
   // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C40]] step %[[C5]]
   // CHECK:   arith.addi
-  // CHECK: scf.for %{{.+}} = %[[C40]] to %[[C42]] step %[[C5]]
+  // CHECK: scf.for %{{.+}} = %[[C40]] to %[[C41]] step %[[C5]]
   // CHECK:   arith.addi
   %0 = arith.constant 0 : index
-  %1 = arith.constant 42 : index
+  %1 = arith.constant 41 : index
+  %2 = arith.constant 5 : index
+  // expected-remark @below {{main loop}}
+  // expected-remark @below {{remainder loop}}
+  scf.for %i = %0 to %1 step %2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %remainder = transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    // Make sure 
+    transform.test_print_remark_at_operand %main_loop, "main loop" : !transform.op<"scf.for">
+    transform.test_print_remark_at_operand %remainder, "remainder loop" : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @loop_peel_first_iter_op
+func.func @loop_peel_first_iter_op() {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[C41:.+]] = arith.constant 41
+  // CHECK: %[[C5:.+]] = arith.constant 5
+  // CHECK: %[[C5_0:.+]] = arith.constant 5
+  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C5_0]] step %[[C5]]
+  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %[[C5_0]] to %[[C41]] step %[[C5]]
+  // CHECK:   arith.addi
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 41 : index
   %2 = arith.constant 5 : index
   scf.for %i = %0 to %1 step %2 {
     arith.addi %i, %i : index
@@ -103,11 +96,13 @@ func.func @loop_peel_op() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  transform.loop.peel %1 : (!transform.op<"scf.for">) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %remainder = transform.loop.peel %1 {peel_front = true} : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
 }
 
 // -----
@@ -136,13 +131,15 @@ func.func @loop_pipeline_op(%A: memref<?xf32>, %result: memref<?xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  %2 = transform.loop.pipeline %1 : (!transform.op<"scf.for">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %2, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %2 = transform.loop.pipeline %1 : (!transform.op<"scf.for">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %2, "transformed" : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -160,55 +157,13 @@ func.func @loop_unroll_op() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  transform.loop.unroll %1 { factor = 4 } : !transform.op<"scf.for">
-}
-
-// -----
-
-// CHECK-LABEL: @get_parent_for_op
-func.func @get_parent_for_op(%arg0: index, %arg1: index, %arg2: index) {
-  // expected-remark @below {{first loop}}
-  affine.for %i = %arg0 to %arg1 {
-    // expected-remark @below {{second loop}}
-    affine.for %j = %arg0 to %arg1 {
-      // expected-remark @below {{third loop}}
-      affine.for %k = %arg0 to %arg1 {
-        arith.addi %i, %j : index
-      }
-    }
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll %1 { factor = 4 } : !transform.op<"scf.for">
+    transform.yield
   }
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // CHECK: = transform.loop.get_parent_for
-  %1 = transform.loop.get_parent_for %0 { affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
-  %2 = transform.loop.get_parent_for %0 { num_loops = 2, affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
-  %3 = transform.loop.get_parent_for %0 { num_loops = 3, affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
-  transform.test_print_remark_at_operand %1, "third loop" : !transform.op<"affine.for">
-  transform.test_print_remark_at_operand %2, "second loop" : !transform.op<"affine.for">
-  transform.test_print_remark_at_operand %3, "first loop" : !transform.op<"affine.for">
-}
-
-// -----
-
-func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
-  // expected-note @below {{target op}}
-  arith.addi %arg0, %arg1 : index
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{could not find an 'affine.for' parent}}
-  %1 = transform.loop.get_parent_for %0 { affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
 }
 
 // -----
@@ -226,12 +181,14 @@ func.func @loop_unroll_op() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 { affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
-  transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
-  transform.loop.unroll %1 { factor = 4, affine = true } : !transform.op<"affine.for">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
+    transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
+    transform.loop.unroll %1 { factor = 4, affine = true } : !transform.op<"affine.for">
+    transform.yield
+  }
 }
 
 // -----
@@ -251,12 +208,14 @@ func.func @test_mixed_loops() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 { num_loops = 1, affine = true } : (!transform.any_op) -> !transform.op<"affine.for">
-  transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
-  transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
+    transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
+    transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
+    transform.yield
+  }
 }
 
 // -----
@@ -275,8 +234,39 @@ func.func @test_promote_if_one_iteration(%a: index) -> index {
   return %0 : index
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.loop.promote_if_one_iteration %0 : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.loop.promote_if_one_iteration %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+
+// -----
+
+// CHECK-LABEL: func @test_structural_conversion_patterns(
+// CHECK: scf.for {{.*}} -> (memref<f32>) {
+
+func.func @test_structural_conversion_patterns(%a: tensor<f32>) -> tensor<f32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %j = %c0 to %c10 step %c1 iter_args(%arg0 = %a) -> tensor<f32> {
+    %1 = "test.foo"(%arg0) : (tensor<f32>) -> (tensor<f32>)
+    scf.yield %1 : tensor<f32>
+  }
+  return %0 : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_conversion_patterns to %0 {
+      transform.apply_conversion_patterns.scf.structural_conversions
+    } with type_converter {
+      transform.apply_conversion_patterns.transform.test_type_converter
+    } {  partial_conversion  } : !transform.any_op
+    transform.yield
+  }
 }

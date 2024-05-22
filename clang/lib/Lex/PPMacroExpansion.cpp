@@ -1136,7 +1136,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the feature name, __foo__ becomes foo.
-  if (Feature.startswith("__") && Feature.endswith("__") && Feature.size() >= 4)
+  if (Feature.starts_with("__") && Feature.ends_with("__") &&
+      Feature.size() >= 4)
     Feature = Feature.substr(2, Feature.size() - 4);
 
 #define FEATURE(Name, Predicate) .Case(#Name, Predicate)
@@ -1162,7 +1163,7 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the extension name, __foo__ becomes foo.
-  if (Extension.startswith("__") && Extension.endswith("__") &&
+  if (Extension.starts_with("__") && Extension.ends_with("__") &&
       Extension.size() >= 4)
     Extension = Extension.substr(2, Extension.size() - 4);
 
@@ -1248,16 +1249,20 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   if (Filename.empty())
     return false;
 
+  // Passing this to LookupFile forces header search to check whether the found
+  // file belongs to a module. Skipping that check could incorrectly mark
+  // modular header as textual, causing issues down the line.
+  ModuleMap::KnownHeader KH;
+
   // Search include directories.
   OptionalFileEntryRef File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
-                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+                    nullptr, nullptr, nullptr, &KH, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
-      FileType =
-          PP.getHeaderSearchInfo().getFileDirFlavor(&File->getFileEntry());
+      FileType = PP.getHeaderSearchInfo().getFileDirFlavor(*File);
     Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
   }
 
@@ -1687,14 +1692,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           // as being "builtin functions", even if the syntax isn't a valid
           // function call (for example, because the builtin takes a type
           // argument).
-          if (II->getName().startswith("__builtin_") ||
-              II->getName().startswith("__is_") ||
-              II->getName().startswith("__has_"))
+          if (II->getName().starts_with("__builtin_") ||
+              II->getName().starts_with("__is_") ||
+              II->getName().starts_with("__has_"))
             return true;
           return llvm::StringSwitch<bool>(II->getName())
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
+              .Case("__reference_constructs_from_temporary", true)
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
 #include "clang/Basic/TransformTypeTraits.def"
               .Default(false);
@@ -1781,7 +1787,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
           AttributeCommonInfo::Syntax Syntax =
               IsCXX ? AttributeCommonInfo::Syntax::AS_CXX11
-                    : AttributeCommonInfo::Syntax::AS_C2x;
+                    : AttributeCommonInfo::Syntax::AS_C23;
           return II ? hasAttribute(Syntax, ScopeII, II, getTargetInfo(),
                                    getLangOpts())
                     : 0;
@@ -1869,7 +1875,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     if (!Tok.isAnnotation() && Tok.getIdentifierInfo())
       Tok.setKind(tok::identifier);
     else if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
-      StringLiteralParser Literal(Tok, *this);
+      StringLiteralParser Literal(Tok, *this,
+                                  StringLiteralEvalMethod::Unevaluated);
       if (Literal.hadError)
         return;
 

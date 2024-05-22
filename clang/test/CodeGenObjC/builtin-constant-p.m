@@ -2,7 +2,6 @@
 
 // Test that can call `__builtin_constant_p` with instances of different
 // Objective-C classes.
-// rdar://problem/47499250
 @class Foo;
 @class Bar;
 

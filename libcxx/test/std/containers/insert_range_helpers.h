@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "exception_safety_helpers.h"
 #include "from_range_helpers.h"
 #include "min_allocator.h"
 #include "test_allocator.h"

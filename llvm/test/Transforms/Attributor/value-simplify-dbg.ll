@@ -28,7 +28,7 @@ define void @src() norecurse !dbg !22 {
 ; CHECK-LABEL: define {{[^@]+}}@src
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG22:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @speculatable(), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @speculatable() #[[ATTR2:[0-9]+]], !dbg [[DBG23:![0-9]+]]
 ; CHECK-NEXT:    [[PLUS1:%.*]] = add i32 [[CALL]], 1
 ; CHECK-NEXT:    store i32 [[PLUS1]], ptr @G, align 4, !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG25:![0-9]+]]
@@ -75,6 +75,7 @@ declare i32 @speculatable() speculatable readnone
 ;.
 ; CHECK: attributes #[[ATTR0]] = { norecurse nosync memory(write) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { speculatable memory(none) }
+; CHECK: attributes #[[ATTR2]] = { nosync }
 ;.
 ; CHECK: [[DBG0]] = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 ; CHECK: [[META1:![0-9]+]] = distinct !DIGlobalVariable(name: "G", scope: !2, file: !5, line: 1, type: !6, isLocal: true, isDefinition: true)

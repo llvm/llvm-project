@@ -14,9 +14,8 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
@@ -179,10 +178,10 @@ FunctionType FunctionType::getWithArgsAndResults(
     ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<unsigned> resultIndices, TypeRange resultTypes) {
   SmallVector<Type> argStorage, resultStorage;
-  TypeRange newArgTypes = function_interface_impl::insertTypesInto(
-      getInputs(), argIndices, argTypes, argStorage);
-  TypeRange newResultTypes = function_interface_impl::insertTypesInto(
-      getResults(), resultIndices, resultTypes, resultStorage);
+  TypeRange newArgTypes =
+      insertTypesInto(getInputs(), argIndices, argTypes, argStorage);
+  TypeRange newResultTypes =
+      insertTypesInto(getResults(), resultIndices, resultTypes, resultStorage);
   return clone(newArgTypes, newResultTypes);
 }
 
@@ -191,10 +190,9 @@ FunctionType
 FunctionType::getWithoutArgsAndResults(const BitVector &argIndices,
                                        const BitVector &resultIndices) {
   SmallVector<Type> argStorage, resultStorage;
-  TypeRange newArgTypes = function_interface_impl::filterTypesOut(
-      getInputs(), argIndices, argStorage);
-  TypeRange newResultTypes = function_interface_impl::filterTypesOut(
-      getResults(), resultIndices, resultStorage);
+  TypeRange newArgTypes = filterTypesOut(getInputs(), argIndices, argStorage);
+  TypeRange newResultTypes =
+      filterTypesOut(getResults(), resultIndices, resultStorage);
   return clone(newArgTypes, newResultTypes);
 }
 
@@ -283,7 +281,7 @@ ArrayRef<int64_t> TensorType::getShape() const {
 
 TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  if (auto unrankedTy = llvm::dyn_cast<UnrankedTensorType>(*this)) {
+  if (llvm::dyn_cast<UnrankedTensorType>(*this)) {
     if (shape)
       return RankedTensorType::get(*shape, elementType);
     return UnrankedTensorType::get(elementType);
@@ -370,7 +368,7 @@ ArrayRef<int64_t> BaseMemRefType::getShape() const {
 
 BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                          Type elementType) const {
-  if (auto unrankedTy = llvm::dyn_cast<UnrankedMemRefType>(*this)) {
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this)) {
     if (!shape)
       return UnrankedMemRefType::get(elementType, getMemorySpace());
     MemRefType::Builder builder(*shape, elementType);
@@ -680,7 +678,7 @@ static void extractStridesFromTerm(AffineExpr e,
                                    AffineExpr multiplicativeFactor,
                                    MutableArrayRef<AffineExpr> strides,
                                    AffineExpr &offset) {
-  if (auto dim = e.dyn_cast<AffineDimExpr>())
+  if (auto dim = dyn_cast<AffineDimExpr>(e))
     strides[dim.getPosition()] =
         strides[dim.getPosition()] + multiplicativeFactor;
   else
@@ -695,7 +693,7 @@ static LogicalResult extractStrides(AffineExpr e,
                                     AffineExpr multiplicativeFactor,
                                     MutableArrayRef<AffineExpr> strides,
                                     AffineExpr &offset) {
-  auto bin = e.dyn_cast<AffineBinaryOpExpr>();
+  auto bin = dyn_cast<AffineBinaryOpExpr>(e);
   if (!bin) {
     extractStridesFromTerm(e, multiplicativeFactor, strides, offset);
     return success();
@@ -707,7 +705,7 @@ static LogicalResult extractStrides(AffineExpr e,
     return failure();
 
   if (bin.getKind() == AffineExprKind::Mul) {
-    auto dim = bin.getLHS().dyn_cast<AffineDimExpr>();
+    auto dim = dyn_cast<AffineDimExpr>(bin.getLHS());
     if (dim) {
       strides[dim.getPosition()] =
           strides[dim.getPosition()] + bin.getRHS() * multiplicativeFactor;
@@ -822,12 +820,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   SmallVector<AffineExpr, 4> strideExprs;
   if (failed(::getStridesAndOffset(t, strideExprs, offsetExpr)))
     return failure();
-  if (auto cst = offsetExpr.dyn_cast<AffineConstantExpr>())
+  if (auto cst = dyn_cast<AffineConstantExpr>(offsetExpr))
     offset = cst.getValue();
   else
     offset = ShapedType::kDynamic;
   for (auto e : strideExprs) {
-    if (auto c = e.dyn_cast<AffineConstantExpr>())
+    if (auto c = dyn_cast<AffineConstantExpr>(e))
       strides.push_back(c.getValue());
     else
       strides.push_back(ShapedType::kDynamic);
@@ -890,7 +888,7 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
 
   // Corner-case for 0-D affine maps.
   if (m.getNumDims() == 0 && m.getNumSymbols() == 0) {
-    if (auto cst = m.getResult(0).dyn_cast<AffineConstantExpr>())
+    if (auto cst = dyn_cast<AffineConstantExpr>(m.getResult(0)))
       if (cst.getValue() == 0)
         return MemRefType::Builder(t).setLayout({});
     return t;
@@ -956,10 +954,16 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   return makeCanonicalStridedLayoutExpr(sizes, exprs, context);
 }
 
-/// Return true if the layout for `t` is compatible with strided semantics.
 bool mlir::isStrided(MemRefType t) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
+}
+
+bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }

@@ -4,21 +4,21 @@
 define <16 x double> @test_sitofp_fixed(<16 x i32> %in) {
 ; CHECK-LABEL: test_sitofp_fixed:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sshll2.2d v4, v2, #0
-; CHECK-NEXT:    sshll2.2d v5, v0, #0
-; CHECK-NEXT:    sshll2.2d v6, v1, #0
-; CHECK-NEXT:    sshll2.2d v7, v3, #0
+; CHECK-NEXT:    sshll2.2d v4, v0, #0
 ; CHECK-NEXT:    sshll.2d v0, v0, #0
-; CHECK-NEXT:    sshll.2d v16, v1, #0
-; CHECK-NEXT:    sshll.2d v17, v2, #0
+; CHECK-NEXT:    sshll2.2d v5, v1, #0
+; CHECK-NEXT:    sshll.2d v6, v1, #0
+; CHECK-NEXT:    sshll.2d v7, v2, #0
+; CHECK-NEXT:    sshll2.2d v16, v2, #0
+; CHECK-NEXT:    sshll2.2d v17, v3, #0
 ; CHECK-NEXT:    sshll.2d v18, v3, #0
-; CHECK-NEXT:    scvtf.2d v1, v5, #6
+; CHECK-NEXT:    scvtf.2d v1, v4, #6
 ; CHECK-NEXT:    scvtf.2d v0, v0, #6
-; CHECK-NEXT:    scvtf.2d v3, v6, #6
-; CHECK-NEXT:    scvtf.2d v2, v16, #6
-; CHECK-NEXT:    scvtf.2d v5, v4, #6
-; CHECK-NEXT:    scvtf.2d v4, v17, #6
-; CHECK-NEXT:    scvtf.2d v7, v7, #6
+; CHECK-NEXT:    scvtf.2d v3, v5, #6
+; CHECK-NEXT:    scvtf.2d v2, v6, #6
+; CHECK-NEXT:    scvtf.2d v4, v7, #6
+; CHECK-NEXT:    scvtf.2d v5, v16, #6
+; CHECK-NEXT:    scvtf.2d v7, v17, #6
 ; CHECK-NEXT:    scvtf.2d v6, v18, #6
 ; CHECK-NEXT:    ret
 

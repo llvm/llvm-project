@@ -93,7 +93,6 @@ public:
   Status Read(void *buf, size_t &num_bytes) override;
   Status Write(const void *buf, size_t &num_bytes) override;
 
-  virtual Status PreDisconnect();
   Status Close() override;
 
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }

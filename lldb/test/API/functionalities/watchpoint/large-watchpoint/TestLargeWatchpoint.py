@@ -45,7 +45,9 @@ class UnalignedWatchpointTestCase(TestBase):
         # to a 1024 byte boundary to begin with, force alignment.
         wa_256_addr = (array_addr + 1024) & ~(1024 - 1)
         err = lldb.SBError()
-        wp = target.WatchAddress(wa_256_addr, 1024, False, True, err)
+        wp_opts = lldb.SBWatchpointOptions()
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+        wp = target.WatchpointCreateByAddress(wa_256_addr, 1024, wp_opts, err)
         self.assertTrue(wp.IsValid())
         self.assertSuccess(err)
 

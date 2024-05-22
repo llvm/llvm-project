@@ -83,7 +83,7 @@
 // RUN: %clang -fsanitize=bounds -### -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=CHECK-BOUNDS
 // CHECK-BOUNDS: "-fsanitize={{((array-bounds|local-bounds),?){2}"}}
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=all %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSANITIZE-ALL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=all %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSANITIZE-ALL
 // CHECK-FSANITIZE-ALL: error: unsupported argument 'all' to option '-fsanitize='
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address,undefined -fno-sanitize=all -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FNO-SANITIZE-ALL
@@ -95,112 +95,112 @@
 // RUN: %clang -fsanitize=shift -fno-sanitize=shift-base %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSANITIZE-SHIFT-PARTIAL
 // CHECK-FSANITIZE-SHIFT-PARTIAL: "-fsanitize=shift-exponent"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-trap=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-undefined-trap-on-error %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-trap=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-undefined-trap-on-error %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
 // CHECK-VPTR-TRAP-UNDEF: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-trap=undefined'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-NO-RTTI
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-NO-RTTI
 // CHECK-VPTR-NO-RTTI: '-fsanitize=vptr' not allowed with '-fno-rtti'
 
 // RUN: %clang -fsanitize=undefined -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-NO-RTTI
 // CHECK-UNDEFINED-NO-RTTI-NOT: vptr
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANT
 // CHECK-SANA-SANT: '-fsanitize=address' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANM
 // CHECK-SANA-SANM: '-fsanitize=address' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANT-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=thread,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANT-SANM
 // CHECK-SANT-SANM: '-fsanitize=thread' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=memory,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANM-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=memory,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANM-SANT
 // CHECK-SANM-SANT: '-fsanitize=thread' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=leak,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=leak,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANT
 // CHECK-SANL-SANT: '-fsanitize=leak' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=leak,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=leak,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANM
 // CHECK-SANL-SANM: '-fsanitize=leak' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-ASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-ASAN
 // CHECK-KMSAN-ASAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,hwaddress -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-HWASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,hwaddress -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-HWASAN
 // CHECK-KMSAN-HWASAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=hwaddress'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-LSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-LSAN
 // CHECK-KMSAN-LSAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=leak'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-TSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-TSAN
 // CHECK-KMSAN-TSAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,kernel-address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-KASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,kernel-address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-KASAN
 // CHECK-KMSAN-KASAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=kernel-address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-MSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-MSAN
 // CHECK-KMSAN-MSAN: '-fsanitize=kernel-memory' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,safe-stack -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-SAFESTACK
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-memory,safe-stack -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KMSAN-SAFESTACK
 // CHECK-KMSAN-SAFESTACK: '-fsanitize=kernel-memory' not allowed with '-fsanitize=safe-stack'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANT
 // CHECK-SANKA-SANT: '-fsanitize=kernel-address' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANM
 // CHECK-SANKA-SANM: '-fsanitize=kernel-address' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANA
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANA
 // CHECK-SANKA-SANA: '-fsanitize=kernel-address' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-address,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKA-SANL
 // CHECK-SANKA-SANL: '-fsanitize=kernel-address' not allowed with '-fsanitize=leak'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANT
 // CHECK-SANKHA-SANT: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANM
 // CHECK-SANKHA-SANM: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANA
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANA
 // CHECK-SANKHA-SANA: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,leak -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANL
 // CHECK-SANKHA-SANL: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=leak'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,hwaddress -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANHA
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,hwaddress -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANHA
 // CHECK-SANKHA-SANHA: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=hwaddress'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,kernel-address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANKA
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kernel-hwaddress,kernel-address -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANKHA-SANKA
 // CHECK-SANKHA-SANKA: '-fsanitize=kernel-hwaddress' not allowed with '-fsanitize=kernel-address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANT
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,thread -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANT
 // CHECK-SANHA-SANT: '-fsanitize=hwaddress' not allowed with '-fsanitize=thread'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANM
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANM
 // CHECK-SANHA-SANM: '-fsanitize=hwaddress' not allowed with '-fsanitize=memory'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANA
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=hwaddress,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANHA-SANA
 // CHECK-SANHA-SANA: '-fsanitize=hwaddress' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=aarch64-linux-android -fsanitize=memtag,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-SANA
+// RUN: not %clang --target=aarch64-linux-android -fsanitize=memtag,address -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-SANA
 // CHECK-SANMT-SANA: '-fsanitize=memtag' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=aarch64-linux-android -fsanitize=memtag,hwaddress -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-SANHA
+// RUN: not %clang --target=aarch64-linux-android -fsanitize=memtag,hwaddress -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-SANHA
 // CHECK-SANMT-SANHA: '-fsanitize=memtag' not allowed with '-fsanitize=hwaddress'
 
-// RUN: %clang --target=i386-linux-android -fsanitize=memtag -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-BAD-ARCH
-// RUN: %clang --target=x86_64-linux-android -fsanitize=memtag -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-BAD-ARCH
+// RUN: not %clang --target=i386-linux-android -fsanitize=memtag -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-BAD-ARCH
+// RUN: not %clang --target=x86_64-linux-android -fsanitize=memtag -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-BAD-ARCH
 // CHECK-SANMT-BAD-ARCH: unsupported option '-fsanitize=memtag' for target
 
 // RUN: %clang --target=aarch64-linux-android31 -fsanitize=memtag -march=armv8-a+memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
 // CHECK-SANMT-MT: "-target-feature" "+mte"
 // CHECK-SANMT-MT-SAME: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 
-// RUN: %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
+// RUN: not %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
 // CHECK-SANMT-NOMT-0: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
-// RUN: %clang --target=aarch64-linux -fsanitize=memtag -I +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-1
+// RUN: not %clang --target=aarch64-linux -fsanitize=memtag -I +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-1
 // CHECK-SANMT-NOMT-1: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-use-after-scope %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-SCOPE
@@ -312,7 +312,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=memory -fsanitize-memory-track-origins=2 -pie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACK-ORIGINS-2
 // CHECK-TRACK-ORIGINS-2: -fsanitize-memory-track-origins=2
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=memory -fsanitize-memory-track-origins=3 -pie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACK-ORIGINS-3
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=memory -fsanitize-memory-track-origins=3 -pie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACK-ORIGINS-3
 // CHECK-TRACK-ORIGINS-3: error: invalid value '3' in '-fsanitize-memory-track-origins=3'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=memory -fsanitize-memory-use-after-dtor %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-DTOR
@@ -330,7 +330,7 @@
 // CHECK-ASAN-FIELD-PADDING-1: -fsanitize-address-field-padding=1
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-field-padding=2 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-FIELD-PADDING-2
 // CHECK-ASAN-FIELD-PADDING-2: -fsanitize-address-field-padding=2
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-field-padding=3 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-FIELD-PADDING-3
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-field-padding=3 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-FIELD-PADDING-3
 // CHECK-ASAN-FIELD-PADDING-3: error: invalid value '3' in '-fsanitize-address-field-padding=3'
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize-address-field-padding=2 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-FIELD-PADDING-NO-ASAN
 // CHECK-ASAN-FIELD-PADDING-NO-ASAN: warning: argument unused during compilation: '-fsanitize-address-field-padding=2'
@@ -361,15 +361,15 @@
 // RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=address -fsanitize-recover -### 2>&1 | FileCheck %s --check-prefix=CHECK-RECOVER-ASAN
 // CHECK-RECOVER-ASAN: "-fsanitize-recover=address"
 
-// RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover=foobar,object-size,unreachable -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG-RECOVER
+// RUN: not %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover=foobar,object-size,unreachable -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG-RECOVER
 // CHECK-DIAG-RECOVER: unsupported argument 'foobar' to option '-fsanitize-recover='
 // CHECK-DIAG-RECOVER: unsupported argument 'unreachable' to option '-fsanitize-recover='
 
 // RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover -fno-sanitize-recover -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEPRECATED-RECOVER
 // CHECK-DEPRECATED-RECOVER-NOT: is deprecated
 
-// RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=kernel-address -fno-sanitize-recover=kernel-address -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KASAN
-// RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=kernel-hwaddress -fno-sanitize-recover=kernel-hwaddress -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KHWASAN
+// RUN: not %clang --target=x86_64-linux-gnu %s -fsanitize=kernel-address -fno-sanitize-recover=kernel-address -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KASAN
+// RUN: not %clang --target=x86_64-linux-gnu %s -fsanitize=kernel-hwaddress -fno-sanitize-recover=kernel-hwaddress -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KHWASAN
 // CHECK-NO-RECOVER-KASAN: unsupported argument 'kernel-address' to option '-fno-sanitize-recover='
 // CHECK-NO-RECOVER-KHWASAN: unsupported argument 'kernel-hwaddress' to option '-fno-sanitize-recover='
 
@@ -409,10 +409,10 @@
 // RUN: %clang --target=thumbeb-linux -fsanitize=address,leak -fno-sanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANL-NO-SANA-THUMBEB
 // CHECK-SANA-SANL-NO-SANA-THUMBEB: "-fsanitize=leak"
 
-// RUN: %clang --target=mips-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-MIPS
+// RUN: not %clang --target=mips-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-MIPS
 // CHECK-SANL-MIPS: unsupported option '-fsanitize=leak' for target 'mips-unknown-linux'
 
-// RUN: %clang --target=mips-unknown-freebsd -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-MIPS-FREEBSD
+// RUN: not %clang --target=mips-unknown-freebsd -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-MIPS-FREEBSD
 // CHECK-SANL-MIPS-FREEBSD: unsupported option '-fsanitize=leak' for target 'mips-unknown-freebsd'
 
 // RUN: %clang --target=mips64-unknown-freebsd -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-MIPS64-FREEBSD
@@ -421,7 +421,7 @@
 // RUN: %clang --target=powerpc64-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC64
 // RUN: %clang --target=powerpc64le-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC64
 // CHECK-SANL-PPC64: "-fsanitize=leak"
-// RUN: %clang --target=powerpc-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC
+// RUN: not %clang --target=powerpc-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC
 // CHECK-SANL-PPC: unsupported option '-fsanitize=leak' for target 'powerpc-unknown-linux'
 
 // RUN: %clang --target=riscv64-linux-gnu -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-RISCV64
@@ -441,21 +441,21 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN
 // CHECK-ASAN: "-fno-assume-sane-operator-new"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=zzz %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG1
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=zzz %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG1
 // CHECK-DIAG1: unsupported argument 'zzz' to option '-fsanitize='
 // CHECK-DIAG1-NOT: unsupported argument 'zzz' to option '-fsanitize='
 
-// RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-DARWIN
+// RUN: not %clang --target=x86_64-apple-darwin10 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-DARWIN
 // CHECK-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 
 // RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=memory -fno-sanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-NOMSAN-DARWIN
 // CHECK-MSAN-NOMSAN-DARWIN-NOT: unsupported option
 
-// RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=memory -fsanitize=thread,memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-TSAN-MSAN-DARWIN
+// RUN: not %clang --target=x86_64-apple-darwin10 -fsanitize=memory -fsanitize=thread,memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-TSAN-MSAN-DARWIN
 // CHECK-MSAN-TSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-MSAN-TSAN-MSAN-DARWIN-NOT: unsupported option
 
-// RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=thread,memory -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MSAN-MSAN-DARWIN
+// RUN: not %clang --target=x86_64-apple-darwin10 -fsanitize=thread,memory -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MSAN-MSAN-DARWIN
 // CHECK-TSAN-MSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-TSAN-MSAN-MSAN-DARWIN-NOT: unsupported option
 
@@ -484,16 +484,16 @@
 // RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-TVOSSIMULATOR
 // CHECK-TSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang --target=i386-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-DARWIN
+// RUN: not %clang --target=i386-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-DARWIN
 // CHECK-TSAN-I386-DARWIN: unsupported option '-fsanitize=thread' for target 'i386-apple-darwin'
 
-// RUN: %clang --target=arm-apple-ios -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM-IOS
+// RUN: not %clang --target=arm-apple-ios -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM-IOS
 // CHECK-TSAN-ARM-IOS: unsupported option '-fsanitize=thread' for target 'arm-apple-ios'
 
-// RUN: %clang --target=i386-apple-ios-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-IOSSIMULATOR
+// RUN: not %clang --target=i386-apple-ios-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-IOSSIMULATOR
 // CHECK-TSAN-I386-IOSSIMULATOR: unsupported option '-fsanitize=thread' for target 'i386-apple-ios-simulator'
 
-// RUN: %clang --target=i386-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-TVOSSIMULATOR
+// RUN: not %clang --target=i386-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-TVOSSIMULATOR
 // CHECK-TSAN-I386-TVOSSIMULATOR: unsupported option '-fsanitize=thread' for target 'i386-apple-tvos-simulator'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-memory-access %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MEMORY-ACCESS
@@ -530,10 +530,10 @@
 // RUN: %clang --target=riscv64-pc-freebsd -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
 // CHECK-FUNCTION: -cc1{{.*}}"-fsanitize=function" "-fsanitize-recover=function"
 
-// RUN: %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
+// RUN: not %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
 
-// RUN: %clang --target=arm-apple-ios4 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-IOS-OLD
+// RUN: not %clang --target=arm-apple-ios4 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-IOS-OLD
 // CHECK-VPTR-IOS-OLD: unsupported option '-fsanitize=vptr' for target 'arm-apple-ios4'
 
 // RUN: %clang --target=aarch64-apple-darwin15.0.0 -fsanitize=vptr %s -### 2>&1
@@ -548,19 +548,19 @@
 // RUN: %clang --target=armv7-apple-ios7 -miphoneos-version-min=7.0 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-IOS
 // CHECK-ASAN-IOS: -fsanitize=address
 
-// RUN %clang --target=i386-pc-openbsd -fsanitize=undefined %s -### 2>&1 | FileCheck --check-prefix=CHECK-UBSAN-OPENBSD
-// CHECK-UBSAN-OPENBSD: -fsanitize=undefined
+// RUN: %clang --target=i386-pc-openbsd -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-OPENBSD
+// CHECK-UBSAN-OPENBSD: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|vptr|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){19}"}}
 
-// RUN: %clang --target=i386-pc-openbsd -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-OPENBSD
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-OPENBSD
 // CHECK-ASAN-OPENBSD: unsupported option '-fsanitize=address' for target 'i386-pc-openbsd'
 
-// RUN: %clang --target=i386-pc-openbsd -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-OPENBSD
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-OPENBSD
 // CHECK-LSAN-OPENBSD: unsupported option '-fsanitize=leak' for target 'i386-pc-openbsd'
 
-// RUN: %clang --target=i386-pc-openbsd -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-OPENBSD
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-OPENBSD
 // CHECK-TSAN-OPENBSD: unsupported option '-fsanitize=thread' for target 'i386-pc-openbsd'
 
-// RUN: %clang --target=i386-pc-openbsd -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-OPENBSD
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-OPENBSD
 // CHECK-MSAN-OPENBSD: unsupported option '-fsanitize=memory' for target 'i386-pc-openbsd'
 
 // RUN: %clang --target=x86_64-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
@@ -585,21 +585,22 @@
 // CHECK-LSAN-I386-TVOSSIMULATOR-NOT: unsupported option
 
 
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=x86_64-apple-darwin10 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=x86_64-pc-win32 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-derived-cast -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-DCAST
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-unrelated-cast -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-UCAST
-// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-nvcall -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NVCALL
-// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-vcall -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-VCALL
-// RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=riscv64 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-apple-darwin10 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-pc-win32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-derived-cast -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-DCAST
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-unrelated-cast -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-UCAST
+// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-nvcall -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NVCALL
+// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-vcall -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-VCALL
+// RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=riscv64 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=loongarch64 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // CHECK-CFI: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall
 // CHECK-CFI-NOMFCALL: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast,cfi-icall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall
 // CHECK-CFI-DCAST: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast
@@ -607,83 +608,83 @@
 // CHECK-CFI-NVCALL: -emit-llvm-bc{{.*}}-fsanitize=cfi-nvcall
 // CHECK-CFI-VCALL: -emit-llvm-bc{{.*}}-fsanitize=cfi-vcall
 
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -flto -fsanitize=cfi-derived-cast -fno-lto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOLTO
+// RUN: not %clang --target=x86_64-linux-gnu -fvisibility=hidden -flto -fsanitize=cfi-derived-cast -fno-lto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOLTO
 // CHECK-CFI-NOLTO: '-fsanitize=cfi-derived-cast' only allowed with '-flto'
 
-// RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS
-// CHECK-CFI-NOVIS: '-fsanitize=cfi-derived-cast' only allowed with '-fvisibility='
+// RUN: not %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS
+// CHECK-CFI-NOVIS: error: invalid argument '-fsanitize=cfi-derived-cast' only allowed with '-fvisibility='
 
-// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-derived-cast -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
+// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-derived-cast -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
 // RUN: echo > %t.o
-// RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast %t.o -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
+// RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast -resource-dir=%S/Inputs/resource_dir %t.o -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
 // CHECK-CFI-NOVIS-NOERROR-NOT: only allowed with
 
-// RUN: %clang --target=mips-unknown-linux -fsanitize=cfi-icall %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-MIPS
-// CHECK-CFI-ICALL-MIPS: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
+// RUN: not %clang --target=mips-unknown-linux -fsanitize=cfi-icall %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-MIPS
+// CHECK-CFI-ICALL-MIPS: error: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize-trap=address -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-TRAP
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-trap=address -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-TRAP
 // CHECK-ASAN-TRAP: error: unsupported argument 'address' to option '-fsanitize-trap='
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize-trap=hwaddress -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-TRAP
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-trap=hwaddress -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-TRAP
 // CHECK-HWASAN-TRAP: error: unsupported argument 'hwaddress' to option '-fsanitize-trap='
 
-// RUN: %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
+// RUN: not %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'
 
-// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-WIN
+// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-WIN
 // CHECK-CFI-NOTRAP-WIN: -emit-llvm-bc
 // CHECK-CFI-NOTRAP-WIN-NOT: -fsanitize-trap=cfi
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -fno-sanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-cfi-cross-dso -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -fno-sanitize-cfi-cross-dso -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-cfi-cross-dso -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
 // CHECK-CFI-CROSS-DSO: -emit-llvm-bc
 // CHECK-CFI-CROSS-DSO: -fsanitize-cfi-cross-dso
 // CHECK-CFI-NO-CROSS-DSO: -emit-llvm-bc
 // CHECK-CFI-NO-CROSS-DSO-NOT: -fsanitize-cfi-cross-dso
 
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-mfcall -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MFCALL-CROSS-DSO
+// RUN: not %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-mfcall -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MFCALL-CROSS-DSO
 // CHECK-CFI-MFCALL-CROSS-DSO: '-fsanitize=cfi-mfcall' not allowed with '-fsanitize-cfi-cross-dso'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-POINTERS
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-GENERALIZE-POINTERS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-POINTERS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-GENERALIZE-POINTERS
 // CHECK-CFI-GENERALIZE-POINTERS: -fsanitize-cfi-icall-generalize-pointers
 // CHECK-NO-CFI-GENERALIZE-POINTERS-NOT: -fsanitize-cfi-icall-generalize-pointers
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-AND-CROSS-DSO
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-AND-CROSS-DSO
 // CHECK-CFI-GENERALIZE-AND-CROSS-DSO: error: invalid argument '-fsanitize-cfi-cross-dso' not allowed with '-fsanitize-cfi-icall-generalize-pointers'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -resource-dir=%S/Inputs/resource_dir -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
 // CHECK-CFI-CANONICAL-JUMP-TABLES: -fsanitize-cfi-canonical-jump-tables
 // CHECK-NO-CFI-CANONICAL-JUMP-TABLES-NOT: -fsanitize-cfi-canonical-jump-tables
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
 // CHECK-CFI-STATS: -fsanitize-stats
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize=cfi -flto -fvisibility=hidden %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOCFI
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize=cfi -flto -fvisibility=hidden %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOCFI
 // CHECK-KCFI-NOCFI: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=cfi'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-trap=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOTRAP
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-trap=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOTRAP
 // CHECK-KCFI-NOTRAP: error: unsupported argument 'kcfi' to option '-fsanitize-trap='
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI
 // CHECK-KCFI: "-fsanitize=kcfi"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fno-sanitize-recover=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-RECOVER
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fno-sanitize-recover=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-RECOVER
 // CHECK-KCFI-RECOVER: error: unsupported argument 'kcfi' to option '-fno-sanitize-recover='
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi,function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-FUNCTION
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi,function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-FUNCTION
 // CHECK-KCFI-FUNCTION: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=function'
 
-// RUN: %clang_cl -fsanitize=address -c -MDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
-// RUN: %clang_cl -fsanitize=address -c -MTd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
-// RUN: %clang_cl -fsanitize=address -c -LDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
-// RUN: %clang_cl -fsanitize=address -c -MD -MDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
-// RUN: %clang_cl -fsanitize=address -c -MT -MTd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
-// RUN: %clang_cl -fsanitize=address -c -LD -LDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -MDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -MTd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -LDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -MD -MDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -MT -MTd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+// RUN: not %clang_cl -fsanitize=address -c -LD -LDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
 // CHECK-ASAN-DEBUGRTL: error: invalid argument
 // CHECK-ASAN-DEBUGRTL: not allowed with '-fsanitize=address'
 // CHECK-ASAN-DEBUGRTL: note: AddressSanitizer doesn't support linking with debug runtime libraries yet
@@ -700,12 +701,11 @@
 // NOSP-NOT: "-fsanitize=safe-stack"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP-ASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP-ASAN
 // RUN: %clang --target=x86_64-linux-gnu -fstack-protector -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=safe-stack -fstack-protector-all -### %s 2>&1 | FileCheck %s -check-prefix=SP
 // RUN: %clang --target=arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
 // RUN: %clang --target=aarch64-linux-android -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
-// RUN: %clang --target=i386-contiki-unknown -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
 // NO-SP-NOT: stack-protector
 // NO-SP: "-fsanitize=safe-stack"
 // SP-ASAN: error: invalid argument '-fsanitize=safe-stack' not allowed with '-fsanitize=address'
@@ -716,10 +716,6 @@
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
 // RUN: %clang --target=powerpc64le-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
 // CHECK-SANM: "-fsanitize=memory"
-
-// RUN: %clang --target=aarch64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
-// RUN: %clang --target=x86_64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
-// SAFESTACK-CLOUDABI: "-fsanitize=safe-stack"
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
@@ -768,8 +764,8 @@
 // RUN: %clang --target=x86_64--netbsd -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=DATAFLOW-NETBSD
 // DATAFLOW-NETBSD: "-fsanitize=dataflow"
 
-// RUN: %clang --target=i386--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
-// RUN: %clang --target=x86_64--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// RUN: %clang --target=i386--netbsd -fsanitize=cfi -flto -fvisibility=hidden -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// RUN: %clang --target=x86_64--netbsd -fsanitize=cfi -flto -fvisibility=hidden -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
 // CFI-NETBSD: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 
 // RUN: %clang --target=i386--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
@@ -792,13 +788,13 @@
 // FUNCTION-SOLARIS: "-fsanitize=function"
 
 
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=dataflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DFSAN-PS4
+// RUN: not %clang --target=x86_64-scei-ps4 -fsanitize=dataflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DFSAN-PS4
 // CHECK-DFSAN-PS4: unsupported option '-fsanitize=dataflow' for target 'x86_64-scei-ps4'
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-PS4
+// RUN: not %clang --target=x86_64-scei-ps4 -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-PS4
 // CHECK-LSAN-PS4: unsupported option '-fsanitize=leak' for target 'x86_64-scei-ps4'
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-PS4
+// RUN: not %clang --target=x86_64-scei-ps4 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-PS4
 // CHECK-MSAN-PS4: unsupported option '-fsanitize=memory' for target 'x86_64-scei-ps4'
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-PS4
+// RUN: not %clang --target=x86_64-scei-ps4 -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-PS4
 // CHECK-TSAN-PS4: unsupported option '-fsanitize=thread' for target 'x86_64-scei-ps4'
 // RUN: %clang --target=x86_64-scei-ps4 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-PS4
 // Make sure there are no *.{o,bc} or -l passed before the ASan library.
@@ -834,10 +830,10 @@
 // CHECK-TSAN-NOLIB-PS5-NOT: SceThreadSanitizer_nosubmission_stub_weak
 
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-MINIMAL
 // CHECK-ASAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=address'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MINIMAL
 // CHECK-TSAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=thread'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL
@@ -857,23 +853,23 @@
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=function -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=vptr -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-VPTR-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=vptr -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-VPTR-MINIMAL
 // CHECK-UBSAN-VPTR-MINIMAL: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-minimal-runtime'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-minimal-runtime -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-UBSAN-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-minimal-runtime -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-UBSAN-MINIMAL
 // CHECK-ASAN-UBSAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=address'
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-MINIMAL
 // CHECK-HWASAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=hwaddress'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MINIMAL
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MINIMAL
 // CHECK-CFI-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-minimal-runtime"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
 // CHECK-CFI-NOTRAP-MINIMAL: error: invalid argument 'fsanitize-minimal-runtime' only allowed with 'fsanitize-trap=cfi'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize-minimal-runtime"
@@ -916,27 +912,27 @@
 // CHECK-SCUDO-UBSAN-MINIMAL: "-fsanitize={{.*}}scudo"
 // CHECK-SCUDO-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
-// RUN: %clang --target=powerpc-unknown-linux -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SCUDO
+// RUN: not %clang --target=powerpc-unknown-linux -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SCUDO
 // CHECK-NO-SCUDO: unsupported option
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,address  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-ASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,address  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-ASAN
 // CHECK-SCUDO-ASAN: error: invalid argument '-fsanitize=scudo' not allowed with '-fsanitize=address'
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,leak  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-LSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,leak  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-LSAN
 // CHECK-SCUDO-LSAN: error: invalid argument '-fsanitize=scudo' not allowed with '-fsanitize=leak'
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-MSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-MSAN
 // CHECK-SCUDO-MSAN: error: invalid argument '-fsanitize=scudo' not allowed with '-fsanitize=memory'
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-TSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-TSAN
 // CHECK-SCUDO-TSAN: error: invalid argument '-fsanitize=scudo' not allowed with '-fsanitize=thread'
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,hwaddress  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-HWASAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,hwaddress  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-HWASAN
 // CHECK-SCUDO-HWASAN: error: invalid argument '-fsanitize=scudo' not allowed with '-fsanitize=hwaddress'
 //
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,kernel-memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-KMSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=scudo,kernel-memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-KMSAN
 // CHECK-SCUDO-KMSAN: error: invalid argument '-fsanitize=kernel-memory' not allowed with '-fsanitize=scudo'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=interceptor %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=platform %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-PLATFORM-ABI
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=foo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-FOO-ABI
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=foo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-FOO-ABI
 // CHECK-HWASAN-INTERCEPTOR-ABI: "-default-function-attr" "hwasan-abi=interceptor"
 // CHECK-HWASAN-PLATFORM-ABI: "-default-function-attr" "hwasan-abi=platform"
 // CHECK-HWASAN-FOO-ABI: error: invalid value 'foo' in '-fsanitize-hwaddress-abi=foo'
@@ -945,8 +941,8 @@
 // CHECK-HWASAN-ALIAS: "-mllvm" "-hwasan-experimental-use-page-aliases=1"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address,pointer-compare,pointer-subtract %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POINTER-ALL
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=pointer-compare %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POINTER-CMP-NEEDS-ADDRESS
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=pointer-subtract %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POINTER-SUB-NEEDS-ADDRESS
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=pointer-compare %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POINTER-CMP-NEEDS-ADDRESS
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=pointer-subtract %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POINTER-SUB-NEEDS-ADDRESS
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=pointer-subtract -fno-sanitize=pointer-subtract %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-POINTER-SUB
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=pointer-compare -fno-sanitize=pointer-compare %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-POINTER-CMP
 // CHECK-POINTER-ALL: -cc1{{.*}}-fsanitize={{[^"]*}}pointer-compare,pointer-subtract{{.*}}" {{.*}} "-mllvm" "-asan-detect-invalid-pointer-cmp" {{.*}}"-mllvm" "-asan-detect-invalid-pointer-sub"
@@ -969,5 +965,66 @@
 // RUN: %clang -fsanitize=undefined,float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIVBYZERO-UBSAN
 // CHECK-DIVBYZERO-UBSAN: "-fsanitize={{.*}},float-divide-by-zero,{{.*}}"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
 // CHECK-UBSAN-FUNCTION-CODE-MODEL: error: invalid argument '-fsanitize=function' only allowed with '-mcmodel=small'
+
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=undefined -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
+// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
+
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
+// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED-VPTR
+
+// CHECK-UBSAN-KCFI-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
+// CHECK-UBSAN-FUNCTION-DAG: error: invalid argument '-fsanitize=function' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
+// CHECK-UBSAN-UNDEFINED-VPTR: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound|vptr),?){18}"}}
+
+// * Test BareMetal toolchain sanitizer support *
+
+// RUN: %clang --target=arm-arm-non-eabi -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-BAREMETAL
+// ADDRESS-BAREMETAL: "-fsanitize=address"
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-BAREMETAL
+// KERNEL-ADDRESS-BAREMETAL: "-fsanitize=kernel-address"
+
+// RUN: %clang --target=aarch64-none-elf -fsanitize=hwaddress %s -### 2>&1 | FileCheck %s -check-prefix=HWADDRESS-BAREMETAL
+// HWADDRESS-BAREMETAL: "-fsanitize=hwaddress"
+
+// RUN: %clang --target=aarch64-none-elf -fsanitize=kernel-hwaddress %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-HWADDRESS-BAREMETAL
+// KERNEL-HWADDRESS-BAREMETAL: "-fsanitize=kernel-hwaddress"
+
+// RUN: %clang --target=aarch64-none-elf -fsanitize=thread %s -### 2>&1 | FileCheck %s -check-prefix=THREAD-BAREMETAL
+// THREAD-BAREMETAL: "-fsanitize=thread"
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-BAREMETAL
+// VPTR-BAREMETAL: "-fsanitize=vptr"
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-BAREMETAL
+// SAFESTACK-BAREMETAL: "-fsanitize=safe-stack"
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=undefined %s -### 2>&1 | FileCheck %s -check-prefix=UNDEFINED-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=undefined %s -### 2>&1 | FileCheck %s -check-prefix=UNDEFINED-BAREMETAL
+// UNDEFINED-BAREMETAL: "-fsanitize={{.*}}
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=scudo %s -### 2>&1 | FileCheck %s -check-prefix=SCUDO-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=scudo %s -### 2>&1 | FileCheck %s -check-prefix=SCUDO-BAREMETAL
+// SCUDO-BAREMETAL: "-fsanitize=scudo"
+
+// RUN: %clang --target=arm-arm-none-eabi -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-BAREMETAL
+// RUN: %clang --target=aarch64-none-elf -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-BAREMETAL
+// FUNCTION-BAREMETAL: "-fsanitize=function"
+
+// RUN: not %clang --target=aarch64-none-elf -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
+// RUN: not %clang --target=aarch64-none-elf -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
+// RUN: not %clang --target=aarch64-none-elf -fsanitize=leak %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
+// RUN: not %clang --target=aarch64-none-elf -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
+// RUN: not %clang --target=arm-arm-none-eabi -fsanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
+// UNSUPPORTED-BAREMETAL: unsupported option '-fsanitize={{.*}}' for target

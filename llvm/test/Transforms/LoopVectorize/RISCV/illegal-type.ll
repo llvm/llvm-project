@@ -111,8 +111,6 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x ptr> poison, ptr [[START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x ptr> [[BROADCAST_SPLATINSERT]], <32 x ptr> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <32 x ptr> poison, ptr [[START]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <32 x ptr> [[BROADCAST_SPLATINSERT2]], <32 x ptr> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -122,7 +120,7 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, <32 x ptr> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, <32 x ptr> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <32 x ptr> [[TMP4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <32 x ptr> [[TMP5]], [[BROADCAST_SPLAT3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <32 x ptr> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <32 x i1> [[TMP7]], i32 31
 ; CHECK-NEXT:    store i1 [[TMP8]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64

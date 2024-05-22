@@ -22,8 +22,9 @@ entry:
 }
 
 define internal void @g(ptr %a) {
+; CHECK: Function Attrs: memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@g
-; CHECK-SAME: (i32 [[TMP0:%.*]]) {
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
 ; CHECK-NEXT:    [[AA:%.*]] = load i32, ptr [[A_PRIV]], align 1
@@ -42,7 +43,7 @@ declare void @z(i32)
 define internal i32 @test(ptr %X, ptr %Y) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[Y_PRIV:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    store i64 [[TMP0]], ptr [[Y_PRIV]], align 4
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[X]], align 4
@@ -69,9 +70,9 @@ Return2:
 }
 
 define internal i32 @caller(ptr %A) {
-; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_PRIV]], i64 noundef 1) #[[ATTR3:[0-9]+]]
@@ -86,13 +87,13 @@ define internal i32 @caller(ptr %A) {
 define i32 @callercaller() {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@callercaller
-; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    ret i32 3
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callercaller
-; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @caller(i32 noundef 2) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
@@ -102,11 +103,12 @@ define i32 @callercaller() {
   ret i32 %X
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(read) }
-; CGSCC: attributes #[[ATTR4]] = { nofree nounwind willreturn }
+; CGSCC: attributes #[[ATTR4]] = { nofree nosync willreturn }
 ;.

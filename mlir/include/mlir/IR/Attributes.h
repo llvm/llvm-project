@@ -87,6 +87,15 @@ public:
 
   friend ::llvm::hash_code hash_value(Attribute arg);
 
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() {
+    return dialect_extension_detail::hasPromisedInterface(
+               getDialect(), getTypeID(), InterfaceT::getInterfaceID()) ||
+           mlir::isa<InterfaceT>(*this);
+  }
+
   /// Returns true if the type was registered with a particular trait.
   template <template <typename T> class Trait>
   bool hasTrait() {
@@ -282,14 +291,14 @@ public:
                                           Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
-private:
+protected:
   /// Returns the impl interface instance for the given type.
   static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
 #ifndef NDEBUG
     // Check that the current interface isn't an unresolved promise for the
     // given attribute.
     dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
-        attr.getDialect(), ConcreteType::getInterfaceID(),
+        attr.getDialect(), attr.getTypeID(), ConcreteType::getInterfaceID(),
         llvm::getTypeName<ConcreteType>());
 #endif
 
@@ -400,7 +409,6 @@ struct CastInfo<To, From,
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
-      (void)ty;
       return true;
     } else {
       return To::classof(ty);

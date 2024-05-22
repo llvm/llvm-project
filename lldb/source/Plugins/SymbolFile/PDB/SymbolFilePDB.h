@@ -134,19 +134,8 @@ public:
       std::vector<lldb_private::ConstString> &mangled_names) override;
 
   void AddSymbols(lldb_private::Symtab &symtab) override;
-
-  void
-  FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext &parent_decl_ctx,
-            uint32_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            lldb_private::TypeMap &types) override;
-
-  void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                 lldb_private::LanguageSet languages,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 lldb_private::TypeMap &types) override;
-
+  void FindTypes(const lldb_private::TypeQuery &match,
+                 lldb_private::TypeResults &results) override;
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
                         uint32_t max_matches, lldb_private::TypeMap &types);
 

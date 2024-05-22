@@ -4,26 +4,26 @@
 #define HEADER
 
 // Test host codegen.
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 // RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
 // RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK3
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK5
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK5
 // RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK5
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK5
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK7
 // RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK1 -verify -Wno-vla -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK1
 
@@ -83,26 +83,26 @@ int teams_template_struct(void) {
 #endif // CK1
 
 // Test host codegen.
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK13
 // RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK13
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK15
 // RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
 
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK17
 // RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK17
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK19
+// RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK19
 // RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK19
+// RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK19
 
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK2 -verify -Wno-vla -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 #ifdef CK2
 
 template <typename T, int n>
@@ -4341,7 +4341,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 100, ptr [[N]], align 4
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
 // CHECK13-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK13-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK13-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK13-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8
 // CHECK13-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 4
 // CHECK13-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
@@ -4727,7 +4727,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z5tmainIiLi10EEiT_(i32 noundef signext [[TMP190]])
 // CHECK13-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    [[TMP191:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK13-NEXT:    call void @llvm.stackrestore(ptr [[TMP191]])
+// CHECK13-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP191]])
 // CHECK13-NEXT:    [[TMP192:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    ret i32 [[TMP192]]
 //
@@ -6998,7 +6998,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    store ptr [[ARGV]], ptr [[ARGV_ADDR]], align 4
 // CHECK15-NEXT:    store i32 100, ptr [[N]], align 4
 // CHECK15-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
-// CHECK15-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+// CHECK15-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK15-NEXT:    store ptr [[TMP1]], ptr [[SAVED_STACK]], align 4
 // CHECK15-NEXT:    [[VLA:%.*]] = alloca i32, i32 [[TMP0]], align 4
 // CHECK15-NEXT:    store i32 [[TMP0]], ptr [[__VLA_EXPR0]], align 4
@@ -7389,7 +7389,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiLi10EEiT_(i32 noundef [[TMP194]])
 // CHECK15-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK15-NEXT:    [[TMP195:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// CHECK15-NEXT:    call void @llvm.stackrestore(ptr [[TMP195]])
+// CHECK15-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP195]])
 // CHECK15-NEXT:    [[TMP196:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK15-NEXT:    ret i32 [[TMP196]]
 //
@@ -9609,7 +9609,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 100, ptr [[N]], align 4
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
 // CHECK17-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK17-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK17-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK17-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8
 // CHECK17-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 4
 // CHECK17-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
@@ -9995,7 +9995,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z5tmainIiLi10EEiT_(i32 noundef signext [[TMP190]])
 // CHECK17-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK17-NEXT:    [[TMP191:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK17-NEXT:    call void @llvm.stackrestore(ptr [[TMP191]])
+// CHECK17-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP191]])
 // CHECK17-NEXT:    [[TMP192:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK17-NEXT:    ret i32 [[TMP192]]
 //
@@ -12266,7 +12266,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    store ptr [[ARGV]], ptr [[ARGV_ADDR]], align 4
 // CHECK19-NEXT:    store i32 100, ptr [[N]], align 4
 // CHECK19-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
-// CHECK19-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+// CHECK19-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK19-NEXT:    store ptr [[TMP1]], ptr [[SAVED_STACK]], align 4
 // CHECK19-NEXT:    [[VLA:%.*]] = alloca i32, i32 [[TMP0]], align 4
 // CHECK19-NEXT:    store i32 [[TMP0]], ptr [[__VLA_EXPR0]], align 4
@@ -12657,7 +12657,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiLi10EEiT_(i32 noundef [[TMP194]])
 // CHECK19-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK19-NEXT:    [[TMP195:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// CHECK19-NEXT:    call void @llvm.stackrestore(ptr [[TMP195]])
+// CHECK19-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP195]])
 // CHECK19-NEXT:    [[TMP196:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK19-NEXT:    ret i32 [[TMP196]]
 //

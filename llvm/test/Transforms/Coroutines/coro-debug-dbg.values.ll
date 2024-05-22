@@ -1,5 +1,6 @@
 ; Tests whether resume function would remain dbg.value infomation.
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK-LABEL: define void @f(
@@ -154,7 +155,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
   br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-  %end = call i1 @llvm.coro.end(ptr null, i1 false)
+  %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -186,7 +187,7 @@ declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 
 declare ptr @new(i64)
 

@@ -52,6 +52,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <optional>
 #include <string>
@@ -402,6 +403,53 @@ class StdLibraryFunctionsChecker
     }
   };
 
+  /// Check null or non-null-ness of an argument that is of pointer type.
+  /// The argument is meant to be a buffer that has a size constraint, and it
+  /// is allowed to have a NULL value if the size is 0. The size can depend on
+  /// 1 or 2 additional arguments, if one of these is 0 the buffer is allowed to
+  /// be NULL. This is useful for functions like `fread` which have this special
+  /// property.
+  class NotNullBufferConstraint : public ValueConstraint {
+    using ValueConstraint::ValueConstraint;
+    ArgNo SizeArg1N;
+    std::optional<ArgNo> SizeArg2N;
+    // This variable has a role when we negate the constraint.
+    bool CannotBeNull = true;
+
+  public:
+    NotNullBufferConstraint(ArgNo ArgN, ArgNo SizeArg1N,
+                            std::optional<ArgNo> SizeArg2N,
+                            bool CannotBeNull = true)
+        : ValueConstraint(ArgN), SizeArg1N(SizeArg1N), SizeArg2N(SizeArg2N),
+          CannotBeNull(CannotBeNull) {}
+
+    ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
+                          const Summary &Summary,
+                          CheckerContext &C) const override;
+
+    void describe(DescriptionKind DK, const CallEvent &Call,
+                  ProgramStateRef State, const Summary &Summary,
+                  llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
+
+    ValueConstraintPtr negate() const override {
+      NotNullBufferConstraint Tmp(*this);
+      Tmp.CannotBeNull = !this->CannotBeNull;
+      return std::make_shared<NotNullBufferConstraint>(Tmp);
+    }
+
+  protected:
+    bool checkSpecificValidity(const FunctionDecl *FD) const override {
+      const bool ValidArg = getArgType(FD, ArgN)->isPointerType();
+      assert(ValidArg &&
+             "This constraint should be applied only on a pointer type");
+      return ValidArg;
+    }
+  };
+
   // Represents a buffer argument with an additional size constraint. The
   // constraint may be a concrete value, or a symbolic value in an argument.
   // Example 1. Concrete value as the minimum buffer size.
@@ -485,13 +533,11 @@ class StdLibraryFunctionsChecker
     virtual ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                                   const Summary &Summary,
                                   CheckerContext &C) const = 0;
-    /// Get a NoteTag about the changes made to 'errno' and the possible bug.
-    /// It may return \c nullptr (if no bug report from \c ErrnoChecker is
-    /// expected).
-    virtual const NoteTag *describe(CheckerContext &C,
-                                    StringRef FunctionName) const {
-      return nullptr;
-    }
+    /// Get a description about what happens with 'errno' here and how it causes
+    /// a later bug report created by ErrnoChecker.
+    /// Empty return value means that 'errno' related bug may not happen from
+    /// the current analyzed function.
+    virtual const std::string describe(CheckerContext &C) const { return ""; }
 
     virtual ~ErrnoConstraintBase() {}
 
@@ -548,7 +594,8 @@ class StdLibraryFunctionsChecker
   };
 
   /// Set errno constraint at success cases of standard functions.
-  /// Success case: 'errno' is not allowed to be used.
+  /// Success case: 'errno' is not allowed to be used because the value is
+  /// undefined after successful call.
   /// \c ErrnoChecker can emit bug report after such a function call if errno
   /// is used.
   class SuccessErrnoConstraint : public ErrnoConstraintBase {
@@ -559,12 +606,15 @@ class StdLibraryFunctionsChecker
       return errno_modeling::setErrnoForStdSuccess(State, C);
     }
 
-    const NoteTag *describe(CheckerContext &C,
-                            StringRef FunctionName) const override {
-      return errno_modeling::getNoteTagForStdSuccess(C, FunctionName);
+    const std::string describe(CheckerContext &C) const override {
+      return "'errno' becomes undefined after the call";
     }
   };
 
+  /// Set errno constraint at functions that indicate failure only with 'errno'.
+  /// In this case 'errno' is required to be observed.
+  /// \c ErrnoChecker can emit bug report after such a function call if errno
+  /// is overwritten without a read before.
   class ErrnoMustBeCheckedConstraint : public ErrnoConstraintBase {
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
@@ -574,9 +624,8 @@ class StdLibraryFunctionsChecker
                                                       Call.getOriginExpr());
     }
 
-    const NoteTag *describe(CheckerContext &C,
-                            StringRef FunctionName) const override {
-      return errno_modeling::getNoteTagForStdMustBeChecked(C, FunctionName);
+    const std::string describe(CheckerContext &C) const override {
+      return "reading 'errno' is required to find out if the call has failed";
     }
   };
 
@@ -834,6 +883,7 @@ private:
 
     for (ArgNo ArgN : VC->getArgsToTrack()) {
       bugreporter::trackExpressionValue(N, Call.getArgExpr(ArgN), *R);
+      R->markInteresting(Call.getArgSVal(ArgN));
       // All tracked arguments are important, highlight them.
       R->addRange(Call.getArgSourceRange(ArgN));
     }
@@ -1138,6 +1188,54 @@ bool StdLibraryFunctionsChecker::NotNullConstraint::describeArgumentValue(
   return true;
 }
 
+ProgramStateRef StdLibraryFunctionsChecker::NotNullBufferConstraint::apply(
+    ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
+    CheckerContext &C) const {
+  SVal V = getArgSVal(Call, getArgNo());
+  if (V.isUndef())
+    return State;
+  DefinedOrUnknownSVal L = V.castAs<DefinedOrUnknownSVal>();
+  if (!isa<Loc>(L))
+    return State;
+
+  std::optional<DefinedOrUnknownSVal> SizeArg1 =
+      getArgSVal(Call, SizeArg1N).getAs<DefinedOrUnknownSVal>();
+  std::optional<DefinedOrUnknownSVal> SizeArg2;
+  if (SizeArg2N)
+    SizeArg2 = getArgSVal(Call, *SizeArg2N).getAs<DefinedOrUnknownSVal>();
+
+  auto IsArgZero = [State](std::optional<DefinedOrUnknownSVal> Val) {
+    if (!Val)
+      return false;
+    auto [IsNonNull, IsNull] = State->assume(*Val);
+    return IsNull && !IsNonNull;
+  };
+
+  if (IsArgZero(SizeArg1) || IsArgZero(SizeArg2))
+    return State;
+
+  return State->assume(L, CannotBeNull);
+}
+
+void StdLibraryFunctionsChecker::NotNullBufferConstraint::describe(
+    DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
+    const Summary &Summary, llvm::raw_ostream &Out) const {
+  assert(CannotBeNull &&
+         "Describe should not be used when the value must be NULL");
+  if (DK == Violation)
+    Out << "should not be NULL";
+  else
+    Out << "is not NULL";
+}
+
+bool StdLibraryFunctionsChecker::NotNullBufferConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  assert(!CannotBeNull && "This function is used when the value is NULL");
+  Out << "is NULL";
+  return true;
+}
+
 ProgramStateRef StdLibraryFunctionsChecker::BufferSizeConstraint::apply(
     ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
     CheckerContext &C) const {
@@ -1273,7 +1371,7 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
   // Now apply the constraints.
   const Summary &Summary = *FoundSummary;
   ProgramStateRef State = C.getState();
-  const ExplodedNode *Node = C.getPredecessor();
+  ExplodedNode *Node = C.getPredecessor();
 
   // Apply case/branch specifications.
   for (const SummaryCase &Case : Summary.getCases()) {
@@ -1287,35 +1385,85 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
     if (NewState)
       NewState = Case.getErrnoConstraint().apply(NewState, Call, Summary, C);
 
-    if (NewState && NewState != State) {
-      if (Case.getNote().empty()) {
-        const NoteTag *NT = nullptr;
-        if (const auto *D = dyn_cast_or_null<FunctionDecl>(Call.getDecl()))
-          NT = Case.getErrnoConstraint().describe(C, D->getNameAsString());
-        C.addTransition(NewState, NT);
-      } else {
-        StringRef Note = Case.getNote();
-        const NoteTag *Tag = C.getNoteTag(
-            // Sorry couldn't help myself.
-            [Node, Note]() -> std::string {
-              // Don't emit "Assuming..." note when we ended up
-              // knowing in advance which branch is taken.
-              return (Node->succ_size() > 1) ? Note.str() : "";
-            },
-            /*IsPrunable=*/true);
-        C.addTransition(NewState, Tag);
-      }
-    } else if (NewState == State) {
-      // It is possible that the function was evaluated in a checker callback
-      // where the state constraints are already applied, then no change happens
-      // here to the state (if the ErrnoConstraint did not change it either).
-      // If the evaluated function requires a NoteTag for errno change, it is
-      // added here.
-      if (const auto *D = dyn_cast_or_null<FunctionDecl>(Call.getDecl()))
-        if (const NoteTag *NT =
-                Case.getErrnoConstraint().describe(C, D->getNameAsString()))
-          C.addTransition(NewState, NT);
+    if (!NewState)
+      continue;
+
+    // Here it's possible that NewState == State, e.g. when other checkers
+    // already applied the same constraints (or stricter ones).
+    // Still add these note tags, the other checker should add only its
+    // specialized note tags. These general note tags are handled always by
+    // StdLibraryFunctionsChecker.
+
+    ExplodedNode *Pred = Node;
+    DeclarationName FunctionName =
+        cast<NamedDecl>(Call.getDecl())->getDeclName();
+
+    std::string ErrnoNote = Case.getErrnoConstraint().describe(C);
+    std::string CaseNote;
+    if (Case.getNote().empty()) {
+      if (!ErrnoNote.empty())
+        ErrnoNote =
+            llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
+    } else {
+      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
     }
+    const SVal RV = Call.getReturnValue();
+
+    if (Summary.getInvalidationKd() == EvalCallAsPure) {
+      // Do not expect that errno is interesting (the "pure" functions do not
+      // affect it).
+      if (!CaseNote.empty()) {
+        const NoteTag *Tag = C.getNoteTag(
+            [Node, CaseNote, RV](PathSensitiveBugReport &BR) -> std::string {
+              // Try to omit the note if we know in advance which branch is
+              // taken (this means, only one branch exists).
+              // This check is performed inside the lambda, after other
+              // (or this) checkers had a chance to add other successors.
+              // Dereferencing the saved node object is valid because it's part
+              // of a bug report call sequence.
+              // FIXME: This check is not exact. We may be here after a state
+              // split that was performed by another checker (and can not find
+              // the successors). This is why this check is only used in the
+              // EvalCallAsPure case.
+              if (BR.isInteresting(RV) && Node->succ_size() > 1)
+                return CaseNote;
+              return "";
+            });
+        Pred = C.addTransition(NewState, Pred, Tag);
+      }
+    } else {
+      if (!CaseNote.empty() || !ErrnoNote.empty()) {
+        const NoteTag *Tag =
+            C.getNoteTag([CaseNote, ErrnoNote,
+                          RV](PathSensitiveBugReport &BR) -> std::string {
+              // If 'errno' is interesting, show the user a note about the case
+              // (what happened at the function call) and about how 'errno'
+              // causes the problem. ErrnoChecker sets the errno (but not RV) to
+              // interesting.
+              // If only the return value is interesting, show only the case
+              // note.
+              std::optional<Loc> ErrnoLoc =
+                  errno_modeling::getErrnoLoc(BR.getErrorNode()->getState());
+              bool ErrnoImportant = !ErrnoNote.empty() && ErrnoLoc &&
+                                    BR.isInteresting(ErrnoLoc->getAsRegion());
+              if (ErrnoImportant) {
+                BR.markNotInteresting(ErrnoLoc->getAsRegion());
+                if (CaseNote.empty())
+                  return ErrnoNote;
+                return llvm::formatv("{0}; {1}", CaseNote, ErrnoNote);
+              } else {
+                if (BR.isInteresting(RV))
+                  return CaseNote;
+              }
+              return "";
+            });
+        Pred = C.addTransition(NewState, Pred, Tag);
+      }
+    }
+
+    // Add the transition if no note tag was added.
+    if (Pred == Node && NewState != State)
+      C.addTransition(NewState);
   }
 }
 
@@ -1650,6 +1798,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto IsNull = [&](ArgNo ArgN) {
     return std::make_shared<NotNullConstraint>(ArgN, false);
   };
+  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N, ArgNo SizeArg2N) {
+    return std::make_shared<NotNullBufferConstraint>(ArgN, SizeArg1N,
+                                                     SizeArg2N);
+  };
 
   std::optional<QualType> FileTy = lookupTy("FILE");
   std::optional<QualType> FilePtrTy = getPointerTy(FileTy);
@@ -1659,6 +1811,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   std::optional<QualType> FPosTPtrTy = getPointerTy(FPosTTy);
   std::optional<QualType> ConstFPosTPtrTy = getPointerTy(getConstTy(FPosTTy));
   std::optional<QualType> FPosTPtrRestrictTy = getRestrictTy(FPosTPtrTy);
+
+  constexpr llvm::StringLiteral GenericSuccessMsg(
+      "Assuming that '{0}' is successful");
+  constexpr llvm::StringLiteral GenericFailureMsg("Assuming that '{0}' fails");
 
   // We are finally ready to define specifications for all supported functions.
   //
@@ -1892,19 +2048,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                  ArgumentCondition(2U, WithinRange, Range(1, SizeMax)),
                  ReturnValueCondition(BO_LT, ArgNo(2)),
                  ReturnValueCondition(WithinRange, Range(0, SizeMax))},
-                ErrnoNEZeroIrrelevant)
+                ErrnoNEZeroIrrelevant, GenericFailureMsg)
           .Case({ArgumentCondition(1U, WithinRange, Range(1, SizeMax)),
                  ReturnValueCondition(BO_EQ, ArgNo(2)),
                  ReturnValueCondition(WithinRange, Range(0, SizeMax))},
-                ErrnoMustNotBeChecked)
+                ErrnoMustNotBeChecked, GenericSuccessMsg)
           .Case({ArgumentCondition(1U, WithinRange, SingleValue(0)),
                  ReturnValueCondition(WithinRange, SingleValue(0))},
-                ErrnoMustNotBeChecked)
-          .ArgConstraint(NotNull(ArgNo(0)))
+                ErrnoMustNotBeChecked,
+                "Assuming that argument 'size' to '{0}' is 0")
+          .ArgConstraint(NotNullBuffer(ArgNo(0), ArgNo(1), ArgNo(2)))
           .ArgConstraint(NotNull(ArgNo(3)))
-          // FIXME: It should be allowed to have a null buffer if any of
-          // args 1 or 2 are zero. Remove NotNull check of arg 0, add a check
-          // for non-null buffer if non-zero size to BufferSizeConstraint?
           .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
                                     /*BufSizeMultiplier=*/ArgNo(2)));
 
@@ -2016,17 +2170,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, ConstCharPtrRestrictTy},
                   RetType{FilePtrTy}),
         Summary(NoEvalCall)
-            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked)
-            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // FILE *tmpfile(void);
-    addToFunctionSummaryMap("tmpfile",
-                            Signature(ArgTypes{}, RetType{FilePtrTy}),
-                            Summary(NoEvalCall)
-                                .Case({NotNull(Ret)}, ErrnoMustNotBeChecked)
-                                .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant));
+    addToFunctionSummaryMap(
+        "tmpfile", Signature(ArgTypes{}, RetType{FilePtrTy}),
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg));
 
     // FILE *freopen(const char *restrict pathname, const char *restrict mode,
     //               FILE *restrict stream);
@@ -2037,8 +2191,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{FilePtrTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(BO_EQ, ArgNo(2))},
-                  ErrnoMustNotBeChecked)
-            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant)
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
@@ -2046,9 +2200,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "fclose", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
-                  ErrnoNEZeroIrrelevant)
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fseek(FILE *stream, long offset, int whence);
@@ -2058,8 +2212,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "fseek", Signature(ArgTypes{FilePtrTy, LongTy, IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(ArgumentCondition(2, WithinRange, {{0, 2}})));
 
@@ -2072,8 +2226,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{FilePtrRestrictTy, FPosTPtrRestrictTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoUnchanged)
-            .Case(ReturnsNonZero, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoUnchanged, GenericSuccessMsg)
+            .Case(ReturnsNonZero, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2085,8 +2239,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "fsetpos",
         Signature(ArgTypes{FilePtrTy, ConstFPosTPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoUnchanged)
-            .Case(ReturnsNonZero, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoUnchanged, GenericSuccessMsg)
+            .Case(ReturnsNonZero, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2098,16 +2252,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "ftell", Signature(ArgTypes{FilePtrTy}, RetType{LongTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(WithinRange, Range(1, LongMax))},
-                  ErrnoUnchanged)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                  ErrnoUnchanged, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fileno(FILE *stream);
     addToFunctionSummaryMap(
         "fileno", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // void rewind(FILE *stream);
@@ -2145,12 +2300,32 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                 .ArgConstraint(ArgumentCondition(
                                     0, WithinRange, Range(0, LongMax))));
 
+    // int open(const char *path, int oflag, ...);
+    addToFunctionSummaryMap(
+        "open", Signature(ArgTypes{ConstCharPtrTy, IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int openat(int fd, const char *path, int oflag, ...);
+    addToFunctionSummaryMap(
+        "openat",
+        Signature(ArgTypes{IntTy, ConstCharPtrTy, IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
     // int access(const char *pathname, int amode);
     addToFunctionSummaryMap(
         "access", Signature(ArgTypes{ConstCharPtrTy, IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int faccessat(int dirfd, const char *pathname, int mode, int flags);
@@ -2159,8 +2334,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, IntTy, IntTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2168,8 +2343,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "dup", Signature(ArgTypes{IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2177,20 +2353,21 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "dup2", Signature(ArgTypes{IntTy, IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(
                 ArgumentCondition(1, WithinRange, Range(0, IntMax))));
 
     // int fdatasync(int fildes);
-    addToFunctionSummaryMap("fdatasync",
-                            Signature(ArgTypes{IntTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+    addToFunctionSummaryMap(
+        "fdatasync", Signature(ArgTypes{IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // int fnmatch(const char *pattern, const char *string, int flags);
     addToFunctionSummaryMap(
@@ -2202,12 +2379,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int fsync(int fildes);
-    addToFunctionSummaryMap("fsync", Signature(ArgTypes{IntTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+    addToFunctionSummaryMap(
+        "fsync", Signature(ArgTypes{IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     std::optional<QualType> Off_tTy = lookupTy("off_t");
 
@@ -2216,8 +2394,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "truncate",
         Signature(ArgTypes{ConstCharPtrTy, Off_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int symlink(const char *oldpath, const char *newpath);
@@ -2225,8 +2403,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "symlink",
         Signature(ArgTypes{ConstCharPtrTy, ConstCharPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2236,8 +2414,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrTy, IntTy, ConstCharPtrTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
@@ -2246,8 +2424,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "lockf", Signature(ArgTypes{IntTy, IntTy, Off_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2257,8 +2435,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "creat", Signature(ArgTypes{ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // unsigned int sleep(unsigned int seconds);
@@ -2275,8 +2454,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "dirfd", Signature(ArgTypes{DirPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // unsigned int alarm(unsigned int seconds);
@@ -2287,12 +2467,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 ArgumentCondition(0, WithinRange, Range(0, UnsignedIntMax))));
 
     // int closedir(DIR *dir);
-    addToFunctionSummaryMap("closedir",
-                            Signature(ArgTypes{DirPtrTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap(
+        "closedir", Signature(ArgTypes{DirPtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *strdup(const char *s);
     addToFunctionSummaryMap(
@@ -2317,8 +2497,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "mkstemp", Signature(ArgTypes{CharPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *mkdtemp(char *template);
@@ -2339,8 +2520,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "mkdir", Signature(ArgTypes{ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int mkdirat(int dirfd, const char *pathname, mode_t mode);
@@ -2348,8 +2529,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "mkdirat",
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2360,8 +2541,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "mknod",
         Signature(ArgTypes{ConstCharPtrTy, Mode_tTy, Dev_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
@@ -2370,8 +2551,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Mode_tTy, Dev_tTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2379,8 +2560,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "chmod", Signature(ArgTypes{ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
@@ -2389,8 +2570,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Mode_tTy, IntTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2398,8 +2579,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "fchmod", Signature(ArgTypes{IntTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2413,8 +2594,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Uid_tTy, Gid_tTy, IntTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2423,8 +2604,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "chown",
         Signature(ArgTypes{ConstCharPtrTy, Uid_tTy, Gid_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int lchown(const char *path, uid_t owner, gid_t group);
@@ -2432,42 +2613,42 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "lchown",
         Signature(ArgTypes{ConstCharPtrTy, Uid_tTy, Gid_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fchown(int fildes, uid_t owner, gid_t group);
     addToFunctionSummaryMap(
         "fchown", Signature(ArgTypes{IntTy, Uid_tTy, Gid_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // int rmdir(const char *pathname);
-    addToFunctionSummaryMap("rmdir",
-                            Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap(
+        "rmdir", Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // int chdir(const char *path);
-    addToFunctionSummaryMap("chdir",
-                            Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap(
+        "chdir", Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // int link(const char *oldpath, const char *newpath);
     addToFunctionSummaryMap(
         "link",
         Signature(ArgTypes{ConstCharPtrTy, ConstCharPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2478,28 +2659,28 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, IntTy, ConstCharPtrTy, IntTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
             .ArgConstraint(NotNull(ArgNo(3))));
 
     // int unlink(const char *pathname);
-    addToFunctionSummaryMap("unlink",
-                            Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap(
+        "unlink", Signature(ArgTypes{ConstCharPtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // int unlinkat(int fd, const char *path, int flag);
     addToFunctionSummaryMap(
         "unlinkat",
         Signature(ArgTypes{IntTy, ConstCharPtrTy, IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2512,8 +2693,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "fstat", Signature(ArgTypes{IntTy, StructStatPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2523,8 +2704,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, StructStatPtrRestrictTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2534,8 +2715,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, StructStatPtrRestrictTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
@@ -2547,8 +2728,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                            StructStatPtrRestrictTy, IntTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
@@ -2592,12 +2773,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
 
     // int close(int fildes);
-    addToFunctionSummaryMap("close", Signature(ArgTypes{IntTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(-1, IntMax))));
+    addToFunctionSummaryMap(
+        "close", Signature(ArgTypes{IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(-1, IntMax))));
 
     // long fpathconf(int fildes, int name);
     addToFunctionSummaryMap("fpathconf",
@@ -2674,12 +2856,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
 
     // int pipe(int fildes[2]);
-    addToFunctionSummaryMap("pipe",
-                            Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap(
+        "pipe", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // off_t lseek(int fildes, off_t offset, int whence);
     // In the first case we can not tell for sure if it failed or not.
@@ -2690,7 +2872,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "lseek", Signature(ArgTypes{IntTy, Off_tTy, IntTy}, RetType{Off_tTy}),
         Summary(NoEvalCall)
             .Case(ReturnsNonnegative, ErrnoIrrelevant)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2701,10 +2883,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case({ArgumentCondition(2, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(2, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
@@ -2720,10 +2907,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
             RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(3)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case({ArgumentCondition(3, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(3)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(3, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2)))
@@ -2739,8 +2931,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstCharPtrTy, IntTy, ConstCharPtrTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
@@ -2808,10 +3000,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // standardized signature will not match, thus we try to match with another
     // signature that has the joker Irrelevant type. We also remove those
     // constraints which require pointer types for the sockaddr param.
+
+    // int socket(int domain, int type, int protocol);
+    addToFunctionSummaryMap(
+        "socket", Signature(ArgTypes{IntTy, IntTy, IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg));
+
     auto Accept =
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)));
     if (!addToFunctionSummaryMap(
             "accept",
@@ -2834,8 +3036,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             Signature(ArgTypes{IntTy, ConstStructSockaddrPtrTy, Socklen_tTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
-                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -2848,8 +3050,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           "bind",
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tTy}, RetType{IntTy}),
           Summary(NoEvalCall)
-              .Case(ReturnsZero, ErrnoMustNotBeChecked)
-              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+              .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax)))
               .ArgConstraint(
@@ -2863,8 +3065,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                Socklen_tPtrRestrictTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
-                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -2874,8 +3076,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tPtrRestrictTy},
                     RetType{IntTy}),
           Summary(NoEvalCall)
-              .Case(ReturnsZero, ErrnoMustNotBeChecked)
-              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+              .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2887,8 +3089,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                Socklen_tPtrRestrictTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
-                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -2898,8 +3100,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tPtrRestrictTy},
                     RetType{IntTy}),
           Summary(NoEvalCall)
-              .Case(ReturnsZero, ErrnoMustNotBeChecked)
-              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+              .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2910,8 +3112,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             Signature(ArgTypes{IntTy, ConstStructSockaddrPtrTy, Socklen_tTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
-                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))))
@@ -2919,17 +3121,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           "connect",
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tTy}, RetType{IntTy}),
           Summary(NoEvalCall)
-              .Case(ReturnsZero, ErrnoMustNotBeChecked)
-              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+              .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+              .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     auto Recvfrom =
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2)));
@@ -2954,9 +3159,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     auto Sendto =
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2)));
@@ -2977,13 +3185,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           Sendto);
 
     // int listen(int sockfd, int backlog);
-    addToFunctionSummaryMap("listen",
-                            Signature(ArgTypes{IntTy, IntTy}, RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+    addToFunctionSummaryMap(
+        "listen", Signature(ArgTypes{IntTy, IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
     addToFunctionSummaryMap(
@@ -2992,9 +3200,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2))));
@@ -3010,9 +3221,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, StructMsghdrPtrTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case({ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -3022,9 +3233,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstStructMsghdrPtrTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case({ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -3035,8 +3246,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, IntTy, IntTy, ConstVoidPtrTy, Socklen_tTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(3)))
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
@@ -3052,8 +3263,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                            Socklen_tPtrRestrictTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(3)))
             .ArgConstraint(NotNull(ArgNo(4))));
 
@@ -3064,9 +3275,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
-                  ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2))));
@@ -3076,9 +3290,18 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "socketpair",
         Signature(ArgTypes{IntTy, IntTy, IntTy, IntPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(3))));
+
+    // int shutdown(int socket, int how);
+    addToFunctionSummaryMap(
+        "shutdown", Signature(ArgTypes{IntTy, IntTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen,
     //                 char *restrict node, socklen_t nodelen,
@@ -3115,8 +3338,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "utime",
         Signature(ArgTypes{ConstCharPtrTy, StructUtimbufPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     std::optional<QualType> StructTimespecTy = lookupTy("timespec");
@@ -3130,21 +3353,22 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "futimens",
         Signature(ArgTypes{IntTy, ConstStructTimespecPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // int utimensat(int dirfd, const char *pathname,
     //               const struct timespec times[2], int flags);
-    addToFunctionSummaryMap("utimensat",
-                            Signature(ArgTypes{IntTy, ConstCharPtrTy,
-                                               ConstStructTimespecPtrTy, IntTy},
-                                      RetType{IntTy}),
-                            Summary(NoEvalCall)
-                                .Case(ReturnsZero, ErrnoMustNotBeChecked)
-                                .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-                                .ArgConstraint(NotNull(ArgNo(1))));
+    addToFunctionSummaryMap(
+        "utimensat",
+        Signature(
+            ArgTypes{IntTy, ConstCharPtrTy, ConstStructTimespecPtrTy, IntTy},
+            RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> StructTimevalTy = lookupTy("timeval");
     std::optional<QualType> ConstStructTimevalPtrTy =
@@ -3156,8 +3380,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrTy, ConstStructTimevalPtrTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
@@ -3166,8 +3390,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstStructTimespecPtrTy, StructTimespecPtrTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     std::optional<QualType> Time_tTy = lookupTy("time_t");
@@ -3245,8 +3469,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "clock_gettime",
         Signature(ArgTypes{Clockid_tTy, StructTimespecPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> StructItimervalTy = lookupTy("itimerval");
@@ -3258,8 +3482,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "getitimer",
         Signature(ArgTypes{IntTy, StructItimervalPtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZero, ErrnoMustNotBeChecked)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> Pthread_cond_tTy = lookupTy("pthread_cond_t");
@@ -3368,6 +3592,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "__not_null", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),
         Summary(EvalCallAsPure).ArgConstraint(NotNull(ArgNo(0))));
+
+    addToFunctionSummaryMap(
+        "__not_null_buffer",
+        Signature(ArgTypes{VoidPtrTy, IntTy, IntTy}, RetType{IntTy}),
+        Summary(EvalCallAsPure)
+            .ArgConstraint(NotNullBuffer(ArgNo(0), ArgNo(1), ArgNo(2))));
 
     // Test inside range constraints.
     addToFunctionSummaryMap(

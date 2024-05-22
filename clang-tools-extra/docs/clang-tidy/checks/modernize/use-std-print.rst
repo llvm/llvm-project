@@ -70,8 +70,10 @@ If the call is deemed suitable for conversion then:
   `FprintfLikeFunctions` are replaced with the function specified by the
   `ReplacementPrintlnFunction` option if the format string ends with ``\n``
   or `ReplacementPrintFunction` otherwise.
-- the format string is rewritten to use the ``std::formatter`` language and
-  a ``\n`` is removed from the end.
+- the format string is rewritten to use the ``std::formatter`` language. If
+  a ``\n`` is found at the end of the format string not preceded by ``r``
+  then it is removed and `ReplacementPrintlnFunction` is used rather than
+  `ReplacementPrintFunction`.
 - any arguments that corresponded to ``%p`` specifiers that
   ``std::formatter`` wouldn't accept are wrapped in a ``static_cast``
   to ``const void *``.
@@ -79,7 +81,7 @@ If the call is deemed suitable for conversion then:
   is of ``signed char`` or ``unsigned char`` type are wrapped in a
   ``reinterpret_cast<const char *>``.
 - any arguments where the format string and the parameter differ in
-  signedness will be wrapped in an approprate ``static_cast`` if `StrictMode`
+  signedness will be wrapped in an appropriate ``static_cast`` if `StrictMode`
   is enabled.
 - any arguments that end in a call to ``std::string::c_str()`` or
   ``std::string::data()`` will have that call removed.

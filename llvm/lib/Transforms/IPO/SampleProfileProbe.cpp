@@ -18,6 +18,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -95,13 +96,13 @@ void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (const auto **M = any_cast<const Module *>(&IR))
+  if (const auto **M = llvm::any_cast<const Module *>(&IR))
     runAfterPass(*M);
-  else if (const auto **F = any_cast<const Function *>(&IR))
+  else if (const auto **F = llvm::any_cast<const Function *>(&IR))
     runAfterPass(*F);
-  else if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
+  else if (const auto **C = llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
     runAfterPass(*C);
-  else if (const auto **L = any_cast<const Loop *>(&IR))
+  else if (const auto **L = llvm::any_cast<const Loop *>(&IR))
     runAfterPass(*L);
   else
     llvm_unreachable("Unknown IR unit");
@@ -221,12 +222,26 @@ void SampleProfileProber::computeProbeIdForBlocks() {
 }
 
 void SampleProfileProber::computeProbeIdForCallsites() {
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
   for (auto &BB : *F) {
     for (auto &I : BB) {
       if (!isa<CallBase>(I))
         continue;
       if (isa<IntrinsicInst>(&I))
         continue;
+
+      // The current implementation uses the lower 16 bits of the discriminator
+      // so anything larger than 0xFFFF will be ignored.
+      if (LastProbeId >= 0xFFFF) {
+        std::string Msg = "Pseudo instrumentation incomplete for " +
+                          std::string(F->getName()) + " because it's too large";
+        Ctx.diagnose(
+            DiagnosticInfoSampleProfile(M->getName().data(), Msg, DS_Warning));
+        return;
+      }
+
       CallProbeIds[&I] = ++LastProbeId;
     }
   }

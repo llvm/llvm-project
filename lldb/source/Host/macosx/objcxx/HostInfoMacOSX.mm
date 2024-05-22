@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "Utility/UuidCompatibility.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -32,20 +31,24 @@
 #include <sys/sysctl.h>
 #include <sys/syslimits.h>
 #include <sys/types.h>
+#include <uuid/uuid.h>
 
 // Objective-C/C++ includes
+#include <AvailabilityMacros.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
 #include <mach-o/dyld.h>
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
+  MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
 #if __has_include(<mach-o/dyld_introspection.h>)
 #include <mach-o/dyld_introspection.h>
 #define SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS
+#endif
 #endif
 #include <objc/objc-auto.h>
 
 // These are needed when compiling on systems
 // that do not yet have these definitions
-#include <AvailabilityMacros.h>
 #ifndef CPU_SUBTYPE_X86_64_H
 #define CPU_SUBTYPE_X86_64_H ((cpu_subtype_t)8)
 #endif
@@ -391,7 +394,7 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   if (log) {
     std::string cmdstr;
     args.GetCommandString(cmdstr);
-    log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+    LLDB_LOG(log, "GetXcodeSDK() running shell cmd '{0}'", cmdstr);
   }
 
   int status = 0;
@@ -407,13 +410,15 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // Check that xcrun returned something useful.
   if (error.Fail()) {
     // Catastrophic error.
-    LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
+    LLDB_LOG(log, "xcrun failed to execute: {0}", error);
     return error.ToError();
   }
   if (status != 0) {
     // xcrun didn't find a matching SDK. Not an error, we'll try
     // different spellings.
-    LLDB_LOG(log, "xcrun returned exit code %d", status);
+    LLDB_LOG(log, "xcrun returned exit code {0}", status);
+    if (!output_str.empty())
+      LLDB_LOG(log, "xcrun output was:\n{0}", output_str);
     return "";
   }
   if (output_str.empty()) {
@@ -458,13 +463,11 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
     // Invoke xcrun with the shlib dir.
     if (FileSpec fspec = HostInfo::GetShlibDir()) {
       if (FileSystem::Instance().Exists(fspec)) {
-        std::string contents_dir =
-            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
-        llvm::StringRef shlib_developer_dir =
-            llvm::sys::path::parent_path(contents_dir);
-        if (!shlib_developer_dir.empty()) {
-          auto sdk =
-              xcrun(sdk_name, show_sdk_path, std::move(shlib_developer_dir));
+        llvm::SmallString<0> shlib_developer_dir(
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
+        llvm::sys::path::append(shlib_developer_dir, "Developer");
+        if (FileSystem::Instance().Exists(shlib_developer_dir)) {
+          auto sdk = xcrun(sdk_name, show_sdk_path, shlib_developer_dir);
           if (!sdk)
             return sdk.takeError();
           if (!sdk->empty())

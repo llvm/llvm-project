@@ -54,13 +54,13 @@ declare void @foo(ptr)
 
 define i32 @call_preallocated_multiple_args() {
 ; CHECK-LABEL: define {{[^@]+}}@call_preallocated_multiple_args() local_unnamed_addr {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[PAARG:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @foo(ptr [[PAARG]])
 ; CHECK-NEXT:    call void @foo(ptr [[PAARG]])
 ; CHECK-NEXT:    call void @foo(ptr [[PAARG]])
 ; CHECK-NEXT:    [[R:%.*]] = call fastcc i32 @preallocated(ptr [[PAARG]])
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)

@@ -7,15 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStructuredData.h"
-#include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Utility/Instrumentation.h"
 
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBScriptObject.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -31,6 +36,25 @@ SBStructuredData::SBStructuredData() : m_impl_up(new StructuredDataImpl()) {
 SBStructuredData::SBStructuredData(const lldb::SBStructuredData &rhs)
     : m_impl_up(new StructuredDataImpl(*rhs.m_impl_up)) {
   LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBStructuredData::SBStructuredData(const lldb::SBScriptObject obj,
+                                   const lldb::SBDebugger &debugger) {
+  LLDB_INSTRUMENT_VA(this, obj, debugger);
+
+  if (!obj.IsValid())
+    return;
+
+  ScriptInterpreter *interpreter =
+      debugger.m_opaque_sp->GetScriptInterpreter(true, obj.GetLanguage());
+
+  if (!interpreter)
+    return;
+
+  StructuredDataImplUP impl_up = std::make_unique<StructuredDataImpl>(
+      interpreter->CreateStructuredDataFromScriptObject(obj.ref()));
+  if (impl_up && impl_up->IsValid())
+    m_impl_up.reset(impl_up.release());
 }
 
 SBStructuredData::SBStructuredData(const lldb::EventSP &event_sp)
@@ -138,9 +162,9 @@ bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
   StructuredData::Array *key_arr = array_sp->GetAsArray();
   assert(key_arr);
 
-  key_arr->ForEach([&keys] (StructuredData::Object *object) -> bool {
+  key_arr->ForEach([&keys](StructuredData::Object *object) -> bool {
     llvm::StringRef key = object->GetStringValue("");
-    keys.AppendString(key.str().c_str());
+    keys->AppendString(key);
     return true;
   });
   return true;
@@ -196,4 +220,10 @@ size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
   LLDB_INSTRUMENT_VA(this, dst, dst_len);
 
   return m_impl_up->GetStringValue(dst, dst_len);
+}
+
+lldb::SBScriptObject SBStructuredData::GetGenericValue() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return {m_impl_up->GetGenericValue(), eScriptLanguageDefault};
 }

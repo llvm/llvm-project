@@ -119,37 +119,37 @@ msr SVCRSM, #0
 // CHECK-INST: smstop sm
 // CHECK-ENCODING: [0x7f,0x42,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503427f   msr   S0_3_C4_C2_3, xzr
+// CHECK-UNKNOWN: d503427f   smstop sm
 
 msr SVCRSM, #1
 // CHECK-INST: smstart
 // CHECK-ENCODING: [0x7f,0x43,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503437f   msr   S0_3_C4_C3_3, xzr
+// CHECK-UNKNOWN: d503437f   smstart
 
 msr SVCRZA, #0
 // CHECK-INST: smstop za
 // CHECK-ENCODING: [0x7f,0x44,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503447f   msr   S0_3_C4_C4_3, xzr
+// CHECK-UNKNOWN: d503447f   smstop za
 
 msr SVCRZA, #1
 // CHECK-INST: smstart za
 // CHECK-ENCODING: [0x7f,0x45,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503457f   msr   S0_3_C4_C5_3, xzr
+// CHECK-UNKNOWN: d503457f   smstart za
 
 msr SVCRSMZA, #0
 // CHECK-INST: smstop
 // CHECK-ENCODING: [0x7f,0x46,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503467f   msr   S0_3_C4_C6_3, xzr
+// CHECK-UNKNOWN: d503467f   smstop
 
 msr SVCRSMZA, #1
 // CHECK-INST: smstart
 // CHECK-ENCODING: [0x7f,0x47,0x03,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: d503477f   msr   S0_3_C4_C7_3, xzr
+// CHECK-UNKNOWN: d503477f   smstart
 
 msr TPIDR2_EL0, x3
 // CHECK-INST: msr TPIDR2_EL0, x3

@@ -93,6 +93,7 @@ struct Config {
     Strict,
     None,
   };
+  enum class FastCheckPolicy { Strict, Loose, None };
   /// Controls warnings and errors when parsing code.
   struct {
     bool SuppressAll = false;
@@ -103,6 +104,7 @@ struct Config {
       // A comma-separated list of globs specify which clang-tidy checks to run.
       std::string Checks;
       llvm::StringMap<std::string> CheckOptions;
+      FastCheckPolicy FastCheckFilter = FastCheckPolicy::Strict;
     } ClangTidy;
 
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
@@ -144,6 +146,7 @@ struct Config {
     bool Parameters = true;
     bool DeducedTypes = true;
     bool Designators = true;
+    bool BlockEnd = false;
     // Limit the length of type names in inlay hints. (0 means no limit)
     uint32_t TypeNameLimit = 32;
   } InlayHints;

@@ -14,14 +14,6 @@ namespace mlir {
 #include "mlir/Interfaces/DestinationStyleOpInterface.cpp.inc"
 } // namespace mlir
 
-OpOperandVector::operator SmallVector<Value>() {
-  SmallVector<Value> result;
-  result.reserve(this->size());
-  llvm::transform(*this, std::back_inserter(result),
-                  [](OpOperand *opOperand) { return opOperand->get(); });
-  return result;
-}
-
 namespace {
 size_t getNumTensorResults(Operation *op) {
   size_t numTensorResults = 0;
@@ -39,13 +31,13 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
       cast<DestinationStyleOpInterface>(op);
 
   SmallVector<OpOperand *> outputTensorOperands;
-  for (OpOperand *operand : dstStyleOp.getDpsInitOperands()) {
-    Type type = operand->get().getType();
+  for (OpOperand &operand : dstStyleOp.getDpsInitsMutable()) {
+    Type type = operand.get().getType();
     if (isa<RankedTensorType>(type)) {
-      outputTensorOperands.push_back(operand);
+      outputTensorOperands.push_back(&operand);
     } else if (!isa<MemRefType>(type)) {
       return op->emitOpError("expected that operand #")
-             << operand->getOperandNumber()
+             << operand.getOperandNumber()
              << " is a ranked tensor or a ranked memref";
     }
   }

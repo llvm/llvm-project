@@ -28,6 +28,10 @@ namespace linalg {
 class LinalgOp;
 } // namespace linalg
 
+namespace scf {
+class ForOp;
+} // namespace scf
+
 namespace nvgpu {
 void registerTransformDialectExtension(DialectRegistry &registry);
 } // namespace nvgpu

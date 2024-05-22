@@ -272,3 +272,54 @@ nvgpu::getLaneIdToLdMatrixMatrixCoord(OpBuilder &builder, Location loc,
 
   return failure();
 }
+
+bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferReadOp op) {
+  if (op.getMask() || op.hasOutOfBoundsDim())
+    return false;
+  VectorType type = op.getType();
+  // The result type should be 2D. Note that it is possible to expand support so
+  // that we are robust to extra unit dimensions that failed to fold, but that
+  // would significantly increase downstream code complexity in the conversion
+  // step. For now, we rely on other patterns to ensure canonical 2D form is
+  // used when targeting the `nvgpu.mma.sync` lowering path.
+  if (!type.hasStaticShape() || type.getRank() != 2)
+    return false;
+
+  // Currently we can't support reads on tensor types because we need stride
+  // information to ensure correctness of downstream assumptions. It is possible
+  // to enable this if caller can assert that tensor will be lowered in a
+  // particular manner.
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  if (!sourceType)
+    return false;
+
+  // Check that the last dimension of the read is contiguous. Note that it is
+  // possible to expand support for this by scalarizing all the loads during
+  // conversion.
+  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  return strides.back() == 1;
+}
+
+bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferWriteOp op) {
+  if (op.getMask() || op.hasOutOfBoundsDim() || op.getTransferRank() == 0)
+    return false;
+  VectorType type = op.getVectorType();
+  if (!type.hasStaticShape() || type.getRank() != 2)
+    return false;
+  // TODO: Currently we rely on lowering to a `vector.store` operation. We could
+  // support the transposed write case by lowering to scalarized `memref.store`
+  // operations.
+  if (!op.getPermutationMap().isMinorIdentity())
+    return false;
+  // Currently we can't support reads on tensor types because we need stride
+  // information to ensure correctness of downstream assumptions.
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  if (!sourceType)
+    return false;
+
+  // Check that the last dimension of the target memref is contiguous. Note that
+  // it is possible to expand support for this by scalarizing all the stores
+  // during conversion.
+  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  return strides.back() == 1;
+}

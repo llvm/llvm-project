@@ -437,7 +437,7 @@ public:
   ///
   lldb::SBError DeallocateMemory(lldb::addr_t ptr);
 
-  lldb::ScriptedObject GetScriptedImplementation();
+  lldb::SBScriptObject GetScriptedImplementation();
 
 protected:
   friend class SBAddress;
@@ -449,6 +449,7 @@ protected:
   friend class SBExecutionContext;
   friend class SBFunction;
   friend class SBModule;
+  friend class SBPlatform;
   friend class SBTarget;
   friend class SBThread;
   friend class SBValue;

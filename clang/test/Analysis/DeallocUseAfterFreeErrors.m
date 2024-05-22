@@ -18,7 +18,6 @@ typedef unsigned long NSUInteger;
 typedef struct objc_selector *SEL;
 
 //===------------------------------------------------------------------------===
-//  <rdar://problem/6953275>
 //  Check that 'self' is not referenced after calling '[super dealloc]'.
 
 @interface SuperDeallocThenReleaseIvarClass : NSObject {

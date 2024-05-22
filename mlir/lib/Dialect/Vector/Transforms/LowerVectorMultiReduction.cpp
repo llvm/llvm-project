@@ -154,10 +154,17 @@ public:
 
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
     auto srcShape = multiReductionOp.getSourceVectorType().getShape();
+    auto srcScalableDims =
+        multiReductionOp.getSourceVectorType().getScalableDims();
     auto loc = multiReductionOp.getLoc();
 
     // If rank less than 2, nothing to do.
     if (srcRank < 2)
+      return failure();
+
+    // Allow only 1 scalable dimensions. Otherwise we could end-up with e.g.
+    // `vscale * vscale` that's currently not modelled.
+    if (llvm::count(srcScalableDims, true) > 1)
       return failure();
 
     // If already rank-2 ["parallel", "reduce"] or ["reduce", "parallel"] bail.
@@ -167,16 +174,20 @@ public:
 
     // 1. Separate reduction and parallel dims.
     SmallVector<int64_t, 4> parallelDims, parallelShapes;
+    SmallVector<bool, 4> parallelScalableDims;
     SmallVector<int64_t, 4> reductionDims, reductionShapes;
+    bool isReductionDimScalable = false;
     for (const auto &it : llvm::enumerate(reductionMask)) {
       int64_t i = it.index();
       bool isReduction = it.value();
       if (isReduction) {
         reductionDims.push_back(i);
         reductionShapes.push_back(srcShape[i]);
+        isReductionDimScalable |= srcScalableDims[i];
       } else {
         parallelDims.push_back(i);
         parallelShapes.push_back(srcShape[i]);
+        parallelScalableDims.push_back(srcScalableDims[i]);
       }
     }
 
@@ -212,18 +223,23 @@ public:
     // 4. Shape cast to collapse consecutive parallel (resp. reduction dim) into
     // a single parallel (resp. reduction) dim.
     SmallVector<bool, 2> mask;
+    SmallVector<bool, 2> scalableDims;
     SmallVector<int64_t, 2> vectorShape;
+    bool isParallelDimScalable = llvm::is_contained(parallelScalableDims, true);
     if (flattenedParallelDim) {
       mask.push_back(false);
       vectorShape.push_back(flattenedParallelDim);
+      scalableDims.push_back(isParallelDimScalable);
     }
     if (flattenedReductionDim) {
       mask.push_back(true);
       vectorShape.push_back(flattenedReductionDim);
+      scalableDims.push_back(isReductionDimScalable);
     }
     if (!useInnerDimsForReduction && vectorShape.size() == 2) {
       std::swap(mask.front(), mask.back());
       std::swap(vectorShape.front(), vectorShape.back());
+      std::swap(scalableDims.front(), scalableDims.back());
     }
 
     Value newVectorMask;
@@ -237,7 +253,8 @@ public:
     }
 
     auto castedType = VectorType::get(
-        vectorShape, multiReductionOp.getSourceVectorType().getElementType());
+        vectorShape, multiReductionOp.getSourceVectorType().getElementType(),
+        scalableDims);
     Value cast = rewriter.create<vector::ShapeCastOp>(
         loc, castedType, multiReductionOp.getSource());
 
@@ -245,7 +262,8 @@ public:
     if (flattenedParallelDim) {
       auto accType = VectorType::get(
           {flattenedParallelDim},
-          multiReductionOp.getSourceVectorType().getElementType());
+          multiReductionOp.getSourceVectorType().getElementType(),
+          /*scalableDims=*/{isParallelDimScalable});
       acc = rewriter.create<vector::ShapeCastOp>(loc, accType, acc);
     }
     // 6. Creates the flattened form of vector.multi_reduction with inner/outer
@@ -264,8 +282,8 @@ public:
 
     // 8. Creates shape cast for the output n-D -> 2-D.
     VectorType outputCastedType = VectorType::get(
-        parallelShapes,
-        multiReductionOp.getSourceVectorType().getElementType());
+        parallelShapes, multiReductionOp.getSourceVectorType().getElementType(),
+        parallelScalableDims);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         rootOp, outputCastedType, newMultiDimRedOp->getResult(0));
     return success();

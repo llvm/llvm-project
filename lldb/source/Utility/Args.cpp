@@ -25,7 +25,7 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
   // Inside double quotes, '\' and '"' are special.
   static const char *k_escapable_characters = "\"\\";
   while (true) {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = quoted.find_first_of(k_escapable_characters);
     result += quoted.substr(0, regular);
     quoted = quoted.substr(regular);
@@ -93,7 +93,7 @@ ParseSingleArgument(llvm::StringRef command) {
 
   bool arg_complete = false;
   do {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = command.find_first_of(" \t\r\"'`\\");
     arg += command.substr(0, regular);
     command = command.substr(regular);
@@ -445,6 +445,7 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
                         .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
                         .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
                         .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
+                        .Case("tp", LLDB_REGNUM_GENERIC_TP)
                         .Default(LLDB_INVALID_REGNUM);
   return result;
 }
@@ -640,7 +641,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
 
   // If the string doesn't start with a dash, we just have no options and just
   // a raw part.
-  if (!arg_string.startswith("-")) {
+  if (!arg_string.starts_with("-")) {
     m_suffix = std::string(original_args);
     return;
   }

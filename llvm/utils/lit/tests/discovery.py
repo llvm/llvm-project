@@ -28,6 +28,13 @@
 # CHECK-BASIC-OUT: top-level-suite :: test-one
 # CHECK-BASIC-OUT: top-level-suite :: test-two
 
+# RUN: %{lit} %{inputs}/discovery \
+# RUN:   -v > %t.out 2> %t.err
+# RUN: FileCheck --check-prefix=CHECK-PERCENTAGES-OUT < %/t.out %s
+#
+# CHECK-PERCENTAGES-OUT:  Total Discovered Tests: {{[0-9]*}}
+# CHECK-PERCENTAGES-OUT:  Passed: {{[0-9]*}} {{\([0-9]*\.[0-9]*%\)}}
+
 # Check discovery when providing the special builtin 'config_map'
 # RUN: %{python} %{inputs}/config-map-discovery/driver.py \
 # RUN:           %{inputs}/config-map-discovery/main-config/lit.cfg \
@@ -143,11 +150,6 @@
 #
 # CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: warning: input 'Inputs/discovery/test.not-txt' contained no tests
 # CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: error: did not discover any tests for provided path(s)
-
-# Check that no error is emitted with --no-indirectly-run-check.
-#
-# RUN: %{lit} \
-# RUN:     %{inputs}/discovery/test.not-txt --no-indirectly-run-check
 
 # Check that a standalone test with no suffixes set is run without any errors.
 #

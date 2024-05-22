@@ -8,9 +8,10 @@
 
 # Fortran For C Programmers
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This note is limited to essential information about Fortran so that

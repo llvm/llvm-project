@@ -11,9 +11,10 @@
 ! The Semantics phase of the compiler requires the module file of this module
 ! in order to generate description tables for all other derived types.
 
-module __Fortran_type_info
+module __fortran_type_info
 
-  use, intrinsic :: __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
+  use, intrinsic :: __fortran_builtins, &
+    only: __builtin_c_ptr, __builtin_c_funptr
 
   private
 
@@ -30,16 +31,19 @@ module __Fortran_type_info
     ! Instances of parameterized derived types use the "uninstantiated"
     ! component to point to the pristine original definition.
     type(DerivedType), pointer :: uninstantiated
-    integer(kind=int64), pointer, contiguous :: kindParameter(:) ! values of instance
-    integer(1), pointer, contiguous :: lenParameterKind(:) ! INTEGER kinds of LEN types
+    ! values of instance
+    integer(kind=int64), pointer, contiguous :: kindParameter(:)
+    ! INTEGER kinds of LEN types
+    integer(1), pointer, contiguous :: lenParameterKind(:)
     ! Data components appear in component order.
     ! The parent component, if any, appears explicitly and first.
     type(Component), pointer, contiguous :: component(:) ! data components
-    type(ProcPtrComponent), pointer, contiguous :: procptr(:) ! procedure pointers
+    ! procedure pointers
+    type(ProcPtrComponent), pointer, contiguous :: procptr(:)
     ! Special bindings of the ancestral types are not duplicated here.
     ! Bindings are in ascending order of their "which" code values.
     type(SpecialBinding), pointer, contiguous :: special(:)
-    ! A little-endian bit set of SpecialBinding::Which codes present in "special"
+    ! little-endian bit set of SpecialBinding::Which codes present in "special"
     integer(4) :: specialBitSet
     integer(1) :: hasParent
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
@@ -86,7 +90,8 @@ module __Fortran_type_info
     integer(kind=int64) :: offset
     type(Value) :: characterLen ! for category == Character
     type(DerivedType), pointer :: derived ! for category == Derived
-    type(Value), pointer, contiguous :: lenValue(:) ! (SIZE(derived%lenParameterKind))
+    ! (SIZE(derived%lenParameterKind))
+    type(Value), pointer, contiguous :: lenValue(:)
     type(Value), pointer, contiguous :: bounds(:, :) ! (2, rank): lower, upper
     type(__builtin_c_ptr) :: initialization
   end type
@@ -109,7 +114,8 @@ module __Fortran_type_info
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
     integer(1) :: isTypeBound
-    integer(1) :: __padding0(5)
+    integer(1) :: isArgContiguousSet
+    integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc
   end type
 

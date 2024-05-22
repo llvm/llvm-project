@@ -6,7 +6,7 @@
 @global_array1 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
 
 ; IR-LABEL: define amdgpu_kernel void @promote_alloca_size_256(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) {
-; IR: alloca [10 x i32]
+; IR-NOT: alloca [10 x i32]
 ; ASM-LABEL: {{^}}promote_alloca_size_256:
 ; ASM: .amdgpu_lds llvm.amdgcn.kernel.promote_alloca_size_256.lds, 60000, 16
 ; ASM-NOT: .amdgpu_lds

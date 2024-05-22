@@ -17,45 +17,45 @@
 
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcExp2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibcExp2fTest, SpecialNumbers) {
+TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::exp2f(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(inf));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp2f(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(neg_inf));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2f(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::exp2f(0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::exp2f(-0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(-0.0f));
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExp2fTest, Overflow) {
+TEST_F(LlvmLibcExp2fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp2fTest, TrickyInputs) {
+TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
   constexpr int N = 12;
   constexpr uint32_t INPUTS[N] = {
       0x3b429d37U, /*0x1.853a6ep-9f*/
@@ -75,34 +75,34 @@ TEST(LlvmLibcExp2fTest, TrickyInputs) {
     libc_errno = 0;
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                   __llvm_libc::exp2f(x), 0.5);
+                                   LIBC_NAMESPACE::exp2f(x), 0.5);
     EXPECT_MATH_ERRNO(0);
   }
 }
 
-TEST(LlvmLibcExp2fTest, Underflow) {
+TEST_F(LlvmLibcExp2fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      0.0f, __llvm_libc::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
+      0.0f, LIBC_NAMESPACE::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc3158000U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
+                                 LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0xc3160000U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
+                                 LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 
   x = float(FPBits(0xc3165432U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
+                                 LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp2fTest, InFloatRange) {
+TEST_F(LlvmLibcExp2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -110,7 +110,7 @@ TEST(LlvmLibcExp2fTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;
-    float result = __llvm_libc::exp2f(x);
+    float result = LIBC_NAMESPACE::exp2f(x);
 
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
@@ -119,6 +119,6 @@ TEST(LlvmLibcExp2fTest, InFloatRange) {
     if (isnan(result) || isinf(result) || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                   __llvm_libc::exp2f(x), 0.5);
+                                   LIBC_NAMESPACE::exp2f(x), 0.5);
   }
 }

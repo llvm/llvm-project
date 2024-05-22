@@ -11,11 +11,13 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 
 static bool areAllSymbolsInExprMapped(const Fortran::evaluate::ExtentExpr &expr,
@@ -62,11 +64,11 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
       std::tie(funcPtr, funcPtrResultLength) =
           fir::factory::extractCharacterProcedureTuple(builder, loc, funcPtr);
   } else {
-    std::string name = converter.mangleName(*symbol);
     mlir::func::FuncOp func =
-        Fortran::lower::getOrDeclareFunction(name, proc, converter);
-    funcPtr = builder.create<fir::AddrOfOp>(loc, func.getFunctionType(),
-                                            builder.getSymbolRefAttr(name));
+        Fortran::lower::getOrDeclareFunction(proc, converter);
+    mlir::SymbolRefAttr nameAttr = builder.getSymbolRefAttr(func.getSymName());
+    funcPtr =
+        builder.create<fir::AddrOfOp>(loc, func.getFunctionType(), nameAttr);
   }
   if (Fortran::lower::mustPassLengthWithDummyProcedure(proc, converter)) {
     // The result length, if available here, must be propagated along the
@@ -98,6 +100,15 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  const auto *sym = proc.GetSymbol();
+  if (sym) {
+    if (sym->GetUltimate().attrs().test(Fortran::semantics::Attr::INTRINSIC))
+      TODO(loc, "Procedure pointer with intrinsic target.");
+    if (std::optional<fir::FortranVariableOpInterface> varDef =
+            symMap.lookupVariableDefinition(*sym))
+      return *varDef;
+  }
+
   fir::ExtendedValue procExv =
       convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);
   // Directly package the procedure address as a fir.boxproc or
@@ -124,4 +135,16 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
       },
       [funcAddr](const auto &) { return funcAddr; });
   return hlfir::EntityWithAttributes{res};
+}
+
+mlir::Value Fortran::lower::convertProcedureDesignatorInitialTarget(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::lower::StatementContext stmtCtx;
+  Fortran::evaluate::ProcedureDesignator proc(sym);
+  auto procVal{Fortran::lower::convertProcedureDesignatorToHLFIR(
+      loc, converter, proc, globalOpSymMap, stmtCtx)};
+  return fir::getBase(Fortran::lower::convertToAddress(
+      loc, converter, procVal, stmtCtx, procVal.getType()));
 }

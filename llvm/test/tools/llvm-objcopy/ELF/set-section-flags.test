@@ -40,6 +40,12 @@
 # RUN: llvm-objcopy --set-section-flags=.foo=share \
 # RUN:   --set-section-flags=.baz=share --set-section-flags=.rela.baz=share %t %t.share
 # RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=large \
+# RUN:   --set-section-flags=.baz=large --set-section-flags=.rela.baz=large %t %t.large
+# RUN: llvm-readobj --sections %t.large | FileCheck %s --check-prefixes=CHECK,LARGE,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=data \
+# RUN:   --set-section-flags=.baz=data --set-section-flags=.rela.baz=data %t %t.no-large
+# RUN: llvm-readobj --sections %t.no-large | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
 
 # Multiple flags:
 # RUN: llvm-objcopy --set-section-flags=.foo=alloc,readonly,strings \
@@ -102,6 +108,7 @@ Sections:
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
 # EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
 # CHECK-NEXT:    ]
 
 # CHECK:         Name: .baz
@@ -114,6 +121,7 @@ Sections:
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
 # EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
 # CHECK-NEXT:    ]
 
 # CHECK:         Name: .rela.baz
@@ -125,6 +133,7 @@ Sections:
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
 # EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
 # CHECK-NEXT:    ]
 
 # BAD-FORMAT: bad format for --set-section-flags: missing '='

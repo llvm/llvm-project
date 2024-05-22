@@ -36,14 +36,24 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ForwardRefImplicitNone, OpenAccessAppend, BOZAsDefaultInteger,
     DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat,
     SaveMainProgram, SaveBigMainProgramVariables,
-    DistinctArrayConstructorLengths, PPCVector, RelaxedIntentInChecking)
+    DistinctArrayConstructorLengths, PPCVector, RelaxedIntentInChecking,
+    ForwardRefImplicitNoneData, NullActualForAllocatable,
+    ActualIntegerConvertedToSmallerKind, HollerithOrCharacterAsBOZ,
+    BindingAsProcedure, StatementFunctionExtensions,
+    UseGenericIntrinsicWhenSpecificDoesntMatch, DataStmtExtensions,
+    RedundantContiguous, InitBlankCommon, EmptyBindCDerivedType,
+    MiscSourceExtensions, AllocateToOtherLength, LongNames, IntrinsicAsSpecific,
+    BenignNameClash, BenignRedundancy, NullMoldAllocatableComponentValue,
+    NopassScalarBase, MiscUseExtensions, ImpliedDoIndexScope,
+    DistinctCommonSizes)
 
 // Portability and suspicious usage warnings for conforming code
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
     ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
-    F202XAllocatableBreakingChange)
+    F202XAllocatableBreakingChange, DimMustBePresent, CommonBlockPadding,
+    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

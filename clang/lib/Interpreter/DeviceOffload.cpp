@@ -88,7 +88,7 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
 
   llvm::legacy::PassManager PM;
   if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
-                                         llvm::CGFT_AssemblyFile)) {
+                                         llvm::CodeGenFileType::AssemblyFile)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",
         llvm::inconvertibleErrorCode());

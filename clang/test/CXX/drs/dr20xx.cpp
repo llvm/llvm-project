@@ -1,13 +1,14 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors \
-// RUN:            -Wno-variadic-macros -Wno-c11-extensions
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus < 201103L
-#define static_assert(...) _Static_assert(__VA_ARGS__)
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
 namespace dr2007 { // dr2007: 3.4
@@ -15,8 +16,12 @@ template<typename T> struct A { typename T::error e; };
 template<typename T> struct B { };
 B<A<void> > b1;
 B<A<void> > b2 = b1;
-int a = b2[0]; // expected-error {{does not provide a subscript operator}}
-int b = __builtin_addressof(b2)->foo; // expected-error {{no member}}
+int a = b2[0];
+// cxx98-error@-1 {{type 'B<A<void> >' does not provide a subscript operator}}
+// since-cxx11-error@-2 {{type 'B<A<void>>' does not provide a subscript operator}}
+int b = __builtin_addressof(b2)->foo;
+// cxx98-error@-1 {{no member named 'foo' in 'dr2007::B<dr2007::A<void> >'}}
+// since-cxx11-error@-2 {{no member named 'foo' in 'dr2007::B<dr2007::A<void>>'}}
 }
 
 // dr2009: na
@@ -24,41 +29,74 @@ int b = __builtin_addressof(b2)->foo; // expected-error {{no member}}
 namespace dr2026 { // dr2026: 11
   template<int> struct X {};
 
-  const int a = a + 1; // expected-warning {{uninitialized}} expected-note {{here}} expected-note 0-1{{outside its lifetime}}
-  X<a> xa; // expected-error {{constant expression}} expected-note {{initializer of 'a'}}
+  const int a = a + 1; // #dr2026-a
+  // expected-warning@-1 {{variable 'a' is uninitialized when used within its own initialization}}
+  X<a> xa; // #dr2026-xa
+  // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
+  //   cxx98-note@-2 {{initializer of 'a' is not a constant expression}}
+  //   cxx98-note@#dr2026-a {{declared here}}
+  // since-cxx11-error@#dr2026-xa {{non-type template argument is not a constant expression}}
+  //   since-cxx11-note@#dr2026-xa {{initializer of 'a' is not a constant expression}}
+  //   since-cxx11-note@#dr2026-a {{declared here}}
 
 #if __cplusplus >= 201103L
-  constexpr int b = b; // expected-error {{constant expression}} expected-note {{outside its lifetime}}
-  [[clang::require_constant_initialization]] int c = c; // expected-error {{constant initializer}} expected-note {{attribute}}
-#if __cplusplus == 201103L
-  // expected-note@-2 {{read of non-const variable}} expected-note@-2 {{declared here}}
-#else
-  // expected-note@-4 {{outside its lifetime}}
-#endif
+  constexpr int b = b;
+  // since-cxx11-error@-1 {{constexpr variable 'b' must be initialized by a constant expression}}
+  //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
+  [[clang::require_constant_initialization]] int c = c;
+  // since-cxx11-error@-1 {{variable does not have a constant initializer}}
+  //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
+  //   cxx11-note@-3 {{read of non-const variable 'c' is not allowed in a constant expression}}
+  //   cxx11-note@-4 {{declared here}}
+  //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
 #endif
 
-#if __cplusplus > 201703L
-  constinit int d = d; // expected-error {{constant initializer}} expected-note {{outside its lifetime}} expected-note {{'constinit'}}
+#if __cplusplus >= 202002L
+  constinit int d = d;
+  // since-cxx20-error@-1 {{variable does not have a constant initializer}}
+  //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
+  //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
 #endif
 
   void f() {
-    static const int e = e + 1; // expected-warning {{suspicious}} expected-note {{here}} expected-note 0-1{{outside its lifetime}}
-    X<e> xe; // expected-error {{constant expression}} expected-note {{initializer of 'e'}}
+    static const int e = e + 1; // #dr2026-e
+    // expected-warning@-1 {{static variable 'e' is suspiciously used within its own initialization}}
+    X<e> xe; // #dr2026-xe
+    // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
+    //   cxx98-note@-2 {{initializer of 'e' is not a constant expression}}
+    //   cxx98-note@#dr2026-e {{declared here}}
+    // since-cxx11-error@#dr2026-xe {{non-type template argument is not a constant expression}}
+    //   since-cxx11-note@#dr2026-xe {{initializer of 'e' is not a constant expression}}
+    //   since-cxx11-note@#dr2026-e {{declared here}}
 
 #if __cplusplus >= 201103L
-    static constexpr int f = f; // expected-error {{constant expression}} expected-note {{outside its lifetime}}
-    [[clang::require_constant_initialization]] static int g = g; // expected-error {{constant initializer}} expected-note {{attribute}}
-#if __cplusplus == 201103L
-    // expected-note@-2 {{read of non-const variable}} expected-note@-2 {{declared here}}
-#else
-    // expected-note@-4 {{outside its lifetime}}
-#endif
+    static constexpr int f = f;
+    // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
+    //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
+    [[clang::require_constant_initialization]] static int g = g;
+    // since-cxx11-error@-1 {{variable does not have a constant initializer}}
+    //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
+    //   cxx11-note@-3 {{read of non-const variable 'g' is not allowed in a constant expression}}
+    //   cxx11-note@-4 {{declared here}}
+    //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
 #endif
 
-#if __cplusplus > 201703L
-    static constinit int h = h; // expected-error {{constant initializer}} expected-note {{outside its lifetime}} expected-note {{'constinit'}}
+#if __cplusplus >= 202002L
+    static constinit int h = h;
+    // since-cxx20-error@-1 {{variable does not have a constant initializer}}
+    //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
+    //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
 #endif
   }
+}
+
+namespace dr2049 { // dr2049: 18 drafting
+#if __cplusplus >= 202302L
+template <int* x = {}> struct X {};
+X<> a;
+X<nullptr> b;
+static_assert(__is_same(decltype(a), decltype(b)));
+#endif
 }
 
 namespace dr2061 { // dr2061: yes
@@ -111,8 +149,8 @@ namespace dr2076 { // dr2076: 13
     operator string_view() const;
   };
 
-  void foo(const string &); // expected-note {{cannot convert initializer list}}
-  void bar(string_view); // expected-note 2{{cannot convert initializer list}}
+  void foo(const string &); // #dr2076-foo 
+  void bar(string_view); // #dr2076-bar
 
   void func(const string &arg) {
     // An argument in one set of braces is subject to user-defined conversions;
@@ -121,11 +159,17 @@ namespace dr2076 { // dr2076: 13
     foo(arg);
     foo({arg});
     foo({{arg}});
-    foo({{{arg}}}); // expected-error {{no matching function}}
+    foo({{{arg}}});
+    // since-cxx11-error@-1 {{no matching function}}
+    //   since-cxx11-note@#dr2076-foo  {{cannot convert initializer list}}
     bar(arg);
     bar({arg});
-    bar({{arg}}); // expected-error {{no matching function}}
-    bar({{{arg}}}); // expected-error {{no matching function}}
+    bar({{arg}});
+    // since-cxx11-error@-1 {{no matching function}}
+    //   since-cxx11-note@#dr2076-bar {{cannot convert initializer list}}
+    bar({{{arg}}});
+    // since-cxx11-error@-1 {{no matching function}}
+    //   since-cxx11-note@#dr2076-bar {{cannot convert initializer list}}
   }
 #endif
 }
@@ -163,18 +207,20 @@ namespace dr2083 { // dr2083: partial
   // treatment in C++11 onwards. We continue to apply that even after DR2083.
   void ref_to_non_const() {
     int c;
-    const int &ra = a; // expected-note 0-1{{here}}
-    int &rb = b; // expected-note 0-1{{here}}
-    int &rc = c; // expected-note {{here}}
+    const int &ra = a; // #dr2083-ra
+    int &rb = b; // #dr2083-rb
+    int &rc = c; // #dr2083-rc
     struct A {
       int f() {
         int a = ra;
+        // cxx98-error@-1 {{reference to local variable 'ra' declared in enclosing function 'dr2083::ref_to_non_const'}}
+        //   cxx98-note@#dr2083-ra {{'ra' declared here}}
         int b = rb;
-#if __cplusplus < 201103L
-        // expected-error@-3 {{in enclosing function}}
-        // expected-error@-3 {{in enclosing function}}
-#endif
-        int c = rc; // expected-error {{in enclosing function}}
+        // cxx98-error@-1 {{reference to local variable 'rb' declared in enclosing function 'dr2083::ref_to_non_const'}}
+        //   cxx98-note@#dr2083-rb {{'rb' declared here}}
+        int c = rc;
+        // expected-error@-1 {{reference to local variable 'rc' declared in enclosing function 'dr2083::ref_to_non_const'}}
+        //   expected-note@#dr2083-rc {{'rc' declared here}}
         return a + b + c;
       }
     };
@@ -198,18 +244,24 @@ namespace dr2083 { // dr2083: partial
     constexpr NoMut1 nm1 = {1, 2};
     constexpr NoMut2 nm2 = {1, 2};
     constexpr NoMut3 nm3 = {1, 2};
-    constexpr Mut1 m1 = {1, 2}; // expected-note {{declared here}}
-    constexpr Mut2 m2 = {1, 2}; // expected-note {{declared here}}
-    constexpr Mut3 m3 = {1, 2}; // expected-note {{declared here}}
+    constexpr Mut1 m1 = {1, 2}; // #dr2083-m1
+    constexpr Mut2 m2 = {1, 2}; // #dr2083-m2
+    constexpr Mut3 m3 = {1, 2}; // #dr2083-m3
     struct A {
       void f() {
         static_assert(nm1.a == 1, "");
         static_assert(nm2.m.a == 1, "");
         static_assert(nm3.a == 1, "");
         // Can't even access a non-mutable member of a variable containing mutable fields.
-        static_assert(m1.a == 1, ""); // expected-error {{enclosing function}}
-        static_assert(m2.m.a == 1, ""); // expected-error {{enclosing function}}
-        static_assert(m3.a == 1, ""); // expected-error {{enclosing function}}
+        static_assert(m1.a == 1, "");
+        // since-cxx11-error@-1 {{reference to local variable 'm1' declared in enclosing function 'dr2083::mutable_subobjects'}}
+        //   since-cxx11-note@#dr2083-m1 {{'m1' declared here}}
+        static_assert(m2.m.a == 1, "");
+        // since-cxx11-error@-1 {{reference to local variable 'm2' declared in enclosing function 'dr2083::mutable_subobjects'}}
+        //   since-cxx11-note@#dr2083-m2 {{'m2' declared here}}
+        static_assert(m3.a == 1, "");
+        // since-cxx11-error@-1 {{reference to local variable 'm3' declared in enclosing function 'dr2083::mutable_subobjects'}}
+        //   since-cxx11-note@#dr2083-m3 {{'m3' declared here}}
       }
     };
   }
@@ -222,14 +274,16 @@ namespace dr2083 { // dr2083: partial
 #if __cplusplus >= 201103L
     constexpr
 #endif
-      A a = {}; // expected-note {{here}}
+      A a = {}; // #dr2083-a
     struct B {
       void f() {
         ellipsis(n);
         // Even though this is technically modelled as an lvalue-to-rvalue
         // conversion, it calls a constructor and binds 'a' to a reference, so
         // it results in an odr-use.
-        ellipsis(a); // expected-error {{enclosing function}}
+        ellipsis(a);
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr2083::ellipsis'}}
+        //   expected-note@#dr2083-a {{'a' declared here}}
       }
     };
   }
@@ -237,7 +291,7 @@ namespace dr2083 { // dr2083: partial
 #if __cplusplus >= 201103L
   void volatile_lval() {
     struct A { int n; };
-    constexpr A a = {0}; // expected-note {{here}}
+    constexpr A a = {0}; // #dr2083-a2
     struct B {
       void f() {
         // An lvalue-to-rvalue conversion of a volatile lvalue always results
@@ -245,7 +299,9 @@ namespace dr2083 { // dr2083: partial
         int A::*p = &A::n;
         int x = a.*p;
         volatile int A::*q = p;
-        int y = a.*q; // expected-error {{enclosing function}}
+        int y = a.*q;
+        // since-cxx11-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr2083::volatile_lval'}}
+        //   since-cxx11-note@#dr2083-a2 {{'a' declared here}}
       }
     };
   }
@@ -253,32 +309,45 @@ namespace dr2083 { // dr2083: partial
 
   void discarded_lval() {
     struct A { int x; mutable int y; volatile int z; };
-    A a; // expected-note 1+{{here}}
-    int &r = a.x; // expected-note {{here}}
+    A a; // #dr2083-a-3
+    int &r = a.x; // #dr2083-r
     struct B {
       void f() {
-        a.x; // expected-warning {{unused}}
-        a.*&A::x; // expected-warning {{unused}}
-        true ? a.x : a.y; // expected-warning {{unused}}
+        // FIXME: We emit more errors than we should be. They are explictly marked below.
+        a.x;
+        // expected-warning@-1 {{expression result unused}}
+        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
+        a.*&A::x;
+        // expected-warning@-1 {{expression result unused}}
+        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
+        true ? a.x : a.y; // #dr2083-ternary
+        // expected-warning@-1 {{expression result unused}}
+        // expected-error@#dr2083-ternary {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
+        // expected-error@#dr2083-ternary {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
         (void)a.x;
-        a.x, discarded_lval(); // expected-warning {{left operand of comma operator has no effect}}
-#if 1 // FIXME: These errors are all incorrect; the above code is valid.
-      // expected-error@-6 {{enclosing function}}
-      // expected-error@-6 {{enclosing function}}
-      // expected-error@-6 2{{enclosing function}}
-      // expected-error@-6 {{enclosing function}}
-      // expected-error@-6 {{enclosing function}}
-#endif
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
+        a.x, discarded_lval();
+        // expected-warning@-1 {{left operand of comma operator has no effect}}
+        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}} FIXME
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
 
         // 'volatile' qualifier triggers an lvalue-to-rvalue conversion.
-        a.z; // expected-error {{enclosing function}}
-#if __cplusplus < 201103L
-        // expected-warning@-2 {{assign into a variable}}
-#endif
+        a.z;
+        // cxx98-warning@-1 {{expression result unused; assign into a variable to force a volatile load}}
+        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'dr2083::discarded_lval'}}
+        //   expected-note@#dr2083-a-3 {{'a' declared here}}
 
         // References always get "loaded" to determine what they reference,
         // even if the result is discarded.
-        r; // expected-error {{enclosing function}} expected-warning {{unused}}
+        r;
+        // expected-warning@-1 {{expression result unused}}
+        // expected-error@-2 {{reference to local variable 'r' declared in enclosing function 'dr2083::discarded_lval'}}
+        //   expected-note@#dr2083-r {{'r' declared here}}
       }
     };
   }
@@ -286,12 +355,11 @@ namespace dr2083 { // dr2083: partial
   namespace dr_example_1 {
     extern int globx;
     int main() {
-      const int &x = globx;
+      const int &x = globx; // #dr2083-x
       struct A {
-#if __cplusplus < 201103L
-        // expected-error@+2 {{enclosing function}} expected-note@-3 {{here}}
-#endif
         const int *foo() { return &x; }
+        // cxx98-error@-1 {{reference to local variable 'x' declared in enclosing function 'dr2083::dr_example_1::main'}}
+        //   cxx98-note@#dr2083-x {{'x' declared here}}
       } a;
       return *a.foo();
     }

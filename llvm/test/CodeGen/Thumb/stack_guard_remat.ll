@@ -3,9 +3,8 @@
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s  -check-prefix=NO-PIC -check-prefix=DYNAMIC-NO-PIC
 
 ;PIC:        foo2
-;PIC:        ldr [[SAVED_GUARD:r[0-9]+]], [[GUARD_STACK_OFFSET:LCPI[0-9_]+]]
-;PIC-NEXT:   add [[SAVED_GUARD]], sp
-;PIC-NEXT:   ldr [[SAVED_GUARD]], [[[SAVED_GUARD]]]
+;PIC:        add [[SAVED_GUARD:r[0-9]+]], sp, #904
+;PIC-NEXT:   ldr [[SAVED_GUARD]], [[[SAVED_GUARD]], #124]
 ;PIC-NEXT:   ldr [[ORIGINAL_GUARD:r[0-9]+]], [[ORIGINAL_GUARD_LABEL:LCPI[0-9_]+]]
 ;PIC-NEXT: [[LABEL1:LPC[0-9_]+]]:
 ;PIC-NEXT:   add [[ORIGINAL_GUARD]], pc
@@ -13,28 +12,21 @@
 ;PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;PIC-NEXT:   cmp [[ORIGINAL_GUARD]], [[SAVED_GUARD]]
 
-;PIC:      [[GUARD_STACK_OFFSET]]:
-;PIC-NEXT:   .long 1028
 ;PIC:      [[ORIGINAL_GUARD_LABEL]]:
 ;PIC-NEXT:   .long L___stack_chk_guard$non_lazy_ptr-([[LABEL1]]+4)
 
 ;NO-PIC:   foo2
-;NO-PIC:                ldr [[SAVED_GUARD:r[0-9]+]], [[GUARD_STACK_OFFSET:LCPI[0-9_]+]]
-;NO-PIC-NEXT:           add [[SAVED_GUARD]], sp
-;NO-PIC-NEXT:           ldr [[SAVED_GUARD]], [[[SAVED_GUARD]]]
+;NO-PIC:                add [[SAVED_GUARD:r[0-9]+]], sp, #904
+;NO-PIC-NEXT:           ldr [[SAVED_GUARD]], [[[SAVED_GUARD]], #124]
 ;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD:r[0-9]+]], [[ORIGINAL_GUARD_LABEL:LCPI[0-9_]+]]
 ;NO-PIC-NOT: LPC
 ;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;DYNAMIC-NO-PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;NO-PIC-NEXT:           cmp [[ORIGINAL_GUARD]], [[SAVED_GUARD]]
 
-;STATIC:      [[GUARD_STACK_OFFSET]]:
-;STATIC-NEXT:   .long 1028
 ;STATIC:      [[ORIGINAL_GUARD_LABEL]]:
 ;STATIC-NEXT:   .long ___stack_chk_guard
 
-;DYNAMIC-NO-PIC:      [[GUARD_STACK_OFFSET]]:
-;DYNAMIC-NO-PIC-NEXT:   .long 1028
 ;DYNAMIC-NO-PIC:      [[ORIGINAL_GUARD_LABEL]]:
 ;DYNAMIC-NO-PIC-NEXT:   .long L___stack_chk_guard$non_lazy_ptr
 

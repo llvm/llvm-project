@@ -132,9 +132,6 @@ define i1 @pt62607() {
 ; CHECK-NEXT:  entry_1:
 ; CHECK-NEXT:    br label [[LOOP_5:%.*]]
 ; CHECK:       loop_5:
-; CHECK-NEXT:    [[LOOP_CNT_I1_26_0:%.*]] = phi i1 [ false, [[ENTRY_1:%.*]] ], [ [[VAL_I1_55:%.*]], [[LOOP_5]] ]
-; CHECK-NEXT:    [[VAL_I1_55]] = xor i1 [[LOOP_CNT_I1_26_0]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[VAL_I1_55]])
 ; CHECK-NEXT:    br i1 poison, label [[LOOP_5]], label [[LOOP_EXIT_8:%.*]]
 ; CHECK:       loop_exit_8:
 ; CHECK-NEXT:    ret i1 false

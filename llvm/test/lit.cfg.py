@@ -216,7 +216,6 @@ tools.extend(
         "llvm-rc",
         "llvm-readelf",
         "llvm-readobj",
-        "llvm-remark-size-diff",
         "llvm-rtdyld",
         "llvm-sim",
         "llvm-size",
@@ -225,7 +224,7 @@ tools.extend(
         "llvm-strings",
         "llvm-strip",
         "llvm-tblgen",
-        "llvm-tapi-diff",
+        "llvm-readtapi",
         "llvm-undname",
         "llvm-windres",
         "llvm-c-test",
@@ -272,7 +271,7 @@ def ptxas_version(ptxas):
     ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
     ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
     ptxas_cmd.wait()
-    match = re.search("release (\d+)\.(\d+)", ptxas_out)
+    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
     if match:
         return (int(match.group(1)), int(match.group(2)))
     print("couldn't determine ptxas version")
@@ -478,10 +477,6 @@ if config.target_triple:
     if not config.target_triple.startswith(("nvptx", "xcore")):
         config.available_features.add("object-emission")
 
-# Allow checking for specific details in the host triple
-if config.host_triple:
-    config.available_features.add('host=%s' % config.host_triple)
-
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
@@ -577,15 +572,15 @@ if "darwin" == sys.platform:
         if "hw.optional.fma: 1" in result:
             config.available_features.add("fma3")
 
+if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 17063:
+    config.available_features.add("unix-sockets")
+
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
 if not re.match(
     r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-gnu|windows-msvc|aix)",
     config.target_triple,
 ) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
     config.available_features.add("debug_frame")
-
-if config.have_libxar:
-    config.available_features.add("xar")
 
 if config.enable_threads:
     config.available_features.add("thread_support")
@@ -608,34 +603,6 @@ if config.expensive_checks:
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
-
-def exclude_unsupported_files_for_aix(dirname):
-    for filename in os.listdir(dirname):
-        source_path = os.path.join(dirname, filename)
-        if os.path.isdir(source_path):
-            continue
-        f = open(source_path, "r")
-        try:
-            data = f.read()
-            # 64-bit object files are not supported on AIX, so exclude the tests.
-            if (
-                "-emit-obj" in data or "-filetype=obj" in data
-            ) and "64" in config.target_triple:
-                config.excludes += [filename]
-        finally:
-            f.close()
-
-
-if "aix" in config.target_triple:
-    for directory in (
-        "/CodeGen/X86",
-        "/DebugInfo",
-        "/DebugInfo/X86",
-        "/DebugInfo/Generic",
-        "/LTO/X86",
-        "/Linker",
-    ):
-        exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"

@@ -34,8 +34,8 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
-  MCOperand lowerSymbolOperandDarwin(const MachineOperand &MO,
-                                     MCSymbol *Sym) const;
+  MCOperand lowerSymbolOperandMachO(const MachineOperand &MO,
+                                    MCSymbol *Sym) const;
   MCOperand lowerSymbolOperandELF(const MachineOperand &MO,
                                   MCSymbol *Sym) const;
   MCOperand lowerSymbolOperandCOFF(const MachineOperand &MO,

@@ -3,7 +3,7 @@
 # contains not dead objects only. So using objects IDs as offset in the storage
 # caused out of bounds access.
 
-# RUN: llc -march=amdgcn -run-pass=si-lower-sgpr-spills,prologepilog -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -start-before=si-lower-sgpr-spills -stop-after=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
 
 # CHECK-LABEL: name:            foo
 # CHECK: {{^}}fixedStack:      []

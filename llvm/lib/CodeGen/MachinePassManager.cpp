@@ -33,16 +33,17 @@ Error MachineFunctionPassManager::run(Module &M,
   (void)RequireCodeGenSCCOrder;
   assert(!RequireCodeGenSCCOrder && "not implemented");
 
+  // M is unused here
+  PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(M);
+
   // Add a PIC to verify machine functions.
   if (VerifyMachineFunction) {
-    PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(M);
-
     // No need to pop this callback later since MIR pipeline is flat which means
     // current pipeline is the top-level pipeline. Callbacks are not used after
     // current pipeline.
     PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
-      assert(any_cast<const MachineFunction *>(&IR));
-      const MachineFunction *MF = any_cast<const MachineFunction *>(IR);
+      assert(llvm::any_cast<const MachineFunction *>(&IR));
+      const MachineFunction *MF = llvm::any_cast<const MachineFunction *>(IR);
       assert(MF && "Machine function should be valid for printing");
       std::string Banner = std::string("After ") + std::string(PassID);
       verifyMachineFunction(&MFAM, Banner, *MF);
@@ -59,8 +60,11 @@ Error MachineFunctionPassManager::run(Module &M,
   do {
     // Run machine module passes
     for (; MachineModulePasses.count(Idx) && Idx != Size; ++Idx) {
+      if (!PI.runBeforePass<Module>(*Passes[Idx], M))
+        continue;
       if (auto Err = MachineModulePasses.at(Idx)(M, MFAM))
         return Err;
+      PI.runAfterPass(*Passes[Idx], M, PreservedAnalyses::all());
     }
 
     // Finish running all passes.
@@ -81,7 +85,6 @@ Error MachineFunctionPassManager::run(Module &M,
         continue;
 
       MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
-      PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(MF);
 
       for (unsigned I = Begin, E = Idx; I != E; ++I) {
         auto *P = Passes[I].get();

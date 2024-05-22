@@ -11,10 +11,10 @@
 
 #include <signal.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sigdelset(sigset_t *set, int signum);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGDELSET_H

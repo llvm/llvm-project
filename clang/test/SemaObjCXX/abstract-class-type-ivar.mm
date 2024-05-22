@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://12095239
-// rdar://14261999
 
 class CppAbstractBase {
 public:

@@ -92,13 +92,14 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i64
     ; ALL: liveins: $rdi, $rsi
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr64_with_sub_8bit = COPY $rsi
-    ; ALL: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-    ; ALL: $cl = COPY [[COPY2]]
-    ; ALL: [[SHL64rCL:%[0-9]+]]:gr64 = SHL64rCL [[COPY]], implicit-def $eflags, implicit $cl
-    ; ALL: $rax = COPY [[SHL64rCL]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr64_with_sub_8bit = COPY $rsi
+    ; ALL-NEXT: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
+    ; ALL-NEXT: $cl = COPY [[COPY2]]
+    ; ALL-NEXT: [[SHL64rCL:%[0-9]+]]:gr64 = SHL64rCL [[COPY]], implicit-def dead $eflags, implicit $cl
+    ; ALL-NEXT: $rax = COPY [[SHL64rCL]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi
     %2(s8) = G_TRUNC %1
@@ -127,10 +128,11 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i64_imm
     ; ALL: liveins: $rdi
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 5, implicit-def $eflags
-    ; ALL: $rax = COPY [[SHL64ri]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 5, implicit-def dead $eflags
+    ; ALL-NEXT: $rax = COPY [[SHL64ri]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s8) = G_CONSTANT i8 5
     %2(s64) = G_SHL %0, %1
@@ -158,10 +160,11 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i64_imm1
     ; ALL: liveins: $rdi
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY]], implicit-def $eflags
-    ; ALL: $rax = COPY [[ADD64rr]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY]], implicit-def dead $eflags
+    ; ALL-NEXT: $rax = COPY [[ADD64rr]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s8) = G_CONSTANT i8 1
     %2(s64) = G_SHL %0, %1
@@ -190,13 +193,14 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i32
     ; ALL: liveins: $edi, $esi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-    ; ALL: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-    ; ALL: $cl = COPY [[COPY2]]
-    ; ALL: [[SHL32rCL:%[0-9]+]]:gr32 = SHL32rCL [[COPY]], implicit-def $eflags, implicit $cl
-    ; ALL: $eax = COPY [[SHL32rCL]]
-    ; ALL: RET 0, implicit $eax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+    ; ALL-NEXT: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
+    ; ALL-NEXT: $cl = COPY [[COPY2]]
+    ; ALL-NEXT: [[SHL32rCL:%[0-9]+]]:gr32 = SHL32rCL [[COPY]], implicit-def dead $eflags, implicit $cl
+    ; ALL-NEXT: $eax = COPY [[SHL32rCL]]
+    ; ALL-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
     %2(s8) = G_TRUNC %1
@@ -225,10 +229,11 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i32_imm
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[SHL32ri:%[0-9]+]]:gr32 = SHL32ri [[COPY]], 5, implicit-def $eflags
-    ; ALL: $eax = COPY [[SHL32ri]]
-    ; ALL: RET 0, implicit $eax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[SHL32ri:%[0-9]+]]:gr32 = SHL32ri [[COPY]], 5, implicit-def dead $eflags
+    ; ALL-NEXT: $eax = COPY [[SHL32ri]]
+    ; ALL-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s8) = G_CONSTANT i8 5
     %2(s32) = G_SHL %0, %1
@@ -256,10 +261,11 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i32_imm1
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY]], [[COPY]], implicit-def $eflags
-    ; ALL: $eax = COPY [[ADD32rr]]
-    ; ALL: RET 0, implicit $eax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY]], [[COPY]], implicit-def dead $eflags
+    ; ALL-NEXT: $eax = COPY [[ADD32rr]]
+    ; ALL-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s8) = G_CONSTANT i8 1
     %2(s32) = G_SHL %0, %1
@@ -289,14 +295,15 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i16
     ; ALL: liveins: $edi, $esi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-    ; ALL: [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; ALL: [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-    ; ALL: $cl = COPY [[COPY3]]
-    ; ALL: [[SHL16rCL:%[0-9]+]]:gr16 = SHL16rCL [[COPY2]], implicit-def $eflags, implicit $cl
-    ; ALL: $ax = COPY [[SHL16rCL]]
-    ; ALL: RET 0, implicit $ax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+    ; ALL-NEXT: [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; ALL-NEXT: [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
+    ; ALL-NEXT: $cl = COPY [[COPY3]]
+    ; ALL-NEXT: [[SHL16rCL:%[0-9]+]]:gr16 = SHL16rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
+    ; ALL-NEXT: $ax = COPY [[SHL16rCL]]
+    ; ALL-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
     %2(s16) = G_TRUNC %0(s32)
@@ -327,11 +334,12 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i16_imm
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; ALL: [[SHL16ri:%[0-9]+]]:gr16 = SHL16ri [[COPY1]], 5, implicit-def $eflags
-    ; ALL: $ax = COPY [[SHL16ri]]
-    ; ALL: RET 0, implicit $ax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; ALL-NEXT: [[SHL16ri:%[0-9]+]]:gr16 = SHL16ri [[COPY1]], 5, implicit-def dead $eflags
+    ; ALL-NEXT: $ax = COPY [[SHL16ri]]
+    ; ALL-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %2(s8) = G_CONSTANT i8 5
     %1(s16) = G_TRUNC %0(s32)
@@ -361,11 +369,12 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i16_imm1
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; ALL: [[ADD16rr:%[0-9]+]]:gr16 = ADD16rr [[COPY1]], [[COPY1]], implicit-def $eflags
-    ; ALL: $ax = COPY [[ADD16rr]]
-    ; ALL: RET 0, implicit $ax
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; ALL-NEXT: [[ADD16rr:%[0-9]+]]:gr16 = ADD16rr [[COPY1]], [[COPY1]], implicit-def dead $eflags
+    ; ALL-NEXT: $ax = COPY [[ADD16rr]]
+    ; ALL-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %2(s8) = G_CONSTANT i8 1
     %1(s16) = G_TRUNC %0(s32)
@@ -396,14 +405,15 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i8
     ; ALL: liveins: $edi, $esi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-    ; ALL: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-    ; ALL: $cl = COPY [[COPY3]]
-    ; ALL: [[SHL8rCL:%[0-9]+]]:gr8 = SHL8rCL [[COPY2]], implicit-def $eflags, implicit $cl
-    ; ALL: $al = COPY [[SHL8rCL]]
-    ; ALL: RET 0, implicit $al
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+    ; ALL-NEXT: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL-NEXT: [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
+    ; ALL-NEXT: $cl = COPY [[COPY3]]
+    ; ALL-NEXT: [[SHL8rCL:%[0-9]+]]:gr8 = SHL8rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
+    ; ALL-NEXT: $al = COPY [[SHL8rCL]]
+    ; ALL-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
     %2(s8) = G_TRUNC %0(s32)
@@ -434,11 +444,12 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i8_imm
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[SHL8ri:%[0-9]+]]:gr8 = SHL8ri [[COPY1]], 5, implicit-def $eflags
-    ; ALL: $al = COPY [[SHL8ri]]
-    ; ALL: RET 0, implicit $al
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL-NEXT: [[SHL8ri:%[0-9]+]]:gr8 = SHL8ri [[COPY1]], 5, implicit-def dead $eflags
+    ; ALL-NEXT: $al = COPY [[SHL8ri]]
+    ; ALL-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %2(s8) = G_CONSTANT i8 5
     %1(s8) = G_TRUNC %0(s32)
@@ -468,11 +479,12 @@ body:             |
 
     ; ALL-LABEL: name: test_shl_i8_imm1
     ; ALL: liveins: $edi
-    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY1]], [[COPY1]], implicit-def $eflags
-    ; ALL: $al = COPY [[ADD8rr]]
-    ; ALL: RET 0, implicit $al
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL-NEXT: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY1]], [[COPY1]], implicit-def dead $eflags
+    ; ALL-NEXT: $al = COPY [[ADD8rr]]
+    ; ALL-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %2(s8) = G_CONSTANT i8 1
     %1(s8) = G_TRUNC %0(s32)

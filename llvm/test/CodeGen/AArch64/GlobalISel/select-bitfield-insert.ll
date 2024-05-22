@@ -145,8 +145,8 @@ define i64 @extra_use2(i64 %in1, i64 %in2, ptr %p) {
 ; SDAG:       ; %bb.0: ; %bb
 ; SDAG-NEXT:    and x8, x1, #0x1
 ; SDAG-NEXT:    bfi x1, x0, #1, #63
-; SDAG-NEXT:    mov x0, x1
 ; SDAG-NEXT:    str x8, [x2]
+; SDAG-NEXT:    mov x0, x1
 ; SDAG-NEXT:    ret
 bb:
   %tmp3 = shl i64 %in1, 1

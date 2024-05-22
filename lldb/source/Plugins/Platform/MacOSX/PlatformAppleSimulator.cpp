@@ -335,8 +335,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
 
   bool create = force;
   if (!create && arch && arch->IsValid()) {
-    if (std::count(supported_arch.begin(), supported_arch.end(),
-                   arch->GetMachine())) {
+    if (llvm::is_contained(supported_arch, arch->GetMachine())) {
       const llvm::Triple &triple = arch->GetTriple();
       switch (triple.getVendor()) {
       case llvm::Triple::Apple:
@@ -545,7 +544,7 @@ static bool shouldSkipSimulatorPlatform(bool force, const ArchSpec *arch) {
   // If the arch is known not to specify a simulator environment, skip creating
   // the simulator platform (we can create it later if there's a matching arch).
   // This avoids very slow xcrun queries for non-simulator archs (the slowness
-  // is due to xcrun not caching negative queries (rdar://74882205)).
+  // is due to xcrun not caching negative queries.
   return !force && arch && arch->IsValid() &&
          !arch->TripleEnvironmentWasSpecified();
 }

@@ -45,7 +45,7 @@
 # CHECK5:      0 NOTYPE  GLOBAL DEFAULT [VARIANT_CC] UND   func_global_undef
 # CHECK5-NEXT: 0 NOTYPE  GLOBAL DEFAULT [VARIANT_CC] [[#]] func_global_def
 # CHECK5-NEXT: 0 IFUNC   GLOBAL DEFAULT [VARIANT_CC] [[#]] ifunc_global_def
-# CHECK5:      Symbol table '.symtab' contains 9 entries:
+# CHECK5:      Symbol table '.symtab' contains 10 entries:
 # CHECK5:      0 NOTYPE  LOCAL  DEFAULT [VARIANT_CC] [[#]] func_local
 # CHECK5-NEXT: 0 IFUNC   LOCAL  DEFAULT [VARIANT_CC] [[#]] ifunc_local
 # CHECK5:      0 NOTYPE  LOCAL  HIDDEN  [VARIANT_CC] [[#]] func_global_hidden

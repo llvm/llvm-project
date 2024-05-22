@@ -867,19 +867,18 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 
     // These library functions default to expand.
-    setOperationAction(
-        {ISD::FROUND, ISD::FROUNDEVEN, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP},
-        VT, Expand);
+    setOperationAction({ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP}, VT,
+                       Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector())
-      setOperationAction({ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG,
-                          ISD::ANY_EXTEND_VECTOR_INREG,
-                          ISD::SIGN_EXTEND_VECTOR_INREG,
-                          ISD::ZERO_EXTEND_VECTOR_INREG, ISD::SPLAT_VECTOR},
-                         VT, Expand);
+      setOperationAction(
+          {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
+           ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT},
+          VT, Expand);
 
-    // Constrained floating-point operations default to expand.
+      // Constrained floating-point operations default to expand.
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
@@ -921,14 +920,14 @@ void TargetLoweringBase::initActions() {
   // Legal, in which case all fp constants are legal, or use isFPImmLegal()
   // to optimize expansions for certain constants.
   setOperationAction(ISD::ConstantFP,
-                     {MVT::f16, MVT::f32, MVT::f64, MVT::f80, MVT::f128},
+                     {MVT::bf16, MVT::f16, MVT::f32, MVT::f64, MVT::f80, MVT::f128},
                      Expand);
 
   // These library functions default to expand.
   setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
-                      ISD::FRINT, ISD::FTRUNC, ISD::LROUND, ISD::LLROUND,
-                      ISD::LRINT, ISD::LLRINT},
+                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
+                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
+                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // Default ISD::TRAP to expand (which turns it into abort).
@@ -942,6 +941,12 @@ void TargetLoweringBase::initActions() {
 
   setOperationAction(ISD::GET_FPENV_MEM, MVT::Other, Expand);
   setOperationAction(ISD::SET_FPENV_MEM, MVT::Other, Expand);
+
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::GET_FPMODE, VT, Expand);
+    setOperationAction(ISD::SET_FPMODE, VT, Expand);
+  }
+  setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1905,7 +1910,7 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   auto UnsafeStackPtr =
       dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
 
-  Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
+  Type *StackPtrTy = PointerType::getUnqual(M->getContext());
 
   if (!UnsafeStackPtr) {
     auto TLSModel = UseTLS ?
@@ -1936,9 +1941,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
-  FunctionCallee Fn = M->getOrInsertFunction("__safestack_pointer_address",
-                                             StackPtrTy->getPointerTo(0));
+  auto *PtrTy = PointerType::getUnqual(M->getContext());
+  FunctionCallee Fn =
+      M->getOrInsertFunction("__safestack_pointer_address", PtrTy);
   return IRB.CreateCall(Fn);
 }
 
@@ -1992,7 +1997,7 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
-    PointerType *PtrTy = Type::getInt8PtrTy(M.getContext());
+    PointerType *PtrTy = PointerType::getUnqual(M.getContext());
     Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
     if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
       G->setVisibility(GlobalValue::HiddenVisibility);
@@ -2005,15 +2010,16 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
 // TODO: add LOAD_STACK_GUARD support.
 void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
   if (!M.getNamedValue("__stack_chk_guard")) {
-    auto *GV = new GlobalVariable(M, Type::getInt8PtrTy(M.getContext()), false,
-                                  GlobalVariable::ExternalLinkage, nullptr,
-                                  "__stack_chk_guard");
+    auto *GV = new GlobalVariable(M, PointerType::getUnqual(M.getContext()),
+                                  false, GlobalVariable::ExternalLinkage,
+                                  nullptr, "__stack_chk_guard");
 
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
         !TM.getTargetTriple().isWindowsGNUEnvironment() &&
         !TM.getTargetTriple().isOSFreeBSD() &&
-        !TM.getTargetTriple().isOSDarwin())
+        (!TM.getTargetTriple().isOSDarwin() ||
+         TM.getRelocationModel() == Reloc::Static))
       GV->setDSOLocal(true);
   }
 }

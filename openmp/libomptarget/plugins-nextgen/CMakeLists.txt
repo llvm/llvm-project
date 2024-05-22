@@ -47,15 +47,16 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
 
         LINK_LIBS
         PRIVATE
-        elf_common
-        MemoryManager
-        OMPT
-        PluginInterface
+        PluginCommon
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
 
       NO_INSTALL_RPATH
     )
+
+    if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+      target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE OMPT)
+    endif()
 
     if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
       target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE
@@ -67,6 +68,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
       LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
     set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
       INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+      POSITION_INDEPENDENT_CODE ON
       CXX_VISIBILITY_PRESET protected)
 
     target_include_directories( "omptarget.rtl.${tmachine_libname}" PRIVATE
@@ -77,9 +79,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
     set(LIBOMPTARGET_TESTED_PLUGINS
         "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
     set(LIBOMPTARGET_SYSTEM_TARGETS 
-        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} " PARENT_SCOPE)
-    set(LIBOMPTARGET_SYSTEM_TARGETS 
-        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple}-LTO" PARENT_SCOPE)
+        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} ${tmachine_triple}-LTO" PARENT_SCOPE)
 
   else(LIBOMPTARGET_DEP_LIBFFI_FOUND)
     libomptarget_say("Not building ${tmachine_name} NextGen offloading plugin: libffi dependency not found.")
@@ -95,6 +95,7 @@ add_subdirectory(cuda)
 add_subdirectory(ppc64)
 add_subdirectory(ppc64le)
 add_subdirectory(x86_64)
+add_subdirectory(s390x)
 
 # Make sure the parent scope can see the plugins that will be created.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)

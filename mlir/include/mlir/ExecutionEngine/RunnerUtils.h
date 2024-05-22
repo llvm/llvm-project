@@ -38,6 +38,7 @@
 #include <iostream>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 
 template <typename T, typename StreamType>
 void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &v) {
@@ -369,9 +370,15 @@ _mlir_ciface_printMemrefShapeC64(UnrankedMemRefType<impl::complex64> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefI16(UnrankedMemRefType<int16_t> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI64(UnrankedMemRefType<int64_t> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefF16(UnrankedMemRefType<f16> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefBF16(UnrankedMemRefType<bf16> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefF32(UnrankedMemRefType<float> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
@@ -392,7 +399,6 @@ extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF64(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefInd(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC32(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC64(int64_t rank, void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void printCString(char *str);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *m);

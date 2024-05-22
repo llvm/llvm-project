@@ -18,6 +18,7 @@
 #define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF)
 #endif
 
+// Reflection metadata.
 HANDLE_SWIFT_SECTION(fieldmd, "__swift5_fieldmd", "swift5_fieldmd", ".sw5flmd")
 HANDLE_SWIFT_SECTION(assocty, "__swift5_assocty", "swift5_assocty", ".sw5asty")
 HANDLE_SWIFT_SECTION(builtin, "__swift5_builtin", "swift5_builtin", ".sw5bltn")
@@ -31,3 +32,6 @@ HANDLE_SWIFT_SECTION(protocs, "__swift5_protos", "swift5_protocols",
 HANDLE_SWIFT_SECTION(acfuncs, "__swift5_acfuncs", "swift5_accessible_functions",
                      ".sw5acfn$B")
 HANDLE_SWIFT_SECTION(mpenum, "__swift5_mpenum", "swift5_mpenum", ".sw5mpen$B")
+
+// Debug info.
+HANDLE_SWIFT_SECTION(swiftast, "__swift_ast", ".swift_ast", "swiftast")

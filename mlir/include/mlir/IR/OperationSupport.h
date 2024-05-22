@@ -129,17 +129,19 @@ public:
     virtual void populateInherentAttrs(Operation *op, NamedAttrList &attrs) = 0;
     virtual LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                        function_ref<InFlightDiagnostic()> getDiag) = 0;
+                        function_ref<InFlightDiagnostic()> emitError) = 0;
     virtual int getOpPropertyByteSize() = 0;
     virtual void initProperties(OperationName opName, OpaqueProperties storage,
                                 OpaqueProperties init) = 0;
     virtual void deleteProperties(OpaqueProperties) = 0;
     virtual void populateDefaultProperties(OperationName opName,
                                            OpaqueProperties properties) = 0;
-    virtual LogicalResult setPropertiesFromAttr(Operation *, Attribute,
-                                                InFlightDiagnostic *) = 0;
+    virtual LogicalResult
+    setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
+                          function_ref<InFlightDiagnostic()> emitError) = 0;
     virtual Attribute getPropertiesAsAttr(Operation *) = 0;
     virtual void copyProperties(OpaqueProperties, OpaqueProperties) = 0;
+    virtual bool compareProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual llvm::hash_code hashProperties(OpaqueProperties) = 0;
   };
 
@@ -208,17 +210,19 @@ protected:
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final;
     LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                        function_ref<InFlightDiagnostic()> getDiag) final;
+                        function_ref<InFlightDiagnostic()> emitError) final;
     int getOpPropertyByteSize() final;
     void initProperties(OperationName opName, OpaqueProperties storage,
                         OpaqueProperties init) final;
     void deleteProperties(OpaqueProperties) final;
     void populateDefaultProperties(OperationName opName,
                                    OpaqueProperties properties) final;
-    LogicalResult setPropertiesFromAttr(Operation *, Attribute,
-                                        InFlightDiagnostic *) final;
+    LogicalResult
+    setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
+                          function_ref<InFlightDiagnostic()> emitError) final;
     Attribute getPropertiesAsAttr(Operation *) final;
     void copyProperties(OpaqueProperties, OpaqueProperties) final;
+    bool compareProperties(OpaqueProperties, OpaqueProperties) final;
     llvm::hash_code hashProperties(OpaqueProperties) final;
   };
 
@@ -350,10 +354,19 @@ public:
   void attachInterface() {
     // Handle the case where the models resolve a promised interface.
     (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
-         *getDialect(), Models::Interface::getInterfaceID()),
+         *getDialect(), getTypeID(), Models::Interface::getInterfaceID()),
      ...);
 
     getImpl()->getInterfaceMap().insertModels<Models...>();
+  }
+
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return dialect_extension_detail::hasPromisedInterface(
+               getDialect(), getTypeID(), InterfaceT::getInterfaceID()) ||
+           hasInterface<InterfaceT>();
   }
 
   /// Returns true if this operation has the given interface registered to it.
@@ -395,8 +408,8 @@ public:
   /// attributes when parsed from the older generic syntax pre-Properties.
   LogicalResult
   verifyInherentAttrs(NamedAttrList &attributes,
-                      function_ref<InFlightDiagnostic()> getDiag) const {
-    return getImpl()->verifyInherentAttrs(*this, attributes, getDiag);
+                      function_ref<InFlightDiagnostic()> emitError) const {
+    return getImpl()->verifyInherentAttrs(*this, attributes, emitError);
   }
   /// This hooks return the number of bytes to allocate for the op properties.
   int getOpPropertyByteSize() const {
@@ -424,14 +437,19 @@ public:
   }
 
   /// Define the op properties from the provided Attribute.
-  LogicalResult
-  setOpPropertiesFromAttribute(Operation *op, Attribute properties,
-                               InFlightDiagnostic *diagnostic) const {
-    return getImpl()->setPropertiesFromAttr(op, properties, diagnostic);
+  LogicalResult setOpPropertiesFromAttribute(
+      OperationName opName, OpaqueProperties properties, Attribute attr,
+      function_ref<InFlightDiagnostic()> emitError) const {
+    return getImpl()->setPropertiesFromAttr(opName, properties, attr,
+                                            emitError);
   }
 
   void copyOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
     return getImpl()->copyProperties(lhs, rhs);
+  }
+
+  bool compareOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
+    return getImpl()->compareProperties(lhs, rhs);
   }
 
   llvm::hash_code hashOpProperties(OpaqueProperties properties) const {
@@ -552,7 +570,8 @@ public:
                                              StringRef name) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        return ConcreteOp::getInherentAttr(concreteOp.getProperties(), name);
+        return ConcreteOp::getInherentAttr(concreteOp->getContext(),
+                                           concreteOp.getProperties(), name);
       }
       // If the op does not have support for properties, we dispatch back to the
       // dictionnary of discardable attributes for now.
@@ -572,14 +591,15 @@ public:
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        ConcreteOp::populateInherentAttrs(concreteOp.getProperties(), attrs);
+        ConcreteOp::populateInherentAttrs(concreteOp->getContext(),
+                                          concreteOp.getProperties(), attrs);
       }
     }
     LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                        function_ref<InFlightDiagnostic()> getDiag) final {
+                        function_ref<InFlightDiagnostic()> emitError) final {
       if constexpr (hasProperties)
-        return ConcreteOp::verifyInherentAttrs(opName, attributes, getDiag);
+        return ConcreteOp::verifyInherentAttrs(opName, attributes, emitError);
       return success();
     }
     // Detect if the concrete operation defined properties.
@@ -614,13 +634,15 @@ public:
                                               *properties.as<Properties *>());
     }
 
-    LogicalResult setPropertiesFromAttr(Operation *op, Attribute attr,
-                                        InFlightDiagnostic *diag) final {
-      if constexpr (hasProperties)
-        return ConcreteOp::setPropertiesFromAttr(
-            cast<ConcreteOp>(op).getProperties(), attr, diag);
-      if (diag)
-        *diag << "This operation does not support properties";
+    LogicalResult
+    setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+                          Attribute attr,
+                          function_ref<InFlightDiagnostic()> emitError) final {
+      if constexpr (hasProperties) {
+        auto p = properties.as<Properties *>();
+        return ConcreteOp::setPropertiesFromAttr(*p, attr, emitError);
+      }
+      emitError() << "this operation does not support properties";
       return failure();
     }
     Attribute getPropertiesAsAttr(Operation *op) final {
@@ -630,6 +652,13 @@ public:
                                                concreteOp.getProperties());
       }
       return {};
+    }
+    bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
+      if constexpr (hasProperties) {
+        return *lhs.as<Properties *>() == *rhs.as<Properties *>();
+      } else {
+        return true;
+      }
     }
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
@@ -980,8 +1009,9 @@ public:
 
   // Set the properties defined on this OpState on the given operation,
   // optionally emit diagnostics on error through the provided diagnostic.
-  LogicalResult setProperties(Operation *op,
-                              InFlightDiagnostic *diagnostic) const;
+  LogicalResult
+  setProperties(Operation *op,
+                function_ref<InFlightDiagnostic()> emitError) const;
 
   void addOperands(ValueRange newOperands);
 
@@ -1101,6 +1131,12 @@ public:
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 
+  /// Enables the elision of large resources strings by omitting them from the
+  /// `dialect_resources` section. The `largeResourceLimit` is used to configure
+  /// what is considered to be a "large" resource by providing an upper limit to
+  /// the string size.
+  OpPrintingFlags &elideLargeResourceString(int64_t largeResourceLimit = 64);
+
   /// Enable or disable printing of debug information (based on `enable`). If
   /// 'prettyForm' is set to true, debug information is printed in a more
   /// readable 'pretty' form. Note: The IR generated with 'prettyForm' is not
@@ -1131,6 +1167,9 @@ public:
   /// Return the size limit for printing large ElementsAttr.
   std::optional<int64_t> getLargeElementsAttrLimit() const;
 
+  /// Return the size limit in chars for printing large resources.
+  std::optional<uint64_t> getLargeResourceStringLimit() const;
+
   /// Return if debug information should be printed.
   bool shouldPrintDebugInfo() const;
 
@@ -1156,6 +1195,9 @@ private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
   std::optional<int64_t> elementsAttrElementLimit;
+
+  /// Elide printing large resources based on size of string.
+  std::optional<uint64_t> resourceStringCharLimit;
 
   /// Print debug information.
   bool printDebugInfoFlag : 1;
@@ -1219,6 +1261,10 @@ struct OperationEquivalence {
   ///   value or this callback must return `success`.
   /// * `markEquivalent` is a callback to inform the caller that the analysis
   ///   determined that two values are equivalent.
+  /// * `checkCommutativeEquivalent` is an optional callback to check for
+  ///   equivalence across two ranges for a commutative operation. If not passed
+  ///   in, then equivalence is checked pairwise. This callback is needed to be
+  ///   able to query the optional equivalence classes.
   ///
   /// Note: Additional information regarding value equivalence can be injected
   /// into the analysis via `checkEquivalent`. Typically, callers may want
@@ -1229,7 +1275,9 @@ struct OperationEquivalence {
   isEquivalentTo(Operation *lhs, Operation *rhs,
                  function_ref<LogicalResult(Value, Value)> checkEquivalent,
                  function_ref<void(Value, Value)> markEquivalent = nullptr,
-                 Flags flags = Flags::None);
+                 Flags flags = Flags::None,
+                 function_ref<LogicalResult(ValueRange, ValueRange)>
+                     checkCommutativeEquivalent = nullptr);
 
   /// Compare two operations and return if they are equivalent.
   static bool isEquivalentTo(Operation *lhs, Operation *rhs, Flags flags);
@@ -1240,7 +1288,9 @@ struct OperationEquivalence {
       Region *lhs, Region *rhs,
       function_ref<LogicalResult(Value, Value)> checkEquivalent,
       function_ref<void(Value, Value)> markEquivalent,
-      OperationEquivalence::Flags flags);
+      OperationEquivalence::Flags flags,
+      function_ref<LogicalResult(ValueRange, ValueRange)>
+          checkCommutativeEquivalent = nullptr);
 
   /// Compare two regions and return if they are equivalent.
   static bool isRegionEquivalentTo(Region *lhs, Region *rhs,

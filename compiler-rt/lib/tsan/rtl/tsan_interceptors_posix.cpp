@@ -81,6 +81,8 @@ struct ucontext_t {
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
 #elif SANITIZER_LOONGARCH64
 #define PTHREAD_ABI_BASE  "GLIBC_2.36"
+#elif SANITIZER_RISCV64
+#  define PTHREAD_ABI_BASE "GLIBC_2.27"
 #endif
 
 extern "C" int pthread_attr_init(void *attr);
@@ -2543,6 +2545,8 @@ static __sanitizer_sighandler_ptr signal_impl(int sig,
 #define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signo, handler) \
   { return (uptr)signal_impl(signo, (__sanitizer_sighandler_ptr)handler); }
 
+#define SIGNAL_INTERCEPTOR_ENTER() LazyInitialize(cur_thread_init())
+
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 int sigaction_impl(int sig, const __sanitizer_sigaction *act,
@@ -2563,7 +2567,7 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
     // Copy act into sigactions[sig].
     // Can't use struct copy, because compiler can emit call to memcpy.
     // Can't use internal_memcpy, because it copies byte-by-byte,
-    // and signal handler reads the handler concurrently. It it can read
+    // and signal handler reads the handler concurrently. It can read
     // some bytes from old value and some bytes from new value.
     // Use volatile to prevent insertion of memcpy.
     sigactions[sig].handler =

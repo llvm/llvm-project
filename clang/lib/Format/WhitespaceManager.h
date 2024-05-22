@@ -202,7 +202,7 @@ private:
     // Determine if every row in the array
     // has the same number of columns.
     bool isRectangular() const {
-      if (CellCounts.empty())
+      if (CellCounts.size() < 2)
         return false;
 
       for (auto NumberOfColumns : CellCounts)
@@ -231,6 +231,9 @@ private:
 
   /// Align consecutive declarations over all \c Changes.
   void alignChainedConditionals();
+
+  /// Align consecutive short case statements over all \c Changes.
+  void alignConsecutiveShortCaseStatements();
 
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
@@ -314,7 +317,7 @@ private:
     auto Offset = std::distance(CellStart, CellStop);
     for (const auto *Next = CellStop->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > MaxRowCount)
+      if (RowCount >= MaxRowCount)
         break;
       auto Start = (CellStart + RowCount * CellCount);
       auto End = Start + Offset;

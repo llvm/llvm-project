@@ -61,5 +61,28 @@
 // RUN:   -Xclang -target-feature -Xclang "+image-insts" %s 2>&1 | FileCheck --check-prefixes=NOIMAGE,WARN %s
 // NOWARN-NOT: warning
 // WARN: warning: feature flag '{{[+|-]}}image-insts' is ignored since the feature is read only [-Winvalid-command-line-argument]
+// IMAGE-NOT: #define __HIP_NO_IMAGE_SUPPORT__
 // IMAGE-NOT: #define __HIP_NO_IMAGE_SUPPORT
-// NOIMAGE: #define __HIP_NO_IMAGE_SUPPORT 1
+// NOIMAGE-DAG: #define __HIP_NO_IMAGE_SUPPORT__ 1
+// NOIMAGE-DAG: #define __HIP_NO_IMAGE_SUPPORT 1
+
+// RUN: %clang -E -dM --offload-arch=gfx1100 -nogpuinc -nogpulib \
+// RUN:   -fgpu-default-stream=per-thread %s 2>&1 | FileCheck --check-prefixes=PTS %s
+// RUN: %clang -E -dM --offload-arch=gfx940 --cuda-device-only -nogpuinc -nogpulib \
+// RUN:   -fgpu-default-stream=legacy %s 2>&1 | FileCheck --check-prefixes=NOPTS %s
+// RUN: %clang -E -dM --offload-arch=gfx940 --cuda-device-only -nogpuinc -nogpulib \
+// RUN:   %s 2>&1 | FileCheck --check-prefixes=NOPTS %s
+// PTS-DAG: #define __HIP_API_PER_THREAD_DEFAULT_STREAM__ 1
+// PTS-DAG: #define __HIP_API_PER_THREAD_DEFAULT_STREAM__ 1
+// PTS-DAG: #define HIP_API_PER_THREAD_DEFAULT_STREAM 1
+// PTS-DAG: #define HIP_API_PER_THREAD_DEFAULT_STREAM 1
+// NOPTS-NOT: #define __HIP_API_PER_THREAD_DEFAULT_STREAM__
+// NOPTS-NOT: #define HIP_API_PER_THREAD_DEFAULT_STREAM
+
+// RUN: %clang -E -dM --offload-arch=gfx906 -nogpuinc -nogpulib \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=NOAPPROX %s
+// RUN: %clang -E -dM --offload-arch=gfx906 -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=APPROX %s
+// NOAPPROX-NOT: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__
+// APPROX: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__ 1
+// APPROX: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__ 1

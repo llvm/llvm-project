@@ -11,11 +11,11 @@
 
 #include <signal.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sigaction(int signal, const struct sigaction *__restrict libc_new,
               struct sigaction *__restrict libc_old);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGACTION_H

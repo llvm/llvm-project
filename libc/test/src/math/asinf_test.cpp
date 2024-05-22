@@ -18,32 +18,30 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcAsinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAsinfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAsinfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::asinf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::asinf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::asinf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::asinf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::asinf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::asinf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::asinf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcAsinfTest, InFloatRange) {
+TEST_F(LlvmLibcAsinfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -51,11 +49,11 @@ TEST(LlvmLibcAsinfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x,
-                                   __llvm_libc::asinf(x), 0.5);
+                                   LIBC_NAMESPACE::asinf(x), 0.5);
   }
 }
 
-TEST(LlvmLibcAsinfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcAsinfTest, SpecificBitPatterns) {
   constexpr int N = 11;
   constexpr uint32_t INPUTS[N] = {
       0x3f000000, // x = 0.5f
@@ -74,8 +72,8 @@ TEST(LlvmLibcAsinfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x,
-                                   __llvm_libc::asinf(x), 0.5);
+                                   LIBC_NAMESPACE::asinf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, -x,
-                                   __llvm_libc::asinf(-x), 0.5);
+                                   LIBC_NAMESPACE::asinf(-x), 0.5);
   }
 }

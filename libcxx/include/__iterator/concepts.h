@@ -72,10 +72,10 @@ using iter_common_reference_t = common_reference_t<iter_reference_t<_Tp>, iter_v
 template<class _Out, class _Tp>
 concept indirectly_writable =
   requires(_Out&& __o, _Tp&& __t) {
-    *__o = _VSTD::forward<_Tp>(__t);                        // not required to be equality-preserving
-    *_VSTD::forward<_Out>(__o) = _VSTD::forward<_Tp>(__t);  // not required to be equality-preserving
-    const_cast<const iter_reference_t<_Out>&&>(*__o) = _VSTD::forward<_Tp>(__t);                       // not required to be equality-preserving
-    const_cast<const iter_reference_t<_Out>&&>(*_VSTD::forward<_Out>(__o)) = _VSTD::forward<_Tp>(__t); // not required to be equality-preserving
+    *__o = std::forward<_Tp>(__t);                        // not required to be equality-preserving
+    *std::forward<_Out>(__o) = std::forward<_Tp>(__t);  // not required to be equality-preserving
+    const_cast<const iter_reference_t<_Out>&&>(*__o) = std::forward<_Tp>(__t);                       // not required to be equality-preserving
+    const_cast<const iter_reference_t<_Out>&&>(*std::forward<_Out>(__o)) = std::forward<_Tp>(__t); // not required to be equality-preserving
   };
 
 // [iterator.concept.winc]
@@ -147,7 +147,7 @@ concept output_iterator =
   input_or_output_iterator<_Ip> &&
   indirectly_writable<_Ip, _Tp> &&
   requires (_Ip __it, _Tp&& __t) {
-    *__it++ = _VSTD::forward<_Tp>(__t); // not required to be equality-preserving
+    *__it++ = std::forward<_Tp>(__t); // not required to be equality-preserving
   };
 
 // [iterator.concept.forward]
@@ -190,7 +190,7 @@ concept contiguous_iterator =
   is_lvalue_reference_v<iter_reference_t<_Ip>> &&
   same_as<iter_value_t<_Ip>, remove_cvref_t<iter_reference_t<_Ip>>> &&
   requires(const _Ip& __i) {
-    { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
+    { std::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
   };
 
 template<class _Ip>
@@ -294,6 +294,14 @@ concept indirectly_copyable_storable =
 // (both iter_swap and indirectly_swappable require indirectly_readable).
 
 #endif // _LIBCPP_STD_VER >= 20
+
+template <class _Tp>
+using __has_random_access_iterator_category_or_concept
+#if _LIBCPP_STD_VER >= 20
+  = integral_constant<bool, random_access_iterator<_Tp>>;
+#else   // _LIBCPP_STD_VER < 20
+  = __has_random_access_iterator_category<_Tp>;
+#endif  // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD
 

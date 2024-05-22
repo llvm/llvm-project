@@ -15,6 +15,18 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyDecomposeTensorConcatPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.decompose_concat",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor.concat ops should be decomposed into a chain of
+    tensor.insert_slice operations inserting into a materialized destination.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ApplyDropRedundantInsertSliceRankExpansionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.drop_redundant_insert_slice_rank_expansion",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -58,6 +70,18 @@ def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
   let description = [{
     Indicates that tensor.empty should be folded with tensor.extract_slice,
     tensor.expand_shape and tensor.collapse_shape.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldTensorSubsetOpsIntoVectorTransfersPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.fold_tensor_subset_ops_into_vector_transfers",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor.extract_slice -> vector.transfer_read and
+    vector.transfer_write -> tensor.insert_slice op chains should be folded into
+    vector tranfer read and write ops
   }];
 
   let assemblyFormat = "attr-dict";

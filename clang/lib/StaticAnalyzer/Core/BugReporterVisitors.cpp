@@ -132,6 +132,16 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
     }
     // Pattern match for a few useful cases: a[0], p->f, *p etc.
     else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      // This handles the case when the dereferencing of a member reference
+      // happens. This is needed, because the AST for dereferencing a
+      // member reference looks like the following:
+      // |-MemberExpr
+      //  `-DeclRefExpr
+      // Without this special case the notes would refer to the whole object
+      // (struct, class or union variable) instead of just the relevant member.
+
+      if (ME->getMemberDecl()->getType()->isReferenceType())
+        break;
       E = ME->getBase();
     } else if (const auto *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
       E = IvarRef->getBase();
@@ -157,26 +167,42 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
   return E;
 }
 
+static const VarDecl *getVarDeclForExpression(const Expr *E) {
+  if (const auto *DR = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<VarDecl>(DR->getDecl());
+  return nullptr;
+}
+
 static const MemRegion *
 getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
                              bool LookingForReference = true) {
-  if (const auto *DR = dyn_cast<DeclRefExpr>(E)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      if (LookingForReference && !VD->getType()->isReferenceType())
-        return nullptr;
-      return N->getState()
-          ->getLValue(VD, N->getLocationContext())
-          .getAsRegion();
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    // This handles null references from FieldRegions, for example:
+    //   struct Wrapper { int &ref; };
+    //   Wrapper w = { *(int *)0 };
+    //   w.ref = 1;
+    const Expr *Base = ME->getBase();
+    const VarDecl *VD = getVarDeclForExpression(Base);
+    if (!VD)
+      return nullptr;
+
+    const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    if (!FD)
+      return nullptr;
+
+    if (FD->getType()->isReferenceType()) {
+      SVal StructSVal = N->getState()->getLValue(VD, N->getLocationContext());
+      return N->getState()->getLValue(FD, StructSVal).getAsRegion();
     }
+    return nullptr;
   }
 
-  // FIXME: This does not handle other kinds of null references,
-  // for example, references from FieldRegions:
-  //   struct Wrapper { int &ref; };
-  //   Wrapper w = { *(int *)0 };
-  //   w.ref = 1;
-
-  return nullptr;
+  const VarDecl *VD = getVarDeclForExpression(E);
+  if (!VD)
+    return nullptr;
+  if (LookingForReference && !VD->getType()->isReferenceType())
+    return nullptr;
+  return N->getState()->getLValue(VD, N->getLocationContext()).getAsRegion();
 }
 
 /// Comparing internal representations of symbolic values (via
@@ -606,7 +632,7 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Base))
       if (const auto *ID = dyn_cast<ImplicitParamDecl>(DRE->getDecl()))
-        if (ID->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+        if (ID->getParameterKind() == ImplicitParamKind::ObjCSelf)
           return true;
 
     return false;
@@ -1368,8 +1394,7 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
       VR->printPretty(OS);
     }
   } else if (const auto *ImplParam = dyn_cast<ImplicitParamDecl>(D)) {
-    if (ImplParam->getParameterKind() ==
-        ImplicitParamDecl::ImplicitParamKind::ObjCSelf) {
+    if (ImplParam->getParameterKind() == ImplicitParamKind::ObjCSelf) {
       OS << " via implicit parameter 'self'";
     }
   }
@@ -3347,7 +3372,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   FullSourceLoc Loc = BR.getLocation().asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();
-    if (SM.getFilename(Loc).endswith("sys/queue.h")) {
+    if (SM.getFilename(Loc).ends_with("sys/queue.h")) {
       BR.markInvalid(getTag(), nullptr);
       return;
     }

@@ -23,6 +23,10 @@
 #include "llvm/Support/SourceMgr.h"
 #include <string>
 
+#ifdef __linux__
+#include <unistd.h>
+#endif // __linux__
+
 namespace llvm {
 namespace exegesis {
 namespace {
@@ -118,6 +122,19 @@ public:
       MemoryMapping MemMap;
       MemMap.MemoryValueName = Parts[0].trim().str();
       MemMap.Address = std::stol(Parts[1].trim().str());
+
+#ifdef __linux__
+      // Validate that the annotation is a multiple of the platform's page
+      // size.
+      if (MemMap.Address % getpagesize() != 0) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
+               << "', expected <ADDRESS> to be a multiple of the platform page "
+                  "size.";
+        ++InvalidComments;
+        return;
+      }
+#endif // __linux__
+
       // validate that the annotation refers to an already existing memory
       // definition
       auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim().str());
@@ -129,6 +146,33 @@ public:
         return;
       }
       Result->Key.MemoryMappings.push_back(std::move(MemMap));
+      return;
+    }
+    if (CommentText.consume_front("SNIPPET-ADDRESS")) {
+      // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
+      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                16)) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
+               << CommentText
+               << "', expected <ADDRESS> to contain a valid integer in "
+                  "hexadecimal format";
+        ++InvalidComments;
+        return;
+      }
+
+#ifdef __linux__
+      // Validate that the address in the annotation is a multiple of the
+      // platform's page size.
+      if (Result->Key.SnippetAddress % getpagesize() != 0) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
+               << CommentText
+               << ", expected <ADDRESS> to be a multiple of the platform page "
+                  "size.";
+        ++InvalidComments;
+        return;
+      }
+#endif // __linux__
+
       return;
     }
   }

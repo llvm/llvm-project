@@ -8,6 +8,7 @@
 
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -21,6 +22,7 @@
 #include "flang/Runtime/stop.h"
 #include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -37,6 +39,9 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   if (parentOp->getDialect()->getNamespace() ==
       mlir::omp::OpenMPDialect::getDialectNamespace())
     Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
+  else if (parentOp->getDialect()->getNamespace() ==
+           mlir::acc::OpenACCDialect::getDialectNamespace())
+    Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
     builder.create<fir::UnreachableOp>(loc);
   mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
@@ -135,49 +140,49 @@ void Fortran::lower::genFailImageStatement(
 void Fortran::lower::genEventPostStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::EventPostStmt &) {
-  TODO(converter.getCurrentLocation(), "EVENT POST runtime");
+  TODO(converter.getCurrentLocation(), "coarray: EVENT POST runtime");
 }
 
 void Fortran::lower::genEventWaitStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::EventWaitStmt &) {
-  TODO(converter.getCurrentLocation(), "EVENT WAIT runtime");
+  TODO(converter.getCurrentLocation(), "coarray: EVENT WAIT runtime");
 }
 
 void Fortran::lower::genLockStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::LockStmt &) {
-  TODO(converter.getCurrentLocation(), "LOCK runtime");
+  TODO(converter.getCurrentLocation(), "coarray: LOCK runtime");
 }
 
 void Fortran::lower::genUnlockStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::UnlockStmt &) {
-  TODO(converter.getCurrentLocation(), "UNLOCK runtime");
+  TODO(converter.getCurrentLocation(), "coarray: UNLOCK runtime");
 }
 
 void Fortran::lower::genSyncAllStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncAllStmt &) {
-  TODO(converter.getCurrentLocation(), "SYNC ALL runtime");
+  TODO(converter.getCurrentLocation(), "coarray: SYNC ALL runtime");
 }
 
 void Fortran::lower::genSyncImagesStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncImagesStmt &) {
-  TODO(converter.getCurrentLocation(), "SYNC IMAGES runtime");
+  TODO(converter.getCurrentLocation(), "coarray: SYNC IMAGES runtime");
 }
 
 void Fortran::lower::genSyncMemoryStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncMemoryStmt &) {
-  TODO(converter.getCurrentLocation(), "SYNC MEMORY runtime");
+  TODO(converter.getCurrentLocation(), "coarray: SYNC MEMORY runtime");
 }
 
 void Fortran::lower::genSyncTeamStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "SYNC TEAM runtime");
+  TODO(converter.getCurrentLocation(), "coarray: SYNC TEAM runtime");
 }
 
 void Fortran::lower::genPauseStatement(

@@ -14,8 +14,12 @@ unittest("JITLinkTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "AArch32ErrorTests.cpp",
     "AArch32Tests.cpp",
     "EHFrameSupportTests.cpp",
+    "JITLinkMocks.cpp",
     "LinkGraphTests.cpp",
+    "MemoryManagerErrorTests.cpp",
+    "StubsTests.cpp",
   ]
 }

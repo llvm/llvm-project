@@ -60,6 +60,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasMMA = false;
   bool HasROPProtect = false;
   bool HasPrivileged = false;
+  bool HasAIXSmallLocalExecTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
@@ -196,6 +197,8 @@ public:
 
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
                          bool Enabled) const override;
+
+  bool supportsTargetAttributeTune() const override { return true; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 

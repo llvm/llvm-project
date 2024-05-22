@@ -189,7 +189,7 @@ public:
   uint32_t EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
-  uint32_t EncodePPR_p8to15(const MCInst &MI, unsigned OpIdx,
+  uint32_t EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
 
@@ -544,11 +544,11 @@ AArch64MCCodeEmitter::EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
 }
 
 uint32_t
-AArch64MCCodeEmitter::EncodePPR_p8to15(const MCInst &MI, unsigned OpIdx,
+AArch64MCCodeEmitter::EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
-  return RegOpnd - AArch64::P8;
+  return RegOpnd - AArch64::PN8;
 }
 
 uint32_t AArch64MCCodeEmitter::EncodeZPR2StridedRegisterClass(
@@ -685,7 +685,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write<uint32_t>(CB, Binary, support::little);
+  support::endian::write<uint32_t>(CB, Binary, llvm::endianness::little);
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 

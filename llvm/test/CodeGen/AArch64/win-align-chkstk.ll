@@ -25,3 +25,28 @@ declare dso_local void @other(ptr noundef)
 ; CHECK-NEXT: sub sp, sp, x15, lsl #4
 ; CHECK-NEXT: add x15, sp, #16
 ; CHECK-NEXT: and sp, x15, #0xffffffffffffffe0
+
+define dso_local void @func2() {
+entry:
+  %buf = alloca [8192 x i8], align 8192
+  %arraydecay = getelementptr inbounds [8192 x i8], ptr %buf, i64 0, i64 0
+  call void @other(ptr noundef %arraydecay)
+  ret void
+}
+
+; CHECK-LABEL: func2:
+; CHECK-NEXT: .seh_proc func2
+; CHECK-NEXT: // %bb.0:
+; CHECK-NEXT: str x28, [sp, #-32]!
+; CHECK-NEXT: .seh_save_reg_x x28, 32
+; CHECK-NEXT: stp x29, x30, [sp, #8]
+; CHECK-NEXT: .seh_save_fplr 8
+; CHECK-NEXT: add x29, sp, #8
+; CHECK-NEXT: .seh_add_fp 8
+; CHECK-NEXT: .seh_endprologue
+; CHECK-NEXT: mov x15, #1533
+; CHECK-NEXT: bl __chkstk
+; CHECK-NEXT: sub sp, sp, x15, lsl #4
+; CHECK-NEXT: mov x16, #8176
+; CHECK-NEXT: add x15, sp, x16
+; CHECK-NEXT: and sp, x15, #0xffffffffffffe000

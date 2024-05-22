@@ -284,7 +284,9 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   ASSERT_FALSE(!F1Alias);
   ASSERT_FALSE(!F1Alias2);
   EXPECT_EQ("dir/f1.cpp", F1->getName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_EQ("dir/f1.cpp", F1->getFileEntry().getName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   EXPECT_EQ("dir/f1.cpp", F1Alias->getName());
   EXPECT_EQ("dir/f1.cpp", F1Alias2->getName());
   EXPECT_EQ(&F1->getFileEntry(), &F1Alias->getFileEntry());
@@ -303,7 +305,9 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   ASSERT_FALSE(!F2Alias);
   ASSERT_FALSE(!F2Alias2);
   EXPECT_EQ("dir/f2.cpp", F2->getName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_EQ("dir/f2.cpp", F2->getFileEntry().getName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   EXPECT_EQ("dir/f2.cpp", F2Alias->getName());
   EXPECT_EQ("dir/f2.cpp", F2Alias2->getName());
   EXPECT_EQ(&F2->getFileEntry(), &F2Alias->getFileEntry());
@@ -547,7 +551,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   Manager.setStatCache(std::move(Cache));
 
   // Set up a virtual file with a different size than FakeStatCache uses.
-  const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
+  FileEntryRef File = Manager.getVirtualFileRef("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
   const FileEntry &FE = *File;
   EXPECT_EQ(FE.getSize(), 10);
@@ -562,7 +566,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_EQ(FE.getSize(), 10);
 
   // Bypass the file.
-  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File->getLastRef());
+  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File);
   ASSERT_TRUE(BypassRef);
   EXPECT_EQ("/tmp/test", BypassRef->getName());
 

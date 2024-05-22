@@ -101,21 +101,21 @@ entry:
 define void @test16elt(ptr noalias nocapture sret(<16 x float>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
+; CHECK-P8-NEXT:    li r5, 48
 ; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 48
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    xvcvuxwsp vs3, vs3
 ; CHECK-P8-NEXT:    xvcvuxwsp vs0, vs0
-; CHECK-P8-NEXT:    xvcvuxwsp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvuxwsp vs2, vs2
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvuxwsp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
+; CHECK-P8-NEXT:    xvcvuxwsp vs0, vs3
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -248,21 +248,21 @@ entry:
 define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    li r5, 16
+; CHECK-P8-NEXT:    li r5, 48
 ; CHECK-P8-NEXT:    li r6, 32
-; CHECK-P8-NEXT:    li r7, 48
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    xvcvsxwsp vs3, vs3
 ; CHECK-P8-NEXT:    xvcvsxwsp vs0, vs0
-; CHECK-P8-NEXT:    xvcvsxwsp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvsxwsp vs2, vs2
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    xvcvsxwsp vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
+; CHECK-P8-NEXT:    xvcvsxwsp vs0, vs3
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

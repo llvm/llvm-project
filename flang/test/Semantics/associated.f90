@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests for the ASSOCIATED() and NULL() intrinsics
 subroutine assoc()
 
@@ -20,7 +20,7 @@ subroutine assoc()
     type(t1), pointer :: t1ptr(:)
   end type t2
 
-  contains
+ contains
   integer function intFunc(x)
     integer, intent(in) :: x
     intFunc = x
@@ -48,11 +48,25 @@ subroutine assoc()
     integer :: i(:)
   end subroutine subrCannotBeCalledfromImplicit
 
-  subroutine test()
+  function objPtrFunc(x)
+    integer, target :: x
+    integer, pointer :: objPtrFunc
+    objPtrFunc => x
+  end
+
+  !PORTABILITY: nonstandard usage: FUNCTION statement without dummy argument list
+  function procPtrFunc
+    procedure(intFunc), pointer :: procPtrFunc
+    procPtrFunc => intFunc
+  end
+
+  subroutine test(assumedRank)
+    real, pointer, intent(in out) :: assumedRank(..)
     integer :: intVar
     integer, target :: targetIntVar1
     integer(kind=2), target :: targetIntVar2
-    real, target :: targetRealVar
+    real, target :: targetRealVar, targetRealMat(2,2)
+    real, pointer :: realScalarPtr, realVecPtr(:), realMatPtr(:,:)
     integer, pointer :: intPointerVar1
     integer, pointer :: intPointerVar2
     integer, allocatable :: intAllocVar
@@ -68,6 +82,8 @@ subroutine assoc()
     procedure(subrInt), pointer :: subProcPointer
     procedure(), pointer :: implicitProcPointer
     procedure(subrCannotBeCalledfromImplicit), pointer :: cannotBeCalledfromImplicitPointer
+    !ERROR: 'neverdeclared' must be an abstract interface or a procedure with an explicit interface
+    procedure(neverDeclared), pointer :: badPointer
     logical :: lVar
     type(t1) :: t1x
     type(t1), target :: t1xtarget
@@ -76,34 +92,53 @@ subroutine assoc()
     integer, target :: targetIntArr(2)
     integer, target :: targetIntCoarray[*]
     integer, pointer :: intPointerArr(:)
+    procedure(objPtrFunc), pointer :: objPtrFuncPointer
 
+    !ERROR: Assumed-rank array cannot be forwarded to 'target=' argument
+    lvar = associated(assumedRank, assumedRank)
+    lvar = associated(assumedRank, targetRealVar) ! ok
+    lvar = associated(assumedRank, targetRealMat) ! ok
+    lvar = associated(realScalarPtr, targetRealVar) ! ok
+    !ERROR: 'target=' argument has unacceptable rank 0
+    lvar = associated(realVecPtr, targetRealVar)
+    !ERROR: 'target=' argument has unacceptable rank 0
+    lvar = associated(realMatPtr, targetRealVar)
+    !ERROR: 'target=' argument has unacceptable rank 2
+    lvar = associated(realScalarPtr, targetRealMat)
+    !ERROR: 'target=' argument has unacceptable rank 2
+    lvar = associated(realVecPtr, targetRealMat)
+    lvar = associated(realMatPtr, targetRealMat) ! ok
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
+    !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument '(targetintvar1)' is not a procedure or procedure pointer
+    lvar = associated(intprocPointer1, (targetIntVar1))
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument '(targetintvar1)' is not a variable
+    lvar = associated(intPointerVar1, (targetIntVar1))
     !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
     lVar = associated(null(intVar))
     lVar = associated(null(intAllocVar)) !OK
     lVar = associated(null()) !OK
     lVar = associated(null(intPointerVar1)) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
     !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null()) !OK
     lVar = associated(intPointerVar1, null(intPointerVar2)) !OK
     lVar = associated(intPointerVar1, null()) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
     !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null(intPointerVar1)) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
     lVar = associated(null(intPointerVar1), null()) !OK
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intVar)
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intVar, intVar)
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intAllocVar)
-    !ERROR: Arguments of ASSOCIATED() must be a POINTER and an optional valid target
+    !ERROR: Arguments of ASSOCIATED() must be a pointer and an optional valid target
     lVar = associated(intPointerVar1, targetRealVar)
     lVar = associated(intPointerVar1, targetIntVar1) !OK
-    !ERROR: Arguments of ASSOCIATED() must be a POINTER and an optional valid target
+    !ERROR: Arguments of ASSOCIATED() must be a pointer and an optional valid target
     lVar = associated(intPointerVar1, targetIntVar2)
     lVar = associated(intPointerVar1) !OK
     lVar = associated(intPointerVar1, intPointerVar2) !OK
@@ -135,9 +170,29 @@ subroutine assoc()
     intProcPointer1 => null(intProcPointer2) ! ok
     lvar = associated(intProcPointer1, null(intProcPointer2)) ! ok
     intProcPointer1 =>null() ! ok
-    lvar = associated(intProcPointer1, null()) ! ok
+    lvar = associated(intProcPointer1, null())
     intPointerVar1 => null(intPointerVar1) ! ok
     lvar = associated (intPointerVar1, null(intPointerVar1)) ! ok
+
+    ! Functions (other than NULL) returning pointers
+    lVar = associated(objPtrFunc(targetIntVar1)) ! ok
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), targetIntVar1) ! ok
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), objPtrFunc(targetIntVar1)) ! ok
+    lVar = associated(procPtrFunc()) ! ok
+    lVar = associated(procPtrFunc(), intFunc) ! ok
+    lVar = associated(procPtrFunc(), procPtrFunc()) ! ok
+    !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'intfunc' is not a variable
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), intFunc)
+    !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'procptrfunc()' is not a variable
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), procPtrFunc())
+    !ERROR: POINTER= argument 'procptrfunc()' is a procedure pointer but the TARGET= argument 'objptrfunc(targetintvar1)' is not a procedure or procedure pointer
+    lVar = associated(procPtrFunc(), objPtrFunc(targetIntVar1))
+    !ERROR: POINTER= argument 'procptrfunc()' is a procedure pointer but the TARGET= argument 'targetintvar1' is not a procedure or procedure pointer
+    lVar = associated(procPtrFunc(), targetIntVar1)
 
     !ERROR: In assignment to procedure pointer 'intprocpointer1', the target is not a procedure or procedure pointer
     intprocPointer1 => intVar
@@ -148,8 +203,10 @@ subroutine assoc()
     !WARNING: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
     !ERROR: Non-intrinsic ELEMENTAL procedure 'elementalproc' may not be passed as an actual argument
     lvar = associated(intProcPointer1, elementalProc)
-    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is a procedure designator
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is not a variable
     lvar = associated (intPointerVar1, intFunc)
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'objptrfuncpointer' is not a variable
+    lvar = associated (intPointerVar1, objPtrFuncPointer)
     !ERROR: In assignment to object pointer 'intpointervar1', the target 'intfunc' is a procedure designator
     intPointerVar1 => intFunc
     !ERROR: In assignment to procedure pointer 'intprocpointer1', the target is not a procedure or procedure pointer
@@ -158,7 +215,7 @@ subroutine assoc()
     lvar = associated (intProcPointer1, targetIntVar1)
     !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     intProcPointer1 => null(mold=realProcPointer1)
-    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
+    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null(mold=realprocpointer1)' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     lvar = associated(intProcPointer1, null(mold=realProcPointer1))
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     pureFuncPointer => intProc
@@ -190,5 +247,10 @@ subroutine assoc()
     lvar = associated(intPointerArr, targetIntArr([2,1]))
     !ERROR: TARGET= argument 'targetintcoarray[1_8]' may not have a vector subscript or coindexing
     lvar = associated(intPointerVar1, targetIntCoarray[1])
+    !ERROR: 'neverdeclared' is not a procedure
+    !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
+    !ERROR: 'neverdeclared' is not a procedure
+    !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
+    lvar = associated(badPointer)
   end subroutine test
 end subroutine assoc

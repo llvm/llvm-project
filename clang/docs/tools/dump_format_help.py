@@ -7,14 +7,14 @@ import re
 import subprocess
 import sys
 
-CLANG_DIR = os.path.join(os.path.dirname(__file__), "../..")
-DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormat.rst")
+PARENT_DIR = os.path.join(os.path.dirname(__file__), "..")
+DOC_FILE = os.path.join(PARENT_DIR, "ClangFormat.rst")
 
 
 def substitute(text, tag, contents):
     replacement = "\n.. START_%s\n\n%s\n\n.. END_%s\n" % (tag, contents, tag)
     pattern = r"\n\.\. START_%s\n.*\n\.\. END_%s\n" % (tag, tag)
-    return re.sub(pattern, "%s", text, flags=re.S) % replacement
+    return re.sub(pattern, replacement, text, flags=re.S)
 
 
 def indent(text, columns, indent_first_line=True):
@@ -40,7 +40,7 @@ def get_help_text():
     out = (
         """.. code-block:: console
 
-$ clang-format -help
+$ clang-format --help
 """
         + out
     )
@@ -55,7 +55,7 @@ def validate(text, columns):
 
 
 help_text = get_help_text()
-validate(help_text, 95)
+validate(help_text, 100)
 
 with open(DOC_FILE) as f:
     contents = f.read()

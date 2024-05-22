@@ -30,8 +30,9 @@ namespace format {
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
+  TYPE(AttributeLParen)                                                        \
   TYPE(AttributeMacro)                                                         \
-  TYPE(AttributeParen)                                                         \
+  TYPE(AttributeRParen)                                                        \
   TYPE(AttributeSquare)                                                        \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
@@ -41,7 +42,7 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
-  TYPE(CompoundRequirementLBrace)                                              \
+  TYPE(ClassRBrace)                                                            \
   /* ternary ?: expression */                                                  \
   TYPE(ConditionalExpr)                                                        \
   /* the condition in an if statement */                                       \
@@ -51,6 +52,7 @@ namespace format {
   TYPE(ConflictStart)                                                          \
   /* l_brace of if/for/while */                                                \
   TYPE(ControlStatementLBrace)                                                 \
+  TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
   TYPE(CSharpGenericTypeConstraint)                                            \
   TYPE(CSharpGenericTypeConstraintColon)                                       \
@@ -61,11 +63,15 @@ namespace format {
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
+  TYPE(CtorDtorDeclName)                                                       \
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
+  TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
+  TYPE(EnumRBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -94,7 +100,6 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
-  TYPE(LambdaArrow)                                                            \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -102,7 +107,9 @@ namespace format {
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
   TYPE(ModulePartitionColon)                                                   \
+  TYPE(NamespaceLBrace)                                                        \
   TYPE(NamespaceMacro)                                                         \
+  TYPE(NamespaceRBrace)                                                        \
   TYPE(NonNullAssertion)                                                       \
   TYPE(NullCoalescingEqual)                                                    \
   TYPE(NullCoalescingOperator)                                                 \
@@ -122,6 +129,7 @@ namespace format {
   TYPE(PureVirtualSpecifier)                                                   \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
+  TYPE(RecordRBrace)                                                           \
   TYPE(RegexLiteral)                                                           \
   TYPE(RequiresClause)                                                         \
   TYPE(RequiresClauseInARequiresExpression)                                    \
@@ -132,7 +140,13 @@ namespace format {
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
+  /* A string that is part of a string concatenation. For C#, JavaScript, and  \
+   * Java, it is used for marking whether a string needs parentheses around it \
+   * if it is to be split into parts joined by `+`. For Verilog, whether       \
+   * braces need to be added to split it. Not used for other languages. */     \
+  TYPE(StringInConcatenation)                                                  \
   TYPE(StructLBrace)                                                           \
+  TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
@@ -141,9 +155,11 @@ namespace format {
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
+  TYPE(TypeName)                                                               \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
+  TYPE(UnionRBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
   /* Like in 'assign x = 0, y = 1;' . */                                       \
   TYPE(VerilogAssignComma)                                                     \
@@ -610,6 +626,10 @@ public:
 
   bool isStringLiteral() const { return tok::isStringLiteral(Tok.getKind()); }
 
+  bool isAttribute() const {
+    return isOneOf(tok::kw___attribute, tok::kw___declspec, TT_AttributeMacro);
+  }
+
   bool isObjCAtKeyword(tok::ObjCKeywordKind Kind) const {
     return Tok.isObjCAtKeyword(Kind);
   }
@@ -625,9 +645,10 @@ public:
 
   bool canBePointerOrReferenceQualifier() const {
     return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
-                   tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
+                   tok::kw__Nonnull, tok::kw__Nullable,
                    tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64,
-                   tok::kw___funcref, TT_AttributeMacro);
+                   tok::kw___funcref) ||
+           isAttribute();
   }
 
   /// Determine whether the token is a simple-type-specifier.
@@ -646,7 +667,7 @@ public:
   /// Returns whether \p Tok is ([{ or an opening < of a template or in
   /// protos.
   bool opensScope() const {
-    if (is(TT_TemplateString) && TokenText.endswith("${"))
+    if (is(TT_TemplateString) && TokenText.ends_with("${"))
       return true;
     if (is(TT_DictLiteral) && is(tok::less))
       return true;
@@ -656,7 +677,7 @@ public:
   /// Returns whether \p Tok is )]} or a closing > of a template or in
   /// protos.
   bool closesScope() const {
-    if (is(TT_TemplateString) && TokenText.startswith("}"))
+    if (is(TT_TemplateString) && TokenText.starts_with("}"))
       return true;
     if (is(TT_DictLiteral) && is(tok::greater))
       return true;
@@ -668,7 +689,11 @@ public:
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
+                    TT_LeadingJavaAnnotation);
+  }
+
+  bool isPointerOrReference() const {
+    return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
   bool isUnaryOperator() const {
@@ -700,36 +725,27 @@ public:
   /// Returns \c true if this is a keyword that can be used
   /// like a function call (e.g. sizeof, typeid, ...).
   bool isFunctionLikeKeyword() const {
-    switch (Tok.getKind()) {
-    case tok::kw_throw:
-    case tok::kw_typeid:
-    case tok::kw_return:
-    case tok::kw_sizeof:
-    case tok::kw_alignof:
-    case tok::kw_alignas:
-    case tok::kw_decltype:
-    case tok::kw_noexcept:
-    case tok::kw_static_assert:
-    case tok::kw__Atomic:
-    case tok::kw___attribute:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-    case tok::kw_requires:
+    if (isAttribute())
       return true;
-    default:
-      return false;
-    }
+
+    return isOneOf(tok::kw_throw, tok::kw_typeid, tok::kw_return,
+                   tok::kw_sizeof, tok::kw_alignof, tok::kw_alignas,
+                   tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
+                   tok::kw__Atomic,
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+                   tok::kw_requires);
   }
 
   /// Returns \c true if this is a string literal that's like a label,
   /// e.g. ends with "=" or ":".
   bool isLabelString() const {
-    if (!is(tok::string_literal))
+    if (isNot(tok::string_literal))
       return false;
     StringRef Content = TokenText;
-    if (Content.startswith("\"") || Content.startswith("'"))
+    if (Content.starts_with("\"") || Content.starts_with("'"))
       Content = Content.drop_front(1);
-    if (Content.endswith("\"") || Content.endswith("'"))
+    if (Content.ends_with("\"") || Content.ends_with("'"))
       Content = Content.drop_back(1);
     Content = Content.trim();
     return Content.size() > 1 &&
@@ -773,6 +789,9 @@ public:
       Tok = Tok->Next;
     return Tok;
   }
+
+  /// Returns \c true if this token ends a block indented initializer list.
+  [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
@@ -1804,7 +1823,7 @@ private:
 };
 
 inline bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
+  return FormatTok.is(tok::comment) && !FormatTok.TokenText.starts_with("/*");
 }
 
 // Checks if \p FormatTok is a line comment that continues the line comment

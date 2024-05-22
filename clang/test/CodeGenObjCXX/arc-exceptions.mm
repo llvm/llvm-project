@@ -2,7 +2,7 @@
 
 @class Ety;
 
-// These first four tests are all PR11732 / rdar://problem/10667070.
+// These first four tests are all PR11732.
 
 void test0_helper(void);
 void test0(void) {
@@ -104,7 +104,6 @@ namespace test4 {
   // CHECK:      resume
 }
 
-// rdar://21397946
 __attribute__((ns_returns_retained)) id test5_helper(unsigned);
 void test5(void) {
   id array[][2] = {

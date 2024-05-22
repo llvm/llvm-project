@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false --emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false --emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Test intrinsic module procedure c_loc
 

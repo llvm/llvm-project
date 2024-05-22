@@ -29,21 +29,21 @@
 ; Check that all the names are present in the output
 ; CHECK: Bucket 0
 ; CHECK:     Hash: 0xF8CF70D
-; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBBlockC1ERKS0_"
-; CHECK:     Hash: 0xF8CF70D
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBBlockaSERKS0_"
-; CHECK:     Hash: 0x135A482C
-; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBErrorC1ERKS0_"
+; CHECK:     Hash: 0xF8CF70D
+; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBBlockC1ERKS0_"
 ; CHECK:     Hash: 0x135A482C
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBErroraSERKS0_"
+; CHECK:     Hash: 0x135A482C
+; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZN4lldb7SBErrorC1ERKS0_"
 ; CHECK-NOT: String:
 ; CHECK: Bucket 1
 ; CHECK-NEXT: EMPTY
 ; CHECK: Bucket 2
 ; CHECK:     Hash: 0x2841B989
-; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL11NumCommutes"
-; CHECK:     Hash: 0x2841B989
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL11numCommutes"
+; CHECK:     Hash: 0x2841B989
+; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL11NumCommutes"
 ; CHECK:     Hash: 0x3E190F5F
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL9NumRemats"
 ; CHECK:     Hash: 0x3E190F5F

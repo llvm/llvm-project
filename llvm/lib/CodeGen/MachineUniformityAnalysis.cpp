@@ -157,7 +157,7 @@ MachineUniformityInfo llvm::computeMachineUniformityInfo(
     MachineFunction &F, const MachineCycleInfo &cycleInfo,
     const MachineDomTree &domTree, bool HasBranchDivergence) {
   assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
-  MachineUniformityInfo UI(F, domTree, cycleInfo);
+  MachineUniformityInfo UI(domTree, cycleInfo);
   if (HasBranchDivergence)
     UI.compute();
   return UI;

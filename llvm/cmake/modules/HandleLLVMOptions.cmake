@@ -36,6 +36,21 @@ string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 # The following only works with the Ninja generator in CMake >= 3.0.
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
   "Define the maximum number of concurrent compilation jobs (Ninja only).")
+if(LLVM_RAM_PER_COMPILE_JOB OR LLVM_RAM_PER_LINK_JOB)
+  cmake_host_system_information(RESULT available_physical_memory QUERY AVAILABLE_PHYSICAL_MEMORY)
+  cmake_host_system_information(RESULT number_of_logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
+endif()
+if(LLVM_RAM_PER_COMPILE_JOB)
+  math(EXPR jobs_with_sufficient_memory "${available_physical_memory} / ${LLVM_RAM_PER_COMPILE_JOB}" OUTPUT_FORMAT DECIMAL)
+  if (jobs_with_sufficient_memory LESS 1)
+    set(jobs_with_sufficient_memory 1)
+  endif()
+  if (jobs_with_sufficient_memory LESS number_of_logical_cores)
+    set(LLVM_PARALLEL_COMPILE_JOBS "${jobs_with_sufficient_memory}")
+  else()
+    set(LLVM_PARALLEL_COMPILE_JOBS "${number_of_logical_cores}")
+  endif()
+endif()
 if(LLVM_PARALLEL_COMPILE_JOBS)
   if(NOT CMAKE_GENERATOR MATCHES "Ninja")
     message(WARNING "Job pooling is only available with Ninja generators.")
@@ -47,6 +62,17 @@ endif()
 
 set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
   "Define the maximum number of concurrent link jobs (Ninja only).")
+if(LLVM_RAM_PER_LINK_JOB)
+  math(EXPR jobs_with_sufficient_memory "${available_physical_memory} / ${LLVM_RAM_PER_LINK_JOB}" OUTPUT_FORMAT DECIMAL)
+  if (jobs_with_sufficient_memory LESS 1)
+    set(jobs_with_sufficient_memory 1)
+  endif()
+  if (jobs_with_sufficient_memory LESS number_of_logical_cores)
+    set(LLVM_PARALLEL_LINK_JOBS "${jobs_with_sufficient_memory}")
+  else()
+    set(LLVM_PARALLEL_LINK_JOBS "${number_of_logical_cores}")
+  endif()
+endif()
 if(CMAKE_GENERATOR MATCHES "Ninja")
   if(NOT LLVM_PARALLEL_LINK_JOBS AND uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
     message(STATUS "ThinLTO provides its own parallel linking - limiting parallel link jobs to 2.")
@@ -85,8 +111,13 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
-  # Enable assertions in libc++.
-  add_compile_definitions(_LIBCPP_ENABLE_ASSERTIONS)
+  # Cautiously enable the extensive hardening mode in libc++.
+  if((DEFINED LIBCXX_HARDENING_MODE) AND
+     (NOT LIBCXX_HARDENING_MODE STREQUAL "extensive"))
+    message(WARNING "LLVM_ENABLE_ASSERTIONS implies LIBCXX_HARDENING_MODE \"extensive\" but is overriden from command line with value \"${LIBCXX_HARDENING_MODE}\".")
+  else()
+    set(LIBCXX_HARDENING_MODE "extensive")
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -107,6 +138,10 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   else()
     add_compile_definitions(_GLIBCXX_ASSERTIONS)
   endif()
+endif()
+
+if(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS)
+  add_compile_definitions(EXPERIMENTAL_DEBUGINFO_ITERATORS)
 endif()
 
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
@@ -327,7 +362,10 @@ if( LLVM_USE_LINKER )
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
   if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
-    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'")
+    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
+                        "Please make sure that '${LLVM_USE_LINKER}' is installed and "
+                        "that your host compiler can compile a simple program when "
+                        "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
   endif()
 endif()
 
@@ -458,7 +496,7 @@ if(MSVC)
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
-elseif(MINGW) # FIXME: Also cygwin?
+elseif(MINGW OR CYGWIN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
@@ -470,7 +508,6 @@ endif()
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 
 if( MSVC )
-  include(ChooseMSVCCRT)
 
   # Add definitions that make MSVC much less annoying.
   add_compile_definitions(
@@ -741,7 +778,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append("-Wcast-qual" CMAKE_CXX_FLAGS)
+  append("-Wcast-qual" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by
@@ -769,6 +806,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   add_flag_if_supported("-Wcovered-switch-default" COVERED_SWITCH_DEFAULT_FLAG)
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
+
+  # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-Wno-nonnull" CMAKE_CXX_FLAGS)
+  endif()
 
   # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
   # LLVM's ADT classes.
@@ -946,7 +988,10 @@ if(LLVM_USE_SANITIZER)
       endif()
       # Prepare ASAN runtime if needed
       if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
-        if (${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+        # lld string tail merging interacts badly with ASAN on Windows, turn it off here
+        # See https://github.com/llvm/llvm-project/issues/62078
+        append("/opt:nolldtailmerge" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
           append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS)
           append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
@@ -1000,7 +1045,7 @@ if (LLVM_USE_SPLIT_DWARF AND
   # Limit to clang and gcc so far. Add compilers supporting this option.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-gsplit-dwarf)
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-gsplit-dwarf>)
     include(LLVMCheckLinkerFlag)
     llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
     append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
@@ -1155,6 +1200,7 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
+option(LLVM_INDIVIDUAL_TEST_COVERAGE "Emit individual coverage file for each test case." OFF)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
 append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\" -fcoverage-mapping"
   CMAKE_CXX_FLAGS
@@ -1298,7 +1344,7 @@ if(LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO)
   else()
     set(source_root "${LLVM_MAIN_SRC_DIR}")
   endif()
-  file(RELATIVE_PATH relative_root "${source_root}" "${CMAKE_BINARY_DIR}")
+  file(RELATIVE_PATH relative_root "${CMAKE_BINARY_DIR}" "${source_root}")
   append_if(SUPPORTS_FDEBUG_PREFIX_MAP "-fdebug-prefix-map=${CMAKE_BINARY_DIR}=${relative_root}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(SUPPORTS_FDEBUG_PREFIX_MAP "-fdebug-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)
@@ -1313,7 +1359,7 @@ if(LLVM_USE_RELATIVE_PATHS_IN_FILES)
   else()
     set(source_root "${LLVM_MAIN_SRC_DIR}")
   endif()
-  file(RELATIVE_PATH relative_root "${source_root}" "${CMAKE_BINARY_DIR}")
+  file(RELATIVE_PATH relative_root "${CMAKE_BINARY_DIR}" "${source_root}")
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${CMAKE_BINARY_DIR}=${relative_root}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)

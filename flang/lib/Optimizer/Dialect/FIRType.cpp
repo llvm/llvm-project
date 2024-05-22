@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
@@ -311,6 +311,25 @@ bool isAssumedType(mlir::Type ty) {
   return false;
 }
 
+bool isAssumedShape(mlir::Type ty) {
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
+      return seqTy.hasDynamicExtents();
+  return false;
+}
+
+bool isAllocatableOrPointerArray(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
+    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(heapTy.getEleTy());
+    if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(ptrTy.getEleTy());
+  }
+  return false;
+}
+
 bool isPolymorphicType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
@@ -360,6 +379,18 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
   return false;
 }
 
+bool isRecordWithDescriptorMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
+  if (auto recTy = ty.dyn_cast<fir::RecordType>())
+    for (auto [field, memTy] : recTy.getTypeList()) {
+      if (mlir::isa<fir::BaseBoxType>(memTy))
+        return true;
+      if (memTy.isa<fir::RecordType>() && isRecordWithDescriptorMember(memTy))
+        return true;
+    }
+  return false;
+}
+
 mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
   while (true) {
     mlir::Type nt = unwrapSequenceType(unwrapRefType(ty));
@@ -374,7 +405,7 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
     return seqTy.getEleTy();
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = unwrapRefType(boxTy.getEleTy());
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
@@ -514,18 +545,27 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
       break;
     } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
       name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
-      if (charTy.getLen() != fir::CharacterType::singleton())
+      if (charTy.getLen() == fir::CharacterType::unknownLen())
+        name << "xU";
+      else if (charTy.getLen() != fir::CharacterType::singleton())
         name << "x" << charTy.getLen();
       break;
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-      for (auto extent : seqTy.getShape())
-        name << extent << 'x';
+      for (auto extent : seqTy.getShape()) {
+        if (extent == fir::SequenceType::getUnknownExtent())
+          name << "Ux";
+        else
+          name << extent << 'x';
+      }
       ty = seqTy.getEleTy();
     } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
       name << "ref_";
       ty = refTy.getEleTy();
     } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
       name << "ptr_";
+      ty = ptrTy.getEleTy();
+    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
+      name << "llvmptr_";
       ty = ptrTy.getEleTy();
     } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
       name << "heap_";
@@ -536,6 +576,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
       name << "box_";
       ty = boxTy.getEleTy();
+    } else if (auto boxcharTy = mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
+      name << "boxchar_";
+      ty = boxcharTy.getEleTy();
     } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
       name << "rec_" << recTy.getName();
       break;
@@ -804,6 +847,12 @@ fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       KindTy fKind) {
   // TODO
   return mlir::success();
+}
+
+mlir::Type fir::RealType::getFloatType(const fir::KindMapping &kindMap) const {
+  auto fkind = getFKind();
+  auto realTypeID = kindMap.getRealTypeID(fkind);
+  return fir::fromRealTypeID(getContext(), realTypeID, fkind);
 }
 
 //===----------------------------------------------------------------------===//

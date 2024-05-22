@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
+#error "wrong value for __cpp_placeholder_variables"
+#endif
+
 // --- C++23 features ---
 
 #if check(implicit_move, 0, 0, 0, 0, 0, 202011, 202011)
@@ -168,10 +172,6 @@
 #if check(if_constexpr, 0, 0, 0, 201606, 201606, 201606, 201606)
 #error "wrong value for __cpp_if_constexpr"
 #endif
-
-// range_based_for checked below
-
-// static_assert checked below
 
 #if check(deduction_guides, 0, 0, 0, 201703, 201703, 201703, 201703)
 // FIXME: 201907 in C++20
@@ -308,7 +308,7 @@
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 201411)
+#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 202306)
 #error "wrong value for __cpp_static_assert"
 #endif
 

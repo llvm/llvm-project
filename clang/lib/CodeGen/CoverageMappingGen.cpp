@@ -322,12 +322,12 @@ public:
     for (const auto &FL : FileLocs) {
       SourceLocation Loc = FL.first;
       FileID SpellingFile = SM.getDecomposedSpellingLoc(Loc).first;
-      auto Entry = SM.getFileEntryForID(SpellingFile);
+      auto Entry = SM.getFileEntryRefForID(SpellingFile);
       if (!Entry)
         continue;
 
       FileIDMapping[SM.getFileID(Loc)] = std::make_pair(Mapping.size(), Loc);
-      Mapping.push_back(CVM.getFileID(Entry));
+      Mapping.push_back(CVM.getFileID(*Entry));
     }
   }
 
@@ -1032,11 +1032,21 @@ struct CounterCoverageMappingBuilder
     // lexer may not be able to report back precise token end locations for
     // these children nodes (llvm.org/PR39822), and moreover users will not be
     // able to see coverage for them.
+    Counter BodyCounter = getRegionCounter(Body);
     bool Defaulted = false;
     if (auto *Method = dyn_cast<CXXMethodDecl>(D))
       Defaulted = Method->isDefaulted();
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
+      for (auto *Initializer : Ctor->inits()) {
+        if (Initializer->isWritten()) {
+          auto *Init = Initializer->getInit();
+          if (getStart(Init).isValid() && getEnd(Init).isValid())
+            propagateCounts(BodyCounter, Init);
+        }
+      }
+    }
 
-    propagateCounts(getRegionCounter(Body), Body,
+    propagateCounts(BodyCounter, Body,
                     /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
   }
@@ -1613,7 +1623,11 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       OS << "Gap,";
       break;
     case CounterMappingRegion::BranchRegion:
+    case CounterMappingRegion::MCDCBranchRegion:
       OS << "Branch,";
+      break;
+    case CounterMappingRegion::MCDCDecisionRegion:
+      OS << "Decision,";
       break;
     }
 
@@ -1718,13 +1732,11 @@ void CoverageMappingModuleGen::emitFunctionMappingRecord(
 void CoverageMappingModuleGen::addFunctionMappingRecord(
     llvm::GlobalVariable *NamePtr, StringRef NameValue, uint64_t FuncHash,
     const std::string &CoverageMapping, bool IsUsed) {
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   const uint64_t NameHash = llvm::IndexedInstrProf::ComputeHash(NameValue);
   FunctionRecords.push_back({NameHash, FuncHash, CoverageMapping, IsUsed});
 
   if (!IsUsed)
-    FunctionNames.push_back(
-        llvm::ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)));
+    FunctionNames.push_back(NamePtr);
 
   if (CGM.getCodeGenOpts().DumpCoverageMapping) {
     // Dump the coverage mapping data for this function by decoding the
@@ -1740,7 +1752,7 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
     FilenameStrs[0] = normalizeFilename(getCurrentDirname());
     for (const auto &Entry : FileEntries) {
       auto I = Entry.second;
-      FilenameStrs[I] = normalizeFilename(Entry.first->getName());
+      FilenameStrs[I] = normalizeFilename(Entry.first.getName());
     }
     ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(FilenameStrs);
     RawCoverageMappingReader Reader(CoverageMapping, FilenameRefs, Filenames,
@@ -1764,7 +1776,7 @@ void CoverageMappingModuleGen::emit() {
   FilenameStrs[0] = normalizeFilename(getCurrentDirname());
   for (const auto &Entry : FileEntries) {
     auto I = Entry.second;
-    FilenameStrs[I] = normalizeFilename(Entry.first->getName());
+    FilenameStrs[I] = normalizeFilename(Entry.first.getName());
   }
 
   std::string Filenames;
@@ -1812,7 +1824,7 @@ void CoverageMappingModuleGen::emit() {
   CGM.addUsedGlobal(CovData);
   // Create the deferred function records array
   if (!FunctionNames.empty()) {
-    auto NamesArrTy = llvm::ArrayType::get(llvm::Type::getInt8PtrTy(Ctx),
+    auto NamesArrTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(Ctx),
                                            FunctionNames.size());
     auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
     // This variable will *NOT* be emitted to the object file. It is used
@@ -1823,7 +1835,7 @@ void CoverageMappingModuleGen::emit() {
   }
 }
 
-unsigned CoverageMappingModuleGen::getFileID(const FileEntry *File) {
+unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
   auto It = FileEntries.find(File);
   if (It != FileEntries.end())
     return It->second;

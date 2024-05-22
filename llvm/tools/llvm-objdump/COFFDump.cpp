@@ -37,13 +37,15 @@ template <typename T> struct EnumEntry {
   StringRef Name;
 };
 
-class COFFDumper {
+class COFFDumper : public Dumper {
 public:
-  explicit COFFDumper(const llvm::object::COFFObjectFile &Obj) : Obj(Obj) {
+  explicit COFFDumper(const llvm::object::COFFObjectFile &O)
+      : Dumper(O), Obj(O) {
     Is64 = !Obj.getPE32Header();
   }
 
   template <class PEHeader> void printPEHeader(const PEHeader &Hdr) const;
+  void printPrivateHeaders() override;
 
 private:
   template <typename T> FormattedNumber formatAddr(T V) const {
@@ -58,6 +60,11 @@ private:
   bool Is64;
 };
 } // namespace
+
+std::unique_ptr<Dumper>
+objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
+  return std::make_unique<COFFDumper>(Obj);
+}
 
 constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
     {uint16_t(COFF::PE32Header::PE32), "PE32"},
@@ -764,7 +771,7 @@ void objdump::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   }
 }
 
-void objdump::printCOFFFileHeader(const COFFObjectFile &Obj) {
+void COFFDumper::printPrivateHeaders() {
   COFFDumper CD(Obj);
   const uint16_t Cha = Obj.getCharacteristics();
   outs() << "Characteristics 0x" << Twine::utohexstr(Cha) << '\n';
@@ -850,7 +857,7 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile &coff) {
            << "(nx " << unsigned(Symbol->getNumberOfAuxSymbols()) << ") "
            << "0x" << format("%08x", unsigned(Symbol->getValue())) << " "
            << Name;
-    if (Demangle && Name.startswith("?")) {
+    if (Demangle && Name.starts_with("?")) {
       int Status = -1;
       char *DemangledSymbol = microsoftDemangle(Name, nullptr, &Status);
 

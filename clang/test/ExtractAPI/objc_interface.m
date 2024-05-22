@@ -124,8 +124,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 3
+          "character": 11,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -231,8 +231,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 5
+          "character": 0,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -392,8 +392,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 6
+          "character": 0,
+          "line": 5
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -468,6 +468,10 @@
         {
           "kind": "identifier",
           "spelling": "Property"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -480,8 +484,8 @@
       },
       "location": {
         "position": {
-          "character": 50,
-          "line": 4
+          "character": 49,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -540,8 +544,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 9
+          "character": 11,
+          "line": 8
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -579,6 +583,10 @@
         {
           "kind": "identifier",
           "spelling": "Ivar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -591,8 +599,8 @@
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 10
+          "character": 7,
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -660,8 +668,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 12
+          "character": 0,
+          "line": 11
         },
         "uri": "file://INPUT_DIR/input.h"
       },

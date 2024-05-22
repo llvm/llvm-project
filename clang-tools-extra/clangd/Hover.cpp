@@ -21,7 +21,6 @@
 #include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/SymbolCollector.h"
-#include "support/Logger.h"
 #include "support/Markup.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
@@ -409,7 +408,9 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 // -2    => 0xfffffffe
 // -2^32 => 0xffffffff00000000
 static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
-  uint64_t Bits = V.getZExtValue();
+  assert(V.getSignificantBits() <= 64 && "Can't print more than 64 bits.");
+  uint64_t Bits =
+      V.getBitWidth() > 64 ? V.trunc(64).getZExtValue() : V.getZExtValue();
   if (V.isNegative() && V.getSignificantBits() <= 32)
     return llvm::format_hex(uint32_t(Bits), 0);
   return llvm::format_hex(Bits, 0);
@@ -687,9 +688,9 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
     HI.Type = printType(Name->getType(), Ctx, PP);
   } else {
     // Inside templates, the approximate type `const char[]` is still useful.
-    QualType StringType = Ctx.getIncompleteArrayType(
-        Ctx.CharTy.withConst(), ArrayType::ArraySizeModifier::Normal,
-        /*IndexTypeQuals=*/0);
+    QualType StringType = Ctx.getIncompleteArrayType(Ctx.CharTy.withConst(),
+                                                     ArraySizeModifier::Normal,
+                                                     /*IndexTypeQuals=*/0);
     HI.Type = printType(StringType, Ctx, PP);
   }
   return HI;
@@ -959,7 +960,7 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
 }
 
 bool isParagraphBreak(llvm::StringRef Rest) {
-  return Rest.ltrim(" \t").startswith("\n");
+  return Rest.ltrim(" \t").starts_with("\n");
 }
 
 bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
@@ -983,7 +984,7 @@ bool isHardLineBreakIndicator(llvm::StringRef Rest) {
 
   if (llvm::isDigit(Rest.front())) {
     llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
-    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+    if (AfterDigit.starts_with(".") || AfterDigit.starts_with(")"))
       return true;
   }
   return false;
@@ -1002,6 +1003,8 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
     if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
       HI.Size = Size->getQuantity() * 8;
+    if (!RD->isDependentType() && RD->isCompleteDefinition())
+      HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
     return;
   }
 
@@ -1010,6 +1013,7 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     if (Record)
       Record = Record->getDefinition();
     if (Record && !Record->isInvalidDecl() && !Record->isDependentType()) {
+      HI.Align = Ctx.getTypeAlign(FD->getType());
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Record);
       HI.Offset = Layout.getFieldOffset(FD->getFieldIndex());
       if (FD->isBitField())
@@ -1190,13 +1194,12 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
 
   const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes());
+      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes().get());
   if (RankedProviders.empty())
     return;
 
   std::string Result;
-  include_cleaner::Includes ConvertedIncludes =
-      convertIncludes(SM, AST.getIncludeStructure().MainFileIncludes);
+  include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   for (const auto &P : RankedProviders) {
     if (P.kind() == include_cleaner::Header::Physical &&
         P.physical() == SM.getFileEntryForID(SM.getMainFileID()))
@@ -1247,26 +1250,19 @@ std::string getSymbolName(include_cleaner::Symbol Sym) {
 }
 
 void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
-  const SourceManager &SM = AST.getSourceManager();
-  const auto &ConvertedMainFileIncludes =
-      convertIncludes(SM, AST.getIncludeStructure().MainFileIncludes);
-  const auto &HoveredInclude = convertIncludes(SM, llvm::ArrayRef{Inc});
+  auto Converted = convertIncludes(AST);
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes(), SM,
+      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||
             UsedSymbols.contains(Ref.Target))
           return;
 
-        auto Provider =
-            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
-        if (!Provider || HoveredInclude.match(*Provider).empty())
-          return;
-
-        UsedSymbols.insert(Ref.Target);
+        if (isPreferredProvider(Inc, Converted, Providers))
+          UsedSymbols.insert(Ref.Target);
       });
 
   for (const auto &UsedSymbolDecl : UsedSymbols)
@@ -1496,6 +1492,8 @@ markup::Document HoverInfo::present() const {
       P.appendText(
           llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
     }
+    if (Align)
+      P.appendText(", alignment " + formatSize(*Align));
   }
 
   if (CalleeArgInfo) {

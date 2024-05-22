@@ -594,15 +594,15 @@ define i32 @PR14212(<3 x i8> %val) {
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META250:![0-9]+]], metadata !DIExpression()), !dbg [[DBG252:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> [[VAL:%.*]] to i24, !dbg [[DBG253:![0-9]+]]
-; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i8 undef to i32, !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[RETVAL_SROA_2_0_INSERT_EXT]], 24, !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_MASK:%.*]] = and i32 undef, 16777215, !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_INSERT:%.*]] = or i32 [[RETVAL_SROA_2_0_INSERT_MASK]], [[RETVAL_SROA_2_0_INSERT_SHIFT]], !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_0_INSERT_EXT:%.*]] = zext i24 [[TMP0]] to i32, !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_0_INSERT_MASK:%.*]] = and i32 [[RETVAL_SROA_2_0_INSERT_INSERT]], -16777216, !dbg [[DBG253]]
-; DEBUG-NEXT:    [[RETVAL_0_INSERT_INSERT:%.*]] = or i32 [[RETVAL_0_INSERT_MASK]], [[RETVAL_0_INSERT_EXT]], !dbg [[DBG253]]
+; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i8 undef to i32, !dbg [[DBG254:![0-9]+]]
+; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[RETVAL_SROA_2_0_INSERT_EXT]], 24, !dbg [[DBG254]]
+; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_MASK:%.*]] = and i32 undef, 16777215, !dbg [[DBG254]]
+; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_INSERT:%.*]] = or i32 [[RETVAL_SROA_2_0_INSERT_MASK]], [[RETVAL_SROA_2_0_INSERT_SHIFT]], !dbg [[DBG254]]
+; DEBUG-NEXT:    [[RETVAL_0_INSERT_EXT:%.*]] = zext i24 [[TMP0]] to i32, !dbg [[DBG254]]
+; DEBUG-NEXT:    [[RETVAL_0_INSERT_MASK:%.*]] = and i32 [[RETVAL_SROA_2_0_INSERT_INSERT]], -16777216, !dbg [[DBG254]]
+; DEBUG-NEXT:    [[RETVAL_0_INSERT_INSERT:%.*]] = or i32 [[RETVAL_0_INSERT_MASK]], [[RETVAL_0_INSERT_EXT]], !dbg [[DBG254]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[RETVAL_0_INSERT_INSERT]], metadata [[META251:![0-9]+]], metadata !DIExpression()), !dbg [[DBG253]]
-; DEBUG-NEXT:    ret i32 [[RETVAL_0_INSERT_INSERT]], !dbg [[DBG254:![0-9]+]]
+; DEBUG-NEXT:    ret i32 [[RETVAL_0_INSERT_INSERT]], !dbg [[DBG254]]
 ;
 entry:
   %retval = alloca <3 x i8>, align 4
@@ -664,15 +664,15 @@ define i32 @PR14349.2(<2 x i8> %x) {
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META266:![0-9]+]], metadata !DIExpression()), !dbg [[DBG268:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8> [[X:%.*]] to i16, !dbg [[DBG269:![0-9]+]]
-; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_EXT:%.*]] = zext i16 undef to i32, !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[A_SROA_2_0_INSERT_EXT]], 16, !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_MASK:%.*]] = and i32 undef, 65535, !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_2_0_INSERT_MASK]], [[A_SROA_2_0_INSERT_SHIFT]], !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_EXT:%.*]] = zext i16 [[TMP0]] to i32, !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[A_SROA_2_0_INSERT_INSERT]], -65536, !dbg [[DBG269]]
-; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_0_0_INSERT_MASK]], [[A_SROA_0_0_INSERT_EXT]], !dbg [[DBG269]]
+; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_EXT:%.*]] = zext i16 undef to i32, !dbg [[DBG270:![0-9]+]]
+; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[A_SROA_2_0_INSERT_EXT]], 16, !dbg [[DBG270]]
+; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_MASK:%.*]] = and i32 undef, 65535, !dbg [[DBG270]]
+; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_2_0_INSERT_MASK]], [[A_SROA_2_0_INSERT_SHIFT]], !dbg [[DBG270]]
+; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_EXT:%.*]] = zext i16 [[TMP0]] to i32, !dbg [[DBG270]]
+; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[A_SROA_2_0_INSERT_INSERT]], -65536, !dbg [[DBG270]]
+; DEBUG-NEXT:    [[A_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_0_0_INSERT_MASK]], [[A_SROA_0_0_INSERT_EXT]], !dbg [[DBG270]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[A_SROA_0_0_INSERT_INSERT]], metadata [[META267:![0-9]+]], metadata !DIExpression()), !dbg [[DBG269]]
-; DEBUG-NEXT:    ret i32 [[A_SROA_0_0_INSERT_INSERT]], !dbg [[DBG270:![0-9]+]]
+; DEBUG-NEXT:    ret i32 [[A_SROA_0_0_INSERT_INSERT]], !dbg [[DBG270]]
 ;
 entry:
   %a = alloca i32

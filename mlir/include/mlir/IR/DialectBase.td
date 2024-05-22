@@ -13,23 +13,7 @@
 #ifndef DIALECTBASE_TD
 #define DIALECTBASE_TD
 
-// Helper for marking deprecated classes or defs in TableGen. To mark a def as
-// deprecated, mix in the `Deprecate` class with a reason.
-// Usage of a deprecated def within TableGen will cause a warning with the
-// given message.
-class Deprecated<string reason> {
-  string odsDeprecated = reason;
-}
-
-// Helper for marking entities in ODS generated C++ as deprecated.
-// Usage of such an entity from C++ code will cause a warning being emitted by
-// the C++ compiler with the given message.
-//
-// Note: Support has to be implemented by the code generator of a given
-// entity.
-class CppDeprecated<string reason> {
-  string odsCppDeprecated = reason;
-}
+include "mlir/IR/Utils.td"
 
 //===----------------------------------------------------------------------===//
 // Dialect definitions
@@ -105,7 +89,7 @@ class Dialect {
   bit isExtensible = 0;
 
   // Whether inherent Attributes defined in ODS will be stored as Properties.
-  bit usePropertiesForAttributes = 0;
+  bit usePropertiesForAttributes = 1;
 }
 
 #endif // DIALECTBASE_TD

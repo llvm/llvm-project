@@ -37,6 +37,13 @@ const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
 
 SBStringList::~SBStringList() = default;
 
+lldb_private::StringList *SBStringList::operator->() {
+  if (!IsValid())
+    m_opaque_up = std::make_unique<lldb_private::StringList>();
+
+  return m_opaque_up.get();
+}
+
 const lldb_private::StringList *SBStringList::operator->() const {
   return m_opaque_up.get();
 }

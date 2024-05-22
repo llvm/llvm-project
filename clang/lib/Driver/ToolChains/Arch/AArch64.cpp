@@ -57,9 +57,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   if (Triple.isArm64e())
     return "apple-a12";
 
-  // Make sure we pick the appropriate Apple CPU if -arch is used or when
-  // targetting a Darwin OS.
-  if (Args.getLastArg(options::OPT_arch) || Triple.isOSDarwin())
+  // Make sure we pick the appropriate Apple CPU when targetting a Darwin OS.
+  if (Triple.isOSDarwin())
     return Triple.getArch() == llvm::Triple::aarch64_32 ? "apple-s4"
                                                         : "apple-a7";
 
@@ -81,6 +80,25 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
     else
       return false;
+
+    // +sme implies +bf16.
+    // +sme-f64f64 and +sme-i16i64 both imply +sme.
+    if (Feature == "sme") {
+      Features.push_back("+bf16");
+    } else if (Feature == "nosme") {
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    } else if (Feature == "sme-f64f64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "sme-i16i64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "nobf16") {
+      Features.push_back("-sme");
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    }
 
     if (Feature == "sve2")
       Features.push_back("+sve");
@@ -139,7 +157,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 
     Features.push_back(ArchInfo->ArchFeature);
 
-    uint64_t Extension = CpuInfo->getImpliedExtensions();
+    auto Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }
@@ -210,7 +228,7 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
   if (MtuneLowerCase == "native")
     MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
   if (MtuneLowerCase == "cyclone" ||
-      StringRef(MtuneLowerCase).startswith("apple")) {
+      StringRef(MtuneLowerCase).starts_with("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
@@ -244,7 +262,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     for (const auto *A :
          Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
       for (StringRef Value : A->getValues())
-        if (Value.startswith("-march="))
+        if (Value.starts_with("-march="))
           WaMArch = Value.substr(7);
   // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
   // "-Xassembler -march" is detected. Otherwise it may return false
@@ -255,7 +273,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple))
+  else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
   else
@@ -268,8 +286,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (success &&
-           (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple)))
+  else if (success && isCPUDeterminedByTriple(Triple))
     success = getAArch64MicroArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
@@ -392,6 +409,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     else if (*I == "+v9.2a") V9Version = 2;
     else if (*I == "+v9.3a") V9Version = 3;
     else if (*I == "+v9.4a") V9Version = 4;
+    else if (*I == "+v9.5a") V9Version = 5;
     else if (*I == "+sm4")  HasSM4 = true;
     else if (*I == "+sha3") HasSHA3 = true;
     else if (*I == "+sha2") HasSHA2 = true;

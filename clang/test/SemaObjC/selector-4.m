@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -Wselector -x objective-c %s -include %s -verify
 // expected-no-diagnostics
-// rdar://16600230
 
 #ifndef INCLUDED
 #define INCLUDED

@@ -34,8 +34,7 @@ declare i32 @llvm.smax.i32(i32, i32)
 define void @intrinsic(i32 %x, i32 %y) {
 ; CHECK-LABEL: @intrinsic(
 ; CHECK-NEXT:    [[M1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call i32 @llvm.smax.i32(i32 [[Y]], i32 [[X]])
-; CHECK-NEXT:    call void @use(i32 [[M1]], i32 [[M2]])
+; CHECK-NEXT:    call void @use(i32 [[M1]], i32 [[M1]])
 ; CHECK-NEXT:    ret void
 ;
   %m1 = call i32 @llvm.smax.i32(i32 %x, i32 %y)
@@ -49,10 +48,7 @@ declare i16 @llvm.umul.fix.i16(i16, i16, i32)
 
 define i16 @intrinsic_3_args(i16 %x, i16 %y) {
 ; CHECK-LABEL: @intrinsic_3_args(
-; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i32 1)
-; CHECK-NEXT:    [[M2:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[Y]], i16 [[X]], i32 1)
-; CHECK-NEXT:    [[R:%.*]] = sub i16 [[M1]], [[M2]]
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    ret i16 0
 ;
   %m1 = call i16 @llvm.smul.fix.i16(i16 %x, i16 %y, i32 1)
   %m2 = call i16 @llvm.smul.fix.i16(i16 %y, i16 %x, i32 1)
@@ -78,12 +74,26 @@ declare float @llvm.fma.f32(float, float, float)
 define float @fma(float %x, float %y) {
 ; CHECK-LABEL: @fma(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.fma.f32(float [[Y]], float [[X]], float 1.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[M1]], [[M2]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[M1]], [[M1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m1 = call float @llvm.fma.f32(float %x, float %y, float 1.0)
   %m2 = call float @llvm.fma.f32(float %y, float %x, float 1.0)
   %r = fdiv nnan float %m1, %m2
   ret float %r
+}
+
+declare i16 @llvm.sdiv.fix.i16(i16, i16, i32)
+
+define i16 @intrinsic_3_args_not_commutative(i16 %x, i16 %y) {
+; CHECK-LABEL: @intrinsic_3_args_not_commutative(
+; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.sdiv.fix.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i32 1)
+; CHECK-NEXT:    [[M2:%.*]] = call i16 @llvm.sdiv.fix.i16(i16 [[Y]], i16 [[X]], i32 1)
+; CHECK-NEXT:    [[R:%.*]] = sub i16 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %m1 = call i16 @llvm.sdiv.fix.i16(i16 %x, i16 %y, i32 1)
+  %m2 = call i16 @llvm.sdiv.fix.i16(i16 %y, i16 %x, i32 1)
+  %r = sub i16 %m1, %m2
+  ret i16 %r
 }

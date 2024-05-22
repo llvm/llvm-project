@@ -9,9 +9,11 @@
 #include "mlir-c/RegisterEverything.h"
 
 #include "mlir/CAPI/IR.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllExtensions.h"
 #include "mlir/InitAllPasses.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
@@ -22,8 +24,9 @@ void mlirRegisterAllDialects(MlirDialectRegistry registry) {
 
 void mlirRegisterAllLLVMTranslations(MlirContext context) {
   auto &ctx = *unwrap(context);
-  mlir::registerBuiltinDialectTranslation(ctx);
-  mlir::registerLLVMDialectTranslation(ctx);
+  mlir::DialectRegistry registry;
+  mlir::registerAllToLLVMIRTranslations(registry);
+  ctx.appendDialectRegistry(registry);
 }
 
 void mlirRegisterAllPasses() { mlir::registerAllPasses(); }

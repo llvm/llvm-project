@@ -90,3 +90,36 @@ void baz(__rvv_int32m1x2_t v_tuple) {
 __rvv_int32m1x2_t qux(__rvv_int32m1x2_t v_tuple) {
   return v_tuple;
 }
+
+// O0-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @quux
+// O0-SAME: (<vscale x 2 x i32> [[V_TUPLE_COERCE0:%.*]], <vscale x 2 x i32> [[V_TUPLE_COERCE1:%.*]]) #[[ATTR0]] {
+// O0-NEXT:  entry:
+// O0-NEXT:    [[V_TUPLE:%.*]] = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+// O0-NEXT:    [[V_TUPLE_ADDR:%.*]] = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+// O0-NEXT:    [[COERCE:%.*]] = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+// O0-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[V_TUPLE_COERCE0]], 0
+// O0-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[V_TUPLE_COERCE1]], 1
+// O0-NEXT:    store { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], ptr [[V_TUPLE]], align 4
+// O0-NEXT:    [[V_TUPLE1:%.*]] = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr [[V_TUPLE]], align 4
+// O0-NEXT:    store { <vscale x 2 x i32>, <vscale x 2 x i32> } [[V_TUPLE1]], ptr [[V_TUPLE_ADDR]], align 4
+// O0-NEXT:    [[TMP2:%.*]] = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr [[V_TUPLE_ADDR]], align 4
+// O0-NEXT:    store { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP2]], ptr [[COERCE]], align 4
+// O0-NEXT:    [[COERCE_TUPLE:%.*]] = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr [[COERCE]], align 4
+// O0-NEXT:    [[COERCE_EXTRACT0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[COERCE_TUPLE]], 0
+// O0-NEXT:    [[COERCE_EXTRACT1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[COERCE_TUPLE]], 1
+// O0-NEXT:    [[CALL:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @qux(<vscale x 2 x i32> [[COERCE_EXTRACT0]], <vscale x 2 x i32> [[COERCE_EXTRACT1]])
+// O0-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[CALL]]
+//
+// AFTER_MEM2REG-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @quux
+// AFTER_MEM2REG-SAME: (<vscale x 2 x i32> [[V_TUPLE_COERCE0:%.*]], <vscale x 2 x i32> [[V_TUPLE_COERCE1:%.*]]) #[[ATTR0]] {
+// AFTER_MEM2REG-NEXT:  entry:
+// AFTER_MEM2REG-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[V_TUPLE_COERCE0]], 0
+// AFTER_MEM2REG-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[V_TUPLE_COERCE1]], 1
+// AFTER_MEM2REG-NEXT:    [[COERCE_EXTRACT0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 0
+// AFTER_MEM2REG-NEXT:    [[COERCE_EXTRACT1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 1
+// AFTER_MEM2REG-NEXT:    [[CALL:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @qux(<vscale x 2 x i32> [[COERCE_EXTRACT0]], <vscale x 2 x i32> [[COERCE_EXTRACT1]])
+// AFTER_MEM2REG-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[CALL]]
+//
+__rvv_int32m1x2_t quux(__rvv_int32m1x2_t v_tuple) {
+  return qux(v_tuple);
+}

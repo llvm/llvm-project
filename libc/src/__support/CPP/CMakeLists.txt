@@ -1,4 +1,10 @@
 add_header_library(
+  algorithm
+  HDRS
+    algorithm.h
+)
+
+add_header_library(
   array
   HDRS
     array.h
@@ -9,7 +15,11 @@ add_header_library(
   HDRS
     bit.h
   DEPENDS
-    libc.src.__support.macros.properties.compiler
+    .limits
+    .type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
 )
 
 add_header_library(
@@ -36,6 +46,8 @@ add_header_library(
   limits
   HDRS
     limits.h
+  DEPENDS
+    .type_traits
 )
 
 add_header_library(
@@ -64,8 +76,8 @@ add_header_library(
     .string_view
     libc.src.__support.common
     libc.src.__support.integer_to_string
-    libc.src.string.memory_utils.memcpy_implementation
-    libc.src.string.memory_utils.memset_implementation
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
 )
 
@@ -89,12 +101,70 @@ add_header_library(
   type_traits
   HDRS
     type_traits.h
+    type_traits/always_false.h
+    type_traits/add_lvalue_reference.h
+    type_traits/add_pointer.h
+    type_traits/add_rvalue_reference.h
+    type_traits/bool_constant.h
+    type_traits/conditional.h
+    type_traits/decay.h
+    type_traits/enable_if.h
+    type_traits/false_type.h
+    type_traits/integral_constant.h
+    type_traits/invoke.h
+    type_traits/invoke_result.h
+    type_traits/is_arithmetic.h
+    type_traits/is_array.h
+    type_traits/is_base_of.h
+    type_traits/is_class.h
+    type_traits/is_const.h
+    type_traits/is_convertible.h
+    type_traits/is_destructible.h
+    type_traits/is_enum.h
+    type_traits/is_floating_point.h
+    type_traits/is_function.h
+    type_traits/is_integral.h
+    type_traits/is_lvalue_reference.h
+    type_traits/is_member_pointer.h
+    type_traits/is_null_pointer.h
+    type_traits/is_object.h
+    type_traits/is_pointer.h
+    type_traits/is_reference.h
+    type_traits/is_rvalue_reference.h
+    type_traits/is_same.h
+    type_traits/is_scalar.h
+    type_traits/is_signed.h
+    type_traits/is_trivially_constructible.h
+    type_traits/is_trivially_copyable.h
+    type_traits/is_trivially_destructible.h
+    type_traits/is_union.h
+    type_traits/is_unsigned.h
+    type_traits/is_void.h
+    type_traits/make_signed.h
+    type_traits/make_unsigned.h
+    type_traits/remove_all_extents.h
+    type_traits/remove_cv.h
+    type_traits/remove_cvref.h
+    type_traits/remove_extent.h
+    type_traits/remove_reference.h
+    type_traits/true_type.h
+    type_traits/type_identity.h
+    type_traits/void_t.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.float
 )
 
 add_header_library(
   utility
   HDRS
     utility.h
+    utility/declval.h
+    utility/forward.h
+    utility/in_place.h
+    utility/integer_sequence.h
+    utility/move.h
 )
 
 add_header_library(

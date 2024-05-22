@@ -154,3 +154,47 @@ void AArch64MCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
 
   fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
+
+const AArch64AuthMCExpr *AArch64AuthMCExpr::create(const MCExpr *Expr,
+                                                   uint16_t Discriminator,
+                                                   AArch64PACKey::ID Key,
+                                                   bool HasAddressDiversity,
+                                                   MCContext &Ctx) {
+  return new (Ctx)
+      AArch64AuthMCExpr(Expr, Discriminator, Key, HasAddressDiversity);
+}
+
+void AArch64AuthMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
+  bool WrapSubExprInParens = !isa<MCSymbolRefExpr>(getSubExpr());
+  if (WrapSubExprInParens)
+    OS << '(';
+  getSubExpr()->print(OS, MAI);
+  if (WrapSubExprInParens)
+    OS << ')';
+
+  OS << "@AUTH(" << AArch64PACKeyIDToString(Key) << ',' << Discriminator;
+  if (hasAddressDiversity())
+    OS << ",addr";
+  OS << ')';
+}
+
+void AArch64AuthMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
+  Streamer.visitUsedExpr(*getSubExpr());
+}
+
+MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
+  llvm_unreachable("FIXME: what goes here?");
+}
+
+bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                                  const MCAsmLayout *Layout,
+                                                  const MCFixup *Fixup) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+    return false;
+
+  if (Res.getSymB())
+    report_fatal_error("Auth relocation can't reference two symbols");
+
+  Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
+  return true;
+}

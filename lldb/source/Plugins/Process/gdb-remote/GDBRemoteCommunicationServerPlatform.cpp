@@ -500,7 +500,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
     auto dictionary = std::make_shared<StructuredData::Dictionary>();
 
     dictionary->AddIntegerItem("signo", signo);
-    dictionary->AddStringItem("name", signals->GetSignalAsCString(signo));
+    dictionary->AddStringItem("name", signals->GetSignalAsStringRef(signo));
 
     bool suppress, stop, notify;
     signals->GetSignalInfo(signo, suppress, stop, notify);

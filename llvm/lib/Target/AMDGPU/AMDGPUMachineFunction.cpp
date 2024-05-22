@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -23,6 +24,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
     : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(F.getCallingConv())),
+      IsChainFunction(AMDGPU::isChainCC(F.getCallingConv())),
       NoSignedZerosFPMath(false) {
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
@@ -42,6 +44,18 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
 
   // Assume the attribute allocates before any known GDS globals.
   StaticGDSSize = GDSSize;
+
+  // Second value, if present, is the maximum value that can be assigned.
+  // Useful in PromoteAlloca or for LDS spills. Could be used for diagnostics
+  // during codegen.
+  std::pair<unsigned, unsigned> LDSSizeRange = AMDGPU::getIntegerPairAttribute(
+      F, "amdgpu-lds-size", {0, UINT32_MAX}, true);
+
+  // The two separate variables are only profitable when the LDS module lowering
+  // pass is disabled. If graphics does not use dynamic LDS, this is never
+  // profitable. Leaving cleanup for a later change.
+  LDSSize = LDSSizeRange.first;
+  StaticLDSSize = LDSSize;
 
   CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
@@ -65,6 +79,42 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+
+    std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
+    if (MaybeAbs) {
+      // Absolute address LDS variables that exist prior to the LDS lowering
+      // pass raise a fatal error in that pass. These failure modes are only
+      // reachable if that lowering pass is disabled or broken. If/when adding
+      // support for absolute addresses on user specified variables, the
+      // alignment check moves to the lowering pass and the frame calculation
+      // needs to take the user variables into consideration.
+
+      uint32_t ObjectStart = *MaybeAbs;
+
+      if (ObjectStart != alignTo(ObjectStart, Alignment)) {
+        report_fatal_error("Absolute address LDS variable inconsistent with "
+                           "variable alignment");
+      }
+
+      if (isModuleEntryFunction()) {
+        // If this is a module entry function, we can also sanity check against
+        // the static frame. Strictly it would be better to check against the
+        // attribute, i.e. that the variable is within the always-allocated
+        // section, and not within some other non-absolute-address object
+        // allocated here, but the extra error detection is minimal and we would
+        // have to pass the Function around or cache the attribute value.
+        uint32_t ObjectEnd =
+            ObjectStart + DL.getTypeAllocSize(GV.getValueType());
+        if (ObjectEnd > StaticLDSSize) {
+          report_fatal_error(
+              "Absolute address LDS variable outside of static frame");
+        }
+      }
+
+      Entry.first->second = ObjectStart;
+      return ObjectStart;
+    }
+
     /// TODO: We should sort these to minimize wasted space due to alignment
     /// padding. Currently the padding is decided by the first encountered use
     /// during lowering.
@@ -89,16 +139,6 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
-static constexpr StringLiteral ModuleLDSName = "llvm.amdgcn.module.lds";
-
-static const GlobalVariable *getKernelLDSGlobalFromFunction(const Function &F) {
-  const Module *M = F.getParent();
-  std::string KernelLDSName = "llvm.amdgcn.kernel.";
-  KernelLDSName += F.getName();
-  KernelLDSName += ".lds";
-  return M->getNamedGlobal(KernelLDSName);
-}
-
 static const GlobalVariable *
 getKernelDynLDSGlobalFromFunction(const Function &F) {
   const Module *M = F.getParent();
@@ -106,73 +146,6 @@ getKernelDynLDSGlobalFromFunction(const Function &F) {
   KernelDynLDSName += F.getName();
   KernelDynLDSName += ".dynlds";
   return M->getNamedGlobal(KernelDynLDSName);
-}
-
-// This kernel calls no functions that require the module lds struct
-static bool canElideModuleLDS(const Function &F) {
-  return F.hasFnAttribute("amdgpu-elide-module-lds");
-}
-
-void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
-  const Module *M = F.getParent();
-  // This function is called before allocating any other LDS so that it can
-  // reliably put values at known addresses. Consequently, dynamic LDS, if
-  // present, will not yet have been allocated
-
-  assert(getDynLDSAlign() == Align() && "dynamic LDS not yet allocated");
-
-  if (isModuleEntryFunction()) {
-
-    // Pointer values start from zero, memory allocated per-kernel-launch
-    // Variables can be grouped into a module level struct and a struct per
-    // kernel function by AMDGPULowerModuleLDSPass. If that is done, they
-    // are allocated at statically computable addresses here.
-    //
-    // Address 0
-    // {
-    //   llvm.amdgcn.module.lds
-    // }
-    // alignment padding
-    // {
-    //   llvm.amdgcn.kernel.some-name.lds
-    // }
-    // other variables, e.g. dynamic lds, allocated after this call
-
-    const GlobalVariable *GV = M->getNamedGlobal(ModuleLDSName);
-    const GlobalVariable *KV = getKernelLDSGlobalFromFunction(F);
-    const GlobalVariable *Dyn = getKernelDynLDSGlobalFromFunction(F);
-
-    if (GV && !canElideModuleLDS(F)) {
-      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV, Align());
-      std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*GV);
-      if (!Expect || (Offset != *Expect)) {
-        report_fatal_error("Inconsistent metadata on module LDS variable");
-      }
-    }
-
-    if (KV) {
-      // The per-kernel offset is deterministic because it is allocated
-      // before any other non-module LDS variables.
-      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *KV, Align());
-      std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*KV);
-      if (!Expect || (Offset != *Expect)) {
-        report_fatal_error("Inconsistent metadata on kernel LDS variable");
-      }
-    }
-
-    if (Dyn) {
-      // The dynamic LDS is deterministic because the per-kernel one has the
-      // maximum alignment of any reachable and all remaining LDS variables,
-      // if this is present, are themselves dynamic LDS and will be allocated
-      // at the same address.
-      setDynLDSAlign(F, *Dyn);
-      unsigned Offset = LDSSize;
-      std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*Dyn);
-      if (!Expect || (Offset != *Expect)) {
-        report_fatal_error("Inconsistent metadata on dynamic LDS variable");
-      }
-    }
-  }
 }
 
 std::optional<uint32_t>

@@ -409,6 +409,10 @@ comprised of the following components:
         the instance is the interface class. In the trait declaration, the
         type of the instance is the concrete entity class
         (e.g. `IntegerAttr`, `FuncOp`, etc.).
+*   Extra Trait Class Declarations (Optional: `extraTraitClassDeclaration`)
+    -   Additional C++ code that is injected into the interface trait
+        declaration.
+    -   Allows the same replacements as extra shared class declarations.
 
 `OpInterface` classes may additionally contain the following:
 
@@ -563,8 +567,7 @@ def MyInterface : OpInterface<"MyInterface"> {
 
         template <typename ConcreteOp>
         struct Model : public Concept {
-          Operation *create(Operation *opaqueOp, OpBuilder &builder,
-                            Location loc) const override {
+          unsigned getNumInputsAndOutputs(Operation *opaqueOp) const override {
             ConcreteOp op = cast<ConcreteOp>(opaqueOp);
             return op.getNumInputs() + op.getNumOutputs();
           }
@@ -593,7 +596,7 @@ def MyInterface : OpInterface<"MyInterface"> {
       public:
         bool isSafeToTransform() {
           ConcreteOp op = cast<ConcreteOp>(this->getOperation());
-          return op.getNumInputs() + op.getNumOutputs();
+          return op.getProperties().hasFlag;
         }
       };
       ```
@@ -619,6 +622,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     }],
       "bool", "isSafeToTransform", (ins), /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
+        return $_op.getProperties().hasFlag;
     }]>,
   ];
 }
@@ -731,9 +735,14 @@ interface section goes as follows:
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
-    -   `ArrayRef<Type> getCallableResults()`
-    -   `ArrayAttr getCallableArgAttrs()`
-    -   `ArrayAttr getCallableResAttrs()`
+    -   `ArrayRef<Type> getArgumentTypes()`
+    -   `ArrayRef<Type> getResultsTypes()`
+    -   `ArrayAttr getArgAttrsAttr()`
+    -   `ArrayAttr getResAttrsAttr()`
+    -   `void setArgAttrsAttr(ArrayAttr)`
+    -   `void setResAttrsAttr(ArrayAttr)`
+    -   `Attribute removeArgAttrsAttr()`
+    -   `Attribute removeResAttrsAttr()`
 
 ##### RegionKindInterfaces
 

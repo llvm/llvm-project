@@ -31,20 +31,22 @@ struct SymbolInfoTy {
   // XCOFF uses XCOFFSymInfo. Other targets use Type.
   XCOFFSymbolInfoTy XCOFFSymInfo;
   uint8_t Type;
+  // Used by ELF to describe a mapping symbol that is usually not displayed.
+  bool IsMappingSymbol;
 
 private:
   bool IsXCOFF;
   bool HasType;
 
 public:
-  SymbolInfoTy(uint64_t Addr, StringRef Name,
-               std::optional<XCOFF::StorageMappingClass> Smc,
-               std::optional<uint32_t> Idx, bool Label)
+  SymbolInfoTy(std::optional<XCOFF::StorageMappingClass> Smc, uint64_t Addr,
+               StringRef Name, std::optional<uint32_t> Idx, bool Label)
       : Addr(Addr), Name(Name), XCOFFSymInfo{Smc, Idx, Label}, Type(0),
-        IsXCOFF(true), HasType(false) {}
+        IsMappingSymbol(false), IsXCOFF(true), HasType(false) {}
   SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
-               bool IsXCOFF = false)
-      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(IsXCOFF), HasType(true) {}
+               bool IsMappingSymbol = false, bool IsXCOFF = false)
+      : Addr(Addr), Name(Name), Type(Type), IsMappingSymbol(IsMappingSymbol),
+        IsXCOFF(IsXCOFF), HasType(true) {}
   bool isXCOFF() const { return IsXCOFF; }
 
 private:
@@ -61,8 +63,10 @@ private:
       return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Name) <
              std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Name);
 
-    return std::tie(P1.Addr, P1.Name, P1.Type) <
-           std::tie(P2.Addr, P2.Name, P2.Type);
+    // With the same address, place mapping symbols first.
+    bool MS1 = !P1.IsMappingSymbol, MS2 = !P2.IsMappingSymbol;
+    return std::tie(P1.Addr, MS1, P1.Name, P1.Type) <
+           std::tie(P2.Addr, MS2, P2.Name, P2.Type);
   }
 };
 

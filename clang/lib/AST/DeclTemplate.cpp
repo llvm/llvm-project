@@ -697,17 +697,15 @@ bool TemplateTypeParmDecl::isParameterPack() const {
   return getTypeForDecl()->castAs<TemplateTypeParmType>()->isParameterPack();
 }
 
-void TemplateTypeParmDecl::setTypeConstraint(NestedNameSpecifierLoc NNS,
-    DeclarationNameInfo NameInfo, NamedDecl *FoundDecl, ConceptDecl *CD,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    Expr *ImmediatelyDeclaredConstraint) {
+void TemplateTypeParmDecl::setTypeConstraint(
+    ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint) {
   assert(HasTypeConstraint &&
          "HasTypeConstraint=true must be passed at construction in order to "
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>()) TypeConstraint(NNS, NameInfo,
-      FoundDecl, CD, ArgsAsWritten, ImmediatelyDeclaredConstraint);
+  new (getTrailingObjects<TypeConstraint>())
+      TypeConstraint(Loc, ImmediatelyDeclaredConstraint);
   TypeConstraintInitialized = true;
 }
 
@@ -922,7 +920,7 @@ ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                                                                  Kind DK)
-    : CXXRecordDecl(DK, TTK_Struct, C, nullptr, SourceLocation(),
+    : CXXRecordDecl(DK, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                     SourceLocation(), nullptr, nullptr),
       SpecializationKind(TSK_Undeclared) {}
 
@@ -1195,19 +1193,6 @@ TypeAliasTemplateDecl::newCommon(ASTContext &C) const {
   auto *CommonPtr = new (C) Common;
   C.addDestruction(CommonPtr);
   return CommonPtr;
-}
-
-//===----------------------------------------------------------------------===//
-// ClassScopeFunctionSpecializationDecl Implementation
-//===----------------------------------------------------------------------===//
-
-void ClassScopeFunctionSpecializationDecl::anchor() {}
-
-ClassScopeFunctionSpecializationDecl *
-ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
-                                                         unsigned ID) {
-  return new (C, ID) ClassScopeFunctionSpecializationDecl(
-      nullptr, SourceLocation(), nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1553,19 +1538,6 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
     : TemplateDecl(BuiltinTemplate, DC, SourceLocation(), Name,
                    createBuiltinTemplateParameterList(C, DC, BTK)),
       BTK(BTK) {}
-
-void TypeConstraint::print(llvm::raw_ostream &OS, PrintingPolicy Policy) const {
-  if (NestedNameSpec)
-    NestedNameSpec.getNestedNameSpecifier()->print(OS, Policy);
-  ConceptName.printName(OS, Policy);
-  if (hasExplicitTemplateArgs()) {
-    OS << "<";
-    // FIXME: Find corresponding parameter for argument
-    for (auto &ArgLoc : ArgsAsWritten->arguments())
-      ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
-    OS << ">";
-  }
-}
 
 TemplateParamObjectDecl *TemplateParamObjectDecl::Create(const ASTContext &C,
                                                          QualType T,

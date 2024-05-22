@@ -47,7 +47,7 @@
 // RUN:   | FileCheck %s -check-prefix ARM-ANDROID
 // ARM-ANDROID: "{{.*[/\\]}}libclang_rt.builtins-arm-android.a"
 
-// RUN: %clang -target arm-linux-androideabi \
+// RUN: not %clang --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -rtlib=compiler-rt -mfloat-abi=hard -### %s 2>&1 \

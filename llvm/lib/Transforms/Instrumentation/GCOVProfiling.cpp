@@ -148,7 +148,7 @@ private:
   std::string mangleName(const DICompileUnit *CU, GCovFileType FileType);
 
   GCOVOptions Options;
-  support::endianness Endian;
+  llvm::endianness Endian;
   raw_ostream *os;
 
   // Checksum, produced by hash of EdgeDestinations
@@ -750,7 +750,7 @@ static BasicBlock *getInstrBB(CFGMST<Edge, BBInfo> &MST, Edge &E,
 #ifndef NDEBUG
 static void dumpEdges(CFGMST<Edge, BBInfo> &MST, GCOVFunction &GF) {
   size_t ID = 0;
-  for (auto &E : make_pointee_range(MST.AllEdges)) {
+  for (const auto &E : make_pointee_range(MST.allEdges())) {
     GCOVBlock &Src = E.SrcBB ? GF.getBlock(E.SrcBB) : GF.getEntryBlock();
     GCOVBlock &Dst = E.DestBB ? GF.getBlock(E.DestBB) : GF.getReturnBlock();
     dbgs() << "  Edge " << ID++ << ": " << Src.Number << "->" << Dst.Number
@@ -788,8 +788,8 @@ bool GCOVProfiler::emitProfileNotes(
     std::vector<uint8_t> EdgeDestinations;
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
 
-    Endian = M->getDataLayout().isLittleEndian() ? support::endianness::little
-                                                 : support::endianness::big;
+    Endian = M->getDataLayout().isLittleEndian() ? llvm::endianness::little
+                                                 : llvm::endianness::big;
     unsigned FunctionIdent = 0;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
@@ -820,8 +820,8 @@ bool GCOVProfiler::emitProfileNotes(
       CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
-      for (size_t I : llvm::seq<size_t>(0, MST.AllEdges.size())) {
-        auto &E = *MST.AllEdges[I];
+      for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
+        auto &E = *MST.allEdges()[I];
         // For now, disable spanning tree optimization when fork or exec* is
         // used.
         if (HasExecOrFork)
@@ -836,16 +836,16 @@ bool GCOVProfiler::emitProfileNotes(
 
       // Some non-tree edges are IndirectBr which cannot be split. Ignore them
       // as well.
-      llvm::erase_if(MST.AllEdges, [](std::unique_ptr<Edge> &E) {
+      llvm::erase_if(MST.allEdges(), [](std::unique_ptr<Edge> &E) {
         return E->Removed || (!E->InMST && !E->Place);
       });
       const size_t Measured =
           std::stable_partition(
-              MST.AllEdges.begin(), MST.AllEdges.end(),
+              MST.allEdges().begin(), MST.allEdges().end(),
               [](std::unique_ptr<Edge> &E) { return E->Place; }) -
-          MST.AllEdges.begin();
+          MST.allEdges().begin();
       for (size_t I : llvm::seq<size_t>(0, Measured)) {
-        Edge &E = *MST.AllEdges[I];
+        Edge &E = *MST.allEdges()[I];
         GCOVBlock &Src =
             E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
         GCOVBlock &Dst =
@@ -854,13 +854,13 @@ bool GCOVProfiler::emitProfileNotes(
         E.DstNumber = Dst.Number;
       }
       std::stable_sort(
-          MST.AllEdges.begin(), MST.AllEdges.begin() + Measured,
+          MST.allEdges().begin(), MST.allEdges().begin() + Measured,
           [](const std::unique_ptr<Edge> &L, const std::unique_ptr<Edge> &R) {
             return L->SrcNumber != R->SrcNumber ? L->SrcNumber < R->SrcNumber
                                                 : L->DstNumber < R->DstNumber;
           });
 
-      for (const Edge &E : make_pointee_range(MST.AllEdges)) {
+      for (const Edge &E : make_pointee_range(MST.allEdges())) {
         GCOVBlock &Src =
             E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
         GCOVBlock &Dst =
@@ -898,7 +898,9 @@ bool GCOVProfiler::emitProfileNotes(
 
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();
-          if (SP != getDISubprogram(Loc.getScope()))
+          MDNode *Scope = Loc.getScope();
+          // TODO: Handle blocks from another file due to #line, #include, etc.
+          if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
             continue;
 
           GCOVLines &Lines = Block.getFile(Filename);
@@ -915,7 +917,7 @@ bool GCOVProfiler::emitProfileNotes(
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
-          const Edge &E = *MST.AllEdges[I];
+          const Edge &E = *MST.allEdges()[I];
           IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
@@ -955,7 +957,7 @@ bool GCOVProfiler::emitProfileNotes(
         continue;
       }
       os = &out;
-      if (Endian == support::endianness::big) {
+      if (Endian == llvm::endianness::big) {
         out.write("gcno", 4);
         out.write(Options.Version, 4);
       } else {
@@ -1029,9 +1031,9 @@ void GCOVProfiler::emitGlobalConstructor(
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-      Type::getInt8PtrTy(*Ctx), // const char *orig_filename
-      Type::getInt32Ty(*Ctx),   // uint32_t version
-      Type::getInt32Ty(*Ctx),   // uint32_t checksum
+      PointerType::getUnqual(*Ctx), // const char *orig_filename
+      Type::getInt32Ty(*Ctx),       // uint32_t version
+      Type::getInt32Ty(*Ctx),       // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_start_file", FTy,
@@ -1051,8 +1053,8 @@ FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
 
 FunctionCallee GCOVProfiler::getEmitArcsFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-    Type::getInt32Ty(*Ctx),     // uint32_t num_counters
-    Type::getInt64PtrTy(*Ctx),  // uint64_t *counters
+      Type::getInt32Ty(*Ctx),       // uint32_t num_counters
+      PointerType::getUnqual(*Ctx), // uint64_t *counters
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy,
@@ -1098,19 +1100,16 @@ Function *GCOVProfiler::insertCounterWriteout(
   // Collect the relevant data into a large constant data structure that we can
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
-      {Builder.getInt8PtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
+      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "start_file_args_ty");
   StructType *EmitFunctionCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "emit_function_args_ty");
-  StructType *EmitArcsCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()},
-      "emit_arcs_args_ty");
-  StructType *FileInfoTy =
-      StructType::create({StartFileCallArgsTy, Builder.getInt32Ty(),
-                          EmitFunctionCallArgsTy->getPointerTo(),
-                          EmitArcsCallArgsTy->getPointerTo()},
-                         "file_info");
+  auto *PtrTy = Builder.getPtrTy();
+  StructType *EmitArcsCallArgsTy =
+      StructType::create({Builder.getInt32Ty(), PtrTy}, "emit_arcs_args_ty");
+  StructType *FileInfoTy = StructType::create(
+      {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
   Constant *Zero32 = Builder.getInt32(0);
   // Build an explicit array of two zeros for use in ConstantExpr GEP building.

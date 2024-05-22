@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/CFGLoopInfo.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;

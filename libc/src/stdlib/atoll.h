@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ATOLL_H
 #define LLVM_LIBC_SRC_STDLIB_ATOLL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long long atoll(const char *str);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_ATOLL_H

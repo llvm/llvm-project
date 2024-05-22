@@ -69,7 +69,7 @@ entry:
 }
 
 ; Verify nofpexcept is set to constrained conversions when ignoring exceptions
-define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) {
+define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) #0 {
   ; CHECK-LABEL: name: fptoint_nofpexcept
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -151,18 +151,18 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) 
   ; CHECK-NEXT:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
-  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
+  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore")
   store volatile i32 %conv1, ptr %addr1, align 4
-  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.ignore")
   store volatile i32 %conv2, ptr %addr1, align 4
-  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
+  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.ignore")
   store volatile i64 %conv3, ptr %addr2, align 8
-  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
+  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.ignore")
   store volatile i64 %conv4, ptr %addr2, align 8
 
-  %conv5 = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
+  %conv5 = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore")
   store volatile i32 %conv5, ptr %addr1, align 4
-  %conv6 = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
+  %conv6 = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore")
   store volatile i32 %conv6, ptr %addr1, align 4
   ret void
 }
@@ -182,7 +182,7 @@ define signext i32 @q_to_i32(fp128 %m) #0 {
   ; CHECK-NEXT:   $x3 = COPY [[EXTSW_32_64_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
+  %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 
@@ -197,7 +197,7 @@ define i64 @q_to_i64(fp128 %m) #0 {
   ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %conv = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
+  %conv = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -212,7 +212,7 @@ define i64 @q_to_u64(fp128 %m) #0 {
   ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %conv = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
+  %conv = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -232,7 +232,7 @@ define zeroext i32 @q_to_u32(fp128 %m) #0 {
   ; CHECK-NEXT:   $x3 = COPY [[RLDICL]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %conv = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
+  %conv = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 

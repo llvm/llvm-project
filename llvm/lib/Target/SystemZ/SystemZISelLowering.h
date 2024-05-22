@@ -215,16 +215,24 @@ enum NodeType : unsigned {
   UNPACK_LOW,
   UNPACKL_LOW,
 
-  // Shift each element of vector operand 0 by the number of bits specified
-  // by scalar operand 1.
+  // Shift/rotate each element of vector operand 0 by the number of bits
+  // specified by scalar operand 1.
   VSHL_BY_SCALAR,
   VSRL_BY_SCALAR,
   VSRA_BY_SCALAR,
+  VROTL_BY_SCALAR,
 
   // For each element of the output type, sum across all sub-elements of
   // operand 0 belonging to the corresponding element, and add in the
   // rightmost sub-element of the corresponding element of operand 1.
   VSUM,
+
+  // Compute carry/borrow indication for add/subtract.
+  VACC, VSCBI,
+  // Add/subtract with carry/borrow.
+  VAC, VSBI,
+  // Compute carry/borrow indication for add/subtract with carry/borrow.
+  VACCC, VSBCBI,
 
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
@@ -263,6 +271,10 @@ enum NodeType : unsigned {
 
   // AND the two vector operands together and set CC based on the result.
   VTM,
+
+  // i128 high integer comparisons.
+  SCMP128HI,
+  UCMP128HI,
 
   // String operations that set CC as a side-effect.
   VFAE_CC,
@@ -431,7 +443,17 @@ public:
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override {
+    // 128-bit single-element vector types are passed like other vectors,
+    // not like their element type.
+    if (VT.isVector() && VT.getSizeInBits() == 128 &&
+        VT.getVectorNumElements() == 1)
+      return MVT::v16i8;
+    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+  }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
+  bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
@@ -452,6 +474,8 @@ public:
     return VT != MVT::f64;
   }
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -487,39 +511,39 @@ public:
   TargetLowering::ConstraintWeight
     getSingleConstraintMatchWeight(AsmOperandInfo &info,
                                    const char *constraint) const override;
-  void LowerAsmOperandForConstraint(SDValue Op,
-                                    std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
     if (ConstraintCode.size() == 1) {
       switch(ConstraintCode[0]) {
       default:
         break;
       case 'o':
-        return InlineAsm::Constraint_o;
+        return InlineAsm::ConstraintCode::o;
       case 'Q':
-        return InlineAsm::Constraint_Q;
+        return InlineAsm::ConstraintCode::Q;
       case 'R':
-        return InlineAsm::Constraint_R;
+        return InlineAsm::ConstraintCode::R;
       case 'S':
-        return InlineAsm::Constraint_S;
+        return InlineAsm::ConstraintCode::S;
       case 'T':
-        return InlineAsm::Constraint_T;
+        return InlineAsm::ConstraintCode::T;
       }
     } else if (ConstraintCode.size() == 2 && ConstraintCode[0] == 'Z') {
       switch (ConstraintCode[1]) {
       default:
         break;
       case 'Q':
-        return InlineAsm::Constraint_ZQ;
+        return InlineAsm::ConstraintCode::ZQ;
       case 'R':
-        return InlineAsm::Constraint_ZR;
+        return InlineAsm::ConstraintCode::ZR;
       case 'S':
-        return InlineAsm::Constraint_ZS;
+        return InlineAsm::ConstraintCode::ZS;
       case 'T':
-        return InlineAsm::Constraint_ZT;
+        return InlineAsm::ConstraintCode::ZT;
       }
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
@@ -739,19 +763,20 @@ private:
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
+  MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
+                                   bool Unsigned) const;
   MachineBasicBlock *emitPair128(MachineInstr &MI,
                                  MachineBasicBlock *MBB) const;
   MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
                                 bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
-                                          unsigned BinOpcode, unsigned BitSize,
+                                          unsigned BinOpcode,
                                           bool Invert = false) const;
   MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
                                           unsigned CompareOpcode,
-                                          unsigned KeepOldMask,
-                                          unsigned BitSize) const;
+                                          unsigned KeepOldMask) const;
   MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,

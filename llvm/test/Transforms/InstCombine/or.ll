@@ -160,7 +160,7 @@ define i32 @test21(i32 %t1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T1:%.*]], -2
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T1]], 1
-; CHECK-NEXT:    [[T6:%.*]] = or i32 [[T5]], [[T3]]
+; CHECK-NEXT:    [[T6:%.*]] = or disjoint i32 [[T5]], [[T3]]
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
@@ -388,7 +388,7 @@ define <2 x i1> @test29vec(<2 x ptr> %A, <2 x ptr> %B) {
 define i32 @test30(i32 %A) {
 ; CHECK-LABEL: @test30(
 ; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], -58312
-; CHECK-NEXT:    [[E:%.*]] = or i32 [[D]], 32962
+; CHECK-NEXT:    [[E:%.*]] = or disjoint i32 [[D]], 32962
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %B = or i32 %A, 32962   ; 0b1000_0000_1100_0010
@@ -401,7 +401,7 @@ define i32 @test30(i32 %A) {
 define <2 x i32> @test30vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test30vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -58312, i32 -58312>
-; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[TMP1]], <i32 32962, i32 32962>
+; CHECK-NEXT:    [[E:%.*]] = or disjoint <2 x i32> [[TMP1]], <i32 32962, i32 32962>
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %B = or <2 x i32> %A, <i32 32962, i32 32962>
@@ -415,7 +415,7 @@ define <2 x i32> @test30vec(<2 x i32> %A) {
 define i64 @test31(i64 %A) {
 ; CHECK-LABEL: @test31(
 ; CHECK-NEXT:    [[E:%.*]] = and i64 [[A:%.*]], 4294908984
-; CHECK-NEXT:    [[F:%.*]] = or i64 [[E]], 32962
+; CHECK-NEXT:    [[F:%.*]] = or disjoint i64 [[E]], 32962
 ; CHECK-NEXT:    ret i64 [[F]]
 ;
   %B = or i64 %A, 194
@@ -431,7 +431,7 @@ define i64 @test31(i64 %A) {
 define <2 x i64> @test31vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test31vec(
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i64> [[A:%.*]], <i64 4294908984, i64 4294908984>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], <i64 32962, i64 32962>
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], <i64 32962, i64 32962>
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %B = or <2 x i64> %A, <i64 194, i64 194>
@@ -1476,7 +1476,7 @@ define i32 @mul_no_common_bits(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[Y]], 1
 ; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -1511,6 +1511,42 @@ define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
   ret <2 x i12> %r
 }
 
+define i32 @mul_no_common_bits_commute2(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits_commute2(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %y, %x
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, %y
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_const_op_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_const_op_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X:%.*]], 25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 24
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
 ; negative test - extra use requires extra instructions
 
 define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
@@ -1519,7 +1555,7 @@ define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p1, 7
@@ -1537,7 +1573,7 @@ define i32 @mul_no_common_bits_const_op_uses(i32 %p) {
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 24
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p, 7
@@ -1575,4 +1611,28 @@ define <4 x i1> @and_or_not_or_logical_vec(<4 x i32> %ap, <4 x i32> %bp) {
   %Y = xor <4 x i1> %W, <i1 true, i1 true, i1 true, i1 true>
   %Z = or <4 x i1> %X, %Y
   ret <4 x i1> %Z
+}
+
+; Make sure SimplifyDemandedBits drops the disjoint flag.
+define i8 @drop_disjoint(i8 %x) {
+; CHECK-LABEL: @drop_disjoint(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = and i8 %x, -2
+  %b = or disjoint i8 %a, 1
+  ret i8 %b
+}
+
+; Make sure we drop disjoint when combining the Ors.
+define i32 @assoc_cast_assoc_disjoint(i16 %x) {
+; CHECK-LABEL: @assoc_cast_assoc_disjoint(
+; CHECK-NEXT:    [[B:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], 65537
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = or i16 %x, 1
+  %b = zext i16 %a to i32
+  %c = or disjoint i32 %b, 65536
+  ret i32 %c
 }

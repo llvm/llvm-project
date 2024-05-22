@@ -1,4 +1,5 @@
 add_mlir_library(MLIRTransformUtils
+  CFGToSCF.cpp
   CommutativityUtils.cpp
   ControlFlowSinkUtils.cpp
   DialectConversion.cpp
@@ -15,7 +16,10 @@ add_mlir_library(MLIRTransformUtils
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRControlFlowInterfaces
+  MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
+  MLIRSubsetOpInterface
   MLIRRewrite
   )

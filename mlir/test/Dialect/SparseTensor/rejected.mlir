@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s
 
 
-// The file contains examples that will be rejected by sparse compiler
+// The file contains examples that will be rejected by sparsifier
 // (we expect the linalg.generic unchanged).
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [ 
@@ -15,7 +15,7 @@
 
 // CHECK-LABEL:   func.func @sparse_reduction_subi(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK:           %[[VAL_2:.*]] = linalg.generic
 // CHECK:           ^bb0(%[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: i32):
 // CHECK:             %[[VAL_5:.*]] = arith.subi %[[VAL_3]], %[[VAL_4]] : i32
@@ -29,7 +29,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
      ins(%arga: tensor<?xi32, #SparseVector>)
       outs(%argx: tensor<i32>) {
       ^bb(%a: i32, %x: i32):
-        // NOTE: `subi %a, %x` is the reason why the program is rejected by the sparse compiler.
+        // NOTE: `subi %a, %x` is the reason why the program is rejected by the sparsifier.
         // It is because we do not allow `-outTensor` in reduction loops as it creates cyclic
         // dependences.
         %t = arith.subi %a, %x: i32 

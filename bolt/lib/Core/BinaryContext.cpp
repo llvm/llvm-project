@@ -118,7 +118,7 @@ Expected<std::unique_ptr<BinaryContext>>
 BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
                                    std::unique_ptr<DWARFContext> DwCtx) {
   StringRef ArchName = "";
-  StringRef FeaturesStr = "";
+  std::string FeaturesStr = "";
   switch (File->getArch()) {
   case llvm::Triple::x86_64:
     ArchName = "x86-64";
@@ -128,11 +128,20 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv64: {
     ArchName = "riscv64";
-    // RV64GC
-    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c";
+    Expected<SubtargetFeatures> Features = File->getFeatures();
+
+    if (auto E = Features.takeError())
+      return std::move(E);
+
+    // We rely on relaxation for some transformations (e.g., promoting all calls
+    // to PseudoCALL and then making JITLink relax them). Since the relax
+    // feature is not stored in the object file, we manually enable it.
+    Features->AddFeature("relax");
+    FeaturesStr = Features->getString();
     break;
+  }
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");
@@ -503,6 +512,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
+  // Does one of the entries match function start address?
+  bool HasStartAsEntry = false;
+
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
@@ -567,14 +579,21 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       continue;
     }
 
+    // Function start is another special case. It is allowed in the jump table,
+    // but we need at least one another regular entry to distinguish the table
+    // from, e.g. a function pointer array.
+    if (Value == BF.getAddress()) {
+      HasStartAsEntry = true;
+      addEntryAddress(Value);
+      continue;
+    }
+
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
-
-    bool DoesBelongToFunction = BF.containsAddress(Value) ||
-                                (TargetBF && TargetBF->isParentOrChildOf(BF));
-
-    // We assume that a jump table cannot have function start as an entry.
-    if (!DoesBelongToFunction || Value == BF.getAddress()) {
+    const bool DoesBelongToFunction =
+        BF.containsAddress(Value) ||
+        (TargetBF && TargetBF->isParentOrChildOf(BF));
+    if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
           dbgs() << "FAIL: function doesn't contain this address\n";
@@ -589,8 +608,6 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
             }
           }
         }
-        if (Value == BF.getAddress())
-          dbgs() << "FAIL: jump table cannot have function start as an entry\n";
       });
       break;
     }
@@ -611,9 +628,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   }
 
   // It's a jump table if the number of real entries is more than 1, or there's
-  // one real entry and "unreachable" targets. If there are only multiple
-  // "unreachable" targets, then it's not a jump table.
-  return NumRealEntries + HasUnreachable >= 2;
+  // one real entry and one or more special targets. If there are only multiple
+  // special targets, then it's not a jump table.
+  return NumRealEntries + (HasUnreachable || HasStartAsEntry) >= 2;
 }
 
 void BinaryContext::populateJumpTables() {
@@ -1018,6 +1035,31 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
   return nullptr;
 }
 
+BinaryData *BinaryContext::getGOTSymbol() {
+  // First tries to find a global symbol with that name
+  BinaryData *GOTSymBD = getBinaryDataByName("_GLOBAL_OFFSET_TABLE_");
+  if (GOTSymBD)
+    return GOTSymBD;
+
+  // This symbol might be hidden from run-time link, so fetch the local
+  // definition if available.
+  GOTSymBD = getBinaryDataByName("_GLOBAL_OFFSET_TABLE_/1");
+  if (!GOTSymBD)
+    return nullptr;
+
+  // If the local symbol is not unique, fail
+  unsigned Index = 2;
+  SmallString<30> Storage;
+  while (const BinaryData *BD =
+             getBinaryDataByName(Twine("_GLOBAL_OFFSET_TABLE_/")
+                                     .concat(Twine(Index++))
+                                     .toStringRef(Storage)))
+    if (BD->getAddress() != GOTSymBD->getAddress())
+      return nullptr;
+
+  return GOTSymBD;
+}
+
 bool BinaryContext::setBinaryDataSize(uint64_t Address, uint64_t Size) {
   auto NI = BinaryDataMap.find(Address);
   assert(NI != BinaryDataMap.end());
@@ -1044,7 +1086,7 @@ void BinaryContext::generateSymbolHashes() {
   auto isPadding = [](const BinaryData &BD) {
     StringRef Contents = BD.getSection().getContents();
     StringRef SymData = Contents.substr(BD.getOffset(), BD.getSize());
-    return (BD.getName().startswith("HOLEat") ||
+    return (BD.getName().starts_with("HOLEat") ||
             SymData.find_first_not_of(0) == StringRef::npos);
   };
 
@@ -1284,8 +1326,8 @@ void BinaryContext::postProcessSymbolTable() {
   bool Valid = true;
   for (auto &Entry : BinaryDataMap) {
     BinaryData *BD = Entry.second;
-    if ((BD->getName().startswith("SYMBOLat") ||
-         BD->getName().startswith("DATAat")) &&
+    if ((BD->getName().starts_with("SYMBOLat") ||
+         BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
         BD->getSection()) {
       errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD << "\n";
@@ -1360,7 +1402,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
 }
 
 void BinaryContext::fixBinaryDataHoles() {
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
 
   for (BinarySection &Section : allocatableSections()) {
     std::vector<std::pair<uint64_t, uint64_t>> Holes;
@@ -1368,9 +1410,9 @@ void BinaryContext::fixBinaryDataHoles() {
     auto isNotHole = [&Section](const binary_data_iterator &Itr) {
       BinaryData *BD = Itr->second;
       bool isHole = (!BD->getParent() && !BD->getSize() && BD->isObject() &&
-                     (BD->getName().startswith("SYMBOLat0x") ||
-                      BD->getName().startswith("DATAat0x") ||
-                      BD->getName().startswith("ANONYMOUS")));
+                     (BD->getName().starts_with("SYMBOLat0x") ||
+                      BD->getName().starts_with("DATAat0x") ||
+                      BD->getName().starts_with("ANONYMOUS")));
       return !isHole && BD->getSection() == Section && !BD->getParent();
     };
 
@@ -1409,7 +1451,7 @@ void BinaryContext::fixBinaryDataHoles() {
     }
   }
 
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
   assert(validateHoles() && "top level hole detected in object map");
 }
 
@@ -1696,6 +1738,15 @@ bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   return HasRelocations || Function.isSimple();
 }
 
+void BinaryContext::dump(const MCInst &Inst) const {
+  if (LLVM_UNLIKELY(!InstPrinter)) {
+    dbgs() << "Cannot dump for InstPrinter is not initialized.\n";
+    return;
+  }
+  InstPrinter->printInst(&Inst, 0, "", *STI, dbgs());
+  dbgs() << "\n";
+}
+
 void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   uint32_t Operation = Inst.getOperation();
   switch (Operation) {
@@ -1752,10 +1803,10 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
 }
 
 MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
-  // For aarch64, the ABI defines mapping symbols so we identify data in the
-  // code section (see IHI0056B). $x identifies a symbol starting code or the
-  // end of a data chunk inside code, $d indentifies start of data.
-  if (!isAArch64() || ELFSymbolRef(Symbol).getSize())
+  // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
+  // in the code section (see IHI0056B). $x identifies a symbol starting code or
+  // the end of a data chunk inside code, $d identifies start of data.
+  if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
   Expected<StringRef> NameOrError = Symbol.getName();
@@ -1767,10 +1818,14 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*TypeOrError != SymbolRef::ST_Unknown)
     return MarkerSymType::NONE;
 
-  if (*NameOrError == "$x" || NameOrError->startswith("$x."))
+  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->startswith("$d."))
+  // $x<ISA>
+  if (isRISCV() && NameOrError->starts_with("$x"))
+    return MarkerSymType::CODE;
+
+  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;
@@ -1816,10 +1871,6 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      bool PrintMCInst, bool PrintMemData,
                                      bool PrintRelocations,
                                      StringRef Endl) const {
-  if (MIB->isEHLabel(Instruction)) {
-    OS << "  EH_LABEL: " << *MIB->getTargetSymbol(Instruction) << Endl;
-    return;
-  }
   OS << format("    %08" PRIx64 ": ", Offset);
   if (MIB->isCFI(Instruction)) {
     uint32_t Offset = Instruction.getOperand(0).getImm();
@@ -1855,6 +1906,10 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
+  if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
+    OS << " # Size: " << *Size;
+  if (MCSymbol *Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);
 
@@ -1880,10 +1935,27 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
-    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) == FileOffset) {
-      // Use segment's aligned memory offset to calculate the base address.
-      const uint64_t MemOffset = alignDown(SegInfo.Address, SegInfo.Alignment);
-      return MMapAddress - MemOffset;
+    // FileOffset is got from perf event,
+    // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
+    // If the pagesize is not equal to SegInfo.Alignment.
+    // FileOffset and SegInfo.FileOffset should be aligned first,
+    // and then judge whether they are equal.
+    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) ==
+        alignDown(FileOffset, SegInfo.Alignment)) {
+      // The function's offset from base address in VAS is aligned by pagesize
+      // instead of SegInfo.Alignment. Pagesize can't be got from perf events.
+      // However, The ELF document says that SegInfo.FileOffset should equal
+      // to SegInfo.Address, modulo the pagesize.
+      // Reference: https://refspecs.linuxfoundation.org/elf/elf.pdf
+
+      // So alignDown(SegInfo.Address, pagesize) can be calculated by:
+      // alignDown(SegInfo.Address, pagesize)
+      //   = SegInfo.Address - (SegInfo.Address % pagesize)
+      //   = SegInfo.Address - (SegInfo.FileOffset % pagesize)
+      //   = SegInfo.Address - SegInfo.FileOffset +
+      //     alignDown(SegInfo.FileOffset, pagesize)
+      //   = SegInfo.Address - SegInfo.FileOffset + FileOffset
+      return MMapAddress - (SegInfo.Address - SegInfo.FileOffset + FileOffset);
     }
   }
 
@@ -2259,14 +2331,36 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   MCAsmLayout Layout(Assembler);
   Assembler.layout(Layout);
 
+  // Obtain fragment sizes.
+  std::vector<uint64_t> FragmentSizes;
+  // Main fragment size.
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize =
-      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
-                      [&](const uint64_t Accu, const LabelRange &Labels) {
-                        return Accu + Layout.getSymbolOffset(*Labels.second) -
-                               Layout.getSymbolOffset(*Labels.first);
-                      });
+  FragmentSizes.push_back(HotSize);
+  // Split fragment sizes.
+  uint64_t ColdSize = 0;
+  for (const auto &Labels : SplitLabels) {
+    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
+                    Layout.getSymbolOffset(*Labels.first);
+    FragmentSizes.push_back(Size);
+    ColdSize += Size;
+  }
+
+  // Populate new start and end offsets of each basic block.
+  uint64_t FragmentIndex = 0;
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    BinaryBasicBlock *PrevBB = nullptr;
+    for (BinaryBasicBlock *BB : FF) {
+      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      BB->setOutputStartAddress(BBStartOffset);
+      if (PrevBB)
+        PrevBB->setOutputEndAddress(BBStartOffset);
+      PrevBB = BB;
+    }
+    if (PrevBB)
+      PrevBB->setOutputEndAddress(FragmentSizes[FragmentIndex]);
+    FragmentIndex++;
+  }
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {

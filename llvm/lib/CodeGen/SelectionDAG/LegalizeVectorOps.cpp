@@ -166,6 +166,21 @@ class VectorLegalizer {
   /// truncated back to the original type.
   void PromoteFP_TO_INT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  /// Implements vector reduce operation promotion.
+  ///
+  /// All vector operands are promoted to a vector type with larger element
+  /// type, and the start value is promoted to a larger scalar type. Then the
+  /// result is truncated back to the original scalar type.
+  void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
+  /// Implements vector setcc operation promotion.
+  ///
+  /// All vector operands are promoted to a vector type with larger element
+  /// type.
+  void PromoteSETCC(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
+  void PromoteSTRICT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
 public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
@@ -385,9 +400,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FLOG10:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
@@ -551,6 +569,116 @@ bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
   return true;
 }
 
+void VectorLegalizer::PromoteReduction(SDNode *Node,
+                                       SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+  MVT ScalarVT = Node->getSimpleValueType(0);
+  MVT NewScalarVT = NewVecVT.getVectorElementType();
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
+
+  // promote the initial value.
+  if (Node->getOperand(0).getValueType().isFloatingPoint())
+    Operands[0] =
+        DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(0));
+  else
+    Operands[0] =
+        DAG.getNode(ISD::ANY_EXTEND, DL, NewScalarVT, Node->getOperand(0));
+
+  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+    if (Node->getOperand(j).getValueType().isVector() &&
+        !(ISD::isVPOpcode(Node->getOpcode()) &&
+          ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
+      // promote the vector operand.
+      if (Node->getOperand(j).getValueType().isFloatingPoint())
+        Operands[j] =
+            DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+      else
+        Operands[j] =
+            DAG.getNode(ISD::ANY_EXTEND, DL, NewVecVT, Node->getOperand(j));
+    else
+      Operands[j] = Node->getOperand(j); // Skip VL operand.
+
+  SDValue Res = DAG.getNode(Node->getOpcode(), DL, NewScalarVT, Operands,
+                            Node->getFlags());
+
+  if (ScalarVT.isFloatingPoint())
+    Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  else
+    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, Res);
+
+  Results.push_back(Res);
+}
+
+void VectorLegalizer::PromoteSETCC(SDNode *Node,
+                                   SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(0).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+
+  unsigned ExtOp = VecVT.isFloatingPoint() ? ISD::FP_EXTEND : ISD::ANY_EXTEND;
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 5> Operands(Node->getNumOperands());
+
+  Operands[0] = DAG.getNode(ExtOp, DL, NewVecVT, Node->getOperand(0));
+  Operands[1] = DAG.getNode(ExtOp, DL, NewVecVT, Node->getOperand(1));
+  Operands[2] = Node->getOperand(2);
+
+  if (Node->getOpcode() == ISD::VP_SETCC) {
+    Operands[3] = Node->getOperand(3); // mask
+    Operands[4] = Node->getOperand(4); // evl
+  }
+
+  SDValue Res = DAG.getNode(Node->getOpcode(), DL, Node->getSimpleValueType(0),
+                            Operands, Node->getFlags());
+
+  Results.push_back(Res);
+}
+
+void VectorLegalizer::PromoteSTRICT(SDNode *Node,
+                                    SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+
+  assert(VecVT.isFloatingPoint());
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 5> Operands(Node->getNumOperands());
+  SmallVector<SDValue, 2> Chains;
+
+  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+    if (Node->getOperand(j).getValueType().isVector() &&
+        !(ISD::isVPOpcode(Node->getOpcode()) &&
+          ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
+    {
+      // promote the vector operand.
+      SDValue Ext =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {NewVecVT, MVT::Other},
+                      {Node->getOperand(0), Node->getOperand(j)});
+      Operands[j] = Ext.getValue(0);
+      Chains.push_back(Ext.getValue(1));
+    } else
+      Operands[j] = Node->getOperand(j); // Skip no vector operand.
+
+  SDVTList VTs = DAG.getVTList(NewVecVT, Node->getValueType(1));
+
+  Operands[0] = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), DL, VTs, Operands, Node->getFlags());
+
+  SDValue Round =
+      DAG.getNode(ISD::STRICT_FP_ROUND, DL, {VecVT, MVT::Other},
+                  {Res.getValue(1), Res.getValue(0),
+                   DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
+
+  Results.push_back(Round.getValue(0));
+  Results.push_back(Round.getValue(1));
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -568,6 +696,36 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     PromoteFP_TO_INT(Node, Results);
+    return;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_SEQ_FADD:
+    // Promote the operation by extending the operand.
+    PromoteReduction(Node, Results);
+    return;
+  case ISD::VP_SETCC:
+  case ISD::SETCC:
+    // Promote the operation by extending the operand.
+    PromoteSETCC(Node, Results);
+    return;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FMA:
+    PromoteSTRICT(Node, Results);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
@@ -589,7 +747,10 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   SmallVector<SDValue, 4> Operands(Node->getNumOperands());
 
   for (unsigned j = 0; j != Node->getNumOperands(); ++j) {
-    if (Node->getOperand(j).getValueType().isVector())
+    // Do not promote the mask operand of a VP OP.
+    bool SkipPromote = ISD::isVPOpcode(Node->getOpcode()) &&
+                       ISD::getVPMaskIdx(Node->getOpcode()) == j;
+    if (Node->getOperand(j).getValueType().isVector() && !SkipPromote)
       if (Node->getOperand(j)
               .getValueType()
               .getVectorElementType()

@@ -266,7 +266,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
 
-  // Used to keep track of target-specific per-machine function information for
+  // Used to keep track of target-specific per-machine-function information for
   // the target implementation.
   MachineFunctionInfo *MFInfo;
 
@@ -463,6 +463,11 @@ public:
     virtual void MF_HandleInsertion(MachineInstr &MI) = 0;
     /// Callback before a removal. This should not modify the MI directly.
     virtual void MF_HandleRemoval(MachineInstr &MI) = 0;
+    /// Callback before changing MCInstrDesc. This should not modify the MI
+    /// directly.
+    virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
+      return;
+    }
   };
 
   /// Structure used to represent pair of argument number after call lowering
@@ -498,6 +503,9 @@ private:
   friend struct ilist_traits<MachineInstr>;
 
 public:
+  // Need to be accessed from MachineInstr::setDesc.
+  void handleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID);
+
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
@@ -884,6 +892,12 @@ public:
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
               bool AbortOnError = true) const;
 
+  /// Run the current MachineFunction through the machine code verifier, useful
+  /// for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
+              const char *Banner = nullptr, bool AbortOnError = true) const;
+
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
   using const_iterator = BasicBlockListType::const_iterator;
@@ -999,8 +1013,11 @@ public:
   void deleteMachineInstr(MachineInstr *MI);
 
   /// CreateMachineBasicBlock - Allocate a new MachineBasicBlock. Use this
-  /// instead of `new MachineBasicBlock'.
-  MachineBasicBlock *CreateMachineBasicBlock(const BasicBlock *bb = nullptr);
+  /// instead of `new MachineBasicBlock'. Sets `MachineBasicBlock::BBID` if
+  /// basic-block-sections is enabled for the function.
+  MachineBasicBlock *
+  CreateMachineBasicBlock(const BasicBlock *BB = nullptr,
+                          std::optional<UniqueBBID> BBID = std::nullopt);
 
   /// DeleteMachineBasicBlock - Delete the given MachineBasicBlock.
   void deleteMachineBasicBlock(MachineBasicBlock *MBB);

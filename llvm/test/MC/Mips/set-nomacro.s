@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 2>&1 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32 2>&1 | FileCheck %s
 
 # CHECK-NOT: warning: macro instruction expanded into multiple instructions
   .set macro

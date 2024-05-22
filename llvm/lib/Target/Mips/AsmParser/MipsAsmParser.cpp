@@ -179,10 +179,9 @@ class MipsAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   /// Parse a register as used in CFI directives
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool parseParenSuffix(StringRef Name, OperandVector &Operands);
 
@@ -6250,7 +6249,7 @@ int MipsAsmParser::matchFPURegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
-  if (Name.startswith("fcc")) {
+  if (Name.starts_with("fcc")) {
     StringRef NumString = Name.substr(3);
     unsigned IntVal;
     if (NumString.getAsInteger(10, IntVal))
@@ -6263,7 +6262,7 @@ int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchACRegisterName(StringRef Name) {
-  if (Name.startswith("ac")) {
+  if (Name.starts_with("ac")) {
     StringRef NumString = Name.substr(2);
     unsigned IntVal;
     if (NumString.getAsInteger(10, IntVal))
@@ -6385,14 +6384,13 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   return true;
 }
 
-bool MipsAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool MipsAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
-  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+  return !tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
 }
 
-OperandMatchResultTy MipsAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                     SMLoc &StartLoc,
-                                                     SMLoc &EndLoc) {
+ParseStatus MipsAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                            SMLoc &EndLoc) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
   ParseStatus Res = parseAnyRegister(Operands);
   if (Res.isSuccess()) {
@@ -6407,15 +6405,14 @@ OperandMatchResultTy MipsAsmParser::tryParseRegister(MCRegister &RegNo,
     // register is a parse error.
     if (Operand.isGPRAsmReg()) {
       // Resolve to GPR32 or GPR64 appropriately.
-      RegNo = isGP64bit() ? Operand.getGPR64Reg() : Operand.getGPR32Reg();
+      Reg = isGP64bit() ? Operand.getGPR64Reg() : Operand.getGPR32Reg();
     }
 
-    return (RegNo == (unsigned)-1) ? MatchOperand_NoMatch
-                                   : MatchOperand_Success;
+    return (Reg == (unsigned)-1) ? ParseStatus::NoMatch : ParseStatus::Success;
   }
 
   assert(Operands.size() == 0);
-  return (RegNo == (unsigned)-1) ? MatchOperand_NoMatch : MatchOperand_Success;
+  return (Reg == (unsigned)-1) ? ParseStatus::NoMatch : ParseStatus::Success;
 }
 
 bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
@@ -6570,7 +6567,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
     if (Expr->getKind() == MCExpr::SymbolRef) {
       const MCSymbolRefExpr *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
       StringRef DefSymbol = Ref->getSymbol().getName();
-      if (DefSymbol.startswith("$")) {
+      if (DefSymbol.starts_with("$")) {
         ParseStatus Res =
             matchAnyRegisterNameWithoutDollar(Operands, DefSymbol.substr(1), S);
         if (Res.isSuccess()) {

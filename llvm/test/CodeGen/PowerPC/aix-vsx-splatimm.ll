@@ -11,20 +11,20 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX:       # %bb.0: # %bb
 ; CHECK-AIX-NEXT:    bclr 12, 20, 0
 ; CHECK-AIX-NEXT:  # %bb.1: # %bb3
-; CHECK-AIX-NEXT:    srwi 4, 4, 16
-; CHECK-AIX-NEXT:    srwi 5, 5, 16
 ; CHECK-AIX-NEXT:    slwi 3, 3, 8
-; CHECK-AIX-NEXT:    mullw 4, 5, 4
 ; CHECK-AIX-NEXT:    neg 3, 3
-; CHECK-AIX-NEXT:    lwz 5, 0(3)
+; CHECK-AIX-NEXT:    lwz 6, 0(3)
 ; CHECK-AIX-NEXT:    sth 3, -16(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -16
 ; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
-; CHECK-AIX-NEXT:    srwi 5, 5, 1
-; CHECK-AIX-NEXT:    mullw 3, 4, 5
+; CHECK-AIX-NEXT:    srwi 3, 4, 16
+; CHECK-AIX-NEXT:    srwi 4, 5, 16
+; CHECK-AIX-NEXT:    mullw 3, 4, 3
+; CHECK-AIX-NEXT:    srwi 4, 6, 1
+; CHECK-AIX-NEXT:    mullw 3, 3, 4
 ; CHECK-AIX-NEXT:    li 4, 0
-; CHECK-AIX-NEXT:    vsplth 2, 2, 0
 ; CHECK-AIX-NEXT:    neg 3, 3
+; CHECK-AIX-NEXT:    vsplth 2, 2, 0
 ; CHECK-AIX-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-AIX-NEXT:    sth 3, -32(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -32
@@ -36,20 +36,20 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    bclr 12, 20, 0
 ; CHECK-NEXT:  # %bb.1: # %bb3
+; CHECK-NEXT:    slwi 3, 3, 8
 ; CHECK-NEXT:    srwi 4, 4, 16
+; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    srwi 5, 5, 16
 ; CHECK-NEXT:    mullw 4, 5, 4
 ; CHECK-NEXT:    lwz 5, 0(3)
-; CHECK-NEXT:    slwi 3, 3, 8
-; CHECK-NEXT:    neg 3, 3
-; CHECK-NEXT:    srwi 5, 5, 1
 ; CHECK-NEXT:    mtvsrd 34, 3
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    srwi 5, 5, 1
 ; CHECK-NEXT:    mullw 4, 4, 5
-; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    neg 4, 4
 ; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    vsplth 2, 2, 3
+; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    vsplth 3, 3, 3
 ; CHECK-NEXT:    stxvd2x 35, 0, 3
 bb:

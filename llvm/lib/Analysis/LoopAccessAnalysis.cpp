@@ -14,7 +14,6 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -22,7 +21,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -53,8 +51,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -65,6 +61,7 @@
 #include <cstdint>
 #include <iterator>
 #include <utility>
+#include <variant>
 #include <vector>
 
 using namespace llvm;
@@ -141,6 +138,13 @@ static cl::opt<bool> SpeculateUnitStride(
     "laa-speculate-unit-stride", cl::Hidden,
     cl::desc("Speculate that non-constant strides are unit in LAA"),
     cl::init(true));
+
+static cl::opt<bool, true> HoistRuntimeChecks(
+    "hoist-runtime-checks", cl::Hidden,
+    cl::desc(
+        "Hoist inner loop runtime memory checks to outer loop if possible"),
+    cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(true));
+bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
@@ -232,6 +236,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
   }
+  assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
+  assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
+
   // Add the size of the pointed element to ScEnd.
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
   Type *IdxTy = DL.getIndexType(Ptr->getType());
@@ -328,6 +335,34 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     CanUseDiffCheck = false;
     return;
   }
+
+  const Loop *InnerLoop = SrcAR->getLoop();
+  // If the start values for both Src and Sink also vary according to an outer
+  // loop, then it's probably better to avoid creating diff checks because
+  // they may not be hoisted. We should instead let llvm::addRuntimeChecks
+  // do the expanded full range overlap checks, which can be hoisted.
+  if (HoistRuntimeChecks && InnerLoop->getParentLoop() &&
+      isa<SCEVAddRecExpr>(SinkStartInt) && isa<SCEVAddRecExpr>(SrcStartInt)) {
+    auto *SrcStartAR = cast<SCEVAddRecExpr>(SrcStartInt);
+    auto *SinkStartAR = cast<SCEVAddRecExpr>(SinkStartInt);
+    const Loop *StartARLoop = SrcStartAR->getLoop();
+    if (StartARLoop == SinkStartAR->getLoop() &&
+        StartARLoop == InnerLoop->getParentLoop() &&
+        // If the diff check would already be loop invariant (due to the
+        // recurrences being the same), then we prefer to keep the diff checks
+        // because they are cheaper.
+        SrcStartAR->getStepRecurrence(*SE) !=
+            SinkStartAR->getStepRecurrence(*SE)) {
+      LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
+                           "cannot be hoisted out of the outer loop\n");
+      CanUseDiffCheck = false;
+      return;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
+                    << "SrcStart: " << *SrcStartInt << '\n'
+                    << "SinkStartInt: " << *SinkStartInt << '\n');
   DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
                           Src->NeedsFreeze || Sink->NeedsFreeze);
 }
@@ -631,7 +666,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, false)].insert(AccessTy);
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -640,7 +675,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc, Type *AccessTy) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
   }
 
@@ -688,6 +723,11 @@ public:
 
   MemAccessInfoList &getDependenciesToCheck() { return CheckDeps; }
 
+  const DenseMap<Value *, SmallVector<const Value *, 16>> &
+  getUnderlyingObjects() {
+    return UnderlyingObjects;
+  }
+
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
 
@@ -733,6 +773,8 @@ private:
 
   /// The SCEV predicate containing all the SCEV-related assumptions.
   PredicatedScalarEvolution &PSE;
+
+  DenseMap<Value *, SmallVector<const Value *, 16>> UnderlyingObjects;
 };
 
 } // end anonymous namespace
@@ -911,6 +953,22 @@ static void findForkedSCEVs(
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
+  case Instruction::PHI: {
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>, 2> ChildScevs;
+    // A phi means we've found a forked pointer, but we currently only
+    // support a single phi per pointer so if there's another behind this
+    // then we just bail out and return the generic SCEV.
+    if (I->getNumOperands() == 2) {
+      findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
+      findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
+    }
+    if (ChildScevs.size() == 2) {
+      ScevList.push_back(ChildScevs[0]);
+      ScevList.push_back(ChildScevs[1]);
+    } else
+      ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
+    break;
+  }
   case Instruction::Add:
   case Instruction::Sub: {
     SmallVector<PointerIntPair<const SCEV *, 1, bool>> LScevs;
@@ -1071,7 +1129,6 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     for (const auto &A : AS) {
       Value *Ptr = A.getValue();
       bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
-
       if (IsWrite)
         ++NumWritePtrChecks;
       else
@@ -1286,10 +1343,12 @@ void AccessAnalysis::processMemAccesses() {
           typedef SmallVector<const Value *, 16> ValueVector;
           ValueVector TempObjects;
 
-          getUnderlyingObjects(Ptr, TempObjects, LI);
+          UnderlyingObjects[Ptr] = {};
+          SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
+          ::getUnderlyingObjects(Ptr, UOs, LI);
           LLVM_DEBUG(dbgs()
                      << "Underlying objects for pointer " << *Ptr << "\n");
-          for (const Value *UnderlyingObj : TempObjects) {
+          for (const Value *UnderlyingObj : UOs) {
             // nullptr never alias, don't join sets for pointer that have "null"
             // in their UnderlyingObjects list.
             if (isa<ConstantPointerNull>(UnderlyingObj) &&
@@ -1470,10 +1529,6 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
                                          ScalarEvolution &SE, bool StrictCheck,
                                          bool CheckType) {
   assert(PtrA && PtrB && "Expected non-nullptr pointers.");
-  assert(cast<PointerType>(PtrA->getType())
-             ->isOpaqueOrPointeeTypeMatches(ElemTyA) && "Wrong PtrA type");
-  assert(cast<PointerType>(PtrB->getType())
-             ->isOpaqueOrPointeeTypeMatches(ElemTyB) && "Wrong PtrB type");
 
   // Make sure that A and B are different pointers.
   if (PtrA == PtrB)
@@ -1621,6 +1676,7 @@ MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   case ForwardButPreventsForwarding:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
+  case IndirectUnsafe:
     return VectorizationSafetyStatus::Unsafe;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1632,6 +1688,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
   case Forward:
   case ForwardButPreventsForwarding:
   case Unknown:
+  case IndirectUnsafe:
     return false;
 
   case BackwardVectorizable:
@@ -1657,6 +1714,7 @@ bool MemoryDepChecker::Dependence::isForward() const {
   case BackwardVectorizable:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
+  case IndirectUnsafe:
     return false;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1679,7 +1737,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssues = std::min(
-      VectorizerParams::MaxVectorWidth * TypeByteSize, MaxSafeDepDistBytes);
+      VectorizerParams::MaxVectorWidth * TypeByteSize, MinDepDistBytes);
 
   // Compute the smallest VF at which the store and load would be misaligned.
   for (uint64_t VF = 2 * TypeByteSize; VF <= MaxVFWithoutSLForwardIssues;
@@ -1699,10 +1757,10 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     return true;
   }
 
-  if (MaxVFWithoutSLForwardIssues < MaxSafeDepDistBytes &&
+  if (MaxVFWithoutSLForwardIssues < MinDepDistBytes &&
       MaxVFWithoutSLForwardIssues !=
           VectorizerParams::MaxVectorWidth * TypeByteSize)
-    MaxSafeDepDistBytes = MaxVFWithoutSLForwardIssues;
+    MinDepDistBytes = MaxVFWithoutSLForwardIssues;
   return false;
 }
 
@@ -1814,67 +1872,116 @@ static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
   return ScaledDist % Stride;
 }
 
-MemoryDepChecker::Dependence::DepType
-MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
-                              const MemAccessInfo &B, unsigned BIdx,
-                              const DenseMap<Value *, const SCEV *> &Strides) {
-  assert (AIdx < BIdx && "Must pass arguments in program order");
+/// Returns true if any of the underlying objects has a loop varying address,
+/// i.e. may change in \p L.
+static bool
+isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
+                             ScalarEvolution &SE, const Loop *L) {
+  return any_of(UnderlyingObjects, [&SE, L](const Value *UO) {
+    return !SE.isLoopInvariant(SE.getSCEV(const_cast<Value *>(UO)), L);
+  });
+}
 
+// Get the dependence distance, stride, type size in whether i is a write for
+// the dependence between A and B. Returns a DepType, if we can prove there's
+// no dependence or the analysis fails. Outlined to lambda to limit he scope
+// of various temporary variables, like A/BPtr, StrideA/BPtr and others.
+// Returns either the dependence result, if it could already be determined, or a
+// tuple with (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
+static std::variant<MemoryDepChecker::Dependence::DepType,
+                    std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>
+getDependenceDistanceStrideAndSize(
+    const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
+    const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
+    const DenseMap<Value *, const SCEV *> &Strides,
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    PredicatedScalarEvolution &PSE, const Loop *InnermostLoop) {
+  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
   auto [BPtr, BIsWrite] = B;
-  Type *ATy = getLoadStoreType(InstMap[AIdx]);
-  Type *BTy = getLoadStoreType(InstMap[BIdx]);
 
   // Two reads are independent.
   if (!AIsWrite && !BIsWrite)
-    return Dependence::NoDep;
+    return MemoryDepChecker::Dependence::NoDep;
+
+  Type *ATy = getLoadStoreType(AInst);
+  Type *BTy = getLoadStoreType(BInst);
 
   // We cannot check pointers in different address spaces.
   if (APtr->getType()->getPointerAddressSpace() !=
       BPtr->getType()->getPointerAddressSpace())
-    return Dependence::Unknown;
+    return MemoryDepChecker::Dependence::Unknown;
 
   int64_t StrideAPtr =
-    getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
   int64_t StrideBPtr =
-    getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
 
   // If the induction step is negative we have to invert source and sink of the
-  // dependence.
+  // dependence when measuring the distance between them. We should not swap
+  // AIsWrite with BIsWrite, as their uses expect them in program order.
   if (StrideAPtr < 0) {
-    std::swap(APtr, BPtr);
-    std::swap(ATy, BTy);
     std::swap(Src, Sink);
-    std::swap(AIsWrite, BIsWrite);
-    std::swap(AIdx, BIdx);
-    std::swap(StrideAPtr, StrideBPtr);
+    std::swap(AInst, BInst);
   }
 
-  ScalarEvolution &SE = *PSE.getSE();
   const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
 
   LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
                     << "(Induction step: " << StrideAPtr << ")\n");
-  LLVM_DEBUG(dbgs() << "LAA: Distance for " << *InstMap[AIdx] << " to "
-                    << *InstMap[BIdx] << ": " << *Dist << "\n");
+  LLVM_DEBUG(dbgs() << "LAA: Distance for " << *AInst << " to " << *BInst
+                    << ": " << *Dist << "\n");
+
+  // Needs accesses where the addresses of the accessed underlying objects do
+  // not change within the loop.
+  if (isLoopVariantIndirectAddress(UnderlyingObjects.find(APtr)->second, SE,
+                                   InnermostLoop) ||
+      isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
+                                   InnermostLoop))
+    return MemoryDepChecker::Dependence::IndirectUnsafe;
 
   // Need accesses with constant stride. We don't want to vectorize
-  // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap in
-  // the address space.
-  if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr){
+  // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
+  // in the address space.
+  if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr) {
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
-    return Dependence::Unknown;
+    return MemoryDepChecker::Dependence::Unknown;
   }
 
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
+  if (!HasSameSize)
+    TypeByteSize = 0;
   uint64_t Stride = std::abs(StrideAPtr);
+  return std::make_tuple(Dist, Stride, TypeByteSize, AIsWrite, BIsWrite);
+}
 
+MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
+    const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
+    unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
+  assert(AIdx < BIdx && "Must pass arguments in program order");
+
+  // Get the dependence distance, stride, type size and what access writes for
+  // the dependence between A and B.
+  auto Res = getDependenceDistanceStrideAndSize(
+      A, InstMap[AIdx], B, InstMap[BIdx], Strides, UnderlyingObjects, PSE,
+      InnermostLoop);
+  if (std::holds_alternative<Dependence::DepType>(Res))
+    return std::get<Dependence::DepType>(Res);
+
+  const auto &[Dist, Stride, TypeByteSize, AIsWrite, BIsWrite] =
+      std::get<std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>(Res);
+  bool HasSameSize = TypeByteSize > 0;
+
+  ScalarEvolution &SE = *PSE.getSE();
+  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
                                Stride, TypeByteSize))
@@ -1900,9 +2007,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (Val.isNegative()) {
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
+    // There is no need to update MaxSafeVectorWidthInBits after call to
+    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes,
+    // since a forward dependency will allow vectorization using any width.
     if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-        (couldPreventStoreLoadForward(Val.abs().getZExtValue(), TypeByteSize) ||
-         !HasSameSize)) {
+        (!HasSameSize || couldPreventStoreLoadForward(Val.abs().getZExtValue(),
+                                                      TypeByteSize))) {
       LLVM_DEBUG(dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
       return Dependence::ForwardButPreventsForwarding;
     }
@@ -1970,8 +2080,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Backward;
   }
 
-  // Unsafe if the minimum distance needed is greater than max safe distance.
-  if (MinDistanceNeeded > MaxSafeDepDistBytes) {
+  // Unsafe if the minimum distance needed is greater than smallest dependence
+  // distance distance.
+  if (MinDistanceNeeded > MinDepDistBytes) {
     LLVM_DEBUG(dbgs() << "LAA: Failure because it needs at least "
                       << MinDistanceNeeded << " size in bytes\n");
     return Dependence::Backward;
@@ -1993,15 +2104,25 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // is 2. Then we analyze the accesses on array A, the minimum distance needed
   // is 8, which is less than 2 and forbidden vectorization, But actually
   // both A and B could be vectorized by 2 iterations.
-  MaxSafeDepDistBytes =
-      std::min(static_cast<uint64_t>(Distance), MaxSafeDepDistBytes);
+  MinDepDistBytes =
+      std::min(static_cast<uint64_t>(Distance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
+  uint64_t MinDepDistBytesOld = MinDepDistBytes;
   if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-      couldPreventStoreLoadForward(Distance, TypeByteSize))
+      couldPreventStoreLoadForward(Distance, TypeByteSize)) {
+    // Sanity check that we didn't update MinDepDistBytes when calling
+    // couldPreventStoreLoadForward
+    assert(MinDepDistBytes == MinDepDistBytesOld &&
+           "An update to MinDepDistBytes requires an update to "
+           "MaxSafeVectorWidthInBits");
+    (void)MinDepDistBytesOld;
     return Dependence::BackwardVectorizableButPreventsForwarding;
+  }
 
-  uint64_t MaxVF = MaxSafeDepDistBytes / (TypeByteSize * Stride);
+  // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
+  // since there is a backwards dependency.
+  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * Stride);
   LLVM_DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
                     << " with max VF = " << MaxVF << '\n');
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
@@ -2009,11 +2130,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
-                                   MemAccessInfoList &CheckDeps,
-                                   const DenseMap<Value *, const SCEV *> &Strides) {
+bool MemoryDepChecker::areDepsSafe(
+    DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
+    const DenseMap<Value *, const SCEV *> &Strides,
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
 
-  MaxSafeDepDistBytes = -1;
+  MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
   for (MemAccessInfo CurAccess : CheckDeps) {
     if (Visited.count(CurAccess))
@@ -2055,7 +2178,8 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
               std::swap(A, B);
 
             Dependence::DepType Type =
-                isDependent(*A.first, A.second, *B.first, B.second, Strides);
+                isDependent(*A.first, A.second, *B.first, B.second, Strides,
+                            UnderlyingObjects);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2099,8 +2223,14 @@ MemoryDepChecker::getInstructionsForAccess(Value *Ptr, bool isWrite) const {
 }
 
 const char *MemoryDepChecker::Dependence::DepName[] = {
-    "NoDep", "Unknown", "Forward", "ForwardButPreventsForwarding", "Backward",
-    "BackwardVectorizable", "BackwardVectorizableButPreventsForwarding"};
+    "NoDep",
+    "Unknown",
+    "IndidrectUnsafe",
+    "Forward",
+    "ForwardButPreventsForwarding",
+    "Backward",
+    "BackwardVectorizable",
+    "BackwardVectorizableButPreventsForwarding"};
 
 void MemoryDepChecker::Dependence::print(
     raw_ostream &OS, unsigned Depth,
@@ -2193,17 +2323,17 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       if (HasComplexMemInst)
         continue;
 
+      // Many math library functions read the rounding mode. We will only
+      // vectorize a loop if it contains known function calls that don't set
+      // the flag. Therefore, it is safe to ignore this read from memory.
+      auto *Call = dyn_cast<CallInst>(&I);
+      if (Call && getVectorIntrinsicIDForCall(Call, TLI))
+        continue;
+
       // If this is a load, save it. If this instruction can read from memory
       // but is not a load, then we quit. Notice that we don't handle function
       // calls that read or write.
       if (I.mayReadFromMemory()) {
-        // Many math library functions read the rounding mode. We will only
-        // vectorize a loop if it contains known function calls that don't set
-        // the flag. Therefore, it is safe to ignore this read from memory.
-        auto *Call = dyn_cast<CallInst>(&I);
-        if (Call && getVectorIntrinsicIDForCall(Call, TLI))
-          continue;
-
         // If the function has an explicit vectorized counterpart, we can safely
         // assume that it can be vectorized.
         if (Call && !Call->isNoBuiltin() && Call->getCalledFunction() &&
@@ -2401,8 +2531,8 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
     CanVecMem = DepChecker->areDepsSafe(
-        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides);
-    MaxSafeDepDistBytes = DepChecker->getMaxSafeDepDistBytes();
+        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
+        Accesses.getUnderlyingObjects());
 
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -2465,12 +2595,24 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
+  bool HasForcedDistribution = false;
+  std::optional<const MDOperand *> Value =
+      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
+  if (Value) {
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+  }
+
+  const std::string Info =
+      HasForcedDistribution
+          ? "unsafe dependent memory operations in loop."
+          : "unsafe dependent memory operations in loop. Use "
+            "#pragma clang loop distribute(enable) to allow loop distribution "
+            "to attempt to isolate the offending operations into a separate "
+            "loop";
   OptimizationRemarkAnalysis &R =
-      recordAnalysis("UnsafeDep", Dep.getDestination(*this))
-      << "unsafe dependent memory operations in loop. Use "
-         "#pragma loop distribute(enable) to allow loop distribution "
-         "to attempt to isolate the offending operations into a separate "
-         "loop";
+      recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
@@ -2487,6 +2629,9 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   case MemoryDepChecker::Dependence::BackwardVectorizableButPreventsForwarding:
     R << "\nBackward loop carried data dependence that prevents "
          "store-to-load forwarding.";
+    break;
+  case MemoryDepChecker::Dependence::IndirectUnsafe:
+    R << "\nUnsafe indirect dependence.";
     break;
   case MemoryDepChecker::Dependence::Unknown:
     R << "\nUnknown data dependence.";
@@ -2767,9 +2912,10 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   if (CanVecMem) {
     OS.indent(Depth) << "Memory dependences are safe";
-    if (MaxSafeDepDistBytes != -1ULL)
-      OS << " with a maximum dependence distance of " << MaxSafeDepDistBytes
-         << " bytes";
+    const MemoryDepChecker &DC = getDepChecker();
+    if (!DC.isSafeForAnyVectorWidth())
+      OS << " with a maximum safe vector width of "
+         << DC.getMaxSafeVectorWidthInBits() << " bits";
     if (PtrRtChecking->Need)
       OS << " with run-time checks";
     OS << "\n";

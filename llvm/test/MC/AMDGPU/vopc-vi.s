@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=VI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefix=NOSICI --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefix=NOSICI --implicit-check-not=error: %s
 
 v_cmp_class_f16 vcc, v2, v4
 // VI: v_cmp_class_f16_e32 vcc, v2, v4 ; encoding: [0x02,0x09,0x28,0x7c]

@@ -154,9 +154,9 @@ constexpr bool test() {
   }
 
   {
-    // const imcompatible:
-    // underlying const sentinels cannot substract underlying iterators
-    // underlying sentinels cannot substract underlying const iterators
+    // const incompatible:
+    // underlying const sentinels cannot subtract underlying iterators
+    // underlying sentinels cannot subtract underlying const iterators
     std::ranges::zip_view v(NonSimpleForwardSizedNonCommon{buffer1});
     static_assert(!std::ranges::common_range<decltype(v)>);
     LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<decltype(v)>);

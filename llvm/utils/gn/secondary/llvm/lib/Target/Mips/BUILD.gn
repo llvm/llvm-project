@@ -34,7 +34,7 @@ tablegen("MipsGenPostLegalizeGICombiner") {
   visibility = [ ":LLVMMipsCodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=MipsPostLegalizerCombinerHelper",
+    "-combiners=MipsPostLegalizerCombiner",
   ]
   td_file = "Mips.td"
 }

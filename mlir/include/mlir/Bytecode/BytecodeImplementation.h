@@ -20,9 +20,21 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
+//===--------------------------------------------------------------------===//
+// Dialect Version Interface.
+//===--------------------------------------------------------------------===//
+
+/// This class is used to represent the version of a dialect, for the purpose
+/// of polymorphic destruction.
+class DialectVersion {
+public:
+  virtual ~DialectVersion() = default;
+};
+
 //===----------------------------------------------------------------------===//
 // DialectBytecodeReader
 //===----------------------------------------------------------------------===//
@@ -37,7 +49,21 @@ public:
   virtual ~DialectBytecodeReader() = default;
 
   /// Emit an error to the reader.
-  virtual InFlightDiagnostic emitError(const Twine &msg = {}) = 0;
+  virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
+
+  /// Retrieve the dialect version by name if available.
+  virtual FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const = 0;
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
+
+  /// Retrieve the context associated to the reader.
+  virtual MLIRContext *getContext() const = 0;
+
+  /// Return the bytecode version being read.
+  virtual uint64_t getBytecodeVersion() const = 0;
 
   /// Read out a list of elements, invoking the provided callback for each
   /// element. The callback function may be in any of the following forms:
@@ -148,6 +174,76 @@ public:
                     [this](int64_t &value) { return readSignedVarInt(value); });
   }
 
+  /// Parse a variable length encoded integer whose low bit is used to encode an
+  /// unrelated flag, i.e: `(integerValue << 1) | (flag ? 1 : 0)`.
+  LogicalResult readVarIntWithFlag(uint64_t &result, bool &flag) {
+    if (failed(readVarInt(result)))
+      return failure();
+    flag = result & 1;
+    result >>= 1;
+    return success();
+  }
+
+  /// Read a "small" sparse array of integer <= 32 bits elements, where
+  /// index/value pairs can be compressed when the array is small.
+  /// Note that only some position of the array will be read and the ones
+  /// not stored in the bytecode are gonne be left untouched.
+  /// If the provided array is too small for the stored indices, an error
+  /// will be returned.
+  template <typename T>
+  LogicalResult readSparseArray(MutableArrayRef<T> array) {
+    static_assert(sizeof(T) < sizeof(uint64_t), "expect integer < 64 bits");
+    static_assert(std::is_integral<T>::value, "expects integer");
+    uint64_t nonZeroesCount;
+    bool useSparseEncoding;
+    if (failed(readVarIntWithFlag(nonZeroesCount, useSparseEncoding)))
+      return failure();
+    if (nonZeroesCount == 0)
+      return success();
+    if (!useSparseEncoding) {
+      // This is a simple dense array.
+      if (nonZeroesCount > array.size()) {
+        emitError("trying to read an array of ")
+            << nonZeroesCount << " but only " << array.size()
+            << " storage available.";
+        return failure();
+      }
+      for (int64_t index : llvm::seq<int64_t>(0, nonZeroesCount)) {
+        uint64_t value;
+        if (failed(readVarInt(value)))
+          return failure();
+        array[index] = value;
+      }
+      return success();
+    }
+    // Read sparse encoding
+    // This is the number of bits used for packing the index with the value.
+    uint64_t indexBitSize;
+    if (failed(readVarInt(indexBitSize)))
+      return failure();
+    constexpr uint64_t maxIndexBitSize = 8;
+    if (indexBitSize > maxIndexBitSize) {
+      emitError("reading sparse array with indexing above 8 bits: ")
+          << indexBitSize;
+      return failure();
+    }
+    for (uint32_t count : llvm::seq<uint32_t>(0, nonZeroesCount)) {
+      (void)count;
+      uint64_t indexValuePair;
+      if (failed(readVarInt(indexValuePair)))
+        return failure();
+      uint64_t index = indexValuePair & ~(uint64_t(-1) << (indexBitSize));
+      uint64_t value = indexValuePair >> indexBitSize;
+      if (index >= array.size()) {
+        emitError("reading a sparse array found index ")
+            << index << " but only " << array.size() << " storage available.";
+        return failure();
+      }
+      array[index] = value;
+    }
+    return success();
+  }
+
   /// Read an APInt that is known to have been encoded with the given width.
   virtual FailureOr<APInt> readAPIntWithKnownWidth(unsigned bitWidth) = 0;
 
@@ -230,6 +326,55 @@ public:
     writeList(value, [this](int64_t value) { writeSignedVarInt(value); });
   }
 
+  /// Write a VarInt and a flag packed together.
+  void writeVarIntWithFlag(uint64_t value, bool flag) {
+    writeVarInt((value << 1) | (flag ? 1 : 0));
+  }
+
+  /// Write out a "small" sparse array of integer <= 32 bits elements, where
+  /// index/value pairs can be compressed when the array is small. This method
+  /// will scan the array multiple times and should not be used for large
+  /// arrays. The optional provided "zero" can be used to adjust for the
+  /// expected repeated value. We assume here that the array size fits in a 32
+  /// bits integer.
+  template <typename T>
+  void writeSparseArray(ArrayRef<T> array) {
+    static_assert(sizeof(T) < sizeof(uint64_t), "expect integer < 64 bits");
+    static_assert(std::is_integral<T>::value, "expects integer");
+    uint32_t size = array.size();
+    uint32_t nonZeroesCount = 0, lastIndex = 0;
+    for (uint32_t index : llvm::seq<uint32_t>(0, size)) {
+      if (!array[index])
+        continue;
+      nonZeroesCount++;
+      lastIndex = index;
+    }
+    // If the last position is too large, or the array isn't at least 50%
+    // sparse, emit it with a dense encoding.
+    if (lastIndex > 256 || nonZeroesCount > size / 2) {
+      // Emit the array size and a flag which indicates whether it is sparse.
+      writeVarIntWithFlag(size, false);
+      for (const T &elt : array)
+        writeVarInt(elt);
+      return;
+    }
+    // Emit sparse: first the number of elements we'll write and a flag
+    // indicating it is a sparse encoding.
+    writeVarIntWithFlag(nonZeroesCount, true);
+    if (nonZeroesCount == 0)
+      return;
+    // This is the number of bits used for packing the index with the value.
+    int indexBitSize = llvm::Log2_32_Ceil(lastIndex + 1);
+    writeVarInt(indexBitSize);
+    for (uint32_t index : llvm::seq<uint32_t>(0, lastIndex + 1)) {
+      T value = array[index];
+      if (!value)
+        continue;
+      uint64_t indexValuePair = (value << indexBitSize) | (index);
+      writeVarInt(indexValuePair);
+    }
+  }
+
   /// Write an APInt to the bytecode stream whose bitwidth will be known
   /// externally at read time. This method is useful for encoding APInt values
   /// when the width is known via external means, such as via a type. This
@@ -259,17 +404,15 @@ public:
 
   /// Return the bytecode version being emitted for.
   virtual int64_t getBytecodeVersion() const = 0;
-};
 
-//===--------------------------------------------------------------------===//
-// Dialect Version Interface.
-//===--------------------------------------------------------------------===//
+  /// Retrieve the dialect version by name if available.
+  virtual FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const = 0;
 
-/// This class is used to represent the version of a dialect, for the purpose
-/// of polymorphic destruction.
-class DialectVersion {
-public:
-  virtual ~DialectVersion() = default;
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -286,44 +429,20 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Read an attribute belonging to this dialect from the given reader. This
-  /// method should return null in the case of failure.
+  /// method should return null in the case of failure. Optionally, the dialect
+  /// version can be accessed through the reader.
   virtual Attribute readAttribute(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading attributes from bytecode";
     return Attribute();
   }
 
-  /// Read a versioned attribute encoding belonging to this dialect from the
-  /// given reader. This method should return null in the case of failure, and
-  /// falls back to the non-versioned reader in case the dialect implements
-  /// versioning but it does not support versioned custom encodings for the
-  /// attributes.
-  virtual Attribute readAttribute(DialectBytecodeReader &reader,
-                                  const DialectVersion &version) const {
-    reader.emitError()
-        << "dialect " << getDialect()->getNamespace()
-        << " does not support reading versioned attributes from bytecode";
-    return Attribute();
-  }
-
   /// Read a type belonging to this dialect from the given reader. This method
-  /// should return null in the case of failure.
+  /// should return null in the case of failure. Optionally, the dialect version
+  /// can be accessed thorugh the reader.
   virtual Type readType(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading types from bytecode";
-    return Type();
-  }
-
-  /// Read a versioned type encoding belonging to this dialect from the given
-  /// reader. This method should return null in the case of failure, and
-  /// falls back to the non-versioned reader in case the dialect implements
-  /// versioning but it does not support versioned custom encodings for the
-  /// types.
-  virtual Type readType(DialectBytecodeReader &reader,
-                        const DialectVersion &version) const {
-    reader.emitError()
-        << "dialect " << getDialect()->getNamespace()
-        << " does not support reading versioned types from bytecode";
     return Type();
   }
 

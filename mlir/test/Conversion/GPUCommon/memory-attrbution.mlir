@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect --convert-gpu-to-nvvm='use-opaque-pointers=1' --split-input-file %s | FileCheck --check-prefix=NVVM %s
-// RUN: mlir-opt -allow-unregistered-dialect --convert-gpu-to-rocdl='use-opaque-pointers=1' --split-input-file %s | FileCheck --check-prefix=ROCDL %s
+// RUN: mlir-opt -allow-unregistered-dialect --convert-gpu-to-nvvm --split-input-file %s | FileCheck --check-prefix=NVVM %s
+// RUN: mlir-opt -allow-unregistered-dialect --convert-gpu-to-rocdl --split-input-file %s | FileCheck --check-prefix=ROCDL %s
 
 gpu.module @kernel {
   // NVVM-LABEL:  llvm.func @private

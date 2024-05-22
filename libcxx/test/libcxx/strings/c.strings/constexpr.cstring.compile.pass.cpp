@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 // Check that __constexpr_* cstring functions are actually constexpr
 
 #include <__string/constexpr_c_functions.h>
@@ -25,7 +23,6 @@ static_assert(std::__constexpr_memcmp(Banane, Bananf, std::__element_count(6)) =
 
 static_assert(!std::__constexpr_memcmp_equal(Banane, Banand, std::__element_count(6)), "");
 static_assert(std::__constexpr_memcmp_equal(Banane, Banane, std::__element_count(6)), "");
-
 
 constexpr bool test_constexpr_wmemchr() {
   const char str[] = "Banane";

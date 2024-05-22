@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
@@ -32,7 +31,6 @@
 #include <cstring>
 #include <inttypes.h>
 #include <iostream>
-#include <map>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -58,9 +56,7 @@ using namespace object;
 using namespace llvm::opt;
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -73,13 +69,7 @@ enum ID {
 #undef PREFIX
 
 const opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -221,14 +211,14 @@ static bool filterArch(MachOObjectFile &Obj) {
   Triple ObjTriple(Obj.getArchTriple());
   StringRef ObjArch = ObjTriple.getArchName();
 
-  for (auto Arch : ArchFilters) {
+  for (StringRef Arch : ArchFilters) {
     // Match name.
     if (Arch == ObjArch)
       return true;
 
     // Match architecture number.
     unsigned Value;
-    if (!StringRef(Arch).getAsInteger(0, Value))
+    if (!Arch.getAsInteger(0, Value))
       if (Value == getCPUType(Obj))
         return true;
   }
@@ -238,7 +228,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
@@ -315,6 +305,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
   auto &OS = outs();
+  // Make a stream refernce that will become a /dev/null log stream if
+  // Quiet is true, or normal output if Quiet is false. This can stop the
+  // errors and warnings from being displayed and producing too much output
+  // when they aren't desired.
+  raw_ostream *LogOS = Quiet ? nullptr : &outs();
 
   GsymCreator Gsym(Quiet);
 
@@ -340,23 +335,30 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   }
 
   // Make sure there is DWARF to convert first.
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      Obj,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
+      /*DWPName=*/"",
+      /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
+      /*WarningHandler=*/WithColor::defaultWarningHandler,
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, OS, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
   // Convert all DWARF to GSYM.
-  if (auto Err = DT.convert(ThreadCount))
+  if (auto Err = DT.convert(ThreadCount, LogOS))
     return Err;
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, OS, Gsym))
+  if (auto Err = ObjectFileTransformer::convert(Obj, LogOS, Gsym))
     return Err;
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
@@ -366,8 +368,9 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
     return Err;
 
   // Save the GSYM file to disk.
-  support::endianness Endian =
-      Obj.makeTriple().isLittleEndian() ? support::little : support::big;
+  llvm::endianness Endian = Obj.makeTriple().isLittleEndian()
+                                ? llvm::endianness::little
+                                : llvm::endianness::big;
 
   std::optional<uint64_t> OptSegmentSize;
   if (SegmentSize > 0)
@@ -378,7 +381,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
   // can be looked up in the GSYM and that all lookups get matching data.
   if (Verify) {
-    if (auto Err = DT.verify(OutFile))
+    if (auto Err = DT.verify(OutFile, OS))
       return Err;
   }
 
@@ -465,10 +468,9 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     error(DsymObjectsOrErr.takeError());
   }
 
-  for (auto Object : Objects) {
-    if (auto Err = handleFileConversionToGSYM(Object, OutFile))
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile))
       return Err;
-  }
   return Error::success();
 }
 

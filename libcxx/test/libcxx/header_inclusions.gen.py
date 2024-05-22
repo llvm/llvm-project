@@ -13,7 +13,7 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
+from libcxx.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
 
 for header in public_headers:
   header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"

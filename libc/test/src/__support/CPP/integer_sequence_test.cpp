@@ -9,7 +9,7 @@
 #include "src/__support/CPP/utility.h"
 #include "test/UnitTest/Test.h"
 
-using namespace __llvm_libc::cpp;
+using namespace LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcIntegerSequencetTest, Basic) {
   EXPECT_TRUE(

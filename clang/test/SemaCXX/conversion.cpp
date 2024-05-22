@@ -13,7 +13,6 @@ typedef unsigned short uint16_t;
 typedef unsigned int   uint32_t;
 typedef unsigned long  uint64_t;
 
-// <rdar://problem/7909130>
 namespace test0 {
   int32_t test1_positive(char *I, char *E) {
     return (E - I); // expected-warning {{implicit conversion loses integer precision}}

@@ -46,7 +46,7 @@ define i32 @d_to_i32(double %m) #0 {
 ; NOVSX-NEXT:    lwz r3, -4(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 
@@ -64,7 +64,7 @@ define i64 @d_to_i64(double %m) #0 {
 ; NOVSX-NEXT:    ld r3, -8(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -82,7 +82,7 @@ define i64 @d_to_u64(double %m) #0 {
 ; NOVSX-NEXT:    ld r3, -8(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -101,7 +101,7 @@ define zeroext i32 @d_to_u32(double %m) #0 {
 ; NOVSX-NEXT:    lwz r3, -4(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 
@@ -121,7 +121,7 @@ define signext i32 @f_to_i32(float %m) #0 {
 ; NOVSX-NEXT:    lwa r3, -4(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 
@@ -139,7 +139,7 @@ define i64 @f_to_i64(float %m) #0 {
 ; NOVSX-NEXT:    ld r3, -8(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -157,7 +157,7 @@ define i64 @f_to_u64(float %m) #0 {
 ; NOVSX-NEXT:    ld r3, -8(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.strict")
   ret i64 %conv
 }
 
@@ -176,7 +176,7 @@ define zeroext i32 @f_to_u32(float %m) #0 {
 ; NOVSX-NEXT:    lwz r3, -4(r1)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.strict")
   ret i32 %conv
 }
 
@@ -189,13 +189,13 @@ define double @i32_to_d(i32 signext %m) #0 {
 ;
 ; NOVSX-LABEL: i32_to_d:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    fcfid f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -213,7 +213,7 @@ define double @i64_to_d(i64 %m) #0 {
 ; NOVSX-NEXT:    fcfid f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -226,13 +226,13 @@ define double @u32_to_d(i32 zeroext %m) #0 {
 ;
 ; NOVSX-LABEL: u32_to_d:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwzx f0, 0, r3
 ; NOVSX-NEXT:    fcfidu f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -250,7 +250,7 @@ define double @u64_to_d(i64 %m) #0 {
 ; NOVSX-NEXT:    fcfidu f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -263,13 +263,13 @@ define float @i32_to_f(i32 signext %m) #0 {
 ;
 ; NOVSX-LABEL: i32_to_f:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    fcfids f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -287,7 +287,7 @@ define float @i64_to_f(i64 %m) #0 {
 ; NOVSX-NEXT:    fcfids f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -300,13 +300,13 @@ define float @u32_to_f(i32 zeroext %m) #0 {
 ;
 ; NOVSX-LABEL: u32_to_f:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwzx f0, 0, r3
 ; NOVSX-NEXT:    fcfidus f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -324,7 +324,7 @@ define float @u64_to_f(i64 %m) #0 {
 ; NOVSX-NEXT:    fcfidus f1, f0
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -344,7 +344,7 @@ define void @d_to_i32_store(double %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    stw r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.strict")
   store i32 %conv, ptr %addr, align 4
   ret void
 }
@@ -370,7 +370,7 @@ define void @d_to_i64_store(double %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    std r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.strict")
   store i64 %conv, ptr %addr, align 8
   ret void
 }
@@ -396,7 +396,7 @@ define void @d_to_u64_store(double %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    std r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.strict")
   store i64 %conv, ptr %addr, align 8
   ret void
 }
@@ -417,7 +417,7 @@ define void @d_to_u32_store(double %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    stw r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.strict")
   store i32 %conv, ptr %addr, align 4
   ret void
 }
@@ -438,7 +438,7 @@ define void @f_to_i32_store(float %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    stw r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.strict")
   store i32 %conv, ptr %addr, align 4
   ret void
 }
@@ -464,7 +464,7 @@ define void @f_to_i64_store(float %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    std r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.strict")
   store i64 %conv, ptr %addr, align 8
   ret void
 }
@@ -490,7 +490,7 @@ define void @f_to_u64_store(float %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    std r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.strict")
   store i64 %conv, ptr %addr, align 8
   ret void
 }
@@ -511,7 +511,7 @@ define void @f_to_u32_store(float %m, ptr %addr) #0 {
 ; NOVSX-NEXT:    stw r3, 0(r4)
 ; NOVSX-NEXT:    blr
 entry:
-  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.strict") #0
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.strict")
   store i32 %conv, ptr %addr, align 4
   ret void
 }
@@ -530,7 +530,7 @@ define double @load_i32_to_d(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i32, ptr %addr, align 4
-  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -548,7 +548,7 @@ define double @load_i64_to_d(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i64, ptr %addr, align 8
-  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -566,7 +566,7 @@ define double @load_u32_to_d(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i32, ptr %addr, align 4
-  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -584,7 +584,7 @@ define double @load_u64_to_d(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i64, ptr %addr, align 8
-  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %conv
 }
 
@@ -602,7 +602,7 @@ define float @load_i32_to_f(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i32, ptr %addr, align 4
-  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -620,7 +620,7 @@ define float @load_i64_to_f(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i64, ptr %addr, align 8
-  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -638,7 +638,7 @@ define float @load_u32_to_f(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i32, ptr %addr, align 4
-  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
@@ -656,21 +656,21 @@ define float @load_u64_to_f(ptr %addr) #0 {
 ; NOVSX-NEXT:    blr
 entry:
   %m = load i64, ptr %addr, align 8
-  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %conv
 }
 
-define void @fptoint_nofpexcept_f64(double %m, ptr %addr1, ptr %addr2) {
+define void @fptoint_nofpexcept_f64(double %m, ptr %addr1, ptr %addr2) #0 {
 ; MIR-LABEL: name: fptoint_nofpexcept_f64
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXWS
 ; MIR: renamable $vf{{[0-9]+}} = nofpexcept XSCVDPSXDS
 ; MIR: renamable $vf{{[0-9]+}} = nofpexcept XSCVDPUXDS
 entry:
-  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.ignore") #0
-  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.ignore") #0
-  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.ignore") #0
-  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.ignore") #0
+  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.ignore")
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.ignore")
+  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.ignore")
+  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.ignore")
   store volatile i32 %conv1, ptr %addr1, align 4
   store volatile i32 %conv2, ptr %addr1, align 4
   store volatile i64 %conv3, ptr %addr2, align 8
@@ -678,17 +678,17 @@ entry:
   ret void
 }
 
-define void @fptoint_nofpexcept_f32(float %m, ptr %addr1, ptr %addr2) {
+define void @fptoint_nofpexcept_f32(float %m, ptr %addr1, ptr %addr2) #0 {
 ; MIR-LABEL: name: fptoint_nofpexcept_f32
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXWS
 ; MIR: renamable $vf{{[0-9]+}} = nofpexcept XSCVDPSXDS
 ; MIR: renamable $vf{{[0-9]+}} = nofpexcept XSCVDPUXDS
 entry:
-  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.ignore") #0
-  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.ignore") #0
-  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.ignore") #0
-  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.ignore") #0
+  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.ignore")
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.ignore")
+  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.ignore")
+  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.ignore")
   store volatile i32 %conv1, ptr %addr1, align 4
   store volatile i32 %conv2, ptr %addr1, align 4
   store volatile i64 %conv3, ptr %addr2, align 8
@@ -696,17 +696,17 @@ entry:
   ret void
 }
 
-define void @inttofp_nofpexcept_i32(i32 %m, ptr %addr1, ptr %addr2) {
+define void @inttofp_nofpexcept_i32(i32 %m, ptr %addr1, ptr %addr2) #0 {
 ; MIR-LABEL: name: inttofp_nofpexcept_i32
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDSP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDSP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDDP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDDP
 entry:
-  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   store volatile float  %conv1, ptr  %addr1, align 4
   store volatile float  %conv2, ptr  %addr1, align 4
   store volatile double %conv3, ptr %addr2, align 8
@@ -714,17 +714,17 @@ entry:
   ret void
 }
 
-define void @inttofp_nofpexcept_i64(i64 %m, ptr %addr1, ptr %addr2) {
+define void @inttofp_nofpexcept_i64(i64 %m, ptr %addr1, ptr %addr2) #0 {
 ; MIR-LABEL: name: inttofp_nofpexcept_i64
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDSP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDSP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDDP
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDDP
 entry:
-  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   store volatile float  %conv1, ptr  %addr1, align 4
   store volatile float  %conv2, ptr  %addr1, align 4
   store volatile double %conv3, ptr %addr2, align 8
@@ -732,11 +732,11 @@ entry:
   ret void
 }
 
-define <2 x double> @inttofp_nofpexcept_vec(<2 x i16> %m) {
+define <2 x double> @inttofp_nofpexcept_vec(<2 x i16> %m) #0 {
 ; MIR-LABEL: name: inttofp_nofpexcept_vec
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XVCVSXDDP
 entry:
-  %conv = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16> %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16> %m, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   ret <2 x double> %conv
 }
 

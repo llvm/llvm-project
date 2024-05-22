@@ -52,7 +52,7 @@ class AArch64UnwindPAC(TestBase):
         self.assertTrue(thread.GetNumFrames() >= (len(backtrace) + len(libc_backtrace)))
 
         # Strictly check frames that are in the test program's source.
-        for frame_idx, frame in enumerate(thread.frames[:len(backtrace)]):
+        for frame_idx, frame in enumerate(thread.frames[: len(backtrace)]):
             self.assertTrue(frame)
             self.assertEqual(frame.GetFunctionName(), backtrace[frame_idx])
             self.assertEqual(

@@ -145,8 +145,8 @@ void LoopVersioning::addPHINodes(
     }
     // If not create it.
     if (!PN) {
-      PN = PHINode::Create(Inst->getType(), 2, Inst->getName() + ".lver",
-                           &PHIBlock->front());
+      PN = PHINode::Create(Inst->getType(), 2, Inst->getName() + ".lver");
+      PN->insertBefore(PHIBlock->begin());
       SmallVector<User*, 8> UsersToUpdate;
       for (User *U : Inst->users())
         if (!VersionedLoop->contains(cast<Instruction>(U)->getParent()))

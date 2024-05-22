@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic MachO LinkGraph buliding code.
+// Generic MachO LinkGraph building code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -73,7 +73,7 @@ Linkage MachOLinkGraphBuilder::getLinkage(uint16_t Desc) {
 
 Scope MachOLinkGraphBuilder::getScope(StringRef Name, uint8_t Type) {
   if (Type & MachO::N_EXT) {
-    if ((Type & MachO::N_PEXT) || Name.startswith("l"))
+    if ((Type & MachO::N_PEXT) || Name.starts_with("l"))
       return Scope::Hidden;
     else
       return Scope::Default;
@@ -106,9 +106,10 @@ MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
 }
 
-support::endianness
+llvm::endianness
 MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? support::little : support::big;
+  return Obj.isLittleEndian() ? llvm::endianness::little
+                              : llvm::endianness::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
@@ -192,7 +193,7 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
 
     // TODO: Are there any other criteria for NoAlloc lifetime?
     if (NSec.Flags & MachO::S_ATTR_DEBUG)
-      NSec.GraphSection->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+      NSec.GraphSection->setMemLifetime(orc::MemLifetime::NoAlloc);
 
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }

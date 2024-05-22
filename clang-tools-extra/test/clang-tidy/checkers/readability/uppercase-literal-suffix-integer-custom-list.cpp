@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
 
 #include "integral_constant.h"
 

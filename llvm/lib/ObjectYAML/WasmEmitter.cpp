@@ -646,8 +646,18 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
 
     StringStream.flush();
 
+    unsigned HeaderSecSizeEncodingLen =
+        Sec->HeaderSecSizeEncodingLen ? *Sec->HeaderSecSizeEncodingLen : 5;
+    unsigned RequiredLen = getULEB128Size(OutString.size());
+    // Wasm spec does not allow LEBs larger than 5 bytes
+    assert(RequiredLen <= 5);
+    if (HeaderSecSizeEncodingLen < RequiredLen) {
+      reportError("section header length can't be encoded in a LEB of size " +
+                  Twine(HeaderSecSizeEncodingLen));
+      return false;
+    }
     // Write the section size followed by the content
-    encodeULEB128(OutString.size(), OS);
+    encodeULEB128(OutString.size(), OS, HeaderSecSizeEncodingLen);
     OS << OutString;
   }
 

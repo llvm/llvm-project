@@ -151,6 +151,20 @@ llvm.func @index_to_struct(%arg: i32) {
 
 // -----
 
+// CHECK-LABEL: llvm.func @no_crash_on_negative_gep_index
+llvm.func @no_crash_on_negative_gep_index() {
+  %0 = llvm.mlir.constant(1.000000e+00 : f16) : f16
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32, i32)>
+  %2 = llvm.alloca %1 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK: llvm.getelementptr %[[ALLOCA]][-1] : (!llvm.ptr) -> !llvm.ptr, f32
+  %3 = llvm.getelementptr %2[-1] : (!llvm.ptr) -> !llvm.ptr, f32
+  llvm.store %0, %3 : f16, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @coalesced_store_ints
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints(%arg: i64) {
@@ -218,8 +232,8 @@ llvm.func @coalesced_store_floats(%arg: i64) {
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
   // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (f32, f32)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : i64, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
@@ -409,12 +423,243 @@ llvm.func @type_consistent_vector_store(%arg: vector<4xi32>) {
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
 llvm.func @type_consistent_vector_store_other_type(%arg: vector<4xi32>) {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (vector<4xf32>)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (vector<4xf32>)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @bitcast_insertion
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @bitcast_insertion(%arg: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x f32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : i32 to f32
+  // CHECK: llvm.store %[[BIT_CAST]], %[[ALLOCA]]
+  llvm.store %arg, %1 : i32, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @gep_split
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @gep_split(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x struct<"foo", (i64)>>
+  %1 = llvm.alloca %0 x !llvm.array<2 x struct<"foo", (i64)>> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @coalesced_store_ints_subaggregate
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @coalesced_store_ints_subaggregate(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, struct<(i32, i32)>)> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @gep_result_ptr_type_dynamic
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @gep_result_ptr_type_dynamic(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x struct<"foo", (i64)>>
+  %1 = llvm.alloca %0 x !llvm.array<2 x struct<"foo", (i64)>> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, %arg, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, %[[ARG]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @overlapping_int_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @overlapping_int_aggregate_store(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i16
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST16]] : i64
+  // CHECK: [[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i48
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+
+  // Normal integer splitting of [[TRUNC]] follows:
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 2] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @overlapping_vector_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: vector<4xi16>
+llvm.func @overlapping_vector_aggregate_store(%arg: vector<4 x i16>) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST0]] : i32]
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST1]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST2]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST3]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 2] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  llvm.store %arg, %1 : vector<4 x i16>, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @partially_overlapping_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @partially_overlapping_aggregate_store(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i16
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST16]] : i64
+  // CHECK: [[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i48
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+
+  // Normal integer splitting of [[TRUNC]] follows:
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+
+  // It is important that there are no more stores at this point.
+  // Specifically a store into the fourth field of %[[TOP_GEP]] would
+  // incorrectly change the semantics of the code.
+  // CHECK-NOT: llvm.store %{{.*}}, %{{.*}}
+
+  llvm.store %arg, %1 : i64, !llvm.ptr
+
+  llvm.return
+}
+
+// -----
+
+// Here a split is undesirable since the store does a partial store into the field.
+
+// CHECK-LABEL: llvm.func @undesirable_overlapping_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @undesirable_overlapping_aggregate_store(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)> : (i32) -> !llvm.ptr
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %2 : i64, !llvm.ptr
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @coalesced_store_ints_array
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @coalesced_store_ints_array(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x i32>
+  %1 = llvm.alloca %0 x !llvm.array<2 x i32> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i32>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.array<2 x i32>
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  llvm.store %arg, %1 : i64, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
   llvm.return
 }

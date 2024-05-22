@@ -6,14 +6,10 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import contextlib
-import io
 import lit
 import lit.formats
 import os
-import pipes
 import re
-import shutil
 
 
 def _getTempPaths(test):
@@ -35,39 +31,6 @@ def _checkBaseSubstitutions(substitutions):
     for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
-def _parseLitOutput(fullOutput):
-    """
-    Parse output of a Lit ShTest to extract the actual output of the contained commands.
-
-    This takes output of the form
-
-        $ ":" "RUN: at line 11"
-        $ "echo" "OUTPUT1"
-        # command output:
-        OUTPUT1
-
-        $ ":" "RUN: at line 12"
-        $ "echo" "OUTPUT2"
-        # command output:
-        OUTPUT2
-
-    and returns a string containing
-
-        OUTPUT1
-        OUTPUT2
-
-    as-if the commands had been run directly. This is a workaround for the fact
-    that Lit doesn't let us execute ShTest and retrieve the raw output without
-    injecting additional Lit output around it.
-    """
-    parsed = ''
-    for output in re.split('[$]\s*":"\s*"RUN: at line \d+"', fullOutput):
-        if output: # skip blank lines
-            commandOutput = re.search("# command output:\n(.+)\n$", output, flags=re.DOTALL)
-            if commandOutput:
-                parsed += commandOutput.group(1)
-    return parsed
-
 def _executeScriptInternal(test, litConfig, commands):
     """
     Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
@@ -78,21 +41,13 @@ def _executeScriptInternal(test, litConfig, commands):
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
-    res = lit.TestRunner.executeScriptInternal(
-        test, litConfig, tmpBase, parsedCommands, execDir
-    )
-    if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
-        res = ("", res.output, 127, None)
+    try:
+        res = lit.TestRunner.executeScriptInternal(
+            test, litConfig, tmpBase, parsedCommands, execDir, debug=False
+        )
+    except lit.TestRunner.ScriptFatal as e:
+        res = ("", str(e), 127, None)
     (out, err, exitCode, timeoutInfo) = res
-
-    # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
-    #       split any stderr output that is included in stdout. It shouldn't be there, but
-    #       the Lit internal shell conflates stderr and stdout.
-    conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
-    if conflatedErrorOutput:
-        conflatedErrorOutput = conflatedErrorOutput.group(0)
-        out = out[: -len(conflatedErrorOutput)]
-        err += conflatedErrorOutput
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)
 
@@ -116,10 +71,20 @@ def parseScript(test, preamble):
     tmpDir, tmpBase = _getTempPaths(test)
     substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)
 
-    # Check base substitutions and add the %{build} and %{run} convenience substitutions
+    # Check base substitutions and add the %{build}, %{verify} and %{run} convenience substitutions
+    #
+    # Note: We use -Wno-error with %{verify} to make sure that we don't treat all diagnostics as
+    #       errors, which doesn't make sense for clang-verify tests because we may want to check
+    #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
     substitutions.append(
         ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+    )
+    substitutions.append(
+        (
+            "%{verify}",
+            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+        )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
 
@@ -134,7 +99,7 @@ def parseScript(test, preamble):
         ),
         lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS:",
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
         ),
     ]
@@ -145,7 +110,7 @@ def parseScript(test, preamble):
     for feature in test.config.available_features:
         parser = lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS({}):".format(feature),
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
         )
         parsers.append(parser)
@@ -251,7 +216,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             all the inputs necessary to run the test, such that e.g. execution
             on a remote host can be done by simply copying %T to the host.
 
-        // ADDITIONAL_COMPILE_FLAGS: flag1, flag2, flag3
+        // ADDITIONAL_COMPILE_FLAGS: flag1 flag2 flag3
 
             This directive will cause the provided flags to be added to the
             %{compile_flags} substitution for the test that contains it. This
@@ -267,6 +232,13 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             Expands to a command-line that builds the current source
             file with the %{flags}, %{compile_flags} and %{link_flags}
             substitutions, and that produces an executable named %t.exe.
+
+        %{verify}
+            Expands to a command-line that builds the current source
+            file with the %{flags} and %{compile_flags} substitutions
+            and enables clang-verify. This can be used to write .sh.cpp
+            tests that use clang-verify. Note that this substitution can
+            only be used when the 'verify-support' feature is available.
 
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
@@ -306,9 +278,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             yield lit.Test.Test(testSuite, pathInSuite, localConfig)
 
     def execute(self, test, litConfig):
-        VERIFY_FLAGS = (
-            "-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0"
-        )
         supportsVerify = "verify-support" in test.config.available_features
         filename = test.path_in_suite[-1]
 
@@ -346,13 +315,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
-            steps = [
-                # Note: Use -Wno-error to make sure all diagnostics are not treated as errors,
-                #       which doesn't make sense for clang-verify tests.
-                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
-                    VERIFY_FLAGS
-                )
-            ]
+            steps = ["%dbg(COMPILED WITH) %{verify}"]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.
@@ -400,9 +363,8 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
 
         # Split the generated output into multiple files and generate one test for each file
-        parsed = _parseLitOutput(out)
-        for (subfile, content) in self._splitFile(parsed):
-            generatedFile = testSuite.getExecPath(pathInSuite + (subfile, ))
+        for subfile, content in self._splitFile(out):
+            generatedFile = testSuite.getExecPath(pathInSuite + (subfile,))
             os.makedirs(os.path.dirname(generatedFile), exist_ok=True)
             with open(generatedFile, 'w') as f:
                 f.write(content)

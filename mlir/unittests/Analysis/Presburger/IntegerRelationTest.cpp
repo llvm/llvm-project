@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "Parser.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>
@@ -15,14 +16,6 @@
 
 using namespace mlir;
 using namespace presburger;
-
-static IntegerRelation parseRelationFromSet(StringRef set, unsigned numDomain) {
-  IntegerRelation rel = parseIntegerPolyhedron(set);
-
-  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
-
-  return rel;
-}
 
 TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerRelation rel = parseRelationFromSet(
@@ -126,7 +119,7 @@ TEST(IntegerRelationTest, applyDomainAndRange) {
 }
 
 TEST(IntegerRelationTest, symbolicLexmin) {
-  SymbolicLexMin lexmin =
+  SymbolicLexOpt lexmin =
       parseRelationFromSet("(a, x)[b] : (x - a >= 0, x - b >= 0)", 1)
           .findSymbolicIntegerLexMin();
 
@@ -135,5 +128,82 @@ TEST(IntegerRelationTest, symbolicLexmin) {
       {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (b)"}, // b
   });
   EXPECT_TRUE(lexmin.unboundedDomain.isIntegerEmpty());
-  EXPECT_TRUE(lexmin.lexmin.isEqual(expectedLexmin));
+  EXPECT_TRUE(lexmin.lexopt.isEqual(expectedLexmin));
+}
+
+TEST(IntegerRelationTest, symbolicLexmax) {
+  SymbolicLexOpt lexmax1 =
+      parseRelationFromSet("(a, x)[b] : (a - x >= 0, b - x >= 0)", 1)
+          .findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax1 = parsePWMAF({
+      {"(a)[b] : (a - b >= 0)", "(a)[b] -> (b)"},
+      {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (a)"},
+  });
+
+  SymbolicLexOpt lexmax2 =
+      parseRelationFromSet("(i, j)[N] : (i >= 0, j >= 0, N - i - j >= 0)", 1)
+          .findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax2 = parsePWMAF({
+      {"(i)[N] : (i >= 0, N - i >= 0)", "(i)[N] -> (N - i)"},
+  });
+
+  SymbolicLexOpt lexmax3 =
+      parseRelationFromSet("(x, y)[N] : (x >= 0, 2 * N - x >= 0, y >= 0, x - y "
+                           "+ 2 * N >= 0, 4 * N - x - y >= 0)",
+                           1)
+          .findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax3 =
+      parsePWMAF({{"(x)[N] : (x >= 0, 2 * N - x >= 0, x - N - 1 >= 0)",
+                   "(x)[N] -> (4 * N - x)"},
+                  {"(x)[N] : (x >= 0, 2 * N - x >= 0, -x + N >= 0)",
+                   "(x)[N] -> (x + 2 * N)"}});
+
+  EXPECT_TRUE(lexmax1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax1.lexopt.isEqual(expectedLexmax1));
+  EXPECT_TRUE(lexmax2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexmax2));
+  EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
+}
+
+TEST(IntegerRelationTest, swapVar) {
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 2, 0);
+  space.resetIds();
+
+  int identifiers[6] = {0, 1, 2, 3, 4};
+
+  // Attach identifiers to domain identifiers.
+  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+
+  // Attach identifiers to range identifiers.
+  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
+
+  // Attach identifiers to symbol identifiers.
+  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
+  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
+
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z)[N, M] : (z - x - y == 0, x >= 0, N - x "
+                           ">= 0, y >= 0, M - y >= 0)",
+                           2);
+  rel.setSpace(space);
+  // Swap (Domain 0, Range 0)
+  rel.swapVar(0, 2);
+  // Swap (Domain 1, Symbol 1)
+  rel.swapVar(1, 4);
+
+  PresburgerSpace swappedSpace = rel.getSpace();
+
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Domain, 0)
+                  .isEqual(space.getId(VarKind::Range, 0)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Domain, 1)
+                  .isEqual(space.getId(VarKind::Symbol, 1)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Range, 0)
+                  .isEqual(space.getId(VarKind::Domain, 0)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Symbol, 1)
+                  .isEqual(space.getId(VarKind::Domain, 1)));
 }

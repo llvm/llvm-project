@@ -210,7 +210,7 @@ record in the array has the format:
   uint16_t Dirty : 1;
   // ``true`` if EC information is present for this module. EC is presumed to
   // stand for "Edit & Continue", which LLVM does not support.  So this flag
-  // will always be be false.
+  // will always be false.
   uint16_t EC : 1;
   uint16_t Unused : 6;
   // Type Server Index for this module.  This is assumed to be related to /Zi,

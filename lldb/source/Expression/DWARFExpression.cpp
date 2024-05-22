@@ -45,6 +45,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression() : m_data() {}
@@ -408,13 +409,33 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
       // the heap data so "m_data" will now correctly manage the heap data.
       m_data.SetData(encoder.GetDataBuffer());
       return true;
-    } else {
-      const offset_t op_arg_size =
-          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-      if (op_arg_size == LLDB_INVALID_OFFSET)
-        break;
-      offset += op_arg_size;
     }
+    if (op == DW_OP_addrx) {
+      // Replace DW_OP_addrx with DW_OP_addr, since we can't modify the
+      // read-only debug_addr table.
+      // Subtract one to account for the opcode.
+      llvm::ArrayRef data_before_op = m_data.GetData().take_front(offset - 1);
+
+      // Read the addrx index to determine how many bytes it needs.
+      const lldb::offset_t old_offset = offset;
+      m_data.GetULEB128(&offset);
+      if (old_offset == offset)
+        return false;
+      llvm::ArrayRef data_after_op = m_data.GetData().drop_front(offset);
+
+      DataEncoder encoder(m_data.GetByteOrder(), m_data.GetAddressByteSize());
+      encoder.AppendData(data_before_op);
+      encoder.AppendU8(DW_OP_addr);
+      encoder.AppendAddress(file_addr);
+      encoder.AppendData(data_after_op);
+      m_data.SetData(encoder.GetDataBuffer());
+      return true;
+    }
+    const offset_t op_arg_size =
+        GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      break;
+    offset += op_arg_size;
   }
   return false;
 }
@@ -1069,6 +1090,13 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint8_t size = opcodes.GetU8(&offset);
+      if (size > 8) {
+        if (error_ptr)
+              error_ptr->SetErrorStringWithFormat(
+                  "Invalid address size for DW_OP_deref_size: %d\n",
+                  size);
+        return false;
+      }
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
       case Value::ValueType::HostAddress: {
@@ -1127,22 +1155,21 @@ bool DWARFExpression::Evaluate(
 
         if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
           uint8_t addr_bytes[8];
-          size_t buf_size = sizeof(addr_bytes);
           Status error;
 
           if (target &&
-              target->ReadMemory(so_addr, &addr_bytes, buf_size, error,
-                                 /*force_live_memory=*/false) == buf_size) {
+              target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                 /*force_live_memory=*/false) == size) {
             ObjectFile *objfile = module_sp->GetObjectFile();
 
             stack.back().GetScalar() = DerefSizeExtractDataHelper(
-                addr_bytes, size, objfile->GetByteOrder(), buf_size);
+                addr_bytes, size, objfile->GetByteOrder(), size);
             stack.back().ClearContext();
             break;
           } else {
             if (error_ptr)
               error_ptr->SetErrorStringWithFormat(
-                  "Failed to dereference pointer for for DW_OP_deref_size: "
+                  "Failed to dereference pointer for DW_OP_deref_size: "
                   "%s\n",
                   error.AsCString());
             return false;
@@ -1160,13 +1187,13 @@ bool DWARFExpression::Evaluate(
             lldb::addr_t pointer_addr =
                 stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
             uint8_t addr_bytes[sizeof(lldb::addr_t)];
-            size_t buf_size = sizeof(addr_bytes);
             Status error;
-            if (process->ReadMemory(pointer_addr, &addr_bytes, buf_size, error)
-                == buf_size) {
+            if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
+                size) {
+
               stack.back().GetScalar() =
                   DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
-                                             process->GetByteOrder(), buf_size);
+                                             process->GetByteOrder(), size);
               stack.back().ClearContext();
             } else {
               if (error_ptr)

@@ -153,7 +153,8 @@ a:  if constexpr(sizeof(n) == 4) // expected-error {{redefinition}} expected-not
 
   void evil_things() {
     goto evil_label; // expected-error {{cannot jump}}
-    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}}
+    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}} \
+                                                     // expected-note {{jump enters a statement expression}}
 
     if constexpr (true) // expected-note {{constexpr if}}
       goto surprise; // expected-error {{cannot jump}}

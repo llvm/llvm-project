@@ -14,12 +14,14 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
+#include "Interfaces/OperatingSystemPythonInterface.h"
+#include "Interfaces/ScriptedPlatformPythonInterface.h"
+#include "Interfaces/ScriptedProcessPythonInterface.h"
+#include "Interfaces/ScriptedThreadPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
-#include "ScriptedPlatformPythonInterface.h"
-#include "ScriptedProcessPythonInterface.h"
 
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
@@ -177,18 +179,31 @@ private:
       return;
 #endif
 
+// `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
+// Python 3.13. It has been returning `true` always since Python 3.7.
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
     if (PyEval_ThreadsInitialized()) {
+#else
+    if (true) {
+#endif
       Log *log = GetLog(LLDBLog::Script);
 
       m_was_already_initialized = true;
       m_gil_state = PyGILState_Ensure();
       LLDB_LOGV(log, "Ensured PyGILState. Previous state = {0}locked\n",
                 m_gil_state == PyGILState_UNLOCKED ? "un" : "");
+
+// `PyEval_InitThreads` was deprecated in Python 3.9 and removed in
+// Python 3.13.
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
       return;
     }
 
     // InitThreads acquires the GIL if it hasn't been called before.
     PyEval_InitThreads();
+#else
+    }
+#endif
   }
 
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
@@ -412,8 +427,6 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
-  m_scripted_platform_interface_up =
-      std::make_unique<ScriptedPlatformPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;
@@ -582,10 +595,6 @@ void ScriptInterpreterPythonImpl::LeaveSession() {
   // up believing we have no thread state and PyImport_AddModule will crash if
   // that is the case - since that seems to only happen when destroying the
   // SBDebugger, we can make do without clearing up stdout and stderr
-
-  // rdar://problem/11292882
-  // When the current thread state is NULL, PyThreadState_Get() issues a fatal
-  // error.
   if (PyThreadState_GetDict()) {
     PythonDictionary &sys_module_dict = GetSysModuleDictionary();
     if (sys_module_dict.IsValid()) {
@@ -1519,157 +1528,25 @@ ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
   return std::make_unique<ScriptedProcessPythonInterface>(*this);
 }
 
-StructuredData::GenericSP
-ScriptInterpreterPythonImpl::OSPlugin_CreatePluginObject(
-    const char *class_name, lldb::ProcessSP process_sp) {
-  if (class_name == nullptr || class_name[0] == '\0')
-    return StructuredData::GenericSP();
-
-  if (!process_sp)
-    return StructuredData::GenericSP();
-
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-  PythonObject ret_val = SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
-      class_name, m_dictionary_name.c_str(), process_sp);
-
-  return StructuredData::GenericSP(
-      new StructuredPythonObject(std::move(ret_val)));
+ScriptedThreadInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
+  return std::make_shared<ScriptedThreadPythonInterface>(*this);
 }
 
-StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_RegisterInfo(
-    StructuredData::ObjectSP os_plugin_object_sp) {
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  if (!os_plugin_object_sp)
-    return {};
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return {};
-
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return {};
-
-  llvm::Expected<PythonObject> expected_py_return =
-      implementor.CallMethod("get_register_info");
-
-  if (!expected_py_return) {
-    llvm::consumeError(expected_py_return.takeError());
-    return {};
-  }
-
-  PythonObject py_return = std::move(expected_py_return.get());
-
-  if (py_return.get()) {
-    PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
-    return result_dict.CreateStructuredDictionary();
-  }
-  return StructuredData::DictionarySP();
+OperatingSystemInterfaceSP
+ScriptInterpreterPythonImpl::CreateOperatingSystemInterface() {
+  return std::make_shared<OperatingSystemPythonInterface>(*this);
 }
 
-StructuredData::ArraySP ScriptInterpreterPythonImpl::OSPlugin_ThreadsInfo(
-    StructuredData::ObjectSP os_plugin_object_sp) {
+StructuredData::ObjectSP
+ScriptInterpreterPythonImpl::CreateStructuredDataFromScriptObject(
+    ScriptObject obj) {
+  void *ptr = const_cast<void *>(obj.GetPointer());
+  PythonObject py_obj(PyRefType::Borrowed, static_cast<PyObject *>(ptr));
+  if (!py_obj.IsValid() || py_obj.IsNone())
+    return {};
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-  if (!os_plugin_object_sp)
-    return {};
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return {};
-
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return {};
-
-  llvm::Expected<PythonObject> expected_py_return =
-      implementor.CallMethod("get_thread_info");
-
-  if (!expected_py_return) {
-    llvm::consumeError(expected_py_return.takeError());
-    return {};
-  }
-
-  PythonObject py_return = std::move(expected_py_return.get());
-
-  if (py_return.get()) {
-    PythonList result_list(PyRefType::Borrowed, py_return.get());
-    return result_list.CreateStructuredArray();
-  }
-  return StructuredData::ArraySP();
-}
-
-StructuredData::StringSP
-ScriptInterpreterPythonImpl::OSPlugin_RegisterContextData(
-    StructuredData::ObjectSP os_plugin_object_sp, lldb::tid_t tid) {
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  if (!os_plugin_object_sp)
-    return {};
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return {};
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return {};
-
-  llvm::Expected<PythonObject> expected_py_return =
-      implementor.CallMethod("get_register_data", tid);
-
-  if (!expected_py_return) {
-    llvm::consumeError(expected_py_return.takeError());
-    return {};
-  }
-
-  PythonObject py_return = std::move(expected_py_return.get());
-
-  if (py_return.get()) {
-    PythonBytes result(PyRefType::Borrowed, py_return.get());
-    return result.CreateStructuredString();
-  }
-  return {};
-}
-
-StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
-    StructuredData::ObjectSP os_plugin_object_sp, lldb::tid_t tid,
-    lldb::addr_t context) {
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  if (!os_plugin_object_sp)
-    return {};
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return {};
-
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return {};
-
-  llvm::Expected<PythonObject> expected_py_return =
-      implementor.CallMethod("create_thread", tid, context);
-
-  if (!expected_py_return) {
-    llvm::consumeError(expected_py_return.takeError());
-    return {};
-  }
-
-  PythonObject py_return = std::move(expected_py_return.get());
-
-  if (py_return.get()) {
-    PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
-    return result_dict.CreateStructuredDictionary();
-  }
-  return StructuredData::DictionarySP();
+  return py_obj.CreateStructuredObject();
 }
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
@@ -1772,7 +1649,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
 
 bool
 ScriptInterpreterPythonImpl::ScriptedThreadPlanGetStopDescription(
-    StructuredData::ObjectSP implementor_sp, lldb_private::Stream *stream, 
+    StructuredData::ObjectSP implementor_sp, lldb_private::Stream *stream,
     bool &script_error) {
   StructuredData::Generic *generic = nullptr;
   if (implementor_sp)
@@ -2431,24 +2308,11 @@ ConstString ScriptInterpreterPythonImpl::GetSyntheticTypeName(
   }
 
   PythonObject py_return = std::move(expected_py_return.get());
+  if (!py_return.IsAllocated() || !PythonString::Check(py_return.get()))
+    return {};
 
-  ConstString ret_val;
-  bool got_string = false;
-  std::string buffer;
-
-  if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
-    PythonString py_string(PyRefType::Borrowed, py_return.get());
-    llvm::StringRef return_data(py_string.GetString());
-    if (!return_data.empty()) {
-      buffer.assign(return_data.data(), return_data.size());
-      got_string = true;
-    }
-  }
-
-  if (got_string)
-    ret_val.SetCStringWithLength(buffer.c_str(), buffer.size());
-
-  return ret_val;
+  PythonString type_name(PyRefType::Borrowed, py_return.get());
+  return ConstString(type_name.GetString());
 }
 
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(

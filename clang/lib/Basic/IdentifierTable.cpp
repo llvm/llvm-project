@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdio>
@@ -52,8 +51,7 @@ namespace {
 
 /// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
-class EmptyLookupIterator : public IdentifierIterator
-{
+class EmptyLookupIterator : public IdentifierIterator {
 public:
   StringRef Next() override { return StringRef(); }
 };
@@ -94,7 +92,7 @@ namespace {
     KEYNOCXX      = 0x80,
     KEYBORLAND    = 0x100,
     KEYOPENCLC    = 0x200,
-    KEYC2X        = 0x400,
+    KEYC23        = 0x400,
     KEYNOMS18     = 0x800,
     KEYNOOPENCL   = 0x1000,
     WCHARSUPPORT  = 0x2000,
@@ -110,7 +108,8 @@ namespace {
     KEYSYCL       = 0x800000,
     KEYCUDA       = 0x1000000,
     KEYHLSL       = 0x2000000,
-    KEYMAX        = KEYHLSL, // The maximum key
+    KEYFIXEDPOINT = 0x4000000,
+    KEYMAX        = KEYFIXEDPOINT, // The maximum key
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
     KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
              ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -145,8 +144,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     if (LangOpts.C99)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
-  case KEYC2X:
-    if (LangOpts.C2x)
+  case KEYC23:
+    if (LangOpts.C23)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYCXX:
@@ -212,6 +211,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYNOMS18:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
+  case KEYFIXEDPOINT:
+    return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
   default:
     llvm_unreachable("Unknown KeywordStatus flag");
   }
@@ -397,6 +398,19 @@ IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
   return ReservedIdentifierStatus::NotReserved;
 }
 
+ReservedLiteralSuffixIdStatus
+IdentifierInfo::isReservedLiteralSuffixId() const {
+  StringRef Name = getName();
+
+  if (Name[0] != '_')
+    return ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore;
+
+  if (Name.contains("__"))
+    return ReservedLiteralSuffixIdStatus::ContainsDoubleUnderscore;
+
+  return ReservedLiteralSuffixIdStatus::NotReserved;
+}
+
 StringRef IdentifierInfo::deuglifiedName() const {
   StringRef Name = getName();
   if (Name.size() >= 2 && Name.front() == '_' &&
@@ -501,63 +515,6 @@ unsigned llvm::DenseMapInfo<clang::Selector>::getHashValue(clang::Selector S) {
   return DenseMapInfo<void*>::getHashValue(S.getAsOpaquePtr());
 }
 
-namespace clang {
-
-/// One of these variable length records is kept for each
-/// selector containing more than one keyword. We use a folding set
-/// to unique aggregate names (keyword selectors in ObjC parlance). Access to
-/// this class is provided strictly through Selector.
-class alignas(IdentifierInfoAlignment) MultiKeywordSelector
-    : public detail::DeclarationNameExtra,
-      public llvm::FoldingSetNode {
-  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
-
-public:
-  // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
-      : DeclarationNameExtra(nKeys) {
-    assert((nKeys > 1) && "not a multi-keyword selector");
-
-    // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
-    for (unsigned i = 0; i != nKeys; ++i)
-      KeyInfo[i] = IIV[i];
-  }
-
-  // getName - Derive the full selector name and return it.
-  std::string getName() const;
-
-  using DeclarationNameExtra::getNumArgs;
-
-  using keyword_iterator = IdentifierInfo *const *;
-
-  keyword_iterator keyword_begin() const {
-    return reinterpret_cast<keyword_iterator>(this + 1);
-  }
-
-  keyword_iterator keyword_end() const {
-    return keyword_begin() + getNumArgs();
-  }
-
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
-    assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
-    return keyword_begin()[i];
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
-                      unsigned NumArgs) {
-    ID.AddInteger(NumArgs);
-    for (unsigned i = 0; i != NumArgs; ++i)
-      ID.AddPointer(ArgTys[i]);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, keyword_begin(), getNumArgs());
-  }
-};
-
-} // namespace clang.
-
 bool Selector::isKeywordSelector(ArrayRef<StringRef> Names) const {
   assert(!Names.empty() && "must have >= 1 selector slots");
   if (getNumArgs() != Names.size())
@@ -613,7 +570,7 @@ std::string MultiKeywordSelector::getName() const {
 }
 
 std::string Selector::getAsString() const {
-  if (InfoPtr == 0)
+  if (isNull())
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {
@@ -647,7 +604,7 @@ LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
 static bool startsWithWord(StringRef name, StringRef word) {
   if (name.size() < word.size()) return false;
   return ((name.size() == word.size() || !isLowercase(name[word.size()])) &&
-          name.startswith(word));
+          name.starts_with(word));
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
@@ -785,7 +742,7 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
 
 std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
   StringRef Name = Sel.getNameForSlot(0);
-  assert(Name.startswith("set") && "invalid setter name");
+  assert(Name.starts_with("set") && "invalid setter name");
   return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 
@@ -901,8 +858,8 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
   } else {
     if ((Flags & KEYC99) == KEYC99)
       return diag::warn_c99_keyword;
-    if ((Flags & KEYC2X) == KEYC2X)
-      return diag::warn_c2x_keyword;
+    if ((Flags & KEYC23) == KEYC23)
+      return diag::warn_c23_keyword;
   }
 
   llvm_unreachable(

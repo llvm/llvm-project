@@ -6,14 +6,15 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-f3
 define ptr@test1(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -34,15 +35,16 @@ bb2:
 define ptr@test2(i32 %A, i32 %Offset) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -64,15 +66,15 @@ bb2:
 }
 
 ; Perform the transformation only if we know that the GEPs used are inbounds.
-define ptr@test3(ptr %A, i32 %Offset) {
-; CHECK-LABEL: @test3(
+define ptr @test3_no_inbounds1(ptr %A, i32 %Offset) {
+; CHECK-LABEL: @test3_no_inbounds1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i32, ptr [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i32 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
@@ -84,8 +86,66 @@ entry:
 
 bb:
   %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr i32, ptr %A, i32 100
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
+
+define ptr @test3_no_inbounds2(ptr %A, i32 %Offset) {
+; CHECK-LABEL: @test3_no_inbounds2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret ptr [[RHS]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
   %RHS.next = getelementptr i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
+
+define ptr @test3_no_inbounds3(ptr %A, i32 %Offset) {
+; CHECK-LABEL: @test3_no_inbounds3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i32, ptr [[A]], i32 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret ptr [[RHS]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
   %cond = icmp ult ptr %LHS, %RHS
   br i1 %cond, label %bb2, label %bb
 
@@ -99,16 +159,17 @@ bb2:
 define ptr@test4(i16 %A, i32 %Offset) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -135,20 +196,21 @@ define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = invoke ptr @fun_ptr()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[CONT]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[CONT]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -179,21 +241,22 @@ define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = invoke i32 @fun_i32()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[CONT]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[CONT]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -272,10 +335,16 @@ entry:
 define void @test_zero_offset_cycle(ptr %arg) {
 ; CHECK-LABEL: @test_zero_offset_cycle(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[ARG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[GEP_INT:%.*]] = ptrtoint ptr [[GEP]] to i32
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[LOOP_CONT:%.*]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[GEP_INT]], [[ENTRY:%.*]] ], [ [[GEP_INT2:%.*]], [[LOOP_CONT:%.*]] ], [ [[PHI]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = inttoptr i32 [[PHI]] to ptr
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[PHI_PTR]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[LOOP_CONT]]
 ; CHECK:       loop.cont:
+; CHECK-NEXT:    [[GEP_INT2]] = ptrtoint ptr [[GEP]] to i32
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

@@ -4,6 +4,7 @@ executable("llvm-jitlink") {
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Debugging",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
@@ -15,6 +16,7 @@ executable("llvm-jitlink") {
     "llvm-jitlink-coff.cpp",
     "llvm-jitlink-elf.cpp",
     "llvm-jitlink-macho.cpp",
+    "llvm-jitlink-statistics.cpp",
     "llvm-jitlink.cpp",
   ]
   if (host_os != "mac" && host_os != "win") {

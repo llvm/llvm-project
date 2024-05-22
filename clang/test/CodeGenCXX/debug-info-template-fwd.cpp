@@ -5,7 +5,6 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Derived<int>"
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
-// rdar://problem/15931354
 template <class A> class Derived;
 
 template <class A> class Base {

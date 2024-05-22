@@ -27,30 +27,45 @@ def ApplyForLoopCanonicalizationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
-
-def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
-    [NavigationTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let summary = "Gets a handle to the parent 'for' loop of the given operation";
+def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.structural_conversions",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+      ["populateConversionTargetRules"]>]> {
   let description = [{
-    Produces a handle to the n-th (default 1) parent `scf.for` or `affine.for`
-    (when the affine flag is true) loop for each Payload IR operation
-    associated with the operand. Fails if such a loop cannot be found. The list
-    of operations associated with the handle contains parent operations in the
-    same order as the list associated with the operand, except for operations
-    that are parents to more than one input which are only present once.
+    Collects patterns for performing structural conversions of SCF operations.
   }];
 
-  let arguments =
-    (ins TransformHandleTypeInterface:$target,
-         DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
-                           "1">:$num_loops,
-         DefaultValuedAttr<BoolAttr, "false">:$affine);
-  let results = (outs TransformHandleTypeInterface : $parent);
+  let assemblyFormat = "attr-dict";
+}
 
-  let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
+
+def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Converts scf.forall into a nest of scf.for operations";
+  let description = [{
+    Converts the `scf.forall` operation pointed to by the given handle into a
+    set of nested `scf.for` operations. Each new operation corresponds to one
+    induction variable of the original "multifor" loop.
+
+    The operand handle must be associated with exactly one payload operation.
+
+    Loops with shared outputs are currently not supported.
+
+    #### Return Modes
+
+    Consumes the operand handle. Produces a silenceable failure if the operand
+    is not associated with a single `scf.forall` payload operation.
+    Returns as many handles as the given `forall` op has induction variables
+    that are associated with the generated `scf.for` loops.
+    Produces a silenceable failure if another number of resulting handles is
+    requested.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
 }
 
 def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
@@ -91,9 +106,11 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
 def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
-  let summary = "Peels the last iteration of the loop";
+  let summary = "Peels the first or last iteration of the loop";
   let description = [{
-     Updates the given loop so that its step evenly divides its range and puts
+     Rewrite the given loop with a main loop and a partial (first or last) loop.
+     When the `peelFront` option is set as true, the first iteration is peeled off.
+     Otherwise, updates the given loop so that its step evenly divides its range and puts
      the remaining iteration into a separate loop or a conditional.
 
      In the absence of sufficient static information, this op may peel a loop,
@@ -103,23 +120,29 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
-     This operation always succeeds and returns the scf::ForOp with the
-     postcondition: "the loop trip count is divisible by the step".
-     This operation may return the same unmodified loop handle when peeling did
-     not modify the IR (i.e. the loop trip count was already divisible).
+     When `peelFront` is true, this operation returns two scf::ForOp Ops, the
+     first scf::ForOp corresponds to the first iteration of the loop which can
+     be canonicalized away in the following optimization. The second loop Op
+     contains the remaining iteration, and the new lower bound is the original
+     lower bound plus the number of steps.
 
-     Note that even though the Payload IR modification may be performed
-     in-place, this operation consumes the operand handle and produces a new
-     one.
+     When `peelFront` is not true, this operation returns two scf::ForOp Ops, with the first
+     scf::ForOp satisfying: "the loop trip count is divisible by the step".
+     The second loop Op contains the remaining iteration. Note that even though the
+     Payload IR modification may be performed in-place, this operation consumes
+     the operand handle and produces a new one.
 
-     TODO: Return both the peeled loop and the remainder loop.
+     #### Return Modes
+
+     Produces a definite failure if peeling fails.
   }];
 
   let arguments =
       (ins Transform_ScfForOp:$target,
+           DefaultValuedAttr<BoolAttr, "false">:$peel_front,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
-  // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$peeled_loop,
+                      TransformHandleTypeInterface:$remainder_loop);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -273,8 +296,8 @@ def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
   TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
     Given an scf.if conditional, inject user-defined information that it is
-    always safe to execute only the if or else branch. 
-    
+    always safe to execute only the if or else branch.
+
     This is achieved by just replacing the scf.if by the content of one of its
     branches.
 
@@ -308,6 +331,41 @@ def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def LoopFuseSibling : Op<Transform_Dialect, "loop.fuse_sibling",
+  [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+   DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Fuse a loop into another loop, assuming the fusion is legal.";
+
+  let description = [{
+    Fuses the `target` loop into the `source` loop assuming they are
+    independent of each other. It is the responsibility of the user to ensure
+    that the given two loops are independent of each other, this operation will
+    not performa any legality checks and will simply fuse the two given loops.
+
+    Currently, the only fusion supported is when both `target` and `source`
+    are `scf.forall` operations. For `scf.forall` fusion, the bounds and the
+    mapping must match, otherwise a silencable failure is produced.
+
+    The input handles `target` and `source` must map to exactly one operation,
+    a definite failure is produced otherwise.
+
+    #### Return modes
+
+    This operation consumes the `target` and `source` handles and produces the
+    `fused_loop` handle, which points to the fused loop.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       TransformHandleTypeInterface:$source);
+  let results = (outs TransformHandleTypeInterface:$fused_loop);
+  let assemblyFormat = "$target `into` $source attr-dict "
+                       " `:` functional-type(operands, results)";
+
+  let builders = [
+    OpBuilder<(ins "Value":$loop, "Value":$fused_loop)>
+  ];
 }
 
 #endif // SCF_TRANSFORM_OPS

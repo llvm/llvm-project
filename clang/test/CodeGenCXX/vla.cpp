@@ -15,7 +15,6 @@ int f() {
   return sizeof a;
 }
 
-// rdar://problem/9506377
 void test0(void *array, int n) {
   // CHECK-LABEL: define{{.*}} void @_Z5test0Pvi(
   // AMDGCN:        [[ARRAY0:%.*]] = alloca ptr, align 8, addrspace(5)

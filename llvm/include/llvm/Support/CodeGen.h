@@ -50,41 +50,40 @@ namespace llvm {
     };
   }
 
-  namespace CodeGenOpt {
-  /// Type for the unique integer IDs of code generation optimization levels.
-  using IDType = int;
   /// Code generation optimization level.
-  enum Level : IDType {
+  enum class CodeGenOptLevel {
     None = 0,      ///< -O0
     Less = 1,      ///< -O1
     Default = 2,   ///< -O2, -Os
     Aggressive = 3 ///< -O3
   };
-  /// Get the \c Level identified by the integer \p ID.
+
+  namespace CodeGenOpt {
+  /// Get the \c Level identified by the integer \p OL.
   ///
-  /// Returns std::nullopt if \p ID is invalid.
-  inline std::optional<Level> getLevel(IDType ID) {
-    if (ID < 0 || ID > 3)
+  /// Returns std::nullopt if \p OL is invalid.
+  inline std::optional<CodeGenOptLevel> getLevel(int OL) {
+    if (OL < 0 || OL > 3)
       return std::nullopt;
-    return static_cast<Level>(ID);
+    return static_cast<CodeGenOptLevel>(OL);
   }
-  /// Parse \p C as a single digit integer ID and get matching \c Level.
+  /// Parse \p C as a single digit integer and get matching \c CodeGenLevel.
   ///
-  /// Returns std::nullopt if the input is not a valid digit or not a valid ID.
-  inline std::optional<Level> parseLevel(char C) {
+  /// Returns std::nullopt if the input is not a valid optimization level.
+  inline std::optional<CodeGenOptLevel> parseLevel(char C) {
     if (C < '0')
       return std::nullopt;
-    return getLevel(static_cast<IDType>(C - '0'));
+    return getLevel(static_cast<int>(C - '0'));
   }
   } // namespace CodeGenOpt
 
   /// These enums are meant to be passed into addPassesToEmitFile to indicate
   /// what type of file to emit, and returned by it to indicate what type of
   /// file could actually be made.
-  enum CodeGenFileType {
-    CGFT_AssemblyFile,
-    CGFT_ObjectFile,
-    CGFT_Null         // Do not emit any output.
+  enum class CodeGenFileType {
+    AssemblyFile,
+    ObjectFile,
+    Null // Do not emit any output.
   };
 
   // Specify what functions should keep the frame pointer.

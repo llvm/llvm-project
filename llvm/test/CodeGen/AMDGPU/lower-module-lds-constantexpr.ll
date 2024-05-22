@@ -4,19 +4,19 @@
 ; CHECK: %llvm.amdgcn.module.lds.t = type { float, float }
 ; CHECK: %llvm.amdgcn.kernel.timestwo.lds.t = type { float, float }
 
-@a_func = addrspace(3) global float undef, align 4
+@a_func = addrspace(3) global float poison, align 4
 
-@kern = addrspace(3) global float undef, align 4
+@kern = addrspace(3) global float poison, align 4
 
 ; @a_func is only used from a non-kernel function so is rewritten
 ; CHECK-NOT: @a_func
 ; @b_both is used from a non-kernel function so is rewritten
 ; CHECK-NOT: @b_both
 ; sorted both < func, so @b_both at null and @a_func at 4
-@b_both = addrspace(3) global float undef, align 4
+@b_both = addrspace(3) global float poison, align 4
 
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 4
-; CHECK: @llvm.amdgcn.kernel.timestwo.lds = internal addrspace(3) global %llvm.amdgcn.kernel.timestwo.lds.t undef, align 4
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4
+; CHECK: @llvm.amdgcn.kernel.timestwo.lds = internal addrspace(3) global %llvm.amdgcn.kernel.timestwo.lds.t poison, align 4
 
 ; CHECK-LABEL: @get_func()
 ; CHECK:       %0 = addrspacecast ptr addrspace(3) @llvm.amdgcn.module.lds to ptr
@@ -42,7 +42,7 @@ entry:
 ; CHECK:      %5 = inttoptr i64 %4 to ptr
 ; CHECK:      store i32 %x, ptr %5, align 4
 ; CHECK:      ret void
-define void @set_func(i32 %x) local_unnamed_addr #1 {
+define void @set_func(i32 %x) {
 entry:
   store i32 %x, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64)) to ptr), align 4
   ret void
@@ -74,7 +74,7 @@ define amdgpu_kernel void @timestwo() {
   ret void
 }
 
-; CHECK-LABEL: @through_functions()
+; CHECK-LABEL: @through_functions() #0
 define amdgpu_kernel void @through_functions() {
   %ld = call i32 @get_func()
   %mul = mul i32 %ld, 4
@@ -82,5 +82,4 @@ define amdgpu_kernel void @through_functions() {
   ret void
 }
 
-attributes #0 = { "amdgpu-elide-module-lds" }
-; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }
+; CHECK: attributes #0 = { "amdgpu-lds-size"="8" }

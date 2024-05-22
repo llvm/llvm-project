@@ -48,6 +48,8 @@ enum class ExportSource {
   ModuleDefinition,
 };
 
+enum class EmitKind { Obj, LLVM, ASM };
+
 // Represents an /export option.
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
@@ -70,7 +72,7 @@ struct Export {
   StringRef symbolName;
   StringRef exportName; // Name in DLL
 
-  bool operator==(const Export &e) {
+  bool operator==(const Export &e) const {
     return (name == e.name && extName == e.extName &&
             aliasTarget == e.aliasTarget &&
             ordinal == e.ordinal && noname == e.noname &&
@@ -100,12 +102,16 @@ enum class ICFLevel {
         // behavior.
 };
 
+enum class BuildIDHash {
+  None,
+  PDB,
+  Binary,
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
-  bool is64() const {
-    return machine == AMD64 || llvm::COFF::isAnyArm64(machine);
-  }
+  bool is64() const { return llvm::COFF::is64Bit(machine); }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   size_t wordsize;
@@ -124,14 +130,15 @@ struct Configuration {
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
   bool debug = false;
-  bool debugDwarf = false;
+  bool includeDwarfChunks = false;
   bool debugGHashes = false;
-  bool debugSymtab = false;
+  bool writeSymtab = false;
   bool driver = false;
   bool driverUponly = false;
   bool driverWdm = false;
   bool showTiming = false;
   bool showSummary = false;
+  bool printSearchPaths = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   std::vector<std::string> natvisFiles;
@@ -285,6 +292,8 @@ struct Configuration {
   uint32_t minorSubsystemVersion = 0;
   uint32_t timestamp = 0;
   uint32_t functionPadMin = 0;
+  uint32_t timeTraceGranularity = 0;
+  uint16_t dependentLoadFlags = 0;
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
@@ -308,10 +317,14 @@ struct Configuration {
   bool swaprunNet = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool timeTraceEnabled = false;
   bool autoImport = false;
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
   bool writeCheckSum = false;
+  EmitKind emit = EmitKind::Obj;
+  bool allowDuplicateWeak = false;
+  BuildIDHash buildIDHash = BuildIDHash::None;
 };
 
 } // namespace lld::coff

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;

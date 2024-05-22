@@ -43,8 +43,8 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS) {
 
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS) {
   OS << "{\n";
-  OS << "\"file\": \"" << Storage->SourceFilename << "\",\n";
-  OS << "\"timestamp\": \"" << Storage->Timestamp << "\",\n";
+  OS << R"("file": ")" << Storage->SourceFilename << "\",\n";
+  OS << R"("timestamp": ")" << Storage->Timestamp << "\",\n";
   OS << "\"profile\": {\n";
   TG->printJSONValues(OS, "");
   OS << "\n}\n";

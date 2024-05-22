@@ -18,7 +18,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -26,6 +25,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
+
+static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
+cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
@@ -73,16 +75,14 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (getOrEnforceKnownAlignment(
             II.getArgOperand(0), Align(16), IC.getDataLayout(), &II,
             &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
-      Value *Ptr = IC.Builder.CreateBitCast(
-          II.getArgOperand(0), PointerType::getUnqual(II.getType()));
+      Value *Ptr = II.getArgOperand(0);
       return new LoadInst(II.getType(), Ptr, "", false, Align(16));
     }
     break;
   case Intrinsic::ppc_vsx_lxvw4x:
   case Intrinsic::ppc_vsx_lxvd2x: {
     // Turn PPC VSX loads into normal loads.
-    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::getUnqual(II.getType()));
+    Value *Ptr = II.getArgOperand(0);
     return new LoadInst(II.getType(), Ptr, Twine(""), false, Align(1));
   }
   case Intrinsic::ppc_altivec_stvx:
@@ -91,16 +91,14 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (getOrEnforceKnownAlignment(
             II.getArgOperand(1), Align(16), IC.getDataLayout(), &II,
             &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
-      Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
-      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      Value *Ptr = II.getArgOperand(1);
       return new StoreInst(II.getArgOperand(0), Ptr, false, Align(16));
     }
     break;
   case Intrinsic::ppc_vsx_stxvw4x:
   case Intrinsic::ppc_vsx_stxvd2x: {
     // Turn PPC VSX stores into normal stores.
-    Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
-    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+    Value *Ptr = II.getArgOperand(1);
     return new StoreInst(II.getArgOperand(0), Ptr, false, Align(1));
   }
   case Intrinsic::ppc_altivec_vperm:
@@ -700,6 +698,9 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
 
   } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
+    unsigned EltSize = Val->getScalarSizeInBits();
+    // Computing on 1 bit values requires extra mask or compare operations.
+    unsigned MaskCost = VecMaskCost && EltSize == 1 ? 1 : 0;
     if (ST->hasP9Altivec()) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
@@ -721,12 +722,15 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return CostFactor;
+      return CostFactor + MaskCost;
 
-    } else if (ST->hasDirectMove())
+    } else if (ST->hasDirectMove()) {
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
-      return 3;
+      if (ISD == ISD::INSERT_VECTOR_ELT)
+        return 3;
+      return 3 + MaskCost;
+    }
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained

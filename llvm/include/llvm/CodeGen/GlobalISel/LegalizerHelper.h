@@ -246,7 +246,7 @@ private:
   /// needs to be widened to evenly cover \p DstReg, inserts high bits
   /// corresponding to the extension opcode \p PadStrategy.
   ///
-  /// \p VRegs will be cleared, and the the result \p NarrowTy register pieces
+  /// \p VRegs will be cleared, and the result \p NarrowTy register pieces
   /// will replace it. Returns The complete LCMTy that \p VRegs will cover when
   /// merged.
   LLT buildLCMMergePieces(LLT DstTy, LLT NarrowTy, LLT GCDTy,
@@ -285,6 +285,14 @@ private:
   LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
                               uint64_t KnownLen, Align DstAlign, Align SrcAlign,
                               bool IsVolatile);
+
+  // Implements floating-point environment read/write via library function call.
+  LegalizeResult createGetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI);
+  LegalizeResult createSetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI);
+  LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                         MachineInstr &MI);
 
 public:
   /// Return the alignment to use for a stack temporary object with the given
@@ -375,6 +383,8 @@ public:
   LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
   LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
   LegalizeResult lowerFunnelShift(MachineInstr &MI);
+  LegalizeResult lowerEXT(MachineInstr &MI);
+  LegalizeResult lowerTRUNC(MachineInstr &MI);
   LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LegalizeResult lowerRotate(MachineInstr &MI);
 
@@ -400,7 +410,11 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
+                                     Align Alignment, LLT PtrTy);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
+  LegalizeResult lowerStackSave(MachineInstr &MI);
+  LegalizeResult lowerStackRestore(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
@@ -418,6 +432,7 @@ public:
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+  LegalizeResult lowerVAArg(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given
@@ -437,6 +452,7 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
 LegalizerHelper::LegalizeResult
 createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                  MachineInstr &MI, LostDebugLocObserver &LocObserver);
+
 
 } // End namespace llvm.
 

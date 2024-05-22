@@ -459,7 +459,7 @@ public:
   /// Parse an affine expr instance into 'expr' using the already computed
   /// mapping from symbols to affine expressions in 'symbolSet'.
   ParseResult
-  parseAffineExpr(SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
+  parseAffineExpr(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
                   AffineExpr &expr) override {
     return parser.parseAffineExprReference(symbolSet, expr);
   }
@@ -568,6 +568,14 @@ public:
 
   ParseResult parseXInDimensionList() override {
     return parser.parseXInDimensionList();
+  }
+
+  LogicalResult pushCyclicParsing(const void *opaquePointer) override {
+    return success(parser.getState().cyclicParsingStack.insert(opaquePointer));
+  }
+
+  void popCyclicParsing() override {
+    parser.getState().cyclicParsingStack.pop_back();
   }
 
   //===--------------------------------------------------------------------===//

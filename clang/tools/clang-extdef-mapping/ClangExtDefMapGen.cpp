@@ -23,6 +23,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include <optional>
 #include <sstream>
 #include <string>
@@ -97,12 +98,14 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
   }
 
   switch (DD->getLinkageInternal()) {
-  case ExternalLinkage:
-  case VisibleNoLinkage:
-  case UniqueExternalLinkage:
+  case Linkage::External:
+  case Linkage::VisibleNone:
+  case Linkage::UniqueExternal:
     if (SM.isInMainFile(defStart))
       Index[*LookupName] = CurrentFileName;
     break;
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage has not been computed!");
   default:
     break;
   }
@@ -178,7 +181,7 @@ static int HandleFiles(ArrayRef<std::string> SourceFiles,
   // process them directly in HandleAST, otherwise put them
   // on a list for ClangTool to handle.
   for (StringRef Src : SourceFiles) {
-    if (Src.endswith(".ast")) {
+    if (Src.ends_with(".ast")) {
       if (!HandleAST(Src)) {
         return 1;
       }
@@ -213,6 +216,10 @@ int main(int argc, const char **argv) {
     return 1;
   }
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   return HandleFiles(OptionsParser.getSourcePathList(),
                      OptionsParser.getCompilations());

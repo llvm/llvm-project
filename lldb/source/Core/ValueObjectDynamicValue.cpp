@@ -149,7 +149,18 @@ bool ValueObjectDynamicValue::UpdateValue() {
   if (known_type != lldb::eLanguageTypeUnknown &&
       known_type != lldb::eLanguageTypeC) {
     runtime = process->GetLanguageRuntime(known_type);
-    if (runtime)
+    if (auto *preferred_runtime =
+            runtime->GetPreferredLanguageRuntime(*m_parent)) {
+      // Try the preferred runtime first.
+      found_dynamic_type = preferred_runtime->GetDynamicTypeAndAddress(
+          *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
+          value_type);
+      if (found_dynamic_type)
+        // Set the operative `runtime` for later use in this function.
+        runtime = preferred_runtime;
+    }
+    if (!found_dynamic_type)
+      // Fallback to the runtime for `known_type`.
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
           value_type);

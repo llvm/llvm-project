@@ -1,4 +1,9 @@
-// RUN: %libomptarget-compile-generic && env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | %fcheck-generic -allow-empty
+// RUN: %libomptarget-compile-generic && \
+// RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
+// RUN: %fcheck-generic -allow-empty
+// RUN: %libomptarget-compileopt-generic && \
+// RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
+// RUN: %fcheck-generic -allow-empty
 
 #include <assert.h>
 #include <omp.h>

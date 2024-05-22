@@ -24,6 +24,7 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
+#include "kmp_utils.h"
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -47,8 +48,9 @@ static char *ProfileTraceFile = nullptr;
 #include <process.h>
 #endif
 
-#if KMP_OS_WINDOWS
-// windows does not need include files as it doesn't use shared memory
+#ifndef KMP_USE_SHM
+// Windows and WASI do not need these include files as they don't use shared
+// memory.
 #else
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -178,7 +180,12 @@ int __kmp_get_global_thread_id() {
       if (stack_diff <= stack_size) {
         /* The only way we can be closer than the allocated */
         /* stack size is if we are running on this thread. */
-        KMP_DEBUG_ASSERT(__kmp_gtid_get_specific() == i);
+        // __kmp_gtid_get_specific can return negative value because this
+        // function can be called by thread destructor. However, before the
+        // thread destructor is called, the value of the corresponding
+        // thread-specific data will be reset to NULL.
+        KMP_DEBUG_ASSERT(__kmp_gtid_get_specific() < 0 ||
+                         __kmp_gtid_get_specific() == i);
         return i;
       }
     }
@@ -194,6 +201,12 @@ int __kmp_get_global_thread_id() {
 
   /* if we havn't been assigned a gtid, then return code */
   if (i < 0)
+    return i;
+
+  // other_threads[i] can be nullptr at this point because the corresponding
+  // thread could have already been destructed. It can happen when this function
+  // is called in end library routine.
+  if (!TCR_SYNC_PTR(other_threads[i]))
     return i;
 
   /* dynamically updated stack window for uber threads to avoid get_specific
@@ -435,26 +448,26 @@ void __kmp_abort_process() {
     __kmp_dump_debug_buffer();
   }
 
-  if (KMP_OS_WINDOWS) {
-    // Let other threads know of abnormal termination and prevent deadlock
-    // if abort happened during library initialization or shutdown
-    __kmp_global.g.g_abort = SIGABRT;
+#if KMP_OS_WINDOWS
+  // Let other threads know of abnormal termination and prevent deadlock
+  // if abort happened during library initialization or shutdown
+  __kmp_global.g.g_abort = SIGABRT;
 
-    /* On Windows* OS by default abort() causes pop-up error box, which stalls
-       nightly testing. Unfortunately, we cannot reliably suppress pop-up error
-       boxes. _set_abort_behavior() works well, but this function is not
-       available in VS7 (this is not problem for DLL, but it is a problem for
-       static OpenMP RTL). SetErrorMode (and so, timelimit utility) does not
-       help, at least in some versions of MS C RTL.
+  /* On Windows* OS by default abort() causes pop-up error box, which stalls
+     nightly testing. Unfortunately, we cannot reliably suppress pop-up error
+     boxes. _set_abort_behavior() works well, but this function is not
+     available in VS7 (this is not problem for DLL, but it is a problem for
+     static OpenMP RTL). SetErrorMode (and so, timelimit utility) does not
+     help, at least in some versions of MS C RTL.
 
-       It seems following sequence is the only way to simulate abort() and
-       avoid pop-up error box. */
-    raise(SIGABRT);
-    _exit(3); // Just in case, if signal ignored, exit anyway.
-  } else {
-    __kmp_unregister_library();
-    abort();
-  }
+     It seems following sequence is the only way to simulate abort() and
+     avoid pop-up error box. */
+  raise(SIGABRT);
+  _exit(3); // Just in case, if signal ignored, exit anyway.
+#else
+  __kmp_unregister_library();
+  abort();
+#endif
 
   __kmp_infinite_loop();
   __kmp_release_bootstrap_lock(&__kmp_exit_lock);
@@ -1641,7 +1654,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
 /* josh todo: hypothetical question: what do we do for OS X*? */
 #if KMP_OS_LINUX &&                                                            \
     (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
-  void *args[argc];
+  SimpleVLA<void *> args(argc);
 #else
   void **args = (void **)KMP_ALLOCA(argc * sizeof(void *));
 #endif /* KMP_OS_LINUX && ( KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || \
@@ -1872,6 +1885,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
   int nthreads;
   int master_active;
   int master_set_numthreads;
+  int task_thread_limit = 0;
   int level;
   int active_level;
   int teams_level;
@@ -1910,6 +1924,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     root = master_th->th.th_root;
     master_active = root->r.r_active;
     master_set_numthreads = master_th->th.th_set_nproc;
+    task_thread_limit =
+        master_th->th.th_current_task->td_icvs.task_thread_limit;
 
 #if OMPT_SUPPORT
     ompt_data_t ompt_parallel_data = ompt_data_none;
@@ -2000,6 +2016,11 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                      ? master_set_numthreads
                      // TODO: get nproc directly from current task
                      : get__nproc_2(parent_team, master_tid);
+      // Use the thread_limit set for the current target task if exists, else go
+      // with the deduced nthreads
+      nthreads = task_thread_limit > 0 && task_thread_limit < nthreads
+                     ? task_thread_limit
+                     : nthreads;
       // Check if we need to take forkjoin lock? (no need for serialized
       // parallel out of teams construct).
       if (nthreads > 1) {
@@ -3291,6 +3312,8 @@ static kmp_internal_control_t __kmp_get_global_icvs(void) {
     // next parallel region (per thread)
     // (use a max ub on value if __kmp_parallel_initialize not called yet)
     __kmp_cg_max_nth, // int thread_limit;
+    __kmp_task_max_nth, // int task_thread_limit; // to set the thread_limit
+    // on task. This is used in the case of target thread_limit
     __kmp_dflt_max_active_levels, // int max_active_levels; //internal control
     // for max_active_levels
     r_sched, // kmp_r_sched_t sched; //internal control for runtime schedule
@@ -4671,6 +4694,11 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   }
 #endif /* KMP_ADJUST_BLOCKTIME */
 
+#if KMP_AFFINITY_SUPPORTED
+  // Set the affinity and topology information for new thread
+  __kmp_affinity_set_init_mask(new_gtid, /*isa_root=*/FALSE);
+#endif
+
   /* actually fork it and create the new worker thread */
   KF_TRACE(
       10, ("__kmp_allocate_thread: before __kmp_create_worker: %p\n", new_thr));
@@ -4763,26 +4791,20 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
   KF_TRACE(10, ("__kmp_initialize_team: exit: team=%p\n", team));
 }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-/* Sets full mask for thread and returns old mask, no changes to structures. */
-static void
-__kmp_set_thread_affinity_mask_full_tmp(kmp_affin_mask_t *old_mask) {
-  if (KMP_AFFINITY_CAPABLE()) {
-    int status;
-    if (old_mask != NULL) {
-      status = __kmp_get_system_affinity(old_mask, TRUE);
-      int error = errno;
-      if (status != 0) {
-        __kmp_fatal(KMP_MSG(ChangeThreadAffMaskError), KMP_ERR(error),
-                    __kmp_msg_null);
-      }
-    }
-    __kmp_set_system_affinity(__kmp_affin_fullMask, TRUE);
+#if KMP_AFFINITY_SUPPORTED
+static inline void __kmp_set_thread_place(kmp_team_t *team, kmp_info_t *th,
+                                          int first, int last, int newp) {
+  th->th.th_first_place = first;
+  th->th.th_last_place = last;
+  th->th.th_new_place = newp;
+  if (newp != th->th.th_current_place) {
+    if (__kmp_display_affinity && team->t.t_display_affinity != 1)
+      team->t.t_display_affinity = 1;
+    // Copy topology information associated with the new place
+    th->th.th_topology_ids = __kmp_affinity.ids[th->th.th_new_place];
+    th->th.th_topology_attrs = __kmp_affinity.attrs[th->th.th_new_place];
   }
 }
-#endif
-
-#if KMP_AFFINITY_SUPPORTED
 
 // __kmp_partition_places() is the heart of the OpenMP 4.0 affinity mechanism.
 // It calculates the worker + primary thread's partition based upon the parent
@@ -4822,13 +4844,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     for (f = 1; f < n_th; f++) {
       kmp_info_t *th = team->t.t_threads[f];
       KMP_DEBUG_ASSERT(th != NULL);
-      th->th.th_first_place = first_place;
-      th->th.th_last_place = last_place;
-      th->th.th_new_place = masters_place;
-      if (__kmp_display_affinity && masters_place != th->th.th_current_place &&
-          team->t.t_display_affinity != 1) {
-        team->t.t_display_affinity = 1;
-      }
+      __kmp_set_thread_place(team, th, first_place, last_place, masters_place);
 
       KA_TRACE(100, ("__kmp_partition_places: primary: T#%d(%d:%d) place %d "
                      "partition = [%d,%d]\n",
@@ -4859,13 +4875,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else {
           place++;
         }
-        th->th.th_first_place = first_place;
-        th->th.th_last_place = last_place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, first_place, last_place, place);
 
         KA_TRACE(100, ("__kmp_partition_places: close: T#%d(%d:%d) place %d "
                        "partition = [%d,%d]\n",
@@ -4884,13 +4894,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         kmp_info_t *th = team->t.t_threads[f];
         KMP_DEBUG_ASSERT(th != NULL);
 
-        th->th.th_first_place = first_place;
-        th->th.th_last_place = last_place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, first_place, last_place, place);
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {
@@ -4957,12 +4961,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           kmp_info_t *th = team->t.t_threads[f];
           KMP_DEBUG_ASSERT(th != NULL);
 
-          th->th.th_first_place = place;
-          th->th.th_new_place = place;
-          if (__kmp_display_affinity && place != th->th.th_current_place &&
-              team->t.t_display_affinity != 1) {
-            team->t.t_display_affinity = 1;
-          }
+          int fplace = place, nplace = place;
           s_count = 1;
           while (s_count < S) {
             if (place == last_place) {
@@ -4985,7 +4984,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             rem--;
             gap_ct = 0;
           }
-          th->th.th_last_place = place;
+          __kmp_set_thread_place(team, th, fplace, place, nplace);
           gap_ct++;
 
           if (place == last_place) {
@@ -5051,13 +5050,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             KMP_DEBUG_ASSERT(last_place >= first_place);
             th = team->t.t_threads[f];
             KMP_DEBUG_ASSERT(th);
-            th->th.th_first_place = first;
-            th->th.th_new_place = place;
-            th->th.th_last_place = last;
-            if (__kmp_display_affinity && place != th->th.th_current_place &&
-                team->t.t_display_affinity != 1) {
-              team->t.t_display_affinity = 1;
-            }
+            __kmp_set_thread_place(team, th, first, last, place);
             KA_TRACE(100,
                      ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
                       "partition = [%d,%d], spacing = %.4f\n",
@@ -5083,13 +5076,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         kmp_info_t *th = team->t.t_threads[f];
         KMP_DEBUG_ASSERT(th != NULL);
 
-        th->th.th_first_place = place;
-        th->th.th_last_place = place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, place, place, place);
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {
@@ -5347,12 +5334,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 #endif
       }
     } else { // team->t.t_nproc < new_nproc
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-      kmp_affin_mask_t *old_mask;
-      if (KMP_AFFINITY_CAPABLE()) {
-        KMP_CPU_ALLOC(old_mask);
-      }
-#endif
 
       KA_TRACE(20,
                ("__kmp_allocate_team: increasing hot team thread count to %d\n",
@@ -5401,7 +5382,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
            primary thread, so if a lot of workers are created on the single
            core quickly, they don't get a chance to set their own affinity for
            a long time. */
-        __kmp_set_thread_affinity_mask_full_tmp(old_mask);
+        kmp_affinity_raii_t new_temp_affinity{__kmp_affin_fullMask};
 #endif
 
         /* allocate new threads for the hot team */
@@ -5432,11 +5413,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         }
 
 #if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-        if (KMP_AFFINITY_CAPABLE()) {
-          /* Restore initial primary thread's affinity mask */
-          __kmp_set_system_affinity(old_mask, TRUE);
-          KMP_CPU_FREE(old_mask);
-        }
+        /* Restore initial primary thread's affinity mask */
+        new_temp_affinity.restore();
 #endif
 #if KMP_NESTED_HOT_TEAMS
       } // end of check of t_nproc vs. new_nproc vs. hot_team_nth
@@ -6741,6 +6719,8 @@ static inline char *__kmp_reg_status_name() {
 } // __kmp_reg_status_get
 
 #if defined(KMP_USE_SHM)
+bool __kmp_shm_available = false;
+bool __kmp_tmp_available = false;
 // If /dev/shm is not accessible, we will create a temporary file under /tmp.
 char *temp_reg_status_file_name = nullptr;
 #endif
@@ -6770,60 +6750,108 @@ void __kmp_register_library_startup(void) {
     char *value = NULL; // Actual value of the environment variable.
 
 #if defined(KMP_USE_SHM)
-    char *shm_name = __kmp_str_format("/%s", name);
-    int shm_preexist = 0;
-    char *data1;
-    int fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
-    if ((fd1 == -1) && (errno == EEXIST)) {
-      // file didn't open because it already exists.
-      // try opening existing file
-      fd1 = shm_open(shm_name, O_RDWR, 0666);
-      if (fd1 == -1) { // file didn't open
-        // error out here
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't open SHM"), KMP_ERR(0),
-                    __kmp_msg_null);
-      } else {
-        // able to open existing file
-        shm_preexist = 1;
+    char *shm_name = nullptr;
+    char *data1 = nullptr;
+    __kmp_shm_available = __kmp_detect_shm();
+    if (__kmp_shm_available) {
+      int fd1 = -1;
+      shm_name = __kmp_str_format("/%s", name);
+      int shm_preexist = 0;
+      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      if ((fd1 == -1) && (errno == EEXIST)) {
+        // file didn't open because it already exists.
+        // try opening existing file
+        fd1 = shm_open(shm_name, O_RDWR, 0666);
+        if (fd1 == -1) { // file didn't open
+          KMP_WARNING(FunctionError, "Can't open SHM");
+          __kmp_shm_available = false;
+        } else { // able to open existing file
+          shm_preexist = 1;
+        }
       }
-    } else if (fd1 == -1) {
-      // SHM didn't open; it was due to error other than already exists. Try to
-      // create a temp file under /tmp.
+      if (__kmp_shm_available && shm_preexist == 0) { // SHM created, set size
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+          KMP_WARNING(FunctionError, "Can't set size of SHM");
+          __kmp_shm_available = false;
+        }
+      }
+      if (__kmp_shm_available) { // SHM exists, now map it
+        data1 = (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                             fd1, 0);
+        if (data1 == MAP_FAILED) { // failed to map shared memory
+          KMP_WARNING(FunctionError, "Can't map SHM");
+          __kmp_shm_available = false;
+        }
+      }
+      if (__kmp_shm_available) { // SHM mapped
+        if (shm_preexist == 0) { // set data to SHM, set value
+          KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
+        }
+        // Read value from either what we just wrote or existing file.
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      if (fd1 != -1)
+        close(fd1);
+    }
+    if (!__kmp_shm_available)
+      __kmp_tmp_available = __kmp_detect_tmp();
+    if (!__kmp_shm_available && __kmp_tmp_available) {
+      // SHM failed to work due to an error other than that the file already
+      // exists. Try to create a temp file under /tmp.
+      // If /tmp isn't accessible, fall back to using environment variable.
       // TODO: /tmp might not always be the temporary directory. For now we will
-      // not consider TMPDIR. If /tmp is not accessible, we simply error out.
-      char *temp_file_name = __kmp_str_format("/tmp/%sXXXXXX", name);
-      fd1 = mkstemp(temp_file_name);
-      if (fd1 == -1) {
-        // error out here.
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't open TEMP"), KMP_ERR(errno),
-                    __kmp_msg_null);
+      // not consider TMPDIR.
+      int fd1 = -1;
+      temp_reg_status_file_name = __kmp_str_format("/tmp/%s", name);
+      int tmp_preexist = 0;
+      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      if ((fd1 == -1) && (errno == EEXIST)) {
+        // file didn't open because it already exists.
+        // try opening existing file
+        fd1 = open(temp_reg_status_file_name, O_RDWR, 0666);
+        if (fd1 == -1) { // file didn't open if (fd1 == -1) {
+          KMP_WARNING(FunctionError, "Can't open TEMP");
+          __kmp_tmp_available = false;
+        } else {
+          tmp_preexist = 1;
+        }
       }
-      temp_reg_status_file_name = temp_file_name;
-    }
-    if (shm_preexist == 0) {
-      // we created SHM now set size
-      if (ftruncate(fd1, SHM_SIZE) == -1) {
-        // error occured setting size;
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't set size of SHM"),
-                    KMP_ERR(errno), __kmp_msg_null);
+      if (__kmp_tmp_available && tmp_preexist == 0) {
+        // we created /tmp file now set size
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+          KMP_WARNING(FunctionError, "Can't set size of /tmp file");
+          __kmp_tmp_available = false;
+        }
       }
+      if (__kmp_tmp_available) {
+        data1 = (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                             fd1, 0);
+        if (data1 == MAP_FAILED) { // failed to map /tmp
+          KMP_WARNING(FunctionError, "Can't map /tmp");
+          __kmp_tmp_available = false;
+        }
+      }
+      if (__kmp_tmp_available) {
+        if (tmp_preexist == 0) { // set data to TMP, set value
+          KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
+        }
+        // Read value from either what we just wrote or existing file.
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      if (fd1 != -1)
+        close(fd1);
     }
-    data1 =
-        (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd1, 0);
-    if (data1 == MAP_FAILED) {
-      // failed to map shared memory
-      __kmp_fatal(KMP_MSG(FunctionError, "Can't map SHM"), KMP_ERR(errno),
-                  __kmp_msg_null);
+    if (!__kmp_shm_available && !__kmp_tmp_available) {
+      // no /dev/shm and no /tmp -- fall back to environment variable
+      // Set environment variable, but do not overwrite if it exists.
+      __kmp_env_set(name, __kmp_registration_str, 0);
+      // read value to see if it got set
+      value = __kmp_env_get(name);
     }
-    if (shm_preexist == 0) { // set data to SHM, set value
-      KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
-    }
-    // Read value from either what we just wrote or existing file.
-    value = __kmp_str_format("%s", data1); // read value from SHM
-    munmap(data1, SHM_SIZE);
-    close(fd1);
 #else // Windows and unix with static library
-    // Set environment variable, but do not overwrite if it is exist.
+    // Set environment variable, but do not overwrite if it exists.
     __kmp_env_set(name, __kmp_registration_str, 0);
     // read value to see if it got set
     value = __kmp_env_get(name);
@@ -6883,8 +6911,14 @@ void __kmp_register_library_startup(void) {
       case 2: { // Neighbor is dead.
 
 #if defined(KMP_USE_SHM)
-        // close shared memory.
-        shm_unlink(shm_name); // this removes file in /dev/shm
+        if (__kmp_shm_available) { // close shared memory.
+          shm_unlink(shm_name); // this removes file in /dev/shm
+        } else if (__kmp_tmp_available) {
+          unlink(temp_reg_status_file_name); // this removes the temp file
+        } else {
+          // Clear the variable and try to register library again.
+          __kmp_env_unset(name);
+        }
 #else
         // Clear the variable and try to register library again.
         __kmp_env_unset(name);
@@ -6897,7 +6931,8 @@ void __kmp_register_library_startup(void) {
     }
     KMP_INTERNAL_FREE((void *)value);
 #if defined(KMP_USE_SHM)
-    KMP_INTERNAL_FREE((void *)shm_name);
+    if (shm_name)
+      KMP_INTERNAL_FREE((void *)shm_name);
 #endif
   } // while
   KMP_INTERNAL_FREE((void *)name);
@@ -6910,25 +6945,32 @@ void __kmp_unregister_library(void) {
   char *value = NULL;
 
 #if defined(KMP_USE_SHM)
-  bool use_shm = true;
-  char *shm_name = __kmp_str_format("/%s", name);
-  int fd1 = shm_open(shm_name, O_RDONLY, 0666);
-  if (fd1 == -1) {
-    // File did not open. Try the temporary file.
-    use_shm = false;
-    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
-    fd1 = open(temp_reg_status_file_name, O_RDONLY);
-    if (fd1 == -1) {
-      // give it up now.
-      return;
+  char *shm_name = nullptr;
+  int fd1;
+  if (__kmp_shm_available) {
+    shm_name = __kmp_str_format("/%s", name);
+    fd1 = shm_open(shm_name, O_RDONLY, 0666);
+    if (fd1 != -1) { // File opened successfully
+      char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
+      if (data1 != MAP_FAILED) {
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      close(fd1);
     }
+  } else if (__kmp_tmp_available) { // try /tmp
+    fd1 = open(temp_reg_status_file_name, O_RDONLY);
+    if (fd1 != -1) { // File opened successfully
+      char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
+      if (data1 != MAP_FAILED) {
+        value = __kmp_str_format("%s", data1); // read value from /tmp
+        munmap(data1, SHM_SIZE);
+      }
+      close(fd1);
+    }
+  } else { // fall back to envirable
+    value = __kmp_env_get(name);
   }
-  char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
-  if (data1 != MAP_FAILED) {
-    value = __kmp_str_format("%s", data1); // read value from SHM
-    munmap(data1, SHM_SIZE);
-  }
-  close(fd1);
 #else
   value = __kmp_env_get(name);
 #endif
@@ -6938,11 +6980,12 @@ void __kmp_unregister_library(void) {
   if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
-    if (use_shm) {
+    if (__kmp_shm_available) {
       shm_unlink(shm_name); // this removes file in /dev/shm
-    } else {
-      KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+    } else if (__kmp_tmp_available) {
       unlink(temp_reg_status_file_name); // this removes the temp file
+    } else {
+      __kmp_env_unset(name);
     }
 #else
     __kmp_env_unset(name);
@@ -6950,11 +6993,10 @@ void __kmp_unregister_library(void) {
   }
 
 #if defined(KMP_USE_SHM)
-  KMP_INTERNAL_FREE(shm_name);
-  if (!use_shm) {
-    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+  if (shm_name)
+    KMP_INTERNAL_FREE(shm_name);
+  if (temp_reg_status_file_name)
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
-  }
 #endif
 
   KMP_INTERNAL_FREE(__kmp_registration_str);
@@ -7314,6 +7356,10 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_init_counter++;
 
   __kmp_init_serial = TRUE;
+
+  if (__kmp_version) {
+    __kmp_print_version_1();
+  }
 
   if (__kmp_settings) {
     __kmp_env_print();
@@ -8753,9 +8799,8 @@ void __kmp_aux_display_affinity(int gtid, const char *format) {
 }
 
 /* ------------------------------------------------------------------------ */
-
 void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
-  int blocktime = arg; /* argument is in milliseconds */
+  int blocktime = arg; /* argument is in microseconds */
 #if KMP_USE_MONITOR
   int bt_intervals;
 #endif
@@ -8851,10 +8896,12 @@ __kmp_determine_reduction_method(
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||        \
+    KMP_OS_SOLARIS || KMP_OS_WASI
 
     int teamsize_cutoff = 4;
 
@@ -8878,11 +8925,15 @@ __kmp_determine_reduction_method(
 #else
 #error "Unknown or unsupported OS"
 #endif // KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
-       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
+       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||
+       // KMP_OS_SOLARIS || KMP_OS_WASI
 
-#elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS
+#elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
+    KMP_ARCH_WASM
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS || KMP_OS_HURD
+#if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD || KMP_OS_SOLARIS ||       \
+    KMP_OS_WASI
 
     // basic tuning
 

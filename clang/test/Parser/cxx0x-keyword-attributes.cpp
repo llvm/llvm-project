@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fdeclspec -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions -triple aarch64-none-linux-gnu %s
+// RUN: %clang_cc1 -fcxx-exceptions -fdeclspec -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions -triple aarch64-none-linux-gnu -target-feature +sme %s
 
 // Need std::initializer_list
 namespace std {
@@ -48,10 +48,10 @@ void noexcept_fn_attr () noexcept __arm_streaming;
 struct MemberFnOrder {
   virtual void f() const volatile && noexcept __arm_streaming final = 0;
 };
-struct __arm_streaming struct_attr; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-class __arm_streaming class_attr {}; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-union __arm_streaming union_attr; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-enum __arm_streaming E { }; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+struct __arm_streaming struct_attr; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+class __arm_streaming class_attr {}; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+union __arm_streaming union_attr; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_streaming E { }; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 namespace test_misplacement {
 __arm_streaming struct struct_attr2;  // expected-error {{misplaced '__arm_streaming'}}
 __arm_streaming class class_attr2; // expected-error {{misplaced '__arm_streaming'}}
@@ -60,28 +60,28 @@ __arm_streaming enum  E2 { }; // expected-error {{misplaced '__arm_streaming'}}
 }
 
 // Checks attributes placed at wrong syntactic locations of class specifiers.
-class __arm_streaming __arm_streaming // expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+class __arm_streaming __arm_streaming // expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
   attr_after_class_name_decl __arm_streaming __arm_streaming; // expected-error {{'__arm_streaming' cannot appear here}} \
-                                                                 expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                                 expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
 
-class __arm_streaming __arm_streaming // expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+class __arm_streaming __arm_streaming // expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
  attr_after_class_name_definition __arm_streaming __arm_streaming __arm_streaming{}; // expected-error {{'__arm_streaming' cannot appear here}} \
-                                                                                        expected-error 3 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                                                        expected-error 3 {{'__arm_streaming' only applies to non-K&R-style functions}}
 
-class __arm_streaming c {}; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+class __arm_streaming c {}; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 class c __arm_streaming __arm_streaming x; // expected-error 2 {{'__arm_streaming' only applies to function types}}
 class c __arm_streaming __arm_streaming y __arm_streaming __arm_streaming; // expected-error 4 {{'__arm_streaming' only applies to function types}}
 class c final [(int){0}];
 
 class base {};
-class __arm_streaming __arm_streaming final_class // expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+class __arm_streaming __arm_streaming final_class // expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
   __arm_streaming alignas(float) final // expected-error {{'__arm_streaming' cannot appear here}} \
-                                          expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                          expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   __arm_streaming alignas(float) __arm_streaming alignas(float): base{}; // expected-error {{'__arm_streaming' cannot appear here}}
 
-class __arm_streaming __arm_streaming final_class_another // expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+class __arm_streaming __arm_streaming final_class_another // expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
   __arm_streaming __arm_streaming alignas(16) final // expected-error {{'__arm_streaming' cannot appear here}} \
-                                                       expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                       expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
   __arm_streaming __arm_streaming alignas(16) __arm_streaming{}; // expected-error {{'__arm_streaming' cannot appear here}}
 
 class after_class_close {} __arm_streaming; // expected-error {{'__arm_streaming' cannot appear here, place it after "class" to apply it to the type declaration}}
@@ -95,7 +95,7 @@ void fn_with_structs() {
   __arm_streaming struct with_init_declarators {} init_declarator; // expected-error {{'__arm_streaming' only applies to function types}}
   __arm_streaming struct no_init_declarators; // expected-error {{'__arm_streaming' cannot appear here}}
 }
-__arm_streaming; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+__arm_streaming; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 struct ctordtor {
   __arm_streaming ctordtor __arm_streaming () __arm_streaming; // expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
   ctordtor (C) __arm_streaming;
@@ -122,16 +122,16 @@ __arm_streaming static_assert(true, ""); //expected-error {{'__arm_streaming' ca
 __arm_streaming asm(""); // expected-error {{'__arm_streaming' cannot appear here}}
 
 __arm_streaming using ns::i; // expected-warning {{ISO C++}} \
-                                expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-__arm_streaming using namespace ns; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+__arm_streaming using namespace ns; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 namespace __arm_streaming ns2 {} // expected-warning {{attributes on a namespace declaration are a C++17 extension}} \
-                                    expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                    expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
 using __arm_streaming alignas(4)__arm_streaming ns::i;          // expected-warning 2 {{ISO C++}} \
                                                                    expected-error {{'__arm_streaming' cannot appear here}} \
                                                                    expected-error {{'alignas' attribute only applies to variables, data members and tag types}} \
                                                                    expected-warning {{ISO C++}} \
-                                                                   expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                                   expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
 using __arm_streaming alignas(4) __arm_streaming foobar = int; // expected-error {{'__arm_streaming' cannot appear here}} \
                                                                   expected-error {{'alignas' attribute only applies to}} \
                                                                   expected-error 2 {{'__arm_streaming' only applies to function types}}
@@ -140,25 +140,25 @@ __arm_streaming using T = int; // expected-error {{'__arm_streaming' cannot appe
 using T __arm_streaming = int; // expected-error {{'__arm_streaming' only applies to function types}}
 template<typename T> using U __arm_streaming = T; // expected-error {{'__arm_streaming' only applies to function types}}
 using ns::i __arm_streaming; // expected-warning {{ISO C++}} \
-                                expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 using ns::i __arm_streaming, ns::i __arm_streaming; // expected-warning 2 {{ISO C++}} \
                                                        expected-warning {{use of multiple declarators in a single using declaration is a C++17 extension}} \
-                                                       expected-error 2 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                       expected-error 2 {{'__arm_streaming' only applies to non-K&R-style functions}}
 struct using_in_struct_base {
   typedef int i, j, k, l;
 };
 struct using_in_struct : using_in_struct_base {
   __arm_streaming using using_in_struct_base::i; // expected-warning {{ISO C++}} \
-                                                    expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                                    expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   using using_in_struct_base::j __arm_streaming; // expected-warning {{ISO C++}} \
-                                                    expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                                    expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   __arm_streaming using using_in_struct_base::k __arm_streaming, using_in_struct_base::l __arm_streaming; // expected-warning 3 {{ISO C++}} \
                                                                                                              expected-warning {{use of multiple declarators in a single using declaration is a C++17 extension}} \
-                                                                                                             expected-error 4 {{'__arm_streaming' cannot be applied to a declaration}}
+                                                                                                             expected-error 4 {{'__arm_streaming' only applies to non-K&R-style functions}}
 };
 using __arm_streaming ns::i; // expected-warning {{ISO C++}} \
                                 expected-error {{'__arm_streaming' cannot appear here}} \
-                                expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 using T __arm_streaming = int; // expected-error {{'__arm_streaming' only applies to function types}}
 
 auto trailing() -> __arm_streaming const int; // expected-error {{'__arm_streaming' cannot appear here}}
@@ -177,20 +177,20 @@ struct __arm_streaming Template<int> t; // expected-error {{'__arm_streaming' ca
 struct __arm_streaming ::template Template<int> u; // expected-error {{'__arm_streaming' cannot appear here}}
 template struct __arm_streaming Template<char>; // expected-error {{'__arm_streaming' cannot appear here}}
 template struct __attribute__((pure)) Template<std::size_t>; // We still allow GNU-style attributes here
-template <> struct __arm_streaming Template<void>; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+template <> struct __arm_streaming Template<void>; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
-enum __arm_streaming E1 {}; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+enum __arm_streaming E1 {}; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 enum __arm_streaming E2; // expected-error {{forbids forward references}} \
-                            expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-enum __arm_streaming E1; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-enum __arm_streaming E3 : int; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-enum __arm_streaming { // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                            expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_streaming E1; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_streaming E3 : int; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_streaming { // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   k_123 __arm_streaming = 123 // expected-warning {{attributes on an enumerator declaration are a C++17 extension}} \
-                                 expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                 expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 };
 enum __arm_streaming E1 e; // expected-error {{'__arm_streaming' cannot appear here}}
 enum __arm_streaming class E4 { }; // expected-error {{'__arm_streaming' cannot appear here}}
-enum struct __arm_streaming E5; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+enum struct __arm_streaming E5; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 enum E6 {} __arm_streaming; // expected-error {{'__arm_streaming' cannot appear here, place it after "enum" to apply it to the type declaration}}
 
 struct S {
@@ -229,7 +229,7 @@ void foo () {
   }
 
   __arm_streaming goto there; // expected-error {{'__arm_streaming' cannot be applied to a statement}}
-  __arm_streaming there: // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+  __arm_streaming there: // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
   __arm_streaming try { // expected-error {{'__arm_streaming' cannot be applied to a statement}}
   } __arm_streaming catch (...) { // expected-error {{'__arm_streaming' cannot appear here}}
@@ -277,7 +277,7 @@ void baz () {
 enum class __attribute__((visibility("hidden"))) SecretKeepers {
   one, /* rest are deprecated */ two, three
 };
-enum class __arm_streaming EvenMoreSecrets {}; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+enum class __arm_streaming EvenMoreSecrets {}; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
 // Forbid attributes on decl specifiers.
 unsigned __arm_streaming static int __arm_streaming v1; // expected-error {{'__arm_streaming' only applies to function types}} \
@@ -286,7 +286,7 @@ typedef __arm_streaming unsigned long __arm_streaming v2; // expected-error {{'_
           expected-error {{'__arm_streaming' cannot appear here}}
 int __arm_streaming foo(int __arm_streaming x); // expected-error 2 {{'__arm_streaming' only applies to function types}}
 
-__arm_streaming; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+__arm_streaming; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
 class A {
   A(__arm_streaming int a); // expected-error {{'__arm_streaming' only applies to function types}}
@@ -341,5 +341,5 @@ struct F : virtual __arm_streaming public A {}; // expected-error {{'__arm_strea
                                                    expected-error {{'__arm_streaming' cannot be applied to a base specifier}}
 }
 
-namespace __arm_streaming ns_attr {}; // expected-error {{'__arm_streaming' cannot be applied to a declaration}} \
+namespace __arm_streaming ns_attr {}; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}} \
                                          expected-warning {{attributes on a namespace declaration are a C++17 extension}}

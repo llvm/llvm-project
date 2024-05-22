@@ -444,11 +444,11 @@ unsigned char test_InterlockedCompareExchange128(
 // CHECK-64: [[EH:%[0-9]+]] = zext i64 %inc to i128
 // CHECK-64: [[EL:%[0-9]+]] = zext i64 %inc1 to i128
 // CHECK-64: [[EHS:%[0-9]+]] = shl nuw i128 [[EH]], 64
-// CHECK-64: [[EXP:%[0-9]+]] = or i128 [[EHS]], [[EL]]
-// CHECK-64: [[ORG:%[0-9]+]] = load i128, ptr %incdec.ptr2, align 16
+// CHECK-64: [[EXP:%[0-9]+]] = or disjoint i128 [[EHS]], [[EL]]
+// CHECK-64: [[ORG:%[0-9]+]] = load i128, ptr %incdec.ptr2, align 8
 // CHECK-64: [[RES:%[0-9]+]] = cmpxchg volatile ptr %incdec.ptr, i128 [[ORG]], i128 [[EXP]] seq_cst seq_cst, align 16
 // CHECK-64: [[OLD:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 0
-// CHECK-64: store i128 [[OLD]], ptr %incdec.ptr2, align 16
+// CHECK-64: store i128 [[OLD]], ptr %incdec.ptr2, align 8
 // CHECK-64: [[SUC1:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 1
 // CHECK-64: [[SUC8:%[0-9]+]] = zext i1 [[SUC1]] to i8
 // CHECK-64: ret i8 [[SUC8]]

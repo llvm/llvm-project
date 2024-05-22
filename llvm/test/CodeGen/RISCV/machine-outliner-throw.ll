@@ -13,7 +13,7 @@ define i32 @func1(i32 %x) #0 {
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    addiw s0, a0, 1
+; CHECK-NEXT:    addi s0, a0, 1
 ; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    call __cxa_allocate_exception@plt
 ; CHECK-NEXT:    sw s0, 0(a0)
@@ -40,7 +40,7 @@ define i32 @func2(i32 %x) #0 {
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    addiw s0, a0, 1
+; CHECK-NEXT:    addi s0, a0, 1
 ; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    call __cxa_allocate_exception@plt
 ; CHECK-NEXT:    sw s0, 0(a0)

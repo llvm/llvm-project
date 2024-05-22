@@ -21,6 +21,8 @@ static_library("Basic") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
+    "//clang/include/clang/Basic:AttrLeftSideCanPrintList",
+    "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:AttrTokenKinds",
@@ -52,6 +54,7 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -88,6 +91,7 @@ static_library("Basic") {
     "Sarif.cpp",
     "SourceLocation.cpp",
     "SourceManager.cpp",
+    "SourceMgrAdapter.cpp",
     "Stack.cpp",
     "TargetID.cpp",
     "TargetInfo.cpp",

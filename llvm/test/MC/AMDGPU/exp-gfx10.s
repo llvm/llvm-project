@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=verde %s 2>&1 | FileCheck -check-prefix=SIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=SIVI --implicit-check-not=error: %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=verde %s 2>&1 | FileCheck -check-prefix=SIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=SIVI --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
 exp prim v1, off, off, off
 // SIVI: :[[@LINE-1]]:5: error: exp target is not supported on this GPU

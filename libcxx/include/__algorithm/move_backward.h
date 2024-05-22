@@ -80,7 +80,7 @@ struct __move_backward_loop {
                               !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) {
+  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
     using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
 
@@ -127,7 +127,7 @@ __move_backward(_BidirectionalIterator1 __first, _Sentinel __last, _Bidirectiona
 }
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator2
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator2
 move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last, _BidirectionalIterator2 __result) {
   return std::__move_backward<_ClassicAlgPolicy>(std::move(__first), std::move(__last), std::move(__result)).second;
 }

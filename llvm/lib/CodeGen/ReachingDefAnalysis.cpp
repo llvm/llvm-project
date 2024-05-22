@@ -181,7 +181,7 @@ void ReachingDefAnalysis::reprocessBasicBlock(MachineBasicBlock *MBB) {
         MBBReachingDefs[MBBNumber][Unit].insert(Start, Def);
       }
 
-      // Update reaching def at end of of BB. Keep in mind that these are
+      // Update reaching def at end of BB. Keep in mind that these are
       // adjusted relative to the end of the basic block.
       if (MBBOutRegsInfos[MBBNumber][Unit] < Def - NumInsts)
         MBBOutRegsInfos[MBBNumber][Unit] = Def - NumInsts;

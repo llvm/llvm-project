@@ -14,7 +14,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 class FormatSectionMatcher : public Matcher<scanf_core::FormatSection> {
@@ -31,12 +31,12 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define EXPECT_SFORMAT_EQ(expected, actual)                                    \
-  EXPECT_THAT(actual, __llvm_libc::testing::FormatSectionMatcher(expected))
+  EXPECT_THAT(actual, LIBC_NAMESPACE::testing::FormatSectionMatcher(expected))
 
 #define ASSERT_SFORMAT_EQ(expected, actual)                                    \
-  ASSERT_THAT(actual, __llvm_libc::testing::FormatSectionMatcher(expected))
+  ASSERT_THAT(actual, LIBC_NAMESPACE::testing::FormatSectionMatcher(expected))
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H

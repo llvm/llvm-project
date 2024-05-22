@@ -29,7 +29,6 @@ namespace llvm {
 class AAResults;
 class AssumptionCache;
 class BasicBlock;
-class CmpInst;
 class DemandedBits;
 class DominatorTree;
 class Function;

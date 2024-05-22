@@ -475,7 +475,7 @@ Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
 
 And this to the main translation unit of the :program:`clang-tidy` binary (or
 the binary you link the ``clang-tidy`` library in)
-``clang-tidy/tool/ClangTidyMain.cpp``:
+``clang-tidy/ClangTidyForceLinker.h``:
 
 .. code-block:: c++
 

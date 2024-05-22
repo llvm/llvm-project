@@ -25,7 +25,6 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"
@@ -3179,13 +3178,13 @@ public:
         m_debugger.GetListener(), llvm::StringRef(), &core_file_spec, false));
 
     if (!process_sp) {
-      SetError("Unable to find process plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
 
     Status status = process_sp->LoadCore();
     if (status.Fail()) {
-      SetError("Can't find plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
   }
@@ -4615,30 +4614,48 @@ public:
 
 typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
 
-class TreeItem {
-public:
-  TreeItem(TreeItem *parent, TreeDelegate &delegate, bool might_have_children)
-      : m_parent(parent), m_delegate(delegate), m_children(),
-        m_might_have_children(might_have_children) {
-    if (m_parent == nullptr)
-      m_is_expanded = m_delegate.TreeDelegateExpandRootByDefault();
+struct TreeItemData {
+  TreeItemData(TreeItem *parent, TreeDelegate &delegate,
+               bool might_have_children, bool is_expanded)
+      : m_parent(parent), m_delegate(&delegate),
+        m_might_have_children(might_have_children), m_is_expanded(is_expanded) {
   }
 
-  TreeItem &operator=(const TreeItem &rhs) {
+protected:
+  TreeItem *m_parent;
+  TreeDelegate *m_delegate;
+  void *m_user_data = nullptr;
+  uint64_t m_identifier = 0;
+  std::string m_text;
+  int m_row_idx = -1; // Zero based visible row index, -1 if not visible or for
+                      // the root item
+  bool m_might_have_children;
+  bool m_is_expanded = false;
+};
+
+class TreeItem : public TreeItemData {
+public:
+  TreeItem(TreeItem *parent, TreeDelegate &delegate, bool might_have_children)
+      : TreeItemData(parent, delegate, might_have_children,
+                     parent == nullptr
+                         ? delegate.TreeDelegateExpandRootByDefault()
+                         : false),
+        m_children() {}
+
+  TreeItem(const TreeItem &) = delete;
+  TreeItem &operator=(const TreeItem &rhs) = delete;
+
+  TreeItem &operator=(TreeItem &&rhs) {
     if (this != &rhs) {
-      m_parent = rhs.m_parent;
-      m_delegate = rhs.m_delegate;
-      m_user_data = rhs.m_user_data;
-      m_identifier = rhs.m_identifier;
-      m_row_idx = rhs.m_row_idx;
-      m_children = rhs.m_children;
-      m_might_have_children = rhs.m_might_have_children;
-      m_is_expanded = rhs.m_is_expanded;
+      TreeItemData::operator=(std::move(rhs));
+      AdoptChildren(rhs.m_children);
     }
     return *this;
   }
 
-  TreeItem(const TreeItem &) = default;
+  TreeItem(TreeItem &&rhs) : TreeItemData(std::move(rhs)) {
+    AdoptChildren(rhs.m_children);
+  }
 
   size_t GetDepth() const {
     if (m_parent)
@@ -4650,18 +4667,28 @@ public:
 
   void ClearChildren() { m_children.clear(); }
 
-  void Resize(size_t n, const TreeItem &t) { m_children.resize(n, t); }
+  void Resize(size_t n, TreeDelegate &delegate, bool might_have_children) {
+    if (m_children.size() >= n) {
+      m_children.erase(m_children.begin() + n, m_children.end());
+      return;
+    }
+    m_children.reserve(n);
+    std::generate_n(std::back_inserter(m_children), n - m_children.size(),
+                    [&, parent = this]() {
+                      return TreeItem(parent, delegate, might_have_children);
+                    });
+  }
 
   TreeItem &operator[](size_t i) { return m_children[i]; }
 
   void SetRowIndex(int row_idx) { m_row_idx = row_idx; }
 
   size_t GetNumChildren() {
-    m_delegate.TreeDelegateGenerateChildren(*this);
+    m_delegate->TreeDelegateGenerateChildren(*this);
     return m_children.size();
   }
 
-  void ItemWasSelected() { m_delegate.TreeDelegateItemSelected(*this); }
+  void ItemWasSelected() { m_delegate->TreeDelegateItemSelected(*this); }
 
   void CalculateRowIndexes(int &row_idx) {
     SetRowIndex(row_idx);
@@ -4728,7 +4755,7 @@ public:
       if (highlight)
         window.AttributeOn(A_REVERSE);
 
-      m_delegate.TreeDelegateDrawTreeItem(*this, window);
+      m_delegate->TreeDelegateDrawTreeItem(*this, window);
 
       if (highlight)
         window.AttributeOff(A_REVERSE);
@@ -4812,16 +4839,13 @@ public:
   void SetMightHaveChildren(bool b) { m_might_have_children = b; }
 
 protected:
-  TreeItem *m_parent;
-  TreeDelegate &m_delegate;
-  void *m_user_data = nullptr;
-  uint64_t m_identifier = 0;
-  std::string m_text;
-  int m_row_idx = -1; // Zero based visible row index, -1 if not visible or for
-                      // the root item
+  void AdoptChildren(std::vector<TreeItem> &children) {
+    m_children = std::move(children);
+    for (auto &child : m_children)
+      child.m_parent = this;
+  }
+
   std::vector<TreeItem> m_children;
-  bool m_might_have_children;
-  bool m_is_expanded = false;
 };
 
 class TreeWindowDelegate : public WindowDelegate {
@@ -5118,9 +5142,8 @@ public:
           m_stop_id = process_sp->GetStopID();
           m_tid = thread_sp->GetID();
 
-          TreeItem t(&item, *m_frame_delegate_sp, false);
           size_t num_frames = thread_sp->GetStackFrameCount();
-          item.Resize(num_frames, t);
+          item.Resize(num_frames, *m_frame_delegate_sp, false);
           for (size_t i = 0; i < num_frames; ++i) {
             item[i].SetUserData(thread_sp.get());
             item[i].SetIdentifier(i);
@@ -5220,12 +5243,11 @@ public:
               std::make_shared<ThreadTreeDelegate>(m_debugger);
         }
 
-        TreeItem t(&item, *m_thread_delegate_sp, false);
         ThreadList &threads = process_sp->GetThreadList();
         std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
         ThreadSP selected_thread = threads.GetSelectedThread();
         size_t num_threads = threads.GetSize();
-        item.Resize(num_threads, t);
+        item.Resize(num_threads, *m_thread_delegate_sp, false);
         for (size_t i = 0; i < num_threads; ++i) {
           ThreadSP thread = threads.GetThreadAtIndex(i);
           item[i].SetIdentifier(thread->GetID());
@@ -5405,9 +5427,8 @@ public:
 
     if (!m_string_delegate_sp)
       m_string_delegate_sp = std::make_shared<TextTreeDelegate>();
-    TreeItem details_tree_item(&item, *m_string_delegate_sp, false);
 
-    item.Resize(details.GetSize(), details_tree_item);
+    item.Resize(details.GetSize(), *m_string_delegate_sp, false);
     for (size_t i = 0; i < details.GetSize(); i++) {
       item[i].SetText(details.GetStringAtIndex(i));
     }
@@ -5449,10 +5470,9 @@ public:
     if (!m_breakpoint_location_delegate_sp)
       m_breakpoint_location_delegate_sp =
           std::make_shared<BreakpointLocationTreeDelegate>(m_debugger);
-    TreeItem breakpoint_location_tree_item(
-        &item, *m_breakpoint_location_delegate_sp, true);
 
-    item.Resize(breakpoint->GetNumLocations(), breakpoint_location_tree_item);
+    item.Resize(breakpoint->GetNumLocations(),
+                *m_breakpoint_location_delegate_sp, true);
     for (size_t i = 0; i < breakpoint->GetNumLocations(); i++) {
       item[i].SetIdentifier(i);
       item[i].SetUserData(breakpoint.get());
@@ -5496,9 +5516,8 @@ public:
     if (!m_breakpoint_delegate_sp)
       m_breakpoint_delegate_sp =
           std::make_shared<BreakpointTreeDelegate>(m_debugger);
-    TreeItem breakpoint_tree_item(&item, *m_breakpoint_delegate_sp, true);
 
-    item.Resize(breakpoints.GetSize(), breakpoint_tree_item);
+    item.Resize(breakpoints.GetSize(), *m_breakpoint_delegate_sp, true);
     for (size_t i = 0; i < breakpoints.GetSize(); i++) {
       item[i].SetIdentifier(i);
     }
@@ -7033,7 +7052,7 @@ public:
           m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
                                         &lineStream);
           StringRef line = lineStream.GetString();
-          if (line.endswith("\n"))
+          if (line.ends_with("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
               1, line, m_first_visible_column, is_pc_line);

@@ -10,25 +10,25 @@
 // CHECK-NEXT:        -:    4:
 // CHECK-NEXT:        1:    5:  int a = 1;
 // CHECK-NEXT:        1:    6:  if (a) {
-// CHECK-NEXT:branch  0 taken 1
-// CHECK-NEXT:branch  1 taken 0
+// CHECK-NEXT:branch  0 taken 0
+// CHECK-NEXT:branch  1 taken 1
 // CHECK-NEXT:        1:    7:    var++;
 // CHECK-NEXT:        1:    8:  }
 // CHECK-NEXT:        -:    9:
 // CHECK-NEXT:        1:   10:  if (a) {}
-// CHECK-NEXT:branch  0 taken 1
-// CHECK-NEXT:branch  1 taken 0
+// CHECK-NEXT:branch  0 taken 0
+// CHECK-NEXT:branch  1 taken 1
 // CHECK-NEXT:        -:   11:
 // CHECK-NEXT:        1:   12:  int b = 0;
 // CHECK-NEXT:        1:   13:  if (b) {
-// CHECK-NEXT:branch  0 taken 0
-// CHECK-NEXT:branch  1 taken 1
+// CHECK-NEXT:branch  0 taken 1
+// CHECK-NEXT:branch  1 taken 0
 // CHECK-NEXT:    #####:   14:    var++;
 // CHECK-NEXT:    #####:   15:  }
 // CHECK-NEXT:        -:   16:
 // CHECK-NEXT:        1:   17:  if (b) {}
-// CHECK-NEXT:branch  0 taken 0
-// CHECK-NEXT:branch  1 taken 1
+// CHECK-NEXT:branch  0 taken 1
+// CHECK-NEXT:branch  1 taken 0
 // CHECK-NEXT:        -:   18:
 // CHECK-NEXT:        1:   19:  return 0;
 // CHECK-NEXT:        -:   20:}

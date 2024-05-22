@@ -88,7 +88,6 @@ void overloadable_callexpr(int arg) {
 	func_overloadable(ar); //expected-error{{use of undeclared identifier}}
 }
 
-// rdar://problem/38642201
 struct rdar38642201 {
   int fieldName;
 };

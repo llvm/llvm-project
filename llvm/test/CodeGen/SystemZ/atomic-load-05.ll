@@ -1,6 +1,7 @@
 ; Test 128-bit atomic loads.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
 define i128 @f1(ptr %src) {
 ; CHECK-LABEL: f1:

@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRPresburgerTests
+  FractionTest.cpp
   IntegerPolyhedronTest.cpp
   IntegerRelationTest.cpp
   LinearTransformTest.cpp
@@ -7,6 +8,7 @@ add_mlir_unittest(MLIRPresburgerTests
   Parser.h
   ParserTest.cpp
   PresburgerSetTest.cpp
+  PresburgerRelationTest.cpp
   PresburgerSpaceTest.cpp
   PWMAFunctionTest.cpp
   SimplexTest.cpp

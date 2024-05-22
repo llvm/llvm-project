@@ -76,10 +76,10 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
        llvm::zip_equal(llvm::seq<unsigned>(0, innerDimsPos.size()),
                        innerDimsPos, packOrUnPackOp.getMixedTiles())) {
     auto expr = exprs[innerDimPos];
-    if (!expr.template isa<AffineDimExpr>())
+    if (!isa<AffineDimExpr>(expr))
       return failure();
     int64_t domainDimPos =
-        exprs[innerDimPos].template cast<AffineDimExpr>().getPosition();
+        cast<AffineDimExpr>(exprs[innerDimPos]).getPosition();
     if (!isParallelIterator(iterators[domainDimPos]))
       return failure();
     packInfo.tiledDimsPos.push_back(domainDimPos);
@@ -99,7 +99,7 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
   auto areAllAffineDimExpr = [&](int dim) {
     for (AffineMap map : indexingMaps) {
       if (llvm::any_of(map.getResults(), [dim](AffineExpr expr) {
-            return expr.isFunctionOfDim(dim) && !expr.isa<AffineDimExpr>();
+            return expr.isFunctionOfDim(dim) && !isa<AffineDimExpr>(expr);
           })) {
         return false;
       }
@@ -126,7 +126,7 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
   SmallVector<int64_t> permutedOuterDims;
   for (auto [index, dim] : llvm::enumerate(packOrUnPackOp.getOuterDimsPerm())) {
     auto permutedExpr = indexingMap.getResult(dim);
-    if (auto dimExpr = permutedExpr.template dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(permutedExpr)) {
       permutedOuterDims.push_back(dimExpr.getPosition());
       continue;
     }
@@ -177,7 +177,7 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
     // Here we rely on the assumption that the outer dims permutation
     // when propagating currently requires that non-affine dim expressions
     // are not permuted, thus allowing the identity assignment below.
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
       currentPositionTileLoops[dimExpr.getPosition()] = pos;
     else
       currentPositionTileLoops[pos] = pos;
@@ -238,7 +238,7 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   // Step 1. Construct the information of packing data dimensions; append inner
   // dimensions to the indexing maps for the operand.
   for (auto [index, expr] : llvm::enumerate(exprs)) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       int64_t dimPos = dimExpr.getPosition();
       domainDimToOperandDim[dimPos] = index;
       continue;
@@ -264,12 +264,12 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
     SmallVector<int64_t> inversedOuterPerm =
         invertPermutationVector(packInfo.outerDimsOnDomainPerm);
     for (auto i : llvm::seq<unsigned>(0, origIndexingMap.getNumResults())) {
-      if (auto dimExpr = exprs[i].dyn_cast<AffineDimExpr>()) {
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(exprs[i])) {
         int64_t dimPos = dimExpr.getPosition();
         exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
         continue;
       }
-      assert(exprs[i].isa<AffineConstantExpr>() &&
+      assert(isa<AffineConstantExpr>(exprs[i]) &&
              "Attempted to permute non-constant and non-affine dim expression");
     }
     // Step 2.2: Undo the transposition on `exprs` and propagate the
@@ -448,46 +448,6 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
                        *packInfo);
 }
 
-/// Folds pack(fill) into a single fill op if
-///   1. The pack op does not have padding value, or
-///   2. The filled value and padding value are the same.
-static FailureOr<FillOp>
-foldFillPackIntoFillOp(RewriterBase &rewriter, tensor::PackOp packOp,
-                       ControlPropagationFn controlFn) {
-  auto fillOp = packOp.getSource().getDefiningOp<FillOp>();
-  if (!fillOp)
-    return failure();
-
-  // User controlled propagation function.
-  if (!controlFn(fillOp))
-    return failure();
-
-  if (auto paddingValue = packOp.getPaddingValue())
-    if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
-      return failure();
-
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(fillOp);
-
-  Value packOpDest = packOp.getDest();
-  if (!packOpDest.hasOneUse())
-    return failure();
-  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
-    packOpDest = tensor::PackOp::createDestinationTensor(
-        rewriter, fillOp.getLoc(), fillOp.getDpsInitOperand(0)->get(),
-        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
-        packOp.getOuterDimsPerm());
-  } else {
-    DominanceInfo dom(fillOp);
-    if (!dom.properlyDominates(packOpDest, fillOp))
-      return failure();
-  }
-
-  Value fillDest = packOpDest;
-  return clone(rewriter, fillOp, packOpDest.getType(),
-               {fillOp.value(), fillDest});
-}
-
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
 struct BubbleUpPackOpThroughGenericOpPattern
     : public OpRewritePattern<tensor::PackOp> {
@@ -503,25 +463,6 @@ public:
     if (failed(genericOp))
       return failure();
     rewriter.replaceOp(packOp, genericOp->getResults());
-    return success();
-  }
-
-private:
-  ControlPropagationFn controlFn;
-};
-
-/// Wrapper pattern that applies foldFillPackIntoFillOp method.
-struct FoldFillPackIntoFillOpPattern : public OpRewritePattern<tensor::PackOp> {
-public:
-  FoldFillPackIntoFillOpPattern(MLIRContext *context, ControlPropagationFn fun)
-      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
-
-  LogicalResult matchAndRewrite(tensor::PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    auto fillOp = foldFillPackIntoFillOp(rewriter, packOp, controlFn);
-    if (failed(fillOp))
-      return failure();
-    rewriter.replaceOp(packOp, fillOp.value().result());
     return success();
   }
 
@@ -750,7 +691,6 @@ void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation) {
   patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
-                  FoldFillPackIntoFillOpPattern,
                   PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
       patterns.getContext(), controlPackUnPackPropagation);
 }

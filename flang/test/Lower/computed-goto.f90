@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QPm
 function m(index)
@@ -38,15 +38,15 @@ end
 ! CHECK-LABEL: func @_QPm1
 function m1(index)
     ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m1"
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave()
+    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave.p0()
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb3
     ! CHECK: ^bb2:  // pred: ^bb0
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
     ! CHECK:   cf.br ^bb4
     ! CHECK: ^bb3:  // pred: ^bb1
@@ -65,21 +65,21 @@ end
 ! CHECK-LABEL: func @_QPm2
 function m2(index)
     ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m2"
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave()
+    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave.p0()
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb5
     ! CHECK: ^bb2:  // pred: ^bb0
     ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c2{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_4]], ^bb3, ^bb4
     ! CHECK: ^bb3:  // pred: ^bb2
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb6
     ! CHECK: ^bb4:  // pred: ^bb2
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb5:  // pred: ^bb1
@@ -102,27 +102,27 @@ end
 ! CHECK-LABEL: func @_QPm3
 function m3(index)
     ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m3"
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave()
+    ! CHECK:   %[[V_1:[0-9]+]] = fir.call @llvm.stacksave.p0()
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb2:  // pred: ^bb0
     ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c2{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_4]], ^bb3, ^bb4
     ! CHECK: ^bb3:  // pred: ^bb2
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb8
     ! CHECK: ^bb4:  // pred: ^bb2
     ! CHECK:   %[[V_5:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c3{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_5]], ^bb5, ^bb6
     ! CHECK: ^bb5:  // pred: ^bb4
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   cf.br ^bb9
     ! CHECK: ^bb6:  // pred: ^bb4
-    ! CHECK:   fir.call @llvm.stackrestore(%[[V_1]])
+    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_1]])
     ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
     ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb7:  // pred: ^bb1

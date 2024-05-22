@@ -13,3 +13,5 @@
 .equ CONST, .Lbuf_end - .Lbuf
 # CHECK: error: operand must be a constant 12-bit integer
 li a0, CONST
+# CHECK: error: operand must be a constant 12-bit integer
+li a0, .Lbuf_end - .Lbuf

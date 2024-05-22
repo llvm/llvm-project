@@ -19,10 +19,6 @@ namespace dataflow {
 
 static bool areEquivalentIndirectionValues(const Value &Val1,
                                            const Value &Val2) {
-  if (auto *IndVal1 = dyn_cast<ReferenceValue>(&Val1)) {
-    auto *IndVal2 = cast<ReferenceValue>(&Val2);
-    return &IndVal1->getReferentLoc() == &IndVal2->getReferentLoc();
-  }
   if (auto *IndVal1 = dyn_cast<PointerValue>(&Val1)) {
     auto *IndVal2 = cast<PointerValue>(&Val2);
     return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
@@ -38,18 +34,20 @@ bool areEquivalentValues(const Value &Val1, const Value &Val2) {
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
   switch (Val.getKind()) {
-  case Value::Kind::Reference: {
-    const auto *RV = cast<ReferenceValue>(&Val);
-    return OS << "Reference(" << &RV->getReferentLoc() << ")";
+  case Value::Kind::Integer:
+    return OS << "Integer(@" << &Val << ")";
+  case Value::Kind::Pointer:
+    return OS << "Pointer(" << &cast<PointerValue>(Val).getPointeeLoc() << ")";
+  case Value::Kind::Record:
+    return OS << "Record(" << &cast<RecordValue>(Val).getLoc() << ")";
+  case Value::Kind::TopBool:
+    return OS << "TopBool(" << cast<TopBoolValue>(Val).getAtom() << ")";
+  case Value::Kind::AtomicBool:
+    return OS << "AtomicBool(" << cast<AtomicBoolValue>(Val).getAtom() << ")";
+  case Value::Kind::FormulaBool:
+    return OS << "FormulaBool(" << cast<FormulaBoolValue>(Val).formula() << ")";
   }
-  case Value::Kind::Pointer: {
-    const auto *PV = dyn_cast<PointerValue>(&Val);
-    return OS << "Pointer(" << &PV->getPointeeLoc() << ")";
-  }
-  // FIXME: support remaining cases.
-  default:
-    return OS << debugString(Val.getKind());
-  }
+  llvm_unreachable("Unknown clang::dataflow::Value::Kind enum");
 }
 
 } // namespace dataflow

@@ -71,6 +71,22 @@ public:
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
+  /// Get a 16-bit IEEE half value.
+  /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
+  static constexpr LLT float16() {
+    return scalar(16);
+  }
+
+  /// Get a 32-bit IEEE float value.
+  static constexpr LLT float32() {
+    return scalar(32);
+  }
+
+  /// Get a 64-bit IEEE double value.
+  static constexpr LLT float64() {
+    return scalar(64);
+  }
+
   /// Get a low-level fixed-width vector of some number of elements and element
   /// width.
   static constexpr LLT fixed_vector(unsigned NumElements,
@@ -147,6 +163,14 @@ public:
                      : getFieldValue(VectorScalableFieldInfo);
   }
 
+  /// Returns true if the LLT is a fixed vector. Returns false otherwise, even
+  /// if the LLT is not a vector type.
+  constexpr bool isFixedVector() const { return isVector() && !isScalable(); }
+
+  /// Returns true if the LLT is a scalable vector. Returns false otherwise,
+  /// even if the LLT is not a vector type.
+  constexpr bool isScalableVector() const { return isVector() && isScalable(); }
+
   constexpr ElementCount getElementCount() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
     return ElementCount::get(IsPointer
@@ -158,7 +182,7 @@ public:
   /// Returns the total size of the type. Must only be called on sized types.
   constexpr TypeSize getSizeInBits() const {
     if (isPointer() || isScalar())
-      return TypeSize::Fixed(getScalarSizeInBits());
+      return TypeSize::getFixed(getScalarSizeInBits());
     auto EC = getElementCount();
     return TypeSize(getScalarSizeInBits() * EC.getKnownMinValue(),
                     EC.isScalable());
@@ -238,10 +262,9 @@ public:
         return getFieldValue(VectorSizeFieldInfo);
       else
         return getFieldValue(PointerVectorSizeFieldInfo);
-    } else if (IsPointer)
-      return getFieldValue(PointerSizeFieldInfo);
-    else
-      llvm_unreachable("unexpected LLT");
+    }
+    assert(IsPointer && "unexpected LLT");
+    return getFieldValue(PointerSizeFieldInfo);
   }
 
   constexpr unsigned getAddressSpace() const {

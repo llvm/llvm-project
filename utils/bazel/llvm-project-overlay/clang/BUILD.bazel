@@ -181,6 +181,20 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_arm_sve_streaming_attrs_gen",
+    tbl_outs = [(
+        "-gen-arm-sve-streaming-attrs",
+        "include/clang/Basic/arm_sve_streaming_attrs.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sve.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
     name = "basic_arm_sme_builtins_gen",
     tbl_outs = [(
         "-gen-arm-sme-builtins",
@@ -213,6 +227,20 @@ gentbl(
     tbl_outs = [(
         "-gen-arm-sme-sema-rangechecks",
         "include/clang/Basic/arm_sme_sema_rangechecks.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_streaming_attrs_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-streaming-attrs",
+        "include/clang/Basic/arm_sme_streaming_attrs.inc",
     )],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/arm_sme.td",
@@ -468,7 +496,7 @@ genrule(
         "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"{vers}git\"' >> $@\n"
     ).format(
         major = LLVM_VERSION_MAJOR,
         minor = LLVM_VERSION_MINOR,
@@ -593,6 +621,7 @@ cc_library(
         ":sema_attr_gen",
         "//llvm:Core",
         "//llvm:FrontendDebug",
+        "//llvm:FrontendDriver",
         "//llvm:FrontendOpenMP",
         "//llvm:Instrumentation",
         "//llvm:MC",
@@ -647,6 +676,14 @@ gentbl(
         (
             "-gen-clang-attr-impl",
             "include/clang/AST/AttrImpl.inc",
+        ),
+        (
+            "-gen-clang-attr-can-print-left-list",
+            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
+        ),
+        (
+            "-gen-clang-attr-must-print-left-list",
+            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -895,6 +932,7 @@ cc_library(
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1023,14 +1061,17 @@ cc_library(
     ],
     deps = [
         ":analysis",
+        ":apinotes",
         ":ast",
         ":basic",
         ":basic_arm_cde_aliases_gen",
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sme_builtins_gen",
         ":basic_arm_sme_sema_rangechecks_gen",
+        ":basic_arm_sme_streaming_attrs_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_arm_sve_streaming_attrs_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
@@ -1643,6 +1684,20 @@ gentbl(
 )
 
 gentbl(
+    name = "headers_arm_vector_type_gen",
+    tbl_outs = [(
+        "-gen-arm-vector-type",
+        "lib/Headers/arm_vector_types.h",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_neon.td",
+    td_srcs = [
+        "include/clang/Basic/arm_neon.td",
+        "include/clang/Basic/arm_neon_incl.td",
+    ],
+)
+
+gentbl(
     name = "headers_riscv_vector",
     tbl_outs = [(
         "-gen-riscv-vector-header",
@@ -1674,6 +1729,7 @@ builtin_headers = glob(
     "lib/Headers/arm_neon.h",
     "lib/Headers/arm_sve.h",
     "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
+    "lib/Headers/arm_vector_types.h",
     "lib/Headers/arm_bf16.h",
     "lib/Headers/module.modulemap",
     "lib/Headers/riscv_vector.h",
@@ -1718,6 +1774,7 @@ cc_library(
         "include/clang/Frontend/*.def",
     ]),
     deps = [
+        ":apinotes",
         ":ast",
         ":basic",
         ":config",
@@ -1796,6 +1853,7 @@ cc_library(
         "//llvm:ExecutionEngine",
         "//llvm:MC",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
@@ -1844,8 +1902,11 @@ cc_library(
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
+        "//llvm:FrontendDriver",
         "//llvm:FrontendHLSL",
+        "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenMP",
+        "//llvm:HipStdPar",
         "//llvm:IPO",
         "//llvm:IRPrinter",
         "//llvm:IRReader",
@@ -2116,6 +2177,22 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "apinotes",
+    srcs = glob([
+        "lib/APINotes/*.cpp",
+        "lib/APINotes/*.h",
+    ]),
+    hdrs = glob(["include/clang/APINotes/*.h"]),
+    deps = [
+        ":basic",
+        "//llvm:BitWriter",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//llvm:Support",
+    ],
+)
+
 cc_binary(
     name = "arcmt-test",
     testonly = 1,
@@ -2381,6 +2458,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IRReader",
         "//llvm:LTO",
         "//llvm:MC",

@@ -19,6 +19,7 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Pass.h"
+#include <set>
 
 using namespace llvm;
 

@@ -20,9 +20,6 @@ class ValueAsLinkedListTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Break at this line")
 
-    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into
-    # SWIG 3.0.8.
-    @skipIf(py_version=[">=", (3, 0)], swig_version=["<", (3, 0, 8)])
     def test(self):
         """Exercise SBValue API linked_list_iter."""
         d = {"EXE": self.exe_name}

@@ -169,7 +169,7 @@ void ClangASTNodesEmitter::deriveChildTree() {
 void ClangASTNodesEmitter::run(raw_ostream &OS) {
   deriveChildTree();
 
-  emitSourceFileHeader("List of AST nodes of a particular kind", OS);
+  emitSourceFileHeader("List of AST nodes of a particular kind", OS, Records);
 
   // Write the preamble
   OS << "#ifndef ABSTRACT_" << macroHierarchyName() << "\n";
@@ -205,7 +205,7 @@ void clang::EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
 void clang::EmitClangDeclContext(RecordKeeper &Records, raw_ostream &OS) {
   // FIXME: Find a .td file format to allow for this to be represented better.
 
-  emitSourceFileHeader("List of AST Decl nodes", OS);
+  emitSourceFileHeader("List of AST Decl nodes", OS, Records);
 
   OS << "#ifndef DECL_CONTEXT\n";
   OS << "#  define DECL_CONTEXT(DECL)\n";

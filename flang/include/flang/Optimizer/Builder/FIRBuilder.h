@@ -53,6 +53,18 @@ public:
         kindMap{getKindMapping(mod)} {
     setListener(this);
   }
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::Operation *op)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+    setListener(this);
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
+  FirOpBuilder(mlir::OpBuilder &builder, mlir::Operation *op)
+      : FirOpBuilder(builder, fir::getKindMapping(op), op) {}
 
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
@@ -170,6 +182,15 @@ public:
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
 
+  /// Create a temporary using `fir.alloca`. This function does not hoist.
+  /// It is the callers responsibility to set the insertion point if
+  /// hoisting is required.
+  mlir::Value
+  createTemporaryAlloc(mlir::Location loc, mlir::Type type,
+                       llvm::StringRef name, mlir::ValueRange lenParams = {},
+                       mlir::ValueRange shape = {},
+                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read
   /// and written using `fir.load` and `fir.store`, resp.  The temporary can be
   /// given a name via a front-end `Symbol` or a `StringRef`.
@@ -232,11 +253,6 @@ public:
     return createGlobal(loc, type, name, /*isConst=*/true, /*isTarget=*/false,
                         bodyBuilder, linkage);
   }
-
-  /// Create a fir::DispatchTable operation.
-  fir::DispatchTableOp createDispatchTableOp(mlir::Location loc,
-                                             llvm::StringRef name,
-                                             llvm::StringRef parentName);
 
   /// Convert a StringRef string into a fir::StringLitOp.
   fir::StringLitOp createStringLitOp(mlir::Location loc,
@@ -456,6 +472,20 @@ public:
   /// Get current FastMathFlags value.
   mlir::arith::FastMathFlags getFastMathFlags() const { return fastMathFlags; }
 
+  /// Stringify FastMathFlags set in a way
+  /// that the string may be used for mangling a function name.
+  /// If FastMathFlags are set to 'none', then the result is an empty
+  /// string.
+  std::string getFastMathFlagsString() {
+    mlir::arith::FastMathFlags flags = getFastMathFlags();
+    if (flags == mlir::arith::FastMathFlags::none)
+      return {};
+
+    std::string fmfString{mlir::arith::stringifyFastMathFlags(flags)};
+    std::replace(fmfString.begin(), fmfString.end(), ',', '_');
+    return fmfString;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -589,7 +619,9 @@ fir::ExtendedValue arraySectionElementToExtendedValue(
 void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
+                         bool needFinalization = false,
                          bool isTemporaryLHS = false);
+
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
 /// derived types (10.2.1.3 point 13).
@@ -645,6 +677,10 @@ mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 /// to keep all the lower bound and explicit parameter information.
 fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
                              const fir::ExtendedValue &exv);
+
+/// Generate Null BoxProc for procedure pointer null initialization.
+mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type boxType);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

@@ -305,6 +305,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
@@ -328,16 +329,13 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GFX7-NEXT:    buffer_load_dword v1, v[1:2], s[4:7], 0 addr64
-; GFX7-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
-; GFX7-NEXT:    v_mov_b32_e32 v4, s1
-; GFX7-NEXT:    v_mov_b32_e32 v3, s0
+; GFX7-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_or_b32_e32 v0, 0xff800000, v1
-; GFX7-NEXT:    v_mul_i32_i24_e32 v1, -7, v0
-; GFX7-NEXT:    v_lshl_b64 v[0:1], v[1:2], 3
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, v3, v5
-; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
-; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GFX7-NEXT:    v_or_b32_e32 v1, 0xff800000, v1
+; GFX7-NEXT:    v_mul_i32_i24_e32 v1, -7, v1
+; GFX7-NEXT:    v_lshl_b64 v[3:4], v[1:2], 3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
+; GFX7-NEXT:    buffer_store_dwordx2 v[3:4], v[1:2], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: muli24_shl64:
@@ -405,6 +403,7 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ; GFX11-NEXT:    v_mul_i32_i24_e32 v1, -7, v1
 ; GFX11-NEXT:    v_lshlrev_b64 v[1:2], 3, v[1:2]
 ; GFX11-NEXT:    global_store_b64 v0, v[1:2], s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:

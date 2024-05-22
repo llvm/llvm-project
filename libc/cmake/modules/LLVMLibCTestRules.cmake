@@ -15,49 +15,83 @@
 function(get_object_files_for_test result skipped_entrypoints_list)
   set(object_files "")
   set(skipped_list "")
-  foreach(dep IN LISTS ARGN)
+  set(checked_list "")
+  set(unchecked_list "${ARGN}")
+  list(REMOVE_DUPLICATES unchecked_list)
+
+  foreach(dep IN LISTS unchecked_list)
     if (NOT TARGET ${dep})
-      # Skip any tests whose dependencies have not been defined.
+      # Skip tests with undefined dependencies.
       list(APPEND skipped_list ${dep})
       continue()
     endif()
+    get_target_property(aliased_target ${dep} "ALIASED_TARGET")
+    if(aliased_target)
+      # If the target is just an alias, switch to the real target.
+      set(dep ${aliased_target})
+    endif()
+
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT dep_type)
-      # Target for which TARGET_TYPE property is not set do not
-      # provide any object files.
+      # Skip tests with no object dependencies.
       continue()
     endif()
 
-    if(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
-      get_target_property(dep_object_files ${dep} "OBJECT_FILES")
-      if(dep_object_files)
-        list(APPEND object_files ${dep_object_files})
+    get_target_property(dep_checked ${dep} "CHECK_OBJ_FOR_TESTS")
+
+    if(dep_checked)
+      # Target full dependency has already been checked.  Just use the results.
+      get_target_property(dep_obj ${dep} "OBJECT_FILES_FOR_TESTS")
+      get_target_property(dep_skip ${dep} "SKIPPED_LIST_FOR_TESTS")
+    else()
+      # Target full dependency hasn't been checked.  Recursively check its DEPS.
+      set(dep_obj "${dep}")
+      set(dep_skip "")
+
+      get_target_property(indirect_deps ${dep} "DEPS")
+      get_object_files_for_test(dep_obj dep_skip ${indirect_deps})
+
+      if(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
+        get_target_property(dep_object_files ${dep} "OBJECT_FILES")
+        if(dep_object_files)
+          list(APPEND dep_obj ${dep_object_files})
+        endif()
+      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+        get_target_property(is_skipped ${dep} "SKIPPED")
+        if(is_skipped)
+          list(APPEND dep_skip ${dep})
+          list(REMOVE_ITEM dep_obj ${dep})
+        endif()
+        get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
+        if(object_file_raw)
+          list(APPEND dep_obj ${object_file_raw})
+        endif()
+      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+        # Skip tests for externally implemented entrypoints.
+        list(APPEND dep_skip ${dep})
+        list(REMOVE_ITEM dep_obj ${dep})
       endif()
-    elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
-      get_target_property(is_skipped ${dep} "SKIPPED")
-      if(is_skipped)
-        list(APPEND skipped_list ${dep})
-        continue()
-      endif()
-      get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
-      if(object_file_raw)
-        list(APPEND object_files ${object_file_raw})
-      endif()
+
+      set_target_properties(${dep} PROPERTIES
+        OBJECT_FILES_FOR_TESTS "${dep_obj}"
+        SKIPPED_LIST_FOR_TESTS "${dep_skip}"
+        CHECK_OBJ_FOR_TESTS "YES"
+      )
+
     endif()
 
-    get_target_property(indirect_deps ${dep} "DEPS")
-    get_object_files_for_test(
-        indirect_objfiles indirect_skipped_list ${indirect_deps})
-    list(APPEND object_files ${indirect_objfiles})
-    if(indirect_skipped_list)
-      list(APPEND skipped_list ${indirect_skipped_list})
-    endif()
+    list(APPEND object_files ${dep_obj})
+    list(APPEND skipped_list ${dep_skip})
+
   endforeach(dep)
+
   list(REMOVE_DUPLICATES object_files)
   set(${result} ${object_files} PARENT_SCOPE)
   list(REMOVE_DUPLICATES skipped_list)
   set(${skipped_entrypoints_list} ${skipped_list} PARENT_SCOPE)
+
 endfunction(get_object_files_for_test)
+
 
 # Rule to add a libc unittest.
 # Usage
@@ -144,17 +178,18 @@ function(create_libc_unittest fq_target_name)
     ${LIBC_UNITTEST_SRCS}
     ${LIBC_UNITTEST_HDRS}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(
     ${fq_build_target_name}
     PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
+  if(LLVM_LIBC_FULL_BUILD)
+    target_compile_options(
+      ${fq_build_target_name}
+      PRIVATE -ffreestanding
+    )
+  endif()
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
       ${fq_build_target_name}
@@ -377,13 +412,8 @@ function(add_libc_fuzzer target_name)
     ${LIBC_FUZZER_SRCS}
     ${LIBC_FUZZER_HDRS}
   )
-  target_include_directories(
-    ${fq_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
-  )
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
   target_link_libraries(${fq_target_name} PRIVATE 
     ${link_object_files} 
@@ -508,20 +538,16 @@ function(add_integration_test test_name)
   )
   set_target_properties(${fq_build_target_name}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE
                            -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
-                           -flto --target=${LIBC_GPU_TARGET_TRIPLE})
+                           -flto --target=${LIBC_GPU_TARGET_TRIPLE}
+                           -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
     target_compile_options(${fq_build_target_name} PRIVATE
@@ -529,7 +555,11 @@ function(add_integration_test test_name)
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
 
-  target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  endif()
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
@@ -555,6 +585,7 @@ function(add_integration_test test_name)
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
+      ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
@@ -571,7 +602,9 @@ set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
 # The GPU build requires overriding the default CMake triple and architecture.
 if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto --target=${LIBC_GPU_TARGET_TRIPLE})
+       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+       --target=${LIBC_GPU_TARGET_TRIPLE}
+       -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
 elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
@@ -633,6 +666,12 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memset
       libc.src.__support.StringUtil.error_to_string
   )
+
+  if(TARGET libc.src.time.clock)
+    # We will link in the 'clock' implementation if it exists for test timing.
+    list(APPEND fq_deps_list libc.src.time.clock)
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -673,13 +712,8 @@ function(add_libc_hermetic_test test_name)
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       #OUTPUT_NAME ${fq_target_name}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
 
@@ -718,7 +752,7 @@ function(add_libc_hermetic_test test_name)
   endif()
 
   set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${HERMETIC_TEST_LOADER_ARGS}
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}

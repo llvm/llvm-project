@@ -1373,6 +1373,13 @@ TEST_F(ConstantRangeTest, Shl) {
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
 
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xfff0), APInt(16, 0)));
+  EXPECT_EQ(ConstantRange(APInt(16, 0xfffe), APInt(16, 0))
+                .shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xffe0), APInt(16, 0)));
+
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shl(CR2);
@@ -2429,6 +2436,26 @@ TEST_F(ConstantRangeTest, Ctlz) {
           return std::nullopt;
         return APInt(N.getBitWidth(), N.countl_zero());
       });
+}
+
+TEST_F(ConstantRangeTest, Cttz) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.countr_zero()); });
+
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(/*ZeroIsPoison=*/true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isZero())
+          return std::nullopt;
+        return APInt(N.getBitWidth(), N.countr_zero());
+      });
+}
+
+TEST_F(ConstantRangeTest, Ctpop) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctpop(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.popcount()); });
 }
 
 TEST_F(ConstantRangeTest, castOps) {

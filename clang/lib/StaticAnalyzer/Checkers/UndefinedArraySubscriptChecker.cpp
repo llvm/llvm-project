@@ -49,7 +49,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
   if (!N)
     return;
   if (!BT)
-    BT.reset(new BuiltinBug(this, "Array subscript is undefined"));
+    BT.reset(new BugType(this, "Array subscript is undefined"));
 
   // Generate a report for this bug.
   auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);

@@ -215,36 +215,10 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(Operation *op,
                                          SmallVectorImpl<Value> &results) {
-  SmallVector<Attribute, 8> operandConstants;
-
-  // If this is a commutative operation, move constants to be trailing operands.
-  bool updatedOpOperands = false;
-  if (op->getNumOperands() >= 2 && op->hasTrait<OpTrait::IsCommutative>()) {
-    auto isNonConstant = [&](OpOperand &o) {
-      return !matchPattern(o.get(), m_Constant());
-    };
-    auto *firstConstantIt =
-        llvm::find_if_not(op->getOpOperands(), isNonConstant);
-    auto *newConstantIt = std::stable_partition(
-        firstConstantIt, op->getOpOperands().end(), isNonConstant);
-
-    // Remember if we actually moved anything.
-    updatedOpOperands = firstConstantIt != newConstantIt;
-  }
-
-  // Check to see if any operands to the operation is constant and whether
-  // the operation knows how to constant fold itself.
-  operandConstants.assign(op->getNumOperands(), Attribute());
-  for (unsigned i = 0, e = op->getNumOperands(); i != e; ++i)
-    matchPattern(op->getOperand(i), m_Constant(&operandConstants[i]));
-
-  // Attempt to constant fold the operation. If we failed, check to see if we at
-  // least updated the operands of the operation. We treat this as an in-place
-  // fold.
   SmallVector<OpFoldResult, 8> foldResults;
-  if (failed(op->fold(operandConstants, foldResults)) ||
+  if (failed(op->fold(foldResults)) ||
       failed(processFoldResults(op, results, foldResults)))
-    return success(updatedOpOperands);
+    return failure();
   return success();
 }
 

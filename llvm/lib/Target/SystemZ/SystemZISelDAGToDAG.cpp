@@ -307,6 +307,8 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   void loadVectorConstant(const SystemZVectorConstantInfo &VCI,
                           SDNode *Node);
 
+  SDNode *loadPoolVectorConstant(APInt Val, EVT VT, SDLoc DL);
+
   // Try to use gather instruction Opcode to implement vector insertion N.
   bool tryGather(SDNode *N, unsigned Opcode);
 
@@ -350,7 +352,7 @@ public:
 
   SystemZDAGToDAGISel() = delete;
 
-  SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOpt::Level OptLevel)
+  SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -368,7 +370,8 @@ public:
 
   // Override SelectionDAGISel.
   void Select(SDNode *Node) override;
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
   bool IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const override;
   void PreprocessISelDAG() override;
@@ -383,7 +386,7 @@ char SystemZDAGToDAGISel::ID = 0;
 INITIALIZE_PASS(SystemZDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
-                                         CodeGenOpt::Level OptLevel) {
+                                         CodeGenOptLevel OptLevel) {
   return new SystemZDAGToDAGISel(TM, OptLevel);
 }
 
@@ -462,7 +465,8 @@ bool SystemZDAGToDAGISel::expandAddress(SystemZAddressingMode &AM,
                                         bool IsBase) const {
   SDValue N = IsBase ? AM.Base : AM.Index;
   unsigned Opcode = N.getOpcode();
-  if (Opcode == ISD::TRUNCATE) {
+  // Look through no-op truncations.
+  if (Opcode == ISD::TRUNCATE && N.getOperand(0).getValueSizeInBits() <= 64) {
     N = N.getOperand(0);
     Opcode = N.getOpcode();
   }
@@ -782,6 +786,8 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   switch (Opcode) {
   case ISD::TRUNCATE: {
     if (RxSBG.Opcode == SystemZ::RNSBG)
+      return false;
+    if (N.getOperand(0).getValueSizeInBits() > 64)
       return false;
     uint64_t BitSize = N.getValueSizeInBits();
     uint64_t Mask = allOnes(BitSize);
@@ -1182,6 +1188,35 @@ void SystemZDAGToDAGISel::loadVectorConstant(
   SelectCode(Op.getNode());
 }
 
+SDNode *SystemZDAGToDAGISel::loadPoolVectorConstant(APInt Val, EVT VT, SDLoc DL) {
+  SDNode *ResNode;
+  assert (VT.getSizeInBits() == 128);
+
+  SDValue CP = CurDAG->getTargetConstantPool(
+      ConstantInt::get(Type::getInt128Ty(*CurDAG->getContext()), Val),
+      TLI->getPointerTy(CurDAG->getDataLayout()));
+
+  EVT PtrVT = CP.getValueType();
+  SDValue Ops[] = {
+    SDValue(CurDAG->getMachineNode(SystemZ::LARL, DL, PtrVT, CP), 0),
+    CurDAG->getTargetConstant(0, DL, PtrVT),
+    CurDAG->getRegister(0, PtrVT),
+    CurDAG->getEntryNode()
+  };
+  ResNode = CurDAG->getMachineNode(SystemZ::VL, DL, VT, MVT::Other, Ops);
+
+  // Annotate ResNode with memory operand information so that MachineInstr
+  // queries work properly. This e.g. gives the register allocation the
+  // required information for rematerialization.
+  MachineFunction& MF = CurDAG->getMachineFunction();
+  MachineMemOperand *MemOp =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, 16, Align(8));
+
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
+  return ResNode;
+}
+
 bool SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
   SDValue ElemV = N->getOperand(2);
   auto *ElemN = dyn_cast<ConstantSDNode>(ElemV);
@@ -1557,6 +1592,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
                 break;
           }
         }
+        // Don't split an XOR with -1 as LCGR/AGHI is more compact.
+        if (Opcode == ISD::XOR && Op1->isAllOnes())
+          break;
         if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {
           splitLargeImmediate(Opcode, Node, Node->getOperand(0),
                               Val - uint32_t(Val), uint32_t(Val));
@@ -1578,6 +1616,27 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case ISD::BSWAP:
+    if (Node->getValueType(0) == MVT::i128) {
+      SDLoc DL(Node);
+      SDValue Src = Node->getOperand(0);
+      Src = CurDAG->getNode(ISD::BITCAST, DL, MVT::v16i8, Src);
+
+      uint64_t Bytes[2] = { 0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL };
+      SDNode *Mask = loadPoolVectorConstant(APInt(128, Bytes), MVT::v16i8, DL);
+      SDValue Ops[] = { Src, Src, SDValue(Mask, 0) };
+      SDValue Res = SDValue(CurDAG->getMachineNode(SystemZ::VPERM, DL,
+                                                   MVT::v16i8, Ops), 0);
+
+      Res = CurDAG->getNode(ISD::BITCAST, DL, MVT::i128, Res);
+      SDNode *ResNode = Res.getNode();
+      ReplaceNode(Node, ResNode);
+      SelectCode(Src.getNode());
+      SelectCode(ResNode);
+      return;
+    }
+    break;
+
   case ISD::Constant:
     // If this is a 64-bit constant that is out of the range of LLILF,
     // LLIHF and LGFI, split it into two 32-bit pieces.
@@ -1589,6 +1648,18 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
     }
+    if (Node->getValueType(0) == MVT::i128) {
+      const APInt &Val = cast<ConstantSDNode>(Node)->getAPIntValue();
+      SystemZVectorConstantInfo VCI(Val);
+      if (VCI.isVectorConstantLegal(*Subtarget)) {
+        loadVectorConstant(VCI, Node);
+        return;
+      }
+      // If we can't materialize the constant we need to use a literal pool.
+      SDNode *ResNode = loadPoolVectorConstant(Val, MVT::i128, SDLoc(Node));
+      ReplaceNode(Node, ResNode);
+      return;
+    }
     break;
 
   case SystemZISD::SELECT_CCMASK: {
@@ -1599,6 +1670,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     if ((Op1.getOpcode() == ISD::LOAD && Op0.getOpcode() != ISD::LOAD) ||
         (Subtarget->hasLoadStoreOnCond2() &&
          Node->getValueType(0).isInteger() &&
+         Node->getValueType(0).getSizeInBits() <= 64 &&
          Op1.getOpcode() == ISD::Constant &&
          isInt<16>(cast<ConstantSDNode>(Op1)->getSExtValue()) &&
          !(Op0.getOpcode() == ISD::Constant &&
@@ -1677,10 +1749,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
   SelectCode(Node);
 }
 
-bool SystemZDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op,
-                             unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   SystemZAddressingMode::AddrForm Form;
   SystemZAddressingMode::DispRange DispRange;
   SDValue Base, Disp, Index;
@@ -1688,30 +1759,30 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_i:
-  case InlineAsm::Constraint_Q:
-  case InlineAsm::Constraint_ZQ:
+  case InlineAsm::ConstraintCode::i:
+  case InlineAsm::ConstraintCode::Q:
+  case InlineAsm::ConstraintCode::ZQ:
     // Accept an address with a short displacement, but no index.
     Form = SystemZAddressingMode::FormBD;
     DispRange = SystemZAddressingMode::Disp12Only;
     break;
-  case InlineAsm::Constraint_R:
-  case InlineAsm::Constraint_ZR:
+  case InlineAsm::ConstraintCode::R:
+  case InlineAsm::ConstraintCode::ZR:
     // Accept an address with a short displacement and an index.
     Form = SystemZAddressingMode::FormBDXNormal;
     DispRange = SystemZAddressingMode::Disp12Only;
     break;
-  case InlineAsm::Constraint_S:
-  case InlineAsm::Constraint_ZS:
+  case InlineAsm::ConstraintCode::S:
+  case InlineAsm::ConstraintCode::ZS:
     // Accept an address with a long displacement, but no index.
     Form = SystemZAddressingMode::FormBD;
     DispRange = SystemZAddressingMode::Disp20Only;
     break;
-  case InlineAsm::Constraint_T:
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
-  case InlineAsm::Constraint_p:
-  case InlineAsm::Constraint_ZT:
+  case InlineAsm::ConstraintCode::T:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
+  case InlineAsm::ConstraintCode::p:
+  case InlineAsm::ConstraintCode::ZT:
     // Accept an address with a long displacement and an index.
     // m works the same as T, as this is the most general case.
     // We don't really have any special handling of "offsettable"

@@ -99,7 +99,7 @@ public:
   }
 
   FormatToken *getPreviousToken() override {
-    assert(Position <= 0 || !Tokens[Position - 1]->is(tok::eof));
+    assert(Position <= 0 || Tokens[Position - 1]->isNot(tok::eof));
     return Position > 0 ? Tokens[Position - 1] : nullptr;
   }
 

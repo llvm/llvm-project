@@ -46,9 +46,9 @@
 
 // Error out if an unsupported value is passed to -msve-vector-bits.
 // -----------------------------------------------------------------------------
-// RUN: %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve \
+// RUN: not %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve \
 // RUN:  -msve-vector-bits=64 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
-// RUN: %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve \
+// RUN: not %clang -c %s -### --target=aarch64-none-linux-gnu -march=armv8-a+sve \
 // RUN:  -msve-vector-bits=A 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
 
 // CHECK-BAD-VALUE-ERROR: error: unsupported argument '{{.*}}' to option '-msve-vector-bits='

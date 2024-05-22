@@ -51,6 +51,7 @@ option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
+option(LIBUNWIND_ENABLE_FRAME_APIS "Include libgcc-compatible frame apis." OFF)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -61,11 +62,6 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
-
-# TODO: Remove this after branching for LLVM 15
-if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
-  message(WARNING "LIBUNWIND_SYSROOT, LIBUNWIND_TARGET_TRIPLE and LIBUNWIND_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
-endif()
 
 if(MINGW)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
@@ -248,6 +244,11 @@ endif()
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   add_compile_flags(-D_LIBUNWIND_IS_NATIVE_ONLY)
+endif()
+
+# Include stubs for __register_frame_info_bases and related
+if (LIBUNWIND_ENABLE_FRAME_APIS)
+  add_compile_flags(-D_LIBUNWIND_SUPPORT_FRAME_APIS)
 endif()
 
 # Threading-support

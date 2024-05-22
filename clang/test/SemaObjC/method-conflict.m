@@ -54,7 +54,6 @@ typedef NSUInteger XDSourceLanguage;
 }
 @end 
 
-// rdar: // 8006060
 @interface Bar
 - (void)foo:(id)format, ...;  // expected-note {{previous declaration is here}}
 - (void)foo1:(id)format;      // expected-note {{previous declaration is here}}

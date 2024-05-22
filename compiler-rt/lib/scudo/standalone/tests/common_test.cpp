@@ -72,27 +72,4 @@ TEST(ScudoCommonTest, Zeros) {
   MemMap.unmap(MemMap.getBase(), Size);
 }
 
-#if 0
-// This test is temorarily disabled because it may not work as expected. E.g.,
-// it doesn't dirty the pages so the pages may not be commited and it may only
-// work on the single thread environment. As a result, this test is flaky and is
-// impacting many test scenarios.
-TEST(ScudoCommonTest, GetRssFromBuffer) {
-  constexpr int64_t AllocSize = 10000000;
-  constexpr int64_t Error = 3000000;
-  constexpr size_t Runs = 10;
-
-  int64_t Rss = scudo::GetRSS();
-  EXPECT_GT(Rss, 0);
-
-  std::vector<std::unique_ptr<char[]>> Allocs(Runs);
-  for (auto &Alloc : Allocs) {
-    Alloc.reset(new char[AllocSize]());
-    int64_t Prev = Rss;
-    Rss = scudo::GetRSS();
-    EXPECT_LE(std::abs(Rss - AllocSize - Prev), Error);
-  }
-}
-#endif
-
 } // namespace scudo

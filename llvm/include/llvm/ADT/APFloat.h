@@ -489,6 +489,18 @@ public:
   /// return true.
   bool getExactInverse(APFloat *inv) const;
 
+  // If this is an exact power of two, return the exponent while ignoring the
+  // sign bit. If it's not an exact power of 2, return INT_MIN
+  LLVM_READONLY
+  int getExactLog2Abs() const;
+
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
+  LLVM_READONLY
+  int getExactLog2() const {
+    return isNegative() ? INT_MIN : getExactLog2Abs();
+  }
+
   /// Returns the exponent of the internal representation of the APFloat.
   ///
   /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
@@ -747,12 +759,19 @@ public:
 
   bool getExactInverse(APFloat *inv) const;
 
+  LLVM_READONLY
+  int getExactLog2() const;
+  LLVM_READONLY
+  int getExactLog2Abs() const;
+
   friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
   friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
   friend hash_code hash_value(const DoubleAPFloat &Arg);
 };
 
 hash_code hash_value(const DoubleAPFloat &Arg);
+DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, IEEEFloat::roundingMode RM);
+DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, IEEEFloat::roundingMode);
 
 } // End detail namespace
 
@@ -1314,6 +1333,16 @@ public:
 
   bool getExactInverse(APFloat *inv) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
+  }
+
+  LLVM_READONLY
+  int getExactLog2Abs() const {
+    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2Abs());
+  }
+
+  LLVM_READONLY
+  int getExactLog2() const {
+    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
   }
 
   friend hash_code hash_value(const APFloat &Arg);

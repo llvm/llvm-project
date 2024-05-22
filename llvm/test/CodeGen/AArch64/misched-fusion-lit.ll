@@ -33,6 +33,7 @@ entry:
 
 ; CHECK-LABEL: litp_tune_generic:
 ; CHECK:         adrp [[R:x[0-9]+]], litp_tune_generic
+; CHECKDONT:     add  {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
 ; CHECK-NEXT:    add {{x[0-9]+}}, [[R]], :lo12:litp_tune_generic
 }
 

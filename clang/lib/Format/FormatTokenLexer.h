@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
@@ -125,6 +126,8 @@ private:
   SmallVector<FormatToken *, 16> Tokens;
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
+
+  llvm::SmallPtrSet<IdentifierInfo *, 8> TypeNames;
 
   bool FormattingDisabled;
 

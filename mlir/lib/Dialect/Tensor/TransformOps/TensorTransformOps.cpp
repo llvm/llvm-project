@@ -83,6 +83,11 @@ void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
+void transform::ApplyDecomposeTensorConcatPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateDecomposeTensorConcatPatterns(patterns);
+}
+
 void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
   tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
@@ -101,6 +106,11 @@ void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
+}
+
+void transform::ApplyFoldTensorSubsetOpsIntoVectorTransfersPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
 }
 
 void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::

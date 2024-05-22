@@ -16,12 +16,12 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -99,10 +99,9 @@ static size_t g_debugger_event_thread_stack_bytes = 8 * 1024 * 1024;
 
 #pragma mark Static Functions
 
-typedef std::vector<DebuggerSP> DebuggerList;
 static std::recursive_mutex *g_debugger_list_mutex_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
-static DebuggerList *g_debugger_list_ptr =
+static Debugger::DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static llvm::ThreadPool *g_thread_pool = nullptr;
 
@@ -213,7 +212,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
 
   TargetSP target_sp;
   LoadScriptFromSymFile load_script_old_value = eLoadScriptFromSymFileFalse;
-  if (is_load_script && exe_ctx->GetTargetSP()) {
+  if (is_load_script && exe_ctx && exe_ctx->GetTargetSP()) {
     target_sp = exe_ctx->GetTargetSP();
     load_script_old_value =
         target_sp->TargetProperties::GetLoadScriptFromSymbolFile();
@@ -237,6 +236,13 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // codes.
       SetPrompt(GetPrompt());
     } else if (property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiPrefix].name ||
+               property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiSuffix].name) {
+      // Prompt colors changed. Ping the prompt so it can reset the ansi
+      // terminal codes.
+      SetPrompt(GetPrompt());
+    } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
       // disabled.
@@ -249,7 +255,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
         StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, &feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
           Stream &s = GetErrorStream();
           for (auto error : errors) {
             s.Printf("%s\n", error.AsCString());
@@ -298,6 +304,18 @@ bool Debugger::GetNotifyVoid() const {
 
 llvm::StringRef Debugger::GetPrompt() const {
   constexpr uint32_t idx = ePropertyPrompt;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiPrefix() const {
+  const uint32_t idx = ePropertyPromptAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiSuffix() const {
+  const uint32_t idx = ePropertyPromptAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }
@@ -433,6 +451,24 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
   const uint32_t idx = ePropertyShowAutosuggestionAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetRegexMatchAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetRegexMatchAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+bool Debugger::GetShowDontUsePoHint() const {
+  const uint32_t idx = ePropertyShowDontUsePoHint;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::GetUseSourceCache() const {
@@ -906,7 +942,7 @@ void Debugger::Clear() {
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
         if (ProcessSP process_sp = target_sp->GetProcessSP())
-          process_sp->Finalize();
+          process_sp->Finalize(false /* not destructing */);
         target_sp->Destroy();
       }
     }
@@ -922,15 +958,6 @@ void Debugger::Clear() {
     if (Diagnostics::Enabled())
       Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
-}
-
-bool Debugger::GetCloseInputOnEOF() const {
-  //    return m_input_comm.GetCloseOnEOF();
-  return false;
-}
-
-void Debugger::SetCloseInputOnEOF(bool b) {
-  //    m_input_comm.SetCloseOnEOF(b);
 }
 
 bool Debugger::GetAsyncExecution() {
@@ -1274,6 +1301,33 @@ bool Debugger::InterruptRequested() {
     return m_interrupt_requested != 0;
   }
   return GetCommandInterpreter().WasInterrupted();
+}
+
+Debugger::InterruptionReport::InterruptionReport(
+    std::string function_name, const llvm::formatv_object_base &payload)
+    : m_function_name(std::move(function_name)),
+      m_interrupt_time(std::chrono::system_clock::now()),
+      m_thread_id(llvm::get_threadid()) {
+  llvm::raw_string_ostream desc(m_description);
+  desc << payload << "\n";
+}
+
+void Debugger::ReportInterruption(const InterruptionReport &report) {
+  // For now, just log the description:
+  Log *log = GetLog(LLDBLog::Host);
+  LLDB_LOG(log, "Interruption: {0}", report.m_description);
+}
+
+Debugger::DebuggerList Debugger::DebuggersRequestingInterruption() {
+  DebuggerList result;
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (auto debugger_sp : *g_debugger_list_ptr) {
+      if (debugger_sp->InterruptRequested())
+        result.push_back(debugger_sp);
+    }
+  }
+  return result;
 }
 
 size_t Debugger::GetNumDebuggers() {

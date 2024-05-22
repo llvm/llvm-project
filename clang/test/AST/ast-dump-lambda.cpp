@@ -156,10 +156,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int'
+// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int'
+// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:28:3, col:8> '(lambda at {{.*}}ast-dump-lambda.cpp:28:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
 // CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
@@ -184,10 +184,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int'
+// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int'
+// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:30:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:30:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
 // CHECK-NEXT:    | | |-DefinitionData lambda trivially_copyable literal can_const_default_init
@@ -202,9 +202,9 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:13, col:24>
 // CHECK-NEXT:    | | |     `-BinaryOperator {{.*}} <col:20, col:24> 'int' '+'
 // CHECK-NEXT:    | | |       |-ImplicitCastExpr {{.*}} <col:20> 'int' <LValueToRValue>
-// CHECK-NEXT:    | | |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int'
+// CHECK-NEXT:    | | |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    | | |       `-ImplicitCastExpr {{.*}} <col:24> 'int' <LValueToRValue>
-// CHECK-NEXT:    | | |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int'
+// CHECK-NEXT:    | | |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'int'
 // CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'int &'
 // CHECK-NEXT:    | |-ImplicitCastExpr {{.*}} <col:4> 'int' <LValueToRValue>
@@ -214,9 +214,9 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:13, col:24>
 // CHECK-NEXT:    |     `-BinaryOperator {{.*}} <col:20, col:24> 'int' '+'
 // CHECK-NEXT:    |       |-ImplicitCastExpr {{.*}} <col:20> 'int' <LValueToRValue>
-// CHECK-NEXT:    |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int'
+// CHECK-NEXT:    |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    |       `-ImplicitCastExpr {{.*}} <col:24> 'int' <LValueToRValue>
-// CHECK-NEXT:    |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int'
+// CHECK-NEXT:    |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:31:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:31:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
 // CHECK-NEXT:    | | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
@@ -229,7 +229,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
-// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int':'int'
+// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int'
 // CHECK-NEXT:    | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
 // CHECK-NEXT:    | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
 // CHECK-NEXT:    | |-IntegerLiteral {{.*}} <col:14> 'int' 12

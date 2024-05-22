@@ -6,25 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace x86 {
 
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      unsafe_clz(static_cast<uint64_t>(mantissa)) -
-      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
+      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
+      (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -35,18 +34,18 @@ LIBC_INLINE long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
-#if defined(SPECIAL_X86_LONG_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 LIBC_INLINE long double sqrt(long double x) {
-  using UIntType = typename FPBits<long double>::UIntType;
-  constexpr UIntType ONE = UIntType(1)
-                           << int(MantissaWidth<long double>::VALUE);
+  using LDBits = FPBits<long double>;
+  using StorageType = typename LDBits::StorageType;
+  constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
 
   FPBits<long double> bits(x);
 
   if (bits.is_inf_or_nan()) {
     if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<long double>::build_quiet_nan(ONE >> 1);
+      return LDBits::build_quiet_nan(ONE >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -58,15 +57,15 @@ LIBC_INLINE long double sqrt(long double x) {
     return x;
   } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<long double>::build_quiet_nan(ONE >> 1);
+    return LDBits::build_quiet_nan(ONE >> 1);
   } else {
-    int x_exp = bits.get_exponent();
-    UIntType x_mant = bits.get_mantissa();
+    int x_exp = bits.get_explicit_exponent();
+    StorageType x_mant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_unbiased_exponent() == 0) {
+    } else if (bits.get_biased_exponent() == 0) {
       normalize(x_exp, x_mant);
     }
 
@@ -88,12 +87,12 @@ LIBC_INLINE long double sqrt(long double x) {
     // So the nth digit y_n of the mantissa of sqrt(x) can be found by:
     //   y_n = 1 if 2*r(n-1) >= 2*y(n - 1) + 2^(-n-1)
     //         0 otherwise.
-    UIntType y = ONE;
-    UIntType r = x_mant - ONE;
+    StorageType y = ONE;
+    StorageType r = x_mant - ONE;
 
-    for (UIntType current_bit = ONE >> 1; current_bit; current_bit >>= 1) {
+    for (StorageType current_bit = ONE >> 1; current_bit; current_bit >>= 1) {
       r <<= 1;
-      UIntType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
+      StorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
       if (r >= tmp) {
         r -= tmp;
         y += current_bit;
@@ -102,18 +101,17 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // We compute one more iteration in order to round correctly.
     bool lsb = static_cast<bool>(y & 1); // Least significant bit
-    bool rb = false;  // Round bit
+    bool rb = false;                     // Round bit
     r <<= 2;
-    UIntType tmp = (y << 2) + 1;
+    StorageType tmp = (y << 2) + 1;
     if (r >= tmp) {
       r -= tmp;
       rb = true;
     }
 
     // Append the exponent field.
-    x_exp = ((x_exp >> 1) + FPBits<long double>::EXPONENT_BIAS);
-    y |= (static_cast<UIntType>(x_exp)
-          << (MantissaWidth<long double>::VALUE + 1));
+    x_exp = ((x_exp >> 1) + LDBits::EXP_BIAS);
+    y |= (static_cast<StorageType>(x_exp) << (LDBits::FRACTION_LEN + 1));
 
     switch (quick_get_round()) {
     case FE_TONEAREST:
@@ -129,17 +127,17 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // Extract output
     FPBits<long double> out(0.0L);
-    out.set_unbiased_exponent(x_exp);
+    out.set_biased_exponent(x_exp);
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
     return out;
   }
 }
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace x86
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H

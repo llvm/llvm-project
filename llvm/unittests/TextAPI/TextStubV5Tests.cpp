@@ -124,6 +124,8 @@ TEST(TBDv5, ReadFile) {
               "_globalVar"
           ],
           "objc_class": [
+              "ClassA",
+              "ClassB",
               "ClassData"
           ],
           "objc_eh_type": [
@@ -183,11 +185,15 @@ TEST(TBDv5, ReadFile) {
 "libraries": []
 })";
 
-  Expected<TBDFile> Result =
-      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  MemoryBufferRef InputBuf = MemoryBufferRef(TBDv5File, "Test.tbd");
+  Expected<FileType> ExpectedFT = TextAPIReader::canRead(InputBuf);
+  EXPECT_TRUE(!!ExpectedFT);
+
+  Expected<TBDFile> Result = TextAPIReader::get(InputBuf);
   EXPECT_TRUE(!!Result);
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  EXPECT_EQ(*ExpectedFT, File->getFileType());
   EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"), File->getInstallName());
 
   TargetList AllTargets = {
@@ -195,13 +201,24 @@ TEST(TBDv5, ReadFile) {
       Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
       Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
   };
+  std::set<Target> FileTargets{File->targets().begin(), File->targets().end()};
   EXPECT_EQ(mapToPlatformSet(AllTargets), File->getPlatforms());
   EXPECT_EQ(mapToArchitectureSet(AllTargets), File->getArchitectures());
+  EXPECT_EQ(FileTargets.size(), AllTargets.size());
+  for (const auto &Targ : AllTargets) {
+    auto FileTarg = FileTargets.find(Targ);
+    EXPECT_FALSE(FileTarg == FileTargets.end());
+    EXPECT_EQ(*FileTarg, Targ);
+    PackedVersion MD = Targ.MinDeployment;
+    PackedVersion FileMD = FileTarg->MinDeployment;
+    EXPECT_EQ(MD, FileMD);
+  }
 
   EXPECT_EQ(PackedVersion(1, 2, 0), File->getCurrentVersion());
   EXPECT_EQ(PackedVersion(1, 1, 0), File->getCompatibilityVersion());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
   EXPECT_FALSE(File->isTwoLevelNamespace());
+  EXPECT_FALSE(File->isOSLibNotForSharedCache());
   EXPECT_EQ(0U, File->documents().size());
 
   InterfaceFileRef ClientA("ClientA", AllTargets);
@@ -264,7 +281,18 @@ TEST(TBDv5, ReadFile) {
        false,
        true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
-      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass,
+       "ClassA",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassB",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCClass,
        "ClassData",
        false,
@@ -333,6 +361,9 @@ TEST(TBDv5, ReadFile) {
                          std::begin(ExpectedReexportedSymbols)));
   EXPECT_TRUE(std::equal(Undefineds.begin(), Undefineds.end(),
                          std::begin(ExpectedUndefinedSymbols)));
+
+  EXPECT_TRUE(
+      File->getSymbol(SymbolKind::GlobalSymbol, "_globalBind").has_value());
 }
 
 TEST(TBDv5, ReadMultipleTargets) {
@@ -440,7 +471,7 @@ TEST(TBDv5, ReadMultipleDocuments) {
       {
         "data": {
           "thread_local": [ "_globalVar" ],
-          "objc_class": [ "ClassData" ], 
+          "objc_class": [ "ClassData", "ClassA", "ClassB"], 
           "objc_eh_type": [ "ClassA", "ClassB" ]
         },
         "text": {
@@ -495,6 +526,8 @@ TEST(TBDv5, ReadMultipleDocuments) {
   ExportedSymbolSeq ExpectedExports = {
       {SymbolKind::GlobalSymbol, "_funcFoo", false, false, false, {iOSTarget}},
       {SymbolKind::GlobalSymbol, "_globalVar", false, true, true, {iOSTarget}},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, {iOSTarget}},
+      {SymbolKind::ObjectiveCClass, "ClassB", false, false, true, {iOSTarget}},
       {SymbolKind::ObjectiveCClass,
        "ClassData",
        false,
@@ -622,6 +655,8 @@ TEST(TBDv5, WriteFile) {
               "_globalVar"
           ],
           "objc_class": [
+              "ClassA",
+              "ClassB",
               "ClassData"
           ],
           "objc_eh_type": [
@@ -885,7 +920,8 @@ TEST(TBDv5, WriteMultipleDocuments) {
   // against TBDv5File.
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  Error Result = TextAPIWriter::writeToStream(OS, File, /*Compact=*/true);
+  Error Result = TextAPIWriter::writeToStream(OS, File, FileType::Invalid,
+                                              /*Compact=*/true);
   EXPECT_FALSE(Result);
 
   Expected<TBDFile> Input =
@@ -1084,4 +1120,1255 @@ TEST(TBDv5, InvalidSymbols) {
   EXPECT_EQ("invalid exported_symbols section\n", ErrorMessage);
 }
 
+TEST(TBDv5, DefaultMinOS) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"), File->getInstallName());
+  EXPECT_TRUE(File->targets().begin() != File->targets().end());
+  EXPECT_EQ(*File->targets().begin(),
+            Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(0, 0)));
+}
+
+TEST(TBDv5, InvalidMinOS) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator",
+      "min_deployment": "swift-abi"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_FALSE(!!Result);
+  std::string ErrorMessage = toString(Result.takeError());
+  EXPECT_EQ("invalid min_deployment section\n", ErrorMessage);
+}
+
+TEST(TBDv5, SimSupport) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-macos",
+      "min_deployment": "11.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "flags":[ 
+    { "attributes": ["sim_support"] }
+  ] 
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_TRUE(ReadFile->hasSimulatorSupport());
+}
+
+TEST(TBDv5, NotForSharedCache) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-macos",
+      "min_deployment": "11.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "flags":[ 
+    { "attributes": ["not_for_dyld_shared_cache"] }
+  ] 
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_FALSE(ReadFile->hasSimulatorSupport());
+  EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
+}
+
+TEST(TBDv5, MergeIF) {
+  static const char TBDv5FileA[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-maccatalyst",
+      "min_deployment": "12.1"
+    }
+  ],
+  "flags": [
+    {
+      "targets": [
+            "x86_64-macos"
+        ],
+      "attributes": [
+            "flat_namespace"
+        ]
+    }
+  ],
+  "install_names": [
+    {
+        "name": "/S/L/F/Foo.framework/Foo"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1.2"
+    }
+  ],
+  "compatibility_versions": [
+    { "version": "1.1" }
+  ],
+  "rpaths": [
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "paths": [
+          "@executable_path/.../Frameworks"
+      ]
+    }
+  ],
+  "parent_umbrellas": [
+    {
+      "umbrella": "System"
+    }
+  ],
+  "allowable_clients": [
+    {
+        "clients": [
+            "ClientA",
+            "ClientB"
+        ]
+    }
+  ],
+  "reexported_libraries": [
+    {
+        "names": [
+            "/u/l/l/libfoo.dylib",
+            "/u/l/l/libbar.dylib"
+        ]
+    }
+  ],
+  "exported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_global"
+            ],
+            "objc_class": [
+                "ClassA"
+            ],
+            "weak": [],
+            "thread_local": []
+        },
+        "text": {
+            "global": [
+                "_func"
+            ],
+            "weak": [],
+            "thread_local": []
+        }
+    },
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "data": {
+          "global": [
+              "_globalVar"
+          ],
+          "objc_class": [
+              "ClassA",
+              "ClassB",
+              "ClassData"
+          ],
+          "objc_eh_type": [
+              "ClassA",
+              "ClassB"
+          ],
+          "objc_ivar": [
+              "ClassA.ivar1",
+              "ClassA.ivar2",
+              "ClassC.ivar1"
+          ]
+      },
+      "text": {
+          "global": [
+              "_funcFoo"
+          ]
+      }
+    }
+  ],
+  "reexported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalRe"
+            ],
+            "objc_class": [
+                "ClassRexport"
+            ]
+        },
+        "text": {
+            "global": [
+                "_funcA"
+            ]
+        }
+    }
+  ],
+  "undefined_symbols": [
+    {
+        "targets": [
+            "x86_64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalBind"
+            ],
+            "weak": [
+                "referenced_sym"
+            ]
+        }
+    }
+  ]
+},
+"libraries": []
+})";
+
+  static const char TBDv5FileB[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-maccatalyst",
+      "min_deployment": "12.1"
+    }
+  ],
+  "flags": [
+    {
+      "targets": [
+            "x86_64-macos"
+        ],
+      "attributes": [
+            "flat_namespace"
+        ]
+    }
+  ],
+  "install_names": [
+    {
+        "name": "/S/L/F/Foo.framework/Foo"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1.2"
+    }
+  ],
+  "compatibility_versions": [
+    { "version": "1.1" }
+  ],
+  "exported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalZ"
+            ],
+            "objc_class": [
+                "ClassZ"
+            ],
+            "weak": [],
+            "thread_local": []
+        },
+        "text": {
+            "global": [
+                "_funcZ"
+            ],
+            "weak": [],
+            "thread_local": []
+        }
+    },
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "data": {
+          "global": [
+              "_globalVarZ"
+          ],
+          "objc_class": [
+              "ClassZ",
+              "ClassF"
+          ],
+          "objc_eh_type": [
+              "ClassZ",
+              "ClassF"
+          ],
+          "objc_ivar": [
+              "ClassZ.ivar1",
+              "ClassZ.ivar2",
+              "ClassF.ivar1"
+          ]
+      },
+      "text": {
+          "global": [
+              "_funcFooZ"
+          ]
+      }
+    }
+  ]
+},
+"libraries": []
+})";
+
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv5FileA, "Test.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  TBDFile FileA = std::move(ResultA.get());
+
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv5FileB, "Test.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  TBDFile FileB = std::move(ResultB.get());
+
+  Expected<TBDFile> MergedResult = FileA->merge(FileB.get());
+  EXPECT_TRUE(!!MergedResult);
+  TBDFile MergedFile = std::move(MergedResult.get());
+
+  EXPECT_EQ(FileType::TBD_V5, MergedFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            MergedFile->getInstallName());
+  TargetList AllTargets = {
+      Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
+  };
+  EXPECT_EQ(mapToPlatformSet(AllTargets), MergedFile->getPlatforms());
+  EXPECT_EQ(mapToArchitectureSet(AllTargets), MergedFile->getArchitectures());
+  EXPECT_EQ(PackedVersion(1, 2, 0), MergedFile->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 1, 0), MergedFile->getCompatibilityVersion());
+  EXPECT_TRUE(MergedFile->isApplicationExtensionSafe());
+  EXPECT_FALSE(MergedFile->isTwoLevelNamespace());
+  EXPECT_EQ(0U, MergedFile->documents().size());
+  InterfaceFileRef ClientA("ClientA", AllTargets);
+  InterfaceFileRef ClientB("ClientB", AllTargets);
+  EXPECT_EQ(2U, MergedFile->allowableClients().size());
+  EXPECT_EQ(ClientA, MergedFile->allowableClients().at(0));
+  EXPECT_EQ(ClientB, MergedFile->allowableClients().at(1));
+
+  InterfaceFileRef ReexportA("/u/l/l/libbar.dylib", AllTargets);
+  InterfaceFileRef ReexportB("/u/l/l/libfoo.dylib", AllTargets);
+  EXPECT_EQ(2U, MergedFile->reexportedLibraries().size());
+  EXPECT_EQ(ReexportA, MergedFile->reexportedLibraries().at(0));
+  EXPECT_EQ(ReexportB, MergedFile->reexportedLibraries().at(1));
+
+  TargetToAttr RPaths = {
+      {Target(AK_x86_64, PLATFORM_MACOS), "@executable_path/.../Frameworks"},
+  };
+  EXPECT_EQ(RPaths, MergedFile->rpaths());
+
+  TargetToAttr Umbrellas = {{Target(AK_x86_64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACCATALYST), "System"}};
+  EXPECT_EQ(Umbrellas, MergedFile->umbrellas());
+
+  ExportedSymbolSeq Exports, Reexports, Undefineds;
+  for (const auto *Sym : MergedFile->symbols()) {
+    TargetList SymTargets{Sym->targets().begin(), Sym->targets().end()};
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(),
+                       std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(),
+                       Sym->isData(),
+                       SymTargets};
+    if (Sym->isUndefined())
+      Undefineds.emplace_back(std::move(Temp));
+    else
+      Sym->isReexported() ? Reexports.emplace_back(std::move(Temp))
+                          : Exports.emplace_back(std::move(Temp));
+  }
+  llvm::sort(Exports);
+  llvm::sort(Reexports);
+  llvm::sort(Undefineds);
+
+  TargetList MacOSTargets = {Target(AK_x86_64, PLATFORM_MACOS),
+                             Target(AK_arm64, PLATFORM_MACOS)};
+
+  std::vector<ExportedSymbol> ExpectedExportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_func", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol,
+       "_funcFoo",
+       false,
+       false,
+       false,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::GlobalSymbol,
+       "_funcFooZ",
+       false,
+       false,
+       false,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::GlobalSymbol, "_funcZ", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_global", false, false, true, MacOSTargets},
+      {SymbolKind::GlobalSymbol,
+       "_globalVar",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::GlobalSymbol,
+       "_globalVarZ",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::GlobalSymbol, "_globalZ", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass,
+       "ClassA",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassB",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassData",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassF",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassZ",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassA",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassB",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassF",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassZ",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassA.ivar1",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassA.ivar2",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassC.ivar1",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassF.ivar1",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassZ.ivar1",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCInstanceVariable,
+       "ClassZ.ivar2",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+  };
+
+  std::vector<ExportedSymbol> ExpectedReexportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_funcA", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_globalRe", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassRexport", false, false, true,
+       MacOSTargets},
+  };
+
+  std::vector<ExportedSymbol> ExpectedUndefinedSymbols = {
+      {SymbolKind::GlobalSymbol,
+       "_globalBind",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::GlobalSymbol,
+       "referenced_sym",
+       true,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+  };
+
+  EXPECT_EQ(ExpectedExportedSymbols.size(), Exports.size());
+  EXPECT_EQ(ExpectedReexportedSymbols.size(), Reexports.size());
+  EXPECT_EQ(ExpectedUndefinedSymbols.size(), Undefineds.size());
+  EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
+                         std::begin(ExpectedExportedSymbols)));
+  EXPECT_TRUE(std::equal(Reexports.begin(), Reexports.end(),
+                         std::begin(ExpectedReexportedSymbols)));
+  EXPECT_TRUE(std::equal(Undefineds.begin(), Undefineds.end(),
+                         std::begin(ExpectedUndefinedSymbols)));
+}
+
+TEST(TBDv5, ExtractIF) {
+  static const char TBDv5File[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-maccatalyst",
+      "min_deployment": "12.1"
+    }
+  ],
+  "flags": [
+    {
+      "targets": [
+            "x86_64-macos"
+        ],
+      "attributes": [
+            "flat_namespace"
+        ]
+    }
+  ],
+  "install_names": [
+    {
+        "name": "/S/L/F/Foo.framework/Foo"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1.2"
+    }
+  ],
+  "compatibility_versions": [
+    { "version": "1.1" }
+  ],
+  "rpaths": [
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "paths": [
+          "@executable_path/.../Frameworks"
+      ]
+    }
+  ],
+  "parent_umbrellas": [
+    {
+      "umbrella": "System"
+    }
+  ],
+  "allowable_clients": [
+    {
+        "clients": [
+            "ClientA",
+            "ClientB"
+        ]
+    }
+  ],
+  "reexported_libraries": [
+    {
+        "names": [
+            "/u/l/l/libfoo.dylib",
+            "/u/l/l/libbar.dylib"
+        ]
+    }
+  ],
+  "exported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_global"
+            ],
+            "objc_class": [
+                "ClassA"
+            ],
+            "weak": [],
+            "thread_local": []
+        },
+        "text": {
+            "global": [
+                "_func"
+            ],
+            "weak": [],
+            "thread_local": []
+        }
+    },
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "data": {
+          "global": [
+              "_globalVar"
+          ],
+          "objc_class": [
+              "ClassA",
+              "ClassB",
+              "ClassData"
+          ],
+          "objc_eh_type": [
+              "ClassA",
+              "ClassB"
+          ],
+          "objc_ivar": [
+              "ClassA.ivar1",
+              "ClassA.ivar2",
+              "ClassC.ivar1"
+          ]
+      },
+      "text": {
+          "global": [
+              "_funcFoo"
+          ]
+      }
+    }
+  ],
+  "reexported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalRe"
+            ],
+            "objc_class": [
+                "ClassRexport"
+            ]
+        },
+        "text": {
+            "global": [
+                "_funcA"
+            ]
+        }
+    }
+  ],
+  "undefined_symbols": [
+    {
+        "targets": [
+            "x86_64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalBind"
+            ],
+            "weak": [
+                "referenced_sym"
+            ]
+        }
+    }
+  ]
+},
+"libraries": []
+})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  Expected<TBDFile> ExtractedResult = File->extract(AK_arm64);
+  EXPECT_TRUE(!!ExtractedResult);
+  TBDFile ExtractedFile = std::move(ExtractedResult.get());
+
+  EXPECT_EQ(FileType::TBD_V5, ExtractedFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ExtractedFile->getInstallName());
+
+  TargetList AllTargets = {
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
+  };
+  EXPECT_EQ(mapToPlatformSet(AllTargets), ExtractedFile->getPlatforms());
+  EXPECT_EQ(mapToArchitectureSet(AllTargets),
+            ExtractedFile->getArchitectures());
+
+  EXPECT_EQ(PackedVersion(1, 2, 0), ExtractedFile->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 1, 0), ExtractedFile->getCompatibilityVersion());
+  EXPECT_TRUE(ExtractedFile->isApplicationExtensionSafe());
+  EXPECT_FALSE(ExtractedFile->isTwoLevelNamespace());
+  EXPECT_EQ(0U, ExtractedFile->documents().size());
+
+  InterfaceFileRef ClientA("ClientA", AllTargets);
+  InterfaceFileRef ClientB("ClientB", AllTargets);
+  EXPECT_EQ(2U, ExtractedFile->allowableClients().size());
+  EXPECT_EQ(ClientA, ExtractedFile->allowableClients().at(0));
+  EXPECT_EQ(ClientB, ExtractedFile->allowableClients().at(1));
+
+  InterfaceFileRef ReexportA("/u/l/l/libbar.dylib", AllTargets);
+  InterfaceFileRef ReexportB("/u/l/l/libfoo.dylib", AllTargets);
+  EXPECT_EQ(2U, ExtractedFile->reexportedLibraries().size());
+  EXPECT_EQ(ReexportA, ExtractedFile->reexportedLibraries().at(0));
+  EXPECT_EQ(ReexportB, ExtractedFile->reexportedLibraries().at(1));
+
+  EXPECT_EQ(0u, ExtractedFile->rpaths().size());
+
+  TargetToAttr Umbrellas = {{Target(AK_arm64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACCATALYST), "System"}};
+  EXPECT_EQ(Umbrellas, ExtractedFile->umbrellas());
+
+  ExportedSymbolSeq Exports, Reexports, Undefineds;
+  for (const auto *Sym : ExtractedFile->symbols()) {
+    TargetList SymTargets{Sym->targets().begin(), Sym->targets().end()};
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(),
+                       std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(),
+                       Sym->isData(),
+                       SymTargets};
+    if (Sym->isUndefined())
+      Undefineds.emplace_back(std::move(Temp));
+    else
+      Sym->isReexported() ? Reexports.emplace_back(std::move(Temp))
+                          : Exports.emplace_back(std::move(Temp));
+  }
+  llvm::sort(Exports);
+  llvm::sort(Reexports);
+  llvm::sort(Undefineds);
+
+  TargetList MacOSTargets = {Target(AK_arm64, PLATFORM_MACOS)};
+
+  std::vector<ExportedSymbol> ExpectedExportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_func", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_global", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, MacOSTargets},
+  };
+  std::vector<ExportedSymbol> ExpectedReexportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_funcA", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_globalRe", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassRexport", false, false, true,
+       MacOSTargets},
+  };
+
+  EXPECT_EQ(ExpectedExportedSymbols.size(), Exports.size());
+  EXPECT_EQ(ExpectedReexportedSymbols.size(), Reexports.size());
+  EXPECT_EQ(0U, Undefineds.size());
+  EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
+                         std::begin(ExpectedExportedSymbols)));
+  EXPECT_TRUE(std::equal(Reexports.begin(), Reexports.end(),
+                         std::begin(ExpectedReexportedSymbols)));
+}
+
+TEST(TBDv5, RemoveIF) {
+  static const char TBDv5File[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-maccatalyst",
+      "min_deployment": "12.1"
+    }
+  ],
+  "flags": [
+    {
+      "targets": [
+            "x86_64-macos"
+        ],
+      "attributes": [
+            "flat_namespace"
+        ]
+    }
+  ],
+  "install_names": [
+    {
+        "name": "/S/L/F/Foo.framework/Foo"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1.2"
+    }
+  ],
+  "compatibility_versions": [
+    { "version": "1.1" }
+  ],
+  "rpaths": [
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "paths": [
+          "@executable_path/.../Frameworks"
+      ]
+    }
+  ],
+  "parent_umbrellas": [
+    {
+      "umbrella": "System"
+    }
+  ],
+  "allowable_clients": [
+    {
+        "clients": [
+            "ClientA",
+            "ClientB"
+        ]
+    }
+  ],
+  "reexported_libraries": [
+    {
+        "names": [
+            "/u/l/l/libfoo.dylib",
+            "/u/l/l/libbar.dylib"
+        ]
+    }
+  ],
+  "exported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_global"
+            ],
+            "objc_class": [
+                "ClassA"
+            ],
+            "weak": [],
+            "thread_local": []
+        },
+        "text": {
+            "global": [
+                "_func"
+            ],
+            "weak": [],
+            "thread_local": []
+        }
+    },
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "data": {
+          "global": [
+              "_globalVar"
+          ],
+          "objc_class": [
+              "ClassA",
+              "ClassB",
+              "ClassData"
+          ],
+          "objc_eh_type": [
+              "ClassA",
+              "ClassB"
+          ],
+          "objc_ivar": [
+              "ClassA.ivar1",
+              "ClassA.ivar2",
+              "ClassC.ivar1"
+          ]
+      },
+      "text": {
+          "global": [
+              "_funcFoo"
+          ]
+      }
+    }
+  ],
+  "reexported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalRe"
+            ],
+            "objc_class": [
+                "ClassRexport"
+            ]
+        },
+        "text": {
+            "global": [
+                "_funcA"
+            ]
+        }
+    }
+  ],
+  "undefined_symbols": [
+    {
+        "targets": [
+            "x86_64-macos"
+        ],
+        "data": {
+            "global": [
+                "_globalBind"
+            ],
+            "weak": [
+                "referenced_sym"
+            ]
+        }
+    }
+  ]
+},
+"libraries": []
+})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  Expected<TBDFile> RemovedResult = File->remove(AK_x86_64);
+  EXPECT_TRUE(!!RemovedResult);
+  TBDFile RemovedFile = std::move(RemovedResult.get());
+
+  EXPECT_EQ(FileType::TBD_V5, RemovedFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            RemovedFile->getInstallName());
+
+  TargetList AllTargets = {
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
+  };
+  EXPECT_EQ(mapToPlatformSet(AllTargets), RemovedFile->getPlatforms());
+  EXPECT_EQ(mapToArchitectureSet(AllTargets), RemovedFile->getArchitectures());
+
+  EXPECT_EQ(PackedVersion(1, 2, 0), RemovedFile->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 1, 0), RemovedFile->getCompatibilityVersion());
+  EXPECT_TRUE(RemovedFile->isApplicationExtensionSafe());
+  EXPECT_FALSE(RemovedFile->isTwoLevelNamespace());
+  EXPECT_EQ(0U, RemovedFile->documents().size());
+
+  InterfaceFileRef ClientA("ClientA", AllTargets);
+  InterfaceFileRef ClientB("ClientB", AllTargets);
+  EXPECT_EQ(2U, RemovedFile->allowableClients().size());
+  EXPECT_EQ(ClientA, RemovedFile->allowableClients().at(0));
+  EXPECT_EQ(ClientB, RemovedFile->allowableClients().at(1));
+
+  InterfaceFileRef ReexportA("/u/l/l/libbar.dylib", AllTargets);
+  InterfaceFileRef ReexportB("/u/l/l/libfoo.dylib", AllTargets);
+  EXPECT_EQ(2U, RemovedFile->reexportedLibraries().size());
+  EXPECT_EQ(ReexportA, RemovedFile->reexportedLibraries().at(0));
+  EXPECT_EQ(ReexportB, RemovedFile->reexportedLibraries().at(1));
+
+  EXPECT_EQ(0u, RemovedFile->rpaths().size());
+
+  TargetToAttr Umbrellas = {{Target(AK_arm64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACCATALYST), "System"}};
+  EXPECT_EQ(Umbrellas, RemovedFile->umbrellas());
+
+  ExportedSymbolSeq Exports, Reexports, Undefineds;
+  for (const auto *Sym : RemovedFile->symbols()) {
+    TargetList SymTargets{Sym->targets().begin(), Sym->targets().end()};
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(),
+                       std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(),
+                       Sym->isData(),
+                       SymTargets};
+    if (Sym->isUndefined())
+      Undefineds.emplace_back(std::move(Temp));
+    else
+      Sym->isReexported() ? Reexports.emplace_back(std::move(Temp))
+                          : Exports.emplace_back(std::move(Temp));
+  }
+  llvm::sort(Exports);
+  llvm::sort(Reexports);
+  llvm::sort(Undefineds);
+
+  TargetList MacOSTargets = {Target(AK_arm64, PLATFORM_MACOS)};
+
+  std::vector<ExportedSymbol> ExpectedExportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_func", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_global", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, MacOSTargets},
+  };
+  std::vector<ExportedSymbol> ExpectedReexportedSymbols = {
+      {SymbolKind::GlobalSymbol, "_funcA", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_globalRe", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassRexport", false, false, true,
+       MacOSTargets},
+  };
+
+  EXPECT_EQ(ExpectedExportedSymbols.size(), Exports.size());
+  EXPECT_EQ(ExpectedReexportedSymbols.size(), Reexports.size());
+  EXPECT_EQ(0U, Undefineds.size());
+  EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
+                         std::begin(ExpectedExportedSymbols)));
+  EXPECT_TRUE(std::equal(Reexports.begin(), Reexports.end(),
+                         std::begin(ExpectedReexportedSymbols)));
+}
+
+TEST(TBDv5, InlineIF) {
+  static const char UmbrellaFile[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    }
+  ],
+  "install_names": [
+    {
+        "name": "/S/L/F/Foo.framework/Foo"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1.2"
+    }
+  ],
+  "reexported_libraries": [
+    {
+        "names": [
+            "/u/l/l/libfoo.dylib",
+            "/u/l/l/libbar.dylib"
+        ]
+    }
+  ]
+}})";
+
+  static const char ReexportFile[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    }
+  ],
+  "install_names": [
+    {
+        "name" : "/u/l/l/libfoo.dylib"
+    }
+  ],
+  "current_versions": [
+    {
+        "version": "1"
+    }
+  ],
+  "rpaths": [
+    {
+      "targets": [
+          "x86_64-macos"
+      ],
+      "paths": [
+          "@executable_path/.../Frameworks"
+      ]
+    }
+  ],
+  "exported_symbols": [
+    {
+        "targets": [
+            "x86_64-macos",
+            "arm64-macos"
+        ],
+        "data": {
+            "global": [
+                "_global"
+            ],
+            "objc_class": [
+                "ClassA"
+            ],
+            "weak": [],
+            "thread_local": []
+        }
+    }
+  ]}})";
+
+  Expected<TBDFile> UmbrellaResult =
+      TextAPIReader::get(MemoryBufferRef(UmbrellaFile, "Test.tbd"));
+  EXPECT_TRUE(!!UmbrellaResult);
+  TBDFile Umbrella = std::move(UmbrellaResult.get());
+
+  Expected<TBDFile> ReexportResult =
+      TextAPIReader::get(MemoryBufferRef(ReexportFile, "Test.tbd"));
+  EXPECT_TRUE(!!ReexportResult);
+  TBDReexportFile Reexport = std::move(ReexportResult.get());
+  Umbrella->inlineLibrary(Reexport);
+
+  EXPECT_EQ(FileType::TBD_V5, Umbrella->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            Umbrella->getInstallName());
+
+  TargetList AllTargets = {
+      Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
+  };
+  EXPECT_EQ(mapToPlatformSet(AllTargets), Umbrella->getPlatforms());
+  EXPECT_EQ(mapToArchitectureSet(AllTargets), Umbrella->getArchitectures());
+
+  EXPECT_EQ(PackedVersion(1, 2, 0), Umbrella->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 0, 0), Umbrella->getCompatibilityVersion());
+  InterfaceFileRef ReexportA("/u/l/l/libbar.dylib", AllTargets);
+  InterfaceFileRef ReexportB("/u/l/l/libfoo.dylib", AllTargets);
+  EXPECT_EQ(2U, Umbrella->reexportedLibraries().size());
+  EXPECT_EQ(ReexportA, Umbrella->reexportedLibraries().at(0));
+  EXPECT_EQ(ReexportB, Umbrella->reexportedLibraries().at(1));
+  EXPECT_EQ(1U, Umbrella->documents().size());
+
+  TBDReexportFile Document = Umbrella->documents().front();
+  EXPECT_EQ(std::string("/u/l/l/libfoo.dylib"), Document->getInstallName());
+  EXPECT_EQ(0U, Document->getSwiftABIVersion());
+  EXPECT_TRUE(Document->isTwoLevelNamespace());
+  EXPECT_TRUE(Document->isApplicationExtensionSafe());
+  EXPECT_EQ(PackedVersion(1, 0, 0), Document->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 0, 0), Document->getCompatibilityVersion());
+
+  ExportedSymbolSeq Exports;
+  for (const auto *Sym : Document->symbols()) {
+    TargetList SymTargets{Sym->targets().begin(), Sym->targets().end()};
+    Exports.emplace_back(
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(), Sym->isData(), SymTargets});
+  }
+  llvm::sort(Exports);
+
+  ExportedSymbolSeq ExpectedExports = {
+      {SymbolKind::GlobalSymbol, "_global", false, false, true, AllTargets},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, AllTargets},
+  };
+  EXPECT_EQ(ExpectedExports.size(), Exports.size());
+  EXPECT_TRUE(
+      std::equal(Exports.begin(), Exports.end(), std::begin(ExpectedExports)));
+}
 } // end namespace TBDv5

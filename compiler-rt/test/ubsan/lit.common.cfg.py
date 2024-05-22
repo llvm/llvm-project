@@ -85,8 +85,6 @@ if config.host_os not in [
 ]:
     config.unsupported = True
 
-config.available_features.add("arch=" + config.target_arch)
-
 config.excludes = ["Inputs"]
 
 if ubsan_lit_test_mode in ["AddressSanitizer", "MemorySanitizer", "ThreadSanitizer"]:

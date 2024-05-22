@@ -20,6 +20,11 @@ function(lldb_tablegen)
   endif()
 
   set(LLVM_TARGET_DEFINITIONS ${LTG_SOURCE})
+
+  if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
+    list(APPEND LTG_UNPARSED_ARGUMENTS -DLLDB_SANITIZED)
+  endif()
+
   tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)

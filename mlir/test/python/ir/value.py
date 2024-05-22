@@ -1,8 +1,9 @@
-# RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s --enable-var-scope=false
 
 import gc
 from mlir.ir import *
 from mlir.dialects import func
+from mlir.dialects._ods_common import SubClassValueT
 
 
 def run(f):
@@ -165,8 +166,8 @@ def testValuePrintAsOperand():
             # CHECK: Value(%[[VAL2:.*]] = "custom.op2"() : () -> i32)
             print(value2)
 
-            f = func.FuncOp("test", ([i32, i32], []))
-            entry_block1 = Block.create_at_start(f.operation.regions[0], [i32, i32])
+            topFn = func.FuncOp("test", ([i32, i32], []))
+            entry_block1 = Block.create_at_start(topFn.operation.regions[0], [i32, i32])
 
             with InsertionPoint(entry_block1):
                 value3 = Operation.create("custom.op3", results=[i32]).results[0]
@@ -199,6 +200,16 @@ def testValuePrintAsOperand():
         # CHECK: %[[VAL4]]
         print(value4.get_name())
 
+        print("With AsmState")
+        # CHECK-LABEL: With AsmState
+        state = AsmState(topFn.operation, use_local_scope=True)
+        # CHECK: %0
+        print(value3.get_name(state=state))
+        # CHECK: %1
+        print(value4.get_name(state=state))
+
+        print("With use_local_scope")
+        # CHECK-LABEL: With use_local_scope
         # CHECK: %0
         print(value3.get_name(use_local_scope=True))
         # CHECK: %1
@@ -238,3 +249,142 @@ def testValuePrintAsOperand():
         value2.owner.detach_from_parent()
         # CHECK: %0
         print(value2.get_name())
+
+
+# CHECK-LABEL: TEST: testValueSetType
+@run
+def testValueSetType():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            # CHECK: Value(%[[VAL1:.*]] = "custom.op1"() : () -> i32)
+            print(value)
+
+            value.set_type(i64)
+            # CHECK: Value(%[[VAL1]] = "custom.op1"() : () -> i64)
+            print(value)
+
+            # CHECK: %[[VAL1]] = "custom.op1"() : () -> i64
+            print(value.owner)
+
+
+# CHECK-LABEL: TEST: testValueCasters
+@run
+def testValueCasters():
+    class NOPResult(OpResult):
+        def __init__(self, v):
+            super().__init__(v)
+
+        def __str__(self):
+            return super().__str__().replace(Value.__name__, NOPResult.__name__)
+
+    class NOPValue(Value):
+        def __init__(self, v):
+            super().__init__(v)
+
+        def __str__(self):
+            return super().__str__().replace(Value.__name__, NOPValue.__name__)
+
+    class NOPBlockArg(BlockArgument):
+        def __init__(self, v):
+            super().__init__(v)
+
+        def __str__(self):
+            return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
+
+    @register_value_caster(IntegerType.static_typeid)
+    def cast_int(v) -> SubClassValueT:
+        print("in caster", v.__class__.__name__)
+        if isinstance(v, OpResult):
+            return NOPResult(v)
+        if isinstance(v, BlockArgument):
+            return NOPBlockArg(v)
+        elif isinstance(v, Value):
+            return NOPValue(v)
+
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            values = Operation.create("custom.op1", results=[i32, i32]).results
+            # CHECK: in caster OpResult
+            # CHECK: result 0 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("result", values[0].result_number, values[0])
+            # CHECK: in caster OpResult
+            # CHECK: result 1 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("result", values[1].result_number, values[1])
+
+            # CHECK: results slice 0 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("results slice", values[:1][0].result_number, values[:1][0])
+
+            value0, value1 = values
+            # CHECK: in caster OpResult
+            # CHECK: result 0 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("result", value0.result_number, values[0])
+            # CHECK: in caster OpResult
+            # CHECK: result 1 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("result", value1.result_number, values[1])
+
+            op1 = Operation.create("custom.op2", operands=[value0, value1])
+            # CHECK: "custom.op2"(%0#0, %0#1) : (i32, i32) -> ()
+            print(op1)
+
+            # CHECK: in caster Value
+            # CHECK: operand 0 NOPValue(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("operand 0", op1.operands[0])
+            # CHECK: in caster Value
+            # CHECK: operand 1 NOPValue(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("operand 1", op1.operands[1])
+
+            # CHECK: in caster BlockArgument
+            # CHECK: in caster BlockArgument
+            @func.FuncOp.from_py_func(i32, i32)
+            def reduction(arg0, arg1):
+                # CHECK: as func arg 0 NOPBlockArg
+                print("as func arg", arg0.arg_number, arg0.__class__.__name__)
+                # CHECK: as func arg 1 NOPBlockArg
+                print("as func arg", arg1.arg_number, arg1.__class__.__name__)
+
+            # CHECK: args slice 0 NOPBlockArg(<block argument> of type 'i32' at index: 0)
+            print(
+                "args slice",
+                reduction.func_op.arguments[:1][0].arg_number,
+                reduction.func_op.arguments[:1][0],
+            )
+
+    try:
+
+        @register_value_caster(IntegerType.static_typeid)
+        def dont_cast_int_shouldnt_register(v):
+            ...
+
+    except RuntimeError as e:
+        # CHECK: Value caster is already registered: {{.*}}cast_int
+        print(e)
+
+    @register_value_caster(IntegerType.static_typeid, replace=True)
+    def dont_cast_int(v) -> OpResult:
+        assert isinstance(v, OpResult)
+        print("don't cast", v.result_number, v)
+        return v
+
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            # CHECK: don't cast 0 Value(%0 = "custom.op1"() : () -> i32)
+            new_value = Operation.create("custom.op1", results=[i32]).result
+            # CHECK: result 0 Value(%0 = "custom.op1"() : () -> i32)
+            print("result", new_value.result_number, new_value)
+
+            # CHECK: don't cast 0 Value(%1 = "custom.op2"() : () -> i32)
+            new_value = Operation.create("custom.op2", results=[i32]).results[0]
+            # CHECK: result 0 Value(%1 = "custom.op2"() : () -> i32)
+            print("result", new_value.result_number, new_value)

@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -73,6 +74,10 @@ public:
 
   virtual ~InstCombinerImpl() = default;
 
+  /// Perform early cleanup and prepare the InstCombine worklist.
+  bool prepareWorklist(Function &F,
+                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
+
   /// Run the combiner over the entire worklist until it is empty.
   ///
   /// \returns true if the IR is changed.
@@ -93,6 +98,7 @@ public:
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
+  Instruction *foldFMulReassoc(BinaryOperator &I);
   Instruction *visitFMul(BinaryOperator &I);
   Instruction *visitURem(BinaryOperator &I);
   Instruction *visitSRem(BinaryOperator &I);
@@ -126,7 +132,6 @@ public:
   Instruction *FoldShiftByConstant(Value *Op0, Constant *Op1,
                                    BinaryOperator &I);
   Instruction *commonCastTransforms(CastInst &CI);
-  Instruction *commonPointerCastTransforms(CastInst &CI);
   Instruction *visitTrunc(TruncInst &CI);
   Instruction *visitZExt(ZExtInst &Zext);
   Instruction *visitSExt(SExtInst &Sext);
@@ -193,6 +198,44 @@ public:
   LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
                                  const Twine &Suffix = "");
 
+  KnownFPClass computeKnownFPClass(Value *Val, FastMathFlags FMF,
+                                   FPClassTest Interested = fcAllFlags,
+                                   const Instruction *CtxI = nullptr,
+                                   unsigned Depth = 0) const {
+    return llvm::computeKnownFPClass(Val, FMF, DL, Interested, Depth, &TLI, &AC,
+                                     CtxI, &DT);
+  }
+
+  KnownFPClass computeKnownFPClass(Value *Val,
+                                   FPClassTest Interested = fcAllFlags,
+                                   const Instruction *CtxI = nullptr,
+                                   unsigned Depth = 0) const {
+    return llvm::computeKnownFPClass(Val, DL, Interested, Depth, &TLI, &AC,
+                                     CtxI, &DT);
+  }
+
+  /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
+  /// ignorable).
+  bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
+                        const Instruction *CtxI) const;
+
+  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
+    Constant *ExtTruncC =
+        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
+    if (ExtTruncC && ExtTruncC == C)
+      return TruncC;
+    return nullptr;
+  }
+
+  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
+  }
+
+  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
+  }
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -233,6 +276,7 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
+  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
@@ -252,13 +296,15 @@ private:
 
   Instruction *transformSExtICmp(ICmpInst *Cmp, SExtInst &Sext);
 
-  bool willNotOverflowSignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowSignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
   }
 
-  bool willNotOverflowUnsignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowUnsignedAdd(const WithCache<const Value *> &LHS,
+                                  const WithCache<const Value *> &RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
@@ -331,8 +377,6 @@ private:
   Instruction *foldNot(BinaryOperator &I);
   Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
-  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
-
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
   /// \param CI1 The first of a pair of casts.
@@ -389,15 +433,17 @@ private:
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
 
+  Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
     auto &Ctx = InsertAt->getContext();
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
-                             PoisonValue::get(Type::getInt1PtrTy(Ctx)),
+                             PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, *InsertAt);
+    InsertNewInstBefore(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.
@@ -414,6 +460,7 @@ public:
     // use counts.
     SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
+    DC.removeValue(&I);
     I.eraseFromParent();
     for (Value *Op : Ops)
       Worklist.handleUseCountDecrement(Op);
@@ -456,6 +503,12 @@ public:
   //    -> (BinOp (logic_shift (BinOp X, Y)), Mask)
   Instruction *foldBinOpShiftWithShift(BinaryOperator &I);
 
+  /// Tries to simplify binops of select and cast of the select condition.
+  ///
+  /// (Binop (cast C), (select C, T, F))
+  ///    -> (select C, C0, C1)
+  Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
+
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
   Value *tryFactorizationFolds(BinaryOperator &I);
@@ -494,9 +547,10 @@ public:
   /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
+  bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
+                                    APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.
@@ -530,6 +584,9 @@ public:
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
+
+  Instruction *foldSquareSumInt(BinaryOperator &I);
+  Instruction *foldSquareSumFP(BinaryOperator &I);
 
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
@@ -576,6 +633,9 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
+  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
+                                      Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -589,6 +649,8 @@ public:
                                       ConstantInt *C);
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, TruncInst *Trunc,
                                      const APInt &C);
+  Instruction *foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                           const SimplifyQuery &Q);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,
                                    const APInt &C);
   Instruction *foldICmpXorConstant(ICmpInst &Cmp, BinaryOperator *Xor,
@@ -663,8 +725,13 @@ public:
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
-  bool handleUnreachableFrom(Instruction *I);
-  bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void addDeadEdge(BasicBlock *From, BasicBlock *To,
+                   SmallVectorImpl<BasicBlock *> &Worklist);
+  void handleUnreachableFrom(Instruction *I,
+                             SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
 class Negator final {
@@ -674,16 +741,11 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const DataLayout &DL;
-  AssumptionCache &AC;
-  const DominatorTree &DT;
-
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
-          const DominatorTree &DT, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;
@@ -695,13 +757,13 @@ class Negator final {
 
   std::array<Value *, 2> getSortedOperandsOfBinOp(Instruction *I);
 
-  [[nodiscard]] Value *visitImpl(Value *V, unsigned Depth);
+  [[nodiscard]] Value *visitImpl(Value *V, bool IsNSW, unsigned Depth);
 
-  [[nodiscard]] Value *negate(Value *V, unsigned Depth);
+  [[nodiscard]] Value *negate(Value *V, bool IsNSW, unsigned Depth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
-  [[nodiscard]] std::optional<Result> run(Value *Root);
+  [[nodiscard]] std::optional<Result> run(Value *Root, bool IsNSW);
 
   Negator(const Negator &) = delete;
   Negator(Negator &&) = delete;
@@ -711,7 +773,7 @@ class Negator final {
 public:
   /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
   /// otherwise returns negated value.
-  [[nodiscard]] static Value *Negate(bool LHSIsZero, Value *Root,
+  [[nodiscard]] static Value *Negate(bool LHSIsZero, bool IsNSW, Value *Root,
                                      InstCombinerImpl &IC);
 };
 

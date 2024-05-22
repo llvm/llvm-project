@@ -113,7 +113,7 @@ __stdinbuf<_CharT>::uflow()
     return __getchar(true);
 }
 
-static bool __do_getc(FILE *__fp, char *__pbuf) {
+inline bool __do_getc(FILE *__fp, char *__pbuf) {
     int __c = getc(__fp);
     if (__c == EOF)
         return false;
@@ -121,7 +121,7 @@ static bool __do_getc(FILE *__fp, char *__pbuf) {
     return true;
 }
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-static bool __do_getc(FILE *__fp, wchar_t *__pbuf) {
+inline bool __do_getc(FILE *__fp, wchar_t *__pbuf) {
     wint_t __c = getwc(__fp);
     if (__c == WEOF)
         return false;
@@ -130,13 +130,13 @@ static bool __do_getc(FILE *__fp, wchar_t *__pbuf) {
 }
 #endif
 
-static bool __do_ungetc(int __c, FILE *__fp, char __dummy) {
+inline bool __do_ungetc(int __c, FILE *__fp, char __dummy) {
     if (ungetc(__c, __fp) == EOF)
         return false;
     return true;
 }
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-static bool __do_ungetc(std::wint_t __c, FILE *__fp, wchar_t __dummy) {
+inline bool __do_ungetc(std::wint_t __c, FILE *__fp, wchar_t __dummy) {
     if (ungetwc(__c, __fp) == WEOF)
         return false;
     return true;
@@ -172,7 +172,7 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
     }
 
     char __extbuf[__limit];
-    int __nread = _VSTD::max(1, __encoding_);
+    int __nread = std::max(1, __encoding_);
     for (int __i = 0; __i < __nread; ++__i)
     {
         int __c = getc(__file_);
@@ -191,7 +191,7 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
                                &__1buf, &__1buf + 1, __inxt);
         switch (__r)
         {
-        case _VSTD::codecvt_base::ok:
+        case std::codecvt_base::ok:
             break;
         case codecvt_base::partial:
             *__st_ = __sv_st;
@@ -207,11 +207,11 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
             break;
         case codecvt_base::error:
             return traits_type::eof();
-        case _VSTD::codecvt_base::noconv:
+        case std::codecvt_base::noconv:
             __1buf = static_cast<char_type>(__extbuf[0]);
             break;
         }
-    } while (__r == _VSTD::codecvt_base::partial);
+    } while (__r == std::codecvt_base::partial);
     if (!__consume)
     {
         for (int __i = __nread; __i > 0;)
@@ -251,9 +251,9 @@ __stdinbuf<_CharT>::pbackfail(int_type __c)
         switch (__cv_->out(*__st_, &__ci, &__ci + 1, __inxt,
                                   __extbuf, __extbuf + sizeof(__extbuf), __enxt))
         {
-        case _VSTD::codecvt_base::ok:
+        case std::codecvt_base::ok:
             break;
-        case _VSTD::codecvt_base::noconv:
+        case std::codecvt_base::noconv:
             __extbuf[0] = static_cast<char>(__last_consumed_);
             __enxt = __extbuf + 1;
             break;
@@ -324,13 +324,13 @@ __stdoutbuf<_CharT>::__stdoutbuf(FILE* __fp, state_type* __st)
         __always_noconv_ = true;
 }
 
-static bool __do_fputc(char __c, FILE* __fp) {
+inline bool __do_fputc(char __c, FILE* __fp) {
     if (fwrite(&__c, sizeof(__c), 1, __fp) != 1)
         return false;
     return true;
 }
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-static bool __do_fputc(wchar_t __c, FILE* __fp) {
+inline bool __do_fputc(wchar_t __c, FILE* __fp) {
     // fputwc works regardless of wide/narrow mode of stdout, while
     // fwrite of wchar_t only works if the stream actually has been set
     // into wide mode.

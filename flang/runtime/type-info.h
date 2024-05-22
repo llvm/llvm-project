@@ -38,8 +38,9 @@ public:
     Explicit = 2,
     LenParameter = 3
   };
-  Genre genre() const { return genre_; }
-  std::optional<TypeParameterValue> GetValue(const Descriptor *) const;
+  RT_API_ATTRS Genre genre() const { return genre_; }
+  RT_API_ATTRS std::optional<TypeParameterValue> GetValue(
+      const Descriptor *) const;
 
 private:
   Genre genre_{Genre::Explicit};
@@ -57,39 +58,42 @@ public:
     Automatic = 4
   };
 
-  const Descriptor &name() const { return name_.descriptor(); }
-  Genre genre() const { return genre_; }
-  TypeCategory category() const { return static_cast<TypeCategory>(category_); }
-  int kind() const { return kind_; }
-  int rank() const { return rank_; }
-  std::uint64_t offset() const { return offset_; }
-  const Value &characterLen() const { return characterLen_; }
-  const DerivedType *derivedType() const {
+  const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
+  RT_API_ATTRS Genre genre() const { return genre_; }
+  RT_API_ATTRS TypeCategory category() const {
+    return static_cast<TypeCategory>(category_);
+  }
+  RT_API_ATTRS int kind() const { return kind_; }
+  RT_API_ATTRS int rank() const { return rank_; }
+  RT_API_ATTRS std::uint64_t offset() const { return offset_; }
+  const RT_API_ATTRS Value &characterLen() const { return characterLen_; }
+  const RT_API_ATTRS DerivedType *derivedType() const {
     return derivedType_.descriptor().OffsetElement<const DerivedType>();
   }
-  const Value *lenValue() const {
+  const RT_API_ATTRS Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();
   }
-  const Value *bounds() const {
+  const RT_API_ATTRS Value *bounds() const {
     return bounds_.descriptor().OffsetElement<const Value>();
   }
-  const char *initialization() const { return initialization_; }
+  const RT_API_ATTRS char *initialization() const { return initialization_; }
 
-  std::size_t GetElementByteSize(const Descriptor &) const;
-  std::size_t GetElements(const Descriptor &) const;
+  RT_API_ATTRS std::size_t GetElementByteSize(const Descriptor &) const;
+  RT_API_ATTRS std::size_t GetElements(const Descriptor &) const;
 
   // For components that are descriptors, returns size of descriptor;
   // for Genre::Data, returns elemental byte size times element count.
-  std::size_t SizeInBytes(const Descriptor &) const;
+  RT_API_ATTRS std::size_t SizeInBytes(const Descriptor &) const;
 
   // Establishes a descriptor from this component description.
-  void EstablishDescriptor(
+  RT_API_ATTRS void EstablishDescriptor(
       Descriptor &, const Descriptor &container, Terminator &) const;
 
   // Creates a pointer descriptor from this component description, possibly
   // with subscripts
-  void CreatePointerDescriptor(Descriptor &, const Descriptor &container,
-      Terminator &, const SubscriptValue * = nullptr) const;
+  RT_API_ATTRS void CreatePointerDescriptor(Descriptor &,
+      const Descriptor &container, Terminator &,
+      const SubscriptValue * = nullptr) const;
 
   FILE *Dump(FILE * = stdout) const;
 
@@ -135,21 +139,26 @@ public:
 
   // Special bindings can be created during execution to handle defined
   // I/O procedures that are not type-bound.
-  SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet,
-      std::uint8_t isTypeBound)
+  RT_API_ATTRS SpecialBinding(Which which, ProcedurePointer proc,
+      std::uint8_t isArgDescSet, std::uint8_t isTypeBound,
+      std::uint8_t isArgContiguousSet)
       : which_{which}, isArgDescriptorSet_{isArgDescSet},
-        isTypeBound_{isTypeBound}, proc_{proc} {}
+        isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
+        proc_{proc} {}
 
-  static constexpr Which RankFinal(int rank) {
+  static constexpr RT_API_ATTRS Which RankFinal(int rank) {
     return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
   }
 
-  Which which() const { return which_; }
-  bool IsArgDescriptor(int zeroBasedArg) const {
+  RT_API_ATTRS Which which() const { return which_; }
+  RT_API_ATTRS bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
-  bool isTypeBound() const { return isTypeBound_; }
-  template <typename PROC> PROC GetProc() const {
+  RT_API_ATTRS bool isTypeBound() const { return isTypeBound_; }
+  RT_API_ATTRS bool IsArgContiguous(int zeroBasedArg) const {
+    return (isArgContiguousSet_ >> zeroBasedArg) & 1;
+  }
+  template <typename PROC> RT_API_ATTRS PROC GetProc() const {
     return reinterpret_cast<PROC>(proc_);
   }
 
@@ -185,6 +194,9 @@ private:
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
   std::uint8_t isTypeBound_{0};
+  // True when a FINAL subroutine has a dummy argument that is an array that
+  // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
+  std::uint8_t isArgContiguousSet_{0};
 
   ProcedurePointer proc_{nullptr};
 };
@@ -193,36 +205,51 @@ class DerivedType {
 public:
   ~DerivedType(); // never defined
 
-  const Descriptor &binding() const { return binding_.descriptor(); }
-  const Descriptor &name() const { return name_.descriptor(); }
-  std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  const Descriptor &uninstatiated() const {
+  const RT_API_ATTRS Descriptor &binding() const {
+    return binding_.descriptor();
+  }
+  const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
+  RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
+  const RT_API_ATTRS Descriptor &uninstatiated() const {
     return uninstantiated_.descriptor();
   }
-  const Descriptor &kindParameter() const {
+  const RT_API_ATTRS Descriptor &kindParameter() const {
     return kindParameter_.descriptor();
   }
-  const Descriptor &lenParameterKind() const {
+  const RT_API_ATTRS Descriptor &lenParameterKind() const {
     return lenParameterKind_.descriptor();
   }
-  const Descriptor &component() const { return component_.descriptor(); }
-  const Descriptor &procPtr() const { return procPtr_.descriptor(); }
-  const Descriptor &special() const { return special_.descriptor(); }
-  bool hasParent() const { return hasParent_; }
-  bool noInitializationNeeded() const { return noInitializationNeeded_; }
-  bool noDestructionNeeded() const { return noDestructionNeeded_; }
-  bool noFinalizationNeeded() const { return noFinalizationNeeded_; }
+  const RT_API_ATTRS Descriptor &component() const {
+    return component_.descriptor();
+  }
+  const RT_API_ATTRS Descriptor &procPtr() const {
+    return procPtr_.descriptor();
+  }
+  const RT_API_ATTRS Descriptor &special() const {
+    return special_.descriptor();
+  }
+  RT_API_ATTRS bool hasParent() const { return hasParent_; }
+  RT_API_ATTRS bool noInitializationNeeded() const {
+    return noInitializationNeeded_;
+  }
+  RT_API_ATTRS bool noDestructionNeeded() const { return noDestructionNeeded_; }
+  RT_API_ATTRS bool noFinalizationNeeded() const {
+    return noFinalizationNeeded_;
+  }
 
-  std::size_t LenParameters() const { return lenParameterKind().Elements(); }
+  RT_API_ATTRS std::size_t LenParameters() const {
+    return lenParameterKind().Elements();
+  }
 
-  const DerivedType *GetParentType() const;
+  const RT_API_ATTRS DerivedType *GetParentType() const;
 
   // Finds a data component by name in this derived type or its ancestors.
-  const Component *FindDataComponent(
+  const RT_API_ATTRS Component *FindDataComponent(
       const char *name, std::size_t nameLen) const;
 
   // O(1) look-up of special procedure bindings
-  const SpecialBinding *FindSpecialBinding(SpecialBinding::Which which) const {
+  const RT_API_ATTRS SpecialBinding *FindSpecialBinding(
+      SpecialBinding::Which which) const {
     auto bitIndex{static_cast<std::uint32_t>(which)};
     auto bit{std::uint32_t{1} << bitIndex};
     if (specialBitSet_ & bit) {

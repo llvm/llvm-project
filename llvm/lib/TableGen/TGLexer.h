@@ -54,35 +54,60 @@ enum TokKind {
   paste,     // #
   dotdotdot, // ...
 
+  // Boolean literals.
+  TrueVal,
+  FalseVal,
+
+  // Integer value.
+  IntVal,
+
+  // Binary constant.  Note that these are sized according to the number of
+  // bits given.
+  BinaryIntVal,
+
+  // Preprocessing tokens for internal usage by the lexer.
+  // They are never returned as a result of Lex().
+  Ifdef,
+  Ifndef,
+  Else,
+  Endif,
+  Define,
+
   // Reserved keywords. ('ElseKW' is named to distinguish it from the
   // existing 'Else' that means the preprocessor #else.)
-  Assert,
   Bit,
   Bits,
-  Class,
   Code,
   Dag,
-  Def,
-  Defm,
-  Defset,
-  Defvar,
   ElseKW,
   FalseKW,
   Field,
-  Foreach,
-  If,
   In,
   Include,
   Int,
-  Let,
   List,
-  MultiClass,
   String,
   Then,
   TrueKW,
 
+  // Object start tokens.
+  OBJECT_START_FIRST,
+  Assert = OBJECT_START_FIRST,
+  Class,
+  Def,
+  Defm,
+  Defset,
+  Defvar,
+  Dump,
+  Foreach,
+  If,
+  Let,
+  MultiClass,
+  OBJECT_START_LAST = MultiClass,
+
   // Bang operators.
-  XConcat,
+  BANG_OPERATOR_FIRST,
+  XConcat = BANG_OPERATOR_FIRST,
   XADD,
   XSUB,
   XMUL,
@@ -131,33 +156,33 @@ enum TokKind {
   XGetDagName,
   XSetDagArg,
   XSetDagName,
-
-  // Boolean literals.
-  TrueVal,
-  FalseVal,
-
-  // Integer value.
-  IntVal,
-
-  // Binary constant.  Note that these are sized according to the number of
-  // bits given.
-  BinaryIntVal,
+  XRepr,
+  BANG_OPERATOR_LAST = XRepr,
 
   // String valued tokens.
-  Id,
+  STRING_VALUE_FIRST,
+  Id = STRING_VALUE_FIRST,
   StrVal,
   VarName,
   CodeFragment,
-
-  // Preprocessing tokens for internal usage by the lexer.
-  // They are never returned as a result of Lex().
-  Ifdef,
-  Ifndef,
-  Else,
-  Endif,
-  Define
+  STRING_VALUE_LAST = CodeFragment,
 };
+
+/// isBangOperator - Return true if this is a bang operator.
+static inline bool isBangOperator(tgtok::TokKind Kind) {
+  return tgtok::BANG_OPERATOR_FIRST <= Kind && Kind <= BANG_OPERATOR_LAST;
 }
+
+/// isObjectStart - Return true if this is a valid first token for a statement.
+static inline bool isObjectStart(tgtok::TokKind Kind) {
+  return tgtok::OBJECT_START_FIRST <= Kind && Kind <= OBJECT_START_LAST;
+}
+
+/// isStringValue - Return true if this is a string value.
+static inline bool isStringValue(tgtok::TokKind Kind) {
+  return tgtok::STRING_VALUE_FIRST <= Kind && Kind <= STRING_VALUE_LAST;
+}
+} // namespace tgtok
 
 /// TGLexer - TableGen Lexer class.
 class TGLexer {
@@ -197,8 +222,7 @@ public:
   tgtok::TokKind getCode() const { return CurCode; }
 
   const std::string &getCurStrVal() const {
-    assert((CurCode == tgtok::Id || CurCode == tgtok::StrVal ||
-            CurCode == tgtok::VarName || CurCode == tgtok::CodeFragment) &&
+    assert(tgtok::isStringValue(CurCode) &&
            "This token doesn't have a string value");
     return CurStrVal;
   }

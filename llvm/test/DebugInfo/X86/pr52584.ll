@@ -9,7 +9,7 @@
 ; CHECK:      DW_TAG
 define dso_local void @test() !dbg !4 {
 entry:
-  call void @llvm.dbg.value(metadata !DIArgList(i128 0), metadata !7, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 127)), !dbg !12
+  call void @llvm.dbg.value(metadata !DIArgList(i128 0), metadata !7, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 0, DW_OP_plus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 127)), !dbg !12
   ret void, !dbg !12
 }
 

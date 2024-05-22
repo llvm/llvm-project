@@ -39,11 +39,10 @@ struct TextualLogger final : Logger {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
       OS << "=== Beginning data flow analysis ===\n";
     }
-    if (auto *D = CFG.getDecl()) {
-      D->print(OS);
-      OS << "\n";
-      D->dump(OS);
-    }
+    auto &D = CFG.getDecl();
+    D.print(OS);
+    OS << "\n";
+    D.dump(OS);
     CurrentCFG = &CFG.getCFG();
     CurrentCFG->print(OS, Analysis.getASTContext().getLangOpts(), ShowColors);
     CurrentAnalysis = &Analysis;
@@ -58,12 +57,16 @@ struct TextualLogger final : Logger {
     llvm::errs() << "=== Finished analysis: " << Blocks << " blocks in "
                  << Steps << " total steps ===\n";
   }
-  virtual void enterBlock(const CFGBlock &Block) override {
+  virtual void enterBlock(const CFGBlock &Block, bool PostVisit) override {
     unsigned Count = ++VisitCount[&Block];
     {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
-      OS << "=== Entering block B" << Block.getBlockID() << " (iteration "
-         << Count << ") ===\n";
+      OS << "=== Entering block B" << Block.getBlockID();
+      if (PostVisit)
+        OS << " (post-visit)";
+      else
+        OS << " (iteration " << Count << ")";
+      OS << " ===\n";
     }
     Block.print(OS, CurrentCFG, CurrentAnalysis->getASTContext().getLangOpts(),
                 ShowColors);

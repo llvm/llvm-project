@@ -19,7 +19,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template<class It, class Sentinel, class CharT>
+template <class It, class Sentinel, class CharT>
 constexpr void test_ctad(std::basic_string_view<CharT> val) {
   auto sv = std::basic_string_view(It(val.data()), Sentinel(It(val.data() + val.size())));
   ASSERT_SAME_TYPE(decltype(sv), std::basic_string_view<CharT>);
@@ -27,7 +27,7 @@ constexpr void test_ctad(std::basic_string_view<CharT> val) {
   assert(sv.size() == val.size());
 }
 
-template<class CharT>
+template <class CharT>
 constexpr void test_with_char() {
   const auto val = MAKE_STRING_VIEW(CharT, "test");
   test_ctad<CharT*, CharT*>(val);

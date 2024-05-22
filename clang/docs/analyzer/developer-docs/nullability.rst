@@ -62,7 +62,7 @@ Other Issues to keep in mind/take care of:
     * Even though the method might return a nonnull pointer, when it was sent to a nullable pointer the return type will be nullable.
   	* The result is nullable unless the receiver is known to be non null.
 
-  * Sending a message to a unspecified or nonnull pointer
+  * Sending a message to an unspecified or nonnull pointer
 
     * If the pointer is not assumed to be nil, we should be optimistic and use the nullability implied by the method.
 

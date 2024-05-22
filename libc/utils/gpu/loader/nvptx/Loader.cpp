@@ -83,7 +83,6 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
   // for destructors.
   llvm::sort(ctors, [](auto x, auto y) { return x.second < y.second; });
   llvm::sort(dtors, [](auto x, auto y) { return x.second < y.second; });
-  llvm::reverse(dtors);
 
   // Allocate host pinned memory to make these arrays visible to the GPU.
   CUdeviceptr *dev_memory = reinterpret_cast<CUdeviceptr *>(allocator(
@@ -177,6 +176,8 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
 
   // Register RPC callbacks for the malloc and free functions on HSA.
   uint32_t device_id = 0;
+  register_rpc_callbacks<32>(device_id);
+
   rpc_register_callback(
       device_id, RPC_MALLOC,
       [](rpc_port_t port, void *data) {
@@ -307,10 +308,25 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                                          warp_size, rpc_alloc, nullptr))
     handle_error(err);
 
+  // Initialize the RPC client on the device by copying the local data to the
+  // device's internal pointer.
+  CUdeviceptr rpc_client_dev = 0;
+  uint64_t client_ptr_size = sizeof(void *);
+  if (CUresult err = cuModuleGetGlobal(&rpc_client_dev, &client_ptr_size,
+                                       binary, rpc_client_symbol_name))
+    handle_error(err);
+
+  CUdeviceptr rpc_client_host = 0;
+  if (CUresult err =
+          cuMemcpyDtoH(&rpc_client_host, rpc_client_dev, sizeof(void *)))
+    handle_error(err);
+  if (CUresult err =
+          cuMemcpyHtoD(rpc_client_host, rpc_get_client_buffer(device_id),
+                       rpc_get_client_size()))
+    handle_error(err);
+
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
-  // Call the kernel to
-  begin_args_t init_args = {argc, dev_argv, dev_envp,
-                            rpc_get_buffer(device_id)};
+  begin_args_t init_args = {argc, dev_argv, dev_envp};
   if (CUresult err = launch_kernel(binary, stream, single_threaded_params,
                                    "_begin", init_args))
     handle_error(err);

@@ -1,6 +1,6 @@
 // RUN: touch %t.o
 
-// RUN: %clang -target x86_64-apple-driverkit10.15 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
+// RUN: not %clang -target x86_64-apple-driverkit10.15 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
 // RUN:   | FileCheck %s
 // RUN: mkdir -p %t.sdk
 // RUN: %clang -target x86_64-apple-driverkit19 -isysroot %t.sdk -mlinker-version=520 -### %t.o 2>&1 \

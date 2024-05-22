@@ -43,4 +43,11 @@ namespace InitDecl {
     return false;
   }
   static_assert(!f2(), "");
+
+
+  constexpr int attrs() {
+    if (1) [[likely]] {}
+    return 1;
+  }
+  static_assert(attrs() == 1, "");
 };

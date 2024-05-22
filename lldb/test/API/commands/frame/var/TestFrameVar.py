@@ -58,6 +58,16 @@ class TestFrameVar(TestBase):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
+        # Ensure --regex can find globals if it is the very first frame var command.
+        self.expect("frame var --regex g_", substrs=["g_var"])
+
+        # Ensure the requested scope is respected:
+        self.expect(
+            "frame var --regex argc --no-args",
+            error=True,
+            substrs=["no variables matched the regular expression 'argc'"],
+        )
+
         # Just get args:
         result = interp.HandleCommand("frame var -l", command_result)
         self.assertEqual(

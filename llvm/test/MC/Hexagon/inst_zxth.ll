@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj %s -o - \
+; RUN: llc -mtriple=hexagon -filetype=obj %s -o - \
 ; RUN: | llvm-objdump -d - | FileCheck %s
 
 define i32 @foo (i16 %a)

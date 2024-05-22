@@ -29,4 +29,4 @@ int baz(int);
 #endif // __GUARD
 
 // CHECK-HU:  ====== C++20 Module structure ======
-// CHECK-HU-NEXT:  Header Unit './hu-01.h' is the Primary Module at index #1
+// CHECK-HU-NEXT:  Header Unit '.{{/|\\\\?}}hu-01.h' is the Primary Module at index #1

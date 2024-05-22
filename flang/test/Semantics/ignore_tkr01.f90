@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! !DIR$ IGNORE_TKR tests
 
 !ERROR: !DIR$ IGNORE_TKR directive must appear in a subroutine or function
@@ -201,7 +201,7 @@ program test
   call t4(x)
   call t4(m)
   call t5(x)
-  !WARNING: Actual argument array is smaller (2 element(s)) than dummy argument 'm=' array (4)
+  !WARNING: Actual argument array has fewer elements (2) than dummy argument 'm=' array (4)
   call t5(a)
 
   call t6(1)

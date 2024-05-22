@@ -25,6 +25,7 @@
 #include "clang/Basic/Builtins.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -934,7 +935,7 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
   auto GV = new llvm::GlobalVariable(
       CGM.getModule(), C->getType(),
-      CGM.isTypeConstant(E->getType(), true, false),
+      E->getType().isConstantStorage(CGM.getContext(), true, false),
       llvm::GlobalValue::InternalLinkage, C, ".compoundliteral", nullptr,
       llvm::GlobalVariable::NotThreadLocal,
       CGM.getContext().getTargetAddressSpace(addressSpace));
@@ -1127,8 +1128,35 @@ public:
     case CK_ConstructorConversion:
       return Visit(subExpr, destType);
 
+    case CK_ArrayToPointerDecay:
+      if (const auto *S = dyn_cast<StringLiteral>(subExpr))
+        return CGM.GetAddrOfConstantStringFromLiteral(S).getPointer();
+      return nullptr;
+    case CK_NullToPointer:
+      if (Visit(subExpr, destType))
+        return CGM.EmitNullConstant(destType);
+      return nullptr;
+
     case CK_IntToOCLSampler:
       llvm_unreachable("global sampler variables are not generated");
+
+    case CK_IntegralCast: {
+      QualType FromType = subExpr->getType();
+      // See also HandleIntToIntCast in ExprConstant.cpp
+      if (FromType->isIntegerType())
+        if (llvm::Constant *C = Visit(subExpr, FromType))
+          if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+            unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
+            unsigned DstWidth = CGM.getContext().getIntWidth(destType);
+            if (DstWidth == SrcWidth)
+              return CI;
+            llvm::APInt A = FromType->isSignedIntegerType()
+                                ? CI->getValue().sextOrTrunc(DstWidth)
+                                : CI->getValue().zextOrTrunc(DstWidth);
+            return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
+          }
+      return nullptr;
+    }
 
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
@@ -1164,7 +1192,6 @@ public:
     case CK_CPointerToObjCPointerCast:
     case CK_BlockPointerToObjCPointerCast:
     case CK_AnyPointerToBlockPointerCast:
-    case CK_ArrayToPointerDecay:
     case CK_FunctionToPointerDecay:
     case CK_BaseToDerived:
     case CK_DerivedToBase:
@@ -1183,8 +1210,6 @@ public:
     case CK_IntegralComplexToFloatingComplex:
     case CK_PointerToIntegral:
     case CK_PointerToBoolean:
-    case CK_NullToPointer:
-    case CK_IntegralCast:
     case CK_BooleanToSignedIntegral:
     case CK_IntegralToPointer:
     case CK_IntegralToBoolean:
@@ -1215,9 +1240,8 @@ public:
     return Visit(E->getSubExpr(), T);
   }
 
-  llvm::Constant *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E,
-                                                QualType T) {
-    return Visit(E->getSubExpr(), T);
+  llvm::Constant *VisitIntegerLiteral(IntegerLiteral *I, QualType T) {
+    return llvm::ConstantInt::get(CGM.getLLVMContext(), I->getValue());
   }
 
   llvm::Constant *EmitArrayInitialization(InitListExpr *ILE, QualType T) {
@@ -1322,7 +1346,12 @@ public:
       assert(CGM.getContext().hasSameUnqualifiedType(Ty, Arg->getType()) &&
              "argument to copy ctor is of wrong type");
 
-      return Visit(Arg, Ty);
+      // Look through the temporary; it's just converting the value to an
+      // lvalue to pass it to the constructor.
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Arg))
+        return Visit(MTE->getSubExpr(), Ty);
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return nullptr;
     }
 
     return CGM.EmitNullConstant(Ty);
@@ -1350,6 +1379,13 @@ public:
 
   llvm::Constant *VisitUnaryExtension(const UnaryOperator *E, QualType T) {
     return Visit(E->getSubExpr(), T);
+  }
+
+  llvm::Constant *VisitUnaryMinus(UnaryOperator *U, QualType T) {
+    if (llvm::Constant *C = Visit(U->getSubExpr(), T))
+      if (auto *CI = dyn_cast<llvm::ConstantInt>(C))
+        return llvm::ConstantInt::get(CGM.getLLVMContext(), -CI->getValue());
+    return nullptr;
   }
 
   // Utility methods
@@ -1594,13 +1630,8 @@ namespace {
         IndexValues[i] = llvm::ConstantInt::get(CGM.Int32Ty, Indices[i]);
       }
 
-      // Form a GEP and then bitcast to the placeholder type so that the
-      // replacement will succeed.
-      llvm::Constant *location =
-        llvm::ConstantExpr::getInBoundsGetElementPtr(BaseValueTy,
-                                                     Base, IndexValues);
-      location = llvm::ConstantExpr::getBitCast(location,
-                                                placeholder->getType());
+      llvm::Constant *location = llvm::ConstantExpr::getInBoundsGetElementPtr(
+          BaseValueTy, Base, IndexValues);
 
       Locations.insert({placeholder, location});
     }
@@ -1654,29 +1685,22 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   InConstantContext = D.hasConstantInitialization();
 
   QualType destType = D.getType();
-
-  // Try to emit the initializer.  Note that this can allow some things that
-  // are not allowed by tryEmitPrivateForMemory alone.
-  if (auto value = D.evaluateValue()) {
-    return tryEmitPrivateForMemory(*value, destType);
-  }
-
-  // FIXME: Implement C++11 [basic.start.init]p2: if the initializer of a
-  // reference is a constant expression, and the reference binds to a temporary,
-  // then constant initialization is performed. ConstExprEmitter will
-  // incorrectly emit a prvalue constant in this case, and the calling code
-  // interprets that as the (pointer) value of the reference, rather than the
-  // desired value of the referee.
-  if (destType->isReferenceType())
-    return nullptr;
-
   const Expr *E = D.getInit();
   assert(E && "No initializer to emit");
 
-  auto nonMemoryDestType = getNonMemoryType(CGM, destType);
-  auto C =
-    ConstExprEmitter(*this).Visit(const_cast<Expr*>(E), nonMemoryDestType);
-  return (C ? emitForMemory(C, destType) : nullptr);
+  if (!destType->isReferenceType()) {
+    QualType nonMemoryDestType = getNonMemoryType(CGM, destType);
+    if (llvm::Constant *C = ConstExprEmitter(*this).Visit(const_cast<Expr *>(E),
+                                                          nonMemoryDestType))
+      return emitForMemory(C, destType);
+  }
+
+  // Try to emit the initializer.  Note that this can allow some things that
+  // are not allowed by tryEmitPrivateForMemory alone.
+  if (APValue *value = D.evaluateValue())
+    return tryEmitPrivateForMemory(*value, destType);
+
+  return nullptr;
 }
 
 llvm::Constant *
@@ -1733,7 +1757,10 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   // Zero-extend bool.
   if (C->getType()->isIntegerTy(1) && !destType->isBitIntType()) {
     llvm::Type *boolTy = CGM.getTypes().ConvertTypeForMem(destType);
-    return llvm::ConstantExpr::getZExt(C, boolTy);
+    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+        llvm::Instruction::ZExt, C, boolTy, CGM.getDataLayout());
+    assert(Res && "Constant folding must succeed");
+    return Res;
   }
 
   return C;
@@ -1742,6 +1769,11 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
                                                 QualType destType) {
   assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (!destType->isReferenceType())
+    if (llvm::Constant *C =
+            ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
+      return C;
 
   Expr::EvalResult Result;
 
@@ -1752,13 +1784,10 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
   else
     Success = E->EvaluateAsRValue(Result, CGM.getContext(), InConstantContext);
 
-  llvm::Constant *C;
   if (Success && !Result.HasSideEffects)
-    C = tryEmitPrivate(Result.Val, destType);
-  else
-    C = ConstExprEmitter(*this).Visit(const_cast<Expr*>(E), destType);
+    return tryEmitPrivate(Result.Val, destType);
 
-  return C;
+  return nullptr;
 }
 
 llvm::Constant *CodeGenModule::getNullPointer(llvm::PointerType *T, QualType QT) {
@@ -1832,10 +1861,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    llvm::Type *origPtrTy = C->getType();
-    C = llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
-    C = llvm::ConstantExpr::getPointerCast(C, origPtrTy);
-    return C;
+    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
   }
 };
 
@@ -1896,8 +1922,9 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   // FIXME: signedness depends on the original integer type.
   auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
   llvm::Constant *C;
-  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                         /*isSigned*/ false);
+  C = llvm::ConstantFoldIntegerCast(getOffset(), intptrTy, /*isSigned*/ false,
+                                    CGM.getDataLayout());
+  assert(C && "Must have folded, as Offset is a ConstantInt");
   C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
@@ -1924,7 +1951,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
         if (VD->isLocalVarDecl()) {
           return CGM.getOrCreateStaticVarDecl(
-              *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false));
+              *VD, CGM.getLLVMLinkageVarDefinition(VD));
         }
       }
     }
@@ -2002,8 +2029,6 @@ ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(Emitter.CGF && "Invalid address of label expression outside function");
   llvm::Constant *Ptr = Emitter.CGF->GetAddrOfLabel(E->getLabel());
-  Ptr = llvm::ConstantExpr::getBitCast(Ptr,
-                                   CGM.getTypes().ConvertType(E->getType()));
   return Ptr;
 }
 
@@ -2118,6 +2143,9 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
         Inits[I] = llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
       else if (Elt.isFloat())
         Inits[I] = llvm::ConstantFP::get(CGM.getLLVMContext(), Elt.getFloat());
+      else if (Elt.isIndeterminate())
+        Inits[I] = llvm::UndefValue::get(CGM.getTypes().ConvertType(
+            DestType->castAs<VectorType>()->getElementType()));
       else
         llvm_unreachable("unsupported vector element type");
     }

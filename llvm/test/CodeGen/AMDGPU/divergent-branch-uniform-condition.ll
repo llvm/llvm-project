@@ -97,7 +97,7 @@ Flow2:                                            ; preds = %Flow
   br i1 %8, label %if1, label %endloop
 
 if1:                                              ; preds = %Flow2
-  %v3 = call float @llvm.sqrt.f32(float %v0)
+  %v3 = call afn float @llvm.sqrt.f32(float %v0)
   br label %endloop
 
 endif1:                                           ; preds = %loop

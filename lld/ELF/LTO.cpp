@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/SmallString.h"
@@ -39,32 +40,6 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
-
-// Creates an empty file to store a list of object files for final
-// linking of distributed ThinLTO.
-static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
-  std::error_code ec;
-  auto ret =
-      std::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
-  if (ec) {
-    error("cannot open " + file + ": " + ec.message());
-    return nullptr;
-  }
-  return ret;
-}
-
-// The merged bitcode after LTO is large. Try opening a file stream that
-// supports reading, seeking and writing. Such a file allows BitcodeWriter to
-// flush buffered data to reduce memory consumption. If this fails, open a file
-// stream that supports only write.
-static std::unique_ptr<raw_fd_ostream> openLTOOutputFile(StringRef file) {
-  std::error_code ec;
-  std::unique_ptr<raw_fd_ostream> fs =
-      std::make_unique<raw_fd_stream>(file, ec);
-  if (!ec)
-    return fs;
-  return openFile(file);
-}
 
 static std::string getThinLTOOutputFile(StringRef modulePath) {
   return lto::getThinLTOOutputFile(modulePath, config->thinLTOPrefixReplaceOld,
@@ -152,6 +127,9 @@ static lto::Config createConfig() {
   c.DwoDir = std::string(config->dwoDir);
 
   c.HasWholeProgramVisibility = config->ltoWholeProgramVisibility;
+  c.ValidateAllVtablesHaveTypeInfos =
+      config->ltoValidateAllVtablesHaveTypeInfos;
+  c.AllVtablesHaveTypeInfos = ctx.ltoAllVtablesHaveTypeInfos;
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
   for (const llvm::StringRef &name : config->thinLTOModulesToCompile)
@@ -174,7 +152,7 @@ static lto::Config createConfig() {
   }
 
   if (config->ltoEmitAsm) {
-    c.CGFileType = CGFT_AssemblyFile;
+    c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
   }
 
@@ -206,8 +184,13 @@ BitcodeCompiler::BitcodeCompiler() {
         config->thinLTOEmitImportsFiles);
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
-                                       config->ltoPartitions);
+  constexpr llvm::lto::LTO::LTOKind ltoModes[3] =
+    {llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
+     llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
+     llvm::lto::LTO::LTOKind::LTOK_Default};
+  ltoObj = std::make_unique<lto::LTO>(
+      createConfig(), backend, config->ltoPartitions,
+      ltoModes[config->ltoKind]);
 
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())

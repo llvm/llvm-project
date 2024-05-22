@@ -100,7 +100,6 @@ void boxString() {
 
   static const char strarr[] = "coolbox";
   s = @(strarr);
-  // rdar://18080352
   const char *utf8Bytes = "blah";
   NSString *string1 = @(utf8Bytes);
   NSString *string2 = @(utf8Bytes);

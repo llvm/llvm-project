@@ -18,10 +18,10 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
-; CHECK-APPLE-NEXT:    mov w0, #16
+; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-NEXT:    bl _malloc
-; CHECK-APPLE-NEXT:    mov w8, #1
 ; CHECK-APPLE-NEXT:    fmov s0, #1.00000000
+; CHECK-APPLE-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    mov x21, x0
 ; CHECK-APPLE-NEXT:    strb w8, [x0, #8]
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -34,11 +34,11 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    mov w8, #16
+; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x0
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -49,11 +49,11 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #-16]! ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #16
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x0
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp], #16 ; 8-byte Folded Reload
@@ -231,8 +231,8 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset b8, -56
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset b9, -64
-; CHECK-APPLE-AARCH64-NEXT:    mov x19, x0
 ; CHECK-APPLE-AARCH64-NEXT:    fmov s8, #1.00000000
+; CHECK-APPLE-AARCH64-NEXT:    mov x19, x0
 ; CHECK-APPLE-AARCH64-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-APPLE-AARCH64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-APPLE-AARCH64-NEXT:    mov x21, xzr
@@ -313,8 +313,8 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset b8, -56
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset b9, -64
-; CHECK-APPLE-ARM64_32-NEXT:    mov x19, x0
 ; CHECK-APPLE-ARM64_32-NEXT:    fmov s8, #1.00000000
+; CHECK-APPLE-ARM64_32-NEXT:    mov x19, x0
 ; CHECK-APPLE-ARM64_32-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-APPLE-ARM64_32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x21, xzr
@@ -414,11 +414,11 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    cbz w0, LBB3_2
 ; CHECK-APPLE-NEXT:  ; %bb.1: ; %gen_error
-; CHECK-APPLE-NEXT:    mov w0, #16
+; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-NEXT:    bl _malloc
 ; CHECK-APPLE-NEXT:    mov x21, x0
-; CHECK-APPLE-NEXT:    mov w8, #1
 ; CHECK-APPLE-NEXT:    fmov s0, #1.00000000
+; CHECK-APPLE-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    strb w8, [x0, #8]
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ret
@@ -438,11 +438,11 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    cbz w0, LBB3_2
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %gen_error
-; CHECK-O0-AARCH64-NEXT:    mov w8, #16
+; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x0
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
@@ -464,11 +464,11 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    cbz w0, LBB3_2
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %gen_error
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #16
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x0
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
@@ -517,8 +517,8 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-NEXT:    fmov s8, s0
 ; CHECK-APPLE-NEXT:    mov w19, w0
 ; CHECK-APPLE-NEXT:    mov x0, x21
-; CHECK-APPLE-NEXT:    mov w20, #1
 ; CHECK-APPLE-NEXT:    fmov s9, #1.00000000
+; CHECK-APPLE-NEXT:    mov w20, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    b LBB4_2
 ; CHECK-APPLE-NEXT:  LBB4_1: ; %bb_cont
 ; CHECK-APPLE-NEXT:    ; in Loop: Header=BB4_2 Depth=1
@@ -529,7 +529,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-NEXT:    cbz w19, LBB4_1
 ; CHECK-APPLE-NEXT:  ; %bb.3: ; %gen_error
 ; CHECK-APPLE-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; CHECK-APPLE-NEXT:    mov w0, #16
+; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-NEXT:    bl _malloc
 ; CHECK-APPLE-NEXT:    strb w20, [x0, #8]
 ; CHECK-APPLE-NEXT:    b LBB4_1
@@ -561,11 +561,11 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    cbz w8, LBB4_3
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.2: ; %gen_error
 ; CHECK-O0-AARCH64-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-O0-AARCH64-NEXT:    mov w8, #16
+; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
 ; CHECK-O0-AARCH64-NEXT:    mov x9, x0
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9, #8]
 ; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:  LBB4_3: ; %bb_cont
@@ -602,13 +602,13 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-NEXT:    cbz w8, LBB4_3
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.2: ; %gen_error
 ; CHECK-O0-ARM64_32-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #16
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    mov x9, x0
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $x0 killed $x9
 ; CHECK-O0-ARM64_32-NEXT:    mov x0, x9
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9, #8]
 ; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:  LBB4_3: ; %bb_cont
@@ -671,11 +671,11 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-APPLE-NEXT:    .cfi_offset w20, -32
 ; CHECK-APPLE-NEXT:    mov w19, w0
 ; CHECK-APPLE-NEXT:    mov x20, x8
-; CHECK-APPLE-NEXT:    mov w0, #16
+; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-NEXT:    bl _malloc
-; CHECK-APPLE-NEXT:    mov w8, #1
-; CHECK-APPLE-NEXT:    mov x21, x0
+; CHECK-APPLE-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    strb w8, [x0, #8]
+; CHECK-APPLE-NEXT:    mov x21, x0
 ; CHECK-APPLE-NEXT:    str w19, [x20, #4]
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
@@ -691,14 +691,14 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
 ; CHECK-O0-AARCH64-NEXT:    stur w0, [x29, #-4] ; 4-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    str x8, [sp] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #16
+; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
 ; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp] ; 8-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x10, x0
 ; CHECK-O0-AARCH64-NEXT:    ldur w0, [x29, #-4] ; 4-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x10
-; CHECK-O0-AARCH64-NEXT:    mov w9, #1
+; CHECK-O0-AARCH64-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w9, [x10, #8]
 ; CHECK-O0-AARCH64-NEXT:    str w0, [x8, #4]
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
@@ -713,14 +713,14 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
 ; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #12] ; 4-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    str x8, [sp] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #16
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp] ; 8-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x10, x0
 ; CHECK-O0-ARM64_32-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x10
-; CHECK-O0-ARM64_32-NEXT:    mov w9, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w9, [x10, #8]
 ; CHECK-O0-ARM64_32-NEXT:    str w0, [x8, #4]
 ; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
@@ -757,7 +757,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-AARCH64-NEXT:    mov x19, x0
 ; CHECK-APPLE-AARCH64-NEXT:    add x8, sp, #8
-; CHECK-APPLE-AARCH64-NEXT:    mov w0, #1
+; CHECK-APPLE-AARCH64-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-APPLE-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-APPLE-AARCH64-NEXT:    bl _foo_sret
 ; CHECK-APPLE-AARCH64-NEXT:    mov x0, x21
@@ -789,7 +789,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    add x8, sp, #24
-; CHECK-O0-AARCH64-NEXT:    mov w0, #1
+; CHECK-O0-AARCH64-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    bl _foo_sret
 ; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    cbnz x21, LBB6_2
@@ -823,7 +823,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x19, x0
 ; CHECK-APPLE-ARM64_32-NEXT:    add x8, sp, #8
-; CHECK-APPLE-ARM64_32-NEXT:    mov w0, #1
+; CHECK-APPLE-ARM64_32-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-APPLE-ARM64_32-NEXT:    bl _foo_sret
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x0, x21
@@ -854,7 +854,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    add x8, sp, #24
-; CHECK-O0-ARM64_32-NEXT:    mov w0, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo_sret
 ; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    cmp x21, #0
@@ -908,21 +908,21 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-APPLE-AARCH64-NEXT:    mov w0, #16
+; CHECK-APPLE-AARCH64-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-AARCH64-NEXT:    bl _malloc
-; CHECK-APPLE-AARCH64-NEXT:    mov w8, #1
-; CHECK-APPLE-AARCH64-NEXT:    add x9, x29, #16
-; CHECK-APPLE-AARCH64-NEXT:    ldr w10, [x29, #16]
-; CHECK-APPLE-AARCH64-NEXT:    orr x9, x9, #0x8
+; CHECK-APPLE-AARCH64-NEXT:    mov w8, #1 ; =0x1
+; CHECK-APPLE-AARCH64-NEXT:    ldr w9, [x29, #16]
 ; CHECK-APPLE-AARCH64-NEXT:    strb w8, [x0, #8]
-; CHECK-APPLE-AARCH64-NEXT:    stur w10, [x29, #-12]
-; CHECK-APPLE-AARCH64-NEXT:    ldr w8, [x9], #8
-; CHECK-APPLE-AARCH64-NEXT:    str w8, [sp, #16]
-; CHECK-APPLE-AARCH64-NEXT:    ldr w8, [x9], #8
+; CHECK-APPLE-AARCH64-NEXT:    add x8, x29, #16
+; CHECK-APPLE-AARCH64-NEXT:    orr x8, x8, #0x8
+; CHECK-APPLE-AARCH64-NEXT:    stur w9, [x29, #-12]
+; CHECK-APPLE-AARCH64-NEXT:    ldr w9, [x8], #8
+; CHECK-APPLE-AARCH64-NEXT:    str w9, [sp, #16]
 ; CHECK-APPLE-AARCH64-NEXT:    fmov s0, #1.00000000
+; CHECK-APPLE-AARCH64-NEXT:    ldr w9, [x8], #8
+; CHECK-APPLE-AARCH64-NEXT:    stur x8, [x29, #-8]
 ; CHECK-APPLE-AARCH64-NEXT:    mov x21, x0
-; CHECK-APPLE-AARCH64-NEXT:    stur x9, [x29, #-8]
-; CHECK-APPLE-AARCH64-NEXT:    str w8, [sp, #12]
+; CHECK-APPLE-AARCH64-NEXT:    str w9, [sp, #12]
 ; CHECK-APPLE-AARCH64-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-APPLE-AARCH64-NEXT:    add sp, sp, #48
 ; CHECK-APPLE-AARCH64-NEXT:    ret
@@ -935,11 +935,11 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    mov w8, #16
+; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x0
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-AARCH64-NEXT:    add x8, x29, #16
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-8]
@@ -971,23 +971,23 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w29, -16
-; CHECK-APPLE-ARM64_32-NEXT:    mov w0, #16
+; CHECK-APPLE-ARM64_32-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-ARM64_32-NEXT:    bl _malloc
-; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #1
+; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-APPLE-ARM64_32-NEXT:    add x9, x29, #16
-; CHECK-APPLE-ARM64_32-NEXT:    orr w10, w9, #0x4
-; CHECK-APPLE-ARM64_32-NEXT:    and x11, x9, #0xfffffff0
 ; CHECK-APPLE-ARM64_32-NEXT:    strb w8, [x0, #8]
-; CHECK-APPLE-ARM64_32-NEXT:    stur w10, [x29, #-8]
-; CHECK-APPLE-ARM64_32-NEXT:    ldr w8, [x11]
-; CHECK-APPLE-ARM64_32-NEXT:    orr w11, w9, #0x8
-; CHECK-APPLE-ARM64_32-NEXT:    stp w8, w11, [x29, #-12]
-; CHECK-APPLE-ARM64_32-NEXT:    orr w8, w9, #0xc
-; CHECK-APPLE-ARM64_32-NEXT:    ldr w9, [x10]
+; CHECK-APPLE-ARM64_32-NEXT:    orr w8, w9, #0x4
+; CHECK-APPLE-ARM64_32-NEXT:    and x10, x9, #0xfffffff0
 ; CHECK-APPLE-ARM64_32-NEXT:    stur w8, [x29, #-8]
-; CHECK-APPLE-ARM64_32-NEXT:    str w9, [sp, #16]
-; CHECK-APPLE-ARM64_32-NEXT:    ldr w8, [x11]
+; CHECK-APPLE-ARM64_32-NEXT:    ldr w11, [x10]
+; CHECK-APPLE-ARM64_32-NEXT:    orr w10, w9, #0x8
+; CHECK-APPLE-ARM64_32-NEXT:    stp w11, w10, [x29, #-12]
+; CHECK-APPLE-ARM64_32-NEXT:    ldr w8, [x8]
+; CHECK-APPLE-ARM64_32-NEXT:    orr w9, w9, #0xc
+; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp, #16]
+; CHECK-APPLE-ARM64_32-NEXT:    stur w9, [x29, #-8]
 ; CHECK-APPLE-ARM64_32-NEXT:    fmov s0, #1.00000000
+; CHECK-APPLE-ARM64_32-NEXT:    ldr w8, [x10]
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x21, x0
 ; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp, #12]
 ; CHECK-APPLE-ARM64_32-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
@@ -1000,11 +1000,11 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #32] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #16
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x0
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-ARM64_32-NEXT:    add x8, sp, #48
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w8 killed $w8 killed $x8
@@ -1079,10 +1079,10 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w21, -40
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-AARCH64-NEXT:    mov x19, x0
-; CHECK-APPLE-AARCH64-NEXT:    mov w8, #10
-; CHECK-APPLE-AARCH64-NEXT:    mov w9, #11
-; CHECK-APPLE-AARCH64-NEXT:    mov w10, #12
+; CHECK-APPLE-AARCH64-NEXT:    mov w8, #10 ; =0xa
+; CHECK-APPLE-AARCH64-NEXT:    mov w9, #11 ; =0xb
 ; CHECK-APPLE-AARCH64-NEXT:    stp w9, w8, [sp, #32]
+; CHECK-APPLE-AARCH64-NEXT:    mov w10, #12 ; =0xc
 ; CHECK-APPLE-AARCH64-NEXT:    str w10, [sp, #28]
 ; CHECK-APPLE-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-APPLE-AARCH64-NEXT:    stp x9, x10, [sp, #8]
@@ -1116,11 +1116,11 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
 ; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #24] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
-; CHECK-O0-AARCH64-NEXT:    mov w8, #10
+; CHECK-O0-AARCH64-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-O0-AARCH64-NEXT:    stur w8, [x29, #-28]
-; CHECK-O0-AARCH64-NEXT:    mov w8, #11
+; CHECK-O0-AARCH64-NEXT:    mov w8, #11 ; =0xb
 ; CHECK-O0-AARCH64-NEXT:    stur w8, [x29, #-32]
-; CHECK-O0-AARCH64-NEXT:    mov w8, #12
+; CHECK-O0-AARCH64-NEXT:    mov w8, #12 ; =0xc
 ; CHECK-O0-AARCH64-NEXT:    stur w8, [x29, #-36]
 ; CHECK-O0-AARCH64-NEXT:    ldur w8, [x29, #-28]
 ; CHECK-O0-AARCH64-NEXT:    ; kill: def $x8 killed $w8
@@ -1164,13 +1164,13 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w21, -40
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w22, -48
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x19, x0
-; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #10
-; CHECK-APPLE-ARM64_32-NEXT:    mov w9, #11
-; CHECK-APPLE-ARM64_32-NEXT:    mov w10, #12
+; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #10 ; =0xa
+; CHECK-APPLE-ARM64_32-NEXT:    mov w9, #11 ; =0xb
 ; CHECK-APPLE-ARM64_32-NEXT:    stp w9, w8, [sp, #20]
+; CHECK-APPLE-ARM64_32-NEXT:    mov w10, #12 ; =0xc
 ; CHECK-APPLE-ARM64_32-NEXT:    str w10, [sp, #16]
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x21, xzr
-; CHECK-APPLE-ARM64_32-NEXT:    mov x9, #11
+; CHECK-APPLE-ARM64_32-NEXT:    mov x9, #11 ; =0xb
 ; CHECK-APPLE-ARM64_32-NEXT:    movk x9, #12, lsl #32
 ; CHECK-APPLE-ARM64_32-NEXT:    stur x9, [sp, #4]
 ; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp]
@@ -1202,11 +1202,11 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
 ; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #10
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [sp, #40]
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #11
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #11 ; =0xb
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [sp, #36]
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #12
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #12 ; =0xc
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [sp, #32]
 ; CHECK-O0-ARM64_32-NEXT:    ldr w8, [sp, #40]
 ; CHECK-O0-ARM64_32-NEXT:    ldr w10, [sp, #36]
@@ -1467,14 +1467,14 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-APPLE-NEXT:    mov x28, x2
 ; CHECK-APPLE-NEXT:    mov x19, x1
 ; CHECK-APPLE-NEXT:    mov x22, x0
-; CHECK-APPLE-NEXT:    mov w0, #1
-; CHECK-APPLE-NEXT:    mov w1, #2
-; CHECK-APPLE-NEXT:    mov w2, #3
-; CHECK-APPLE-NEXT:    mov w3, #4
-; CHECK-APPLE-NEXT:    mov w4, #5
-; CHECK-APPLE-NEXT:    mov w5, #6
-; CHECK-APPLE-NEXT:    mov w6, #7
-; CHECK-APPLE-NEXT:    mov w7, #8
+; CHECK-APPLE-NEXT:    mov w0, #1 ; =0x1
+; CHECK-APPLE-NEXT:    mov w1, #2 ; =0x2
+; CHECK-APPLE-NEXT:    mov w2, #3 ; =0x3
+; CHECK-APPLE-NEXT:    mov w3, #4 ; =0x4
+; CHECK-APPLE-NEXT:    mov w4, #5 ; =0x5
+; CHECK-APPLE-NEXT:    mov w5, #6 ; =0x6
+; CHECK-APPLE-NEXT:    mov w6, #7 ; =0x7
+; CHECK-APPLE-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-APPLE-NEXT:    mov x20, xzr
 ; CHECK-APPLE-NEXT:    mov x21, xzr
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
@@ -1520,21 +1520,21 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-AARCH64-NEXT:    mov x20, xzr
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x20
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #2
+; CHECK-O0-AARCH64-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-AARCH64-NEXT:    mov w1, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #3
+; CHECK-O0-AARCH64-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-AARCH64-NEXT:    mov w2, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #4
+; CHECK-O0-AARCH64-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-AARCH64-NEXT:    mov w3, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #5
+; CHECK-O0-AARCH64-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-AARCH64-NEXT:    mov w4, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #6
+; CHECK-O0-AARCH64-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-AARCH64-NEXT:    mov w5, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #7
+; CHECK-O0-AARCH64-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-AARCH64-NEXT:    mov w6, w8
-; CHECK-O0-AARCH64-NEXT:    mov w8, #8
+; CHECK-O0-AARCH64-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-AARCH64-NEXT:    mov w7, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _params_in_reg2
 ; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #8] ; 8-byte Folded Reload
@@ -1574,21 +1574,21 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-ARM64_32-NEXT:    mov x20, xzr
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x20
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #2
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-ARM64_32-NEXT:    mov w1, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #3
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-ARM64_32-NEXT:    mov w2, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #4
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-ARM64_32-NEXT:    mov w3, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #5
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-ARM64_32-NEXT:    mov w4, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #6
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-ARM64_32-NEXT:    mov w5, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #7
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-ARM64_32-NEXT:    mov w6, w8
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #8
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-ARM64_32-NEXT:    mov w7, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2
 ; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp, #8] ; 8-byte Folded Reload
@@ -1646,14 +1646,14 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x28, x2
 ; CHECK-APPLE-NEXT:    mov x19, x1
 ; CHECK-APPLE-NEXT:    mov x22, x0
-; CHECK-APPLE-NEXT:    mov w0, #1
-; CHECK-APPLE-NEXT:    mov w1, #2
-; CHECK-APPLE-NEXT:    mov w2, #3
-; CHECK-APPLE-NEXT:    mov w3, #4
-; CHECK-APPLE-NEXT:    mov w4, #5
-; CHECK-APPLE-NEXT:    mov w5, #6
-; CHECK-APPLE-NEXT:    mov w6, #7
-; CHECK-APPLE-NEXT:    mov w7, #8
+; CHECK-APPLE-NEXT:    mov w0, #1 ; =0x1
+; CHECK-APPLE-NEXT:    mov w1, #2 ; =0x2
+; CHECK-APPLE-NEXT:    mov w2, #3 ; =0x3
+; CHECK-APPLE-NEXT:    mov w3, #4 ; =0x4
+; CHECK-APPLE-NEXT:    mov w4, #5 ; =0x5
+; CHECK-APPLE-NEXT:    mov w5, #6 ; =0x6
+; CHECK-APPLE-NEXT:    mov w6, #7 ; =0x7
+; CHECK-APPLE-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-APPLE-NEXT:    mov x20, xzr
 ; CHECK-APPLE-NEXT:    mov x21, xzr
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
@@ -1677,14 +1677,14 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x28, x6
 ; CHECK-APPLE-NEXT:    mov x23, x7
 ; CHECK-APPLE-NEXT:    str x21, [sp, #24] ; 8-byte Folded Spill
-; CHECK-APPLE-NEXT:    mov w0, #1
-; CHECK-APPLE-NEXT:    mov w1, #2
-; CHECK-APPLE-NEXT:    mov w2, #3
-; CHECK-APPLE-NEXT:    mov w3, #4
-; CHECK-APPLE-NEXT:    mov w4, #5
-; CHECK-APPLE-NEXT:    mov w5, #6
-; CHECK-APPLE-NEXT:    mov w6, #7
-; CHECK-APPLE-NEXT:    mov w7, #8
+; CHECK-APPLE-NEXT:    mov w0, #1 ; =0x1
+; CHECK-APPLE-NEXT:    mov w1, #2 ; =0x2
+; CHECK-APPLE-NEXT:    mov w2, #3 ; =0x3
+; CHECK-APPLE-NEXT:    mov w3, #4 ; =0x4
+; CHECK-APPLE-NEXT:    mov w4, #5 ; =0x5
+; CHECK-APPLE-NEXT:    mov w5, #6 ; =0x6
+; CHECK-APPLE-NEXT:    mov w6, #7 ; =0x7
+; CHECK-APPLE-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-APPLE-NEXT:    mov x20, xzr
 ; CHECK-APPLE-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
@@ -1730,28 +1730,28 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-AARCH64-NEXT:    mov x20, xzr
 ; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #80] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x20
-; CHECK-O0-AARCH64-NEXT:    mov w8, #1
+; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #88] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #2
+; CHECK-O0-AARCH64-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-AARCH64-NEXT:    mov w1, w8
 ; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #96] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #3
+; CHECK-O0-AARCH64-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-AARCH64-NEXT:    mov w2, w8
 ; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #104] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #4
+; CHECK-O0-AARCH64-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-AARCH64-NEXT:    mov w3, w8
 ; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #112] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #5
+; CHECK-O0-AARCH64-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-AARCH64-NEXT:    mov w4, w8
 ; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #120] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #6
+; CHECK-O0-AARCH64-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-AARCH64-NEXT:    mov w5, w8
 ; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #128] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #7
+; CHECK-O0-AARCH64-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-AARCH64-NEXT:    mov w6, w8
 ; CHECK-O0-AARCH64-NEXT:    stur x6, [x29, #-120] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    mov w8, #8
+; CHECK-O0-AARCH64-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-AARCH64-NEXT:    mov w7, w8
 ; CHECK-O0-AARCH64-NEXT:    stur x7, [x29, #-112] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    bl _params_in_reg2
@@ -1835,28 +1835,28 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-ARM64_32-NEXT:    mov x20, xzr
 ; CHECK-O0-ARM64_32-NEXT:    str x20, [sp, #80] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x20
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #1
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #88] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #2
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-ARM64_32-NEXT:    mov w1, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #96] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #3
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-ARM64_32-NEXT:    mov w2, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #104] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #4
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-ARM64_32-NEXT:    mov w3, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #112] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #5
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-ARM64_32-NEXT:    mov w4, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #120] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #6
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-ARM64_32-NEXT:    mov w5, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #128] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #7
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-ARM64_32-NEXT:    mov w6, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #136] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    mov w8, #8
+; CHECK-O0-ARM64_32-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-ARM64_32-NEXT:    mov w7, w8
 ; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #144] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2

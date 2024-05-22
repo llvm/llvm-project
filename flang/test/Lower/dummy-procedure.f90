@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test dummy procedures
 
@@ -154,14 +154,14 @@ end subroutine
 
 ! CHECK-LABEL: func private @fir.acos.f32.ref_f32(%arg0: !fir.ref<f32>) -> f32
   !CHECK: %[[load:.*]] = fir.load %arg0
-  !CHECK: %[[res:.*]] = fir.call @acosf(%[[load]]) : (f32) -> f32
+  !CHECK: %[[res:.*]] = fir.call @acosf(%[[load]]) fastmath<contract> : (f32) -> f32
   !CHECK: return %[[res]] : f32
 
 ! CHECK-LABEL: func private @fir.atan2.f32.ref_f32.ref_f32(
 ! CHECK-SAME: %[[x:.*]]: !fir.ref<f32>, %[[y:.*]]: !fir.ref<f32>) -> f32
   ! CHECK-DAG: %[[xload:.*]] = fir.load %[[x]] : !fir.ref<f32>
   ! CHECK-DAG: %[[yload:.*]] = fir.load %[[y]] : !fir.ref<f32>
-  ! CHECK: %[[atan2:.*]] = math.atan2 %[[xload]], %[[yload]] : f32
+  ! CHECK: %[[atan2:.*]] = math.atan2 %[[xload]], %[[yload]] fastmath<contract> : f32
   ! CHECK: return %[[atan2]] : f32
 
 !CHECK-LABEL: func private @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)

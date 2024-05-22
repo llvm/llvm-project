@@ -12,9 +12,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Program.h"
-#include "State.h"
-#include "clang/Basic/LLVM.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -90,12 +87,68 @@ private:
 } // namespace clang
 
 template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
+    const CXXMethodDecl *MD) {
+  assert(MD->isLambdaStaticInvoker());
+  assert(MD->hasBody());
+  assert(cast<CompoundStmt>(MD->getBody())->body_empty());
+
+  const CXXRecordDecl *ClosureClass = MD->getParent();
+  const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+  assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+  const Function *Func = this->getFunction(LambdaCallOp);
+  if (!Func)
+    return false;
+  assert(Func->hasThisPointer());
+  assert(Func->getNumParams() == (MD->getNumParams() + 1 + Func->hasRVO()));
+
+  if (Func->hasRVO()) {
+    if (!this->emitRVOPtr(MD))
+      return false;
+  }
+
+  // The lambda call operator needs an instance pointer, but we don't have
+  // one here, and we don't need one either because the lambda cannot have
+  // any captures, as verified above. Emit a null pointer. This is then
+  // special-cased when interpreting to not emit any misleading diagnostics.
+  if (!this->emitNullPtr(MD))
+    return false;
+
+  // Forward all arguments from the static invoker to the lambda call operator.
+  for (const ParmVarDecl *PVD : MD->parameters()) {
+    auto It = this->Params.find(PVD);
+    assert(It != this->Params.end());
+
+    // We do the lvalue-to-rvalue conversion manually here, so no need
+    // to care about references.
+    PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
+    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
+      return false;
+  }
+
+  if (!this->emitCall(Func, LambdaCallOp))
+    return false;
+
+  this->emitCleanup();
+  if (ReturnType)
+    return this->emitRet(*ReturnType, MD);
+
+  // Nothing to do, since we emitted the RVO pointer above.
+  return this->emitRetVoid(MD);
+}
+
+template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
+  // Emit custom code if this is a lambda static invoker.
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
+      MD && MD->isLambdaStaticInvoker())
+    return this->emitLambdaStaticInvokerBody(MD);
+
   // Constructor. Set up field initializers.
-  if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F)) {
     const RecordDecl *RD = Ctor->getParent();
     const Record *R = this->getRecord(RD);
     if (!R)
@@ -113,15 +166,17 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           if (!this->visit(InitExpr))
             return false;
 
-          if (!this->emitInitThisField(*T, F->Offset, InitExpr))
-            return false;
+          if (F->isBitField()) {
+            if (!this->emitInitThisBitField(*T, F, InitExpr))
+              return false;
+          } else {
+            if (!this->emitInitThisField(*T, F->Offset, InitExpr))
+              return false;
+          }
         } else {
           // Non-primitive case. Get a pointer to the field-to-initialize
           // on the stack and call visitInitialzer() for it.
-          if (!this->emitThis(InitExpr))
-            return false;
-
-          if (!this->emitGetPtrField(F->Offset, InitExpr))
+          if (!this->emitGetPtrThisField(F->Offset, InitExpr))
             return false;
 
           if (!this->visitInitializer(InitExpr))
@@ -133,13 +188,21 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       } else if (const Type *Base = Init->getBaseClass()) {
         // Base class initializer.
         // Get This Base and call initializer on it.
-        auto *BaseDecl = Base->getAsCXXRecordDecl();
+        const auto *BaseDecl = Base->getAsCXXRecordDecl();
         assert(BaseDecl);
         const Record::Base *B = R->getBase(BaseDecl);
         assert(B);
         if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
           return false;
         if (!this->visitInitializer(InitExpr))
+          return false;
+        if (!this->emitInitPtrPop(InitExpr))
+          return false;
+      } else {
+        assert(Init->isDelegatingInitializer());
+        if (!this->emitThis(InitExpr))
+          return false;
+        if (!this->visitInitializer(Init->getInit()))
           return false;
         if (!this->emitPopPtr(InitExpr))
           return false;
@@ -187,6 +250,13 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitCaseStmt(cast<CaseStmt>(S));
   case Stmt::DefaultStmtClass:
     return visitDefaultStmt(cast<DefaultStmt>(S));
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+    return visitAsmStmt(cast<AsmStmt>(S));
+  case Stmt::AttributedStmtClass:
+    return visitAttributedStmt(cast<AttributedStmt>(S));
+  case Stmt::CXXTryStmtClass:
+    return visitCXXTryStmt(cast<CXXTryStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -250,6 +320,9 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
         return false;
       this->emitCleanup();
       return this->emitRet(*ReturnType, RS);
+    } else if (RE->getType()->isVoidType()) {
+      if (!this->visit(RE))
+        return false;
     } else {
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
@@ -279,7 +352,7 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
     return IS->getElse() ? visitStmt(IS->getElse()) : true;
 
   if (auto *CondInit = IS->getInit())
-    if (!visitStmt(IS->getInit()))
+    if (!visitStmt(CondInit))
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())
@@ -559,6 +632,23 @@ template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
   this->emitLabel(*DefaultLabel);
   return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitAsmStmt(const AsmStmt *S) {
+  return this->emitInvalid(S);
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
+  // Ignore all attributes.
+  return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
+  // Ignore all handlers.
+  return this->visitStmt(S->getTryBlock());
 }
 
 namespace clang {

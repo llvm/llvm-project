@@ -187,8 +187,8 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
       FU = "LSU";
     OS << "/" << FU;
 
-    if (PI->Cycles > 1)
-      OS << "(" << PI->Cycles << "cyc)";
+    if (PI->ReleaseAtCycle> 1)
+      OS << "(" << PI->ReleaseAtCycle << "cyc)";
   }
 
   if (SC->NumMicroOps > 1)
@@ -301,7 +301,7 @@ EmitInstruction(SUnit *SU) {
       continue;
     int &CurrCounter =
       ProcResourceCounters[PI->ProcResourceIdx];
-    CurrCounter += PI->Cycles;
+    CurrCounter += PI->ReleaseAtCycle;
     // Check if this is now the new critical resource.
     if ((CurrCounter > ProcResCostLim) &&
         (CriticalResourceIdx == UINT_MAX ||
@@ -401,7 +401,7 @@ resourcesCost(SUnit *SU) {
            PI = SchedModel->getWriteProcResBegin(SC),
            PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI)
       if (PI->ProcResourceIdx == CriticalResourceIdx)
-        Cost = PI->Cycles;
+        Cost = PI->ReleaseAtCycle;
   }
 
   return Cost;

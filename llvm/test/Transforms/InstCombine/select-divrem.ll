@@ -213,3 +213,133 @@ define i5 @urem_common_dividend_defined_cond(i1 noundef %b, i5 %x, i5 %y, i5 %z)
   %sel = select i1 %b, i5 %r2, i5 %r1
   ret i5 %sel
 }
+
+define i32 @rem_euclid_1(i32 %0) {
+; CHECK-LABEL: @rem_euclid_1(
+; CHECK-NEXT:    [[SEL:%.*]] = and i32 [[TMP0:%.*]], 7
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %rem = srem i32 %0, 8
+  %cond = icmp slt i32 %rem, 0
+  %add = add i32 %rem, 8
+  %sel = select i1 %cond, i32 %add, i32 %rem
+  ret i32 %sel
+}
+
+define i32 @rem_euclid_2(i32 %0) {
+; CHECK-LABEL: @rem_euclid_2(
+; CHECK-NEXT:    [[SEL:%.*]] = and i32 [[TMP0:%.*]], 7
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %rem = srem i32 %0, 8
+  %cond = icmp sgt i32 %rem, -1
+  %add = add i32 %rem, 8
+  %sel = select i1 %cond, i32 %rem, i32 %add
+  ret i32 %sel
+}
+
+define i32 @rem_euclid_wrong_sign_test(i32 %0) {
+; CHECK-LABEL: @rem_euclid_wrong_sign_test(
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[REM]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[REM]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[ADD]], i32 [[REM]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %rem = srem i32 %0, 8
+  %cond = icmp sgt i32 %rem, 0
+  %add = add i32 %rem, 8
+  %sel = select i1 %cond, i32 %add, i32 %rem
+  ret i32 %sel
+}
+
+define i32 @rem_euclid_add_different_const(i32 %0) {
+; CHECK-LABEL: @rem_euclid_add_different_const(
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[REM]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[REM]], 9
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[ADD]], i32 [[REM]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %rem = srem i32 %0, 8
+  %cond = icmp slt i32 %rem, 0
+  %add = add i32 %rem, 9
+  %sel = select i1 %cond, i32 %add, i32 %rem
+  ret i32 %sel
+}
+
+define i32 @rem_euclid_wrong_operands_select(i32 %0) {
+; CHECK-LABEL: @rem_euclid_wrong_operands_select(
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[REM]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[REM]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[REM]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %rem = srem i32 %0, 8
+  %cond = icmp slt i32 %rem, 0
+  %add = add i32 %rem, 8
+  %sel = select i1 %cond, i32 %rem, i32 %add
+  ret i32 %sel
+}
+
+define <2 x i32> @rem_euclid_vec(<2 x i32> %0) {
+; CHECK-LABEL: @rem_euclid_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = and <2 x i32> [[TMP0:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %rem = srem <2 x i32> %0, <i32 8, i32 8>
+  %cond = icmp slt <2 x i32> %rem, <i32 0, i32 0>
+  %add = add <2 x i32> %rem, <i32 8, i32 8>
+  %sel = select <2 x i1> %cond, <2 x i32> %add, <2 x i32> %rem
+  ret <2 x i32> %sel
+}
+
+define i128 @rem_euclid_i128(i128 %0) {
+; CHECK-LABEL: @rem_euclid_i128(
+; CHECK-NEXT:    [[SEL:%.*]] = and i128 [[TMP0:%.*]], 7
+; CHECK-NEXT:    ret i128 [[SEL]]
+;
+  %rem = srem i128 %0, 8
+  %cond = icmp slt i128 %rem, 0
+  %add = add i128 %rem, 8
+  %sel = select i1 %cond, i128 %add, i128 %rem
+  ret i128 %sel
+}
+
+define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
+; CHECK-LABEL: @rem_euclid_non_const_pow2(
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %pow2 = shl i8 1, %0
+  %rem = srem i8 %1, %pow2
+  %cond = icmp slt i8 %rem, 0
+  %add = add i8 %rem, %pow2
+  %sel = select i1 %cond, i8 %add, i8 %rem
+  ret i8 %sel
+}
+
+define i32 @rem_euclid_pow2_true_arm_folded(i32 %n) {
+; CHECK-LABEL: @rem_euclid_pow2_true_arm_folded(
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[N:%.*]], 1
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %rem = srem i32 %n, 2
+  %neg = icmp slt i32 %rem, 0
+  %res = select i1 %neg, i32 1, i32 %rem
+  ret i32 %res
+}
+
+define i32 @rem_euclid_pow2_false_arm_folded(i32 %n) {
+; CHECK-LABEL: @rem_euclid_pow2_false_arm_folded(
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[N:%.*]], 1
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %rem = srem i32 %n, 2
+  %nonneg = icmp sge i32 %rem, 0
+  %res = select i1 %nonneg, i32 %rem, i32 1
+  ret i32 %res
+}

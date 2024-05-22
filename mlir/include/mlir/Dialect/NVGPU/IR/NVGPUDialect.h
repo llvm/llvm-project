@@ -19,6 +19,18 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
+
+constexpr int kWarpSize = 32;
+
+/// M size of wgmma.mma_async instruction
+constexpr int kWgmmaSizeM = 64;
+/// Maximum tensor dimension that TMA supports
+constexpr int kMaxTMATensorDimension = 5;
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc"
 

@@ -49,10 +49,10 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Combined with StmtAncestors, this provides roughly the same information as
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
-bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Decls) {
-  for (const auto *Decl : Decls->decls()) {
+bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
+  for (const auto *Decl : Statement->decls()) {
     if (const auto *V = dyn_cast<VarDecl>(Decl))
-      DeclParents.insert(std::make_pair(V, Decls));
+      DeclParents.insert(std::make_pair(V, Statement));
   }
   return true;
 }
@@ -174,7 +174,7 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
     // The initial constructor must take exactly one parameter, but base class
     // and deferred constructors can take more.
     if (ConstructExpr->getNumArgs() != 1 ||
-        ConstructExpr->getConstructionKind() != CXXConstructExpr::CK_Complete)
+        ConstructExpr->getConstructionKind() != CXXConstructionKind::Complete)
       return nullptr;
     E = ConstructExpr->getArg(0);
     if (const auto *Temp = dyn_cast<MaterializeTemporaryExpr>(E))
@@ -455,10 +455,8 @@ ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(ASTContext *Context,
     : Context(Context), IndexVar(IndexVar), EndVar(EndVar),
       ContainerExpr(ContainerExpr), ArrayBoundExpr(ArrayBoundExpr),
       ContainerNeedsDereference(ContainerNeedsDereference),
-      OnlyUsedAsIndex(true), AliasDecl(nullptr),
-      ConfidenceLevel(Confidence::CL_Safe), NextStmtParent(nullptr),
-      CurrStmtParent(nullptr), ReplaceWithAliasUse(false),
-      AliasFromForInit(false) {
+
+      ConfidenceLevel(Confidence::CL_Safe) {
   if (ContainerExpr)
     addComponent(ContainerExpr);
 }
@@ -851,14 +849,14 @@ std::string VariableNamer::createIndexName() {
     ContainerName = TheContainer->getName();
 
   size_t Len = ContainerName.size();
-  if (Len > 1 && ContainerName.endswith(Style == NS_UpperCase ? "S" : "s")) {
+  if (Len > 1 && ContainerName.ends_with(Style == NS_UpperCase ? "S" : "s")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 1));
     // E.g.: (auto thing : things)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
-  if (Len > 2 && ContainerName.endswith(Style == NS_UpperCase ? "S_" : "s_")) {
+  if (Len > 2 && ContainerName.ends_with(Style == NS_UpperCase ? "S_" : "s_")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 2));
     // E.g.: (auto thing : things_)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())

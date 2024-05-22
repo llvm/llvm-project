@@ -745,12 +745,18 @@ struct chpe_metadata {
   support::ulittle32_t AuxiliaryIATCopy;
 };
 
+enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };
+
 struct chpe_range_entry {
   support::ulittle32_t StartOffset;
   support::ulittle32_t Length;
-};
 
-enum chpe_range_type { CHPE_RANGE_ARM64, CHPE_RANGE_ARM64EC, CHPE_RANGE_AMD64 };
+  // The two low bits of StartOffset contain a range type.
+  static constexpr uint32_t TypeMask = 3;
+
+  uint32_t getStart() const { return StartOffset & ~TypeMask; }
+  uint16_t getType() const { return StartOffset & TypeMask; }
+};
 
 struct chpe_code_range_entry {
   support::ulittle32_t StartRva;
@@ -888,8 +894,17 @@ public:
   }
 
   uint16_t getMachine() const {
-    if (COFFHeader)
+    if (COFFHeader) {
+      if (CHPEMetadata) {
+        switch (COFFHeader->Machine) {
+        case COFF::IMAGE_FILE_MACHINE_AMD64:
+          return COFF::IMAGE_FILE_MACHINE_ARM64EC;
+        case COFF::IMAGE_FILE_MACHINE_ARM64:
+          return COFF::IMAGE_FILE_MACHINE_ARM64X;
+        }
+      }
       return COFFHeader->Machine;
+    }
     if (COFFBigObjHeader)
       return COFFBigObjHeader->Machine;
     llvm_unreachable("no COFF header!");
@@ -1283,7 +1298,8 @@ private:
 class ResourceSectionRef {
 public:
   ResourceSectionRef() = default;
-  explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
+  explicit ResourceSectionRef(StringRef Ref)
+      : BBS(Ref, llvm::endianness::little) {}
 
   Error load(const COFFObjectFile *O);
   Error load(const COFFObjectFile *O, const SectionRef &S);

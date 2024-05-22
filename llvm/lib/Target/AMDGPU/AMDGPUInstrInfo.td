@@ -94,6 +94,11 @@ def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
   SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
     [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
@@ -165,6 +170,11 @@ def AMDGPUfmax3 : SDNode<"AMDGPUISD::FMAX3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
+// out = max(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfmaximum3 : SDNode<"AMDGPUISD::FMAXIMUM3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
 // out = max(a, b, c) a, b, and c are signed ints
 def AMDGPUsmax3 : SDNode<"AMDGPUISD::SMAX3", AMDGPUDTIntTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
@@ -177,6 +187,11 @@ def AMDGPUumax3 : SDNode<"AMDGPUISD::UMAX3", AMDGPUDTIntTernaryOp,
 
 // out = min(a, b, c) a, b and c are floats
 def AMDGPUfmin3 : SDNode<"AMDGPUISD::FMIN3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
+// out = min(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfminimum3 : SDNode<"AMDGPUISD::FMINIMUM3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
@@ -265,9 +280,6 @@ def AMDGPUatomic_cmp_swap : SDNode<"AMDGPUISD::ATOMIC_CMP_SWAP",
                             [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                              SDNPMemOperand]>;
 
-def AMDGPUround : SDNode<"ISD::FROUND",
-                         SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>>;
-
 def AMDGPUbfe_u32_impl : SDNode<"AMDGPUISD::BFE_U32", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfe_i32_impl : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
@@ -279,11 +291,15 @@ def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
-// when performing the multiply. The result is a 32-bit value.
-def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", SDTIntBinOp,
+// when performing the multiply. The result is a 32 or 64 bit value.
+def AMDGPUMul24Op : SDTypeProfile<1, 2, [
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>
+]>;
+
+def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
-def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", SDTIntBinOp,
+def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
 

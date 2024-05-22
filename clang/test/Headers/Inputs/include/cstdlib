@@ -26,5 +26,7 @@ float fabs(float __x) { return __builtin_fabs(__x); }
 float abs(float __x) { return fabs(__x); }
 double abs(double __x) { return fabs(__x); }
 
+using ::malloc;
+using ::free;
 }
 

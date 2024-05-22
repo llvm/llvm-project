@@ -237,23 +237,14 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
       buf.readInt(runCount);
       buf.readInt(dummy);
-      // clang<11 uses a fake 4.2 format which sets length to 9.
-      if (length == 9)
-        buf.readInt(runCount);
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
-      // clang<11 uses a fake 4.2 format which sets length to 0.
-      if (length > 0) {
-        buf.readInt(dummy);
-        buf.readInt(dummy);
-        buf.readInt(runCount);
-      }
+      buf.readInt(dummy);
+      buf.readInt(dummy);
+      buf.readInt(runCount);
       ++programCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       if (length == 0) // Placeholder
         continue;
-      // As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger than 3.
-      // However, clang<11 uses a fake 4.2 format which may set length larger
-      // than 3.
       if (length < 2 || !buf.readInt(ident))
         return false;
       auto It = identToFunction.find(ident);
@@ -346,7 +337,7 @@ StringRef GCOVFunction::getName(bool demangle) const {
     return Name;
   if (demangled.empty()) {
     do {
-      if (Name.startswith("_Z")) {
+      if (Name.starts_with("_Z")) {
         // Name is guaranteed to be NUL-terminated.
         if (char *res = itaniumDemangle(Name.data())) {
           demangled = res;
@@ -374,25 +365,60 @@ GCOVBlock &GCOVFunction::getExitBlock() const {
 // For each basic block, the sum of incoming edge counts equals the sum of
 // outgoing edge counts by Kirchoff's circuit law. If the unmeasured arcs form a
 // spanning tree, the count for each unmeasured arc (GCOV_ARC_ON_TREE) can be
-// uniquely identified.
-uint64_t GCOVFunction::propagateCounts(const GCOVBlock &v, GCOVArc *pred) {
-  // If GCOV_ARC_ON_TREE edges do form a tree, visited is not needed; otherwise
-  // this prevents infinite recursion.
-  if (!visited.insert(&v).second)
-    return 0;
+// uniquely identified. Use an iterative algorithm to decrease stack usage for
+// library users in threads. See the edge propagation algorithm in Optimally
+// Profiling and Tracing Programs, ACM Transactions on Programming Languages and
+// Systems, 1994.
+void GCOVFunction::propagateCounts(const GCOVBlock &v, GCOVArc *pred) {
+  struct Elem {
+    const GCOVBlock &v;
+    GCOVArc *pred;
+    bool inDst;
+    size_t i = 0;
+    uint64_t excess = 0;
+  };
 
-  uint64_t excess = 0;
-  for (GCOVArc *e : v.srcs())
-    if (e != pred)
-      excess += e->onTree() ? propagateCounts(e->src, e) : e->count;
-  for (GCOVArc *e : v.dsts())
-    if (e != pred)
-      excess -= e->onTree() ? propagateCounts(e->dst, e) : e->count;
-  if (int64_t(excess) < 0)
-    excess = -excess;
-  if (pred)
-    pred->count = excess;
-  return excess;
+  SmallVector<Elem, 0> stack;
+  stack.push_back({v, pred, false});
+  for (;;) {
+    Elem &u = stack.back();
+    // If GCOV_ARC_ON_TREE edges do form a tree, visited is not needed;
+    // otherwise, this prevents infinite recursion for bad input.
+    if (u.i == 0 && !visited.insert(&u.v).second) {
+      stack.pop_back();
+      if (stack.empty())
+        break;
+      continue;
+    }
+    if (u.i < u.v.pred.size()) {
+      GCOVArc *e = u.v.pred[u.i++];
+      if (e != u.pred) {
+        if (e->onTree())
+          stack.push_back({e->src, e, /*inDst=*/false});
+        else
+          u.excess += e->count;
+      }
+    } else if (u.i < u.v.pred.size() + u.v.succ.size()) {
+      GCOVArc *e = u.v.succ[u.i++ - u.v.pred.size()];
+      if (e != u.pred) {
+        if (e->onTree())
+          stack.push_back({e->dst, e, /*inDst=*/true});
+        else
+          u.excess -= e->count;
+      }
+    } else {
+      uint64_t excess = u.excess;
+      if (static_cast<int64_t>(excess) < 0)
+        excess = -excess;
+      if (u.pred)
+        u.pred->count = excess;
+      bool inDst = u.inDst;
+      stack.pop_back();
+      if (stack.empty())
+        break;
+      stack.back().excess += inDst ? -excess : excess;
+    }
+  }
 }
 
 void GCOVFunction::print(raw_ostream &OS) const {

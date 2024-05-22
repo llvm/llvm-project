@@ -1,37 +1,42 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_1d = {
@@ -63,7 +68,7 @@ module {
   //
   func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
+    %init = tensor.empty() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -81,7 +86,7 @@ module {
   //
   func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
+    %init = tensor.empty() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -99,7 +104,7 @@ module {
   //
   func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
+    %init = tensor.empty() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -120,7 +125,7 @@ module {
   //
   func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
+    %init = tensor.empty() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -138,7 +143,7 @@ module {
 
   func.func @add_outer_2d(%arg0: tensor<2x3xf32, #SparseMatrix>)
                          -> tensor<2x3xf32, #SparseMatrix> {
-    %0 = bufferization.alloc_tensor() : tensor<2x3xf32, #SparseMatrix>
+    %0 = tensor.empty() : tensor<2x3xf32, #SparseMatrix>
     %1 = linalg.generic #trait_2d
       ins(%arg0 : tensor<2x3xf32, #SparseMatrix>)
       outs(%0 : tensor<2x3xf32, #SparseMatrix>) {

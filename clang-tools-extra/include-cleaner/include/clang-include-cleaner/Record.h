@@ -59,9 +59,7 @@ public:
 
   /// Returns true if the given #include of the main-file should never be
   /// removed.
-  bool shouldKeep(unsigned HashLineNumber) const {
-    return ShouldKeep.contains(HashLineNumber);
-  }
+  bool shouldKeep(const FileEntry *FE) const;
 
   /// Returns the public mapping include for the given physical header file.
   /// Returns "" if there is none.
@@ -69,10 +67,10 @@ public:
 
   /// Returns all direct exporter headers for the given header file.
   /// Returns empty if there is none.
-  llvm::SmallVector<const FileEntry *> getExporters(const FileEntry *File,
-                                                    FileManager &FM) const;
-  llvm::SmallVector<const FileEntry *> getExporters(tooling::stdlib::Header,
-                                                    FileManager &FM) const;
+  llvm::SmallVector<FileEntryRef> getExporters(const FileEntry *File,
+                                               FileManager &FM) const;
+  llvm::SmallVector<FileEntryRef> getExporters(tooling::stdlib::Header,
+                                               FileManager &FM) const;
 
   /// Returns true if the given file is a self-contained file.
   bool isSelfContained(const FileEntry *File) const;
@@ -82,10 +80,6 @@ public:
 
 private:
   class RecordPragma;
-  /// 1-based Line numbers for the #include directives of the main file that
-  /// should always keep (e.g. has the `IWYU pragma: keep` or `IWYU pragma:
-  /// export` right after).
-  llvm::DenseSet</*LineNumber*/ unsigned> ShouldKeep;
 
   /// The public header mapping by the IWYU private pragma. For private pragmas
   //  without public mapping an empty StringRef is stored.
@@ -113,6 +107,10 @@ private:
 
   /// Contains all non self-contained files detected during the parsing.
   llvm::DenseSet<llvm::sys::fs::UniqueID> NonSelfContainedFiles;
+  // Files whose inclusions shouldn't be dropped. E.g. because they have an
+  // always_keep pragma or because user marked particular includes with
+  // keep/export pragmas in the main file.
+  llvm::DenseSet<llvm::sys::fs::UniqueID> ShouldKeep;
 
   /// Owns the strings.
   llvm::BumpPtrAllocator Arena;

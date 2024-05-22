@@ -381,7 +381,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
 
   // Insert a phi to count the number of elements processed by the loop.
-  Builder.SetInsertPoint(L->getHeader()->getFirstNonPHI());
+  Builder.SetInsertPoint(L->getHeader(), L->getHeader()->getFirstNonPHIIt());
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 

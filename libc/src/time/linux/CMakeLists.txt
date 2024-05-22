@@ -24,3 +24,43 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  nanosleep
+  SRCS
+    nanosleep.cpp
+  HDRS
+    ../nanosleep.h
+  DEPENDS
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  clock_gettime
+  SRCS
+    clock_gettime.cpp
+  HDRS
+    ../clock_gettime.h
+  DEPENDS
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  gettimeofday
+  SRCS
+    gettimeofday.cpp
+  HDRS
+    ../gettimeofday.h
+  DEPENDS
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

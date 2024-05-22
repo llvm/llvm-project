@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 enum class MemoryOrder : int {
@@ -116,6 +116,6 @@ LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
 }
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H

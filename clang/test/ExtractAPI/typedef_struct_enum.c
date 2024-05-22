@@ -122,8 +122,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 14,
-          "line": 4
+          "character": 13,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -164,8 +164,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 3,
-          "line": 5
+          "character": 2,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -235,8 +235,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 16,
-          "line": 1
+          "character": 15,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -289,8 +289,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 10
+          "character": 7,
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -328,6 +328,10 @@ struct Foo {
         {
           "kind": "identifier",
           "spelling": "bar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -340,8 +344,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 11
+          "character": 8,
+          "line": 10
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -412,8 +416,8 @@ struct Foo {
       },
       "location": {
         "position": {
-          "character": 20,
-          "line": 9
+          "character": 19,
+          "line": 8
         },
         "uri": "file://INPUT_DIR/input.h"
       },

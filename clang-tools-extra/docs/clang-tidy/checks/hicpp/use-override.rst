@@ -5,6 +5,6 @@
 hicpp-use-override
 ==================
 
-This check is an alias for `modernize-use-override <../modernize/use-override.html>`_.
-Implements `rule 10.2.1 <http://www.codingstandard.com/section/10-2-virtual-functions/>`_ to
+This check is an alias for :doc:`modernize-use-override <../modernize/use-override>`.
+Implements `rule 10.2.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/derived-classes>`_ to
 declare a virtual function `override` when overriding.

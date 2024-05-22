@@ -27,6 +27,7 @@
     __cpp_lib_enable_shared_from_this             201603L [C++17]
     __cpp_lib_make_unique                         201304L [C++14]
     __cpp_lib_out_ptr                             202106L [C++23]
+                                                  202311L [C++26]
     __cpp_lib_ranges                              202207L [C++20]
     __cpp_lib_raw_memory_algorithms               201606L [C++17]
     __cpp_lib_shared_ptr_arrays                   201611L [C++17]
@@ -625,8 +626,8 @@
 #   ifndef __cpp_lib_out_ptr
 #     error "__cpp_lib_out_ptr should be defined in c++26"
 #   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++26"
+#   if __cpp_lib_out_ptr != 202311L
+#     error "__cpp_lib_out_ptr should have the value 202311L in c++26"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_out_ptr

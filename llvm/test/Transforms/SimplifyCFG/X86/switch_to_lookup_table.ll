@@ -354,8 +354,8 @@ define i1 @undef(i32 %tmp) {
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i9 [[SWITCH_CAST]], 1
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i9 3, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i9 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 undef
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[_TMP4:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 undef
+; CHECK-NEXT:    ret i1 [[_TMP4]]
 ;
 bb:
   switch i32 %tmp, label %bb3 [
@@ -369,8 +369,8 @@ bb1: br label %bb3
 bb2: br label %bb3
 
 bb3:
-  %tmp4 = phi i1 [ undef, %bb ], [ false, %bb2 ], [ true, %bb1 ]
-  ret i1 %tmp4
+  %_tmp4 = phi i1 [ undef, %bb ], [ false, %bb2 ], [ true, %bb1 ]
+  ret i1 %_tmp4
 }
 
 ; Also handle large switches that would be rejected by
@@ -2038,4 +2038,33 @@ sw.default: br label %return
 return:
   %x = phi i8 [ 3, %sw.default ], [ 124, %sw.bb3 ], [ -99, %sw.bb2 ], [ -66, %sw.bb1 ], [ -33, %entry ]
   ret i8 %x
+}
+
+define i8 @linearmap_dec_wrapped_mon(i3 %0) {
+; CHECK-LABEL: @linearmap_dec_wrapped_mon(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TMP0:%.*]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i3 [[SWITCH_TABLEIDX]], -4
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i3 [[SWITCH_TABLEIDX]], 2
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i3 [[SWITCH_IDX_MULT]], -4
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TMP1]], i3 [[SWITCH_OFFSET]], i3 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i3 [[COND]] to i8
+; CHECK-NEXT:    ret i8 [[CONV]]
+;
+entry:
+  switch i3 %0, label %cond.end [
+  i3 -1, label %cond.false
+  i3 -2, label %cond.false
+  i3 1, label %cond.false
+  i3 0, label %cond.false
+  ]
+
+cond.false:                                       ; preds = %entry, %entry, %entry, %entry
+  %mul = shl nsw i3 %0, 1
+  br label %cond.end
+
+cond.end:                                         ; preds = %entry, %cond.false
+  %cond = phi i3 [ %mul, %cond.false ], [ 2, %entry ]
+  %conv = sext i3 %cond to i8
+  ret i8 %conv
 }

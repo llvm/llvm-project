@@ -74,6 +74,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyTargetMachine.cpp",
     "WebAssemblyTargetObjectFile.cpp",
     "WebAssemblyTargetTransformInfo.cpp",
+    "WebAssemblyUtilities.cpp",
   ]
 }
 

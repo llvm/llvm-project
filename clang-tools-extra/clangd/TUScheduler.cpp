@@ -54,7 +54,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Logger.h"
@@ -63,6 +63,7 @@
 #include "support/ThreadCrashReporter.h"
 #include "support/Threading.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -464,6 +465,10 @@ public:
   }
 
   void run() {
+    // We mark the current as the stack bottom so that clang running on this
+    // thread can notice the stack usage and prevent stack overflow with best
+    // efforts. Same applies to other calls thoughout clangd.
+    clang::noteBottomOfStack();
     while (true) {
       std::optional<PreambleThrottlerRequest> Throttle;
       {
@@ -1080,9 +1085,9 @@ void PreambleThread::build(Request Req) {
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
       [&](CapturedASTCtx ASTCtx,
-          std::shared_ptr<const CanonicalIncludes> CanonIncludes) {
+          std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),
-                                CanonIncludes);
+                                std::move(PI));
       },
       &Stats);
   if (!LatestBuild)
@@ -1383,6 +1388,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
 }
 
 void ASTWorker::run() {
+  clang::noteBottomOfStack();
   while (true) {
     {
       std::unique_lock<std::mutex> Lock(Mutex);
@@ -1777,6 +1783,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
                Ctx = Context::current().derive(FileBeingProcessed,
                                                std::string(File)),
                Action = std::move(Action), this]() mutable {
+    clang::noteBottomOfStack();
     ThreadCrashReporter ScopedReporter([&Name, &Contents, &Command]() {
       llvm::errs() << "Signalled during preamble action: " << Name << "\n";
       crashDumpCompileCommand(llvm::errs(), Command);

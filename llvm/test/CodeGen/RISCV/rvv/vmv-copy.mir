@@ -176,12 +176,13 @@ body:             |
     ; CHECK-NEXT: $x15 = PseudoVSETIVLI 4, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v26m2 = PseudoVLE16_V_M2 undef $v26m2, killed $x16, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v8m2 = PseudoVLE16_V_M2 undef $v8m2, killed $x17, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: early-clobber $v28m4 = PseudoVWADD_VV_M2 $v26m2, $v8m2, $noreg, 4 /* e16 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber $v28m4 = PseudoVWADD_VV_M2 undef $v28m4, $v26m2, $v8m2, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v12m2 = VMV2R_V $v28m2
     $x15 = PseudoVSETIVLI 4, 73, implicit-def $vl, implicit-def $vtype
     $v26m2 = PseudoVLE16_V_M2 undef $v26m2, killed $x16, $noreg, 4, 0, implicit $vl, implicit $vtype
     $v8m2 = PseudoVLE16_V_M2 undef $v8m2, killed $x17, $noreg, 4, 0, implicit $vl, implicit $vtype
-    $v28m4 = PseudoVWADD_VV_M2 $v26m2, $v8m2, $noreg, 4, implicit $vl, implicit $vtype
+
+    $v28m4 = PseudoVWADD_VV_M2 undef $v28m4, $v26m2, $v8m2, $noreg, 4, 0, implicit $vl, implicit $vtype
     $v12m2 = COPY $v28m2
 ...
 ---

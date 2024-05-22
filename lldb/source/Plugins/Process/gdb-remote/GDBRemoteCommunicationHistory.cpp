@@ -9,7 +9,6 @@
 #include "GDBRemoteCommunicationHistory.h"
 
 // Other libraries and framework includes
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 

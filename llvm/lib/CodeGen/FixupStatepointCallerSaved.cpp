@@ -407,7 +407,6 @@ public:
   void spillRegisters() {
     for (Register Reg : RegsToSpill) {
       int FI = CacheFI.getFrameIndex(Reg, EHPad);
-      const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
 
       NumSpilledRegisters++;
       RegToSlotIdx[Reg] = FI;
@@ -419,6 +418,7 @@ public:
       bool IsKill = true;
       MachineBasicBlock::iterator InsertBefore(MI);
       Reg = performCopyPropagation(Reg, InsertBefore, IsKill, TII, TRI);
+      const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
@@ -461,7 +461,8 @@ public:
 
       if (EHPad && !RC.hasReload(Reg, RegToSlotIdx[Reg], EHPad)) {
         RC.recordReload(Reg, RegToSlotIdx[Reg], EHPad);
-        auto EHPadInsertPoint = EHPad->SkipPHIsLabelsAndDebug(EHPad->begin());
+        auto EHPadInsertPoint =
+            EHPad->SkipPHIsLabelsAndDebug(EHPad->begin(), Reg);
         insertReloadBefore(Reg, EHPadInsertPoint, EHPad);
         LLVM_DEBUG(dbgs() << "...also reload at EHPad "
                           << printMBBReference(*EHPad) << "\n");

@@ -4,6 +4,7 @@
 declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
 declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64) #1
+declare { i128, i1 } @llvm.sadd.with.overflow.i128(i128, i128)
 
 define i128 @add128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: add128:
@@ -48,7 +49,7 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %r9, %rsi
+; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
@@ -388,6 +389,34 @@ define i128 @addcarry1_not(i128 %n) nounwind {
   ret i128 %2
 }
 
+define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_not_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    sbbq %rsi, %rdx
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    retq
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 1)
+  ret { i128, i1 } %r
+}
+
+define { i128, i1 } @saddo_carry_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_carry_not_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:    sbbq %rsi, %rdx
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    retq
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 u0x10000000000000001)
+  ret { i128, i1 } %r
+}
+
 define i128 @addcarry_to_subcarry(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: addcarry_to_subcarry:
 ; CHECK:       # %bb.0:
@@ -696,6 +725,29 @@ define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) nounwind 
 
   %zcarryin = zext i8 %carryin to i64
   %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
+
+  %carryout = or i1 %k1, %k2
+
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
+}
+
+; Check that we can reconstruct a carry if it is masked.
+define { i64, i1 } @addcarry_carry_and_1(i64 %a, i64 %b, i64 %carryin) nounwind {
+; CHECK-LABEL: addcarry_carry_and_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btl $0, %edx
+; CHECK-NEXT:    adcq %rsi, %rax
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    retq
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
+
+  %mcarryin = and i64 %carryin, 1
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %mcarryin)
   %k2 = extractvalue { i64, i1 } %sum, 1
 
   %carryout = or i1 %k1, %k2

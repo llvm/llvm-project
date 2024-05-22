@@ -1,24 +1,25 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --pre-sparsification-rewrite \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification="parallelization-strategy=dense-outer-loop" \
 // RUN:             --sparse-gpu-codegen | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 //
 // Compute matrix matrix C = AB
 //
 // CHECK-LABEL: gpu.module @sparse_kernels
 // CHECK-LABEL: gpu.func @kernel0(
-// CHECK-SAME:        %[[VAL_0:.*0]]: index,
-// CHECK-SAME:        %[[VAL_1:.*1]]: index,
-// CHECK-SAME:        %[[VAL_2:.*2]]: memref<?xindex>,
-// CHECK-SAME:        %[[VAL_3:.*3]]: memref<?xindex>,
-// CHECK-SAME:        %[[VAL_4:.*4]]: memref<?xf64>,
-// CHECK-SAME:        %[[VAL_5:.*5]]: memref<?x?xf64>,
-// CHECK-SAME:        %[[VAL_6:.*6]]: memref<?x?xf64>) kernel {
-// CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:         %[[VAL_8:.*]] = arith.constant 0 : index
+// CHECK-SAME:    %[[VAL_0:.*0]]: index,
+// CHECK-SAME:    %[[VAL_1:.*1]]: index,
+// CHECK-SAME:    %[[VAL_2:.*2]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_3:.*3]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_4:.*4]]: memref<?xf64>,
+// CHECK-SAME:    %[[VAL_5:.*5]]: memref<?x?xf64>,
+// CHECK-SAME:    %[[VAL_6:.*6]]: memref<?x?xf64>) kernel {
+// CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:         %[[VAL_9:.*]] = gpu.block_id  x
 // CHECK:         %[[VAL_10:.*]] = gpu.block_dim  x
 // CHECK:         %[[VAL_11:.*]] = gpu.thread_id  x

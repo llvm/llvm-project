@@ -252,38 +252,27 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case M68k::RET: {
-    // Adjust stack to erase error code
-    int64_t StackAdj = MBBI->getOperand(0).getImm();
-    MachineInstrBuilder MIB;
-
-    if (StackAdj == 0) {
-      MIB = BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
-    } else if (isUInt<16>(StackAdj)) {
-
-      if (STI->atLeastM68020()) {
-        llvm_unreachable("RTD is not implemented");
-      } else {
-        // Copy PC from stack to a free address(A0 or A1) register
-        // TODO check if pseudo expand uses free address register
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32aj), M68k::A1)
-            .addReg(M68k::SP);
-
-        // Adjust SP
-        FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
-
-        // Put the return address on stack
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32ja))
-            .addReg(M68k::SP)
-            .addReg(M68k::A1);
-
-        // RTS
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
-      }
+    if (MBB.getParent()->getFunction().getCallingConv() ==
+        CallingConv::M68k_INTR) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTE));
+    } else if (int64_t StackAdj = MBBI->getOperand(0).getImm(); StackAdj == 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     } else {
-      // TODO: RTD can only handle immediates as big as 2**16-1.
-      // If we need to pop off bytes before the return address, we
-      // must do it manually.
-      llvm_unreachable("Stack adjustment size not supported");
+      // Copy return address from stack to a free address(A0 or A1) register
+      // TODO check if pseudo expand uses free address register
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32aj), M68k::A1)
+          .addReg(M68k::SP);
+
+      // Adjust SP
+      FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
+
+      // Put the return address on stack
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32ja))
+          .addReg(M68k::SP)
+          .addReg(M68k::A1);
+
+      // RTS
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     }
 
     // FIXME: Can rest of the operands be ignored, if there is any?

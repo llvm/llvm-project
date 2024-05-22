@@ -47,11 +47,11 @@ template <> struct ScalarEnumerationTraits<clang::AccessSpecifier> {
 
 template <> struct ScalarEnumerationTraits<clang::TagTypeKind> {
   static void enumeration(IO &IO, clang::TagTypeKind &Value) {
-    IO.enumCase(Value, "Struct", clang::TagTypeKind::TTK_Struct);
-    IO.enumCase(Value, "Interface", clang::TagTypeKind::TTK_Interface);
-    IO.enumCase(Value, "Union", clang::TagTypeKind::TTK_Union);
-    IO.enumCase(Value, "Class", clang::TagTypeKind::TTK_Class);
-    IO.enumCase(Value, "Enum", clang::TagTypeKind::TTK_Enum);
+    IO.enumCase(Value, "Struct", clang::TagTypeKind::Struct);
+    IO.enumCase(Value, "Interface", clang::TagTypeKind::Interface);
+    IO.enumCase(Value, "Union", clang::TagTypeKind::Union);
+    IO.enumCase(Value, "Class", clang::TagTypeKind::Class);
+    IO.enumCase(Value, "Enum", clang::TagTypeKind::Enum);
   }
 };
 

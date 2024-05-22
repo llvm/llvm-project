@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Investigate
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api={{2[1-3]}}
+
 // <iostream>
 
-// istream wcin;
+// wistream wcin;
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
+// RUN: echo -n 1234 | %{exec} %t.exe
 
 #include <iostream>
 #include <cassert>

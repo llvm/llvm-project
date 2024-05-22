@@ -30,7 +30,7 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         return op.getFastmathFlagsAttr();
       }]
       >,
@@ -43,6 +43,99 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         return "fastmathFlags";
+      }]
+      >
+  ];
+}
+
+def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface"> {
+  let description = [{
+    Access to op integer overflow flags.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns an IntegerOverflowFlagsAttr attribute for the operation",
+      /*returnType=*/  "IntegerOverflowFlagsAttr",
+      /*methodName=*/  "getOverflowAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getOverflowFlagsAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation has the No Unsigned Wrap keyword",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "hasNoUnsignedWrap",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
+        return bitEnumContainsAll(flags, IntegerOverflowFlags::nuw);
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation has the No Signed Wrap keyword",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "hasNoSignedWrap",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
+        return bitEnumContainsAll(flags, IntegerOverflowFlags::nsw);
+      }]
+      >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the IntegerOveflowFlagsAttr attribute
+                         for the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getIntegerOverflowAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "overflowFlags";
+      }]
+      >
+  ];
+}
+
+def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
+  let description = [{
+    An interface for operations that can carry branch weights metadata. It
+    provides setters and getters for the operation's branch weights attribute.
+    The default implementation of the interface methods expect the operation to
+    have an attribute of type DenseI32ArrayAttr named branch_weights.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the branch weights attribute or nullptr",
+      /*returnType=*/  "DenseI32ArrayAttr",
+      /*methodName=*/  "getBranchWeightsOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getBranchWeightsAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the branch weights attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setBranchWeights",
+      /*args=*/        (ins "DenseI32ArrayAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setBranchWeightsAttr(attr);
       }]
       >
   ];
@@ -67,7 +160,7 @@ def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         return op.getAccessGroupsAttr();
       }]
       >,
@@ -78,7 +171,7 @@ def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
       /*args=*/        (ins "const ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         op.setAccessGroupsAttr(attr);
       }]
       >
@@ -105,7 +198,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         return op.getAliasScopesAttr();
       }]
       >,
@@ -116,7 +209,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins "const ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         op.setAliasScopesAttr(attr);
       }]
       >,
@@ -127,7 +220,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         return op.getNoaliasScopesAttr();
       }]
       >,
@@ -138,7 +231,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins "const ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         op.setNoaliasScopesAttr(attr);
       }]
       >,
@@ -149,7 +242,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         return op.getTbaaAttr();
       }]
       >,
@@ -160,9 +253,16 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*args=*/        (ins "const ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        auto op = cast<ConcreteOp>(this->getOperation());
         op.setTbaaAttr(attr);
       }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Returns a list of all pointer operands accessed by the "
+                       "operation",
+      /*returnType=*/  "::llvm::SmallVector<::mlir::Value>",
+      /*methodName=*/  "getAccessedOperands",
+      /*args=*/        (ins)
       >
   ];
 }

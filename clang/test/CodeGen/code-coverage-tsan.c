@@ -1,7 +1,6 @@
-/// -fprofile-update=atomic (implied by -fsanitize=thread) requires the
-/// (potentially concurrent) counter updates to be atomic.
+/// -fprofile-update=atomic requires the (potentially concurrent) counter updates to be atomic.
 // RUN: %clang_cc1 %s -triple x86_64 -emit-llvm -fprofile-update=atomic \
-// RUN:   -coverage-notes-file /dev/null -coverage-data-file /dev/null -o - | FileCheck %s
+// RUN:   -coverage-notes-file=/dev/null -coverage-data-file=/dev/null -o - | FileCheck %s
 
 // CHECK-LABEL: void @foo()
 /// Two counters are incremented by __tsan_atomic64_fetch_add.

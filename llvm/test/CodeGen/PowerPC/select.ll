@@ -9,10 +9,10 @@
 define i64 @f0(i64 %x) {
 ; CHECK-LE-LABEL: f0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 125
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    li r3, -3
-; CHECK-LE-NEXT:    isellt r3, r3, r4
+; CHECK-LE-NEXT:    li r3, 125
+; CHECK-LE-NEXT:    li r4, -3
+; CHECK-LE-NEXT:    isellt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f0:
@@ -35,10 +35,10 @@ define i64 @f0(i64 %x) {
 define i64 @f1(i64 %x) {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 512
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    li r3, 64
-; CHECK-LE-NEXT:    isellt r3, r3, r4
+; CHECK-LE-NEXT:    li r3, 512
+; CHECK-LE-NEXT:    li r4, 64
+; CHECK-LE-NEXT:    isellt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f1:
@@ -61,9 +61,9 @@ define i64 @f1(i64 %x) {
 define i64 @f2(i64 %x) {
 ; CHECK-LE-LABEL: f2:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r4, 1024
 ; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, 0, r4
+; CHECK-LE-NEXT:    li r3, 1024
+; CHECK-LE-NEXT:    iseleq r3, 0, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f2:
@@ -133,8 +133,8 @@ define i64 @f4(i64 %x) {
 define i64 @f4_sge_0(i64 %x) {
 ; CHECK-LE-LABEL: f4_sge_0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    cmpdi r3, -1
+; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    iselgt r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
@@ -180,8 +180,8 @@ define i64 @f4_slt_0(i64 %x) {
 define i64 @f4_sle_0(i64 %x) {
 ; CHECK-LE-LABEL: f4_sle_0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    cmpdi r3, 1
+; CHECK-LE-NEXT:    neg r4, r3
 ; CHECK-LE-NEXT:    isellt r3, r3, r4
 ; CHECK-LE-NEXT:    blr
 ;
@@ -231,9 +231,9 @@ define i64 @f4_sgt_m1(i64 %x) {
 define i64 @f5(i64 %x, i64 %y) {
 ; CHECK-LE-LABEL: f5:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r5, 0
 ; CHECK-LE-NEXT:    cmpldi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, r4, r5
+; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    iseleq r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f5:
@@ -257,9 +257,9 @@ define i64 @f5(i64 %x, i64 %y) {
 define i32 @f5_i32(i32 %x, i32 %y) {
 ; CHECK-LE-LABEL: f5_i32:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    li r5, 0
 ; CHECK-LE-NEXT:    cmplwi r3, 0
-; CHECK-LE-NEXT:    iseleq r3, r4, r5
+; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    iseleq r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f5_i32:

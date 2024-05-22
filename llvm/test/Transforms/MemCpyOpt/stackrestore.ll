@@ -51,13 +51,13 @@ define i32 @test_norestore(i32 %n) {
 define i32 @test_stackrestore() {
 ; CHECK-LABEL: @test_stackrestore(
 ; CHECK-NEXT:    [[TMPMEM:%.*]] = alloca [10 x i8], align 4
-; CHECK-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca [10 x i8], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[ARGMEM]], ptr align 1 @str, i32 9, i1 false)
 ; CHECK-NEXT:    [[P10:%.*]] = getelementptr inbounds [10 x i8], ptr [[ARGMEM]], i32 0, i32 9
 ; CHECK-NEXT:    store i8 0, ptr [[P10]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[TMPMEM]], ptr [[ARGMEM]], i32 10, i1 false)
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[INALLOCA_SAVE]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[INALLOCA_SAVE]])
 ; CHECK-NEXT:    [[HEAP:%.*]] = call ptr @malloc(i32 9)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[HEAP]], ptr [[TMPMEM]], i32 9, i1 false)
 ; CHECK-NEXT:    call void @useit(ptr [[HEAP]])

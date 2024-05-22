@@ -167,12 +167,11 @@ define i32 @testOneFieldGlobalS_byte_offset_wrong() {
 ; CHECK-NEXT:    br label [[IF_END4]]
 ; CHECK:       if.end4:
 ; CHECK-NEXT:    [[R_1:%.*]] = phi i32 [ [[ADD3]], [[IF_THEN2]] ], [ 1, [[IF_END]] ]
-; CHECK-NEXT:    br label [[IF_THEN5:%.*]]
-; CHECK:       if.then5:
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[R_1]], 4
 ; CHECK-NEXT:    br label [[IF_END7:%.*]]
+; CHECK:       if.then5:
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.end7:
-; CHECK-NEXT:    ret i32 [[ADD6]]
+; CHECK-NEXT:    ret i32 [[R_1]]
 ;
 entry:
   %i = load i32, ptr getelementptr (i32, ptr @GlobalS, i32 1), align 8
@@ -195,7 +194,7 @@ if.then2:                                         ; preds = %if.end
 
 if.end4:                                          ; preds = %if.then2, %if.end
   %r.1 = phi i32 [ %add3, %if.then2 ], [ %r.0, %if.end ]
-  %i2 = load ptr, ptr getelementptr (ptr, ptr @GlobalS, i32 11), align 8
+  %i2 = load ptr, ptr getelementptr (ptr, ptr @GlobalS, i32 2), align 8
   %tobool = icmp ne ptr %i2, null
   br i1 %tobool, label %if.then5, label %if.end7
 

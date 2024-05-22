@@ -12,6 +12,8 @@
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
@@ -21,25 +23,6 @@ using namespace mlir;
 /// and checks the operation for an index type.
 detail::op_matcher<arith::ConstantIndexOp> mlir::matchConstantIndex() {
   return detail::op_matcher<arith::ConstantIndexOp>();
-}
-
-// Returns `success` when any of the elements in `ofrs` was produced by
-// arith::ConstantIndexOp. In that case the constant attribute replaces the
-// Value. Returns `failure` when no folding happened.
-LogicalResult mlir::foldDynamicIndexList(Builder &b,
-                                         SmallVectorImpl<OpFoldResult> &ofrs) {
-  bool valuesChanged = false;
-  for (OpFoldResult &ofr : ofrs) {
-    if (ofr.is<Attribute>())
-      continue;
-    // Newly static, move from Value to constant.
-    if (auto cstOp = llvm::dyn_cast_if_present<Value>(ofr)
-                         .getDefiningOp<arith::ConstantIndexOp>()) {
-      ofr = b.getIndexAttr(cstOp.value());
-      valuesChanged = true;
-    }
-  }
-  return success(valuesChanged);
 }
 
 llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,
@@ -84,45 +67,122 @@ Value mlir::getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
   return b.create<arith::TruncIOp>(loc, targetIntegerType, value);
 }
 
+static Value convertScalarToIntDtype(ImplicitLocOpBuilder &b, Value operand,
+                                     IntegerType toType, bool isUnsigned) {
+  // If operand is floating point, cast directly to the int type.
+  if (isa<FloatType>(operand.getType())) {
+    if (isUnsigned)
+      return b.create<arith::FPToUIOp>(toType, operand);
+    return b.create<arith::FPToSIOp>(toType, operand);
+  }
+  // Cast index operands directly to the int type.
+  if (operand.getType().isIndex())
+    return b.create<arith::IndexCastOp>(toType, operand);
+  if (auto fromIntType = dyn_cast<IntegerType>(operand.getType())) {
+    // Either extend or truncate.
+    if (toType.getWidth() > fromIntType.getWidth()) {
+      if (isUnsigned)
+        return b.create<arith::ExtUIOp>(toType, operand);
+      return b.create<arith::ExtSIOp>(toType, operand);
+    }
+    if (toType.getWidth() < fromIntType.getWidth())
+      return b.create<arith::TruncIOp>(toType, operand);
+    return operand;
+  }
+
+  return {};
+}
+
+static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
+                                    FloatType toType, bool isUnsigned) {
+  // If operand is integer, cast directly to the float type.
+  // Note that it is unclear how to cast from BF16<->FP16.
+  if (isa<IntegerType>(operand.getType())) {
+    if (isUnsigned)
+      return b.create<arith::UIToFPOp>(toType, operand);
+    return b.create<arith::SIToFPOp>(toType, operand);
+  }
+  if (auto fromFpTy = dyn_cast<FloatType>(operand.getType())) {
+    if (toType.getWidth() > fromFpTy.getWidth())
+      return b.create<arith::ExtFOp>(toType, operand);
+    if (toType.getWidth() < fromFpTy.getWidth())
+      return b.create<arith::TruncFOp>(toType, operand);
+    return operand;
+  }
+
+  return {};
+}
+
+static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
+                                         ComplexType targetType,
+                                         bool isUnsigned) {
+  if (auto fromComplexType = dyn_cast<ComplexType>(operand.getType())) {
+    if (isa<FloatType>(targetType.getElementType()) &&
+        isa<FloatType>(fromComplexType.getElementType())) {
+      Value real = b.create<complex::ReOp>(operand);
+      Value imag = b.create<complex::ImOp>(operand);
+      Type targetETy = targetType.getElementType();
+      if (targetType.getElementType().getIntOrFloatBitWidth() <
+          fromComplexType.getElementType().getIntOrFloatBitWidth()) {
+        real = b.create<arith::TruncFOp>(targetETy, real);
+        imag = b.create<arith::TruncFOp>(targetETy, imag);
+      } else {
+        real = b.create<arith::ExtFOp>(targetETy, real);
+        imag = b.create<arith::ExtFOp>(targetETy, imag);
+      }
+      return b.create<complex::CreateOp>(targetType, real, imag);
+    }
+  }
+
+  if (dyn_cast<FloatType>(operand.getType())) {
+    FloatType toFpTy = cast<FloatType>(targetType.getElementType());
+    auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
+    Value from = operand;
+    if (from.getType().getIntOrFloatBitWidth() < toBitwidth) {
+      from = b.create<arith::ExtFOp>(toFpTy, from);
+    }
+    if (from.getType().getIntOrFloatBitWidth() > toBitwidth) {
+      from = b.create<arith::TruncFOp>(toFpTy, from);
+    }
+    Value zero = b.create<mlir::arith::ConstantFloatOp>(
+        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+    return b.create<complex::CreateOp>(targetType, from, zero);
+  }
+
+  if (dyn_cast<IntegerType>(operand.getType())) {
+    FloatType toFpTy = cast<FloatType>(targetType.getElementType());
+    Value from = operand;
+    if (isUnsigned) {
+      from = b.create<arith::UIToFPOp>(toFpTy, from);
+    } else {
+      from = b.create<arith::SIToFPOp>(toFpTy, from);
+    }
+    Value zero = b.create<mlir::arith::ConstantFloatOp>(
+        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+    return b.create<complex::CreateOp>(targetType, from, zero);
+  }
+
+  return {};
+}
+
 Value mlir::convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
                                  Type toType, bool isUnsignedCast) {
   if (operand.getType() == toType)
     return operand;
-  if (auto toIntType = dyn_cast<IntegerType>(toType)) {
-    // If operand is floating point, cast directly to the int type.
-    if (isa<FloatType>(operand.getType())) {
-      if (isUnsignedCast)
-        return b.create<arith::FPToUIOp>(loc, toType, operand);
-      return b.create<arith::FPToSIOp>(loc, toType, operand);
-    }
-    // Cast index operands directly to the int type.
-    if (operand.getType().isIndex())
-      return b.create<arith::IndexCastOp>(loc, toType, operand);
-    if (auto fromIntType = dyn_cast<IntegerType>(operand.getType())) {
-      // Either extend or truncate.
-      if (toIntType.getWidth() > fromIntType.getWidth()) {
-        if (isUnsignedCast)
-          return b.create<arith::ExtUIOp>(loc, toType, operand);
-        return b.create<arith::ExtSIOp>(loc, toType, operand);
-      }
-      if (toIntType.getWidth() < fromIntType.getWidth())
-        return b.create<arith::TruncIOp>(loc, toType, operand);
-    }
-  } else if (auto toFloatType = dyn_cast<FloatType>(toType)) {
-    // If operand is integer, cast directly to the float type.
-    // Note that it is unclear how to cast from BF16<->FP16.
-    if (isa<IntegerType>(operand.getType())) {
-      if (isUnsignedCast)
-        return b.create<arith::UIToFPOp>(loc, toFloatType, operand);
-      return b.create<arith::SIToFPOp>(loc, toFloatType, operand);
-    }
-    if (auto fromFloatType = dyn_cast<FloatType>(operand.getType())) {
-      if (toFloatType.getWidth() > fromFloatType.getWidth())
-        return b.create<arith::ExtFOp>(loc, toFloatType, operand);
-      if (toFloatType.getWidth() < fromFloatType.getWidth())
-        return b.create<arith::TruncFOp>(loc, toFloatType, operand);
-    }
+  ImplicitLocOpBuilder ib(loc, b);
+  Value result;
+  if (auto intTy = dyn_cast<IntegerType>(toType)) {
+    result = convertScalarToIntDtype(ib, operand, intTy, isUnsignedCast);
+  } else if (auto floatTy = dyn_cast<FloatType>(toType)) {
+    result = convertScalarToFpDtype(ib, operand, floatTy, isUnsignedCast);
+  } else if (auto complexTy = dyn_cast<ComplexType>(toType)) {
+    result =
+        convertScalarToComplexDtype(ib, operand, complexTy, isUnsignedCast);
   }
+
+  if (result)
+    return result;
+
   emitWarning(loc) << "could not cast operand of type " << operand.getType()
                    << " to " << toType;
   return operand;

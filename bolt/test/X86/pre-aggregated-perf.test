@@ -10,7 +10,8 @@
 REQUIRES: system-linux
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
-RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
+RUN:   --profile-use-dfs
 RUN: cat %t | sort | FileCheck %s -check-prefix=PERF2BOLT
 RUN: cat %t.new | FileCheck %s -check-prefix=NEWFORMAT
 
@@ -20,7 +21,7 @@ RUN:   --profile-format=fdata
 RUN: cat %t.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
 
 RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated.txt \
-RUN:   --profile-format=yaml
+RUN:   --profile-format=yaml --profile-use-dfs
 RUN: cat %t.yaml | FileCheck %s -check-prefix=NEWFORMAT
 
 # Test --profile-format option with llvm-bolt --aggregate-only
@@ -29,7 +30,7 @@ RUN:   --aggregate-only --profile-format=fdata
 RUN: cat %t.bolt.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
 
 RUN: llvm-bolt %t.exe -o %t.bolt.yaml --pa -p %p/Inputs/pre-aggregated.txt \
-RUN:   --aggregate-only --profile-format=yaml
+RUN:   --aggregate-only --profile-format=yaml --profile-use-dfs
 RUN: cat %t.bolt.yaml | FileCheck %s -check-prefix=NEWFORMAT
 
 PERF2BOLT: 0 [unknown] 7f36d18d60c0 1 main 53c 0 2
@@ -45,7 +46,7 @@ PERF2BOLT: 1 usqrt a 1 usqrt 10 0 22
 
 NEWFORMAT:  - name:            'frame_dummy/1'
 NEWFORMAT:    fid:             3
-NEWFORMAT:    hash:            0x24496F7F9594E89F
+NEWFORMAT:    hash:            0x28C72085C0BD8D37
 NEWFORMAT:    exec:            1
 
 NEWFORMAT:  - name:            usqrt

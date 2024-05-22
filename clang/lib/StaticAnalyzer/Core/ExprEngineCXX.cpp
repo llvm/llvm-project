@@ -61,30 +61,30 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     AlwaysReturnsLValue = true;
   }
 
-  assert(ThisRD);
-  if (ThisRD->isEmpty()) {
-    // Do nothing for empty classes. Otherwise it'd retrieve an UnknownVal
-    // and bind it and RegionStore would think that the actual value
-    // in this region at this offset is unknown.
-    return;
-  }
-
   const LocationContext *LCtx = Pred->getLocationContext();
+  const Expr *CallExpr = Call.getOriginExpr();
 
   ExplodedNodeSet Dst;
   Bldr.takeNodes(Pred);
 
-  SVal V = Call.getArgSVal(0);
+  assert(ThisRD);
+  if (!ThisRD->isEmpty()) {
+    // Load the source value only for non-empty classes.
+    // Otherwise it'd retrieve an UnknownVal
+    // and bind it and RegionStore would think that the actual value
+    // in this region at this offset is unknown.
+    SVal V = Call.getArgSVal(0);
 
-  // If the value being copied is not unknown, load from its location to get
-  // an aggregate rvalue.
-  if (std::optional<Loc> L = V.getAs<Loc>())
-    V = Pred->getState()->getSVal(*L);
-  else
-    assert(V.isUnknownOrUndef());
-
-  const Expr *CallExpr = Call.getOriginExpr();
-  evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+    // If the value being copied is not unknown, load from its location to get
+    // an aggregate rvalue.
+    if (std::optional<Loc> L = V.getAs<Loc>())
+      V = Pred->getState()->getSVal(*L);
+    else
+      assert(V.isUnknownOrUndef());
+    evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+  } else {
+    Dst.Add(Pred);
+  }
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {
@@ -612,10 +612,10 @@ void ExprEngine::handleConstructor(const Expr *E,
   assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
-  const CXXConstructExpr::ConstructionKind CK =
+  const CXXConstructionKind CK =
       CE ? CE->getConstructionKind() : CIE->getConstructionKind();
   switch (CK) {
-  case CXXConstructExpr::CK_Complete: {
+  case CXXConstructionKind::Complete: {
     // Inherited constructors are always base class constructors.
     assert(CE && !CIE && "A complete constructor is inherited?!");
 
@@ -666,21 +666,21 @@ void ExprEngine::handleConstructor(const Expr *E,
         CE, State, currBldrCtx, LCtx, CC, CallOpts, Idx);
     break;
   }
-  case CXXConstructExpr::CK_VirtualBase: {
+  case CXXConstructionKind::VirtualBase: {
     // Make sure we are not calling virtual base class initializers twice.
     // Only the most-derived object should initialize virtual base classes.
     const auto *OuterCtor = dyn_cast_or_null<CXXConstructExpr>(
         LCtx->getStackFrame()->getCallSite());
     assert(
         (!OuterCtor ||
-         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Complete ||
-         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Delegating) &&
+         OuterCtor->getConstructionKind() == CXXConstructionKind::Complete ||
+         OuterCtor->getConstructionKind() == CXXConstructionKind::Delegating) &&
         ("This virtual base should have already been initialized by "
          "the most derived class!"));
     (void)OuterCtor;
     [[fallthrough]];
   }
-  case CXXConstructExpr::CK_NonVirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
     // In C++17, classes with non-virtual bases may be aggregates, so they would
     // be initialized as aggregates without a constructor call, so we may have
     // a base class constructed directly into an initializer list without
@@ -699,17 +699,17 @@ void ExprEngine::handleConstructor(const Expr *E,
       break;
     }
     [[fallthrough]];
-  case CXXConstructExpr::CK_Delegating: {
+  case CXXConstructionKind::Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
     Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor,
                                               LCtx->getStackFrame());
     SVal ThisVal = State->getSVal(ThisPtr);
 
-    if (CK == CXXConstructExpr::CK_Delegating) {
+    if (CK == CXXConstructionKind::Delegating) {
       Target = ThisVal;
     } else {
       // Cast to the base type.
-      bool IsVirtual = (CK == CXXConstructExpr::CK_VirtualBase);
+      bool IsVirtual = (CK == CXXConstructionKind::VirtualBase);
       SVal BaseVal =
           getStoreManager().evalDerivedToBase(ThisVal, E->getType(), IsVirtual);
       Target = BaseVal;

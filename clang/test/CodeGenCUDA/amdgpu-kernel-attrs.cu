@@ -10,10 +10,18 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm \
 // RUN:     -verify -o - -x hip %s | FileCheck -check-prefix=NAMD %s
 
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -foffload-uniform-block \
+// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     | FileCheck -check-prefixes=CHECK,DEFAULT %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fno-offload-uniform-block \
+// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     | FileCheck -check-prefixes=NOUB %s
+
 #include "Inputs/cuda.h"
 
 __global__ void flat_work_group_size_default() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z28flat_work_group_size_defaultv() [[FLAT_WORK_GROUP_SIZE_DEFAULT:#[0-9]+]]
+// NOUB: define{{.*}} void @_Z28flat_work_group_size_defaultv() [[NOUB:#[0-9]+]]
 }
 
 __attribute__((amdgpu_flat_work_group_size(32, 64))) // expected-no-diagnostics
@@ -45,3 +53,5 @@ __global__ void num_vgpr_64() {
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}}"amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}}"amdgpu-num-sgpr"="32"
 // CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}}"amdgpu-num-vgpr"="64"
+
+// NOUB-NOT: "uniform-work-group-size"="true"

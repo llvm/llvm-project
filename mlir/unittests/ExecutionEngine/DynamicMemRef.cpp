@@ -97,3 +97,28 @@ TEST(DynamicMemRef, rankThree) {
   llvm::SmallVector<int, 24> values(dynamicMemRef.begin(), dynamicMemRef.end());
   EXPECT_THAT(values, ElementsAreArray(data));
 }
+
+TEST(DynamicMemRef, rankOneWithOffset) {
+  constexpr int offset = 4;
+  std::array<int, 3 + offset> buffer;
+
+  for (size_t i = 0; i < buffer.size(); ++i) {
+    buffer[i] = i;
+  }
+
+  StridedMemRefType<int, 1> memRef;
+  memRef.basePtr = buffer.data();
+  memRef.data = buffer.data();
+  memRef.offset = offset;
+  memRef.sizes[0] = 3;
+  memRef.strides[0] = 1;
+
+  DynamicMemRefType<int> dynamicMemRef(memRef);
+
+  llvm::SmallVector<int, 3> values(dynamicMemRef.begin(), dynamicMemRef.end());
+
+  for (int64_t i = 0; i < 3; ++i) {
+    EXPECT_EQ(values[i], buffer[offset + i]);
+    EXPECT_EQ(*dynamicMemRef[i], buffer[offset + i]);
+  }
+}

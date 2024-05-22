@@ -23,31 +23,31 @@
 target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
-@__omp_offloading_10302_bd7e0_main_l13_exec_mode = weak protected constant i8 3
-@__omp_offloading_10302_bd7e0_main_l16_exec_mode = weak protected constant i8 1
 @i_shared = internal addrspace(3) global [4 x i8] undef, align 16
 @i.i_shared = internal addrspace(3) global [4 x i8] undef, align 16
-@llvm.compiler.used = appending global [2 x ptr] [ptr @__omp_offloading_10302_bd7e0_main_l13_exec_mode, ptr @__omp_offloading_10302_bd7e0_main_l16_exec_mode], section "llvm.metadata"
+
+@__omp_offloading_10302_bd7e0_main_l13_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_10302_bd7e0_main_l16_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+
 
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak protected constant i8 3
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak protected constant i8 3
 ; CHECK: @[[I_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 16
 ; CHECK: @[[I_I_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 16
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @__omp_offloading_10302_bd7e0_main_l13_exec_mode, ptr @__omp_offloading_10302_bd7e0_main_l16_exec_mode], section "llvm.metadata"
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr nonnull @[[GLOB1]], i8 2, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment, ptr [[DYN:%.*]])
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -67,12 +67,12 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 nounde
 ; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), ptr [[CAPTURED_VARS_ADDRS_I]], align 8
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull @[[GLOB1]], i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %captured_vars_addrs.i = alloca [1 x ptr], align 8
-  %0 = tail call i32 @__kmpc_target_init(ptr nonnull @1, i8 2, i1 false) #6
+  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment, ptr %dyn) #6
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -96,11 +96,11 @@ _Z3fooi.internalized.exit:                        ; preds = %user_code.entry, %r
   store ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), ptr %captured_vars_addrs.i, align 8
   call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.i, i64 1) #6
   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %captured_vars_addrs.i)
-  call void @__kmpc_target_deinit(ptr nonnull @1, i8 2) #6
+  call void @__kmpc_target_deinit() #6
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(ptr, i8, i1) local_unnamed_addr
+declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 
 define hidden void @_Z3fooi(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-LABEL: @_Z3fooi(
@@ -127,11 +127,11 @@ entry:
 
 declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
 
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr nonnull @[[GLOB1]], i8 2, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment, ptr [[DYN:%.*]])
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -140,29 +140,16 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(i64 nounde
 ; CHECK-NEXT:    [[I_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[I:%.*]] to i32
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
-; CHECK:       region.check.tid:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
-; CHECK:       region.guarded:
 ; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), align 16
-; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
-; CHECK:       region.guarded.end:
-; CHECK-NEXT:    br label [[REGION_BARRIER]]
-; CHECK:       region.barrier:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB1]], i32 [[TMP2]])
-; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
-; CHECK:       region.exit:
 ; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), ptr [[CAPTURED_VARS_ADDRS_I]], align 8
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull @[[GLOB1]], i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %captured_vars_addrs.i = alloca [1 x ptr], align 8
-  %0 = tail call i32 @__kmpc_target_init(ptr nonnull @1, i8 1, i1 true) #6
+  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment, ptr %dyn) #6
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -177,7 +164,7 @@ user_code.entry:                                  ; preds = %entry
   store ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), ptr %captured_vars_addrs.i, align 8
   call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i, i64 1) #6
   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %captured_vars_addrs.i)
-  call void @__kmpc_target_deinit(ptr nonnull @1, i8 1) #6
+  call void @__kmpc_target_deinit() #6
   br label %common.ret
 }
 

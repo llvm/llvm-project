@@ -14,7 +14,7 @@
 
 #include <signal.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TOOD: Some architectures will have their signal trampoline functions in the
 // vdso, use those when available.
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, sigaction,
   }
 
   KernelSigaction kernel_old;
-  int ret = __llvm_libc::syscall_impl(
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
       libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
   if (ret) {
@@ -47,4 +47,4 @@ LLVM_LIBC_FUNCTION(int, sigaction,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

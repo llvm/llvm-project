@@ -457,6 +457,23 @@ public:
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
   }
+  void setDiscardableAttr(StringRef name, Attribute value) {
+    setDiscardableAttr(StringAttr::get(getContext(), name), value);
+  }
+
+  /// Remove the discardable attribute with the specified name if it exists.
+  /// Return the attribute that was erased, or nullptr if there was no attribute
+  /// with such name.
+  Attribute removeDiscardableAttr(StringAttr name) {
+    NamedAttrList attributes(attrs);
+    Attribute removedAttr = attributes.erase(name);
+    if (removedAttr)
+      attrs = attributes.getDictionary(getContext());
+    return removedAttr;
+  }
+  Attribute removeDiscardableAttr(StringRef name) {
+    return removeDiscardableAttr(StringAttr::get(getContext(), name));
+  }
 
   /// Return all of the discardable attributes on this operation.
   ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
@@ -542,7 +559,7 @@ public:
   /// value. Otherwise, add a new attribute with the specified name/value.
   void setAttr(StringAttr name, Attribute value) {
     if (getPropertiesStorageSize()) {
-      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+      if (getInherentAttr(name)) {
         setInherentAttr(name, value);
         return;
       }
@@ -679,10 +696,31 @@ public:
 
   /// Attempt to fold this operation with the specified constant operand values
   /// - the elements in "operands" will correspond directly to the operands of
-  /// the operation, but may be null if non-constant. If folding is successful,
-  /// this fills in the `results` vector. If not, `results` is unspecified.
+  /// the operation, but may be null if non-constant.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
+
+  /// Attempt to fold this operation.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
+  LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
+
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return name.hasPromiseOrImplementsInterface<InterfaceT>();
+  }
 
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
@@ -861,8 +899,9 @@ public:
   /// matching the expectations of the properties for this operation. This is
   /// mostly useful for unregistered operations or used when parsing the
   /// generic format. An optional diagnostic can be passed in for richer errors.
-  LogicalResult setPropertiesFromAttribute(Attribute attr,
-                                           InFlightDiagnostic *diagnostic);
+  LogicalResult
+  setPropertiesFromAttribute(Attribute attr,
+                             function_ref<InFlightDiagnostic()> emitError);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.

@@ -10,7 +10,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4242: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
 
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
@@ -23,11 +26,11 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
 #include <vector>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -128,6 +131,17 @@ constexpr bool test() {
                     });
                   });
 
+  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
+  // experimental anymore
+#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+  {
+    std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    auto view                         = vec | std::views::join;
+    assert(std::ranges::find(view.begin(), view.end(), 4) == std::next(view.begin(), 3));
+    assert(std::ranges::find(view, 4) == std::next(view.begin(), 3));
+  }
+#endif
+
   { // check that the first element is returned
     {
       struct S {
@@ -203,7 +217,57 @@ public:
   friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
 };
 
+void test_deque() {
+  { // empty deque
+    std::deque<int> data;
+    assert(std::ranges::find(data, 4) == data.end());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  { // single element - match
+    std::deque<int> data = {4};
+    assert(std::ranges::find(data, 4) == data.begin());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.begin());
+  }
+
+  { // single element - no match
+    std::deque<int> data = {3};
+    assert(std::ranges::find(data, 4) == data.end());
+    assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  // many elements
+  for (auto size : {2, 3, 1023, 1024, 1025, 2047, 2048, 2049}) {
+    { // last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 1] = 4;
+      assert(std::ranges::find(data, 4) == data.end() - 1);
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 1);
+    }
+
+    { // second-last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 2] = 4;
+      assert(std::ranges::find(data, 4) == data.end() - 2);
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end() - 2);
+    }
+
+    { // no match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      assert(std::ranges::find(data, 4) == data.end());
+      assert(std::ranges::find(data.begin(), data.end(), 4) == data.end());
+    }
+  }
+}
+
 int main(int, char**) {
+  test_deque();
   test();
   static_assert(test());
 

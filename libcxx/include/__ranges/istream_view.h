@@ -14,6 +14,8 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/movable.h>
 #include <__config>
+#include <__fwd/istream.h>
+#include <__fwd/string.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
@@ -21,7 +23,6 @@
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <cstddef>
-#include <iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

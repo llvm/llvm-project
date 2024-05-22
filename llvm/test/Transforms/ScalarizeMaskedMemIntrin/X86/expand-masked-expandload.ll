@@ -47,7 +47,7 @@ define <2 x i64> @scalarize_v2i64_ones_mask(ptr %p, <2 x i64> %passthru) {
 
 define <2 x i64> @scalarize_v2i64_zero_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LABEL: @scalarize_v2i64_zero_mask(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> undef, <2 x i64> [[PASSTHRU:%.*]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> poison, <2 x i64> [[PASSTHRU:%.*]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %ret = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p, <2 x i1> <i1 false, i1 false>, <2 x i64> %passthru)
@@ -58,7 +58,7 @@ define <2 x i64> @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LABEL: @scalarize_v2i64_const_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[LOAD1]], i64 1
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x i64> poison, i64 [[LOAD1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[RES1]], <2 x i64> [[PASSTHRU:%.*]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;

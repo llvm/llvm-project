@@ -5,8 +5,11 @@ add_llvm_component_library(LLVMTextAPI
   TextStubV5.cpp
   PackedVersion.cpp
   Platform.cpp
+  RecordsSlice.cpp
   Symbol.cpp
+  SymbolSet.cpp
   Target.cpp
+  TextAPIError.cpp
   TextStub.cpp
   TextStubCommon.cpp
 

@@ -42,8 +42,8 @@ DebugTranslation::DebugTranslation(Operation *module, llvm::Module &llvmModule)
     llvmModule.addModuleFlag(llvm::Module::Warning, debugVersionKey,
                              llvm::DEBUG_METADATA_VERSION);
 
-  if (auto targetTripleAttr =
-          module->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName())) {
+  if (auto targetTripleAttr = module->getDiscardableAttr(
+          LLVM::LLVMDialect::getTargetTripleAttrName())) {
     auto targetTriple =
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue());
     if (targetTriple.isKnownWindowsMSVCEnvironment()) {
@@ -60,20 +60,6 @@ void DebugTranslation::finalize() {}
 /// Translate the debug information for the given function.
 void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
   if (!debugEmissionIsEnabled)
-    return;
-
-  // If we are to create debug info for the function, we need to ensure that all
-  // inlinable calls in it are with debug info, otherwise the LLVM verifier will
-  // complain. For now, be more restricted and treat all calls as inlinable.
-  const bool hasCallWithoutDebugInfo =
-      func.walk([&](LLVM::CallOp call) {
-            return call.getLoc()->walk([](Location l) {
-              return isa<UnknownLoc>(l) ? WalkResult::interrupt()
-                                        : WalkResult::advance();
-            });
-          })
-          .wasInterrupted();
-  if (hasCallWithoutDebugInfo)
     return;
 
   // Look for a sub program attached to the function.
@@ -98,7 +84,7 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
 }
 
 llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
-  if (!stringAttr || stringAttr.getValue().empty())
+  if (!stringAttr || stringAttr.empty())
     return nullptr;
   return llvm::MDString::get(llvmCtx, stringAttr);
 }
@@ -116,7 +102,18 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
-      /*Flags=*/"", /*RV=*/0);
+      /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()));
+}
+
+/// Returns a new `DINodeT` that is either distinct or not, depending on
+/// `isDistinct`.
+template <class DINodeT, class... Ts>
+static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
+  if (isDistinct)
+    return DINodeT::getDistinct(std::forward<Ts>(args)...);
+  return DINodeT::get(std::forward<Ts>(args)...);
 }
 
 llvm::DICompositeType *
@@ -124,8 +121,20 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   SmallVector<llvm::Metadata *> elements;
   for (auto member : attr.getElements())
     elements.push_back(translate(member));
-  return llvm::DICompositeType::get(
-      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+
+  // TODO: Use distinct attributes to model this, once they have landed.
+  // Depending on the tag, composite types must be distinct.
+  bool isDistinct = false;
+  switch (attr.getTag()) {
+  case llvm::dwarf::DW_TAG_class_type:
+  case llvm::dwarf::DW_TAG_enumeration_type:
+  case llvm::dwarf::DW_TAG_structure_type:
+  case llvm::dwarf::DW_TAG_union_type:
+    isDistinct = true;
+  }
+
+  return getDistinctOrUnique<llvm::DICompositeType>(
+      isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
       translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(),
@@ -182,23 +191,23 @@ DebugTranslation::translateImpl(DILocalVariableAttr attr) {
       /*Annotations=*/nullptr);
 }
 
-llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
-  return cast<llvm::DIScope>(translate(DINodeAttr(attr)));
+llvm::DIGlobalVariable *
+DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
+  return llvm::DIGlobalVariable::getDistinct(
+      llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
+      getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),
+      attr.getLine(), translate(attr.getType()), attr.getIsLocalToUnit(),
+      attr.getIsDefined(), nullptr, nullptr, attr.getAlignInBits(), nullptr);
 }
 
-/// Return a new subprogram that is either distinct or not, depending on
-/// `isDistinct`.
-template <class... Ts>
-static llvm::DISubprogram *getSubprogram(bool isDistinct, Ts &&...args) {
-  if (isDistinct)
-    return llvm::DISubprogram::getDistinct(std::forward<Ts>(args)...);
-  return llvm::DISubprogram::get(std::forward<Ts>(args)...);
+llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
+  return cast<llvm::DIScope>(translate(DINodeAttr(attr)));
 }
 
 llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
   bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
                                         LLVM::DISubprogramFlags::Definition);
-  return getSubprogram(
+  return getDistinctOrUnique<llvm::DISubprogram>(
       isDefinition, llvmCtx, translate(attr.getScope()),
       getMDStringOrNull(attr.getName()),
       getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),
@@ -207,6 +216,15 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       translate(attr.getCompileUnit()));
+}
+
+llvm::DIModule *DebugTranslation::translateImpl(DIModuleAttr attr) {
+  return llvm::DIModule::get(
+      llvmCtx, translate(attr.getFile()), translate(attr.getScope()),
+      getMDStringOrNull(attr.getName()),
+      getMDStringOrNull(attr.getConfigMacros()),
+      getMDStringOrNull(attr.getIncludePath()),
+      getMDStringOrNull(attr.getApinotes()), attr.getLine(), attr.getIsDecl());
 }
 
 llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
@@ -253,8 +271,9 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
-                DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+                DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+                DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
                 DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
                 DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
@@ -274,12 +293,32 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
 }
 
+llvm::DIExpression *
+DebugTranslation::translateExpression(LLVM::DIExpressionAttr attr) {
+  SmallVector<uint64_t, 1> ops;
+  if (attr) {
+    // Append operations their operands to the list.
+    for (const DIExpressionElemAttr &op : attr.getOperations()) {
+      ops.push_back(op.getOpcode());
+      append_range(ops, op.getArguments());
+    }
+  }
+  return llvm::DIExpression::get(llvmCtx, ops);
+}
+
+llvm::DIGlobalVariableExpression *
+DebugTranslation::translateGlobalVariableExpression(
+    LLVM::DIGlobalVariableExpressionAttr attr) {
+  return llvm::DIGlobalVariableExpression::get(
+      llvmCtx, translate(attr.getVar()), translateExpression(attr.getExpr()));
+}
+
 /// Translate the given location to an llvm DebugLoc.
 llvm::DILocation *DebugTranslation::translateLoc(Location loc,
                                                  llvm::DILocalScope *scope,
                                                  llvm::DILocation *inlinedAt) {
   // LLVM doesn't have a representation for unknown.
-  if (!scope || isa<UnknownLoc>(loc))
+  if (isa<UnknownLoc>(loc))
     return nullptr;
 
   // Check for a cached instance.
@@ -291,20 +330,18 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
-    llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
+    llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
+    // Fallback: Ignore callee if it has no debug scope.
+    if (!llvmLoc)
+      llvmLoc = callerLoc;
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
-    llvm::DILocalScope *locationScope = scope;
-    // Only construct a new DIFile when no local scope is present. This
-    // prioritizes existing DI information when it's present.
-    if (!locationScope) {
-      auto *file = translateFile(fileLoc.getFilename());
-      locationScope = llvm::DILexicalBlockFile::get(llvmCtx, scope, file,
-                                                    /*Discriminator=*/0);
-    }
-    llvmLoc = llvm::DILocation::get(llvmCtx, fileLoc.getLine(),
-                                    fileLoc.getColumn(), locationScope,
-                                    const_cast<llvm::DILocation *>(inlinedAt));
+    // A scope of a DILocation cannot be null.
+    if (!scope)
+      return nullptr;
+    llvmLoc =
+        llvm::DILocation::get(llvmCtx, fileLoc.getLine(), fileLoc.getColumn(),
+                              scope, const_cast<llvm::DILocation *>(inlinedAt));
 
   } else if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
     ArrayRef<Location> locations = fusedLoc.getLocations();

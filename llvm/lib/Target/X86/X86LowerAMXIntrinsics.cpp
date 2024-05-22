@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -185,9 +184,7 @@ Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
   Value *CurrentColZExt = B.CreateZExt(CurrentCol, Stride->getType());
   Value *Offset =
       B.CreateAdd(B.CreateMul(CurrentRowZExt, Stride), CurrentColZExt);
-  unsigned AS = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  Value *EltBasePtr = B.CreatePointerCast(Ptr, PointerType::get(EltTy, AS));
-  Value *EltPtr = B.CreateGEP(EltTy, EltBasePtr, Offset);
+  Value *EltPtr = B.CreateGEP(EltTy, Ptr, Offset);
   Value *Idx = B.CreateAdd(B.CreateMul(CurrentRow, B.getInt16(16)), CurrentCol);
   if (IsTileLoad) {
     // tileload.scalarize.rows.header:
@@ -495,7 +492,7 @@ X86LowerAMXIntrinsics::lowerTileDP(Instruction *TileDP) {
                                             KDWord, C, A, B);
   // we cannot assume there always be bitcast after tiledpbssd. So we need to
   // insert one bitcast as required
-  Builder.SetInsertPoint(End->getFirstNonPHI());
+  Builder.SetInsertPoint(End, End->getFirstNonPHIIt());
   Value *ResAMX =
       Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
   // Delete TileDP intrinsic and do some clean-up.
@@ -539,7 +536,7 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
   if (IsTileLoad) {
     // we cannot assume there always be bitcast after tileload. So we need to
     // insert one bitcast as required
-    Builder.SetInsertPoint(End->getFirstNonPHI());
+    Builder.SetInsertPoint(End, End->getFirstNonPHIIt());
     Value *ResAMX =
         Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
     // Delete tileloadd6 intrinsic and do some clean-up
@@ -646,7 +643,7 @@ public:
       return false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
-        TM->getOptLevel() != CodeGenOpt::None)
+        TM->getOptLevel() != CodeGenOptLevel::None)
       return false;
 
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();

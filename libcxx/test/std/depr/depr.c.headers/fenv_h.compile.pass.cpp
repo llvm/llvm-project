@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Picolibc does not define some of the floating point environment macros for
+// arm platforms without hardware floating point support.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 // <fenv.h>
 
 #include <fenv.h>
@@ -57,7 +61,7 @@
 #endif
 
 fenv_t fenv = {};
-fexcept_t fex = 0;
+fexcept_t fex = fexcept_t();
 ASSERT_SAME_TYPE(int, decltype(::feclearexcept(0)));
 ASSERT_SAME_TYPE(int, decltype(::fegetexceptflag(&fex, 0)));
 ASSERT_SAME_TYPE(int, decltype(::feraiseexcept(0)));

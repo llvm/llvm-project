@@ -5,11 +5,11 @@
 define <4 x i32> @test_urem_odd_25(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_25:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    movk w8, #49807, lsl #16
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
 ; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    mov w8, #28835
+; CHECK-NEXT:    mov w8, #28835 // =0x70a3
 ; CHECK-NEXT:    movk w8, #2621, lsl #16
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v1.4s, w8
@@ -26,19 +26,18 @@ define <4 x i32> @test_urem_odd_25(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_even_100(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_100:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
+; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    movk w8, #49807, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    mov w8, #23592
+; CHECK-NEXT:    mov w8, #23592 // =0x5c28
 ; CHECK-NEXT:    movk w8, #655, lsl #16
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    dup v2.4s, w8
 ; CHECK-NEXT:    shl v1.4s, v0.4s, #30
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v1.4s, v0.4s, #2
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 100, i32 100, i32 100, i32 100>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -72,16 +71,15 @@ define <4 x i32> @test_urem_even_neg100(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_neg100:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    movi v3.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    adrp x8, .LCPI3_1
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
 ; CHECK-NEXT:    shl v1.4s, v0.4s, #30
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v1.4s, v0.4s, #2
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI3_1]
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 -100, i32 100, i32 -100, i32 100>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -96,7 +94,7 @@ define <4 x i32> @test_urem_even_neg100(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_undef1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #34079
+; CHECK-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
@@ -118,7 +116,7 @@ define <4 x i32> @test_urem_odd_undef1(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_undef1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #34079
+; CHECK-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
@@ -167,10 +165,10 @@ define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_pow2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #15
-; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -182,8 +180,8 @@ define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_int_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    bic v0.4s, #128, lsl #24
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cstring>
 #include <memory>
+#include <shared_mutex>
 
 #include <cerrno>
 #include <cinttypes>
@@ -155,6 +156,8 @@ size_t ThreadedCommunication::Read(void *dst, size_t dst_len,
 }
 
 bool ThreadedCommunication::StartReadThread(Status *error_ptr) {
+  std::lock_guard<std::mutex> lock(m_read_thread_mutex);
+
   if (error_ptr)
     error_ptr->Clear();
 
@@ -189,6 +192,8 @@ bool ThreadedCommunication::StartReadThread(Status *error_ptr) {
 }
 
 bool ThreadedCommunication::StopReadThread(Status *error_ptr) {
+  std::lock_guard<std::mutex> lock(m_read_thread_mutex);
+
   if (!m_read_thread.IsJoinable())
     return true;
 
@@ -199,13 +204,13 @@ bool ThreadedCommunication::StopReadThread(Status *error_ptr) {
 
   BroadcastEvent(eBroadcastBitReadThreadShouldExit, nullptr);
 
-  // error = m_read_thread.Cancel();
-
   Status error = m_read_thread.Join(nullptr);
   return error.Success();
 }
 
 bool ThreadedCommunication::JoinReadThread(Status *error_ptr) {
+  std::lock_guard<std::mutex> lock(m_read_thread_mutex);
+
   if (!m_read_thread.IsJoinable())
     return true;
 

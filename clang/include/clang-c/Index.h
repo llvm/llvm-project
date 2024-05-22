@@ -2136,7 +2136,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPErrorDirective = 305,
 
-  CXCursor_LastStmt = CXCursor_OMPErrorDirective,
+  /** OpenMP scope directive.
+   */
+  CXCursor_OMPScopeDirective = 306,
+
+  CXCursor_LastStmt = CXCursor_OMPScopeDirective,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2976,6 +2980,7 @@ enum CXCallingConv {
   CXCallingConv_AArch64VectorCall = 16,
   CXCallingConv_SwiftAsync = 17,
   CXCallingConv_AArch64SVEPCS = 18,
+  CXCallingConv_M68kRTD = 19,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

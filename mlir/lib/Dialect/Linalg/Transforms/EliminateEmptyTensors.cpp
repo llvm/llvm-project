@@ -22,17 +22,17 @@ using namespace mlir::linalg;
 /// Get an output operand that matches the given input operand and can be used
 /// to eliminate a tensor.empty op.
 static OpOperand *getUnusedOutOperand(LinalgOp op, OpOperand *in) {
-  for (OpOperand *operand : op.getDpsInitOperands()) {
+  for (OpOperand &operand : op.getDpsInitsMutable()) {
     // Operand must be unused.
-    if (op.payloadUsesValueFromOperand(operand))
+    if (op.payloadUsesValueFromOperand(&operand))
       continue;
     // Types must match.
-    if (operand->get().getType() != in->get().getType())
+    if (operand.get().getType() != in->get().getType())
       continue;
     // Indexing maps must match.
-    if (op.getMatchingIndexingMap(operand) != op.getMatchingIndexingMap(in))
+    if (op.getMatchingIndexingMap(&operand) != op.getMatchingIndexingMap(in))
       continue;
-    return operand;
+    return &operand;
   }
   return nullptr;
 }

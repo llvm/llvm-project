@@ -2,7 +2,7 @@
 
 // CHECK: @global = global target("spirv.DeviceEvent") zeroinitializer
 llvm.mlir.global external @global() {addr_space = 0 : i32} : !llvm.target<"spirv.DeviceEvent"> {
-  %0 = llvm.mlir.constant(0 : i64) : !llvm.target<"spirv.DeviceEvent">
+  %0 = llvm.mlir.zero : !llvm.target<"spirv.DeviceEvent">
   llvm.return %0 : !llvm.target<"spirv.DeviceEvent">
 }
 
@@ -22,7 +22,7 @@ llvm.func @func2() -> !llvm.target<"spirv.Event"> {
 // CHECK-NEXT:    %1 = freeze target("spirv.DeviceEvent") zeroinitializer
 // CHECK-NEXT:    ret void
 llvm.func @func3() {
-  %0 = llvm.mlir.constant(0 : i64) : !llvm.target<"spirv.DeviceEvent">
+  %0 = llvm.mlir.zero : !llvm.target<"spirv.DeviceEvent">
   %1 = llvm.freeze %0 : !llvm.target<"spirv.DeviceEvent">
   llvm.return
 }

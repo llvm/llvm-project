@@ -120,22 +120,6 @@
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC-LEON %s
 
-// RUN: %clang -mcpu=myriad2 --target=sparc \
-// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=SPARC-LEON %s
-
-// RUN: %clang -mcpu=myriad2.1 --target=sparc \
-// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=SPARC-LEON %s
-
-// RUN: %clang -mcpu=myriad2.2 --target=sparc \
-// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=SPARC-LEON %s
-
-// RUN: %clang -mcpu=myriad2.3 --target=sparc \
-// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=SPARC-LEON %s
-
 // RUN: %clang -mcpu=leon2 --target=sparc \
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC-V8 %s

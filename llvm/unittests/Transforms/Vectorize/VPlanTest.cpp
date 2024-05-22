@@ -706,7 +706,7 @@ TEST(VPBasicBlockTest, print) {
     VPSlotTracker SlotTracker;
     I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("EMIT br <badref> <badref>", I3Dump);
+    EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
   }
 
   VPlan Plan(VPBB0, TC, VPBB1);
@@ -715,7 +715,7 @@ TEST(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -728,13 +728,13 @@ compound=true
     "bb1:\l" +
     "  EMIT vp\<%2\> = add\l" +
     "  EMIT vp\<%3\> = sub vp\<%2\>\l" +
-    "  EMIT br vp\<%2\> vp\<%3\>\l" +
+    "  EMIT br vp\<%2\>, vp\<%3\>\l" +
     "Successor(s): bb2\l"
   ]
   N1 -> N2 [ label=""]
   N2 [label =
     "bb2:\l" +
-    "  EMIT vp\<%5\> = mul vp\<%3\> vp\<%2\>\l" +
+    "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
     "  EMIT ret vp\<%5\>\l" +
     "No successors\l"
   ]
@@ -745,7 +745,7 @@ compound=true
   const char *ExpectedBlock1Str = R"(bb1:
   EMIT vp<%2> = add
   EMIT vp<%3> = sub vp<%2>
-  EMIT br vp<%2> vp<%3>
+  EMIT br vp<%2>, vp<%3>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -755,7 +755,7 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%5> = mul vp<%3> vp<%2>
+  EMIT vp<%5> = mul vp<%3>, vp<%2>
   EMIT ret vp<%5>
 No successors
 )";
@@ -770,7 +770,7 @@ No successors
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("EMIT br vp<%2> vp<%3>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
   }
 
   {
@@ -778,7 +778,7 @@ No successors
     raw_string_ostream OS(I4Dump);
     OS << *I4;
     OS.flush();
-    EXPECT_EQ("EMIT vp<%5> = mul vp<%3> vp<%2>", I4Dump);
+    EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
   }
 }
 
@@ -1118,8 +1118,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue ChainOp;
     VPValue VecOp;
     VPValue CondOp;
-    VPReductionRecipe Recipe(nullptr, nullptr, &ChainOp, &CondOp, &VecOp,
-                             nullptr);
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                             &VecOp);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1286,8 +1286,8 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   VPValue ChainOp;
   VPValue VecOp;
   VPValue CondOp;
-  VPReductionRecipe Recipe(nullptr, nullptr, &ChainOp, &CondOp, &VecOp,
-                           nullptr);
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                           &VecOp);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

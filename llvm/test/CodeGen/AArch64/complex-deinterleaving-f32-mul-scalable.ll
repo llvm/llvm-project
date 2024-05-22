@@ -7,8 +7,8 @@ target triple = "aarch64"
 define <vscale x 4 x float> @complex_mul_v4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: complex_mul_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
 ; CHECK-NEXT:    fcmla z2.s, p0/m, z1.s, z0.s, #0
 ; CHECK-NEXT:    fcmla z2.s, p0/m, z1.s, z0.s, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
@@ -34,15 +34,15 @@ entry:
 define <vscale x 8 x float> @complex_mul_v8f32(<vscale x 8 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: complex_mul_v8f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z4.s, #0 // =0x0
 ; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #0
 ; CHECK-NEXT:    fcmla z5.s, p0/m, z2.s, z0.s, #0
-; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #90
+; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #0
 ; CHECK-NEXT:    fcmla z5.s, p0/m, z2.s, z0.s, #90
-; CHECK-NEXT:    mov z1.d, z4.d
+; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #90
 ; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.experimental.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %a)
@@ -65,8 +65,8 @@ entry:
 define <vscale x 16 x float> @complex_mul_v16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b) {
 ; CHECK-LABEL: complex_mul_v16f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z24.s, #0 // =0x0
 ; CHECK-NEXT:    mov z25.d, z24.d
 ; CHECK-NEXT:    mov z26.d, z24.d
 ; CHECK-NEXT:    mov z27.d, z24.d

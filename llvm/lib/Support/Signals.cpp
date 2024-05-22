@@ -72,6 +72,7 @@ void llvm::initSignalsOptions() {
 
 constexpr char DisableSymbolizationEnv[] = "LLVM_DISABLE_SYMBOLIZATION";
 constexpr char LLVMSymbolizerPathEnv[] = "LLVM_SYMBOLIZER_PATH";
+constexpr char EnableSymbolizerMarkupEnv[] = "LLVM_ENABLE_SYMBOLIZER_MARKUP";
 
 // Callbacks to run in signal handler must be lock-free because a signal handler
 // could be running as we add new callbacks. We don't add unbounded numbers of
@@ -237,18 +238,37 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
       if (FunctionName.empty())
         break;
       PrintLineHeader();
-      if (!FunctionName.startswith("??"))
+      if (!FunctionName.starts_with("??"))
         OS << FunctionName << ' ';
       if (CurLine == Lines.end())
         return false;
       StringRef FileLineInfo = *CurLine++;
-      if (!FileLineInfo.startswith("??"))
+      if (!FileLineInfo.starts_with("??"))
         OS << FileLineInfo;
       else
         OS << "(" << Modules[i] << '+' << format_hex(Offsets[i], 0) << ")";
       OS << "\n";
     }
   }
+  return true;
+}
+
+static bool printMarkupContext(raw_ostream &OS, const char *MainExecutableName);
+
+LLVM_ATTRIBUTE_USED
+static bool printMarkupStackTrace(StringRef Argv0, void **StackTrace, int Depth,
+                                  raw_ostream &OS) {
+  const char *Env = getenv(EnableSymbolizerMarkupEnv);
+  if (!Env || !*Env)
+    return false;
+
+  std::string MainExecutableName =
+      sys::fs::exists(Argv0) ? std::string(Argv0)
+                             : sys::fs::getMainExecutable(nullptr, nullptr);
+  if (!printMarkupContext(OS, MainExecutableName.c_str()))
+    return false;
+  for (int I = 0; I < Depth; I++)
+    OS << format("{{{bt:%d:%#016x}}}\n", I, StackTrace[I]);
   return true;
 }
 

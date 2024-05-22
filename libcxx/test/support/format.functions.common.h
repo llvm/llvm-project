@@ -12,8 +12,9 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cstddef>
 #include <charconv>
+#include <cstddef>
+#include <cstdlib>
 #include <format>
 #include <ranges>
 #include <string>
@@ -76,12 +77,12 @@ struct std::formatter<status, CharT> {
     case CharT('}'):
       return begin;
     default:
-      throw_format_error("The format-spec type has a type not supported for a status argument");
+      throw_format_error("The type option contains an invalid value for a status formatting argument");
     }
 
     ++begin;
     if (begin != end && *begin != CharT('}'))
-      throw_format_error("The format-spec should consume the input or end with a '}'");
+      throw_format_error("The format specifier should consume the input or end with a '}'");
 
     return begin;
   }

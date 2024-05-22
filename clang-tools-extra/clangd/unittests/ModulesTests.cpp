@@ -8,6 +8,7 @@
 
 #include "TestFS.h"
 #include "TestTU.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -109,6 +110,34 @@ TEST(Modules, UnknownFormat) {
   // Test that we do not crash.
   TU.build();
 }
+
+// Test that we can build and use a preamble for a module unit.
+TEST(Modules, ModulePreamble) {
+  TestTU TU = TestTU::withCode(R"cpp(
+    module;
+    #define PREAMBLE_MACRO 1
+    export module foo;
+    #define MODULE_MACRO 2
+    module :private;
+    #define PRIVATE_MACRO 3
+  )cpp");
+  TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("--precompile");
+
+  auto AST = TU.build();
+  auto &SM = AST.getSourceManager();
+  auto GetMacroFile = [&](llvm::StringRef Name) -> FileID {
+    if (auto *MI = AST.getPreprocessor().getMacroInfo(
+            &AST.getASTContext().Idents.get(Name)))
+      return SM.getFileID(MI->getDefinitionLoc());
+    return {};
+  };
+
+  EXPECT_EQ(GetMacroFile("PREAMBLE_MACRO"), SM.getPreambleFileID());
+  EXPECT_EQ(GetMacroFile("MODULE_MACRO"), SM.getMainFileID());
+  EXPECT_EQ(GetMacroFile("PRIVATE_MACRO"), SM.getMainFileID());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

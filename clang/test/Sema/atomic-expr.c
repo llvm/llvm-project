@@ -152,23 +152,23 @@ void func_17(void) {
   _Atomic(const int *) acip5 = cicp;
   _Atomic(const void *) acvip3 = cicp;
 
-#if __STDC_VERSION__ >= 202000L
+#if __STDC_VERSION__ >= 202311L
   // the left operand has an atomic ... version of the nullptr_t type and the
   // right operand is a null pointer constant or its type is nullptr_t
   typedef typeof(nullptr) nullptr_t;
   nullptr_t n;
   _Atomic nullptr_t cn2 = n;
   _Atomic nullptr_t cn3 = nullptr;
-#endif // __STDC_VERSION__ >= 202000L
+#endif // __STDC_VERSION__ >= 202311L
 
   // the left operand is an atomic ... pointer, and the right operand is a null
   // pointer constant or its type is nullptr_t;
   _Atomic(int *) aip2 = 0;
-#if __STDC_VERSION__ >= 202000L
+#if __STDC_VERSION__ >= 202311L
   _Atomic(int *) ip2 = n;
   _Atomic(int *) ip3 = nullptr;
   _Atomic(const int *) ip4 = nullptr;
-#endif // __STDC_VERSION__ >= 202000L
+#endif // __STDC_VERSION__ >= 202311L
 }
 
 // Ensure that the assignment constraints also work at file scope.
@@ -185,14 +185,14 @@ _Atomic(const int *) acip1 = cip; // expected-error {{initializer element is not
 const void *cvp = 0;
 _Atomic(const int *) acip2 = cvp; // expected-error {{initializer element is not a compile-time constant}}
 
-#if __STDC_VERSION__ >= 202000L
+#if __STDC_VERSION__ >= 202311L
   // the left operand has an atomic ... version of the nullptr_t type and the
   // right operand is a null pointer constant or its type is nullptr_t
   typedef typeof(nullptr) nullptr_t;
   nullptr_t n;
   _Atomic nullptr_t cn2 = n; // expected-error {{initializer element is not a compile-time constant}}
   _Atomic(int *) aip2 = nullptr;
-#endif // __STDC_VERSION__ >= 202000L
+#endif // __STDC_VERSION__ >= 202311L
 
 // FIXME: &ai is an address constant, so this should be accepted as an
 // initializer, but the bit-cast inserted due to the pointer conversion is
@@ -215,4 +215,10 @@ void func_18(void) {
   struct S { int a; } s;
   struct T { int a; };
   (void)(_Atomic struct T)s; // expected-error {{used type 'struct T' where arithmetic or pointer type is required}}
+}
+
+// Test if we can handle an _Atomic qualified integer in a switch statement.
+void func_19(void) {
+  _Atomic int a = 0;
+  switch (a) { }
 }

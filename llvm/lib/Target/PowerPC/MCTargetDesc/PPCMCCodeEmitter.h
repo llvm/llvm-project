@@ -121,6 +121,10 @@ public:
 
   // Is this instruction a prefixed instruction.
   bool isPrefixedInstruction(const MCInst &MI) const;
+
+  /// Check if Opcode corresponds to a call instruction that should be marked
+  /// with the NOTOC relocation.
+  bool isNoTOCCallInstr(const MCInst &MI) const;
 };
 
 } // namespace llvm

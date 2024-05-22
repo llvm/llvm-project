@@ -178,7 +178,7 @@ defined inside macros, like this example demonstrates:
 Counter:
 ^^^^^^^^
 
-A coverage mapping counter can represents a reference to the profile
+A coverage mapping counter can represent a reference to the profile
 instrumentation counter. The execution count for a region with such counter
 is determined by looking up the value of the corresponding profile
 instrumentation counter.
@@ -318,7 +318,7 @@ In version 2, the function record for *foo* was defined as follows:
 Coverage Mapping Header:
 ------------------------
 
-The coverage mapping header has the following fields:
+As shown above, the coverage mapping header has the following fields:
 
 * The number of function records affixed to the coverage header. Always 0, but present for backwards compatibility.
 
@@ -326,7 +326,7 @@ The coverage mapping header has the following fields:
 
 * The length of the string in the third field of *__llvm_coverage_mapping* that contains any encoded coverage mapping data affixed to the coverage header. Always 0, but present for backwards compatibility.
 
-* The format version. The current version is 4 (encoded as a 3).
+* The format version. The current version is 6 (encoded as a 5).
 
 .. _function records:
 
@@ -610,3 +610,70 @@ The source range record contains the following fields:
 * *columnEnd*: The ending column of the mapping region. If the high bit is set,
   the current mapping region is a gap area. A count for a gap area is only used
   as the line execution count if there are no other regions on a line.
+
+Testing Format
+==============
+
+.. warning::
+  This section is for the LLVM developers who are working on ``llvm-cov`` only.
+
+``llvm-cov`` uses a special file format (called ``.covmapping`` below) for
+testing purposes. This format is private and should have no use for general
+users. As a developer, you can get such files by the ``convert-for-testing``
+subcommand of ``llvm-cov``.
+
+The structure of the ``.covmapping`` files follows:
+
+``[magicNumber : u64, version : u64, profileNames, coverageMapping, coverageRecords]``
+
+Magic Number and Version
+------------------------
+
+The magic is ``0x6d766f636d766c6c``, which is the ASCII string
+``llvmcovm`` in little-endian.
+
+There are two versions for now:
+
+- Version1, encoded as ``0x6174616474736574`` (ASCII string ``testdata``).
+- Version2, encoded as 1.
+
+The only difference between Version1 and Version2 is in the encoding of the
+``coverageMapping`` fields, which is explained later.
+
+Profile Names
+-------------
+
+``profileNames``, ``coverageMapping`` and ``coverageRecords`` are 3 sections
+extracted from the original binary file.
+
+``profileNames`` encodes the size, address and the raw data of the section:
+
+``[profileNamesSize : LEB128, profileNamesAddr : LEB128, profileNamesData : bytes]``
+
+Coverage Mapping
+----------------
+
+This field is padded with zero bytes to make it 8-byte aligned.
+
+``coverageMapping`` contains the records of the source files. In version 1,
+only one record is stored:
+
+``[padding : bytes, coverageMappingData : bytes]``
+
+Version 2 relaxes this restriction by encoding the size of
+``coverageMappingData`` as a LEB128 number before the data:
+
+``[coverageMappingSize : LEB128, padding : bytes, coverageMappingData : bytes]``
+
+The current version is 2.
+
+Coverage Records
+----------------
+
+This field is padded with zero bytes to make it 8-byte aligned.
+
+``coverageRecords`` is encoded as:
+
+``[padding : bytes, coverageRecordsData : bytes]``
+
+The rest data in the file is considered as the ``coverageRecordsData``.

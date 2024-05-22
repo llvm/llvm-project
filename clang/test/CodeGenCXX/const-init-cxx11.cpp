@@ -88,7 +88,7 @@ namespace BaseClass {
 
   struct E {};
   struct Test2 : X<E,0>, X<E,1>, X<E,2>, X<E,3> {};
-  // CHECK: @_ZN9BaseClass2t2E ={{.*}} constant {{.*}} undef
+  // CHECK: @_ZN9BaseClass2t2E ={{.*}} constant {{.*}} zeroinitializer, align 1
   extern constexpr Test2 t2 = Test2();
 
   struct __attribute((packed)) PackedD { double y = 2; };
@@ -424,6 +424,8 @@ namespace DR2126 {
 // CHECK: @_ZN33ClassTemplateWithStaticDataMember3useE ={{.*}} constant ptr @_ZGRN33ClassTemplateWithStaticDataMember1SIvE1aE_
 // CHECK: @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_ = linkonce_odr hidden constant i32 5, comdat
 // CHECK: @_ZN39ClassTemplateWithHiddenStaticDataMember3useE ={{.*}} constant ptr @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_
+// CHECK: @.str.[[STR:[0-9]+]] ={{.*}} constant [9 x i8] c"12345678\00"
+// CHECK-NEXT: @e = global %struct.PR69979 { ptr @.str.[[STR]] }
 // CHECK: @_ZGRZN20InlineStaticConstRef3funEvE1i_ = linkonce_odr constant i32 10, comdat
 // CHECK20: @_ZZN12LocalVarInit4dtorEvE1a = internal constant {{.*}} i32 103
 
@@ -631,6 +633,10 @@ struct X {
 // CHECK: @_ZGRN34ClassWithStaticConstexprDataMember1X1pE_
 const char *f() { return &X::p; }
 }
+
+struct PR69979 {
+  const char (&d)[9];
+} e {"12345678"};
 
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,
 // not just declared.

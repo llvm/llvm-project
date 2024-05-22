@@ -31,6 +31,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <limits>
@@ -38,6 +39,7 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
 
@@ -261,6 +263,19 @@ void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   } else {
     error("/functionpadmin: invalid argument for this machine: " + arg);
   }
+}
+
+// Parses /dependentloadflag option argument.
+void LinkerDriver::parseDependentLoadFlags(llvm::opt::Arg *a) {
+  StringRef arg = a->getNumValues() ? a->getValue() : "";
+  if (!arg.empty()) {
+    if (arg.getAsInteger(0, ctx.config.dependentLoadFlags))
+      error("/dependentloadflag: invalid argument: " + arg);
+    return;
+  }
+  // MSVC linker reports error "no argument specified", although MSDN describes
+  // argument as optional.
+  error("/dependentloadflag: no argument specified");
 }
 
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
@@ -660,6 +675,7 @@ static StringRef exportSourceName(ExportSource s) {
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void LinkerDriver::fixupExports() {
+  llvm::TimeTraceScope timeScope("Fixup exports");
   // Symbol ordinals must be unique.
   std::set<uint16_t> ords;
   for (Export &e : ctx.config.exports) {
@@ -818,9 +834,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
 // Create table mapping all options defined in Options.td
 static constexpr llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };

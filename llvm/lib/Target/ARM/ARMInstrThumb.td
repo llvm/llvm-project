@@ -1609,7 +1609,7 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
 // relocations.
 // This is a single pseudo instruction to make it re-materializable.
 // FIXME: Remove this when we can do generalized remat.
-let isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
+let Defs = [CPSR], isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
 def tMOVi32imm : PseudoInst<(outs rGPR:$dst), (ins i32imm:$src), NoItinerary,
                             [(set rGPR:$dst, (i32 imm:$src))]>,
                             Requires<[IsThumb1Only, GenExecuteOnly, DontUseMovt]>;
@@ -1713,17 +1713,17 @@ def : T1Pat<(atomic_load_32 t_addrmode_is4:$src),
              (tLDRi t_addrmode_is4:$src)>;
 def : T1Pat<(atomic_load_32 t_addrmode_rr:$src),
              (tLDRr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_store_8 t_addrmode_is1:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_8 tGPR:$val, t_addrmode_is1:$ptr),
              (tSTRBi tGPR:$val, t_addrmode_is1:$ptr)>;
-def : T1Pat<(atomic_store_8 t_addrmode_rr:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_8 tGPR:$val, t_addrmode_rr:$ptr),
              (tSTRBr tGPR:$val, t_addrmode_rr:$ptr)>;
-def : T1Pat<(atomic_store_16 t_addrmode_is2:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_16 tGPR:$val, t_addrmode_is2:$ptr),
              (tSTRHi tGPR:$val, t_addrmode_is2:$ptr)>;
-def : T1Pat<(atomic_store_16 t_addrmode_rr:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_16 tGPR:$val, t_addrmode_rr:$ptr),
              (tSTRHr tGPR:$val, t_addrmode_rr:$ptr)>;
-def : T1Pat<(atomic_store_32 t_addrmode_is4:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_32 tGPR:$val, t_addrmode_is4:$ptr),
              (tSTRi tGPR:$val, t_addrmode_is4:$ptr)>;
-def : T1Pat<(atomic_store_32 t_addrmode_rr:$ptr, tGPR:$val),
+def : T1Pat<(atomic_store_32 tGPR:$val, t_addrmode_rr:$ptr),
              (tSTRr tGPR:$val, t_addrmode_rr:$ptr)>;
 
 // Large immediate handling.

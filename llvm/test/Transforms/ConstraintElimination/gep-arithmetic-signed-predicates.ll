@@ -11,7 +11,6 @@ define i1 @gep_constant_positive_index(ptr %dst, ptr %lower, ptr %upper) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[PRE_DST_LOWER]], [[PRE_DST_UPPER]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_DST_LOWER:%.*]] = icmp sge ptr [[DST]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_UPPER:%.*]] = icmp slt ptr [[DST]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[CMP_DST_UPPER]]
 ; CHECK-NEXT:    [[DST_ADD_3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
@@ -20,7 +19,6 @@ define i1 @gep_constant_positive_index(ptr %dst, ptr %lower, ptr %upper) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_DST_ADD_3_LOWER]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[CMP_DST_ADD_3_UPPER]]
 ; CHECK-NEXT:    [[CMP_DST_ADD_4_LOWER:%.*]] = icmp sge ptr [[DST_ADD_4]], [[LOWER]]
-; CHECK-NEXT:    [[CMP_DST_ADD_4_UPPER:%.*]] = icmp slt ptr [[DST_ADD_4]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[CMP_DST_ADD_4_LOWER]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[DST_ADD_5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 5
@@ -70,7 +68,6 @@ define i1 @gep_constant_negative_index(ptr %dst, ptr %lower, ptr %upper) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[PRE_DST_LOWER]], [[PRE_DST_UPPER]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_DST_LOWER:%.*]] = icmp sge ptr [[DST]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_UPPER:%.*]] = icmp slt ptr [[DST]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[CMP_DST_UPPER]]
 ; CHECK-NEXT:    [[DST_SUB_3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 -3
@@ -79,7 +76,6 @@ define i1 @gep_constant_negative_index(ptr %dst, ptr %lower, ptr %upper) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_DST_SUB_3_LOWER]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[CMP_DST_SUB_3_UPPER]]
 ; CHECK-NEXT:    [[CMP_DST_SUB_4_LOWER:%.*]] = icmp sge ptr [[DST_SUB_4]], [[LOWER]]
-; CHECK-NEXT:    [[CMP_DST_SUB_4_UPPER:%.*]] = icmp slt ptr [[DST_SUB_4]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[CMP_DST_SUB_4_LOWER]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[DST_SUB_5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 -5
@@ -280,7 +276,6 @@ define i4 @ptr_N_and_step_signed_positive_explicit_check_constant_step(ptr %src,
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_SGE_0:%.*]] = icmp sge i16 [[STEP]], 0
 ; CHECK-NEXT:    [[STEP_SLT_N:%.*]] = icmp slt i16 [[STEP]], [[N]]
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i1 true, [[STEP_SLT_N]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]

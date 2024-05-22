@@ -11,7 +11,7 @@ m(m)
 
 
 
-// rdar://7466570 PR4438, PR5163
+// PR4438, PR5163
 
 // We should get '42' in the argument list for gcc compatibility.
 #define A 1

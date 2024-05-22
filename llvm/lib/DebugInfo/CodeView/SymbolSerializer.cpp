@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -20,8 +19,8 @@ using namespace llvm::codeview;
 
 SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator,
                                    CodeViewContainer Container)
-    : Storage(Allocator), Stream(RecordBuffer, support::little), Writer(Stream),
-      Mapping(Writer, Container) {}
+    : Storage(Allocator), Stream(RecordBuffer, llvm::endianness::little),
+      Writer(Stream), Mapping(Writer, Container) {}
 
 Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {
   assert(!CurrentSymbol && "Already in a symbol mapping!");

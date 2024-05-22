@@ -8,24 +8,24 @@ declare void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8>, <vscale x 
 define fastcc i8 @allocno_reload_assign() {
 ; CHECK-LABEL: allocno_reload_assign:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.b, #0 // =0x0
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uunpklo z4.h, z3.b
-; CHECK-NEXT:    uunpkhi z7.h, z3.b
-; CHECK-NEXT:    uunpklo z2.s, z4.h
-; CHECK-NEXT:    uunpkhi z4.s, z4.h
-; CHECK-NEXT:    uunpklo z6.s, z7.h
-; CHECK-NEXT:    uunpkhi z16.s, z7.h
+; CHECK-NEXT:    mov z16.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    uunpklo z1.d, z2.s
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    uunpklo z3.d, z4.s
-; CHECK-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEXT:    uunpklo z5.d, z6.s
-; CHECK-NEXT:    uunpkhi z6.d, z6.s
-; CHECK-NEXT:    uunpklo z7.d, z16.s
-; CHECK-NEXT:    uunpkhi z16.d, z16.s
+; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    uunpkhi z0.h, z0.b
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpkhi z3.s, z1.h
+; CHECK-NEXT:    uunpklo z5.s, z0.h
+; CHECK-NEXT:    uunpkhi z7.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpklo z4.d, z5.s
+; CHECK-NEXT:    uunpkhi z5.d, z5.s
+; CHECK-NEXT:    uunpklo z6.d, z7.s
+; CHECK-NEXT:    uunpkhi z7.d, z7.s
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fmov d17, xzr
 ; CHECK-NEXT:    cmpeq p2.d, p0/z, z17.d, #0
@@ -43,22 +43,22 @@ define fastcc i8 @allocno_reload_assign() {
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpklo p5.h, p4.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    st1b { z1.d }, p5, [z0.d]
-; CHECK-NEXT:    punpklo p5.h, p2.b
-; CHECK-NEXT:    st1b { z2.d }, p4, [z0.d]
+; CHECK-NEXT:    st1b { z0.d }, p5, [z16.d]
+; CHECK-NEXT:    st1b { z1.d }, p4, [z16.d]
 ; CHECK-NEXT:    punpklo p4.h, p3.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
-; CHECK-NEXT:    st1b { z3.d }, p4, [z0.d]
-; CHECK-NEXT:    punpklo p4.h, p5.b
-; CHECK-NEXT:    st1b { z4.d }, p3, [z0.d]
-; CHECK-NEXT:    punpkhi p3.h, p5.b
-; CHECK-NEXT:    st1b { z5.d }, p4, [z0.d]
+; CHECK-NEXT:    st1b { z2.d }, p4, [z16.d]
 ; CHECK-NEXT:    punpklo p4.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    st1b { z6.d }, p3, [z0.d]
-; CHECK-NEXT:    st1b { z7.d }, p4, [z0.d]
-; CHECK-NEXT:    st1b { z16.d }, p2, [z0.d]
+; CHECK-NEXT:    st1b { z3.d }, p3, [z16.d]
+; CHECK-NEXT:    punpklo p3.h, p4.b
+; CHECK-NEXT:    st1b { z4.d }, p3, [z16.d]
+; CHECK-NEXT:    punpkhi p3.h, p4.b
+; CHECK-NEXT:    st1b { z5.d }, p3, [z16.d]
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    st1b { z6.d }, p3, [z16.d]
+; CHECK-NEXT:    st1b { z7.d }, p2, [z16.d]
 ; CHECK-NEXT:    b .LBB0_1
   br label %1
 

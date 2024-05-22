@@ -117,11 +117,10 @@ llvm.mlir.global internal protected unnamed_addr @protected(42 : i32) : i32
 
 // -----
 
-// expected-error @+1 {{expects type to be a valid element type for an LLVM pointer}}
+// expected-error @+1 {{expects type to be a valid element type for an LLVM global}}
 llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 
 // -----
-
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
 "llvm.mlir.global"() ({}) {sym_name = "foo", global_type = i64, value = 42 : i64, addr_space = -1 : i32, linkage = #llvm.linkage<private>} : () -> ()
 
@@ -246,10 +245,42 @@ llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
 // CHECK: llvm.mlir.global external @target_ext() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
 llvm.mlir.global @target_ext() : !llvm.target<"spirv.Image", i32, 0>
 
-// CHECK: llvm.mlir.global external @target_ext_init(0 : i64) {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
-llvm.mlir.global @target_ext_init(0 : i64) : !llvm.target<"spirv.Image", i32, 0>
+// CHECK:       llvm.mlir.global external @target_ext_init() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:    %0 = llvm.mlir.zero : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:    llvm.return %0 : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:  }
+llvm.mlir.global @target_ext_init() : !llvm.target<"spirv.Image", i32, 0> {
+  %0 = llvm.mlir.zero : !llvm.target<"spirv.Image", i32, 0>
+  llvm.return %0 : !llvm.target<"spirv.Image", i32, 0>
+}
 
 // -----
 
-// expected-error @+1 {{expected zero value for global with target extension type}}
-llvm.mlir.global @target_fail(1 : i64) : !llvm.target<"spirv.Image", i32, 0>
+// expected-error @+1 {{global with target extension type can only be initialized with zero-initializer}}
+llvm.mlir.global @target_fail(0 : i64) : !llvm.target<"spirv.Image", i32, 0>
+
+// -----
+
+// CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
+// CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"not" in "existence">
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[CU]], name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #[[FILE]], line = 370, type = #[[TYPE]], isLocalToUnit = true, isDefined = true, alignInBits = 8>
+// CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[CU]], name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #[[FILE]], line = 371, type = #[[TYPE]], isLocalToUnit = true, isDefined = true, alignInBits = 8>
+// CHECK-DAG: #[[GVAR2:.*]] = #llvm.di_global_variable<scope = #[[CU]], name = "global_with_expr_3", linkageName = "global_with_expr_3", file = #[[FILE]], line = 372, type = #[[TYPE]], isLocalToUnit = true, isDefined = true, alignInBits = 8>
+// CHECK-DAG: #[[GVAR3:.*]] = #llvm.di_global_variable<scope = #[[CU]], name = "global_with_expr_4", linkageName = "global_with_expr_4", file = #[[FILE]], line = 373, type = #[[TYPE]], isLocalToUnit = true, isDefined = true, alignInBits = 8>
+// CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <>>
+// CHECK-DAG: #[[EXPR1:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR1]], expr = <[DW_OP_push_object_address, DW_OP_deref]>>
+// CHECK-DAG: #[[EXPR2:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR2]], expr = <[DW_OP_LLVM_arg(0), DW_OP_LLVM_arg(1), DW_OP_plus]>>
+// CHECK-DAG: #[[EXPR3:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR3]], expr = <[DW_OP_LLVM_convert(16, DW_ATE_signed)]>>
+// CHECK-DAG:   llvm.mlir.global external @global_with_expr1() {addr_space = 0 : i32, dbg_expr = #[[EXPR0]]} : i64
+// CHECK-DAG:   llvm.mlir.global external @global_with_expr2() {addr_space = 0 : i32, dbg_expr = #[[EXPR1]]} : i64
+// CHECK-DAG:   llvm.mlir.global external @global_with_expr3() {addr_space = 0 : i32, dbg_expr = #[[EXPR2]]} : i64
+// CHECK-DAG:   llvm.mlir.global external @global_with_expr4() {addr_space = 0 : i32, dbg_expr = #[[EXPR3]]} : i64
+
+#di_file = #llvm.di_file<"not" in "existence">
+#di_compile_unit = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
+llvm.mlir.global external @global_with_expr1() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file, line = 370, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>} : i64
+llvm.mlir.global external @global_with_expr2() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file, line = 371, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_push_object_address, DW_OP_deref]>>} : i64
+llvm.mlir.global external @global_with_expr3() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_3", linkageName = "global_with_expr_3", file = #di_file, line = 372, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_LLVM_arg(0), DW_OP_LLVM_arg(1), DW_OP_plus]>>} : i64
+llvm.mlir.global external @global_with_expr4() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_4", linkageName = "global_with_expr_4", file = #di_file, line = 373, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_LLVM_convert(16, DW_ATE_signed)]>>} : i64

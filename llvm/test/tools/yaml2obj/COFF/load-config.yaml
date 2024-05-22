@@ -1,0 +1,320 @@
+## Test all members of 64-bit load config.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj --coff-load-config %t | FileCheck %s --check-prefix=ALL
+
+# ALL:      Format: COFF-x86-64
+# ALL-NEXT: Arch: x86_64
+# ALL-NEXT: AddressSize: 64bit
+# ALL-NEXT: LoadConfig [
+# ALL-NEXT:   Size: 0x150
+# ALL-NEXT:   TimeDateStamp: 1970-01-01 00:00:01 (0x1)
+# ALL-NEXT:   MajorVersion: 0x2
+# ALL-NEXT:   MinorVersion: 0x3
+# ALL-NEXT:   GlobalFlagsClear: 0x4
+# ALL-NEXT:   GlobalFlagsSet: 0x5
+# ALL-NEXT:   CriticalSectionDefaultTimeout: 0x6
+# ALL-NEXT:   DeCommitFreeBlockThreshold: 0x7
+# ALL-NEXT:   DeCommitTotalFreeThreshold: 0x8
+# ALL-NEXT:   LockPrefixTable: 0x9
+# ALL-NEXT:   MaximumAllocationSize: 0x100000
+# ALL-NEXT:   VirtualMemoryThreshold: 0x2000000
+# ALL-NEXT:   ProcessHeapFlags: 0x2
+# ALL-NEXT:   ProcessAffinityMask: 0x1
+# ALL-NEXT:   CSDVersion: 0x3
+# ALL-NEXT:   DependentLoadFlags: 0x4
+# ALL-NEXT:   EditList: 0x5
+# ALL-NEXT:   SecurityCookie: 0x6
+# ALL-NEXT:   SEHandlerTable: 0x0
+# ALL-NEXT:   SEHandlerCount: 0
+# ALL-NEXT:   GuardCFCheckFunction: 0x9
+# ALL-NEXT:   GuardCFCheckDispatch: 0x1
+# ALL-NEXT:   GuardCFFunctionTable: 0x0
+# ALL-NEXT:   GuardCFFunctionCount: 0
+# ALL-NEXT:   GuardFlags [ (0x4)
+# ALL-NEXT:   ]
+# ALL-NEXT:   GuardAddressTakenIatEntryTable: 0x0
+# ALL-NEXT:   GuardAddressTakenIatEntryCount: 0
+# ALL-NEXT:   GuardLongJumpTargetTable: 0x0
+# ALL-NEXT:   GuardLongJumpTargetCount: 0
+# ALL-NEXT:   DynamicValueRelocTable: 0x2
+# ALL-NEXT:   CHPEMetadataPointer: 0x0
+# ALL-NEXT:   GuardRFFailureRoutine: 0x4
+# ALL-NEXT:   GuardRFFailureRoutineFunctionPointer: 0x5
+# ALL-NEXT:   DynamicValueRelocTableOffset: 0x6
+# ALL-NEXT:   DynamicValueRelocTableSection: 7
+# ALL-NEXT:   GuardRFVerifyStackPointerFunctionPointer: 0x8
+# ALL-NEXT:   HotPatchTableOffset: 0x9
+# ALL-NEXT:   EnclaveConfigurationPointer: 0x1
+# ALL-NEXT:   VolatileMetadataPointer: 0x2
+# ALL-NEXT:   GuardEHContinuationTable: 0x0
+# ALL-NEXT:   GuardEHContinuationCount: 0
+# ALL-NEXT: ]
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     320
+    StructuredData:
+      - LoadConfig:
+          Size: 0x150
+          TimeDateStamp: 1
+          MajorVersion: 2
+          MinorVersion: 3
+          GlobalFlagsClear: 4
+          GlobalFlagsSet: 5
+          CriticalSectionDefaultTimeout: 6
+          DeCommitFreeBlockThreshold: 7
+          DeCommitTotalFreeThreshold: 8
+          LockPrefixTable: 9
+          MaximumAllocationSize: 0x100000
+          VirtualMemoryThreshold: 0x2000000
+          ProcessAffinityMask: 1
+          ProcessHeapFlags: 2
+          CSDVersion: 3
+          DependentLoadFlags: 4
+          EditList: 5
+          SecurityCookie: 6
+          SEHandlerTable: 0
+          SEHandlerCount: 0
+          GuardCFCheckFunction: 9
+          GuardCFCheckDispatch: 1
+          GuardCFFunctionTable: 0
+          GuardCFFunctionCount: 0
+          GuardFlags: 4
+          CodeIntegrity:
+            Flags: 0x100
+            Catalog: 5
+            CatalogOffset: 6
+          GuardAddressTakenIatEntryTable: 0
+          GuardAddressTakenIatEntryCount: 0
+          GuardLongJumpTargetTable: 0
+          GuardLongJumpTargetCount: 0
+          DynamicValueRelocTable: 2
+          CHPEMetadataPointer: 0
+          GuardRFFailureRoutine: 4
+          GuardRFFailureRoutineFunctionPointer: 5
+          DynamicValueRelocTableOffset: 6
+          DynamicValueRelocTableSection: 7
+          GuardRFVerifyStackPointerFunctionPointer: 8
+          HotPatchTableOffset: 9
+          EnclaveConfigurationPointer: 1
+          VolatileMetadataPointer: 2
+          GuardEHContinuationTable: 0
+          GuardEHContinuationCount: 0
+          GuardXFGCheckFunctionPointer: 5
+          GuardXFGDispatchFunctionPointer: 6
+          GuardXFGTableDispatchFunctionPointer: 7
+          CastGuardOsDeterminedFailureMode: 8
+symbols: []
+...
+
+## Simple 32-bit load config.
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-readobj --coff-load-config %t | FileCheck %s --check-prefix=LOADCFG32
+
+# LOADCFG32: LoadConfig [
+# LOADCFG32:   MaximumAllocationSize: 0x100000
+# LOADCFG32:   VirtualMemoryThreshold: 0x2000000
+# LOADCFG32:   CHPEMetadataPointer: 0
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     320
+    StructuredData:
+      - LoadConfig:
+          MaximumAllocationSize: 0x100000
+          VirtualMemoryThreshold: 0x2000000
+symbols: []
+...
+
+## Create load config with all fields using default values.
+# RUN: yaml2obj --docnum=3 %s -o %t
+# RUN: llvm-readobj --coff-load-config %t | FileCheck %s --check-prefix=DEF
+
+# DEF: Format: COFF-x86-64
+# DEF: Arch: x86_64
+# DEF: AddressSize: 64bit
+# DEF: LoadConfig [
+# DEF:   Size: 0x138
+# DEF:   MajorVersion: 0x0
+# DEF:   MinorVersion: 0x0
+# DEF:   GuardEHContinuationCount: 0
+# DEF: ]
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     320
+    StructuredData:
+      - LoadConfig:
+symbols: []
+...
+
+## Create laod config larger than coff_load_configuration32 struct.
+# RUN: yaml2obj --docnum=4 %s -o %t
+# RUN: llvm-readobj --hex-dump=.rdata %t | FileCheck %s --check-prefix=LARGE
+
+# LARGE:      0x00401000 d0000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401010 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401020 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401030 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401040 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401050 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401060 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401070 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401080 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x00401090 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x004010a0 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x004010b0 00000000 00000000 ff000000 00000000 ................
+# LARGE-NEXT: 0x004010c0 00000000 00000000 00000000 00000000 ................
+# LARGE-NEXT: 0x004010d0 aabbccdd                            ....
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x400000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     0xd4
+    StructuredData:
+      - LoadConfig:
+          Size: 0xd0
+          CastGuardOsDeterminedFailureMode: 0xff
+      - UInt32: 0xddccbbaa
+symbols: []
+...
+
+## Try to specify load config field that barely fits the specified size.
+# RUN: yaml2obj --docnum=5 %s -o %t
+# RUN: llvm-readobj --hex-dump=.rdata %t | FileCheck %s --check-prefix=SMALL
+# SMALL: 0x180001000 09000000 00000000 aaffffff ff
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     13
+    StructuredData:
+      - LoadConfig:
+          Size: 9
+          MajorVersion: 0xbbaa
+      - UInt32: 0xffffffff
+symbols: []
+...
+
+## Try to specify load config field that does not fit specified size.
+# RUN: not yaml2obj --docnum=6 %s -o %t 2>&1 | FileCheck %s --check-prefix=TOOSMALL
+# TOOSMALL: error: unknown key 'MajorVersion'
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     320
+    StructuredData:
+      - LoadConfig:
+          Size: 8
+          MajorVersion: 10
+symbols: []
+...
+
+## Set load config size to 0.
+# RUN: not yaml2obj --docnum=7 %s -o %t 2>&1 | FileCheck %s --check-prefix=ZERO
+# ZERO: error: Size must be at least 4
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x1000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     320
+    StructuredData:
+      - LoadConfig:
+          Size: 0
+symbols: []
+...

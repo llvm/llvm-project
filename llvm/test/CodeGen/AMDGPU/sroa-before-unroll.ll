@@ -11,7 +11,7 @@ target datalayout = "A5"
 ; so that we do not need to fully unroll it.
 
 ; FUNC-LABEL: @private_memory
-; LOOP-NOT: alloca
+; LOOP-NOT: = alloca
 ; LOOP: loop.header:
 ; LOOP: br i1 %{{[^,]+}}, label %exit, label %loop.header
 

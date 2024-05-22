@@ -74,6 +74,13 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
+// This structure represents the information for a basic block.
+struct UniqueBBID {
+  unsigned BaseID;
+  // sections profile).
+  unsigned CloneID;
+};
+
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
@@ -111,6 +118,15 @@ private:
 
   const BasicBlock *BB;
   int Number;
+
+  /// The call frame size on entry to this basic block due to call frame setup
+  /// instructions in a predecessor. This is usually zero, unless basic blocks
+  /// are split in the middle of a call sequence.
+  ///
+  /// This information is only maintained until PrologEpilogInserter eliminates
+  /// call frame pseudos.
+  unsigned CallFrameSize = 0;
+
   MachineFunction *xParent;
   Instructions Insts;
 
@@ -171,7 +187,7 @@ private:
 
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
-  std::optional<unsigned> BBID;
+  std::optional<UniqueBBID> BBID;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -224,7 +240,7 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is used as as something other than the target
+  /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
@@ -624,13 +640,7 @@ public:
 
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
-  std::optional<unsigned> getBBID() const { return BBID; }
-
-  /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
-  /// returns `MachineBasicBlock::Number`.
-  /// TODO: Remove this function when version 1 is deprecated and replace its
-  /// uses with `getBBID()`.
-  unsigned getBBIDOrNumber() const;
+  std::optional<UniqueBBID> getBBID() const { return BBID; }
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
@@ -642,7 +652,7 @@ public:
   }
 
   /// Sets the fixed BBID of this basic block.
-  void setBBID(unsigned V) {
+  void setBBID(const UniqueBBID &V) {
     assert(!BBID.has_value() && "Cannot change BBID.");
     BBID = V;
   }
@@ -750,7 +760,7 @@ public:
   ///
   /// This is useful when doing a partial clone of successors. Afterward, the
   /// probabilities may need to be normalized.
-  void copySuccessor(MachineBasicBlock *Orig, succ_iterator I);
+  void copySuccessor(const MachineBasicBlock *Orig, succ_iterator I);
 
   /// Split the old successor into old plus new and updates the probability
   /// info.
@@ -791,6 +801,15 @@ public:
         static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
   }
 
+  /// Return the predecessor of this block if it has a single predecessor.
+  /// Otherwise return a null pointer.
+  ///
+  const MachineBasicBlock *getSinglePredecessor() const;
+  MachineBasicBlock *getSinglePredecessor() {
+    return const_cast<MachineBasicBlock *>(
+        static_cast<const MachineBasicBlock *>(this)->getSinglePredecessor());
+  }
+
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to the block after it by falling off the end of
   /// it. If an explicit branch to the fallthrough block is not allowed,
@@ -816,6 +835,9 @@ public:
   /// the first instruction, which might be PHI.
   /// Returns end() is there's no non-PHI instruction.
   iterator getFirstNonPHI();
+  const_iterator getFirstNonPHI() const {
+    return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
+  }
 
   /// Return the first instruction in MBB after I that is not a PHI or a label.
   /// This is the correct point to insert lowered copies at the beginning of a
@@ -824,8 +846,10 @@ public:
 
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block.
-  iterator SkipPHIsLabelsAndDebug(iterator I, bool SkipPseudoOp = true);
+  /// basic block. \p Reg is the register being used by a spill or defined for a
+  /// restore/split during register allocation.
+  iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
+                                  bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().
@@ -1144,6 +1168,11 @@ public:
   /// they're not in a MachineFunction yet, in which case this will return -1.
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
+
+  /// Return the call frame size on entry to this basic block.
+  unsigned getCallFrameSize() const { return CallFrameSize; }
+  /// Set the call frame size on entry to this basic block.
+  void setCallFrameSize(unsigned N) { CallFrameSize = N; }
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;

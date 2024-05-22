@@ -82,6 +82,8 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasNoSVE = false;
   bool HasFMV = true;
   bool HasGCS = false;
+  bool HasRCPC3 = false;
+  bool HasSMEFA64 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
@@ -141,6 +143,8 @@ public:
   void getTargetDefinesARMV93A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV94A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV95A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

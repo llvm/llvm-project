@@ -67,20 +67,20 @@ class GlobalModuleIndex {
 
   /// Information about a given module file.
   struct ModuleInfo {
-    ModuleInfo() : File(), Size(), ModTime() { }
+    ModuleInfo() = default;
 
     /// The module file, once it has been resolved.
-    ModuleFile *File;
+    ModuleFile *File = nullptr;
 
     /// The module file name.
     std::string FileName;
 
     /// Size of the module file at the time the global index was built.
-    off_t Size;
+    off_t Size = 0;
 
     /// Modification time of the module file at the time the global
     /// index was built.
-    time_t ModTime;
+    time_t ModTime = 0;
 
     /// The module IDs on which this module directly depends.
     /// FIXME: We don't really need a vector here.

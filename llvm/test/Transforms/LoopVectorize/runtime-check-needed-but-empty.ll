@@ -17,22 +17,19 @@ define void @test(ptr %A, i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
+; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ undef, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

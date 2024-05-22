@@ -16,6 +16,7 @@
 #include <cinttypes>
 #include <type_traits>
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -51,15 +52,15 @@ enum SymbolKind : uint16_t {
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
   inline Class operator|(Class a, Class b) {                                   \
-    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) |  \
-                              static_cast<std::underlying_type_t<Class>>(b));  \
+    return static_cast<Class>(llvm::to_underlying(a) |                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator&(Class a, Class b) {                                   \
-    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) &  \
-                              static_cast<std::underlying_type_t<Class>>(b));  \
+    return static_cast<Class>(llvm::to_underlying(a) &                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator~(Class a) {                                            \
-    return static_cast<Class>(~static_cast<std::underlying_type_t<Class>>(a)); \
+    return static_cast<Class>(~llvm::to_underlying(a));                        \
   }                                                                            \
   inline Class &operator|=(Class &a, Class b) {                                \
     a = a | b;                                                                 \
@@ -615,6 +616,29 @@ inline uint32_t alignOf(CodeViewContainer Container) {
     return 1;
   return 4;
 }
+
+// Corresponds to CV_armswitchtype enum.
+// This enum represents the different ways that jump tables entries can be
+// encoded to represent the target address to jump to.
+// * Pointer: The absolute address to jump to.
+// * [U]Int[8|16|32]: A value that is added to some "base" address to get the
+//    address to jump to.
+// * [U]Int[8|16]ShiftLeft: A value that is shifted left by an implementation
+//    specified amount, then added to some "base" address to get the address to
+//    jump to.
+enum class JumpTableEntrySize : uint16_t {
+  Int8 = 0,
+  UInt8 = 1,
+  Int16 = 2,
+  UInt16 = 3,
+  Int32 = 4,
+  UInt32 = 5,
+  Pointer = 6,
+  UInt8ShiftLeft = 7,
+  UInt16ShiftLeft = 8,
+  Int8ShiftLeft = 9,
+  Int16ShiftLeft = 10,
+};
 }
 }
 

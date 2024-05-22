@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-nodiscard.ReplacementString, value: '[[gcc::warn_unused_result]]'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: '[[gcc::warn_unused_result]]'}}"
 
 class Foo
 {

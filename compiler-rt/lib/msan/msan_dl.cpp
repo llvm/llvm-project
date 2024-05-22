@@ -30,6 +30,7 @@ void UnpoisonDllAddrInfo(void *info) {
     __msan_unpoison(ptr->dli_sname, internal_strlen(ptr->dli_sname) + 1);
 }
 
+#if SANITIZER_GLIBC
 void UnpoisonDllAddr1ExtraInfo(void **extra_info, int flags) {
   if (flags == RTLD_DL_SYMENT) {
     __msan_unpoison(extra_info, sizeof(void *));
@@ -59,5 +60,6 @@ void UnpoisonDllAddr1ExtraInfo(void **extra_info, int flags) {
     }
   }
 }
+#endif
 
 }  // namespace __msan

@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/NVGPU/Passes.h"
+#include "mlir/Dialect/NVGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/NVGPU/Transforms/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
@@ -26,7 +27,7 @@
 namespace mlir {
 namespace nvgpu {
 #define GEN_PASS_DEF_OPTIMIZESHAREDMEMORY
-#include "mlir/Dialect/NVGPU/Passes.h.inc"
+#include "mlir/Dialect/NVGPU/Transforms/Passes.h.inc"
 } // namespace nvgpu
 } // namespace mlir
 
@@ -105,38 +106,6 @@ static void transformIndices(OpBuilder &builder, Location loc,
                              int64_t tgtDim) {
   indices[tgtDim] =
       permuteVectorOffset(builder, loc, indices, memrefTy, srcDim, tgtDim);
-}
-
-Operation::operand_range getIndices(Operation *op) {
-  if (auto ldmatrixOp = dyn_cast<LdMatrixOp>(op))
-    return ldmatrixOp.getIndices();
-  if (auto copyOp = dyn_cast<DeviceAsyncCopyOp>(op))
-    return copyOp.getDstIndices();
-  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
-    return loadOp.getIndices();
-  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
-    return storeOp.getIndices();
-  if (auto vectorReadOp = dyn_cast<vector::LoadOp>(op))
-    return vectorReadOp.getIndices();
-  if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
-    return vectorStoreOp.getIndices();
-  llvm_unreachable("unsupported op type");
-}
-
-void setIndices(Operation *op, ArrayRef<Value> indices) {
-  if (auto ldmatrixOp = dyn_cast<LdMatrixOp>(op))
-    return ldmatrixOp.getIndicesMutable().assign(indices);
-  if (auto copyOp = dyn_cast<DeviceAsyncCopyOp>(op))
-    return copyOp.getDstIndicesMutable().assign(indices);
-  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
-    return loadOp.getIndicesMutable().assign(indices);
-  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
-    return storeOp.getIndicesMutable().assign(indices);
-  if (auto vectorReadOp = dyn_cast<vector::LoadOp>(op))
-    return vectorReadOp.getIndicesMutable().assign(indices);
-  if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
-    return vectorStoreOp.getIndicesMutable().assign(indices);
-  llvm_unreachable("unsupported op type");
 }
 
 /// Return all operations within `parentOp` that read from or write to

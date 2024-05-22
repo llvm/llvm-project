@@ -91,7 +91,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// previously returned by the call operation with the operands of the
   /// return.
   void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+                        MutableArrayRef<Value> valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -164,22 +164,6 @@ GenericCallOp. This means that we just need to provide a definition:
 ```c++
 /// Returns the region on the function operation that is callable.
 Region *FuncOp::getCallableRegion() { return &getBody(); }
-
-/// Returns the results types that the callable region produces when
-/// executed.
-ArrayRef<Type> FuncOp::getCallableResults() { return getType().getResults(); }
-
-/// Returns the argument attributes for all callable region arguments or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableArgAttrs() {
-  return getArgAttrs().value_or(nullptr);
-}
-
-/// Returns the result attributes for all callable region results or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableResAttrs() {
-  return getResAttrs().value_or(nullptr);
-}
 
 // ....
 

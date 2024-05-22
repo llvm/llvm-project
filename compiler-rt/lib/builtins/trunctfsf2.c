@@ -9,11 +9,11 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 #define SRC_QUAD
 #define DST_SINGLE
 #include "fp_trunc_impl.inc"
 
-COMPILER_RT_ABI float __trunctfsf2(long double a) { return __truncXfYf2__(a); }
+COMPILER_RT_ABI dst_t __trunctfsf2(src_t a) { return __truncXfYf2__(a); }
 
 #endif

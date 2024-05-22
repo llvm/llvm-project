@@ -1311,18 +1311,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     D.takeAttributes(Attributes);
   }
 
-  // Helper to emit a warning if we see a CUDA host/device/global attribute
-  // after '(...)'. nvcc doesn't accept this.
-  auto WarnIfHasCUDATargetAttr = [&] {
-    if (getLangOpts().CUDA)
-      for (const ParsedAttr &A : Attributes)
-        if (A.getKind() == ParsedAttr::AT_CUDADevice ||
-            A.getKind() == ParsedAttr::AT_CUDAHost ||
-            A.getKind() == ParsedAttr::AT_CUDAGlobal)
-          Diag(A.getLoc(), diag::warn_cuda_attr_lambda_position)
-              << A.getAttrName()->getName();
-  };
-
   MultiParseScope TemplateParamScope(*this);
   if (Tok.is(tok::less)) {
     Diag(Tok, getLangOpts().CPlusPlus20
@@ -1377,91 +1365,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   bool HasSpecifiers = false;
   SourceLocation MutableLoc;
 
-  auto ParseConstexprAndMutableSpecifiers = [&] {
-    // GNU-style attributes must be parsed before the mutable specifier to
-    // be compatible with GCC. MSVC-style attributes must be parsed before
-    // the mutable specifier to be compatible with MSVC.
-    MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attributes);
-    // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update
-    // the DeclEndLoc.
-    SourceLocation ConstexprLoc;
-    SourceLocation ConstevalLoc;
-    SourceLocation StaticLoc;
-
-    tryConsumeLambdaSpecifierToken(*this, MutableLoc, StaticLoc, ConstexprLoc,
-                                   ConstevalLoc, DeclEndLoc);
-
-    DiagnoseStaticSpecifierRestrictions(*this, StaticLoc, MutableLoc, Intro);
-
-    addStaticToLambdaDeclSpecifier(*this, StaticLoc, DS);
-    addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
-    addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
-  };
-
-  auto ParseLambdaSpecifiers =
-      [&](MutableArrayRef<DeclaratorChunk::ParamInfo> ParamInfo,
-          SourceLocation EllipsisLoc) {
-        // Parse exception-specification[opt].
-        ExceptionSpecificationType ESpecType = EST_None;
-        SourceRange ESpecRange;
-        SmallVector<ParsedType, 2> DynamicExceptions;
-        SmallVector<SourceRange, 2> DynamicExceptionRanges;
-        ExprResult NoexceptExpr;
-        CachedTokens *ExceptionSpecTokens;
-
-        ESpecType = tryParseExceptionSpecification(
-            /*Delayed=*/false, ESpecRange, DynamicExceptions,
-            DynamicExceptionRanges, NoexceptExpr, ExceptionSpecTokens);
-
-        if (ESpecType != EST_None)
-          DeclEndLoc = ESpecRange.getEnd();
-
-        // Parse attribute-specifier[opt].
-        if (MaybeParseCXX11Attributes(Attributes))
-          DeclEndLoc = Attributes.Range.getEnd();
-
-        // Parse OpenCL addr space attribute.
-        if (Tok.isOneOf(tok::kw___private, tok::kw___global, tok::kw___local,
-                        tok::kw___constant, tok::kw___generic)) {
-          ParseOpenCLQualifiers(DS.getAttributes());
-          ConsumeToken();
-        }
-
-        SourceLocation FunLocalRangeEnd = DeclEndLoc;
-
-        // Parse trailing-return-type[opt].
-        if (Tok.is(tok::arrow)) {
-          FunLocalRangeEnd = Tok.getLocation();
-          SourceRange Range;
-          TrailingReturnType = ParseTrailingReturnType(
-              Range, /*MayBeFollowedByDirectInit*/ false);
-          TrailingReturnTypeLoc = Range.getBegin();
-          if (Range.getEnd().isValid())
-            DeclEndLoc = Range.getEnd();
-        }
-
-        SourceLocation NoLoc;
-        D.AddTypeInfo(
-            DeclaratorChunk::getFunction(
-                /*HasProto=*/true,
-                /*IsAmbiguous=*/false, LParenLoc, ParamInfo.data(),
-                ParamInfo.size(), EllipsisLoc, RParenLoc,
-                /*RefQualifierIsLvalueRef=*/true,
-                /*RefQualifierLoc=*/NoLoc, MutableLoc, ESpecType, ESpecRange,
-                DynamicExceptions.data(), DynamicExceptionRanges.data(),
-                DynamicExceptions.size(),
-                NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
-                /*ExceptionSpecTokens*/ nullptr,
-                /*DeclsInPrototype=*/std::nullopt, LParenLoc, FunLocalRangeEnd,
-                D, TrailingReturnType, TrailingReturnTypeLoc, &DS),
-            std::move(Attributes), DeclEndLoc);
-
-        Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
-
-        if (HasParentheses && Tok.is(tok::kw_requires))
-          ParseTrailingRequiresClause(D);
-      };
-
   ParseScope Prototype(this, Scope::FunctionPrototypeScope |
                                  Scope::FunctionDeclarationScope |
                                  Scope::DeclScope);
@@ -1511,18 +1414,104 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
   }
 
-  if (HasParentheses || HasSpecifiers)
-    ParseConstexprAndMutableSpecifiers();
+  if (HasParentheses || HasSpecifiers) {
+    // GNU-style attributes must be parsed before the mutable specifier to
+    // be compatible with GCC. MSVC-style attributes must be parsed before
+    // the mutable specifier to be compatible with MSVC.
+    MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attributes);
+    // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update
+    // the DeclEndLoc.
+    SourceLocation ConstexprLoc;
+    SourceLocation ConstevalLoc;
+    SourceLocation StaticLoc;
+
+    tryConsumeLambdaSpecifierToken(*this, MutableLoc, StaticLoc, ConstexprLoc,
+                                   ConstevalLoc, DeclEndLoc);
+
+    DiagnoseStaticSpecifierRestrictions(*this, StaticLoc, MutableLoc, Intro);
+
+    addStaticToLambdaDeclSpecifier(*this, StaticLoc, DS);
+    addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
+    addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
+  }
 
   Actions.ActOnLambdaClosureParameters(getCurScope(), ParamInfo);
 
   if (!HasParentheses)
     Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
-  if (HasSpecifiers || HasParentheses)
-    ParseLambdaSpecifiers(ParamInfo, EllipsisLoc);
+  if (HasSpecifiers || HasParentheses) {
+    // Parse exception-specification[opt].
+    ExceptionSpecificationType ESpecType = EST_None;
+    SourceRange ESpecRange;
+    SmallVector<ParsedType, 2> DynamicExceptions;
+    SmallVector<SourceRange, 2> DynamicExceptionRanges;
+    ExprResult NoexceptExpr;
+    CachedTokens *ExceptionSpecTokens;
 
-  WarnIfHasCUDATargetAttr();
+    ESpecType = tryParseExceptionSpecification(
+        /*Delayed=*/false, ESpecRange, DynamicExceptions,
+        DynamicExceptionRanges, NoexceptExpr, ExceptionSpecTokens);
+
+    if (ESpecType != EST_None)
+      DeclEndLoc = ESpecRange.getEnd();
+
+    // Parse attribute-specifier[opt].
+    if (MaybeParseCXX11Attributes(Attributes))
+      DeclEndLoc = Attributes.Range.getEnd();
+
+    // Parse OpenCL addr space attribute.
+    if (Tok.isOneOf(tok::kw___private, tok::kw___global, tok::kw___local,
+                    tok::kw___constant, tok::kw___generic)) {
+      ParseOpenCLQualifiers(DS.getAttributes());
+      ConsumeToken();
+    }
+
+    SourceLocation FunLocalRangeEnd = DeclEndLoc;
+
+    // Parse trailing-return-type[opt].
+    if (Tok.is(tok::arrow)) {
+      FunLocalRangeEnd = Tok.getLocation();
+      SourceRange Range;
+      TrailingReturnType =
+          ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit=*/false);
+      TrailingReturnTypeLoc = Range.getBegin();
+      if (Range.getEnd().isValid())
+        DeclEndLoc = Range.getEnd();
+    }
+
+    SourceLocation NoLoc;
+    D.AddTypeInfo(DeclaratorChunk::getFunction(
+                      /*HasProto=*/true,
+                      /*IsAmbiguous=*/false, LParenLoc, ParamInfo.data(),
+                      ParamInfo.size(), EllipsisLoc, RParenLoc,
+                      /*RefQualifierIsLvalueRef=*/true,
+                      /*RefQualifierLoc=*/NoLoc, MutableLoc, ESpecType,
+                      ESpecRange, DynamicExceptions.data(),
+                      DynamicExceptionRanges.data(), DynamicExceptions.size(),
+                      NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
+                      /*ExceptionSpecTokens*/ nullptr,
+                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
+                      FunLocalRangeEnd, D, TrailingReturnType,
+                      TrailingReturnTypeLoc, &DS),
+                  std::move(Attributes), DeclEndLoc);
+
+    Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+
+    if (HasParentheses && Tok.is(tok::kw_requires))
+      ParseTrailingRequiresClause(D);
+  }
+
+  // Emit a warning if we see a CUDA host/device/global attribute
+  // after '(...)'. nvcc doesn't accept this.
+  if (getLangOpts().CUDA) {
+    for (const ParsedAttr &A : Attributes)
+      if (A.getKind() == ParsedAttr::AT_CUDADevice ||
+          A.getKind() == ParsedAttr::AT_CUDAHost ||
+          A.getKind() == ParsedAttr::AT_CUDAGlobal)
+        Diag(A.getLoc(), diag::warn_cuda_attr_lambda_position)
+            << A.getAttrName()->getName();
+  }
 
   Prototype.Exit();
 
@@ -1546,8 +1535,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   TemplateParamScope.Exit();
   LambdaScope.Exit();
 
-  if (!Stmt.isInvalid() && !TrailingReturnType.isInvalid())
-    return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get(), getCurScope());
+  if (!Stmt.isInvalid() && !TrailingReturnType.isInvalid() &&
+      !D.isInvalidType())
+    return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get());
 
   Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
   return ExprError();
@@ -2353,6 +2343,15 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   case tok::kw_bool:
     DS.SetTypeSpecType(DeclSpec::TST_bool, Loc, PrevSpec, DiagID, Policy);
     break;
+  case tok::kw__Accum:
+    DS.SetTypeSpecType(DeclSpec::TST_accum, Loc, PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw__Fract:
+    DS.SetTypeSpecType(DeclSpec::TST_fract, Loc, PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw__Sat:
+    DS.SetTypeSpecSat(Loc, PrevSpec, DiagID);
+    break;
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                        \
   case tok::kw_##ImgType##_t:                                                  \
     DS.SetTypeSpecType(DeclSpec::TST_##ImgType##_t, Loc, PrevSpec, DiagID,     \
@@ -3114,10 +3113,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     }
 
     // Note that this is a destructor name.
-    ParsedType Ty = Actions.getDestructorName(TildeLoc, *ClassName,
-                                              ClassNameLoc, getCurScope(),
-                                              SS, ObjectType,
-                                              EnteringContext);
+    ParsedType Ty =
+        Actions.getDestructorName(*ClassName, ClassNameLoc, getCurScope(), SS,
+                                  ObjectType, EnteringContext);
     if (!Ty)
       return true;
 
@@ -3493,11 +3491,11 @@ ExprResult Parser::ParseRequiresExpression() {
   SourceLocation RequiresKWLoc = ConsumeToken(); // Consume 'requires'
 
   llvm::SmallVector<ParmVarDecl *, 2> LocalParameterDecls;
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
   if (Tok.is(tok::l_paren)) {
     // requirement parameter list is present.
     ParseScope LocalParametersScope(this, Scope::FunctionPrototypeScope |
                                     Scope::DeclScope);
-    BalancedDelimiterTracker Parens(*this, tok::l_paren);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
@@ -3626,10 +3624,12 @@ ExprResult Parser::ParseRequiresExpression() {
               auto Res = TryParseParameterDeclarationClause();
               if (Res != TPResult::False) {
                 // Skip to the closing parenthesis
-                // FIXME: Don't traverse these tokens twice (here and in
-                //  TryParseParameterDeclarationClause).
                 unsigned Depth = 1;
                 while (Depth != 0) {
+                  bool FoundParen = SkipUntil(tok::l_paren, tok::r_paren,
+                                              SkipUntilFlags::StopBeforeMatch);
+                  if (!FoundParen)
+                    break;
                   if (Tok.is(tok::l_paren))
                     Depth++;
                   else if (Tok.is(tok::r_paren))
@@ -3769,8 +3769,9 @@ ExprResult Parser::ParseRequiresExpression() {
   Braces.consumeClose();
   Actions.ActOnFinishRequiresExpr();
   ParsingBodyDecl.complete(Body);
-  return Actions.ActOnRequiresExpr(RequiresKWLoc, Body, LocalParameterDecls,
-                                   Requirements, Braces.getCloseLocation());
+  return Actions.ActOnRequiresExpr(
+      RequiresKWLoc, Body, Parens.getOpenLocation(), LocalParameterDecls,
+      Parens.getCloseLocation(), Requirements, Braces.getCloseLocation());
 }
 
 static TypeTrait TypeTraitFromTokKind(tok::TokenKind kind) {

@@ -30,7 +30,9 @@ DefinedOrUnknownSVal getDynamicExtent(ProgramStateRef State,
   MR = MR->StripCasts();
 
   if (const DefinedOrUnknownSVal *Size = State->get<DynamicExtentMap>(MR))
-    return *Size;
+    if (auto SSize =
+            SVB.convertToArrayIndex(*Size).getAs<DefinedOrUnknownSVal>())
+      return *SSize;
 
   return MR->getMemRegionManager().getStaticSize(MR, SVB);
 }
@@ -40,6 +42,32 @@ DefinedOrUnknownSVal getElementExtent(QualType Ty, SValBuilder &SVB) {
                         SVB.getArrayIndexType());
 }
 
+static DefinedOrUnknownSVal getConstantArrayElementCount(SValBuilder &SVB,
+                                                         const MemRegion *MR) {
+  MR = MR->StripCasts();
+
+  const auto *TVR = MR->getAs<TypedValueRegion>();
+  if (!TVR)
+    return UnknownVal();
+
+  if (const ConstantArrayType *CAT =
+          SVB.getContext().getAsConstantArrayType(TVR->getValueType()))
+    return SVB.makeIntVal(CAT->getSize(), /* isUnsigned = */ false);
+
+  return UnknownVal();
+}
+
+static DefinedOrUnknownSVal
+getDynamicElementCount(ProgramStateRef State, SVal Size,
+                       DefinedOrUnknownSVal ElementSize) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+
+  auto ElementCount =
+      SVB.evalBinOp(State, BO_Div, Size, ElementSize, SVB.getArrayIndexType())
+          .getAs<DefinedOrUnknownSVal>();
+  return ElementCount.value_or(UnknownVal());
+}
+
 DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
                                             const MemRegion *MR,
                                             SValBuilder &SVB,
@@ -47,17 +75,16 @@ DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
   assert(MR != nullptr && "Not-null region expected");
   MR = MR->StripCasts();
 
-  DefinedOrUnknownSVal Size = getDynamicExtent(State, MR, SVB);
-  SVal ElementSize = getElementExtent(ElementTy, SVB);
+  DefinedOrUnknownSVal ElementSize = getElementExtent(ElementTy, SVB);
+  if (ElementSize.isZeroConstant())
+    return getConstantArrayElementCount(SVB, MR);
 
-  SVal ElementCount =
-      SVB.evalBinOp(State, BO_Div, Size, ElementSize, SVB.getArrayIndexType());
-
-  return ElementCount.castAs<DefinedOrUnknownSVal>();
+  return getDynamicElementCount(State, getDynamicExtent(State, MR, SVB),
+                                ElementSize);
 }
 
 SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV) {
-  SValBuilder &SvalBuilder = State->getStateManager().getSValBuilder();
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
   const MemRegion *MRegion = BufV.getAsRegion();
   if (!MRegion)
     return UnknownVal();
@@ -68,15 +95,28 @@ SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV) {
   if (!BaseRegion)
     return UnknownVal();
 
-  NonLoc OffsetInBytes = SvalBuilder.makeArrayIndex(
-      Offset.getOffset() /
-      MRegion->getMemRegionManager().getContext().getCharWidth());
-  DefinedOrUnknownSVal ExtentInBytes =
-      getDynamicExtent(State, BaseRegion, SvalBuilder);
+  NonLoc OffsetInChars =
+      SVB.makeArrayIndex(Offset.getOffset() / SVB.getContext().getCharWidth());
+  DefinedOrUnknownSVal ExtentInBytes = getDynamicExtent(State, BaseRegion, SVB);
 
-  return SvalBuilder.evalBinOp(State, BinaryOperator::Opcode::BO_Sub,
-                               ExtentInBytes, OffsetInBytes,
-                               SvalBuilder.getArrayIndexType());
+  return SVB.evalBinOp(State, BinaryOperator::Opcode::BO_Sub, ExtentInBytes,
+                       OffsetInChars, SVB.getArrayIndexType());
+}
+
+DefinedOrUnknownSVal getDynamicElementCountWithOffset(ProgramStateRef State,
+                                                      SVal BufV,
+                                                      QualType ElementTy) {
+  const MemRegion *MR = BufV.getAsRegion();
+  if (!MR)
+    return UnknownVal();
+
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  DefinedOrUnknownSVal ElementSize = getElementExtent(ElementTy, SVB);
+  if (ElementSize.isZeroConstant())
+    return getConstantArrayElementCount(SVB, MR);
+
+  return getDynamicElementCount(State, getDynamicExtentWithOffset(State, BufV),
+                                ElementSize);
 }
 
 ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,

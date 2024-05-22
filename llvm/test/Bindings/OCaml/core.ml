@@ -71,11 +71,11 @@ let test_target () =
   end;
 
   begin group "layout";
-    let layout = "e" in
+    let layout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128" in
     set_data_layout layout m;
     insist (layout = data_layout m)
   end
-  (* CHECK: target datalayout = "e"
+  (* CHECK: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
    * CHECK: target triple = "i686-apple-darwin8"
    *)
 
@@ -263,18 +263,13 @@ let test_constants () =
    * CHECK: @const_mul = global i64 mul
    * CHECK: @const_nsw_mul = global i64 mul nsw
    * CHECK: @const_nuw_mul = global i64 mul nuw
-   * CHECK: @const_and = global i64 and
-   * CHECK: @const_or = global i64 or
    * CHECK: @const_xor = global i64 xor
    * CHECK: @const_icmp = global i1 icmp sle
-   * CHECK: @const_fcmp = global i1 fcmp ole
    *)
   let void_ptr = pointer_type context in
   let five = const_int i64_type 5 in
-  let ffive = const_uitofp five double_type in
   let foldbomb_gv = define_global "FoldBomb" (const_null i8_type) m in
   let foldbomb = const_ptrtoint foldbomb_gv i64_type in
-  let ffoldbomb = const_uitofp foldbomb double_type in
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
   ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
@@ -288,47 +283,25 @@ let test_constants () =
   ignore (define_global "const_mul" (const_mul foldbomb five) m);
   ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
-  ignore (define_global "const_and" (const_and foldbomb five) m);
-  ignore (define_global "const_or" (const_or foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
   ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
-  ignore (define_global "const_fcmp" (const_fcmp Fcmp.Ole ffoldbomb ffive) m);
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc
-   * CHECK: const_sext{{.*}}sext
-   * CHECK: const_zext{{.*}}zext
-   * CHECK: const_fptrunc{{.*}}fptrunc
-   * CHECK: const_fpext{{.*}}fpext
-   * CHECK: const_uitofp{{.*}}uitofp
-   * CHECK: const_sitofp{{.*}}sitofp
-   * CHECK: const_fptoui{{.*}}fptoui
-   * CHECK: const_fptosi{{.*}}fptosi
    * CHECK: const_ptrtoint{{.*}}ptrtoint
    * CHECK: const_inttoptr{{.*}}inttoptr
    * CHECK: const_bitcast{{.*}}bitcast
-   * CHECK: const_intcast{{.*}}zext
    *)
   let i128_type = integer_type context 128 in
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
-  ignore (define_global "const_sext" (const_sext foldbomb i128_type) m);
-  ignore (define_global "const_zext" (const_zext foldbomb i128_type) m);
-  ignore (define_global "const_fptrunc" (const_fptrunc ffoldbomb float_type) m);
-  ignore (define_global "const_fpext" (const_fpext ffoldbomb fp128_type) m);
-  ignore (define_global "const_uitofp" (const_uitofp foldbomb double_type) m);
-  ignore (define_global "const_sitofp" (const_sitofp foldbomb double_type) m);
-  ignore (define_global "const_fptoui" (const_fptoui ffoldbomb i32_type) m);
-  ignore (define_global "const_fptosi" (const_fptosi ffoldbomb i32_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
     (const_gep i8_type (const_null (pointer_type context))
                [| const_int i32_type 1 |])
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
-  ignore (define_global "const_bitcast" (const_bitcast ffoldbomb i64_type) m);
-  ignore (define_global "const_intcast"
-          (const_intcast foldbomb i128_type ~is_signed:false) m);
+  ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
   (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null

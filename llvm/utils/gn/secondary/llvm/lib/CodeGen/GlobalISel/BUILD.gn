@@ -17,6 +17,7 @@ static_library("GlobalISel") {
     "CallLowering.cpp",
     "Combiner.cpp",
     "CombinerHelper.cpp",
+    "GIMatchTableExecutor.cpp",
     "GISelChangeObserver.cpp",
     "GISelKnownBits.cpp",
     "GlobalISel.cpp",

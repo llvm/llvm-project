@@ -79,26 +79,26 @@ module modCommon2
 contains
   ! CHECK-LABEL: func @_QMmodcommon2Pfoo()
   real function foo()
-   ! CHECK-DAG: fir.address_of(@_QCnamed2) : !fir.ref<tuple<i32>>
-   ! CHECK-DAG: fir.address_of(@_QC) : !fir.ref<!fir.array<4xi8>>
-   ! CHECK-DAG: fir.address_of(@_QCnamed1) : !fir.ref<!fir.array<40xi8>>
+   ! CHECK-DAG: fir.address_of(@named2_) : !fir.ref<tuple<i32>>
+   ! CHECK-DAG: fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
+   ! CHECK-DAG: fir.address_of(@named1_) : !fir.ref<!fir.array<40xi8>>
    foo = x_blank + x_named1(5) + i_named2
   end function
 end module
 ! CHECK-LABEL: func @_QPmodcommon2use()
 real function modCommon2use()
  use modCommon2
- ! CHECK-DAG: fir.address_of(@_QCnamed2) : !fir.ref<tuple<i32>>
- ! CHECK-DAG: fir.address_of(@_QC) : !fir.ref<!fir.array<4xi8>>
- ! CHECK-DAG: fir.address_of(@_QCnamed1) : !fir.ref<!fir.array<40xi8>>
+ ! CHECK-DAG: fir.address_of(@named2_) : !fir.ref<tuple<i32>>
+ ! CHECK-DAG: fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
+ ! CHECK-DAG: fir.address_of(@named1_) : !fir.ref<!fir.array<40xi8>>
  modCommon2use = x_blank + x_named1(5) + i_named2
 end function
 ! CHECK-LABEL: func @_QPmodcommon2use_rename()
 real function modCommon2use_rename()
  use modCommon2, only : renamed0 => x_blank, renamed1 => x_named1, renamed2 => i_named2
- ! CHECK-DAG: fir.address_of(@_QCnamed2) : !fir.ref<tuple<i32>>
- ! CHECK-DAG: fir.address_of(@_QC) : !fir.ref<!fir.array<4xi8>>
- ! CHECK-DAG: fir.address_of(@_QCnamed1) : !fir.ref<!fir.array<40xi8>>
+ ! CHECK-DAG: fir.address_of(@named2_) : !fir.ref<tuple<i32>>
+ ! CHECK-DAG: fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
+ ! CHECK-DAG: fir.address_of(@named1_) : !fir.ref<!fir.array<40xi8>>
  modCommon2use_rename = renamed0 + renamed1(5) + renamed2
 end function
 

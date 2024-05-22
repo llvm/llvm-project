@@ -79,35 +79,43 @@ bool EVT::isExtendedVector() const {
 }
 
 bool EVT::isExtended16BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 16;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(16);
 }
 
 bool EVT::isExtended32BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 32;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(32);
 }
 
 bool EVT::isExtended64BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 64;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(64);
 }
 
 bool EVT::isExtended128BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 128;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(128);
 }
 
 bool EVT::isExtended256BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 256;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(256);
 }
 
 bool EVT::isExtended512BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 512;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(512);
 }
 
 bool EVT::isExtended1024BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 1024;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(1024);
 }
 
 bool EVT::isExtended2048BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 2048;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(2048);
 }
 
 bool EVT::isExtendedFixedLengthVector() const {
@@ -143,7 +151,7 @@ ElementCount EVT::getExtendedVectorElementCount() const {
 TypeSize EVT::getExtendedSizeInBits() const {
   assert(isExtended() && "Type is not extended!");
   if (IntegerType *ITy = dyn_cast<IntegerType>(LLVMTy))
-    return TypeSize::Fixed(ITy->getBitWidth());
+    return TypeSize::getFixed(ITy->getBitWidth());
   if (VectorType *VTy = dyn_cast<VectorType>(LLVMTy))
     return VTy->getPrimitiveSizeInBits();
   llvm_unreachable("Unrecognized extended type!");
@@ -637,6 +645,9 @@ void MVT::dump() const {
 #endif
 
 void MVT::print(raw_ostream &OS) const {
-  OS << EVT(*this).getEVTString();
+  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
+    OS << "invalid";
+  else
+    OS << EVT(*this).getEVTString();
 }
 

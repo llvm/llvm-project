@@ -45,6 +45,16 @@ define void @test_store(ptr %a, bfloat %b) nounwind {
   ret void
 }
 
+define void @test_store_negative_offset(ptr %a, bfloat %b) nounwind {
+; CHECK-LABEL: test_store_negative_offset:
+; CHECK-NEXT: stur    h0, [x0, #-4]
+; CHECK-NEXT: ret
+entry:
+  %0 = getelementptr inbounds bfloat, ptr %a, i64 -2
+  store bfloat %b, ptr %0, align 2
+  ret void
+}
+
 ; Simple store of v4bf16
 define void @test_vec_store(ptr %a, <4 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vec_store:

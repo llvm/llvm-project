@@ -21,7 +21,7 @@ struct __tag2 __tag3 t2 {
 int g1 __tag1;
 int g2 __tag_no_arg; // expected-error {{'btf_decl_tag' attribute takes one argument}}
 int g3 __tag_2_arg; // expected-error {{'btf_decl_tag' attribute takes one argument}}
-int i1 __invalid; // expected-error {{'btf_decl_tag' attribute requires a string}}
+int i1 __invalid; // expected-error {{expected string literal as argument of 'btf_decl_tag' attribute}}
 
 enum e1 {
   E1

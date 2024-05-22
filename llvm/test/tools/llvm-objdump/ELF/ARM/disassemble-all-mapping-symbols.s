@@ -6,13 +6,15 @@
 @ RUN: llvm-objdump --no-print-imm-hex -d %t.o | FileCheck %s
 @ RUN: llvm-objdump --no-print-imm-hex -d --disassemble-all %t.o | FileCheck %s
 
-@ CHECK: 00000000 <armfunc>:
-@ CHECK:        0: e2800001      add     r0, r0, #1
-@ CHECK:        4: e12fff1e      bx      lr
-@
-@ CHECK: 00000008 <thmfunc>:
-@ CHECK:        8: f100 0001     add.w   r0, r0, #1
-@ CHECK:        c: 4770          bx      lr
+@ CHECK:       00000000 <armfunc>:
+@ CHECK-NEXT:        0: e2800001      add     r0, r0, #1
+@ CHECK-NEXT:        4: e12fff1e      bx      lr
+@ CHECK-NEXT:        8: 00 00         .short  0x0000
+@ CHECK-EMPTY:
+@ CHECK:       0000000a <thmfunc>:
+@ CHECK-NEXT:        a: f100 0001     add.w   r0, r0, #1
+@ CHECK-NEXT:        e: 4770          bx      lr
+@ CHECK-NEXT:       10: 00 00         .short  0x0000
 
 	.arch armv8a
         .text
@@ -23,6 +25,8 @@
 armfunc:
         add     r0, r0, #1
         bx      lr
+        @@ Test that this is not displayed as a .word
+        .space  2
 
         .thumb
 	.global	thmfunc
@@ -30,3 +34,4 @@ armfunc:
 thmfunc:
         add     r0, r0, #1
         bx      lr
+        .space  2

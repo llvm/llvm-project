@@ -7,30 +7,30 @@ define zeroext i32 @ReverseBits(i32 zeroext %n) {
 ; CHECK-LABEL: ReverseBits:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
-; CHECK-NEXT:    lis 5, 21845
-; CHECK-NEXT:    slwi 6, 3, 1
+; CHECK-NEXT:    slwi 5, 3, 1
 ; CHECK-NEXT:    srwi 3, 3, 1
 ; CHECK-NEXT:    ori 4, 4, 43690
+; CHECK-NEXT:    and 4, 5, 4
+; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    ori 5, 5, 21845
-; CHECK-NEXT:    and 4, 6, 4
 ; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    lis 5, 13107
+; CHECK-NEXT:    lis 5, -13108
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    lis 4, -13108
-; CHECK-NEXT:    ori 5, 5, 13107
-; CHECK-NEXT:    slwi 6, 3, 2
-; CHECK-NEXT:    ori 4, 4, 52428
+; CHECK-NEXT:    ori 5, 5, 52428
+; CHECK-NEXT:    slwi 4, 3, 2
 ; CHECK-NEXT:    srwi 3, 3, 2
-; CHECK-NEXT:    and 4, 6, 4
+; CHECK-NEXT:    and 4, 4, 5
+; CHECK-NEXT:    lis 5, 13107
+; CHECK-NEXT:    ori 5, 5, 13107
 ; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    lis 5, 3855
+; CHECK-NEXT:    lis 5, -3856
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    lis 4, -3856
-; CHECK-NEXT:    ori 5, 5, 3855
-; CHECK-NEXT:    slwi 6, 3, 4
-; CHECK-NEXT:    ori 4, 4, 61680
+; CHECK-NEXT:    ori 5, 5, 61680
+; CHECK-NEXT:    slwi 4, 3, 4
 ; CHECK-NEXT:    srwi 3, 3, 4
-; CHECK-NEXT:    and 4, 6, 4
+; CHECK-NEXT:    and 4, 4, 5
+; CHECK-NEXT:    lis 5, 3855
+; CHECK-NEXT:    ori 5, 5, 3855
 ; CHECK-NEXT:    and 3, 3, 5
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    rotlwi 4, 3, 24
@@ -71,59 +71,59 @@ define i64 @ReverseBits64(i64 %n) {
 ; CHECK-LABEL: ReverseBits64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
-; CHECK-NEXT:    lis 5, 21845
-; CHECK-NEXT:    lis 7, -13108
-; CHECK-NEXT:    lis 8, 13107
-; CHECK-NEXT:    ori 4, 4, 43690
-; CHECK-NEXT:    ori 5, 5, 21845
-; CHECK-NEXT:    ori 7, 7, 52428
-; CHECK-NEXT:    ori 8, 8, 13107
-; CHECK-NEXT:    sldi 4, 4, 32
-; CHECK-NEXT:    sldi 5, 5, 32
-; CHECK-NEXT:    oris 4, 4, 43690
-; CHECK-NEXT:    oris 5, 5, 21845
-; CHECK-NEXT:    sldi 6, 3, 1
+; CHECK-NEXT:    sldi 5, 3, 1
 ; CHECK-NEXT:    rldicl 3, 3, 63, 1
 ; CHECK-NEXT:    ori 4, 4, 43690
+; CHECK-NEXT:    sldi 4, 4, 32
+; CHECK-NEXT:    oris 4, 4, 43690
+; CHECK-NEXT:    ori 4, 4, 43690
+; CHECK-NEXT:    and 4, 5, 4
+; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    ori 5, 5, 21845
-; CHECK-NEXT:    sldi 7, 7, 32
-; CHECK-NEXT:    sldi 8, 8, 32
-; CHECK-NEXT:    and 4, 6, 4
+; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    oris 5, 5, 21845
+; CHECK-NEXT:    ori 5, 5, 21845
+; CHECK-NEXT:    and 3, 3, 5
+; CHECK-NEXT:    lis 5, -13108
+; CHECK-NEXT:    ori 5, 5, 52428
+; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    sldi 4, 3, 2
+; CHECK-NEXT:    rldicl 3, 3, 62, 2
+; CHECK-NEXT:    oris 5, 5, 52428
+; CHECK-NEXT:    ori 5, 5, 52428
+; CHECK-NEXT:    and 4, 4, 5
+; CHECK-NEXT:    lis 5, 13107
+; CHECK-NEXT:    ori 5, 5, 13107
+; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    oris 5, 5, 13107
+; CHECK-NEXT:    ori 5, 5, 13107
 ; CHECK-NEXT:    and 3, 3, 5
 ; CHECK-NEXT:    lis 5, -3856
-; CHECK-NEXT:    oris 6, 7, 52428
-; CHECK-NEXT:    oris 7, 8, 13107
+; CHECK-NEXT:    ori 5, 5, 61680
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    lis 4, 3855
-; CHECK-NEXT:    ori 5, 5, 61680
-; CHECK-NEXT:    ori 6, 6, 52428
-; CHECK-NEXT:    ori 7, 7, 13107
-; CHECK-NEXT:    ori 4, 4, 3855
-; CHECK-NEXT:    sldi 8, 3, 2
-; CHECK-NEXT:    rldicl 3, 3, 62, 2
-; CHECK-NEXT:    and 6, 8, 6
-; CHECK-NEXT:    and 3, 3, 7
 ; CHECK-NEXT:    sldi 5, 5, 32
-; CHECK-NEXT:    sldi 4, 4, 32
-; CHECK-NEXT:    or 3, 3, 6
-; CHECK-NEXT:    oris 5, 5, 61680
-; CHECK-NEXT:    oris 4, 4, 3855
-; CHECK-NEXT:    sldi 6, 3, 4
-; CHECK-NEXT:    ori 5, 5, 61680
-; CHECK-NEXT:    ori 4, 4, 3855
+; CHECK-NEXT:    sldi 4, 3, 4
 ; CHECK-NEXT:    rldicl 3, 3, 60, 4
-; CHECK-NEXT:    and 5, 6, 5
-; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    oris 5, 5, 61680
+; CHECK-NEXT:    ori 5, 5, 61680
+; CHECK-NEXT:    and 4, 4, 5
+; CHECK-NEXT:    lis 5, 3855
+; CHECK-NEXT:    ori 5, 5, 3855
+; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    oris 5, 5, 3855
+; CHECK-NEXT:    ori 5, 5, 3855
+; CHECK-NEXT:    and 3, 3, 5
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    rldicl 4, 3, 32, 32
-; CHECK-NEXT:    rotlwi 5, 3, 24
-; CHECK-NEXT:    rotlwi 6, 4, 24
-; CHECK-NEXT:    rlwimi 5, 3, 8, 8, 15
-; CHECK-NEXT:    rlwimi 5, 3, 8, 24, 31
-; CHECK-NEXT:    rlwimi 6, 4, 8, 8, 15
-; CHECK-NEXT:    rlwimi 6, 4, 8, 24, 31
-; CHECK-NEXT:    sldi 3, 5, 32
-; CHECK-NEXT:    or 3, 3, 6
+; CHECK-NEXT:    rotlwi 5, 4, 24
+; CHECK-NEXT:    rlwimi 5, 4, 8, 8, 15
+; CHECK-NEXT:    rlwimi 5, 4, 8, 24, 31
+; CHECK-NEXT:    rotlwi 4, 3, 24
+; CHECK-NEXT:    rlwimi 4, 3, 8, 8, 15
+; CHECK-NEXT:    rlwimi 4, 3, 8, 24, 31
+; CHECK-NEXT:    sldi 3, 4, 32
+; CHECK-NEXT:    or 3, 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %shr = lshr i64 %n, 1

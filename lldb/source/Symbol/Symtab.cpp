@@ -233,7 +233,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {
   case Mangled::eManglingSchemeItanium: {
-    if (mangled.size() < 3 || !mangled.startswith("_Z"))
+    if (mangled.size() < 3 || !mangled.starts_with("_Z"))
       return true;
 
     // Avoid the following types of symbols in the index.
@@ -256,6 +256,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeMSVC:
   case Mangled::eManglingSchemeRustV0:
   case Mangled::eManglingSchemeD:
+  case Mangled::eManglingSchemeSwift:
     return false;
 
   // Don't try and demangle things we can't categorize.
@@ -1009,10 +1010,7 @@ void Symtab::Finalize() {
   // Calculate the size of symbols inside InitAddressIndexes.
   InitAddressIndexes();
   // Shrink to fit the symbols so we don't waste memory
-  if (m_symbols.capacity() > m_symbols.size()) {
-    collection new_symbols(m_symbols.begin(), m_symbols.end());
-    m_symbols.swap(new_symbols);
-  }
+  m_symbols.shrink_to_fit();
   SaveToCache();
 }
 
@@ -1285,7 +1283,7 @@ bool Symtab::Encode(DataEncoder &encoder) const {
 
   // Now that all strings have been gathered, we will emit the string table.
   strtab.Encode(encoder);
-  // Followed the the symbol table data.
+  // Followed by the symbol table data.
   encoder.AppendData(symtab_encoder.GetData());
   return true;
 }

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -x objective-c %s -o - | FileCheck %s
-// rdar://13192366
 typedef signed char BOOL;
 @interface NSObject 
 {

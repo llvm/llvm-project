@@ -1748,7 +1748,7 @@ bool EmulateInstructionRISCV::SetTargetTriple(const ArchSpec &arch) {
   return SupportsThisArch(arch);
 }
 
-bool EmulateInstructionRISCV::TestEmulation(Stream *out_stream, ArchSpec &arch,
+bool EmulateInstructionRISCV::TestEmulation(Stream &out_stream, ArchSpec &arch,
                                             OptionValueDictionary *test_data) {
   return false;
 }

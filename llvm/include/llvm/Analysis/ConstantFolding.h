@@ -68,28 +68,26 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// Attempt to constant fold a compare instruction (icmp/fcmp) with the
-/// specified operands.  If it fails, it returns a constant expression of the
-/// specified operands.
+/// specified operands. Returns null or a constant expression of the specified
+/// operands on failure.
 /// Denormal inputs may be flushed based on the denormal handling mode.
 Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
     const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
 
-/// Attempt to constant fold a unary operation with the specified
-/// operand. If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a unary operation with the specified operand.
+/// Returns null on failure.
 Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
                                      const DataLayout &DL);
 
-/// Attempt to constant fold a binary operation with the specified
-/// operands.  If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a binary operation with the specified operands.
+/// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
 /// Attempt to constant fold a floating point binary operation with the
-/// specified operands, applying the denormal handling mod to the operands.  If
-/// it fails, it returns a constant expression of the specified operands.
+/// specified operands, applying the denormal handling mod to the operands.
+/// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                      Constant *RHS, const DataLayout &DL,
                                      const Instruction *I);
@@ -114,6 +112,11 @@ Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
+                                  const DataLayout &DL);
+
+/// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
+/// DestTy is wider or narrower than C. Returns nullptr on failure.
+Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
                                   const DataLayout &DL);
 
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue

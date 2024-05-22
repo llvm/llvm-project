@@ -22,7 +22,7 @@ define i1 @test_b2(ptr %s1, ptr %s2) {
 ; CHECKS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECKS-NEXT:    .cfi_def_cfa_offset 16
 ; CHECKS-NEXT:    .cfi_offset w30, -16
-; CHECKS-NEXT:    mov w2, #15
+; CHECKS-NEXT:    mov w2, #15 // =0xf
 ; CHECKS-NEXT:    bl bcmp
 ; CHECKS-NEXT:    cmp w0, #0
 ; CHECKS-NEXT:    cset w0, eq
@@ -52,7 +52,7 @@ define i1 @test_b2_align8(ptr align 8 %s1, ptr align 8 %s2) {
 ; CHECKS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECKS-NEXT:    .cfi_def_cfa_offset 16
 ; CHECKS-NEXT:    .cfi_offset w30, -16
-; CHECKS-NEXT:    mov w2, #15
+; CHECKS-NEXT:    mov w2, #15 // =0xf
 ; CHECKS-NEXT:    bl bcmp
 ; CHECKS-NEXT:    cmp w0, #0
 ; CHECKS-NEXT:    cset w0, eq
@@ -67,16 +67,16 @@ entry:
 define i1 @test_bs(ptr %s1, ptr %s2) optsize {
 ; CHECKN-LABEL: test_bs:
 ; CHECKN:       // %bb.0: // %entry
-; CHECKN-NEXT:    ldp x8, x9, [x0]
-; CHECKN-NEXT:    ldp x10, x11, [x1]
+; CHECKN-NEXT:    ldp x8, x11, [x1]
 ; CHECKN-NEXT:    ldr x12, [x0, #16]
-; CHECKN-NEXT:    cmp x8, x10
-; CHECKN-NEXT:    ldr x8, [x1, #16]
-; CHECKN-NEXT:    ccmp x9, x11, #0, eq
-; CHECKN-NEXT:    ldur x9, [x0, #23]
-; CHECKN-NEXT:    ldur x10, [x1, #23]
-; CHECKN-NEXT:    ccmp x12, x8, #0, eq
-; CHECKN-NEXT:    ccmp x9, x10, #0, eq
+; CHECKN-NEXT:    ldp x9, x10, [x0]
+; CHECKN-NEXT:    ldr x13, [x1, #16]
+; CHECKN-NEXT:    cmp x9, x8
+; CHECKN-NEXT:    ldur x8, [x0, #23]
+; CHECKN-NEXT:    ldur x9, [x1, #23]
+; CHECKN-NEXT:    ccmp x10, x11, #0, eq
+; CHECKN-NEXT:    ccmp x12, x13, #0, eq
+; CHECKN-NEXT:    ccmp x8, x9, #0, eq
 ; CHECKN-NEXT:    cset w0, eq
 ; CHECKN-NEXT:    ret
 ;
@@ -85,7 +85,7 @@ define i1 @test_bs(ptr %s1, ptr %s2) optsize {
 ; CHECKS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECKS-NEXT:    .cfi_def_cfa_offset 16
 ; CHECKS-NEXT:    .cfi_offset w30, -16
-; CHECKS-NEXT:    mov w2, #31
+; CHECKS-NEXT:    mov w2, #31 // =0x1f
 ; CHECKS-NEXT:    bl memcmp
 ; CHECKS-NEXT:    cmp w0, #0
 ; CHECKS-NEXT:    cset w0, eq

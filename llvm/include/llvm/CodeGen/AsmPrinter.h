@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -599,6 +599,26 @@ public:
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
 
+  /// getSubtargetInfo() cannot be used where this is needed because we don't
+  /// have a MachineFunction when we're lowering a GlobalIFunc, and
+  /// getSubtargetInfo requires one. Override the implementation in targets
+  /// that support the Mach-O IFunc lowering.
+  virtual const MCSubtargetInfo *getIFuncMCSubtargetInfo() const {
+    return nullptr;
+  }
+
+  virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                      MCSymbol *LazyPointer) {
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
+  }
+
+  virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
+                                            MCSymbol *LazyPointer) {
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
+  }
+
   /// Emit N NOP instructions.
   void emitNops(unsigned N);
 
@@ -614,7 +634,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(StringRef Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -767,6 +787,18 @@ public:
   void emitDwarfDIE(const DIE &Die) const;
 
   //===------------------------------------------------------------------===//
+  // CodeView Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Gets information required to create a CodeView debug symbol for a jump
+  /// table.
+  /// Return value is <Base Address, Base Offset, Branch Address, Entry Size>
+  virtual std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+                     codeview::JumpTableEntrySize>
+  getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
+                           const MCSymbol *BranchLabel) const;
+
+  //===------------------------------------------------------------------===//
   // Inline Asm Support
   //===------------------------------------------------------------------===//
 
@@ -866,12 +898,13 @@ private:
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);
   /// Emit bytes for llvm.commandline metadata.
-  void emitModuleCommandLines(Module &M);
+  virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalAlias(Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
+private:
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 

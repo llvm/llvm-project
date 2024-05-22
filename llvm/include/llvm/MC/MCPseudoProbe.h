@@ -54,13 +54,13 @@
 #ifndef LLVM_MC_MCPSEUDOPROBE_H
 #define LLVM_MC_MCPSEUDOPROBE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/ErrorOr.h"
 #include <list>
-#include <map>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -299,8 +299,9 @@ public:
     MCProbeDivisions[FuncSym].addPseudoProbe(Probe, InlineStack);
   }
 
-  // TODO: Sort by getOrdinal to ensure a determinstic section order
-  using MCProbeDivisionMap = std::map<MCSymbol *, MCPseudoProbeInlineTree>;
+  // The addresses of MCPseudoProbeInlineTree are used by the tree structure and
+  // need to be stable.
+  using MCProbeDivisionMap = std::unordered_map<MCSymbol *, MCPseudoProbeInlineTree>;
 
 private:
   // A collection of MCPseudoProbe for each function. The MCPseudoProbes are

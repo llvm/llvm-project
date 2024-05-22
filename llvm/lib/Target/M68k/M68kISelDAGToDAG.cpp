@@ -227,7 +227,8 @@ private:
   bool SelectPCD(SDNode *Parent, SDValue N, SDValue &Imm);
   bool SelectPCI(SDNode *Parent, SDValue N, SDValue &Imm, SDValue &Index);
 
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   // If Address Mode represents Frame Index store FI in Disp and
@@ -323,7 +324,7 @@ INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   if (U == Root) {
@@ -953,7 +954,8 @@ bool M68kDAGToDAGISel::SelectARI(SDNode *Parent, SDValue N, SDValue &Base) {
 }
 
 bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   // In order to tell AsmPrinter the exact addressing mode we select here, which
   // might comprise of multiple SDValues (hence MachineOperands), a 32-bit
   // immediate value is prepended to the list of selected SDValues to indicate
@@ -966,7 +968,7 @@ bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
   switch (ConstraintID) {
   // Generic memory operand.
-  case InlineAsm::Constraint_m: {
+  case InlineAsm::ConstraintCode::m: {
     // Try every supported (memory) addressing modes.
     SDValue Operands[4];
 
@@ -997,7 +999,7 @@ bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
     return true;
   }
   // 'Q': Address register indirect addressing.
-  case InlineAsm::Constraint_Q: {
+  case InlineAsm::ConstraintCode::Q: {
     SDValue AMKind, Base;
     // 'j' addressing mode.
     // TODO: Add support for 'o' and 'e' after their
@@ -1009,7 +1011,7 @@ bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
     return true;
   }
   // 'U': Address register indirect w/ constant offset addressing.
-  case InlineAsm::Constraint_Um: {
+  case InlineAsm::ConstraintCode::Um: {
     SDValue AMKind, Base, Offset;
     // 'p' addressing mode.
     if (SelectARID(nullptr, Op, Offset, Base) && addKind(AMKind, AMK::p)) {

@@ -10,9 +10,9 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -226,11 +226,12 @@ private:
 /// This class represents one requested operation replacement via 'replaceOp' or
 /// 'eraseOp`.
 struct OpReplacement {
-  OpReplacement(TypeConverter *converter = nullptr) : converter(converter) {}
+  OpReplacement(const TypeConverter *converter = nullptr)
+      : converter(converter) {}
 
   /// An optional type converter that can be used to materialize conversions
   /// between the new and old values if necessary.
-  TypeConverter *converter;
+  const TypeConverter *converter;
 };
 
 //===----------------------------------------------------------------------===//
@@ -333,7 +334,7 @@ public:
   };
 
   UnresolvedMaterialization(UnrealizedConversionCastOp op = nullptr,
-                            TypeConverter *converter = nullptr,
+                            const TypeConverter *converter = nullptr,
                             Kind kind = Target, Type origOutputType = nullptr)
       : op(op), converterAndKind(converter, kind),
         origOutputType(origOutputType) {}
@@ -343,7 +344,9 @@ public:
   UnrealizedConversionCastOp getOp() const { return op; }
 
   /// Return the type converter of this materialization (which may be null).
-  TypeConverter *getConverter() const { return converterAndKind.getPointer(); }
+  const TypeConverter *getConverter() const {
+    return converterAndKind.getPointer();
+  }
 
   /// Return the kind of this materialization.
   Kind getKind() const { return converterAndKind.getInt(); }
@@ -360,7 +363,7 @@ private:
 
   /// The corresponding type converter to use when resolving this
   /// materialization, and the kind of this materialization.
-  llvm::PointerIntPair<TypeConverter *, 1, Kind> converterAndKind;
+  llvm::PointerIntPair<const TypeConverter *, 1, Kind> converterAndKind;
 
   /// The original output type. This is only used for argument conversions.
   Type origOutputType;
@@ -372,7 +375,7 @@ private:
 static Value buildUnresolvedMaterialization(
     UnresolvedMaterialization::Kind kind, Block *insertBlock,
     Block::iterator insertPt, Location loc, ValueRange inputs, Type outputType,
-    Type origOutputType, TypeConverter *converter,
+    Type origOutputType, const TypeConverter *converter,
     SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations) {
   // Avoid materializing an unnecessary cast.
   if (inputs.size() == 1 && inputs.front().getType() == outputType)
@@ -389,7 +392,7 @@ static Value buildUnresolvedMaterialization(
 }
 static Value buildUnresolvedArgumentMaterialization(
     PatternRewriter &rewriter, Location loc, ValueRange inputs,
-    Type origOutputType, Type outputType, TypeConverter *converter,
+    Type origOutputType, Type outputType, const TypeConverter *converter,
     SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations) {
   return buildUnresolvedMaterialization(
       UnresolvedMaterialization::Argument, rewriter.getInsertionBlock(),
@@ -397,7 +400,7 @@ static Value buildUnresolvedArgumentMaterialization(
       converter, unresolvedMaterializations);
 }
 static Value buildUnresolvedTargetMaterialization(
-    Location loc, Value input, Type outputType, TypeConverter *converter,
+    Location loc, Value input, Type outputType, const TypeConverter *converter,
     SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations) {
   Block *insertBlock = input.getParentBlock();
   Block::iterator insertPt = insertBlock->begin();
@@ -446,7 +449,7 @@ struct ArgConverter {
   /// This structure contains information pertaining to a block that has had its
   /// signature converted.
   struct ConvertedBlockInfo {
-    ConvertedBlockInfo(Block *origBlock, TypeConverter *converter)
+    ConvertedBlockInfo(Block *origBlock, const TypeConverter *converter)
         : origBlock(origBlock), converter(converter) {}
 
     /// The original block that was requested to have its signature converted.
@@ -457,7 +460,7 @@ struct ArgConverter {
     SmallVector<std::optional<ConvertedArgInfo>, 1> argInfo;
 
     /// The type converter used to convert the arguments.
-    TypeConverter *converter;
+    const TypeConverter *converter;
   };
 
   /// Return if the signature of the given block has already been converted.
@@ -466,14 +469,14 @@ struct ArgConverter {
   }
 
   /// Set the type converter to use for the given region.
-  void setConverter(Region *region, TypeConverter *typeConverter) {
+  void setConverter(Region *region, const TypeConverter *typeConverter) {
     assert(typeConverter && "expected valid type converter");
     regionToConverter[region] = typeConverter;
   }
 
   /// Return the type converter to use for the given region, or null if there
   /// isn't one.
-  TypeConverter *getConverter(Region *region) {
+  const TypeConverter *getConverter(Region *region) {
     return regionToConverter.lookup(region);
   }
 
@@ -510,7 +513,7 @@ struct ArgConverter {
   /// block is returned containing the new arguments. Returns `block` if it did
   /// not require conversion.
   FailureOr<Block *>
-  convertSignature(Block *block, TypeConverter *converter,
+  convertSignature(Block *block, const TypeConverter *converter,
                    ConversionValueMapping &mapping,
                    SmallVectorImpl<BlockArgument> &argReplacements);
 
@@ -521,7 +524,7 @@ struct ArgConverter {
   /// translate between the origin argument types and those specified in the
   /// signature conversion.
   Block *applySignatureConversion(
-      Block *block, TypeConverter *converter,
+      Block *block, const TypeConverter *converter,
       TypeConverter::SignatureConversion &signatureConversion,
       ConversionValueMapping &mapping,
       SmallVectorImpl<BlockArgument> &argReplacements);
@@ -542,7 +545,7 @@ struct ArgConverter {
 
   /// A mapping of regions to type converters that should be used when
   /// converting the arguments of blocks within that region.
-  DenseMap<Region *, TypeConverter *> regionToConverter;
+  DenseMap<Region *, const TypeConverter *> regionToConverter;
 
   /// The pattern rewriter to use when materializing conversions.
   PatternRewriter &rewriter;
@@ -686,7 +689,8 @@ LogicalResult ArgConverter::materializeLiveConversions(
 // Conversion
 
 FailureOr<Block *> ArgConverter::convertSignature(
-    Block *block, TypeConverter *converter, ConversionValueMapping &mapping,
+    Block *block, const TypeConverter *converter,
+    ConversionValueMapping &mapping,
     SmallVectorImpl<BlockArgument> &argReplacements) {
   // Check if the block was already converted. If the block is detached,
   // conservatively assume it is going to be deleted.
@@ -705,7 +709,7 @@ FailureOr<Block *> ArgConverter::convertSignature(
 }
 
 Block *ArgConverter::applySignatureConversion(
-    Block *block, TypeConverter *converter,
+    Block *block, const TypeConverter *converter,
     TypeConverter::SignatureConversion &signatureConversion,
     ConversionValueMapping &mapping,
     SmallVectorImpl<BlockArgument> &argReplacements) {
@@ -720,9 +724,18 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  // FIXME: We should map the new arguments to proper locations.
+  // Map all new arguments to the location of the argument they originate from.
   SmallVector<Location> newLocs(convertedTypes.size(),
                                 rewriter.getUnknownLoc());
+  for (unsigned i = 0; i < origArgCount; ++i) {
+    auto inputMap = signatureConversion.getInputMapping(i);
+    if (!inputMap || inputMap->replacementValue)
+      continue;
+    Location origLoc = block->getArgument(i).getLoc();
+    for (unsigned j = 0; j < inputMap->size; ++j)
+      newLocs[inputMap->inputNo + j] = origLoc;
+  }
+
   SmallVector<Value, 4> newArgRange(
       newBlock->addArguments(convertedTypes, newLocs));
   ArrayRef<Value> newArgs(newArgRange);
@@ -865,7 +878,7 @@ struct ConversionPatternRewriterImpl {
 
   /// Convert the signature of the given block.
   FailureOr<Block *> convertBlockSignature(
-      Block *block, TypeConverter *converter,
+      Block *block, const TypeConverter *converter,
       TypeConverter::SignatureConversion *conversion = nullptr);
 
   /// Apply a signature conversion on the given region, using `converter` for
@@ -873,16 +886,16 @@ struct ConversionPatternRewriterImpl {
   Block *
   applySignatureConversion(Region *region,
                            TypeConverter::SignatureConversion &conversion,
-                           TypeConverter *converter);
+                           const TypeConverter *converter);
 
   /// Convert the types of block arguments within the given region.
   FailureOr<Block *>
-  convertRegionTypes(Region *region, TypeConverter &converter,
+  convertRegionTypes(Region *region, const TypeConverter &converter,
                      TypeConverter::SignatureConversion *entryConversion);
 
   /// Convert the types of non-entry block arguments within the given region.
   LogicalResult convertNonEntryRegionTypes(
-      Region *region, TypeConverter &converter,
+      Region *region, const TypeConverter &converter,
       ArrayRef<TypeConverter::SignatureConversion> blockConversions = {});
 
   //===--------------------------------------------------------------------===//
@@ -962,7 +975,7 @@ struct ConversionPatternRewriterImpl {
 
   /// The current type converter, or nullptr if no type converter is currently
   /// active.
-  TypeConverter *currentTypeConverter = nullptr;
+  const TypeConverter *currentTypeConverter = nullptr;
 
   /// This allows the user to collect the match failure message.
   function_ref<void(Diagnostic &)> notifyCallback;
@@ -1283,7 +1296,7 @@ void ConversionPatternRewriterImpl::markNestedOpsIgnored(Operation *op) {
 // Type Conversion
 
 FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
-    Block *block, TypeConverter *converter,
+    Block *block, const TypeConverter *converter,
     TypeConverter::SignatureConversion *conversion) {
   FailureOr<Block *> result =
       conversion ? argConverter.applySignatureConversion(
@@ -1301,14 +1314,14 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
 
 Block *ConversionPatternRewriterImpl::applySignatureConversion(
     Region *region, TypeConverter::SignatureConversion &conversion,
-    TypeConverter *converter) {
+    const TypeConverter *converter) {
   if (!region->empty())
     return *convertBlockSignature(&region->front(), converter, &conversion);
   return nullptr;
 }
 
 FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
-    Region *region, TypeConverter &converter,
+    Region *region, const TypeConverter &converter,
     TypeConverter::SignatureConversion *entryConversion) {
   argConverter.setConverter(region, &converter);
   if (region->empty())
@@ -1323,7 +1336,7 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
 }
 
 LogicalResult ConversionPatternRewriterImpl::convertNonEntryRegionTypes(
-    Region *region, TypeConverter &converter,
+    Region *region, const TypeConverter &converter,
     ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
   argConverter.setConverter(region, &converter);
   if (region->empty())
@@ -1492,18 +1505,18 @@ void ConversionPatternRewriter::eraseBlock(Block *block) {
 
 Block *ConversionPatternRewriter::applySignatureConversion(
     Region *region, TypeConverter::SignatureConversion &conversion,
-    TypeConverter *converter) {
+    const TypeConverter *converter) {
   return impl->applySignatureConversion(region, conversion, converter);
 }
 
 FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
-    Region *region, TypeConverter &converter,
+    Region *region, const TypeConverter &converter,
     TypeConverter::SignatureConversion *entryConversion) {
   return impl->convertRegionTypes(region, converter, entryConversion);
 }
 
 LogicalResult ConversionPatternRewriter::convertNonEntryRegionTypes(
-    Region *region, TypeConverter &converter,
+    Region *region, const TypeConverter &converter,
     ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
   return impl->convertNonEntryRegionTypes(region, converter, blockConversions);
 }
@@ -1677,7 +1690,7 @@ class OperationLegalizer {
 public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
-  OperationLegalizer(ConversionTarget &targetInfo,
+  OperationLegalizer(const ConversionTarget &targetInfo,
                      const FrozenRewritePatternSet &patterns);
 
   /// Returns true if the given operation is known to be illegal on the target.
@@ -1688,7 +1701,7 @@ public:
   LogicalResult legalize(Operation *op, ConversionPatternRewriter &rewriter);
 
   /// Returns the conversion target in use by the legalizer.
-  ConversionTarget &getTarget() { return target; }
+  const ConversionTarget &getTarget() { return target; }
 
 private:
   /// Attempt to legalize the given operation by folding it.
@@ -1766,14 +1779,14 @@ private:
   SmallPtrSet<const Pattern *, 8> appliedPatterns;
 
   /// The legalization information provided by the target.
-  ConversionTarget &target;
+  const ConversionTarget &target;
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
 };
 } // namespace
 
-OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
+OperationLegalizer::OperationLegalizer(const ConversionTarget &targetInfo,
                                        const FrozenRewritePatternSet &patterns)
     : target(targetInfo), applicator(patterns) {
   // The set of patterns that can be applied to illegal operations to transform
@@ -2302,7 +2315,7 @@ enum OpConversionMode {
 // rewrite patterns. The conversion behaves differently depending on the
 // conversion mode.
 struct OperationConverter {
-  explicit OperationConverter(ConversionTarget &target,
+  explicit OperationConverter(const ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
                               OpConversionMode mode,
                               DenseSet<Operation *> *trackedOps = nullptr)
@@ -2341,7 +2354,7 @@ private:
   /// type.
   LogicalResult legalizeChangedResultType(
       Operation *op, OpResult result, Value newValue,
-      TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
+      const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
       ConversionPatternRewriterImpl &rewriterImpl,
       const DenseMap<Value, SmallVector<Value>> &inverseMapping);
 
@@ -2393,7 +2406,7 @@ LogicalResult OperationConverter::convertOperations(
     function_ref<void(Diagnostic &)> notifyCallback) {
   if (ops.empty())
     return success();
-  ConversionTarget &target = opLegalizer.getTarget();
+  const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
   SmallVector<Operation *> toConvert;
@@ -2717,7 +2730,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
   }
 
   // Try to materialize the conversion.
-  if (TypeConverter *converter = mat.getConverter()) {
+  if (const TypeConverter *converter = mat.getConverter()) {
     // FIXME: Determine a suitable insertion location when there are multiple
     // inputs.
     if (inputOperands.size() == 1)
@@ -2836,7 +2849,7 @@ static Operation *findLiveUserOfReplaced(
 
 LogicalResult OperationConverter::legalizeChangedResultType(
     Operation *op, OpResult result, Value newValue,
-    TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
+    const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
     ConversionPatternRewriterImpl &rewriterImpl,
     const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
   Operation *liveUser =
@@ -2906,28 +2919,35 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 }
 
 LogicalResult TypeConverter::convertType(Type t,
-                                         SmallVectorImpl<Type> &results) {
-  auto existingIt = cachedDirectConversions.find(t);
-  if (existingIt != cachedDirectConversions.end()) {
-    if (existingIt->second)
-      results.push_back(existingIt->second);
-    return success(existingIt->second != nullptr);
+                                         SmallVectorImpl<Type> &results) const {
+  {
+    std::shared_lock<decltype(cacheMutex)> cacheReadLock(cacheMutex,
+                                                         std::defer_lock);
+    if (t.getContext()->isMultithreadingEnabled())
+      cacheReadLock.lock();
+    auto existingIt = cachedDirectConversions.find(t);
+    if (existingIt != cachedDirectConversions.end()) {
+      if (existingIt->second)
+        results.push_back(existingIt->second);
+      return success(existingIt->second != nullptr);
+    }
+    auto multiIt = cachedMultiConversions.find(t);
+    if (multiIt != cachedMultiConversions.end()) {
+      results.append(multiIt->second.begin(), multiIt->second.end());
+      return success();
+    }
   }
-  auto multiIt = cachedMultiConversions.find(t);
-  if (multiIt != cachedMultiConversions.end()) {
-    results.append(multiIt->second.begin(), multiIt->second.end());
-    return success();
-  }
-
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
   size_t currentCount = results.size();
-  conversionCallStack.push_back(t);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([this]() { conversionCallStack.pop_back(); });
-  for (ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (std::optional<LogicalResult> result =
-            converter(t, results, conversionCallStack)) {
+
+  std::unique_lock<decltype(cacheMutex)> cacheWriteLock(cacheMutex,
+                                                        std::defer_lock);
+
+  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
+    if (std::optional<LogicalResult> result = converter(t, results)) {
+      if (t.getContext()->isMultithreadingEnabled())
+        cacheWriteLock.lock();
       if (!succeeded(*result)) {
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
@@ -2943,7 +2963,7 @@ LogicalResult TypeConverter::convertType(Type t,
   return failure();
 }
 
-Type TypeConverter::convertType(Type t) {
+Type TypeConverter::convertType(Type t) const {
   // Use the multi-type result version to convert the type.
   SmallVector<Type, 1> results;
   if (failed(convertType(t, results)))
@@ -2953,31 +2973,35 @@ Type TypeConverter::convertType(Type t) {
   return results.size() == 1 ? results.front() : nullptr;
 }
 
-LogicalResult TypeConverter::convertTypes(TypeRange types,
-                                          SmallVectorImpl<Type> &results) {
+LogicalResult
+TypeConverter::convertTypes(TypeRange types,
+                            SmallVectorImpl<Type> &results) const {
   for (Type type : types)
     if (failed(convertType(type, results)))
       return failure();
   return success();
 }
 
-bool TypeConverter::isLegal(Type type) { return convertType(type) == type; }
-bool TypeConverter::isLegal(Operation *op) {
+bool TypeConverter::isLegal(Type type) const {
+  return convertType(type) == type;
+}
+bool TypeConverter::isLegal(Operation *op) const {
   return isLegal(op->getOperandTypes()) && isLegal(op->getResultTypes());
 }
 
-bool TypeConverter::isLegal(Region *region) {
+bool TypeConverter::isLegal(Region *region) const {
   return llvm::all_of(*region, [this](Block &block) {
     return isLegal(block.getArgumentTypes());
   });
 }
 
-bool TypeConverter::isSignatureLegal(FunctionType ty) {
+bool TypeConverter::isSignatureLegal(FunctionType ty) const {
   return isLegal(llvm::concat<const Type>(ty.getInputs(), ty.getResults()));
 }
 
-LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
-                                                 SignatureConversion &result) {
+LogicalResult
+TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
+                                   SignatureConversion &result) const {
   // Try to convert the given input type.
   SmallVector<Type, 1> convertedTypes;
   if (failed(convertType(type, convertedTypes)))
@@ -2991,9 +3015,10 @@ LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
   result.addInputs(inputNo, convertedTypes);
   return success();
 }
-LogicalResult TypeConverter::convertSignatureArgs(TypeRange types,
-                                                  SignatureConversion &result,
-                                                  unsigned origInputOffset) {
+LogicalResult
+TypeConverter::convertSignatureArgs(TypeRange types,
+                                    SignatureConversion &result,
+                                    unsigned origInputOffset) const {
   for (unsigned i = 0, e = types.size(); i != e; ++i)
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
       return failure();
@@ -3001,16 +3026,16 @@ LogicalResult TypeConverter::convertSignatureArgs(TypeRange types,
 }
 
 Value TypeConverter::materializeConversion(
-    MutableArrayRef<MaterializationCallbackFn> materializations,
-    OpBuilder &builder, Location loc, Type resultType, ValueRange inputs) {
-  for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
+    ArrayRef<MaterializationCallbackFn> materializations, OpBuilder &builder,
+    Location loc, Type resultType, ValueRange inputs) const {
+  for (const MaterializationCallbackFn &fn : llvm::reverse(materializations))
     if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
       return *result;
   return nullptr;
 }
 
-auto TypeConverter::convertBlockSignature(Block *block)
-    -> std::optional<SignatureConversion> {
+std::optional<TypeConverter::SignatureConversion>
+TypeConverter::convertBlockSignature(Block *block) const {
   SignatureConversion conversion(block->getNumArguments());
   if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
     return std::nullopt;
@@ -3052,9 +3077,9 @@ Attribute TypeConverter::AttributeConversionResult::getResult() const {
   return impl.getPointer();
 }
 
-std::optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
-                                                             Attribute attr) {
-  for (TypeAttributeConversionCallbackFn &fn :
+std::optional<Attribute>
+TypeConverter::convertTypeAttribute(Type type, Attribute attr) const {
+  for (const TypeAttributeConversionCallbackFn &fn :
        llvm::reverse(typeAttributeConversions)) {
     AttributeConversionResult res = fn(type, attr);
     if (res.hasResult())
@@ -3070,7 +3095,7 @@ std::optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
-                                        TypeConverter &typeConverter,
+                                        const TypeConverter &typeConverter,
                                         ConversionPatternRewriter &rewriter) {
   FunctionType type = dyn_cast<FunctionType>(funcOp.getFunctionType());
   if (!type)
@@ -3101,7 +3126,7 @@ namespace {
 struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
   FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
                                          MLIRContext *ctx,
-                                         TypeConverter &converter)
+                                         const TypeConverter &converter)
       : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   LogicalResult
@@ -3126,13 +3151,13 @@ struct AnyFunctionOpInterfaceSignatureConversion
 
 void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    TypeConverter &converter) {
+    const TypeConverter &converter) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
 }
 
 void mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, TypeConverter &converter) {
+    RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<AnyFunctionOpInterfaceSignatureConversion>(
       converter, patterns.getContext());
 }
@@ -3333,7 +3358,8 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
       [](PatternRewriter &rewriter, Type type) -> FailureOr<Type> {
         auto &rewriterImpl =
             static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
-        if (TypeConverter *converter = rewriterImpl.currentTypeConverter) {
+        if (const TypeConverter *converter =
+                rewriterImpl.currentTypeConverter) {
           if (Type newType = converter->convertType(type))
             return newType;
           return failure();
@@ -3346,7 +3372,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
          TypeRange types) -> FailureOr<SmallVector<Type>> {
         auto &rewriterImpl =
             static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
-        TypeConverter *converter = rewriterImpl.currentTypeConverter;
+        const TypeConverter *converter = rewriterImpl.currentTypeConverter;
         if (!converter)
           return SmallVector<Type>(types);
 
@@ -3366,7 +3392,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 
 LogicalResult
 mlir::applyPartialConversion(ArrayRef<Operation *> ops,
-                             ConversionTarget &target,
+                             const ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Partial,
@@ -3374,7 +3400,7 @@ mlir::applyPartialConversion(ArrayRef<Operation *> ops,
   return opConverter.convertOperations(ops);
 }
 LogicalResult
-mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
+mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   return applyPartialConversion(llvm::ArrayRef(op), target, patterns,
@@ -3385,13 +3411,13 @@ mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
 // Full Conversion
 
 LogicalResult
-mlir::applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+mlir::applyFullConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Full);
   return opConverter.convertOperations(ops);
 }
 LogicalResult
-mlir::applyFullConversion(Operation *op, ConversionTarget &target,
+mlir::applyFullConversion(Operation *op, const ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
   return applyFullConversion(llvm::ArrayRef(op), target, patterns);
 }

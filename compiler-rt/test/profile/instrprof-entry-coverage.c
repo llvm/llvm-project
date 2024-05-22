@@ -23,6 +23,6 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: main
-// CHECK: foo
-// CHECK: bar
+// CHECK-DAG: main
+// CHECK-DAG: foo
+// CHECK-DAG: bar

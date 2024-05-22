@@ -13,67 +13,16 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 #define LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 
+#include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPC.h"
 #include "PPCRegisterInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "PPCGenInstrInfo.inc"
 
 namespace llvm {
-
-/// PPCII - This namespace holds all of the PowerPC target-specific
-/// per-instruction flags.  These must match the corresponding definitions in
-/// PPC.td and PPCInstrFormats.td.
-namespace PPCII {
-enum {
-  // PPC970 Instruction Flags.  These flags describe the characteristics of the
-  // PowerPC 970 (aka G5) dispatch groups and how they are formed out of
-  // raw machine instructions.
-
-  /// PPC970_First - This instruction starts a new dispatch group, so it will
-  /// always be the first one in the group.
-  PPC970_First = 0x1,
-
-  /// PPC970_Single - This instruction starts a new dispatch group and
-  /// terminates it, so it will be the sole instruction in the group.
-  PPC970_Single = 0x2,
-
-  /// PPC970_Cracked - This instruction is cracked into two pieces, requiring
-  /// two dispatch pipes to be available to issue.
-  PPC970_Cracked = 0x4,
-
-  /// PPC970_Mask/Shift - This is a bitmask that selects the pipeline type that
-  /// an instruction is issued to.
-  PPC970_Shift = 3,
-  PPC970_Mask = 0x07 << PPC970_Shift
-};
-enum PPC970_Unit {
-  /// These are the various PPC970 execution unit pipelines.  Each instruction
-  /// is one of these.
-  PPC970_Pseudo = 0 << PPC970_Shift,   // Pseudo instruction
-  PPC970_FXU    = 1 << PPC970_Shift,   // Fixed Point (aka Integer/ALU) Unit
-  PPC970_LSU    = 2 << PPC970_Shift,   // Load Store Unit
-  PPC970_FPU    = 3 << PPC970_Shift,   // Floating Point Unit
-  PPC970_CRU    = 4 << PPC970_Shift,   // Control Register Unit
-  PPC970_VALU   = 5 << PPC970_Shift,   // Vector ALU
-  PPC970_VPERM  = 6 << PPC970_Shift,   // Vector Permute Unit
-  PPC970_BRU    = 7 << PPC970_Shift    // Branch Unit
-};
-
-enum {
-  /// Shift count to bypass PPC970 flags
-  NewDef_Shift = 6,
-
-  /// This instruction is an X-Form memory operation.
-  XFormMemOp = 0x1 << NewDef_Shift,
-  /// This instruction is prefixed.
-  Prefixed = 0x1 << (NewDef_Shift + 1),
-  /// This instruction produced a sign extended result.
-  SExt32To64 = 0x1 << (NewDef_Shift + 2),
-  /// This instruction produced a zero extended result.
-  ZExt32To64 = 0x1 << (NewDef_Shift + 3)
-};
-} // end namespace PPCII
 
 // Instructions that have an immediate form might be convertible to that
 // form if the correct input is a result of a load immediate. In order to
@@ -324,99 +273,6 @@ public:
     return get(Opcode).TSFlags & PPCII::ZExt32To64;
   }
 
-  /// Check if Opcode corresponds to a call instruction that should be marked
-  /// with the NOTOC relocation.
-  bool isNoTOCCallInstr(unsigned Opcode) const {
-    if (!get(Opcode).isCall())
-      return false;
-
-    switch (Opcode) {
-    default:
-#ifndef NDEBUG
-      llvm_unreachable("Unknown call opcode");
-#endif
-      return false;
-    case PPC::BL8_NOTOC:
-    case PPC::BL8_NOTOC_TLS:
-    case PPC::BL8_NOTOC_RM:
-      return true;
-#ifndef NDEBUG
-    case PPC::BL8:
-    case PPC::BL:
-    case PPC::BL8_TLS:
-    case PPC::BL_TLS:
-    case PPC::BLA8:
-    case PPC::BLA:
-    case PPC::BCCL:
-    case PPC::BCCLA:
-    case PPC::BCL:
-    case PPC::BCLn:
-    case PPC::BL8_NOP:
-    case PPC::BL_NOP:
-    case PPC::BL8_NOP_TLS:
-    case PPC::BLA8_NOP:
-    case PPC::BCTRL8:
-    case PPC::BCTRL:
-    case PPC::BCCCTRL8:
-    case PPC::BCCCTRL:
-    case PPC::BCCTRL8:
-    case PPC::BCCTRL:
-    case PPC::BCCTRL8n:
-    case PPC::BCCTRLn:
-    case PPC::BL8_RM:
-    case PPC::BLA8_RM:
-    case PPC::BL8_NOP_RM:
-    case PPC::BLA8_NOP_RM:
-    case PPC::BCTRL8_RM:
-    case PPC::BCTRL8_LDinto_toc:
-    case PPC::BCTRL8_LDinto_toc_RM:
-    case PPC::BL8_TLS_:
-    case PPC::TCRETURNdi8:
-    case PPC::TCRETURNai8:
-    case PPC::TCRETURNri8:
-    case PPC::TAILBCTR8:
-    case PPC::TAILB8:
-    case PPC::TAILBA8:
-    case PPC::BCLalways:
-    case PPC::BLRL:
-    case PPC::BCCLRL:
-    case PPC::BCLRL:
-    case PPC::BCLRLn:
-    case PPC::BDZL:
-    case PPC::BDNZL:
-    case PPC::BDZLA:
-    case PPC::BDNZLA:
-    case PPC::BDZLp:
-    case PPC::BDNZLp:
-    case PPC::BDZLAp:
-    case PPC::BDNZLAp:
-    case PPC::BDZLm:
-    case PPC::BDNZLm:
-    case PPC::BDZLAm:
-    case PPC::BDNZLAm:
-    case PPC::BDZLRL:
-    case PPC::BDNZLRL:
-    case PPC::BDZLRLp:
-    case PPC::BDNZLRLp:
-    case PPC::BDZLRLm:
-    case PPC::BDNZLRLm:
-    case PPC::BL_RM:
-    case PPC::BLA_RM:
-    case PPC::BL_NOP_RM:
-    case PPC::BCTRL_RM:
-    case PPC::TCRETURNdi:
-    case PPC::TCRETURNai:
-    case PPC::TCRETURNri:
-    case PPC::BCTRL_LWZinto_toc:
-    case PPC::BCTRL_LWZinto_toc_RM:
-    case PPC::TAILBCTR:
-    case PPC::TAILB:
-    case PPC::TAILBA:
-      return false;
-#endif
-    }
-  }
-
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
                               PPC::VOR,       PPC::XXLOR, PPC::XXLORf,
@@ -426,6 +282,32 @@ public:
       if (Opcode == CopyOpcodes[i])
         return true;
     return false;
+  }
+
+  static bool hasPCRelFlag(unsigned TF) {
+    return TF == PPCII::MO_PCREL_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasGOTFlag(unsigned TF) {
+    return TF == PPCII::MO_GOT_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasTLSFlag(unsigned TF) {
+    return TF == PPCII::MO_TLSGD_FLAG || TF == PPCII::MO_TPREL_FLAG ||
+           TF == PPCII::MO_TLSLD_FLAG || TF == PPCII::MO_TLSGDM_FLAG ||
+           TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG || TF == PPCII::MO_TPREL_LO ||
+           TF == PPCII::MO_TPREL_HA || TF == PPCII::MO_DTPREL_LO ||
+           TF == PPCII::MO_TLSLD_LO || TF == PPCII::MO_TLS ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG;
   }
 
   ScheduleHazardRecognizer *
@@ -439,13 +321,15 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr &DefMI, unsigned DefIdx,
-                        const MachineInstr &UseMI,
-                        unsigned UseIdx) const override;
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        SDNode *DefNode, unsigned DefIdx,
-                        SDNode *UseNode, unsigned UseIdx) const override {
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            const MachineInstr &DefMI,
+                                            unsigned DefIdx,
+                                            const MachineInstr &UseMI,
+                                            unsigned UseIdx) const override;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            SDNode *DefNode, unsigned DefIdx,
+                                            SDNode *UseNode,
+                                            unsigned UseIdx) const override {
     return PPCGenInstrInfo::getOperandLatency(ItinData, DefNode, DefIdx,
                                               UseNode, UseIdx);
   }
@@ -512,12 +396,9 @@ public:
   /// perserved for more FMA chain reassociations on PowerPC.
   int getExtendResourceLenLimit() const override { return 1; }
 
-  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
-                             MachineInstr &NewMI1,
-                             MachineInstr &NewMI2) const override;
-
   // PowerPC specific version of setSpecialOperandAttr that copies Flags to MI
   // and clears nuw, nsw, and exact flags.
+  using TargetInstrInfo::setSpecialOperandAttr;
   void setSpecialOperandAttr(MachineInstr &MI, uint32_t Flags) const;
 
   bool isCoalescableExtInstr(const MachineInstr &MI,
@@ -678,8 +559,11 @@ public:
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent.
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           int64_t Offset2, bool OffsetIsScalable2,
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   /// Return true if two MIs access different memory addresses and false
   /// otherwise
@@ -700,21 +584,12 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  ArrayRef<std::pair<unsigned, const char *>>
-  getSerializableBitmaskMachineOperandTargetFlags() const override;
-
   // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
   bool expandVSXMemPseudo(MachineInstr &MI) const;
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  static bool isVFRegister(unsigned Reg) {
-    return Reg >= PPC::VF0 && Reg <= PPC::VF31;
-  }
-  static bool isVRRegister(unsigned Reg) {
-    return Reg >= PPC::V0 && Reg <= PPC::V31;
-  }
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);
 
@@ -737,6 +612,7 @@ public:
   }
 
   bool convertToImmediateForm(MachineInstr &MI,
+                              SmallSet<Register, 4> &RegsToUpdate,
                               MachineInstr **KilledDef = nullptr) const;
   bool foldFrameOffset(MachineInstr &MI) const;
   bool combineRLWINM(MachineInstr &MI, MachineInstr **ToErase = nullptr) const;
@@ -750,23 +626,6 @@ public:
                              MachineInstr *&ADDIMI, int64_t &OffsetAddi,
                              int64_t OffsetImm) const;
 
-  /// Fixup killed/dead flag for register \p RegNo between instructions [\p
-  /// StartMI, \p EndMI]. Some pre-RA or post-RA transformations may violate
-  /// register killed/dead flags semantics, this function can be called to fix
-  /// up. Before calling this function,
-  /// 1. Ensure that \p RegNo liveness is killed after instruction \p EndMI.
-  /// 2. Ensure that there is no new definition between (\p StartMI, \p EndMI)
-  ///    and possible definition for \p RegNo is \p StartMI or \p EndMI. For
-  ///    pre-RA cases, definition may be \p StartMI through COPY, \p StartMI
-  ///    will be adjust to true definition.
-  /// 3. We can do accurate fixup for the case when all instructions between
-  ///    [\p StartMI, \p EndMI] are in same basic block.
-  /// 4. For the case when \p StartMI and \p EndMI are not in same basic block,
-  ///    we conservatively clear kill flag for all uses of \p RegNo for pre-RA
-  ///    and for post-RA, we give an assertion as without reaching definition
-  ///    analysis post-RA, \p StartMI and \p EndMI are hard to keep right.
-  void fixupIsDeadOrKill(MachineInstr *StartMI, MachineInstr *EndMI,
-                         unsigned RegNo) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
   void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
                                   int64_t Imm) const;
@@ -784,38 +643,6 @@ public:
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register Reg,
                             int64_t Imm) const;
-
-  /// getRegNumForOperand - some operands use different numbering schemes
-  /// for the same registers. For example, a VSX instruction may have any of
-  /// vs0-vs63 allocated whereas an Altivec instruction could only have
-  /// vs32-vs63 allocated (numbered as v0-v31). This function returns the actual
-  /// register number needed for the opcode/operand number combination.
-  /// The operand number argument will be useful when we need to extend this
-  /// to instructions that use both Altivec and VSX numbering (for different
-  /// operands).
-  static unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
-                                      unsigned OpNo) {
-    int16_t regClass = Desc.operands()[OpNo].RegClass;
-    switch (regClass) {
-      // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
-      // VSX32-VSX63 during encoding/disassembling
-      case PPC::VSSRCRegClassID:
-      case PPC::VSFRCRegClassID:
-        if (isVFRegister(Reg))
-          return PPC::VSX32 + (Reg - PPC::VF0);
-        break;
-      // We store VSL0-VSL31, V0-V31 in MCOperand and it should be VSL0-VSL31,
-      // VSX32-VSX63 during encoding/disassembling
-      case PPC::VSRCRegClassID:
-        if (isVRRegister(Reg))
-          return PPC::VSX32 + (Reg - PPC::V0);
-        break;
-      // Other RegClass doesn't need mapping
-      default:
-        break;
-    }
-    return Reg;
-  }
 
   /// Check \p Opcode is BDNZ (Decrement CTR and branch if it is still nonzero).
   bool isBDNZ(unsigned Opcode) const;

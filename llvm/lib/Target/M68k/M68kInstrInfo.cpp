@@ -361,6 +361,7 @@ bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
 
   assert(RCDst && RCSrc && "Wrong use of MOVX_RR");
   assert(RCDst != RCSrc && "You cannot use the same Reg Classes with MOVX_RR");
+  (void)RCSrc;
 
   // We need to find the super source register that matches the size of Dst
   unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
@@ -407,6 +408,7 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
 
   assert(RCDst && RCSrc && "Wrong use of MOVSX_RR");
   assert(RCDst != RCSrc && "You cannot use the same Reg Classes with MOVSX_RR");
+  (void)RCSrc;
 
   // We need to find the super source register that matches the size of Dst
   unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
@@ -746,6 +748,7 @@ void M68kInstrInfo::storeRegToStackSlot(
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to store");
+  (void)MFI;
 
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
@@ -763,13 +766,14 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to load");
+  (void)MFI;
 
   unsigned Opc = getLoadRegOpcode(DstReg, RC, TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc), DstReg), FrameIndex);
 }
 
-/// Return a virtual register initialized with the the global base register
+/// Return a virtual register initialized with the global base register
 /// value. Output instructions required to initialize the register in the
 /// function entry block, if necessary.
 ///

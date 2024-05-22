@@ -133,71 +133,6 @@ static void getRegistersForValue(MachineFunction &MF,
   }
 }
 
-/// Return an integer indicating how general CT is.
-static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
-  switch (CT) {
-  case TargetLowering::C_Immediate:
-  case TargetLowering::C_Other:
-  case TargetLowering::C_Unknown:
-    return 0;
-  case TargetLowering::C_Register:
-    return 1;
-  case TargetLowering::C_RegisterClass:
-    return 2;
-  case TargetLowering::C_Memory:
-  case TargetLowering::C_Address:
-    return 3;
-  }
-  llvm_unreachable("Invalid constraint type");
-}
-
-static void chooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
-                             const TargetLowering *TLI) {
-  assert(OpInfo.Codes.size() > 1 && "Doesn't have multiple constraint options");
-  unsigned BestIdx = 0;
-  TargetLowering::ConstraintType BestType = TargetLowering::C_Unknown;
-  int BestGenerality = -1;
-
-  // Loop over the options, keeping track of the most general one.
-  for (unsigned i = 0, e = OpInfo.Codes.size(); i != e; ++i) {
-    TargetLowering::ConstraintType CType =
-        TLI->getConstraintType(OpInfo.Codes[i]);
-
-    // Indirect 'other' or 'immediate' constraints are not allowed.
-    if (OpInfo.isIndirect && !(CType == TargetLowering::C_Memory ||
-                               CType == TargetLowering::C_Register ||
-                               CType == TargetLowering::C_RegisterClass))
-      continue;
-
-    // If this is an 'other' or 'immediate' constraint, see if the operand is
-    // valid for it. For example, on X86 we might have an 'rI' constraint. If
-    // the operand is an integer in the range [0..31] we want to use I (saving a
-    // load of a register), otherwise we must use 'r'.
-    if (CType == TargetLowering::C_Other ||
-        CType == TargetLowering::C_Immediate) {
-      assert(OpInfo.Codes[i].size() == 1 &&
-             "Unhandled multi-letter 'other' constraint");
-      // FIXME: prefer immediate constraints if the target allows it
-    }
-
-    // Things with matching constraints can only be registers, per gcc
-    // documentation.  This mainly affects "g" constraints.
-    if (CType == TargetLowering::C_Memory && OpInfo.hasMatchingInput())
-      continue;
-
-    // This constraint letter is more general than the previous one, use it.
-    int Generality = getConstraintGenerality(CType);
-    if (Generality > BestGenerality) {
-      BestType = CType;
-      BestIdx = i;
-      BestGenerality = Generality;
-    }
-  }
-
-  OpInfo.ConstraintCode = OpInfo.Codes[BestIdx];
-  OpInfo.ConstraintType = BestType;
-}
-
 static void computeConstraintToUse(const TargetLowering *TLI,
                                    TargetLowering::AsmOperandInfo &OpInfo) {
   assert(!OpInfo.Codes.empty() && "Must have at least one constraint");
@@ -207,7 +142,18 @@ static void computeConstraintToUse(const TargetLowering *TLI,
     OpInfo.ConstraintCode = OpInfo.Codes[0];
     OpInfo.ConstraintType = TLI->getConstraintType(OpInfo.ConstraintCode);
   } else {
-    chooseConstraint(OpInfo, TLI);
+    TargetLowering::ConstraintGroup G = TLI->getConstraintPreferences(OpInfo);
+    if (G.empty())
+      return;
+    // FIXME: prefer immediate constraints if the target allows it
+    unsigned BestIdx = 0;
+    for (const unsigned E = G.size();
+         BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
+                         G[BestIdx].second == TargetLowering::C_Immediate);
+         ++BestIdx)
+      ;
+    OpInfo.ConstraintCode = G[BestIdx].first;
+    OpInfo.ConstraintType = G[BestIdx].second;
   }
 
   // 'X' matches anything.
@@ -229,8 +175,8 @@ static void computeConstraintToUse(const TargetLowering *TLI,
 }
 
 static unsigned getNumOpRegs(const MachineInstr &I, unsigned OpIdx) {
-  unsigned Flag = I.getOperand(OpIdx).getImm();
-  return InlineAsm::getNumOperandRegisters(Flag);
+  const InlineAsm::Flag F(I.getOperand(OpIdx).getImm());
+  return F.getNumOperandRegisters();
 }
 
 static bool buildAnyextOrCopy(Register Dst, Register Src,
@@ -373,16 +319,16 @@ bool InlineAsmLowering::lowerInlineAsm(
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM instruction to know about this
         // output.
-        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
-        OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
-        Inst.addImm(OpFlags);
+        InlineAsm::Flag Flag(InlineAsm::Kind::Mem, 1);
+        Flag.setMemConstraint(ConstraintID);
+        Inst.addImm(Flag);
         ArrayRef<Register> SourceRegs =
             GetOrCreateVRegs(*OpInfo.CallOperandVal);
         assert(
@@ -405,17 +351,17 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Add information to the INLINEASM instruction to know that this
         // register is set.
-        unsigned Flag = InlineAsm::getFlagWord(
-            OpInfo.isEarlyClobber ? InlineAsm::Kind_RegDefEarlyClobber
-                                  : InlineAsm::Kind_RegDef,
-            OpInfo.Regs.size());
+        InlineAsm::Flag Flag(OpInfo.isEarlyClobber
+                                 ? InlineAsm::Kind::RegDefEarlyClobber
+                                 : InlineAsm::Kind::RegDef,
+                             OpInfo.Regs.size());
         if (OpInfo.Regs.front().isVirtual()) {
           // Put the register class of the virtual registers in the flag word.
           // That way, later passes can recompute register class constraints for
           // inline assembly as well as normal instructions. Don't do this for
           // tied operands that can use the regclass information from the def.
           const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
-          Flag = InlineAsm::getFlagWordForRegClass(Flag, RC->getID());
+          Flag.setRegClass(RC->getID());
         }
 
         Inst.addImm(Flag);
@@ -441,14 +387,13 @@ bool InlineAsmLowering::lowerInlineAsm(
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
         assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
 
-        unsigned MatchedOperandFlag = Inst->getOperand(InstFlagIdx).getImm();
-        if (InlineAsm::isMemKind(MatchedOperandFlag)) {
+        const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
+        if (MatchedOperandFlag.isMemKind()) {
           LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
                                "supported. This should be target specific.\n");
           return false;
         }
-        if (!InlineAsm::isRegDefKind(MatchedOperandFlag) &&
-            !InlineAsm::isRegDefEarlyClobberKind(MatchedOperandFlag)) {
+        if (!MatchedOperandFlag.isRegDefKind() && !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
           LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
           return false;
         }
@@ -470,9 +415,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         }
 
         // Add Flag and input register operand (In) to Inst. Tie In to Def.
-        unsigned UseFlag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
-        unsigned Flag = InlineAsm::getFlagWordForMatchingOp(UseFlag, DefIdx);
-        Inst.addImm(Flag);
+        InlineAsm::Flag UseFlag(InlineAsm::Kind::RegUse, 1);
+        UseFlag.setMatchingOp(DefIdx);
+        Inst.addImm(UseFlag);
         Inst.addReg(In);
         Inst->tieOperands(DefRegIdx, Inst->getNumOperands() - 1);
         break;
@@ -501,8 +446,8 @@ bool InlineAsmLowering::lowerInlineAsm(
                "Expected constraint to be lowered to at least one operand");
 
         // Add information to the INLINEASM node to know about this input.
-        unsigned OpFlags =
-            InlineAsm::getFlagWord(InlineAsm::Kind_Imm, Ops.size());
+        const unsigned OpFlags =
+            InlineAsm::Flag(InlineAsm::Kind::Imm, Ops.size());
         Inst.addImm(OpFlags);
         Inst.add(Ops);
         break;
@@ -518,10 +463,10 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
 
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
-        OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
+        InlineAsm::Flag OpFlags(InlineAsm::Kind::Mem, 1);
+        OpFlags.setMemConstraint(ConstraintID);
         Inst.addImm(OpFlags);
         ArrayRef<Register> SourceRegs =
             GetOrCreateVRegs(*OpInfo.CallOperandVal);
@@ -563,11 +508,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         return false;
       }
 
-      unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, NumRegs);
+      InlineAsm::Flag Flag(InlineAsm::Kind::RegUse, NumRegs);
       if (OpInfo.Regs.front().isVirtual()) {
         // Put the register class of the virtual registers in the flag word.
         const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
-        Flag = InlineAsm::getFlagWordForRegClass(Flag, RC->getID());
+        Flag.setRegClass(RC->getID());
       }
       Inst.addImm(Flag);
       if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))
@@ -578,10 +523,9 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     case InlineAsm::isClobber: {
 
-      unsigned NumRegs = OpInfo.Regs.size();
+      const unsigned NumRegs = OpInfo.Regs.size();
       if (NumRegs > 0) {
-        unsigned Flag =
-            InlineAsm::getFlagWord(InlineAsm::Kind_Clobber, NumRegs);
+        unsigned Flag = InlineAsm::Flag(InlineAsm::Kind::Clobber, NumRegs);
         Inst.addImm(Flag);
 
         for (Register Reg : OpInfo.Regs) {

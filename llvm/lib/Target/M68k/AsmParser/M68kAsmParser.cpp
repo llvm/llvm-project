@@ -66,10 +66,9 @@ public:
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -157,6 +156,7 @@ public:
   bool isAReg() const;
   bool isDReg() const;
   bool isFPDReg() const;
+  bool isFPCReg() const;
   unsigned getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
@@ -255,9 +255,13 @@ static inline unsigned getRegisterIndex(unsigned Register) {
     // SP is sadly not contiguous with the rest of the An registers
     return 15;
 
+  // We don't care about the indices of these registers.
   case M68k::PC:
   case M68k::CCR:
-    return 16;
+  case M68k::FPC:
+  case M68k::FPS:
+  case M68k::FPIAR:
+    return UINT_MAX;
 
   default:
     llvm_unreachable("unexpected register number");
@@ -489,7 +493,8 @@ void M68kOperand::addPCIOperands(MCInst &Inst, unsigned N) const {
 }
 
 static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
-                                      bool SP, bool FPDR = false) {
+                                      bool SP, bool FPDR = false,
+                                      bool FPCR = false) {
   switch (RegNo) {
   case M68k::A0:
   case M68k::A1:
@@ -527,6 +532,11 @@ static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
   case M68k::FP7:
     return FPDR;
 
+  case M68k::FPC:
+  case M68k::FPS:
+  case M68k::FPIAR:
+    return FPCR;
+
   default:
     llvm_unreachable("unexpected register type");
     return false;
@@ -550,6 +560,13 @@ bool M68kOperand::isFPDReg() const {
                                        /*Data=*/false,
                                        /*Address=*/false, /*SP=*/false,
                                        /*FPDR=*/true);
+}
+
+bool M68kOperand::isFPCReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/false,
+                                       /*Address=*/false, /*SP=*/false,
+                                       /*FPDR=*/false, /*FPCR=*/true);
 }
 
 unsigned M68kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
@@ -661,12 +678,22 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
     }
   } else if (StringRef(RegisterNameLower).starts_with("fp") &&
              RegisterNameLower.size() > 2) {
-    // Floating point data register.
     auto RegIndex = unsigned(RegisterNameLower[2] - '0');
-    if (RegIndex >= 8 || RegisterNameLower.size() > 3)
-      return false;
-    RegNo = getRegisterByIndex(16 + RegIndex);
-    return true;
+    if (RegIndex < 8 && RegisterNameLower.size() == 3) {
+      // Floating point data register.
+      RegNo = getRegisterByIndex(16 + RegIndex);
+      return true;
+    } else {
+      // Floating point control register.
+      RegNo = StringSwitch<unsigned>(RegisterNameLower)
+                  .Cases("fpc", "fpcr", M68k::FPC)
+                  .Cases("fps", "fpsr", M68k::FPS)
+                  .Cases("fpi", "fpiar", M68k::FPIAR)
+                  .Default(M68k::NoRegister);
+      assert(RegNo != M68k::NoRegister &&
+             "Unrecognized FP control register name");
+      return true;
+    }
   }
 
   return false;
@@ -704,21 +731,19 @@ ParseStatus M68kAsmParser::parseRegister(MCRegister &RegNo) {
   return ParseStatus::Success;
 }
 
-bool M68kAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool M68kAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
-  auto Result = tryParseRegister(RegNo, StartLoc, EndLoc);
-  if (Result != MatchOperand_Success) {
+  ParseStatus Result = tryParseRegister(Reg, StartLoc, EndLoc);
+  if (!Result.isSuccess())
     return Error(StartLoc, "expected register");
-  }
 
   return false;
 }
 
-OperandMatchResultTy M68kAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                     SMLoc &StartLoc,
-                                                     SMLoc &EndLoc) {
+ParseStatus M68kAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                            SMLoc &EndLoc) {
   StartLoc = getLexer().getLoc();
-  ParseStatus Result = parseRegister(RegNo);
+  ParseStatus Result = parseRegister(Reg);
   EndLoc = getLexer().getLoc();
   return Result;
 }

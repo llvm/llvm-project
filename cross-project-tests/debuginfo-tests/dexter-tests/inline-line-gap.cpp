@@ -1,12 +1,11 @@
 // REQUIRES: system-windows
 //
-// RUN: %dexter --fail-lt 1.0 -w --builder 'clang-cl_vs2015' \
-// RUN:      --debugger 'dbgeng' --cflags '/Od /Z7 /Zi' \
-// RUN:      --ldflags '/Od /Z7 /Zi' -- %s
+// RUN: %clang_cl /Od /Z7 /Zi %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
 //
-// RUN: %dexter --fail-lt 1.0 -w --builder 'clang-cl_vs2015' \
-// RUN:      --debugger 'dbgeng' --cflags '/O2 /Z7 /Zi' \
-// RUN:      --ldflags '/O2 /Z7 /Zi' -- %s
+// RUN: %clang_cl /O2 /Z7 /Zi %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --binary %t \
+// RUN:      --debugger 'dbgeng' -- %s
 
 // This code is structured to have an early exit with an epilogue in the middle
 // of the function, which creates a gap between the beginning of the inlined

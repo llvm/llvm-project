@@ -123,6 +123,18 @@ ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
                                     const NamedDecl *OffendingDecl) {
   assert(K != AR_Available && "Expected an unavailable declaration here!");
 
+  // If this was defined using CF_OPTIONS, etc. then ignore the diagnostic.
+  auto DeclLoc = Ctx->getBeginLoc();
+  // This is only a problem in Foundation's C++ implementation for CF_OPTIONS.
+  if (DeclLoc.isMacroID() && S.getLangOpts().CPlusPlus &&
+      isa<TypedefDecl>(OffendingDecl)) {
+    StringRef MacroName = S.getPreprocessor().getImmediateMacroName(DeclLoc);
+    if (MacroName == "CF_OPTIONS" || MacroName == "OBJC_OPTIONS" ||
+        MacroName == "SWIFT_OPTIONS" || MacroName == "NS_OPTIONS") {
+      return false;
+    }
+  }
+
   // Checks if we should emit the availability diagnostic in the context of C.
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
@@ -523,6 +535,29 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         FixIts.push_back(FixItHint::CreateReplacement(UseRange, Replacement));
     }
   }
+
+  // We emit deprecation warning for deprecated specializations
+  // when their instantiation stacks originate outside
+  // of a system header, even if the diagnostics is suppresed at the
+  // point of definition.
+  SourceLocation InstantiationLoc =
+      S.getTopMostPointOfInstantiation(ReferringDecl);
+  bool ShouldAllowWarningInSystemHeader =
+      InstantiationLoc != Loc &&
+      !S.getSourceManager().isInSystemHeader(InstantiationLoc);
+  struct AllowWarningInSystemHeaders {
+    AllowWarningInSystemHeaders(DiagnosticsEngine &E,
+                                bool AllowWarningInSystemHeaders)
+        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
+      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+    }
+    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+
+  private:
+    DiagnosticsEngine &Engine;
+    bool Prev;
+  } SystemWarningOverrideRAII(S.getDiagnostics(),
+                              ShouldAllowWarningInSystemHeader);
 
   if (!Message.empty()) {
     S.Diag(Loc, diag_message) << ReferringDecl << Message << FixIts;

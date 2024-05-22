@@ -20,13 +20,10 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture reado
 define linkonce_odr void @ZN6snappyDecompressor_(ptr %this, ptr %writer) {
 ; CHECK-LABEL: ZN6snappyDecompressor_:
 ; CHECK:       # %bb.0: # %entry
-; CHECK:       addis 3, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
-; CHECK-DAG:   addi 25, 3, _ZN6snappy8internalL8wordmaskE@toc@l
-; CHECK-DAG:   addis 5, 2, _ZN6snappy8internalL10char_tableE@toc@ha
-; CHECK-DAG:   addi 24, 5, _ZN6snappy8internalL10char_tableE@toc@l
+; CHECK:       addis 4, 2, .L__ModuleStringPool@toc@ha
+; CHECK:       addi 25, 4, .L__ModuleStringPool@toc@l
 ; CHECK:       .LBB0_2: # %for.cond
-; CHECK-NOT:   addis {{[0-9]+}}, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
-; CHECK-NOT:   addis {{[0-9]+}}, 2, _ZN6snappy8internalL10char_tableE@toc@ha
+; CHECK-NOT:   addis {{[0-9]+}}, 2, .L__ModuleStringPool@toc@ha
 ; CHECK:       bctrl
 entry:
   %ip_limit_ = getelementptr inbounds %"class.snappy::SnappyDecompressor", ptr %this, i64 0, i32 2

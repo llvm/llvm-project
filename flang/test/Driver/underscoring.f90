@@ -10,15 +10,15 @@ subroutine test()
 end
 
 ! UNDERSCORING: test_
+! UNDERSCORING-NOT: {{test:$}}
 ! UNDERSCORING: ext_sub_
+! UNDERSCORING-NOT: {{ext_sub[^_]*$}}
 ! UNDERSCORING: comblk_
+! UNDERSCORING-NOT: comblk,
 
 ! NO-UNDERSCORING-NOT: test_
-! NO-UNDERSCORING-NOT: _QPtest
-! NO-UNDERSCORING: test
+! NO-UNDERSCORING: test:
 ! NO-UNDERSCORING-NOT: ext_sub_
-! NO-UNDERSCORING-NOT: _QPext_sub
-! NO-UNDERSCORING: ext_sub
+! NO-UNDERSCORING: {{ext_sub[^_]*$}}
 ! NO-UNDERSCORING-NOT: comblk_
-! NO-UNDERSCORING-NOT: _QBcomblk
-! NO-UNDERSCORING: comblk
+! NO-UNDERSCORING: {{comblk[^_]*$}}

@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: merge_bits1_test
 ! CHECK-SAME: %[[IREF:.*]]: !fir.ref<i8>{{.*}}, %[[JREF:.*]]: !fir.ref<i8>{{.*}}, %[[MREF:.*]]: !fir.ref<i8>{{.*}}, %[[RREF:.*]]: !fir.ref<i8>{{.*}}

@@ -28,43 +28,43 @@ struct TestProperties {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestProperties)
 };
 
+bool operator==(const TestProperties &lhs, TestProperties &rhs) {
+  return lhs.a == rhs.a && lhs.b == rhs.b && lhs.array == rhs.array &&
+         lhs.label == rhs.label;
+}
+
 /// Convert a DictionaryAttr to a TestProperties struct, optionally emit errors
 /// through the provided diagnostic if any. This is used for example during
 /// parsing with the generic format.
 static LogicalResult
 setPropertiesFromAttribute(TestProperties &prop, Attribute attr,
-                           InFlightDiagnostic *diagnostic) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    if (diagnostic)
-      *diagnostic << "expected DictionaryAttr to set TestProperties";
+    emitError() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto aAttr = dict.getAs<IntegerAttr>("a");
   if (!aAttr) {
-    if (diagnostic)
-      *diagnostic << "expected IntegerAttr for key `a`";
+    emitError() << "expected IntegerAttr for key `a`";
     return failure();
   }
   auto bAttr = dict.getAs<FloatAttr>("b");
   if (!bAttr ||
       &bAttr.getValue().getSemantics() != &llvm::APFloatBase::IEEEsingle()) {
-    if (diagnostic)
-      *diagnostic << "expected FloatAttr for key `b`";
+    emitError() << "expected FloatAttr for key `b`";
     return failure();
   }
 
   auto arrayAttr = dict.getAs<DenseI64ArrayAttr>("array");
   if (!arrayAttr) {
-    if (diagnostic)
-      *diagnostic << "expected DenseI64ArrayAttr for key `array`";
+    emitError() << "expected DenseI64ArrayAttr for key `array`";
     return failure();
   }
 
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    if (diagnostic)
-      *diagnostic << "expected StringAttr for key `label`";
+    emitError() << "expected StringAttr for key `label`";
     return failure();
   }
 
@@ -115,17 +115,19 @@ public:
   // This alias is the only definition needed for enabling "properties" for this
   // operation.
   using Properties = TestProperties;
-  static std::optional<mlir::Attribute> getInherentAttr(const Properties &prop,
+  static std::optional<mlir::Attribute> getInherentAttr(MLIRContext *context,
+                                                        const Properties &prop,
                                                         StringRef name) {
     return std::nullopt;
   }
   static void setInherentAttr(Properties &prop, StringRef name,
                               mlir::Attribute value) {}
-  static void populateInherentAttrs(const Properties &prop,
+  static void populateInherentAttrs(MLIRContext *context,
+                                    const Properties &prop,
                                     NamedAttrList &attrs) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
-                      function_ref<InFlightDiagnostic()> getDiag) {
+                      function_ref<InFlightDiagnostic()> emitError) {
     return success();
   }
 };
@@ -255,8 +257,10 @@ TEST(OpPropertiesTest, FailedProperties) {
   attrs.push_back(b.getNamedAttr("a", b.getStringAttr("foo")));
   state.propertiesAttr = attrs.getDictionary(&context);
   {
-    auto diag = op->emitError("setting properties failed: ");
-    auto result = state.setProperties(op, &diag);
+    auto emitError = [&]() {
+      return op->emitError("setting properties failed: ");
+    };
+    auto result = state.setProperties(op, emitError);
     EXPECT_TRUE(result.failed());
   }
   EXPECT_STREQ("setting properties failed: expected IntegerAttr for key `a`",

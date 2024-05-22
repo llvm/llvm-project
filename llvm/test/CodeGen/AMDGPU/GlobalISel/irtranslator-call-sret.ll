@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.1.out.val
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
   ; GCN-NEXT:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store (s8) into %ir.in.val, addrspace 5)
   ; GCN-NEXT:   G_STORE [[C1]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.in.gep1, addrspace 5)
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -66,9 +66,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[DEF1]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; GCN-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 8, implicit-def $scc
-  ; GCN-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; GCN-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p5) :: (dereferenceable load (s8) from %ir.out.val, addrspace 5)
   ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p5) :: (dereferenceable load (s32) from %ir.out.gep1, addrspace 5)
   ; GCN-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) undef`, addrspace 1)

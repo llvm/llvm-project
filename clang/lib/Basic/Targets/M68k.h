@@ -54,6 +54,7 @@ public:
   std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(const std::string &Name) override;
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 };
 
 } // namespace targets

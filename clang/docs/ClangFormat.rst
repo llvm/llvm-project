@@ -69,8 +69,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --ferror-limit=<uint>          - Set the maximum number of clang-format errors to emit
                                      before stopping (0 = no limit).
                                      Used only with --dry-run or -n
-    --files=<filename>             - A file containing a list of files to process, one
-                                     per line.
+    --files=<filename>             - A file containing a list of files to process, one per line.
     -i                             - Inplace edit <file>s, if specified.
     --length=<uint>                - Format a range of this length (in bytes).
                                      Multiple ranges can be formatted by specifying

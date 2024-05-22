@@ -17,6 +17,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -166,6 +167,10 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
+bool AMDGPUSubtarget::useRealTrue16Insts() const {
+  return hasTrue16BitInsts() && EnableRealTrue16Insts;
+}
+
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM)
     : // clang-format off
@@ -196,14 +201,18 @@ unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHLREV_B64_e32_gfx12:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx12:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx12:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_e64_gfx11:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx12:
   case AMDGPU::V_ASHR_I64_e64:
     return 1;
   }
@@ -692,7 +701,7 @@ GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseReservedNumSGPRs(MFI.hasFlatScratchInit());
+  return getBaseReservedNumSGPRs(MFI.getUserSGPRInfo().hasFlatScratchInit());
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
@@ -771,24 +780,26 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
 }
 
 static unsigned getMaxNumPreloadedSGPRs() {
+  using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
-  unsigned MaxUserSGPRs = 4 + // private segment buffer
-                          2 + // Dispatch ptr
-                          2 + // queue ptr
-                          2 + // kernel segment ptr
-                          2 + // dispatch ID
-                          2 + // flat scratch init
-                          2;  // Implicit buffer ptr
+  const unsigned MaxUserSGPRs =
+      USI::getNumUserSGPRForField(USI::PrivateSegmentBufferID) +
+      USI::getNumUserSGPRForField(USI::DispatchPtrID) +
+      USI::getNumUserSGPRForField(USI::QueuePtrID) +
+      USI::getNumUserSGPRForField(USI::KernargSegmentPtrID) +
+      USI::getNumUserSGPRForField(USI::DispatchIdID) +
+      USI::getNumUserSGPRForField(USI::FlatScratchInitID) +
+      USI::getNumUserSGPRForField(USI::ImplicitBufferPtrID);
 
   // Max number of system SGPRs
-  unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
-                            1 + // WorkGroupIDY
-                            1 + // WorkGroupIDZ
-                            1 + // WorkGroupInfo
-                            1;  // private segment wave byte offset
+  const unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
+                                  1 + // WorkGroupIDY
+                                  1 + // WorkGroupIDZ
+                                  1 + // WorkGroupInfo
+                                  1;  // private segment wave byte offset
 
   // Max number of synthetic SGPRs
-  unsigned SyntheticSGPRs = 1; // LDSKernelId
+  const unsigned SyntheticSGPRs = 1; // LDSKernelId
 
   return MaxUserSGPRs + MaxSystemSGPRs + SyntheticSGPRs;
 }
@@ -994,6 +1005,9 @@ GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX12)
+    return 0; // Not MIMG encoding.
+
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 
@@ -1017,4 +1031,80 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   else
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<R600Subtarget>(F));
+}
+
+GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
+                                           const GCNSubtarget &ST)
+    : ST(ST) {
+  const CallingConv::ID CC = F.getCallingConv();
+  const bool IsKernel =
+      CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
+  // FIXME: Should have analysis or something rather than attribute to detect
+  // calls.
+  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
+  // FIXME: This attribute is a hack, we just need an analysis on the function
+  // to look for allocas.
+  const bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
+
+  if (IsKernel && (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0))
+    KernargSegmentPtr = true;
+
+  bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
+  if (IsAmdHsaOrMesa && !ST.enableFlatScratch())
+    PrivateSegmentBuffer = true;
+  else if (ST.isMesaGfxShader(F))
+    ImplicitBufferPtr = true;
+
+  if (!AMDGPU::isGraphics(CC)) {
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
+      DispatchPtr = true;
+
+    // FIXME: Can this always be disabled with < COv5?
+    if (!F.hasFnAttribute("amdgpu-no-queue-ptr"))
+      QueuePtr = true;
+
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-id"))
+      DispatchID = true;
+  }
+
+  // TODO: This could be refined a lot. The attribute is a poor way of
+  // detecting calls or stack objects that may require it before argument
+  // lowering.
+  if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
+      (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
+      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
+      !ST.flatScratchIsArchitected()) {
+    FlatScratchInit = true;
+  }
+
+  if (hasImplicitBufferPtr())
+    NumUsedUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
+
+  if (hasPrivateSegmentBuffer())
+    NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentBufferID);
+
+  if (hasDispatchPtr())
+    NumUsedUserSGPRs += getNumUserSGPRForField(DispatchPtrID);
+
+  if (hasQueuePtr())
+    NumUsedUserSGPRs += getNumUserSGPRForField(QueuePtrID);
+
+  if (hasKernargSegmentPtr())
+    NumUsedUserSGPRs += getNumUserSGPRForField(KernargSegmentPtrID);
+
+  if (hasDispatchID())
+    NumUsedUserSGPRs += getNumUserSGPRForField(DispatchIdID);
+
+  if (hasFlatScratchInit())
+    NumUsedUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+}
+
+void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
+  assert(NumKernargPreloadSGPRs + NumSGPRs <= AMDGPU::getMaxNumUserSGPRs(ST));
+  NumKernargPreloadSGPRs += NumSGPRs;
+  NumUsedUserSGPRs += NumSGPRs;
+}
+
+unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
+  return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
 }

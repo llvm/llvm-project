@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=W32 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=W64 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=W32 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=W64 %s
 
 
 # W32: v_cmp_class_f32_e32 vcc_lo, -1, v2      ; encoding: [0xc1,0x04,0x10,0x7d]

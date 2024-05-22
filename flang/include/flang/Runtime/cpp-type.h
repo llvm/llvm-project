@@ -12,8 +12,8 @@
 #define FORTRAN_RUNTIME_CPP_TYPE_H_
 
 #include "flang/Common/Fortran.h"
+#include "flang/Common/float128.h"
 #include "flang/Common/uint128.h"
-#include "flang/Runtime/float128.h"
 #include <cfloat>
 #include <complex>
 #include <cstdint>

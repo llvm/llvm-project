@@ -21,9 +21,8 @@ define arm_aapcscc void @s(ptr %q, ptr %p) {
 ; ASSEMBLY-NEXT:    sbc r5, r5, #0
 ; ASSEMBLY-NEXT:    ldr r2, [r1, #8]
 ; ASSEMBLY-NEXT:    ldr r3, [r1, #12]
-; ASSEMBLY-NEXT:    str r5, [sp, #132]
+; ASSEMBLY-NEXT:    strd r4, r5, [sp, #128]
 ; ASSEMBLY-NEXT:    add r5, r1, #16
-; ASSEMBLY-NEXT:    str r4, [sp, #128]
 ; ASSEMBLY-NEXT:    mov r4, sp
 ; ASSEMBLY-NEXT:    vld1.32 {d16}, [r5]!
 ; ASSEMBLY-NEXT:    vst1.32 {d16}, [r4]!

@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import unittest2
 from unittest2.test.support import OldTestResult, catch_warnings
 

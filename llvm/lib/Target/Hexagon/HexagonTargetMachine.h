@@ -21,8 +21,6 @@
 
 namespace llvm {
 
-class Module;
-
 class HexagonTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;
@@ -31,7 +29,7 @@ public:
   HexagonTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
   ~HexagonTargetMachine() override;
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;

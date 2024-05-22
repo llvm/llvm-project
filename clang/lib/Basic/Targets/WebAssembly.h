@@ -63,6 +63,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasTailCall = false;
   bool HasReferenceTypes = false;
   bool HasExtendedConst = false;
+  bool HasMultiMemory = false;
 
   std::string ABI;
 

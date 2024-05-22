@@ -4,7 +4,7 @@ let Definition = "modulelist" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched.">;
+    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched. If all other methods fail there may be symbol-locator plugins that, if configured properly, will also attempt to acquire symbols. The debuginfod plugin defaults to the DEGUFINFOD_URLS environment variable which is configurable through the 'plugin.symbol-locator.debuginfod.server_urls' setting.">;
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
@@ -65,6 +65,14 @@ let Definition = "debugger" in {
     DefaultEnumValue<"OptionValueString::eOptionEncodeCharacterEscapeSequences">,
     DefaultStringValue<"(lldb) ">,
     Desc<"The debugger command line prompt displayed for the user.">;
+  def PromptAnsiPrefix: Property<"prompt-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the prompt.">;
+  def PromptAnsiSuffix: Property<"prompt-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the prompt.">;
   def ScriptLanguage: Property<"script-lang", "Enum">,
     Global,
     DefaultEnumValue<"eScriptLanguagePython">,
@@ -173,8 +181,8 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will print the values of variables declared in an expression. Currently only supported in the REPL (default: true).">;
   def TabSize: Property<"tab-size", "UInt64">,
     Global,
-    DefaultUnsignedValue<4>,
-    Desc<"The tab size to use when indenting code in multi-line input mode (default: 4).">;
+    DefaultUnsignedValue<2>,
+    Desc<"The tab size to use when indenting code in multi-line input mode (default: 2).">;
   def EscapeNonPrintables: Property<"escape-non-printables", "Boolean">,
     Global,
     DefaultTrue,
@@ -195,6 +203,18 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+  def ShowRegexMatchAnsiPrefix: Property<"show-regex-match-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.red}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the match.">;
+  def ShowRegexMatchAnsiSuffix: Property<"show-regex-match-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the match.">;
+  def ShowDontUsePoHint: Property<"show-dont-use-po-hint", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, and object description was requested for a type that does not implement it, LLDB will print a hint telling the user to consider using p instead.">;
   def DWIMPrintVerbosity: Property<"dwim-print-verbosity", "Enum">,
     Global,
     DefaultEnumValue<"eDWIMPrintVerbosityNone">,

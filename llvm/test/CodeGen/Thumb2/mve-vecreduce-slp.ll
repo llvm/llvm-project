@@ -7,7 +7,7 @@
 define i32 @addv2i32i32(ptr %x) {
 ; CHECK-LABEL: addv2i32i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1308,10 +1308,10 @@ entry:
 define i32 @mlav2i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i32i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r2, r0, [r0]
-; CHECK-NEXT:    ldrd r3, r1, [r1]
-; CHECK-NEXT:    muls r2, r3, r2
-; CHECK-NEXT:    mla r0, r1, r0, r2
+; CHECK-NEXT:    ldrd r0, r2, [r0]
+; CHECK-NEXT:    ldrd r1, r3, [r1]
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    mla r0, r3, r2, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load i32, ptr %x, align 4

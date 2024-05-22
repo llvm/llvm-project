@@ -8,9 +8,22 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
 #include <optional>
 
 using namespace mlir;
@@ -361,7 +374,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(/*index=*/{}, *operands, successors);
+  branch.getEntrySuccessorRegions(*operands, successors);
   for (const RegionSuccessor &successor : successors) {
     // The successor can be either an entry block or the parent operation.
     ProgramPoint point = successor.getSuccessor()
@@ -385,8 +398,10 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(op->getParentRegion()->getRegionNumber(),
-                             *operands, successors);
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
+    terminator.getSuccessorRegions(*operands, successors);
+  else
+    branch.getSuccessorRegions(op->getParentRegion(), successors);
 
   // Mark successor region entry blocks as executable and add this op to the
   // list of predecessors.
@@ -407,10 +422,6 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
 
 void DeadCodeAnalysis::visitCallableTerminator(Operation *op,
                                                CallableOpInterface callable) {
-  // If there are no exiting values, we have nothing to do.
-  if (op->getNumOperands() == 0)
-    return;
-
   // Add as predecessors to all callsites this return op.
   auto *callsites = getOrCreateFor<PredecessorState>(op, callable);
   bool canResolve = op->hasTrait<OpTrait::ReturnLike>();

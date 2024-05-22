@@ -14,6 +14,7 @@
 #include "UopsBenchmarkRunner.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
 namespace exegesis {
@@ -78,6 +79,7 @@ ExegesisTarget::createBenchmarkRunner(
     Benchmark::ModeE Mode, const LLVMState &State,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     BenchmarkRunner::ExecutionModeE ExecutionMode,
+    unsigned BenchmarkRepeatCount,
     Benchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
@@ -100,7 +102,8 @@ ExegesisTarget::createBenchmarkRunner(
                   "the kernel for real event counts."));
     }
     return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
-                                        ResultAggMode, ExecutionMode);
+                                        ResultAggMode, ExecutionMode,
+                                        BenchmarkRepeatCount);
   case Benchmark::Uops:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
@@ -129,9 +132,11 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
     const LLVMState &State, Benchmark::ModeE Mode,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     Benchmark::ResultAggregationModeE ResultAggMode,
-    BenchmarkRunner::ExecutionModeE ExecutionMode) const {
+    BenchmarkRunner::ExecutionModeE ExecutionMode,
+    unsigned BenchmarkRepeatCount) const {
   return std::make_unique<LatencyBenchmarkRunner>(
-      State, Mode, BenchmarkPhaseSelector, ResultAggMode, ExecutionMode);
+      State, Mode, BenchmarkPhaseSelector, ResultAggMode, ExecutionMode,
+      BenchmarkRepeatCount);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
@@ -180,10 +185,12 @@ ExegesisTarget::SavedState::~SavedState() {} // anchor.
 
 namespace {
 
+bool opcodeIsNotAvailable(unsigned, const FeatureBitset &) { return false; }
+
 // Default implementation.
 class ExegesisDefaultTarget : public ExegesisTarget {
 public:
-  ExegesisDefaultTarget() : ExegesisTarget({}) {}
+  ExegesisDefaultTarget() : ExegesisTarget({}, opcodeIsNotAvailable) {}
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,

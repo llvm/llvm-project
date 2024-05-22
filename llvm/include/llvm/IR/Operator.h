@@ -360,20 +360,12 @@ class ShlOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {
 };
 
-class SDivOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::SDiv> {
-};
-class UDivOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::UDiv> {
-};
 class AShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::AShr> {
 };
 class LShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
 };
-
-class ZExtOperator : public ConcreteOperator<Operator, Instruction::ZExt> {};
 
 class GEPOperator
   : public ConcreteOperator<Operator, Instruction::GetElementPtr> {

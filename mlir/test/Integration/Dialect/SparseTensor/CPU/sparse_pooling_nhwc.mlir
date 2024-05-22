@@ -1,20 +1,33 @@
-// DEFINE: %{option} = "enable-runtime-library=false enable-index-reduction=true"
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=true enable-buffer-initialization=true enable-index-reduction=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
 
-#CCCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
+#CCCC = #sparse_tensor.encoding<{  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : compressed), posWidth = 32, crdWidth = 32 }>
 
 func.func @pooling_nhwc_sum_CCCC(%input: tensor<1x4x4x1xf32, #CCCC>, %filter: tensor<2x2xf32>) -> tensor<1x3x3x1xf32, #CCCC> {
-  %init = bufferization.alloc_tensor() : tensor<1x3x3x1xf32, #CCCC>
+  %init = tensor.empty() : tensor<1x3x3x1xf32, #CCCC>
   %0 = linalg.pooling_nhwc_sum {dilations = dense<1> : tensor<2xi64>,
                                 strides = dense<1> : tensor<2xi64>}
      ins (%input, %filter: tensor<1x4x4x1xf32, #CCCC>, tensor<2x2xf32>)

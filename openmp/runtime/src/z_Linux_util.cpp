@@ -60,6 +60,8 @@
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#elif KMP_OS_SOLARIS
+#include <sys/loadavg.h>
 #endif
 
 #include <ctype.h>
@@ -69,6 +71,15 @@
 struct kmp_sys_timer {
   struct timespec start;
 };
+
+#ifndef TIMEVAL_TO_TIMESPEC
+// Convert timeval to timespec.
+#define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
+  do {                                                                         \
+    (ts)->tv_sec = (tv)->tv_sec;                                               \
+    (ts)->tv_nsec = (tv)->tv_usec * 1000;                                      \
+  } while (0)
+#endif
 
 // Convert timespec to nanoseconds.
 #define TS2NS(timespec)                                                        \
@@ -93,6 +104,7 @@ static kmp_cond_align_t __kmp_wait_cv;
 static kmp_mutex_align_t __kmp_wait_mx;
 
 kmp_uint64 __kmp_ticks_per_msec = 1000000;
+kmp_uint64 __kmp_ticks_per_usec = 1000;
 
 #ifdef DEBUG_SUSPEND
 static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
@@ -265,7 +277,7 @@ int __kmp_futex_determine_capable() {
 
 #endif // KMP_USE_FUTEX
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64) && (!KMP_ASM_INTRINS)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM) && (!KMP_ASM_INTRINS)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -325,7 +337,7 @@ kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
   return old_value;
 }
 
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_WASM
 kmp_int8 __kmp_test_then_add8(volatile kmp_int8 *p, kmp_int8 d) {
   kmp_int8 old_value, new_value;
 
@@ -408,7 +420,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS
   pthread_attr_t attr;
   int status;
   size_t size = 0;
@@ -447,7 +459,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     return TRUE;
   }
 #endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
-          || KMP_OS_HURD */
+          || KMP_OS_HURD || KMP_OS_SOLARIS */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -462,7 +474,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -485,7 +497,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* USE_ITT_BUILD */
 
 #if KMP_AFFINITY_SUPPORTED
-  __kmp_affinity_set_init_mask(gtid, FALSE);
+  __kmp_affinity_bind_init_mask(gtid);
 #endif
 
 #ifdef KMP_CANCEL_THREADS
@@ -511,7 +523,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -973,7 +985,11 @@ retry:
 #endif // KMP_USE_MONITOR
 
 void __kmp_exit_thread(int exit_status) {
+#if KMP_OS_WASI
+// TODO: the wasm32-wasi-threads target does not yet support pthread_exit.
+#else
   pthread_exit((void *)(intptr_t)exit_status);
+#endif
 } // __kmp_exit_thread
 
 #if KMP_USE_MONITOR
@@ -1242,6 +1258,7 @@ static void __kmp_atfork_child(void) {
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   __kmp_affin_fullMask = nullptr;
   __kmp_affin_origMask = nullptr;
+  __kmp_topology = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR
@@ -1317,9 +1334,11 @@ static void __kmp_atfork_child(void) {
 
 void __kmp_register_atfork(void) {
   if (__kmp_need_register_atfork) {
+#if !KMP_OS_WASI
     int status = pthread_atfork(__kmp_atfork_prepare, __kmp_atfork_parent,
                                 __kmp_atfork_child);
     KMP_CHECK_SYSFAIL("pthread_atfork", status);
+#endif
     __kmp_need_register_atfork = FALSE;
   }
 }
@@ -1761,6 +1780,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   status = getrusage(RUSAGE_SELF, &r_usage);
   KMP_CHECK_SYSFAIL_ERRNO("getrusage", status);
 
+#if !KMP_OS_WASI
   // The maximum resident set size utilized (in kilobytes)
   info->maxrss = r_usage.ru_maxrss;
   // The number of page faults serviced without any I/O
@@ -1777,6 +1797,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   info->nvcsw = r_usage.ru_nvcsw;
   // The number of times a context switch was forced
   info->nivcsw = r_usage.ru_nivcsw;
+#endif
 
   return (status != 0);
 }
@@ -1811,7 +1832,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -1892,6 +1913,13 @@ void __kmp_runtime_initialize(void) {
 
     /* Query the maximum number of threads */
     __kmp_type_convert(sysconf(_SC_THREAD_THREADS_MAX), &(__kmp_sys_max_nth));
+#ifdef __ve__
+    if (__kmp_sys_max_nth == -1) {
+      // VE's pthread supports only up to 64 threads per a VE process.
+      // So we use that KMP_MAX_NTH (predefined as 64) here.
+      __kmp_sys_max_nth = KMP_MAX_NTH;
+    }
+#else
     if (__kmp_sys_max_nth == -1) {
       /* Unlimited threads for NPTL */
       __kmp_sys_max_nth = INT_MAX;
@@ -1899,6 +1927,7 @@ void __kmp_runtime_initialize(void) {
       /* Can't tell, just use PTHREAD_THREADS_MAX */
       __kmp_sys_max_nth = KMP_MAX_NTH;
     }
+#endif
 
     /* Query the minimum stack size */
     __kmp_sys_min_stksize = sysconf(_SC_THREAD_STACK_MIN);
@@ -2001,7 +2030,7 @@ kmp_uint64 __kmp_now_nsec() {
 /* Measure clock ticks per millisecond */
 void __kmp_initialize_system_tick() {
   kmp_uint64 now, nsec2, diff;
-  kmp_uint64 delay = 100000; // 50~100 usec on most machines.
+  kmp_uint64 delay = 1000000; // ~450 usec on most machines.
   kmp_uint64 nsec = __kmp_now_nsec();
   kmp_uint64 goal = __kmp_hardware_timestamp() + delay;
   while ((now = __kmp_hardware_timestamp()) < goal)
@@ -2009,9 +2038,11 @@ void __kmp_initialize_system_tick() {
   nsec2 = __kmp_now_nsec();
   diff = nsec2 - nsec;
   if (diff > 0) {
-    kmp_uint64 tpms = ((kmp_uint64)1e6 * (delay + (now - goal)) / diff);
-    if (tpms > 0)
-      __kmp_ticks_per_msec = tpms;
+    double tpus = 1000.0 * (double)(delay + (now - goal)) / (double)diff;
+    if (tpus > 0.0) {
+      __kmp_ticks_per_msec = (kmp_uint64)(tpus * 1000.0);
+      __kmp_ticks_per_usec = (kmp_uint64)tpus;
+    }
   }
 }
 #endif
@@ -2177,9 +2208,11 @@ int __kmp_is_address_mapped(void *addr) {
     }
     kiv.kve_start += 1;
   }
-#elif KMP_OS_DRAGONFLY
+#elif KMP_OS_WASI
+  found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
+#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS
 
-  // FIXME(DragonFly): Implement this
+  // FIXME(DragonFly, Solaris): Implement this
   found = 1;
 
 #else
@@ -2194,7 +2227,8 @@ int __kmp_is_address_mapped(void *addr) {
 
 #ifdef USE_LOAD_BALANCE
 
-#if KMP_OS_DARWIN || KMP_OS_NETBSD
+#if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
+    KMP_OS_OPENBSD || KMP_OS_SOLARIS
 
 // The function returns the rounded value of the system load average
 // during given time interval which depends on the value of
@@ -2452,7 +2486,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
@@ -2739,5 +2773,29 @@ void __kmp_hidden_helper_threads_deinitz_release() {
   KMP_ASSERT(0 && "Hidden helper task is not supported on this OS");
 }
 #endif // KMP_OS_LINUX
+
+bool __kmp_detect_shm() {
+  DIR *dir = opendir("/dev/shm");
+  if (dir) { // /dev/shm exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /dev/shm does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
+
+bool __kmp_detect_tmp() {
+  DIR *dir = opendir("/tmp");
+  if (dir) { // /tmp exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /tmp does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
 
 // end of file //

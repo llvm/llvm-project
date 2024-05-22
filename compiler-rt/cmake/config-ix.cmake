@@ -1,4 +1,5 @@
 include(CMakePushCheckState)
+include(AddLLVM)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -61,6 +62,16 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
                         shell32 user32 kernel32 mingw32 ${MINGW_RUNTIME}
                         moldname mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
+  endif()
+  if (NOT TARGET unwind)
+    # Don't check for a library named unwind, if there's a target with that name within
+    # the same build.
+    check_library_exists(unwind _Unwind_GetRegionStart "" COMPILER_RT_HAS_LIBUNWIND)
+    if (COMPILER_RT_HAS_LIBUNWIND)
+      # If we're omitting default libraries, we might need to manually link in libunwind.
+      # This can affect whether we detect a statically linked libc++ correctly.
+      list(APPEND CMAKE_REQUIRED_LIBRARIES unwind)
+    endif()
   endif()
 endif ()
 
@@ -196,7 +207,7 @@ check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 llvm_check_compiler_linker_flag(C "-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
 llvm_check_compiler_linker_flag(C "-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
   set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
   llvm_check_compiler_linker_flag(C "${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 endif()
@@ -439,10 +450,16 @@ if(APPLE)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
   set(FUZZER_SUPPORTED_OS osx)
-  set(ORC_SUPPORTED_OS osx)
+  set(ORC_SUPPORTED_OS)
   set(UBSAN_SUPPORTED_OS osx)
   set(LSAN_SUPPORTED_OS osx)
   set(STATS_SUPPORTED_OS osx)
+
+  # FIXME: Support a general COMPILER_RT_ENABLE_OSX to match other platforms.
+  set(ORC_ENABLE_OSX 1 CACHE BOOL "Whether to build the orc runtime library for osx")
+  if(ORC_ENABLE_OSX)
+    set(ORC_SUPPORTED_OS osx)
+  endif()
 
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.

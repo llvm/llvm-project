@@ -70,3 +70,20 @@ static_assert(B<>(42) == 42);
 }
 
 }
+
+namespace GH64689 {
+void f();
+void foo() {
+  []<typename T>(int)
+    noexcept(requires(int t) { f(); })
+    -> decltype(requires(int t) { f(); })
+    requires requires(int t) { f(); }
+  {return {};}.operator()<int>(0);
+  [](auto)
+    noexcept(requires(int t) { f(); })
+    -> decltype(requires(int t) { f(); })
+    requires requires(int t) { f(); }
+  {return {};}(1);
+}
+
+}

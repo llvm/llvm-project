@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx906 -disassemble -show-encoding < %s | FileCheck %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx908 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx906 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -disassemble -show-encoding < %s | FileCheck %s
 
 # CHECK: v_fmac_f32_e32 v5, v1, v2 ; encoding: [0x01,0x05,0x0a,0x76]
 0x01,0x05,0x0a,0x76

@@ -128,3 +128,32 @@ void pass_underaligned_record_field() {
 // CHECK: call void @receive_falign1(i64 {{[^,)]*}})
 // CHECK: call void @receive_falign4(i64 {{[^,)]*}})
 // CHECK: call void @receive_falign8(ptr {{[^,)]*}})
+
+struct __declspec(align(8)) BigAligned {
+  int big[5];
+};
+
+void receive_aligned_variadic(int f, ...);
+void pass_aligned_variadic() {
+  struct Align8 a8 = {42};
+  struct FieldAlign8 f8 = {42};
+  struct BigAligned big;
+  receive_aligned_variadic(1, a8, f8, big);
+}
+// MSVC doesn't pass aligned objects to variadic functions indirectly.
+// CHECK-LABEL: define dso_local void @pass_aligned_variadic()
+// CHECK: call void (i32, ...) @receive_aligned_variadic(i32 noundef 1, i64 %{{[^,]*}}, i64 %{{[^,]*}}, ptr noundef byval(%struct.BigAligned) align 4 %{{[^)]*}})
+
+
+void receive_fixed_align_variadic(struct BigAligned big, ...);
+void pass_fixed_align_variadic() {
+  struct BigAligned big;
+  receive_fixed_align_variadic(big, 42);
+}
+// MSVC emits error C2719 and C3916 when receiving and passing arguments with
+// required alignment greater than 4 to the fixed part of a variadic function
+// prototype, but it's actually easier to just implement this functionality
+// correctly in Clang than it is to be bug for bug compatible, so we pass such
+// arguments indirectly.
+// CHECK-LABEL: define dso_local void @pass_fixed_align_variadic()
+// CHECK: call void (ptr, ...) @receive_fixed_align_variadic(ptr noundef %{{[^)]*}}, i32 noundef 42)

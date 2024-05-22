@@ -6,20 +6,24 @@ module m
     real x
   end type t
  contains
-  subroutine s1(a,b)
-    real :: a(*), b(:)
+  subroutine s1(a,b,c)
+    real :: a(*), b(:), c(..)
     !CHECK: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: ub1(ubound(a,1))
     !CHECK-NOT: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: lb1(lbound(a,1))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: ub2(ubound(a,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: ub3(ubound(a,2))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: lb2(lbound(b,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: lb3(lbound(b,2))
+    !CHECK: error: DIM=0 dimension must be positive
+    integer :: lb4(lbound(c,0))
+    !CHECK: error: DIM=666 dimension is too large for any array (maximum rank 15)
+    integer :: lb4(lbound(c,666))
   end subroutine
   subroutine s2
     integer, parameter :: array(2,3) = reshape([(j, j=1, 6)], shape(array))

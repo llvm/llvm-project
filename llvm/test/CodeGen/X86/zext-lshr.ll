@@ -42,7 +42,7 @@ define i64 @i64_zext_shift_i16_zext_i8(i8 %a0) nounwind {
 ; X64-LABEL: i64_zext_shift_i16_zext_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shrq $5, %rax
+; X64-NEXT:    shrl $5, %eax
 ; X64-NEXT:    retq
   %t0 = zext i8 %a0 to i16
   %t1 = lshr i16 %t0, 5
@@ -103,7 +103,7 @@ define i128 @i128_zext_shift_i64_zext_i8(i8 %a0) nounwind {
 ; X64-LABEL: i128_zext_shift_i64_zext_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shrq $4, %rax
+; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    retq
   %t0 = zext i8 %a0 to i64
@@ -127,7 +127,7 @@ define i128 @i128_zext_shift_i64_zext_i16(i16 %a0) nounwind {
 ; X64-LABEL: i128_zext_shift_i64_zext_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    shrq $7, %rax
+; X64-NEXT:    shrl $7, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    retq
   %t0 = zext i16 %a0 to i64

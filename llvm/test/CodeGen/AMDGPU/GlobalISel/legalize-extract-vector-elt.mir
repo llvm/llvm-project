@@ -337,8 +337,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %0
@@ -363,8 +362,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[LSHR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %0

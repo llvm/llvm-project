@@ -70,7 +70,7 @@ SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
 //===----------------------------------------------------------------------===//
 
 SmallVector<int64_t> mlir::computeSuffixProduct(ArrayRef<int64_t> sizes) {
-  assert(llvm::all_of(sizes, [](int64_t s) { return s > 0; }) &&
+  assert(llvm::all_of(sizes, [](int64_t s) { return s >= 0; }) &&
          "sizes must be nonnegative");
   int64_t unit = 1;
   return ::computeSuffixProductImpl(sizes, unit);
@@ -81,7 +81,15 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {
+int64_t mlir::computeSum(ArrayRef<int64_t> basis) {
+  assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
+         "basis must be nonnegative");
+  if (basis.empty())
+    return 0;
+  return std::accumulate(basis.begin(), basis.end(), 1, std::plus<int64_t>());
+}
+
+int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
          "basis must be nonnegative");
   if (basis.empty())
@@ -149,10 +157,17 @@ SmallVector<AffineExpr> mlir::computeElementwiseMul(ArrayRef<AffineExpr> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-AffineExpr mlir::computeMaxLinearIndex(MLIRContext *ctx,
-                                       ArrayRef<AffineExpr> basis) {
+AffineExpr mlir::computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
   if (basis.empty())
     return getAffineConstantExpr(0, ctx);
+  return std::accumulate(basis.begin(), basis.end(),
+                         getAffineConstantExpr(0, ctx),
+                         std::plus<AffineExpr>());
+}
+
+AffineExpr mlir::computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
+  if (basis.empty())
+    return getAffineConstantExpr(1, ctx);
   return std::accumulate(basis.begin(), basis.end(),
                          getAffineConstantExpr(1, ctx),
                          std::multiplies<AffineExpr>());
@@ -166,9 +181,8 @@ AffineExpr mlir::linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
 
 AffineExpr mlir::linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
                            ArrayRef<int64_t> basis) {
-  SmallVector<AffineExpr> basisExprs = llvm::to_vector(llvm::map_range(
-      basis, [ctx](int64_t v) { return getAffineConstantExpr(v, ctx); }));
-  return linearize(ctx, offsets, basisExprs);
+
+  return linearize(ctx, offsets, getAffineConstantExprs(basis, ctx));
 }
 
 SmallVector<AffineExpr> mlir::delinearize(AffineExpr linearIndex,
@@ -181,9 +195,7 @@ SmallVector<AffineExpr> mlir::delinearize(AffineExpr linearIndex,
 SmallVector<AffineExpr> mlir::delinearize(AffineExpr linearIndex,
                                           ArrayRef<int64_t> strides) {
   MLIRContext *ctx = linearIndex.getContext();
-  SmallVector<AffineExpr> basisExprs = llvm::to_vector(llvm::map_range(
-      strides, [ctx](int64_t v) { return getAffineConstantExpr(v, ctx); }));
-  return delinearize(linearIndex, ArrayRef<AffineExpr>{basisExprs});
+  return delinearize(linearIndex, getAffineConstantExprs(strides, ctx));
 }
 
 //===----------------------------------------------------------------------===//
@@ -245,4 +257,98 @@ SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
        it != eit; ++it)
     res.push_back((*it).getValue().getSExtValue());
   return res;
+}
+
+// TODO: do we have any common utily for this?
+static MLIRContext *getContext(OpFoldResult val) {
+  assert(val && "Invalid value");
+  if (auto attr = dyn_cast<Attribute>(val)) {
+    return attr.getContext();
+  } else {
+    return cast<Value>(val).getContext();
+  }
+}
+
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+mlir::computeLinearIndex(OpFoldResult sourceOffset,
+                         ArrayRef<OpFoldResult> strides,
+                         ArrayRef<OpFoldResult> indices) {
+  assert(strides.size() == indices.size());
+  auto sourceRank = static_cast<unsigned>(strides.size());
+
+  // Hold the affine symbols and values for the computation of the offset.
+  SmallVector<OpFoldResult> values(2 * sourceRank + 1);
+  SmallVector<AffineExpr> symbols(2 * sourceRank + 1);
+
+  bindSymbolsList(getContext(sourceOffset), MutableArrayRef{symbols});
+  AffineExpr expr = symbols.front();
+  values[0] = sourceOffset;
+
+  for (unsigned i = 0; i < sourceRank; ++i) {
+    // Compute the stride.
+    OpFoldResult origStride = strides[i];
+
+    // Build up the computation of the offset.
+    unsigned baseIdxForDim = 1 + 2 * i;
+    unsigned subOffsetForDim = baseIdxForDim;
+    unsigned origStrideForDim = baseIdxForDim + 1;
+    expr = expr + symbols[subOffsetForDim] * symbols[origStrideForDim];
+    values[subOffsetForDim] = indices[i];
+    values[origStrideForDim] = origStride;
+  }
+
+  return {expr, values};
+}
+
+//===----------------------------------------------------------------------===//
+// TileOffsetRange
+//===----------------------------------------------------------------------===//
+
+/// Apply left-padding by 1 to the tile shape if required.
+static SmallVector<int64_t> padTileShapeToSize(ArrayRef<int64_t> tileShape,
+                                               unsigned paddedSize) {
+  assert(tileShape.size() <= paddedSize &&
+         "expected tileShape to <= paddedSize");
+  if (tileShape.size() == paddedSize)
+    return to_vector(tileShape);
+  SmallVector<int64_t> result(paddedSize - tileShape.size(), 1);
+  llvm::append_range(result, tileShape);
+  return result;
+}
+
+mlir::detail::TileOffsetRangeImpl::TileOffsetRangeImpl(
+    ArrayRef<int64_t> shape, ArrayRef<int64_t> tileShape,
+    ArrayRef<int64_t> loopOrder)
+    : tileShape(padTileShapeToSize(tileShape, shape.size())),
+      inverseLoopOrder(invertPermutationVector(loopOrder)),
+      sliceStrides(shape.size()) {
+  // Divide the shape by the tile shape.
+  std::optional<SmallVector<int64_t>> shapeRatio =
+      mlir::computeShapeRatio(shape, tileShape);
+  assert(shapeRatio && shapeRatio->size() == shape.size() &&
+         "target shape does not evenly divide the original shape");
+  assert(isPermutationVector(loopOrder) && loopOrder.size() == shape.size() &&
+         "expected loop order to be a permutation of rank equal to outer "
+         "shape");
+
+  maxLinearIndex = mlir::computeMaxLinearIndex(*shapeRatio);
+  mlir::applyPermutationToVector(*shapeRatio, loopOrder);
+  sliceStrides = mlir::computeStrides(*shapeRatio);
+}
+
+SmallVector<int64_t> mlir::detail::TileOffsetRangeImpl::getStaticTileOffsets(
+    int64_t linearIndex) const {
+  SmallVector<int64_t> tileCoords = applyPermutation(
+      delinearize(linearIndex, sliceStrides), inverseLoopOrder);
+  return computeElementwiseMul(tileCoords, tileShape);
+}
+
+SmallVector<AffineExpr>
+mlir::detail::TileOffsetRangeImpl::getDynamicTileOffsets(
+    AffineExpr linearIndex) const {
+  MLIRContext *ctx = linearIndex.getContext();
+  SmallVector<AffineExpr> tileCoords = applyPermutation(
+      delinearize(linearIndex, sliceStrides), inverseLoopOrder);
+  return mlir::computeElementwiseMul(tileCoords,
+                                     getAffineConstantExprs(tileShape, ctx));
 }

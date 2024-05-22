@@ -15,14 +15,16 @@
 
 namespace Fortran::runtime {
 
-std::size_t TrimTrailingSpaces(const char *s, std::size_t n) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS std::size_t TrimTrailingSpaces(const char *s, std::size_t n) {
   while (n > 0 && s[n - 1] == ' ') {
     --n;
   }
   return n;
 }
 
-OwningPtr<char> SaveDefaultCharacter(
+RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
@@ -34,7 +36,7 @@ OwningPtr<char> SaveDefaultCharacter(
   }
 }
 
-static bool CaseInsensitiveMatch(
+static RT_API_ATTRS bool CaseInsensitiveMatch(
     const char *value, std::size_t length, const char *possibility) {
   for (; length-- > 0; ++possibility) {
     char ch{*value++};
@@ -57,7 +59,7 @@ static bool CaseInsensitiveMatch(
   return *possibility == '\0';
 }
 
-int IdentifyValue(
+RT_API_ATTRS int IdentifyValue(
     const char *value, std::size_t length, const char *possibilities[]) {
   if (value) {
     for (int j{0}; possibilities[j]; ++j) {
@@ -69,9 +71,9 @@ int IdentifyValue(
   return -1;
 }
 
-void ToFortranDefaultCharacter(
+RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
-  std::size_t len{std::strlen(from)};
+  std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
     std::memcpy(to, from, len);
     std::memset(to + len, ' ', toLength - len);
@@ -80,7 +82,7 @@ void ToFortranDefaultCharacter(
   }
 }
 
-void CheckConformability(const Descriptor &to, const Descriptor &x,
+RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
     Terminator &terminator, const char *funcName, const char *toName,
     const char *xName) {
   if (x.rank() == 0) {
@@ -104,10 +106,72 @@ void CheckConformability(const Descriptor &to, const Descriptor &x,
   }
 }
 
-void CheckIntegerKind(Terminator &terminator, int kind, const char *intrinsic) {
+RT_API_ATTRS void CheckIntegerKind(
+    Terminator &terminator, int kind, const char *intrinsic) {
   if (kind < 1 || kind > 16 || (kind & (kind - 1)) != 0) {
-    terminator.Crash(
-        "not yet implemented: %s: KIND=%d argument", intrinsic, kind);
+    terminator.Crash("not yet implemented: INTEGER(KIND=%d) in %s intrinsic",
+        intrinsic, kind);
   }
 }
+
+RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank], fromAt[maxRank];
+  to.GetLowerBounds(toAt);
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+    std::memcpy(
+        to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
+    const Descriptor &to, const Descriptor &from) {
+  char *toAt{to.OffsetElement()};
+  SubscriptValue fromAt[maxRank];
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
+    std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank];
+  to.GetLowerBounds(toAt);
+  char *fromAt{from.OffsetElement()};
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), fromAt += elementBytes) {
+    std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous) {
+  if (toIsContiguous) {
+    if (fromIsContiguous) {
+      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+          to.Elements() * to.ElementBytes());
+    } else {
+      ShallowCopyDiscontiguousToContiguous(to, from);
+    }
+  } else {
+    if (fromIsContiguous) {
+      ShallowCopyContiguousToDiscontiguous(to, from);
+    } else {
+      ShallowCopyDiscontiguousToDiscontiguous(to, from);
+    }
+  }
+}
+
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
+  ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
+}
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

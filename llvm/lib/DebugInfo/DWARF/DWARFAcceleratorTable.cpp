@@ -621,7 +621,10 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU.
+  // implicitly refer to the single CU, but only if we don't have a
+  // DW_IDX_type_unit.
+  if (lookup(dwarf::DW_IDX_type_unit).has_value())
+    return std::nullopt;
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
@@ -634,8 +637,21 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   return NameIdx->getCUOffset(*Index);
 }
 
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
+  std::optional<uint64_t> Index = getLocalTUIndex();
+  if (!Index || *Index >= NameIdx->getLocalTUCount())
+    return std::nullopt;
+  return NameIdx->getLocalTUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+  if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
+    return Off->getAsUnsignedConstant();
+  return std::nullopt;
+}
+
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
-  W.printHex("Abbrev", Abbr->Code);
+  W.startLine() << formatv("Abbrev: {0:x}\n", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
@@ -968,4 +984,72 @@ DWARFDebugNames::getCUNameIndex(uint64_t CUOffset) {
     }
   }
   return CUToNameIndex.lookup(CUOffset);
+}
+
+static bool isObjCSelector(StringRef Name) {
+  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
+         (Name[1] == '[');
+}
+
+std::optional<ObjCSelectorNames> llvm::getObjCNamesIfSelector(StringRef Name) {
+  if (!isObjCSelector(Name))
+    return std::nullopt;
+  // "-[Atom setMass:]"
+  StringRef ClassNameStart(Name.drop_front(2));
+  size_t FirstSpace = ClassNameStart.find(' ');
+  if (FirstSpace == StringRef::npos)
+    return std::nullopt;
+
+  StringRef SelectorStart = ClassNameStart.drop_front(FirstSpace + 1);
+  if (!SelectorStart.size())
+    return std::nullopt;
+
+  ObjCSelectorNames Ans;
+  Ans.ClassName = ClassNameStart.take_front(FirstSpace);
+  Ans.Selector = SelectorStart.drop_back(); // drop ']';
+
+  // "-[Class(Category) selector :withArg ...]"
+  if (Ans.ClassName.back() == ')') {
+    size_t OpenParens = Ans.ClassName.find('(');
+    if (OpenParens != StringRef::npos) {
+      Ans.ClassNameNoCategory = Ans.ClassName.take_front(OpenParens);
+
+      Ans.MethodNameNoCategory = Name.take_front(OpenParens + 2);
+      // FIXME: The missing space here may be a bug, but dsymutil-classic also
+      // does it this way.
+      append_range(*Ans.MethodNameNoCategory, SelectorStart);
+    }
+  }
+  return Ans;
+}
+
+std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
+  // We are looking for template parameters to strip from Name. e.g.
+  //
+  //  operator<<B>
+  //
+  // We look for > at the end but if it does not contain any < then we
+  // have something like operator>>. We check for the operator<=> case.
+  if (!Name.ends_with(">") || Name.count("<") == 0 || Name.ends_with("<=>"))
+    return {};
+
+  // How many < until we have the start of the template parameters.
+  size_t NumLeftAnglesToSkip = 1;
+
+  // If we have operator<=> then we need to skip its < as well.
+  NumLeftAnglesToSkip += Name.count("<=>");
+
+  size_t RightAngleCount = Name.count('>');
+  size_t LeftAngleCount = Name.count('<');
+
+  // If we have more < than > we have operator< or operator<<
+  // we to account for their < as well.
+  if (LeftAngleCount > RightAngleCount)
+    NumLeftAnglesToSkip += LeftAngleCount - RightAngleCount;
+
+  size_t StartOfTemplate = 0;
+  while (NumLeftAnglesToSkip--)
+    StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
+
+  return Name.substr(0, StartOfTemplate - 1);
 }

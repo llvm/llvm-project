@@ -407,8 +407,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPInteropDirective(cast<OMPInteropDirective>(*S));
     break;
   case Stmt::OMPDispatchDirectiveClass:
-    llvm_unreachable("Dispatch directive not supported yet.");
+    CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
+  case Stmt::OMPScopeDirectiveClass:
+    llvm_unreachable("scope not supported with FE outlining");
   case Stmt::OMPMaskedDirectiveClass:
     EmitOMPMaskedDirective(cast<OMPMaskedDirective>(*S));
     break;
@@ -1297,8 +1299,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     SLocPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(SLocPtr);
     assert(ReturnLocation.isValid() && "No valid return location");
-    Builder.CreateStore(Builder.CreateBitCast(SLocPtr, Int8PtrTy),
-                        ReturnLocation);
+    Builder.CreateStore(SLocPtr, ReturnLocation);
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
@@ -2418,6 +2419,24 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
   }
 }
 
+static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
+                                        const AsmStmt &S) {
+  constexpr auto Name = "__ASM__hipstdpar_unsupported";
+
+  StringRef Asm;
+  if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
+    Asm = GCCAsm->getAsmString()->getString();
+
+  auto &Ctx = CGF->CGM.getLLVMContext();
+
+  auto StrTy = llvm::ConstantDataArray::getString(Ctx, Asm);
+  auto FnTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx),
+                                      {StrTy->getType()}, false);
+  auto UBF = CGF->CGM.getModule().getOrInsertFunction(Name, FnTy);
+
+  CGF->Builder.CreateCall(UBF, {StrTy});
+}
+
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Pop all cleanup blocks at the end of the asm statement.
   CodeGenFunction::RunCleanupsScope Cleanups(*this);
@@ -2429,26 +2448,37 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
 
-  for (unsigned i = 0, e = S.getNumOutputs(); i != e; i++) {
+  bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
+  bool IsValidTargetAsm = true;
+  for (unsigned i = 0, e = S.getNumOutputs(); i != e && IsValidTargetAsm; i++) {
     StringRef Name;
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
       Name = GAS->getOutputName(i);
     TargetInfo::ConstraintInfo Info(S.getOutputConstraint(i), Name);
     bool IsValid = getTarget().validateOutputConstraint(Info); (void)IsValid;
-    assert(IsValid && "Failed to parse output constraint");
+    if (IsHipStdPar && !IsValid)
+      IsValidTargetAsm = false;
+    else
+      assert(IsValid && "Failed to parse output constraint");
     OutputConstraintInfos.push_back(Info);
   }
 
-  for (unsigned i = 0, e = S.getNumInputs(); i != e; i++) {
+  for (unsigned i = 0, e = S.getNumInputs(); i != e && IsValidTargetAsm; i++) {
     StringRef Name;
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
       Name = GAS->getInputName(i);
     TargetInfo::ConstraintInfo Info(S.getInputConstraint(i), Name);
     bool IsValid =
       getTarget().validateInputConstraint(OutputConstraintInfos, Info);
-    assert(IsValid && "Failed to parse input constraint"); (void)IsValid;
+    if (IsHipStdPar && !IsValid)
+      IsValidTargetAsm = false;
+    else
+      assert(IsValid && "Failed to parse input constraint");
     InputConstraintInfos.push_back(Info);
   }
+
+  if (!IsValidTargetAsm)
+    return EmitHipStdParUnsupportedAsm(this, S);
 
   std::string Constraints;
 
@@ -2518,7 +2548,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).startswith("{@cc");
+      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
       ResultRegIsFlagReg.push_back(IsFlagReg);
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);

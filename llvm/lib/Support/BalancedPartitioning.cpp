@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BalancedPartitioning.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"

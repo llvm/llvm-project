@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_ALLOCATION_GUARD_H
 
 #include <__config>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -51,16 +52,36 @@ struct __allocation_guard {
     template<class _AllocT> // we perform the allocator conversion inside the constructor
     _LIBCPP_HIDE_FROM_ABI
     explicit __allocation_guard(_AllocT __alloc, _Size __n)
-        : __alloc_(_VSTD::move(__alloc))
+        : __alloc_(std::move(__alloc))
         , __n_(__n)
         , __ptr_(allocator_traits<_Alloc>::allocate(__alloc_, __n_)) // initialization order is important
     { }
 
     _LIBCPP_HIDE_FROM_ABI
     ~__allocation_guard() _NOEXCEPT {
-        if (__ptr_ != nullptr) {
-            allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __n_);
+        __destroy();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __allocation_guard(const __allocation_guard&) = delete;
+    _LIBCPP_HIDE_FROM_ABI __allocation_guard(__allocation_guard&& __other) _NOEXCEPT
+        : __alloc_(std::move(__other.__alloc_))
+        , __n_(__other.__n_)
+        , __ptr_(__other.__ptr_) {
+      __other.__ptr_ = nullptr;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __allocation_guard& operator=(const __allocation_guard& __other) = delete;
+    _LIBCPP_HIDE_FROM_ABI __allocation_guard& operator=(__allocation_guard&& __other) _NOEXCEPT {
+        if (std::addressof(__other) != this) {
+            __destroy();
+
+            __alloc_ = std::move(__other.__alloc_);
+            __n_ = __other.__n_;
+            __ptr_ = __other.__ptr_;
+            __other.__ptr_ = nullptr;
         }
+
+        return *this;
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -76,6 +97,13 @@ struct __allocation_guard {
     }
 
 private:
+    _LIBCPP_HIDE_FROM_ABI
+    void __destroy() _NOEXCEPT {
+        if (__ptr_ != nullptr) {
+            allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __n_);
+        }
+    }
+
     _Alloc __alloc_;
     _Size __n_;
     _Pointer __ptr_;

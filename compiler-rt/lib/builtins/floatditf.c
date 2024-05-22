@@ -15,7 +15,7 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 COMPILER_RT_ABI fp_t __floatditf(di_int a) {
 
   const int aWidth = sizeof a * CHAR_BIT;

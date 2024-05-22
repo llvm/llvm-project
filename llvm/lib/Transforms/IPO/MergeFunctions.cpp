@@ -107,6 +107,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -171,15 +172,14 @@ namespace {
 
 class FunctionNode {
   mutable AssertingVH<Function> F;
-  FunctionComparator::FunctionHash Hash;
+  IRHash Hash;
 
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
-  FunctionNode(Function *F)
-    : F(F), Hash(FunctionComparator::functionHash(*F))  {}
+  FunctionNode(Function *F) : F(F), Hash(StructuralHash(*F)) {}
 
   Function *getFunc() const { return F; }
-  FunctionComparator::FunctionHash getHash() const { return Hash; }
+  IRHash getHash() const { return Hash; }
 
   /// Replace the reference to the function F by the function G, assuming their
   /// implementations are equal.
@@ -375,9 +375,32 @@ bool MergeFunctions::doFunctionalCheck(std::vector<WeakTrackingVH> &Worklist) {
 }
 #endif
 
+/// Check whether \p F has an intrinsic which references
+/// distinct metadata as an operand. The most common
+/// instance of this would be CFI checks for function-local types.
+static bool hasDistinctMetadataIntrinsic(const Function &F) {
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+      if (!isa<IntrinsicInst>(&I))
+        continue;
+
+      for (Value *Op : I.operands()) {
+        auto *MDL = dyn_cast<MetadataAsValue>(Op);
+        if (!MDL)
+          continue;
+        if (MDNode *N = dyn_cast<MDNode>(MDL->getMetadata()))
+          if (N->isDistinct())
+            return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
-  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage();
+  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !hasDistinctMetadataIntrinsic(F);
 }
 
 bool MergeFunctions::runOnModule(Module &M) {
@@ -390,11 +413,10 @@ bool MergeFunctions::runOnModule(Module &M) {
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
-  std::vector<std::pair<FunctionComparator::FunctionHash, Function *>>
-    HashedFuncs;
+  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
   for (Function &Func : M) {
     if (isEligibleForMerging(Func)) {
-      HashedFuncs.push_back({FunctionComparator::functionHash(Func), &Func});
+      HashedFuncs.push_back({StructuralHash(Func), &Func});
     }
   }
 
@@ -441,7 +463,6 @@ bool MergeFunctions::runOnModule(Module &M) {
 
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  Constant *BitcastNew = ConstantExpr::getBitCast(New, Old->getType());
   for (Use &U : llvm::make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
@@ -450,7 +471,7 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
       // type congruences in byval(), in which case we need to keep the byval
       // type of the call-site, not the callee function.
       remove(CB->getFunction());
-      U.set(BitcastNew);
+      U.set(New);
     }
   }
 }
@@ -632,13 +653,20 @@ static bool canCreateThunkFor(Function *F) {
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
-    if (F->front().size() <= 2) {
+    if (F->front().sizeWithoutDebug() < 2) {
       LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;
     }
   }
   return true;
+}
+
+/// Copy metadata from one function to another.
+static void copyMetadataIfPresent(Function *From, Function *To, StringRef Key) {
+  if (MDNode *MD = From->getMetadata(Key)) {
+    To->setMetadata(Key, MD);
+  }
 }
 
 // Replace G with a simple tail call to bitcast(F). Also (unless
@@ -719,6 +747,9 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   } else {
     NewG->copyAttributesFrom(G);
     NewG->takeName(G);
+    // Ensure CFI type metadata is propagated to the new function.
+    copyMetadataIfPresent(G, NewG, "type");
+    copyMetadataIfPresent(G, NewG, "kcfi_type");
     removeUsers(G);
     G->replaceAllUsesWith(NewG);
     G->eraseFromParent();
@@ -741,10 +772,9 @@ static bool canCreateAliasFor(Function *F) {
 
 // Replace G with an alias to F (deleting function G)
 void MergeFunctions::writeAlias(Function *F, Function *G) {
-  Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
   PointerType *PtrType = G->getType();
   auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
-                                 G->getLinkage(), "", BitcastF, G->getParent());
+                                 G->getLinkage(), "", F, G->getParent());
 
   const MaybeAlign FAlign = F->getAlign();
   const MaybeAlign GAlign = G->getAlign();
@@ -795,6 +825,9 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    // Ensure CFI type metadata is propagated to the new function.
+    copyMetadataIfPresent(F, NewF, "type");
+    copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
@@ -825,9 +858,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);
         // If G's address is not significant, replace it entirely.
-        Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
         removeUsers(G);
-        G->replaceAllUsesWith(BitcastF);
+        G->replaceAllUsesWith(F);
       } else {
         // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
         // above).

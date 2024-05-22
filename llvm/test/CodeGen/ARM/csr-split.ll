@@ -8,14 +8,13 @@
 define dso_local signext i32 @test1(ptr %b) local_unnamed_addr  {
 ; CHECK-LABEL: test1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    ldr r0, .LCPI0_0
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    cmp r0, r4
-; CHECK-NEXT:    popne {r4, lr}
+; CHECK-NEXT:    ldr r1, .LCPI0_0
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    cmp r1, r0
 ; CHECK-NEXT:    movne pc, lr
 ; CHECK-NEXT:  .LBB0_1: @ %if.then
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    bl callVoid
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    pop {r4, lr}
@@ -48,20 +47,19 @@ declare signext i32 @callNonVoid(ptr) local_unnamed_addr
 define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    ldr r0, .LCPI1_0
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    cmp r0, r4
+; CHECK-NEXT:    ldr r1, .LCPI1_0
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    cmp r1, r0
 ; CHECK-NEXT:    beq .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: @ %return
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    pop {r4, lr}
 ; CHECK-NEXT:    mov pc, lr
 ; CHECK-NEXT:  .LBB1_3: @ %if.then2
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    bl callVoid
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    pop {r4, lr}

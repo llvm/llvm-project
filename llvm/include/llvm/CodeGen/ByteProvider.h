@@ -29,8 +29,7 @@ namespace llvm {
 /// are used to extract Bytes.
 template <typename ISelOp> class ByteProvider {
 private:
-  ByteProvider<ISelOp>(std::optional<ISelOp> Src, int64_t DestOffset,
-                       int64_t SrcOffset)
+  ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset)
       : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
 
   // TODO -- use constraint in c++20

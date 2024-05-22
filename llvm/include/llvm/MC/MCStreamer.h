@@ -270,7 +270,7 @@ protected:
 
   virtual void emitRawTextImpl(StringRef String);
 
-  /// Returns true if the the .cv_loc directive is in the right section.
+  /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
 public:
@@ -646,6 +646,12 @@ public:
   ///
   /// \param Sym - The symbol on the .ref directive.
   virtual void emitXCOFFRefDirective(const MCSymbol *Symbol);
+
+  /// Emit a C_INFO symbol with XCOFF embedded metadata to the .info section.
+  ///
+  /// \param Name - The embedded metadata name
+  /// \param Metadata - The embedded metadata
+  virtual void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata);
 
   /// Emit an ELF .size directive.
   ///

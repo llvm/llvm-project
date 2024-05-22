@@ -321,6 +321,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
 
+**LLVM_ADDITIONAL_BUILD_TYPES**:LIST
+  Adding a semicolon separated list of additional build types to this flag
+  allows for them to be specified as values in CMAKE_BUILD_TYPE without
+  encountering a fatal error during the configuration process.
+
 **LLVM_UNREACHABLE_OPTIMIZE**:BOOL
   This flag controls the behavior of `llvm_unreachable()` in release build
   (when assertions are disabled in general). When ON (default) then
@@ -333,6 +338,15 @@ enabled sub-projects. Nearly all of these variable names begin with
   ``llvm/include/llvm/Support/VCSRevision.h``. Developers using git who don't
   need revision info can disable this option to avoid re-linking most binaries
   after a branch switch. Defaults to ON.
+
+**LLVM_FORCE_VC_REVISION**:STRING
+  Force a specific Git revision id rather than calling to git to determine it.
+  This is useful in environments where git is not available or non-functional
+  but the VC revision is available through other means.
+
+**LLVM_FORCE_VC_REPOSITORY**:STRING
+  Set the git repository to include in version info rather than calling git to
+  determine it.
 
 **LLVM_BUILD_32_BITS**:BOOL
   Build 32-bit executables and libraries on 64-bit systems. This option is
@@ -375,6 +389,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
+  Enable individual test case coverage. When set to ON, code coverage data for
+  each test case will be generated and stored in a separate directory under the
+  config.test_exec_root path. This feature allows code coverage analysis of each
+  individual test case. Defaults to OFF.
+
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
   If enabled, the target for building the libLLVM shared library is added.
   This library contains all of LLVM's components in a single shared library.
@@ -412,6 +432,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
+
+**LLVM_<target>_LINKER_FLAGS**:STRING
+  Defines the set of linker flags that should be applied to a <target>.
 
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
@@ -594,9 +617,15 @@ enabled sub-projects. Nearly all of these variable names begin with
   If enabled, the Z3 constraint solver is activated for the Clang static analyzer.
   A recent version of the z3 library needs to be available on the system.
 
-**LLVM_ENABLE_ZLIB**:BOOL
-  Enable building with zlib to support compression/uncompression in LLVM tools.
-  Defaults to ON.
+**LLVM_ENABLE_ZLIB**:STRING
+  Used to decide if LLVM tools should support compression/decompression with
+  zlib. Allowed values are ``OFF``, ``ON`` (default, enable if zlib is found),
+  and ``FORCE_ON`` (error if zlib is not found).
+
+**LLVM_ENABLE_ZSTD**:STRING
+  Used to decide if LLVM tools should support compression/decompression with
+  zstd. Allowed values are ``OFF``, ``ON`` (default, enable if zstd is found),
+  and ``FORCE_ON`` (error if zstd is not found).
 
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
   Semicolon-separated list of experimental targets to build and linked into
@@ -680,7 +709,7 @@ enabled sub-projects. Nearly all of these variable names begin with
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
   This flag needs to be used along with the static CRT, ie. if building the
-  Release target, add -DLLVM_USE_CRT_RELEASE=MT.
+  Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
 
 **LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
   The path to install Doxygen-generated HTML documentation to. This path can
@@ -712,6 +741,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   directory contains executables with the expected names, no separate
   native versions of those executables will be built.
 
+**LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE**:BOOL
+  Defaults to ``OFF``. If set to ``ON``, CMake's default logic for library IDs
+  on Darwin in the build tree will be used. Otherwise the install-time library
+  IDs will be used in the build tree as well. Mainly useful when other CMake
+  library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
+  set to non-standard values.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
@@ -723,6 +759,19 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
+
+**LLVM_RAM_PER_COMPILE_JOB**:STRING
+  Calculates the amount of Ninja compile jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
+  will be between one and amount of logical cores.
+
+**LLVM_RAM_PER_LINK_JOB**:STRING
+  Calculates the amount of Ninja link jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
+  be between one and amount of logical cores. Link jobs will not run 
+  exclusively therefore you should add an offset of one or two compile jobs 
+  to be sure its not terminated in your memory restricted environment. On ELF
+  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This
@@ -764,11 +813,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defines the set of compile flags used to enable UBSan. Only used if
   ``LLVM_USE_SANITIZER`` contains ``Undefined``. This can be used to override
   the default set of UBSan flags.
-
-**LLVM_USE_CRT_{target}**:STRING
-  On Windows, tells which version of the C runtime library (CRT) should be used.
-  For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
-  LLVM tools and library.
 
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.

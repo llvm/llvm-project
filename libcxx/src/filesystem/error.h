@@ -51,7 +51,7 @@ inline error_code get_last_error() {
 template <class T>
 T error_value();
 template <>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void error_value<void>() {}
+inline constexpr void error_value<void>() {}
 template <>
 inline bool error_value<bool>() {
   return false;
@@ -67,7 +67,7 @@ inline uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
 }
 template <>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX14 file_time_type error_value<file_time_type>() {
+inline constexpr file_time_type error_value<file_time_type>() {
   return file_time_type::min();
 }
 template <>

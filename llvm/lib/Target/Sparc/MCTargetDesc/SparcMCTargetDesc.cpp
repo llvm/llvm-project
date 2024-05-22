@@ -21,6 +21,13 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
+namespace llvm {
+namespace SparcASITag {
+#define GET_ASITagsList_IMPL
+#include "SparcGenSearchableTables.inc"
+} // end namespace SparcASITag
+} // end namespace llvm
+
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC

@@ -87,7 +87,7 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
       [Finder, Builder, &BaseSpecMatcher](const CXXBaseSpecifier *BaseSpec,
                                           CXXBasePath &IgnoredParam) {
         BoundNodesTreeBuilder Result(*Builder);
-        if (BaseSpecMatcher.matches(*BaseSpec, Finder, Builder)) {
+        if (BaseSpecMatcher.matches(*BaseSpec, Finder, &Result)) {
           *Builder = std::move(Result);
           return true;
         }
@@ -480,11 +480,11 @@ HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
 
 static bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
-  if (!Name.endswith(Suffix))
+  if (!Name.ends_with(Suffix))
     return false;
   Name = Name.drop_back(Suffix.size());
   if (!Name.empty()) {
-    if (!Name.endswith("::"))
+    if (!Name.ends_with("::"))
       return false;
     Name = Name.drop_back(2);
   }
@@ -530,7 +530,7 @@ public:
   PatternSet(ArrayRef<std::string> Names) {
     Patterns.reserve(Names.size());
     for (StringRef Name : Names)
-      Patterns.push_back({Name, Name.startswith("::")});
+      Patterns.push_back({Name, Name.starts_with("::")});
   }
 
   /// Consumes the name suffix from each pattern in the set and removes the ones
@@ -652,11 +652,11 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
     const StringRef FullName = OS.str();
 
     for (const StringRef Pattern : Names) {
-      if (Pattern.startswith("::")) {
+      if (Pattern.starts_with("::")) {
         if (FullName == Pattern)
           return true;
-      } else if (FullName.endswith(Pattern) &&
-                 FullName.drop_back(Pattern.size()).endswith("::")) {
+      } else if (FullName.ends_with(Pattern) &&
+                 FullName.drop_back(Pattern.size()).ends_with("::")) {
         return true;
       }
     }
@@ -800,6 +800,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
@@ -882,6 +883,10 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
     arraySubscriptExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+    arrayInitIndexExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+    arrayInitLoopExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
     cxxDefaultArgExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
@@ -936,6 +941,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+    convertVectorExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CoawaitExpr>
     coawaitExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
@@ -1041,6 +1048,7 @@ const AstTypeMatcher<ConstantArrayType> constantArrayType;
 const AstTypeMatcher<DeducedTemplateSpecializationType>
     deducedTemplateSpecializationType;
 const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+const AstTypeMatcher<DependentSizedExtVectorType> dependentSizedExtVectorType;
 const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
 const AstTypeMatcher<VariableArrayType> variableArrayType;
 const AstTypeMatcher<AtomicType> atomicType;
@@ -1050,6 +1058,7 @@ const AstTypeMatcher<FunctionType> functionType;
 const AstTypeMatcher<FunctionProtoType> functionProtoType;
 const AstTypeMatcher<ParenType> parenType;
 const AstTypeMatcher<BlockPointerType> blockPointerType;
+const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
 const AstTypeMatcher<MemberPointerType> memberPointerType;
 const AstTypeMatcher<PointerType> pointerType;
 const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;

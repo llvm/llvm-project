@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -131,7 +132,7 @@ MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
 
-bool SPIRVTypeConverter::allows(spirv::Capability capability) {
+bool SPIRVTypeConverter::allows(spirv::Capability capability) const {
   return targetEnv.allows(capability);
 }
 
@@ -303,16 +304,35 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   type = cast<VectorType>(convertIndexElementType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot convert non-scalar element type\n");
-    return nullptr;
+    // If this is not a spec allowed scalar type, try to handle sub-byte integer
+    // types.
+    auto intType = dyn_cast<IntegerType>(type.getElementType());
+    if (!intType) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type
+                 << " illegal: cannot convert non-scalar element type\n");
+      return nullptr;
+    }
+
+    Type elementType = convertSubByteIntegerType(options, intType);
+    if (type.getRank() <= 1 && type.getNumElements() == 1)
+      return elementType;
+
+    if (type.getNumElements() > 4) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type << " illegal: > 4-element unimplemented\n");
+      return nullptr;
+    }
+
+    return VectorType::get(type.getShape(), elementType);
   }
 
   if (type.getRank() <= 1 && type.getNumElements() == 1)
     return convertScalarType(targetEnv, options, scalarType, storageClass);
 
   if (!spirv::CompositeType::isValid(type)) {
-    LLVM_DEBUG(llvm::dbgs() << type << " illegal: > 4-element unimplemented\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: not a valid composite type\n");
     return nullptr;
   }
 
@@ -390,8 +410,14 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  auto arrayElemCount = *tensorSize / *scalarSize;
-  auto arrayElemType = convertScalarType(targetEnv, options, scalarType);
+  int64_t arrayElemCount = *tensorSize / *scalarSize;
+  if (arrayElemCount == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot handle zero-element tensors\n");
+    return nullptr;
+  }
+
+  Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)
     return nullptr;
   std::optional<int64_t> arrayElemSize =
@@ -443,6 +469,12 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
     return wrapInStructAndGetPointer(arrayType, storageClass);
   }
 
+  if (type.getNumElements() == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
+  }
+
   int64_t memrefSize = llvm::divideCeil(type.getNumElements() * numBoolBits, 8);
   int64_t arrayElemCount = llvm::divideCeil(memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
@@ -472,6 +504,12 @@ static Type convertSubByteMemrefType(const spirv::TargetEnv &targetEnv,
     // For Vulkan we need extra wrapping struct and array to satisfy interface
     // needs.
     return wrapInStructAndGetPointer(arrayType, storageClass);
+  }
+
+  if (type.getNumElements() == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
   }
 
   int64_t memrefSize =
@@ -557,6 +595,12 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  if (*memrefSize == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
+  }
+
   int64_t arrayElemCount = llvm::divideCeil(*memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
   auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
@@ -564,6 +608,84 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return spirv::PointerType::get(arrayType, storageClass);
   return wrapInStructAndGetPointer(arrayType, storageClass);
 }
+
+//===----------------------------------------------------------------------===//
+// Type casting materialization
+//===----------------------------------------------------------------------===//
+
+/// Converts the given `inputs` to the original source `type` considering the
+/// `targetEnv`'s capabilities.
+///
+/// This function is meant to be used for source materialization in type
+/// converters. When the type converter needs to materialize a cast op back
+/// to some original source type, we need to check whether the original source
+/// type is supported in the target environment. If so, we can insert legal
+/// SPIR-V cast ops accordingly.
+///
+/// Note that in SPIR-V the capabilities for storage and compute are separate.
+/// This function is meant to handle the **compute** side; so it does not
+/// involve storage classes in its logic. The storage side is expected to be
+/// handled by MemRef conversion logic.
+std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
+                                      OpBuilder &builder, Type type,
+                                      ValueRange inputs, Location loc) {
+  // We can only cast one value in SPIR-V.
+  if (inputs.size() != 1) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+  Value input = inputs.front();
+
+  // Only support integer types for now. Floating point types to be implemented.
+  if (!isa<IntegerType>(type)) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+  auto inputType = cast<IntegerType>(input.getType());
+
+  auto scalarType = dyn_cast<spirv::ScalarType>(type);
+  if (!scalarType) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // Only support source type with a smaller bitwidth. This would mean we are
+  // truncating to go back so we don't need to worry about the signedness.
+  // For extension, we cannot have enough signal here to decide which op to use.
+  if (inputType.getIntOrFloatBitWidth() < scalarType.getIntOrFloatBitWidth()) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // Boolean values would need to use different ops than normal integer values.
+  if (type.isInteger(1)) {
+    Value one = spirv::ConstantOp::getOne(inputType, loc, builder);
+    return builder.create<spirv::IEqualOp>(loc, input, one);
+  }
+
+  // Check that the source integer type is supported by the environment.
+  SmallVector<ArrayRef<spirv::Extension>, 1> exts;
+  SmallVector<ArrayRef<spirv::Capability>, 2> caps;
+  scalarType.getExtensions(exts);
+  scalarType.getCapabilities(caps);
+  if (failed(checkCapabilityRequirements(type, targetEnv, caps)) ||
+      failed(checkExtensionRequirements(type, targetEnv, exts))) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // We've already made sure this is truncating previously, so we don't need to
+  // care about signedness here. Still try to use a corresponding op for better
+  // consistency though.
+  if (type.isSignedInteger()) {
+    return builder.create<spirv::SConvertOp>(loc, type, input);
+  }
+  return builder.create<spirv::UConvertOp>(loc, type, input);
+}
+
+//===----------------------------------------------------------------------===//
+// SPIRVTypeConverter
+//===----------------------------------------------------------------------===//
 
 SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
                                        const SPIRVConversionOptions &options)
@@ -610,6 +732,17 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
 
   addConversion([this](MemRefType memRefType) {
     return convertMemrefType(this->targetEnv, this->options, memRefType);
+  });
+
+  // Register some last line of defense casting logic.
+  addSourceMaterialization(
+      [this](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+        return castToSourceType(this->targetEnv, builder, type, inputs, loc);
+      });
+  addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return std::optional<Value>(cast.getResult(0));
   });
 }
 
@@ -871,7 +1004,7 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
   return linearizedIndex;
 }
 
-Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -902,7 +1035,7 @@ Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }
 
-Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -937,7 +1070,7 @@ Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
                                                  linearizedIndices);
 }
 
-Value mlir::spirv::getElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
                                  OpBuilder &builder) {

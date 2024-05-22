@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX10
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX10
 
 # GFX10: tbuffer_load_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
 0x00,0x00,0xb0,0xe8,0x00,0x00,0x20,0x80

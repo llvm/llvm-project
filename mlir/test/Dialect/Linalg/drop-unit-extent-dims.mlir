@@ -59,24 +59,24 @@ func.func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %arg1 : f32, %shape: t
   library_call = "some_external_func"
 }
 
-func.func @drop_one_trip_loops_all_ones(%arg0 : tensor<1x1x1xf32>, %arg1 : f32, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32> {
+func.func @drop_one_trip_loops_all_ones(%arg0 : tensor<1x1x1xf32>, %arg1 : f32, %shape: tensor<1x1x?x1x1xf32>) -> tensor<1x1x?x1x1xf32> {
   %0 = linalg.generic #trait
      ins(%arg0, %arg1 : tensor<1x1x1xf32>, f32)
-    outs(%shape : tensor<?x1x?x1x?xf32>) {
+    outs(%shape : tensor<1x1x?x1x1xf32>) {
        ^bb0(%arg2 : f32, %arg3 : f32, %arg4 : f32) :
          linalg.yield %arg3 : f32
-       } -> tensor<?x1x?x1x?xf32>
-  return %0 : tensor<?x1x?x1x?xf32>
+       } -> tensor<1x1x?x1x1xf32>
+  return %0 : tensor<1x1x?x1x1xf32>
 }
 //   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
-//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (0, d0, 0)>
+//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @drop_one_trip_loops_all_ones
 //       CHECK: tensor.collapse_shape %{{.*}} []
-//       CHECK: tensor.collapse_shape %{{.*}} {{\[}}[0, 1], [2, 3], [4]]
+//       CHECK: tensor.collapse_shape %{{.*}} {{\[}}[0, 1, 2, 3, 4]]
 //       CHECK: linalg.generic
 //  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP1]], #[[$MAP2]]]
 //  CHECK-SAME:   iterator_types = ["parallel"]
-//       CHECK: tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2, 3], [4]]
+//       CHECK: tensor.expand_shape %{{.*}} {{\[}}[0, 1, 2, 3, 4]]
 
 // -----
 
@@ -489,6 +489,18 @@ func.func @slice_unit_dims(%arg0: tensor<1x3xf32>) -> tensor<1x1xf32> {
 
 // -----
 
+func.func @rank_reduced_extract_slice(%arg0: tensor<1x1x3x1x3xf32>) -> tensor<1x3x3xf32> {
+  %0 = tensor.extract_slice %arg0[0, 0, 0, 0, 0] [1, 1, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<1x1x3x1x3xf32> to tensor<1x3x3xf32>
+  return %0 : tensor<1x3x3xf32>
+}
+// CHECK-LABEL: func @rank_reduced_extract_slice
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice
+//  CHECK-SAME:     tensor<1x1x3x1x3xf32> to tensor<3x3xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[SLICE]] {{\[}}[0, 1], [2]]
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @insert_slice_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>) -> tensor<1x3xf32> {
   %0 = tensor.insert_slice %arg1 into %arg0[0, 2] [1, 1] [1, 1] : tensor<1x1xf32> into tensor<1x3xf32>
   return %0 : tensor<1x3xf32>
@@ -497,6 +509,18 @@ func.func @insert_slice_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>
 //       CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %{{.+}} []
 //       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[RESHAPE]]
 //  CHECK-SAME:     tensor<f32> into tensor<1x3xf32>
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @rank_reduced_insert_slice(%arg0: tensor<1x1x3x1x3xf32>, %arg1: tensor<1x3x3xf32>) -> tensor<1x1x3x1x3xf32> {
+  %0 = tensor.insert_slice %arg1 into %arg0[0, 0, 0, 0, 0] [1, 1, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<1x3x3xf32> into tensor<1x1x3x1x3xf32>
+  return %0 : tensor<1x1x3x1x3xf32>
+}
+// CHECK-LABEL: func @rank_reduced_insert_slice
+//       CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %{{.+}} {{\[}}[0, 1], [2]]
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[RESHAPE]]
+//  CHECK-SAME:     tensor<3x3xf32> into tensor<1x1x3x1x3xf32>
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -854,7 +878,7 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   iterator_types = ["parallel", "reduction"]
 }
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = ["dense", "compressed"] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> tensor<8xf32> {
     %0 = tensor.empty() : tensor<8xf32>
@@ -922,4 +946,3 @@ func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
 // CHECK-SLICES-LABEL: func @drop_all_loops
 //       CHECK-SLICES:   memref.subview %{{.*}}[0, 0] [1, 1] [1, 1] : memref<1x1xf32, 3> to memref<f32, strided<[]>, 3>
 //       CHECK-SLICES:   linalg.generic{{.*}}memref<f32, strided<[]>, 3>
-

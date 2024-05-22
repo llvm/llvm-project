@@ -152,7 +152,8 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return "false";
   }
 
-  if (const auto *IntLit = dyn_cast<IntegerLiteral>(Expression)) {
+  if (const auto *IntLit =
+          dyn_cast<IntegerLiteral>(Expression->IgnoreParens())) {
     return (IntLit->getValue() == 0) ? "false" : "true";
   }
 
@@ -170,7 +171,7 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return "true";
   }
 
-  return StringRef();
+  return {};
 }
 
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
@@ -228,7 +229,8 @@ bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
       if (!S)
         return false;
       if (isa<IfStmt>(S) || isa<ConditionalOperator>(S) || isa<ForStmt>(S) ||
-          isa<WhileStmt>(S) || isa<BinaryConditionalOperator>(S))
+          isa<WhileStmt>(S) || isa<DoStmt>(S) ||
+          isa<BinaryConditionalOperator>(S))
         return true;
       if (isa<ParenExpr>(S) || isa<ImplicitCastExpr>(S) ||
           isUnaryLogicalNotOperator(S) ||
@@ -384,7 +386,7 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
               << DestType;
 
   if (const auto *BoolLiteral =
-          dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr())) {
+          dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
     Diag << tooling::fixit::createReplacement(
         *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context));
   } else {

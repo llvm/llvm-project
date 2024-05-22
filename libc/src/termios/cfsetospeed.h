@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_CFSETOSPEED_H
-#define LLVM_LIBC_SRC_UNISTD_CFSETOSPEED_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_CFSETOSPEED_H
+#define LLVM_LIBC_SRC_TERMIOS_CFSETOSPEED_H
 
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int cfsetospeed(struct termios *t, speed_t speed);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_UNISTD_CFSETOSPEED_H
+#endif // LLVM_LIBC_SRC_TERMIOS_CFSETOSPEED_H

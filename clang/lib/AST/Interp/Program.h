@@ -82,8 +82,8 @@ public:
   std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
                                             const Expr *Init = nullptr);
 
-  /// Returns or creates a dummy value for parameters.
-  std::optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
+  /// Returns or creates a dummy value for unknown declarations.
+  std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);
@@ -187,7 +187,7 @@ private:
     }
 
     /// Return a pointer to the data.
-    char *data() { return B.data(); }
+    std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
 
@@ -208,7 +208,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ParmVarDecl *, unsigned> DummyParams;
+  llvm::DenseMap<const ValueDecl *, unsigned> DummyParams;
 
   /// Creates a new descriptor.
   template <typename... Ts>

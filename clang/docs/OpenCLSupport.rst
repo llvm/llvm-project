@@ -333,7 +333,7 @@ Missing features or with limited support
 - IR generation for non-trivial global destructors is incomplete (See:
   `PR48047 <https://llvm.org/PR48047>`_).
 
-- Support of `destrutors with non-default address spaces
+- Support of `destructors with non-default address spaces
   <https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#_construction_initialization_and_destruction>`_
   is incomplete (See: `D109609 <https://reviews.llvm.org/D109609>`_).
 

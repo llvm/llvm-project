@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
 
 #include "linux_extension_errors.h"
 #include "posix_errors.h"
 #include "stdc_errors.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_ERRORS =
     STDC_ERRORS + POSIX_ERRORS + LINUX_ERRORS;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H

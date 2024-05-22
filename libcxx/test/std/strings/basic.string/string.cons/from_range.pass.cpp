@@ -19,11 +19,11 @@
 #include "../../../containers/from_range_helpers.h"
 #include "../../../containers/sequences/from_range_sequence_containers.h"
 #include "test_macros.h"
+#include "asan_testing.h"
 
 template <class Container, class Range, class Alloc>
-concept StringHasFromRangeAllocCtr = requires (Range&& range, const Alloc& alloc) {
-  Container(std::from_range, std::forward<Range>(range), alloc);
-};
+concept StringHasFromRangeAllocCtr =
+    requires(Range&& range, const Alloc& alloc) { Container(std::from_range, std::forward<Range>(range), alloc); };
 
 constexpr bool test_constraints() {
   // (from_range, range)
@@ -42,7 +42,7 @@ constexpr bool test_constraints() {
   // (from_range, range, alloc)
   //
   // Input range with the same value type.
-  using Alloc = test_allocator<char>;
+  using Alloc           = test_allocator<char>;
   using StringWithAlloc = std::basic_string<char, std::char_traits<char>, Alloc>;
   static_assert(StringHasFromRangeAllocCtr<StringWithAlloc, InputRange<char>, Alloc>);
   // Input range with a convertible value type.
@@ -59,9 +59,7 @@ constexpr bool test_constraints() {
   return true;
 }
 
-template <class Iter,
-          class Sent,
-          class Alloc>
+template <class Iter, class Sent, class Alloc>
 constexpr void test_with_input(std::vector<char> input) {
   auto b = Iter(input.data());
   auto e = Iter(input.data() + input.size());
@@ -73,6 +71,7 @@ constexpr void test_with_input(std::vector<char> input) {
     LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
     assert(std::ranges::equal(in, c));
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   { // (range, allocator)
@@ -83,6 +82,7 @@ constexpr void test_with_input(std::vector<char> input) {
     assert(c.get_allocator() == alloc);
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
     assert(std::ranges::equal(in, c));
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 }
 

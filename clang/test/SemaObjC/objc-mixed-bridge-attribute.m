@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://17238954
 
 typedef const struct __attribute__((objc_bridge(NSAttributedString))) __CFAttributedString *CFAttributedStringRef;
 

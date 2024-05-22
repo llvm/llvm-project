@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -x c -ffreestanding -triple i686--linux -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64--linux -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
-// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c -ffreestanding -triple i686--linux -no-enable-noundef-analysis -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64--linux -no-enable-noundef-analysis -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
 
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding -triple i686--linux -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding -triple x86_64--linux -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
-// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding -triple i686--linux -no-enable-noundef-analysis -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding -triple x86_64--linux -no-enable-noundef-analysis -emit-llvm %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=i686-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -no-enable-noundef-analysis -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
 
 #include <x86intrin.h>
 

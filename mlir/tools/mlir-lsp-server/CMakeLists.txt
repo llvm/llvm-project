@@ -17,6 +17,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRSPIRVTestPasses
     MLIRTestAnalysis
     MLIRTestDialect
+    MLIRTestDynDialect
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
@@ -27,12 +28,15 @@ if(MLIR_INCLUDE_TESTS)
 endif()
 
 set(LIBS
-  ${dialect_libs}
   ${conversion_libs}
+  ${dialect_libs}
+  ${extension_libs}
   ${test_libs}
+
   MLIRAffineAnalysis
   MLIRAnalysis
   MLIRDialect
+  MLIRFuncAllExtensions
   MLIRLspServerLib
   MLIRParser
   MLIRPass

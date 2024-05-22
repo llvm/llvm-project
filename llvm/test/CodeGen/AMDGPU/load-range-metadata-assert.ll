@@ -8,7 +8,7 @@ define <2 x i32> @range_metata_sext_range_0_i24_i64_bitcast(ptr addrspace(1) %pt
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !0
+  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !{}
   %shl = shl i64 %val, 22
   %ashr = ashr i64 %shl, 22
   %cast = bitcast i64 %ashr to <2 x i32>

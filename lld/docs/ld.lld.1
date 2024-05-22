@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd Feb 9, 2023
+.Dd Jul 25, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -27,8 +27,8 @@ It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
 .Nm
-currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
-MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+currently supports i386, x86-64, ARM, AArch64, LoongArch, PowerPC32,
+PowerPC64, MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
 .Nm
 acts as a Microsoft link.exe-compatible linker if invoked as
 .Nm lld-link
@@ -82,6 +82,9 @@ Bind default visibility defined symbols locally for
 Also set the
 .Dv DF_SYMBOLIC
 flag.
+.It Fl Bsymbolic-non-weak
+Bind default visibility defined STB_GLOBAL symbols locally for
+.Fl shared.
 .It Fl Bsymbolic-functions
 Bind default visibility defined function symbols locally for
 .Fl shared.
@@ -117,6 +120,19 @@ is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
 .Fl -build-id Ns = Ns Cm fast .
+.It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
+.Ar algorithm
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+Ignore call graph profile.
+.It Cm hfsort
+Use hfsort.
+.It Cm cdsort
+Use cdsort (default).
+.El
+.Pp
 .It Fl -color-diagnostics Ns = Ns Ar value
 Use colors in diagnostics.
 .Ar value
@@ -621,6 +637,10 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -fat-lto-objects
+Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.
+.It Fl -no-fat-lto-objects
+Ignore the .llvm.lto section in relocatable object files (default).
 .It Fl -time-trace
 Record time trace.
 .It Fl -time-trace-file Ns = Ns Ar file

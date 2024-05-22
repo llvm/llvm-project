@@ -34,7 +34,7 @@ define void @baz() personality ptr @ham {
 ; CHECK-NEXT:    invoke void @pluto()
 ; CHECK-NEXT:    to label [[BB5:%.*]] unwind label [[OUTER_EXITING_LOOPEXIT_SPLIT_LP_LOOPEXIT_SPLIT_LP:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6]] = add i32 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP6]] = add nsw i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 1
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[EXIT3_LOOPEXIT5:%.*]]
 ; CHECK:       bb8:
@@ -99,7 +99,7 @@ define void @baz() personality ptr @ham {
 ; CHECK:       bb8.preloop:
 ; CHECK-NEXT:    [[TMP9_PRELOOP:%.*]] = icmp slt i32 [[TMP6_PRELOOP]], 84
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP6_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[INNERHEADER_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], [[LOOP0:!llvm.loop !.*]], !irce.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP4]], label [[INNERHEADER_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone [[META5:![0-9]+]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[TMP6_PRELOOP_LCSSA:%.*]] = phi i32 [ [[TMP6_PRELOOP]], [[BB8_PRELOOP]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP6_PRELOOP_LCSSA]], 84
@@ -120,7 +120,7 @@ define void @baz() personality ptr @ham {
 ; CHECK-NEXT:    br i1 [[TMP7_POSTLOOP]], label [[BB8_POSTLOOP]], label [[EXIT3_LOOPEXIT4:%.*]]
 ; CHECK:       bb8.postloop:
 ; CHECK-NEXT:    [[TMP9_POSTLOOP:%.*]] = icmp slt i32 [[TMP6_POSTLOOP]], 84
-; CHECK-NEXT:    br i1 [[TMP9_POSTLOOP]], label [[INNERHEADER_POSTLOOP]], label [[BB13_LOOPEXIT:%.*]], [[LOOP6:!llvm.loop !.*]], !irce.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP9_POSTLOOP]], label [[INNERHEADER_POSTLOOP]], label [[BB13_LOOPEXIT:%.*]], !llvm.loop [[LOOP6:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 bb:
   br label %outerheader

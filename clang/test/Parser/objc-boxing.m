@@ -25,7 +25,6 @@ id missing_parentheses(void) {
                             // expected-note {{to match this '('}}
 }
 
-// rdar://10679157
 void bar(id p);
 void foo(id p) {
         bar(@{p, p}); // expected-error {{expected ':'}}

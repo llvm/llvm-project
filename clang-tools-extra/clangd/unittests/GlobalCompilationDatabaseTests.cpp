@@ -228,14 +228,14 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
     DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
     Opts.ContextProvider = [&](llvm::StringRef Path) {
       Config Cfg;
-      if (Path.endswith("a.cc")) {
+      if (Path.ends_with("a.cc")) {
         // a.cc uses another directory's CDB, so it won't be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::FixedDir;
         Cfg.CompileFlags.CDBSearch.FixedCDBPath = testPath("foo");
-      } else if (Path.endswith("gen.cc")) {
+      } else if (Path.ends_with("gen.cc")) {
         // gen.cc has CDB search disabled, so it won't be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::NoCDBSearch;
-      } else if (Path.endswith("gen2.cc")) {
+      } else if (Path.ends_with("gen2.cc")) {
         // gen2.cc explicitly lists this directory, so it will be discovered.
         Cfg.CompileFlags.CDBSearch.Policy = Config::CDBSearchSpec::FixedDir;
         Cfg.CompileFlags.CDBSearch.FixedCDBPath = testRoot();

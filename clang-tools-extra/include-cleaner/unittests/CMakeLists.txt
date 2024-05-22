@@ -25,6 +25,7 @@ clang_target_link_libraries(ClangIncludeCleanerTests
   clangFrontend
   clangFormat
   clangLex
+  clangSerialization
   clangToolingInclusionsStdlib
   )
 

@@ -13,19 +13,16 @@
 
 namespace mlir {
 class DataFlowSolver;
+class ConversionTarget;
+class TypeConverter;
 
 namespace arith {
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
-#define GEN_PASS_DECL_ARITHINTRANGEOPTS
-#include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 
 class WideIntEmulationConverter;
 class NarrowTypeEmulationConverter;
-
-/// Create a pass to bufferize Arith ops.
-std::unique_ptr<Pass> createArithBufferizePass();
 
 /// Create a pass to bufferize arith.constant ops.
 std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
@@ -42,6 +39,21 @@ void populateArithWideIntEmulationPatterns(
 void populateArithNarrowTypeEmulationPatterns(
     NarrowTypeEmulationConverter &typeConverter, RewritePatternSet &patterns);
 
+/// Populate the type conversions needed to emulate the unsupported
+/// `sourceTypes` with `destType`
+void populateEmulateUnsupportedFloatsConversions(TypeConverter &converter,
+                                                 ArrayRef<Type> sourceTypes,
+                                                 Type targetType);
+
+/// Add rewrite patterns for converting operations that use illegal float types
+/// to ones that use legal ones.
+void populateEmulateUnsupportedFloatsPatterns(RewritePatternSet &patterns,
+                                              TypeConverter &converter);
+
+/// Set up a dialect conversion to reject arithmetic operations on unsupported
+/// float types.
+void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
+                                              TypeConverter &converter);
 /// Add patterns to expand Arith ceil/floor division ops.
 void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
 
@@ -50,13 +62,6 @@ void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
-
-/// Create a pass to legalize Arith ops.
-std::unique_ptr<Pass> createArithExpandOpsPass();
-
-/// Create a pass to legalize Arith ops with specified configuration.
-std::unique_ptr<Pass>
-createArithExpandOpsPass(const ArithExpandOpsOptions &options);
 
 /// Create a pass to replace signed ops with unsigned ones where they are proven
 /// equivalent.

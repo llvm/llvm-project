@@ -64,11 +64,11 @@ LLVMErrorRef transform(void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,
   return LLVMOrcThreadSafeModuleWithModuleDo(*ModInOut, myModuleTransform, Ctx);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
   int MainResult = 0;
 
-  LLVMParseCommandLineOptions(argc, (const char **)argv, "");
+  LLVMParseCommandLineOptions(argc, argv, "");
 
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();

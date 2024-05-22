@@ -3,7 +3,7 @@
 # RUN: not llvm-mc -triple=riscv32 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve32x --mattr=+experimental-zvksed %s \
-# RUN:        | llvm-objdump -d --mattr=+zve32x --mattr=+experimental-zvksed  - \
+# RUN:        | llvm-objdump -d --mattr=+zve32x --mattr=+experimental-zvksed --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve32x --mattr=+experimental-zvksed %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
@@ -13,6 +13,12 @@ vsm4k.vi v10, v9, 7
 # CHECK-ENCODING: [0x77,0xa5,0x93,0x86]
 # CHECK-ERROR: instruction requires the following: 'Zvksed' (SM4 Block Cipher Instructions){{$}}
 # CHECK-UNKNOWN: 77 a5 93 86   <unknown>
+
+vsm4k.vi v10, v9, 31
+# CHECK-INST: vsm4k.vi v10, v9, 31
+# CHECK-ENCODING: [0x77,0xa5,0x9f,0x86]
+# CHECK-ERROR: instruction requires the following: 'Zvksed' (SM4 Block Cipher Instructions){{$}}
+# CHECK-UNKNOWN: 77 a5 9f 86   <unknown>
 
 vsm4r.vv v10, v9
 # CHECK-INST: vsm4r.vv v10, v9

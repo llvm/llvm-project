@@ -214,9 +214,9 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp =
-        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams,
-                                           /*isUnordered=*/true);
+    elementalOp = builder.create<hlfir::ElementalOp>(
+        loc, exprType, shape,
+        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
     mlir::Value diff = builder.create<mlir::arith::SubIOp>(
@@ -240,6 +240,26 @@ public:
     // must be initiated before the YieldElementOp, so we have to pop the scope
     // right now.
     stmtCtx.finalizeAndPop();
+
+    // This is a hacky way to get rid of the DestroyOp clean-up
+    // associated with the final ac-value result if it is hlfir.expr.
+    // Example:
+    //   ... = (/(REPEAT(REPEAT(CHAR(i),2),2),i=1,n)/)
+    // Each intrinsic call lowering will produce hlfir.expr result
+    // with the associated clean-up, but only the last of them
+    // is wrong. It is wrong because the value is used in hlfir.yield_element,
+    // so it cannot be destroyed.
+    mlir::Operation *destroyOp = nullptr;
+    for (mlir::Operation *useOp : elementResult.getUsers())
+      if (mlir::isa<hlfir::DestroyOp>(useOp)) {
+        if (destroyOp)
+          fir::emitFatalError(loc,
+                              "multiple DestroyOp's for ac-value expression");
+        destroyOp = useOp;
+      }
+
+    if (destroyOp)
+      destroyOp->erase();
 
     builder.create<hlfir::YieldElementOp>(loc, elementResult);
   }

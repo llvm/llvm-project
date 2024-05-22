@@ -34,7 +34,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 int __libcpp_clz(unsigned long long __x) _NOEXCEPT { return __builtin_clzll(__x); }
 
 #  ifndef _LIBCPP_HAS_NO_INT128
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 int __libcpp_clz(__uint128_t __x) _NOEXCEPT {
   // The function is written in this form due to C++ constexpr limitations.
   // The algorithm:
@@ -74,7 +74,7 @@ int __countl_zero(_Tp __t) _NOEXCEPT
         int __iter = 0;
         const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
         while (true) {
-            __t = std::__rotr(__t, __ulldigits);
+            __t = std::__rotl(__t, __ulldigits);
             if ((__iter = std::__countl_zero(static_cast<unsigned long long>(__t))) != __ulldigits)
                 break;
             __ret += __iter;

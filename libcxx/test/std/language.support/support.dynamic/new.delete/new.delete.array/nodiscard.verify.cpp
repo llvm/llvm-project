@@ -17,9 +17,6 @@
 // [[nodiscard]] enabled before C++20 in libc++ as an extension
 // UNSUPPORTED: (c++11 || c++14 || c++17) && !stdlib=libc++
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}

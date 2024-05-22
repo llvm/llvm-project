@@ -35,6 +35,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/JSON.h"
 
@@ -826,8 +827,12 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
 }
 
 int GDBRemoteCommunicationClient::SendEnvironment(const Environment &env) {
-  for (const auto &KV : env) {
-    int r = SendEnvironmentPacket(Environment::compose(KV).c_str());
+  llvm::SmallVector<std::pair<llvm::StringRef, llvm::StringRef>, 0> vec;
+  for (const auto &kv : env)
+    vec.emplace_back(kv.first(), kv.second);
+  llvm::sort(vec, llvm::less_first());
+  for (const auto &[k, v] : vec) {
+    int r = SendEnvironmentPacket((k + "=" + v).str().c_str());
     if (r != 0)
       return r;
   }
@@ -1260,7 +1265,14 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             if (!value.getAsInteger(0, pointer_byte_size))
               ++num_keys_decoded;
           } else if (name.equals("addressing_bits")) {
-            if (!value.getAsInteger(0, m_addressing_bits))
+            if (!value.getAsInteger(0, m_low_mem_addressing_bits)) {
+              ++num_keys_decoded;
+            }
+          } else if (name.equals("high_mem_addressing_bits")) {
+            if (!value.getAsInteger(0, m_high_mem_addressing_bits))
+              ++num_keys_decoded;
+          } else if (name.equals("low_mem_addressing_bits")) {
+            if (!value.getAsInteger(0, m_low_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name.equals("os_version") ||
                      name.equals("version")) // Older debugserver binaries used
@@ -1402,11 +1414,19 @@ GDBRemoteCommunicationClient::GetHostArchitecture() {
   return m_host_arch;
 }
 
-uint32_t GDBRemoteCommunicationClient::GetAddressingBits() {
+AddressableBits GDBRemoteCommunicationClient::GetAddressableBits() {
+  AddressableBits addressable_bits;
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
-  return m_addressing_bits;
+
+  if (m_low_mem_addressing_bits == m_high_mem_addressing_bits)
+    addressable_bits.SetAddressableBits(m_low_mem_addressing_bits);
+  else
+    addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
+                                        m_high_mem_addressing_bits);
+  return addressable_bits;
 }
+
 seconds GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
@@ -2629,10 +2649,12 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     return 0;
 
   for (size_t i = 0, count = array->GetSize(); i < count; ++i) {
-    StructuredData::Dictionary *element = nullptr;
-    if (!array->GetItemAtIndexAsDictionary(i, element))
+    std::optional<StructuredData::Dictionary *> maybe_element =
+        array->GetItemAtIndexAsDictionary(i);
+    if (!maybe_element)
       continue;
 
+    StructuredData::Dictionary *element = *maybe_element;
     uint16_t port = 0;
     if (StructuredData::ObjectSP port_osp =
             element->GetValueForKey(llvm::StringRef("port")))
@@ -4020,7 +4042,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
           return;
         } else {
           llvm::StringRef response_str(response.GetStringRef());
-          if (response_str.startswith("qSymbol:")) {
+          if (response_str.starts_with("qSymbol:")) {
             response.SetFilePos(strlen("qSymbol:"));
             std::string symbol_name;
             if (response.GetHexByteString(symbol_name)) {

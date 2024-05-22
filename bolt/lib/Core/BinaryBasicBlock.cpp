@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Errc.h"
 
@@ -611,28 +610,6 @@ BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   Instructions.erase(II, end());
 
   return NewBlock;
-}
-
-void BinaryBasicBlock::updateOutputValues(const MCAsmLayout &Layout) {
-  if (!LocSyms)
-    return;
-
-  const uint64_t BBAddress = getOutputAddressRange().first;
-  const uint64_t BBOffset = Layout.getSymbolOffset(*getLabel());
-  for (const auto &LocSymKV : *LocSyms) {
-    const uint32_t InputFunctionOffset = LocSymKV.first;
-    const uint32_t OutputOffset = static_cast<uint32_t>(
-        Layout.getSymbolOffset(*LocSymKV.second) - BBOffset);
-    getOffsetTranslationTable().emplace_back(
-        std::make_pair(OutputOffset, InputFunctionOffset));
-
-    // Update reverse (relative to BAT) address lookup table for function.
-    if (getFunction()->requiresAddressTranslation()) {
-      getFunction()->getInputOffsetToAddressMap().emplace(
-          std::make_pair(InputFunctionOffset, OutputOffset + BBAddress));
-    }
-  }
-  LocSyms.reset(nullptr);
 }
 
 } // namespace bolt

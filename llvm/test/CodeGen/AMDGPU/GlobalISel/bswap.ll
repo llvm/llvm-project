@@ -609,11 +609,9 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; GFX8-LABEL: v_bswap_v3i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX8-NEXT:    s_mov_b32 s4, 0x2030001
-; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_v3i16:

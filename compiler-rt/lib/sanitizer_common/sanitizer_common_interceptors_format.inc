@@ -340,11 +340,19 @@ static void scanf_common(void *ctx, int n_inputs, bool allowGnuMalloc,
       size = 0;
     }
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, argp, size);
-    // For %ms/%mc, write the allocated output buffer as well.
+    // For %mc/%mC/%ms/%m[/%mS, write the allocated output buffer as well.
     if (dir.allocate) {
-      char *buf = *(char **)argp;
-      if (buf)
-        COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, internal_strlen(buf) + 1);
+      if (char *buf = *(char **)argp) {
+        if (dir.convSpecifier == 'c')
+          size = 1;
+        else if (dir.convSpecifier == 'C')
+          size = sizeof(wchar_t);
+        else if (dir.convSpecifier == 'S')
+          size = (internal_wcslen((wchar_t *)buf) + 1) * sizeof(wchar_t);
+        else  // 's' or '['
+          size = internal_strlen(buf) + 1;
+        COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, size);
+      }
     }
   }
 }
@@ -539,24 +547,25 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
       continue;
     } else if (size == FSS_STRLEN) {
       if (void *argp = va_arg(aq, void *)) {
+        uptr len;
         if (dir.starredPrecision) {
           // FIXME: properly support starred precision for strings.
-          size = 0;
+          len = 0;
         } else if (dir.fieldPrecision > 0) {
           // Won't read more than "precision" symbols.
-          size = internal_strnlen((const char *)argp, dir.fieldPrecision);
-          if (size < dir.fieldPrecision) size++;
+          len = internal_strnlen((const char *)argp, dir.fieldPrecision);
+          if (len < (uptr)dir.fieldPrecision)
+            len++;
         } else {
           // Whole string will be accessed.
-          size = internal_strlen((const char *)argp) + 1;
+          len = internal_strlen((const char *)argp) + 1;
         }
-        COMMON_INTERCEPTOR_READ_RANGE(ctx, argp, size);
+        COMMON_INTERCEPTOR_READ_RANGE(ctx, argp, len);
       }
     } else if (size == FSS_WCSLEN) {
       if (void *argp = va_arg(aq, void *)) {
         // FIXME: Properly support wide-character strings (via wcsrtombs).
-        size = 0;
-        COMMON_INTERCEPTOR_READ_RANGE(ctx, argp, size);
+        COMMON_INTERCEPTOR_READ_RANGE(ctx, argp, 0);
       }
     } else {
       // Skip non-pointer args

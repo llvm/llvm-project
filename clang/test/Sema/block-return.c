@@ -132,12 +132,10 @@ void foo7(void)
   int (^NN) (void)  = ^{ return cint; };
 }
 
-// rdar://11069896
 void (^blk)(void) = ^{
     return (void)0; // expected-warning {{void block literal should not return void expression}}
 };
 
-// rdar://13463504
 enum Test8 { T8_a, T8_b, T8_c };
 void test8(void) {
   extern void test8_helper(int (^)(int));

@@ -137,26 +137,26 @@ static_assert(!wrap_is_aligned(wrap_align_down(wrap_align_up(22, 16), 32), 64), 
 constexpr long const_value(long l) { return l; }
 // Check some invalid values during constant-evaluation
 static_assert(wrap_align_down(1, const_value(-1)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_down(1, -1)'}}
+// expected-note@-1{{in call to 'wrap_align_down<int>(1, -1)'}}
 static_assert(wrap_align_up(1, const_value(-2)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_up(1, -2)'}}
+// expected-note@-1{{in call to 'wrap_align_up<int>(1, -2)'}}
 static_assert(wrap_is_aligned(1, const_value(-3)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_is_aligned(1, -3)'}}
+// expected-note@-1{{in call to 'wrap_is_aligned<int>(1, -3)'}}
 static_assert(wrap_align_down(1, const_value(17)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_down(1, 17)'}}
+// expected-note@-1{{in call to 'wrap_align_down<int>(1, 17)'}}
 static_assert(wrap_align_up(1, const_value(18)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_up(1, 18)'}}
+// expected-note@-1{{in call to 'wrap_align_up<int>(1, 18)'}}
 static_assert(wrap_is_aligned(1, const_value(19)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_is_aligned(1, 19)'}}
+// expected-note@-1{{in call to 'wrap_is_aligned<int>(1, 19)'}}
 
 // Check invalid values for smaller types:
 static_assert(wrap_align_down(static_cast<short>(1), const_value(1 << 20)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_down(1, 1048576)'}}
+// expected-note@-1{{in call to 'wrap_align_down<short>(1, 1048576)'}}
 // Check invalid boolean type
 static_assert(wrap_align_up(static_cast<int>(1), const_value(1ull << 33)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_align_up(1, 8589934592)'}}
+// expected-note@-1{{in call to 'wrap_align_up<int>(1, 8589934592)'}}
 static_assert(wrap_is_aligned(static_cast<char>(1), const_value(1 << 22)), ""); // expected-error{{not an integral constant expression}}
-// expected-note@-1{{in call to 'wrap_is_aligned(1, 4194304)'}}
+// expected-note@-1{{in call to 'wrap_is_aligned<char>(1, 4194304)'}}
 
 // Check invalid boolean type
 static_assert(wrap_align_up(static_cast<bool>(1), const_value(1 << 21)), ""); // expected-error{{not an integral constant expression}}

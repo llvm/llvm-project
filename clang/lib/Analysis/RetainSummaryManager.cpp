@@ -174,7 +174,7 @@ static bool isOSObjectPtr(QualType QT) {
 }
 
 static bool isISLObjectRef(QualType Ty) {
-  return StringRef(Ty.getAsString()).startswith("isl_");
+  return StringRef(Ty.getAsString()).starts_with("isl_");
 }
 
 static bool isOSIteratorSubclass(const Decl *D) {
@@ -255,13 +255,13 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
       // TODO: Add support for the slightly common *Matching(table) idiom.
       // Cf. IOService::nameMatching() etc. - these function have an unusual
       // contract of returning at +0 or +1 depending on their last argument.
-      if (FName.endswith("Matching")) {
+      if (FName.ends_with("Matching")) {
         return getPersistentStopSummary();
       }
 
       // All objects returned with functions *not* starting with 'get',
       // or iterators, are returned at +1.
-      if ((!FName.startswith("get") && !FName.startswith("Get")) ||
+      if ((!FName.starts_with("get") && !FName.starts_with("Get")) ||
           isOSIteratorSubclass(PD)) {
         return getOSSummaryCreateRule(FD);
       } else {
@@ -301,8 +301,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
 
   std::string RetTyName = RetTy.getAsString();
   if (FName == "pthread_create" || FName == "pthread_setspecific") {
-    // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
-    // This will be addressed better with IPA.
+    // It's not uncommon to pass a tracked object into the thread
+    // as 'void *arg', and then release it inside the thread.
+    // FIXME: We could build a much more precise model for these functions.
     return getPersistentStopSummary();
   } else if(FName == "NSMakeCollectable") {
     // Handle: id NSMakeCollectable(CFTypeRef)
@@ -311,7 +312,8 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                  : getPersistentStopSummary();
   } else if (FName == "CMBufferQueueDequeueAndRetain" ||
              FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
-    // Part of: <rdar://problem/39390714>.
+    // These API functions are known to NOT act as a CFRetain wrapper.
+    // They simply make a new object owned by the caller.
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                                 ScratchArgs,
                                 ArgEffect(DoNothing),
@@ -324,40 +326,39 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                FName == "IOServiceNameMatching" ||
                FName == "IORegistryEntryIDMatching" ||
                FName == "IOOpenFirmwarePathMatching"))) {
-    // Part of <rdar://problem/6961230>. (IOKit)
-    // This should be addressed using a API table.
+    // Yes, these IOKit functions return CF objects.
+    // They also violate the CF naming convention.
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF), ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "IOServiceGetMatchingService" ||
              FName == "IOServiceGetMatchingServices") {
-    // FIXES: <rdar://problem/6326900>
-    // This should be addressed using a API table.  This strcmp is also
-    // a little gross, but there is no need to super optimize here.
+    // These IOKit functions accept CF objects as arguments.
+    // They also consume them without an appropriate annotation.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(DecRef, ObjKind::CF));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "IOServiceAddNotification" ||
              FName == "IOServiceAddMatchingNotification") {
-    // Part of <rdar://problem/6961230>. (IOKit)
-    // This should be addressed using a API table.
+    // More IOKit functions suddenly accepting (and even more suddenly,
+    // consuming) CF objects.
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(DecRef, ObjKind::CF));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CVPixelBufferCreateWithBytes") {
-    // FIXES: <rdar://problem/7283567>
     // Eventually this can be improved by recognizing that the pixel
     // buffer passed to CVPixelBufferCreateWithBytes is released via
     // a callback and doing full IPA to make sure this is done correctly.
-    // FIXME: This function has an out parameter that returns an
+    // Note that it's passed as a 'void *', so it's hard to annotate.
+    // FIXME: This function also has an out parameter that returns an
     // allocated object.
     ScratchArgs = AF.add(ScratchArgs, 7, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CGBitmapContextCreateWithData") {
-    // FIXES: <rdar://problem/7358899>
+    // This is similar to the CVPixelBufferCreateWithBytes situation above.
     // Eventually this can be improved by recognizing that 'releaseInfo'
     // passed to CGBitmapContextCreateWithData is released via
     // a callback and doing full IPA to make sure this is done correctly.
@@ -365,17 +366,14 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF), ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
-    // FIXES: <rdar://problem/7283567>
-    // Eventually this can be improved by recognizing that the pixel
-    // buffer passed to CVPixelBufferCreateWithPlanarBytes is released
-    // via a callback and doing full IPA to make sure this is done
-    // correctly.
+    // Same as CVPixelBufferCreateWithBytes, just more arguments.
     ScratchArgs = AF.add(ScratchArgs, 12, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
-  } else if (FName == "VTCompressionSessionEncodeFrame") {
-    // The context argument passed to VTCompressionSessionEncodeFrame()
+  } else if (FName == "VTCompressionSessionEncodeFrame" ||
+             FName == "VTCompressionSessionEncodeMultiImageFrame") {
+    // The context argument passed to VTCompressionSessionEncodeFrame() et.al.
     // is passed to the callback specified when creating the session
     // (e.g. with VTCompressionSessionCreate()) which can release it.
     // To account for this possibility, conservatively stop tracking
@@ -386,21 +384,19 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "dispatch_set_context" ||
              FName == "xpc_connection_set_context") {
-    // <rdar://problem/11059275> - The analyzer currently doesn't have
-    // a good way to reason about the finalizer function for libdispatch.
+    // The analyzer currently doesn't have a good way to reason about
+    // dispatch_set_finalizer_f() which typically cleans up the context.
     // If we pass a context object that is memory managed, stop tracking it.
-    // <rdar://problem/13783514> - Same problem, but for XPC.
-    // FIXME: this hack should possibly go away once we can handle
-    // libdispatch and XPC finalizers.
+    // Same with xpc_connection_set_finalizer_f().
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
-  } else if (FName.startswith("NSLog")) {
+  } else if (FName.starts_with("NSLog")) {
     return getDoNothingSummary();
-  } else if (FName.startswith("NS") && FName.contains("Insert")) {
+  } else if (FName.starts_with("NS") && FName.contains("Insert")) {
     // Allowlist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
-    // be deallocated by NSMapRemove. (radar://11152419)
+    // be deallocated by NSMapRemove.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),
@@ -457,9 +453,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
 
   // Check for release functions, the only kind of functions that we care
   // about that don't return a pointer type.
-  if (FName.startswith("CG") || FName.startswith("CF")) {
+  if (FName.starts_with("CG") || FName.starts_with("CF")) {
     // Test for 'CGCF'.
-    FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
+    FName = FName.substr(FName.starts_with("CGCF") ? 4 : 2);
 
     if (isRelease(FD, FName))
       return getUnarySummary(FT, DecRef);
@@ -740,8 +736,8 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
     // It's okay to be a little sloppy here.
     if (FName == "CMBufferQueueDequeueAndRetain" ||
         FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
-      // Part of: <rdar://problem/39390714>.
-      // These are not retain. They just return something and retain it.
+      // These API functions are known to NOT act as a CFRetain wrapper.
+      // They simply make a new object owned by the caller.
       return std::nullopt;
     }
     if (CE->getNumArgs() == 1 &&
@@ -1243,8 +1239,6 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   // FIXME: For now we opt for false negatives with NSWindow, as these objects
   //  self-own themselves.  However, they only do this once they are displayed.
   //  Thus, we need to track an NSWindow's display status.
-  //  This is tracked in <rdar://problem/6062711>.
-  //  See also http://llvm.org/bugs/show_bug.cgi?id=3714.
   const RetainSummary *NoTrackYet =
       getPersistentSummary(RetEffect::MakeNoRet(), ScratchArgs,
                            ArgEffect(StopTracking), ArgEffect(StopTracking));
@@ -1259,7 +1253,6 @@ void RetainSummaryManager::InitializeMethodSummaries() {
 
   // For NSNull, objects returned by +null are singletons that ignore
   // retain/release semantics.  Just don't track them.
-  // <rdar://problem/12858915>
   addClassMethSummary("NSNull", "null", NoTrackYet);
 
   // Don't track allocated autorelease pools, as it is okay to prematurely

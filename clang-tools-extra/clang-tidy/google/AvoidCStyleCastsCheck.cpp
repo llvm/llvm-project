@@ -58,15 +58,14 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
 }
 
 static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
-  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr))
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
         CastExpr->getSubExprAsWritten()->getBeginLoc());
-  } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr))
     return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
                                          CastExpr->getLParenLoc());
-  } else
-    llvm_unreachable("Unsupported CastExpr");
+  llvm_unreachable("Unsupported CastExpr");
 }
 
 static StringRef getDestTypeString(const SourceManager &SM,
@@ -149,14 +148,15 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   // Ignore code in .c files and headers included from them, even if they are
   // compiled as C++.
-  if (getCurrentMainFile().endswith(".c"))
+  if (getCurrentMainFile().ends_with(".c"))
     return;
 
   SourceManager &SM = *Result.SourceManager;
 
   // Ignore code in .c files #included in other files (which shouldn't be done,
   // but people still do this for test and other purposes).
-  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getBeginLoc())).endswith(".c"))
+  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getBeginLoc()))
+          .ends_with(".c"))
     return;
 
   // Leave type spelling exactly as it was (unlike

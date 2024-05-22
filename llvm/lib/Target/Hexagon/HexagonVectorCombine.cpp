@@ -684,33 +684,11 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
                                          Type *ValTy, int Adjust,
                                          const InstMap &CloneMap) const
     -> Value * {
-  auto remap = [&](Value *V) -> Value * {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      for (auto [Old, New] : CloneMap)
-        I->replaceUsesOfWith(Old, New);
-      return I;
-    }
-    return V;
-  };
-  // The adjustment is in bytes, but if it's a multiple of the type size,
-  // we don't need to do pointer casts.
-  auto *PtrTy = cast<PointerType>(Ptr->getType());
-  if (!PtrTy->isOpaque()) {
-    Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
-    int ElemSize = HVC.getSizeOf(ElemTy, HVC.Alloc);
-    if (Adjust % ElemSize == 0 && Adjust != 0) {
-      Value *Tmp0 = Builder.CreateGEP(
-          ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize), "gep");
-      return Builder.CreatePointerCast(remap(Tmp0), ValTy->getPointerTo(),
-                                       "cst");
-    }
-  }
-
-  PointerType *CharPtrTy = Type::getInt8PtrTy(HVC.F.getContext());
-  Value *Tmp0 = Builder.CreatePointerCast(Ptr, CharPtrTy, "cst");
-  Value *Tmp1 = Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()),
-                                  remap(Tmp0), HVC.getConstInt(Adjust), "gep");
-  return Builder.CreatePointerCast(remap(Tmp1), ValTy->getPointerTo(), "cst");
+  if (auto *I = dyn_cast<Instruction>(Ptr))
+    if (Instruction *New = CloneMap.lookup(I))
+      Ptr = New;
+  return Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()), Ptr,
+                           HVC.getConstInt(Adjust), "gep");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
@@ -728,7 +706,8 @@ auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
   Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy(), "pti");
   Value *Mask = HVC.getConstInt(-Alignment);
   Value *And = Builder.CreateAnd(remap(AsInt), Mask, "and");
-  return Builder.CreateIntToPtr(And, ValTy->getPointerTo(), "itp");
+  return Builder.CreateIntToPtr(
+      And, PointerType::getUnqual(ValTy->getContext()), "itp");
 }
 
 auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,

@@ -217,17 +217,10 @@ QuotingType ScalarTraits<SwiftVersion>::mustQuote(StringRef) {
   return QuotingType::None;
 }
 
-void ScalarTraits<UUID>::output(const UUID &Value, void *, raw_ostream &OS) {
-  OS << Value.first << ": " << Value.second;
-}
+void ScalarTraits<UUID>::output(const UUID &Value, void *, raw_ostream &OS) {}
+
 StringRef ScalarTraits<UUID>::input(StringRef Scalar, void *, UUID &Value) {
-  auto Split = Scalar.split(':');
-  auto Arch = Split.first.trim();
-  auto UUID = Split.second.trim();
-  if (UUID.empty())
-    return "invalid uuid string pair";
-  Value.second = std::string(UUID);
-  Value.first = Target{getArchitectureFromName(Arch), PLATFORM_UNKNOWN};
+  Value = {};
   return {};
 }
 

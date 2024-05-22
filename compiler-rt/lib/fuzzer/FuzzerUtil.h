@@ -59,6 +59,8 @@ size_t GetPeakRSSMb();
 int ExecuteCommand(const Command &Cmd);
 bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput);
 
+void SetThreadName(std::thread &thread, const std::string &name);
+
 // Fuchsia does not have popen/pclose.
 FILE *OpenProcessPipe(const char *Command, const char *Mode);
 int CloseProcessPipe(FILE *F);

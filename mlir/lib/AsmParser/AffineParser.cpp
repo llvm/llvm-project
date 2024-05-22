@@ -11,9 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "Parser.h"
+#include "ParserState.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/AsmState.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -53,9 +66,9 @@ public:
   ParseResult parseAffineMapRange(unsigned numDims, unsigned numSymbols,
                                   AffineMap &result);
   ParseResult parseAffineMapOrIntegerSetInline(AffineMap &map, IntegerSet &set);
-  ParseResult parseAffineExprInline(
-      SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
-      AffineExpr &expr);
+  ParseResult
+  parseAffineExprInline(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                        AffineExpr &expr);
   ParseResult parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols,
                                          IntegerSet &result);
   ParseResult parseAffineMapOfSSAIds(AffineMap &map,
@@ -538,9 +551,8 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
 
 /// Parse an affine expresion definition inline, with given symbols.
 ParseResult AffineParser::parseAffineExprInline(
-    SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
-    AffineExpr &expr) {
-  dimsAndSymbols.assign(symbolSet);
+    ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet, AffineExpr &expr) {
+  dimsAndSymbols.assign(symbolSet.begin(), symbolSet.end());
   expr = parseAffineExpr();
   return success(expr != nullptr);
 }
@@ -716,8 +728,7 @@ ParseResult Parser::parseAffineMapReference(AffineMap &map) {
   return success();
 }
 ParseResult Parser::parseAffineExprReference(
-    SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
-    AffineExpr &expr) {
+    ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet, AffineExpr &expr) {
   return AffineParser(state).parseAffineExprInline(symbolSet, expr);
 }
 ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {

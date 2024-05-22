@@ -36,10 +36,10 @@ public:
         : __y_{__yval}, __m_{__mval} {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year  year()  const noexcept { return __y_; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const months& __dm) noexcept { this->__m_ += __dm; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const months& __dm) noexcept { this->__m_ -= __dm; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const years& __dy)  noexcept { this->__y_ += __dy; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const years& __dy)  noexcept { this->__y_ -= __dy; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const months& __dm) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const months& __dm) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const years& __dy) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const years& __dy) noexcept;
     _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __y_.ok() && __m_.ok(); }
 };
 
@@ -53,13 +53,13 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month& __lhs, const year_month& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const year_month& __lhs, const year_month& __rhs) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const year_month& __lhs, const year_month& __rhs) noexcept {
     if (auto __c = __lhs.year() <=> __rhs.year(); __c != 0)
       return __c;
     return __lhs.month() <=> __rhs.month();
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const year_month& __lhs, const months& __rhs) noexcept
 {
     int __dmi = static_cast<int>(static_cast<unsigned>(__lhs.month())) - 1 + __rhs.count();
@@ -68,29 +68,49 @@ year_month operator+(const year_month& __lhs, const months& __rhs) noexcept
     return (__lhs.year() + years(__dy)) / month(static_cast<unsigned>(__dmi));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const months& __lhs, const year_month& __rhs) noexcept
 { return __rhs + __lhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const year_month& __lhs, const years& __rhs) noexcept
 { return (__lhs.year() + __rhs) / __lhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const years& __lhs, const year_month& __rhs) noexcept
 { return __rhs + __lhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 months operator-(const year_month& __lhs, const year_month& __rhs) noexcept
 { return (__lhs.year() - __rhs.year()) + months(static_cast<unsigned>(__lhs.month()) - static_cast<unsigned>(__rhs.month())); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator-(const year_month& __lhs, const months& __rhs) noexcept
 { return __lhs + -__rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator-(const year_month& __lhs, const years& __rhs) noexcept
 { return __lhs + -__rhs; }
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator+=(const months& __dm) noexcept {
+  *this = *this + __dm;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const months& __dm) noexcept {
+  *this = *this - __dm;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator+=(const years& __dy) noexcept {
+  *this = *this + __dy;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const years& __dy) noexcept {
+  *this = *this - __dy;
+  return *this;
+}
 
 } // namespace chrono
 

@@ -35,6 +35,7 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "GlobalISelMatchTable.h"
+#include "GlobalISelMatchTableExecutorEmitter.h"
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -281,6 +282,10 @@ static std::string getScopedName(unsigned Scope, const std::string &Name) {
   return ("pred:" + Twine(Scope) + ":" + Name).str();
 }
 
+static std::string getMangledRootDefName(StringRef DefOperandName) {
+  return ("DstI[" + DefOperandName + "]").str();
+}
+
 //===- GlobalISelEmitter class --------------------------------------------===//
 
 static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
@@ -298,16 +303,35 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
   return *MaybeOpTy;
 }
 
-class GlobalISelEmitter {
+class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
   explicit GlobalISelEmitter(RecordKeeper &RK);
+
+  void emitAdditionalImpl(raw_ostream &OS) override;
+
+  void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitI64ImmPredicateFns(raw_ostream &OS) override;
+  void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
+  void emitAPIntImmPredicateFns(raw_ostream &OS) override;
+  void emitTestSimplePredicate(raw_ostream &OS) override;
+  void emitRunCustomAction(raw_ostream &OS) override;
+
+  void postProcessRule(RuleMatcher &M);
+
+  const CodeGenTarget &getTarget() const override { return Target; }
+  StringRef getClassName() const override { return ClassName; }
+
   void run(raw_ostream &OS);
 
 private:
+  std::string ClassName;
+
   const RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
   CodeGenRegBank &CGRegs;
+
+  std::vector<Record *> AllPatFrags;
 
   /// Keep track of the equivalence between SDNodes and Instruction by mapping
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
@@ -329,9 +353,6 @@ private:
   /// This adds compatibility for RuleMatchers to use this for ordering rules.
   DenseMap<uint64_t, int> RuleMatcherScores;
 
-  // Map of predicates to their subtarget features.
-  SubtargetFeatureInfoMap SubtargetFeatures;
-
   // Rule coverage information.
   std::optional<CodeGenCoverage> RuleCoverage;
 
@@ -340,8 +361,8 @@ private:
   /// to the number of named operands that predicate expects. Store locations in
   /// StoreIdxForName correspond to the order in which operand names appear in
   /// predicate's argument list.
-  /// When we visit named leaf operand and WaitingForNamedOperands is not zero,
-  /// add matcher that will record operand and decrease counter.
+  /// When we visit named operand and WaitingForNamedOperands is not zero, add
+  /// matcher that will record operand and decrease counter.
   unsigned WaitingForNamedOperands = 0;
   StringMap<unsigned> StoreIdxForName;
 
@@ -387,26 +408,18 @@ private:
       const TreePatternNode *DstChild, const TreePatternNode *Src);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
-                                      DagInit *DefaultOps) const;
+                                      const DAGDefaultOperand &DefaultOp) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
-
-  void emitCxxPredicateFns(raw_ostream &OS, StringRef CodeFieldName,
-                           StringRef TypeIdentifier, StringRef ArgType,
-                           StringRef ArgName, StringRef AdditionalArgs,
-                           StringRef AdditionalDeclarations,
-                           std::function<bool(const Record *R)> Filter);
-  void emitImmPredicateFns(raw_ostream &OS, StringRef TypeIdentifier,
-                           StringRef ArgType,
-                           std::function<bool(const Record *R)> Filter);
-  void emitMIPredicateFns(raw_ostream &OS);
 
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
 
   void declareSubtargetFeature(Record *Predicate);
+
+  unsigned declareHwModeCheck(StringRef HwModeFeatures);
 
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules, bool Optimize,
                              bool WithCoverage);
@@ -447,6 +460,8 @@ private:
                        const TreePredicateFn &Predicate,
                        InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
 };
+
+StringRef getPatFragPredicateEnumName(Record *R) { return R->getName(); }
 
 void GlobalISelEmitter::gatherOpcodeValues() {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
@@ -491,6 +506,10 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
       return &Target.getInstruction(Equiv.getValueAsDef("IfFloatingPoint"));
   }
 
+  if (!Equiv.isValueUnset("IfConvergent") &&
+      N->getIntrinsicInfo(CGP)->isConvergent)
+    return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
+
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
     if (!Equiv.isValueUnset("IfSignExtend") &&
@@ -507,8 +526,10 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
 }
 
 GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
-    : RK(RK), CGP(RK), Target(CGP.getTargetInfo()),
-      CGRegs(Target.getRegBank()) {}
+    : GlobalISelMatchTableExecutorEmitter(), RK(RK), CGP(RK),
+      Target(CGP.getTargetInfo()), CGRegs(Target.getRegBank()) {
+  ClassName = Target.getName().str() + "InstructionSelector";
+}
 
 //===- Emitter ------------------------------------------------------------===//
 
@@ -770,13 +791,11 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     }
   }
 
-  bool IsAtomic = false;
   if (SrcGIEquivOrNull &&
       SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
   else if (SrcGIEquivOrNull &&
            SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    IsAtomic = true;
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
         "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
@@ -830,31 +849,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       }
     }
 
-    // Hack around an unfortunate mistake in how atomic store (and really
-    // atomicrmw in general) operands were ordered. A ISD::STORE used the order
-    // <stored value>, <pointer> order. ISD::ATOMIC_STORE used the opposite,
-    // <pointer>, <stored value>. In GlobalISel there's just the one store
-    // opcode, so we need to swap the operands here to get the right type check.
-    if (IsAtomic && SrcGIOrNull->TheDef->getName() == "G_STORE") {
-      assert(NumChildren == 2 && "wrong operands for atomic store");
-
-      const TreePatternNode *PtrChild = Src->getChild(0);
-      const TreePatternNode *ValueChild = Src->getChild(1);
-
-      if (auto Error = importChildMatcher(Rule, InsnMatcher, PtrChild, true,
-                                          false, 1, TempOpIdx))
-        return std::move(Error);
-
-      if (auto Error = importChildMatcher(Rule, InsnMatcher, ValueChild, false,
-                                          false, 0, TempOpIdx))
-        return std::move(Error);
-      return InsnMatcher;
-    }
-
     // Match the used operands (i.e. the children of the operator).
     bool IsIntrinsic =
         SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" ||
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS";
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS" ||
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_CONVERGENT" ||
+        SrcGIOrNull->TheDef->getName() ==
+            "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS";
     const CodeGenIntrinsic *II = Src->getIntrinsicInfo(CGP);
     if (IsIntrinsic && !II)
       return failedImport("Expected IntInit containing intrinsic ID)");
@@ -1000,6 +1001,17 @@ Error GlobalISelEmitter::importChildMatcher(
                           to_string(*SrcChild) + ")");
   }
 
+  // Try look up SrcChild for a (named) predicate operand if there is any.
+  if (WaitingForNamedOperands) {
+    auto &ScopedNames = SrcChild->getNamesAsPredicateArg();
+    if (!ScopedNames.empty()) {
+      auto PA = ScopedNames.begin();
+      std::string Name = getScopedName(PA->getScope(), PA->getIdentifier());
+      OM.addPredicate<RecordNamedOperandMatcher>(StoreIdxForName[Name], Name);
+      --WaitingForNamedOperands;
+    }
+  }
+
   // Check for nested instructions.
   if (!SrcChild->isLeaf()) {
     if (SrcChild->getOperator()->isSubClassOf("ComplexPattern")) {
@@ -1063,13 +1075,6 @@ Error GlobalISelEmitter::importChildMatcher(
   // Check for def's like register classes or ComplexPattern's.
   if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild->getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
-
-    if (WaitingForNamedOperands) {
-      auto PA = SrcChild->getNamesAsPredicateArg().begin();
-      std::string Name = getScopedName(PA->getScope(), PA->getIdentifier());
-      OM.addPredicate<RecordNamedOperandMatcher>(StoreIdxForName[Name], Name);
-      --WaitingForNamedOperands;
-    }
 
     // Check for register classes.
     if (ChildRec->isSubClassOf("RegisterClass") ||
@@ -1498,8 +1503,13 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
   if (DstNumDefs == 0)
     return InsertPt;
 
-  for (unsigned I = 0; I < SrcNumDefs; ++I)
-    DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[I].Name);
+  for (unsigned I = 0; I < SrcNumDefs; ++I) {
+    std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
+    // CopyRenderer saves a StringRef, so cannot pass OpName itself -
+    // let's use a string with an appropriate lifetime.
+    StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
+    DstMIBuilder.addRenderer<CopyRenderer>(PermanentRef);
+  }
 
   // Some instructions have multiple defs, but are missing a type entry
   // (e.g. s_cc_out operands).
@@ -1671,11 +1681,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
 
-      const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[InstOpNo];
-      DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      if (auto Error = importDefaultOperandRenderers(InsertPt, M, DstMIBuilder,
-                                                     DefaultOps))
+      Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+      if (auto Error = importDefaultOperandRenderers(
+              InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
         return std::move(Error);
+
       ++NumDefaultOps;
       continue;
     }
@@ -1700,22 +1710,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    DagInit *DefaultOps) const {
-  for (const auto *DefaultOp : DefaultOps->getArgs()) {
-    std::optional<LLTCodeGen> OpTyOrNone;
+    const DAGDefaultOperand &DefaultOp) const {
+  for (const auto &Op : DefaultOp.DefaultOps) {
+    const auto *N = Op.get();
+    if (!N->isLeaf())
+      return failedImport("Could not add default op");
 
-    // Look through ValueType operators.
-    if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
-      if (const DefInit *DefaultDagOperator =
-              dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
-        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType")) {
-          OpTyOrNone = MVTToLLT(getValueType(DefaultDagOperator->getDef()));
-          DefaultOp = DefaultDagOp->getArg(0);
-        }
-      }
-    }
+    const auto *DefaultOp = N->getLeafValue();
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
+      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N->getSimpleType(0));
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
@@ -1899,6 +1903,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Error = importRulePredicates(M, Predicates))
     return std::move(Error);
 
+  if (!P.getHwModeFeatures().empty())
+    M.addHwModeIdx(declareHwModeCheck(P.getHwModeFeatures()));
+
   // Next, analyze the pattern operators.
   TreePatternNode *Src = P.getSrcPattern();
   TreePatternNode *Dst = P.getDstPattern();
@@ -2009,16 +2016,17 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     const TypeSetByHwMode &VTy = Src->getExtType(I);
 
     const auto &DstIOperand = DstI.Operands[OpIdx];
-    Record *DstIOpRec = DstIOperand.Rec;
+    PointerUnion<Record *, const CodeGenRegisterClass *> MatchedRC =
+        DstIOperand.Rec;
     if (DstIName == "COPY_TO_REGCLASS") {
-      DstIOpRec = getInitValueAsRegClass(Dst->getChild(1)->getLeafValue());
+      MatchedRC = getInitValueAsRegClass(Dst->getChild(1)->getLeafValue());
 
-      if (DstIOpRec == nullptr)
+      if (MatchedRC.isNull())
         return failedImport(
             "COPY_TO_REGCLASS operand #1 isn't a register class");
     } else if (DstIName == "REG_SEQUENCE") {
-      DstIOpRec = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
-      if (DstIOpRec == nullptr)
+      MatchedRC = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
+      if (MatchedRC.isNull())
         return failedImport("REG_SEQUENCE operand #0 isn't a register class");
     } else if (DstIName == "EXTRACT_SUBREG") {
       auto InferredClass = inferRegClassFromPattern(Dst->getChild(0));
@@ -2028,7 +2036,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
       // We can assume that a subregister is in the same bank as it's super
       // register.
-      DstIOpRec = (*InferredClass)->getDef();
+      MatchedRC = (*InferredClass)->getDef();
     } else if (DstIName == "INSERT_SUBREG") {
       auto MaybeSuperClass = inferSuperRegisterClassForNode(
           VTy, Dst->getChild(0), Dst->getChild(2));
@@ -2038,34 +2046,30 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       // Move to the next pattern here, because the register class we found
       // doesn't necessarily have a record associated with it. So, we can't
       // set DstIOpRec using this.
-      OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-      OM.setSymbolicName(DstIOperand.Name);
-      M.defineOperand(OM.getSymbolicName(), OM);
-      OM.addPredicate<RegisterBankOperandMatcher>(**MaybeSuperClass);
-      ++OpIdx;
-      continue;
+      MatchedRC = *MaybeSuperClass;
     } else if (DstIName == "SUBREG_TO_REG") {
       auto MaybeRegClass = inferSuperRegisterClass(VTy, Dst->getChild(2));
       if (!MaybeRegClass)
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
-      OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-      OM.setSymbolicName(DstIOperand.Name);
-      M.defineOperand(OM.getSymbolicName(), OM);
-      OM.addPredicate<RegisterBankOperandMatcher>(**MaybeRegClass);
-      ++OpIdx;
-      continue;
-    } else if (DstIOpRec->isSubClassOf("RegisterOperand"))
-      DstIOpRec = DstIOpRec->getValueAsDef("RegClass");
-    else if (!DstIOpRec->isSubClassOf("RegisterClass"))
+      MatchedRC = *MaybeRegClass;
+    } else if (MatchedRC.get<Record *>()->isSubClassOf("RegisterOperand"))
+      MatchedRC = MatchedRC.get<Record *>()->getValueAsDef("RegClass");
+    else if (!MatchedRC.get<Record *>()->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" +
                           to_string(*Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-    OM.setSymbolicName(DstIOperand.Name);
+    // The operand names declared in the DstI instruction are unrelated to
+    // those used in pattern's source and destination DAGs, so mangle the
+    // former to prevent implicitly adding unexpected
+    // GIM_CheckIsSameOperand predicates by the defineOperand method.
+    OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
+    if (MatchedRC.is<Record *>())
+      MatchedRC = &Target.getRegisterClass(MatchedRC.get<Record *>());
     OM.addPredicate<RegisterBankOperandMatcher>(
-        Target.getRegisterClass(DstIOpRec));
+        *MatchedRC.get<const CodeGenRegisterClass *>());
     ++OpIdx;
   }
 
@@ -2215,76 +2219,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   return std::move(M);
 }
 
-// Emit imm predicate table and an enum to reference them with.
-// The 'Predicate_' part of the name is redundant but eliminating it is more
-// trouble than it's worth.
-void GlobalISelEmitter::emitCxxPredicateFns(
-    raw_ostream &OS, StringRef CodeFieldName, StringRef TypeIdentifier,
-    StringRef ArgType, StringRef ArgName, StringRef AdditionalArgs,
-    StringRef AdditionalDeclarations,
-    std::function<bool(const Record *R)> Filter) {
-  std::vector<const Record *> MatchedRecords;
-  const auto &Defs = RK.getAllDerivedDefinitions("PatFrags");
-  std::copy_if(Defs.begin(), Defs.end(), std::back_inserter(MatchedRecords),
-               [&](Record *Record) {
-                 return !Record->getValueAsString(CodeFieldName).empty() &&
-                        Filter(Record);
-               });
-
-  if (!MatchedRecords.empty()) {
-    OS << "// PatFrag predicates.\n"
-       << "enum {\n";
-    std::string EnumeratorSeparator =
-        (" = GIPFP_" + TypeIdentifier + "_Invalid + 1,\n").str();
-    for (const auto *Record : MatchedRecords) {
-      OS << "  GIPFP_" << TypeIdentifier << "_Predicate_" << Record->getName()
-         << EnumeratorSeparator;
-      EnumeratorSeparator = ",\n";
-    }
-    OS << "};\n";
-  }
-
-  OS << "bool " << Target.getName() << "InstructionSelector::test" << ArgName
-     << "Predicate_" << TypeIdentifier << "(unsigned PredicateID, " << ArgType
-     << " " << ArgName << AdditionalArgs << ") const {\n"
-     << AdditionalDeclarations;
-  if (!AdditionalDeclarations.empty())
-    OS << "\n";
-  if (!MatchedRecords.empty())
-    OS << "  switch (PredicateID) {\n";
-  for (const auto *Record : MatchedRecords) {
-    OS << "  case GIPFP_" << TypeIdentifier << "_Predicate_"
-       << Record->getName() << ": {\n"
-       << "    " << Record->getValueAsString(CodeFieldName) << "\n"
-       << "    llvm_unreachable(\"" << CodeFieldName
-       << " should have returned\");\n"
-       << "    return false;\n"
-       << "  }\n";
-  }
-  if (!MatchedRecords.empty())
-    OS << "  }\n";
-  OS << "  llvm_unreachable(\"Unknown predicate\");\n"
-     << "  return false;\n"
-     << "}\n";
-}
-
-void GlobalISelEmitter::emitImmPredicateFns(
-    raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
-    std::function<bool(const Record *R)> Filter) {
-  return emitCxxPredicateFns(OS, "ImmediateCode", TypeIdentifier, ArgType,
-                             "Imm", "", "", Filter);
-}
-
-void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
-  return emitCxxPredicateFns(
-      OS, "GISelPredicateCode", "MI", "const MachineInstr &", "MI",
-      ", const std::array<const MachineOperand *, 3> &Operands",
-      "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
-      "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-      "  (void)MRI;",
-      [](const Record *R) { return true; });
-}
-
 MatchTable
 GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                    bool Optimize, bool WithCoverage) {
@@ -2327,6 +2261,129 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
   return MatchTable::buildTable(OptRules, WithCoverage);
 }
 
+void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
+  OS << "bool " << getClassName()
+     << "::selectImpl(MachineInstr &I, CodeGenCoverage "
+        "&CoverageInfo) const {\n"
+     << "  const PredicateBitset AvailableFeatures = "
+        "getAvailableFeatures();\n"
+     << "  MachineIRBuilder B(I);\n"
+     << "  State.MIs.clear();\n"
+     << "  State.MIs.push_back(&I);\n\n"
+     << "  if (executeMatchTable(*this, State, ExecInfo, B"
+     << ", getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures"
+     << ", &CoverageInfo)) {\n"
+     << "    return true;\n"
+     << "  }\n\n"
+     << "  return false;\n"
+     << "}\n\n";
+}
+
+void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 return !R->getValueAsString("GISelPredicateCode").empty();
+               });
+  emitMIPredicateFnsImpl<Record *>(
+      OS,
+      "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
+      "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+      "  const auto &Operands = State.RecordedOperands;\n"
+      "  (void)Operands;\n"
+      "  (void)MRI;",
+      ArrayRef<Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("GISelPredicateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 bool Unset;
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                        !R->getValueAsBit("IsAPInt");
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "I64", "int64_t", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 bool Unset;
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "APFloat", "const APFloat &", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        R->getValueAsBit("IsAPInt");
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "APInt", "const APInt &", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
+  OS << "bool " << getClassName() << "::testSimplePredicate(unsigned) const {\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support simple predicates!\");\n"
+     << "  return false;\n"
+     << "}\n";
+}
+
+void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
+  OS << "void " << getClassName()
+     << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
+        "{\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support custom C++ actions!\");\n"
+     << "}\n";
+}
+
+void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
+  SmallPtrSet<Record *, 16> UsedRegs;
+
+  // TODO: deal with subregs?
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Use : MI->getCGI()->ImplicitUses)
+      UsedRegs.insert(Use);
+  }
+
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Def : MI->getCGI()->ImplicitDefs) {
+      if (!UsedRegs.contains(Def))
+        MI->setDeadImplicitDef(Def);
+    }
+  }
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2349,6 +2406,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   // Track the GINodeEquiv definitions.
   gatherNodeEquivs();
+
+  AllPatFrags = RK.getAllDerivedDefinitions("PatFrags");
 
   emitSourceFileHeader(
       ("Global Instruction Selector for the " + Target.getName() + " target")
@@ -2382,6 +2441,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                      "Pattern is not covered by a test");
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
+    postProcessRule(Rules.back());
   }
 
   // Comparison function to order records by name.
@@ -2405,205 +2465,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       std::unique(CustomRendererFns.begin(), CustomRendererFns.end()),
       CustomRendererFns.end());
 
-  unsigned MaxTemporaries = 0;
-  for (const auto &Rule : Rules)
-    MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
-
-  OS << "#ifdef GET_GLOBALISEL_PREDICATE_BITSET\n"
-     << "const unsigned MAX_SUBTARGET_PREDICATES = " << SubtargetFeatures.size()
-     << ";\n"
-     << "using PredicateBitset = "
-        "llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATE_BITSET\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n"
-     << "  mutable MatcherState State;\n"
-     << "  typedef "
-        "ComplexRendererFns("
-     << Target.getName()
-     << "InstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
-
-     << "  typedef void(" << Target.getName()
-     << "InstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const "
-        "MachineInstr &, int) "
-        "const;\n"
-     << "  const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, "
-        "CustomRendererFn> "
-        "ISelInfo;\n";
-  OS << "  static " << Target.getName()
-     << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
-     << "  static " << Target.getName()
-     << "InstructionSelector::CustomRendererFn CustomRenderers[];\n"
-     << "  bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const "
-        "override;\n"
-     << "  bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) "
-        "const override;\n"
-     << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
-        "&Imm) const override;\n"
-     << "  const int64_t *getMatchTable() const override;\n"
-     << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
-        ", const std::array<const MachineOperand *, 3> &Operands) "
-        "const override;\n"
-     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
-     << ", State(" << MaxTemporaries << "),\n"
-     << "ISelInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
-     << ", ComplexPredicateFns, CustomRenderers)\n"
-     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_IMPL\n";
-  SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
-                                                           OS);
-
-  // Separate subtarget features by how often they must be recomputed.
-  SubtargetFeatureInfoMap ModuleFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(ModuleFeatures, ModuleFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return !X.second.mustRecomputePerFunction();
-               });
-  SubtargetFeatureInfoMap FunctionFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(FunctionFeatures, FunctionFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return X.second.mustRecomputePerFunction();
-               });
-
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
-      Target.getName(), "InstructionSelector", "computeAvailableModuleFeatures",
-      ModuleFeatures, OS);
-
-  OS << "void " << Target.getName()
-     << "InstructionSelector"
-        "::setupGeneratedPerFunctionState(MachineFunction &MF) {\n"
-        "  AvailableFunctionFeatures = computeAvailableFunctionFeatures("
-        "(const "
-     << Target.getName()
-     << "Subtarget *)&MF.getSubtarget(), &MF);\n"
-        "}\n";
-
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
-      Target.getName(), "InstructionSelector",
-      "computeAvailableFunctionFeatures", FunctionFeatures, OS,
-      "const MachineFunction *MF");
-
-  // Emit a table containing the LLT objects needed by the matcher and an enum
+  // Create a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects;
   append_range(TypeObjects, KnownTypes);
   llvm::sort(TypeObjects);
-  OS << "// LLT Objects.\n"
-     << "enum {\n";
-  for (const auto &TypeObject : TypeObjects) {
-    OS << "  ";
-    TypeObject.emitCxxEnumValue(OS);
-    OS << ",\n";
-  }
-  OS << "};\n";
-  OS << "const static size_t NumTypeObjects = " << TypeObjects.size() << ";\n"
-     << "const static LLT TypeObjects[] = {\n";
-  for (const auto &TypeObject : TypeObjects) {
-    OS << "  ";
-    TypeObject.emitCxxConstructorCall(OS);
-    OS << ",\n";
-  }
-  OS << "};\n\n";
 
-  // Emit a table containing the PredicateBitsets objects needed by the matcher
-  // and an enum for the matcher to reference them with.
-  std::vector<std::vector<Record *>> FeatureBitsets;
-  FeatureBitsets.reserve(Rules.size());
-  for (auto &Rule : Rules)
-    FeatureBitsets.push_back(Rule.getRequiredFeatures());
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
-    if (A.size() < B.size())
-      return true;
-    if (A.size() > B.size())
-      return false;
-    for (auto Pair : zip(A, B)) {
-      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
-        return true;
-      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
-        return false;
-    }
-    return false;
-  });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
-  OS << "// Feature bitsets.\n"
-     << "enum {\n"
-     << "  GIFBS_Invalid,\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
-  }
-  OS << "};\n"
-     << "const static PredicateBitset FeatureBitsets[] {\n"
-     << "  {}, // GIFBS_Invalid\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  {";
-    for (const auto &Feature : FeatureBitset) {
-      const auto &I = SubtargetFeatures.find(Feature);
-      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
-      OS << I->second.getEnumBitName() << ", ";
-    }
-    OS << "},\n";
-  }
-  OS << "};\n\n";
-
-  // Emit complex predicate table and an enum to reference them with.
-  OS << "// ComplexPattern predicates.\n"
-     << "enum {\n"
-     << "  GICP_Invalid,\n";
-  for (const auto &Record : ComplexPredicates)
-    OS << "  GICP_" << Record->getName() << ",\n";
-  OS << "};\n"
-     << "// See constructor for table contents\n\n";
-
-  emitImmPredicateFns(OS, "I64", "int64_t", [](const Record *R) {
-    bool Unset;
-    return !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-           !R->getValueAsBit("IsAPInt");
-  });
-  emitImmPredicateFns(OS, "APFloat", "const APFloat &", [](const Record *R) {
-    bool Unset;
-    return R->getValueAsBitOrUnset("IsAPFloat", Unset);
-  });
-  emitImmPredicateFns(OS, "APInt", "const APInt &", [](const Record *R) {
-    return R->getValueAsBit("IsAPInt");
-  });
-  emitMIPredicateFns(OS);
-  OS << "\n";
-
-  OS << Target.getName() << "InstructionSelector::ComplexMatcherMemFn\n"
-     << Target.getName() << "InstructionSelector::ComplexPredicateFns[] = {\n"
-     << "  nullptr, // GICP_Invalid\n";
-  for (const auto &Record : ComplexPredicates)
-    OS << "  &" << Target.getName()
-       << "InstructionSelector::" << Record->getValueAsString("MatcherFn")
-       << ", // " << Record->getName() << "\n";
-  OS << "};\n\n";
-
-  OS << "// Custom renderers.\n"
-     << "enum {\n"
-     << "  GICR_Invalid,\n";
-  for (const auto &Fn : CustomRendererFns)
-    OS << "  GICR_" << Fn << ",\n";
-  OS << "};\n";
-
-  OS << Target.getName() << "InstructionSelector::CustomRendererFn\n"
-     << Target.getName() << "InstructionSelector::CustomRenderers[] = {\n"
-     << "  nullptr, // GICR_Invalid\n";
-  for (const auto &Fn : CustomRendererFns)
-    OS << "  &" << Target.getName() << "InstructionSelector::" << Fn << ",\n";
-  OS << "};\n\n";
-
+  // Sort rules.
   llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
     int ScoreA = RuleMatcherScores[A.getRuleID()];
     int ScoreB = RuleMatcherScores[B.getRuleID()];
@@ -2620,59 +2488,29 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     return false;
   });
 
-  OS << "bool " << Target.getName()
-     << "InstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage "
-        "&CoverageInfo) const {\n"
-     << "  MachineFunction &MF = *I.getParent()->getParent();\n"
-     << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
-     << "  State.MIs.clear();\n"
-     << "  State.MIs.push_back(&I);\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo"
-     << ", getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures"
-     << ", CoverageInfo)) {\n"
-     << "    return true;\n"
-     << "  }\n\n"
-     << "  return false;\n"
-     << "}\n\n";
+  unsigned MaxTemporaries = 0;
+  for (const auto &Rule : Rules)
+    MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
 
+  // Build match table
   const MatchTable Table =
       buildMatchTable(Rules, OptimizeMatchTable, GenerateCoverage);
-  OS << "const int64_t *" << Target.getName()
-     << "InstructionSelector::getMatchTable() const {\n";
-  Table.emitDeclaration(OS);
-  OS << "  return ";
-  Table.emitUse(OS);
-  OS << ";\n}\n";
-  OS << "#endif // ifdef GET_GLOBALISEL_IMPL\n";
 
-  OS << "#ifdef GET_GLOBALISEL_PREDICATES_DECL\n"
-     << "PredicateBitset AvailableModuleFeatures;\n"
-     << "mutable PredicateBitset AvailableFunctionFeatures;\n"
-     << "PredicateBitset getAvailableFeatures() const {\n"
-     << "  return AvailableModuleFeatures | AvailableFunctionFeatures;\n"
-     << "}\n"
-     << "PredicateBitset\n"
-     << "computeAvailableModuleFeatures(const " << Target.getName()
-     << "Subtarget *Subtarget) const;\n"
-     << "PredicateBitset\n"
-     << "computeAvailableFunctionFeatures(const " << Target.getName()
-     << "Subtarget *Subtarget,\n"
-     << "                                 const MachineFunction *MF) const;\n"
-     << "void setupGeneratedPerFunctionState(MachineFunction &MF) override;\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATES_DECL\n";
-
-  OS << "#ifdef GET_GLOBALISEL_PREDICATES_INIT\n"
-     << "AvailableModuleFeatures(computeAvailableModuleFeatures(&STI)),\n"
-     << "AvailableFunctionFeatures()\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATES_INIT\n";
+  emitPredicateBitset(OS, "GET_GLOBALISEL_PREDICATE_BITSET");
+  emitTemporariesDecl(OS, "GET_GLOBALISEL_TEMPORARIES_DECL");
+  emitTemporariesInit(OS, MaxTemporaries, "GET_GLOBALISEL_TEMPORARIES_INIT");
+  emitExecutorImpl(OS, Table, TypeObjects, Rules, ComplexPredicates,
+                   CustomRendererFns, "GET_GLOBALISEL_IMPL");
+  emitPredicatesDecl(OS, "GET_GLOBALISEL_PREDICATES_DECL");
+  emitPredicatesInit(OS, "GET_GLOBALISEL_PREDICATES_INIT");
 }
 
 void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
-  if (SubtargetFeatures.count(Predicate) == 0)
-    SubtargetFeatures.emplace(
-        Predicate, SubtargetFeatureInfo(Predicate, SubtargetFeatures.size()));
+  SubtargetFeatures.try_emplace(Predicate, Predicate, SubtargetFeatures.size());
+}
+
+unsigned GlobalISelEmitter::declareHwModeCheck(StringRef HwModeFeatures) {
+  return HwModes.emplace(HwModeFeatures.str(), HwModes.size()).first->second;
 }
 
 } // end anonymous namespace

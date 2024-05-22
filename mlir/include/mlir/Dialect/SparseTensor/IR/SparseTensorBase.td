@@ -25,11 +25,16 @@ def SparseTensor_Dialect : Dialect {
     means of a small sparse runtime support library.
 
     The concept of **treating sparsity as a property, not a tedious
-    implementation detail**, by letting a **sparse compiler** generate
+    implementation detail**, by letting a **sparsifier** generate
     sparse code automatically was pioneered for linear algebra by [Bik96]
     in MT1 (see https://www.aartbik.com/sparse.php) and formalized
     to tensor algebra by [Kjolstad17,Kjolstad20] in the Sparse Tensor
     Algebra Compiler (TACO) project (see http://tensor-compiler.org).
+    Please note that we started to prefer the term "sparsifier" over
+    the also commonly used "sparse compiler" terminology to refer to
+    such a pass to make it clear that the sparsifier pass is not a
+    separate compiler, but should be an integral part of any compiler
+    pipeline that is built with the MLIR compiler infrastructure
 
     The MLIR implementation [Biketal22] closely follows the "sparse
     iteration theory" that forms the foundation of TACO.  A rewriting
@@ -85,7 +90,7 @@ def SparseTensor_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
+  let hasConstantMaterializer = 1;
 }
 
 #endif // SPARSETENSOR_BASE

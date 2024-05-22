@@ -47,6 +47,11 @@ UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
   return std::make_unique<Instrument>(Desc, Data);
 }
 
+SmallVector<UniqueInstrument>
+InstrumentManager::createInstruments(const MCInst &Inst) {
+  return SmallVector<UniqueInstrument>();
+}
+
 unsigned InstrumentManager::getSchedClassID(
     const MCInstrInfo &MCII, const MCInst &MCI,
     const llvm::SmallVector<Instrument *> &IVec) const {

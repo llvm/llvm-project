@@ -30,9 +30,8 @@ BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS) {}
 
-BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef module_name;
   lldb::offset_t addr_offset;
   FileSpec module_filespec;
@@ -56,7 +55,8 @@ BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
     }
     module_filespec.SetFile(module_name, FileSpec::Style::native);
   }
-  return new BreakpointResolverAddress(bkpt, address, module_filespec);
+  return std::make_shared<BreakpointResolverAddress>(nullptr, address,
+                                                     module_filespec);
 }
 
 StructuredData::ObjectSP

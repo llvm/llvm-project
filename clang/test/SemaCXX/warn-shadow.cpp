@@ -100,13 +100,12 @@ struct path {
 };
 
 
-// TODO: this should warn, <rdar://problem/5018057>
+// TODO: this should warn
 class B : A {
   int data;
   static int field;
 };
 
-// rdar://8900456
 namespace rdar8900456 {
 struct Foo {
   static void Baz();
@@ -148,7 +147,6 @@ extern int bob; // expected-note 1 {{previous declaration is here}}
 typedef int bob1; // expected-note 2 {{previous declaration is here}}
 using bob2=int; // expected-note 2 {{previous declaration is here}}
 
-// rdar://8883302
 void rdar8883302() {
   extern int bob; // don't warn for shadowing.
 }

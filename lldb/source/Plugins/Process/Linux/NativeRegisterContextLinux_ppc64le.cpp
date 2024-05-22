@@ -651,7 +651,7 @@ NativeRegisterContextLinux_ppc64le::GetWatchpointSize(uint32_t wp_index) {
 
   unsigned control = (m_hwp_regs[wp_index].control >> 5) & 0xff;
   if (llvm::isPowerOf2_32(control + 1)) {
-    return llvm::countPopulation(control);
+    return llvm::popcount(control);
   }
 
   return 0;

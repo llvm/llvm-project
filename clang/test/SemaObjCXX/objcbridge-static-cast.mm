@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -x objective-c++ -fobjc-arc -verify -Wno-objc-root-class %s
-// rdar://16756639
 
 typedef struct __attribute__ ((objc_bridge(NSError))) __CFErrorRef * CFErrorRef; // expected-note 3 {{declared here}}
 

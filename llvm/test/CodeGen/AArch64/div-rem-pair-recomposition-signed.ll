@@ -78,16 +78,17 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 ; ALL-NEXT:    smov w13, v0.b[4]
 ; ALL-NEXT:    smov w14, v0.b[5]
 ; ALL-NEXT:    smov w15, v0.b[6]
-; ALL-NEXT:    sdiv w8, w9, w8
-; ALL-NEXT:    smov w9, v1.b[0]
 ; ALL-NEXT:    smov w16, v0.b[7]
 ; ALL-NEXT:    smov w17, v0.b[8]
+; ALL-NEXT:    smov w18, v0.b[9]
+; ALL-NEXT:    sdiv w8, w9, w8
+; ALL-NEXT:    smov w9, v1.b[0]
 ; ALL-NEXT:    sdiv w9, w10, w9
 ; ALL-NEXT:    smov w10, v1.b[2]
 ; ALL-NEXT:    sdiv w10, w11, w10
 ; ALL-NEXT:    smov w11, v1.b[3]
 ; ALL-NEXT:    fmov s2, w9
-; ALL-NEXT:    smov w9, v1.b[9]
+; ALL-NEXT:    smov w9, v1.b[10]
 ; ALL-NEXT:    mov v2.b[1], w8
 ; ALL-NEXT:    sdiv w11, w12, w11
 ; ALL-NEXT:    smov w12, v1.b[4]
@@ -109,10 +110,9 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 ; ALL-NEXT:    smov w16, v1.b[8]
 ; ALL-NEXT:    mov v2.b[6], w14
 ; ALL-NEXT:    sdiv w16, w17, w16
-; ALL-NEXT:    smov w17, v0.b[9]
+; ALL-NEXT:    smov w17, v1.b[9]
 ; ALL-NEXT:    mov v2.b[7], w15
-; ALL-NEXT:    sdiv w8, w17, w9
-; ALL-NEXT:    smov w9, v1.b[10]
+; ALL-NEXT:    sdiv w8, w18, w17
 ; ALL-NEXT:    mov v2.b[8], w16
 ; ALL-NEXT:    sdiv w9, w10, w9
 ; ALL-NEXT:    smov w10, v1.b[11]
@@ -153,6 +153,7 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, ptr %divdst) nounw
 ; ALL-NEXT:    smov w11, v0.h[2]
 ; ALL-NEXT:    smov w12, v0.h[3]
 ; ALL-NEXT:    smov w13, v0.h[4]
+; ALL-NEXT:    smov w14, v0.h[5]
 ; ALL-NEXT:    sdiv w8, w9, w8
 ; ALL-NEXT:    smov w9, v1.h[0]
 ; ALL-NEXT:    sdiv w9, w10, w9
@@ -160,18 +161,17 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, ptr %divdst) nounw
 ; ALL-NEXT:    sdiv w10, w11, w10
 ; ALL-NEXT:    smov w11, v1.h[3]
 ; ALL-NEXT:    fmov s2, w9
-; ALL-NEXT:    smov w9, v1.h[5]
+; ALL-NEXT:    smov w9, v1.h[6]
 ; ALL-NEXT:    mov v2.h[1], w8
 ; ALL-NEXT:    sdiv w11, w12, w11
 ; ALL-NEXT:    smov w12, v1.h[4]
 ; ALL-NEXT:    mov v2.h[2], w10
 ; ALL-NEXT:    smov w10, v0.h[6]
 ; ALL-NEXT:    sdiv w12, w13, w12
-; ALL-NEXT:    smov w13, v0.h[5]
+; ALL-NEXT:    smov w13, v1.h[5]
 ; ALL-NEXT:    mov v2.h[3], w11
 ; ALL-NEXT:    smov w11, v0.h[7]
-; ALL-NEXT:    sdiv w8, w13, w9
-; ALL-NEXT:    smov w9, v1.h[6]
+; ALL-NEXT:    sdiv w8, w14, w13
 ; ALL-NEXT:    mov v2.h[4], w12
 ; ALL-NEXT:    sdiv w9, w10, w9
 ; ALL-NEXT:    smov w10, v1.h[7]
@@ -226,15 +226,15 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, ptr %divdst) nounw
 ; ALL-NEXT:    mov x10, v1.d[1]
 ; ALL-NEXT:    mov x11, v0.d[1]
 ; ALL-NEXT:    sdiv x9, x9, x8
-; ALL-NEXT:    mul x8, x9, x8
 ; ALL-NEXT:    sdiv x11, x11, x10
-; ALL-NEXT:    fmov d2, x9
+; ALL-NEXT:    mul x8, x9, x8
 ; ALL-NEXT:    fmov d1, x8
 ; ALL-NEXT:    mul x10, x11, x10
-; ALL-NEXT:    mov v2.d[1], x11
 ; ALL-NEXT:    mov v1.d[1], x10
-; ALL-NEXT:    str q2, [x0]
 ; ALL-NEXT:    sub v0.2d, v0.2d, v1.2d
+; ALL-NEXT:    fmov d1, x9
+; ALL-NEXT:    mov v1.d[1], x11
+; ALL-NEXT:    str q1, [x0]
 ; ALL-NEXT:    ret
   %div = sdiv <2 x i64> %x, %y
   store <2 x i64> %div, ptr %divdst, align 16

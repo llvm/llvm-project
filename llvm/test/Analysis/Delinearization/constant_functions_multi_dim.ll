@@ -4,14 +4,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK:      Inst:  %tmp = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT: In Loop with Header: for.inc
-; CHECK-NEXT: AccessFunction: {(4 * %N * %call),+,4}<nsw><%for.inc>
+; CHECK-NEXT: AccessFunction: {(4 * %N * %call),+,4}<%for.inc>
 ; CHECK-NEXT: Base offset: %A
 ; CHECK-NEXT: ArrayDecl[UnknownSize][%N] with elements of 4 bytes.
 ; CHECK-NEXT: ArrayRef[%call][{0,+,1}<nuw><nsw><%for.inc>]
 
 ; CHECK:      Inst:  %tmp5 = load float, ptr %arrayidx4, align 4
 ; CHECK-NEXT: In Loop with Header: for.inc
-; CHECK-NEXT: AccessFunction: {(4 * %call1),+,(4 * %N)}<nsw><%for.inc>
+; CHECK-NEXT: AccessFunction: {(4 * %call1),+,(4 * %N)}<%for.inc>
 ; CHECK-NEXT: Base offset: %B
 ; CHECK-NEXT: ArrayDecl[UnknownSize][%N] with elements of 4 bytes.
 ; CHECK-NEXT: ArrayRef[{0,+,1}<nuw><nsw><%for.inc>][%call1]

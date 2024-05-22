@@ -254,7 +254,12 @@ will call terminate, assuming that there was no handler for the
 exception.
 */
 void
+#ifdef __USING_WASM_EXCEPTIONS__
+// In Wasm, a destructor returns its argument
+__cxa_throw(void *thrown_object, std::type_info *tinfo, void *(_LIBCXXABI_DTOR_FUNC *dest)(void *)) {
+#else
 __cxa_throw(void *thrown_object, std::type_info *tinfo, void (_LIBCXXABI_DTOR_FUNC *dest)(void *)) {
+#endif
     __cxa_eh_globals *globals = __cxa_get_globals();
     __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
 
@@ -771,6 +776,6 @@ __cxa_uncaught_exceptions() throw()
     return globals->uncaughtExceptions;
 }
 
-}  // extern "C"
+} // extern "C"
 
 }  // abi

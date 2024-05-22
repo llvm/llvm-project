@@ -1227,6 +1227,7 @@ include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
 include "ARMScheduleM55.td"
 include "ARMScheduleM7.td"
+include "ARMScheduleM85.td"
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -1511,11 +1512,22 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
-def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
                                                          FeatureUseMISched,
+                                                         HasMVEFloatOps]>;
+
+def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureMVEVectorCostFactor1,
                                                          HasMVEFloatOps]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
@@ -1650,7 +1662,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
 
-def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
                                                          FeatureMatMulInt8]>;
 

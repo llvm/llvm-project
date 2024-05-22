@@ -51,7 +51,6 @@ int f_def(void) {
 struct Test1 { int field; };
 void  __attribute__((visibility("default"))) test1(struct Test1 *v) { }
 
-// rdar://problem/8595231
 // CHECK-DEFAULT-LABEL: define{{.*}} void @test2()
 // CHECK-PROTECTED-LABEL: define{{.*}} void @test2()
 // CHECK-HIDDEN-LABEL: define{{.*}} void @test2()
@@ -68,7 +67,6 @@ __private_extern__ void test3(void) {}
 extern int test4;
 __private_extern__ int test4 = 10;
 
-// rdar://12399248
 // CHECK-DEFAULT-LABEL: define hidden void @test5()
 // CHECK-PROTECTED-LABEL: define hidden void @test5()
 // CHECK-HIDDEN-LABEL: define hidden void @test5()

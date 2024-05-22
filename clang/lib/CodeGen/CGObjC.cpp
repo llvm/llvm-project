@@ -52,8 +52,7 @@ llvm::Value *CodeGenFunction::EmitObjCStringLiteral(const ObjCStringLiteral *E)
 {
   llvm::Constant *C =
       CGM.getObjCRuntime().GenerateConstantString(E->getString()).getPointer();
-  // FIXME: This bitcast should just be made an invariant on the Runtime.
-  return llvm::ConstantExpr::getBitCast(C, ConvertType(E->getType()));
+  return C;
 }
 
 /// EmitObjCBoxedExpr - This routine generates code to call
@@ -149,9 +148,9 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   llvm::APInt APNumElements(Context.getTypeSize(Context.getSizeType()),
                             NumElements);
   QualType ElementType = Context.getObjCIdType().withConst();
-  QualType ElementArrayType
-    = Context.getConstantArrayType(ElementType, APNumElements, nullptr,
-                                   ArrayType::Normal, /*IndexTypeQuals=*/0);
+  QualType ElementArrayType = Context.getConstantArrayType(
+      ElementType, APNumElements, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
 
   // Allocate the temporary array(s).
   Address Objects = CreateMemTemp(ElementArrayType, "objects");
@@ -222,6 +221,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   QualType ResultType = E->getType();
   const ObjCObjectPointerType *InterfacePointerType
     = ResultType->getAsObjCInterfacePointerType();
+  assert(InterfacePointerType && "Unexpected InterfacePointerType - null");
   ObjCInterfaceDecl *Class
     = InterfacePointerType->getObjectType()->getInterface();
   CGObjCRuntime &Runtime = CGM.getObjCRuntime();
@@ -827,11 +827,8 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
   //                  sizeof (Type of Ivar), isAtomic, false);
   CallArgList args;
 
-  llvm::Value *dest =
-      CGF.Builder.CreateBitCast(CGF.ReturnValue.getPointer(), CGF.VoidPtrTy);
+  llvm::Value *dest = CGF.ReturnValue.getPointer();
   args.add(RValue::get(dest), Context.VoidPtrTy);
-
-  src = CGF.Builder.CreateBitCast(src, CGF.VoidPtrTy);
   args.add(RValue::get(src), Context.VoidPtrTy);
 
   CharUnits size = CGF.getContext().getTypeSizeInChars(ivar->getType());
@@ -1098,7 +1095,6 @@ static void emitCPPObjectAtomicGetterCall(CodeGenFunction &CGF,
   llvm::Value *ivarAddr =
       CGF.EmitLValueForIvar(CGF.TypeOfSelfObject(), CGF.LoadObjCSelf(), ivar, 0)
           .getPointer(CGF);
-  ivarAddr = CGF.Builder.CreateBitCast(ivarAddr, CGF.Int8PtrTy);
   args.add(RValue::get(ivarAddr), CGF.getContext().VoidPtrTy);
 
   // Third argument is the helper function.
@@ -1340,7 +1336,6 @@ static void emitStructSetterCall(CodeGenFunction &CGF, ObjCMethodDecl *OMD,
                      argVar->getType().getNonReferenceType(), VK_LValue,
                      SourceLocation());
   llvm::Value *argAddr = CGF.EmitLValue(&argRef).getPointer(CGF);
-  argAddr = CGF.Builder.CreateBitCast(argAddr, CGF.Int8PtrTy);
   args.add(RValue::get(argAddr), CGF.getContext().VoidPtrTy);
 
   // The third argument is the sizeof the type.
@@ -1377,7 +1372,6 @@ static void emitCPPObjectAtomicSetterCall(CodeGenFunction &CGF,
   llvm::Value *ivarAddr =
       CGF.EmitLValueForIvar(CGF.TypeOfSelfObject(), CGF.LoadObjCSelf(), ivar, 0)
           .getPointer(CGF);
-  ivarAddr = CGF.Builder.CreateBitCast(ivarAddr, CGF.Int8PtrTy);
   args.add(RValue::get(ivarAddr), CGF.getContext().VoidPtrTy);
 
   // The second argument is the address of the parameter variable.
@@ -1386,7 +1380,6 @@ static void emitCPPObjectAtomicSetterCall(CodeGenFunction &CGF,
                      argVar->getType().getNonReferenceType(), VK_LValue,
                      SourceLocation());
   llvm::Value *argAddr = CGF.EmitLValue(&argRef).getPointer(CGF);
-  argAddr = CGF.Builder.CreateBitCast(argAddr, CGF.Int8PtrTy);
   args.add(RValue::get(argAddr), CGF.getContext().VoidPtrTy);
 
   // Third argument is the helper function.
@@ -1800,10 +1793,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   Selector FastEnumSel =
       CGM.getContext().Selectors.getSelector(std::size(II), &II[0]);
 
-  QualType ItemsTy =
-    getContext().getConstantArrayType(getContext().getObjCIdType(),
-                                      llvm::APInt(32, NumItems), nullptr,
-                                      ArrayType::Normal, 0);
+  QualType ItemsTy = getContext().getConstantArrayType(
+      getContext().getObjCIdType(), llvm::APInt(32, NumItems), nullptr,
+      ArraySizeModifier::Normal, 0);
   Address ItemsPtr = CreateMemTemp(ItemsTy, "items.ptr");
 
   // Emit the collection pointer.  In ARC, we do a retain.
@@ -3686,7 +3678,6 @@ void CodeGenFunction::EmitExtendGCLifetime(llvm::Value *object) {
                                                    /* constraints */ "r",
                                                    /* side effects */ true);
 
-  object = Builder.CreateBitCast(object, VoidPtrTy);
   EmitNounwindRuntimeCall(extender, object);
 }
 
@@ -3710,7 +3701,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
     CharUnits Alignment = C.getTypeAlignInChars(Ty);
     llvm::Constant *Fn = getNonTrivialCStructMoveAssignmentOperator(
         CGM, Alignment, Alignment, Ty.isVolatileQualified(), Ty);
-    return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+    return Fn;
   }
 
   if (!getLangOpts().CPlusPlus ||
@@ -3790,7 +3781,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   EmitStmt(TheCall);
 
   FinishFunction();
-  HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+  HelperFn = Fn;
   CGM.setAtomicSetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }
@@ -3808,7 +3799,7 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
     CharUnits Alignment = C.getTypeAlignInChars(Ty);
     llvm::Constant *Fn = getNonTrivialCStructCopyConstructor(
         CGM, Alignment, Alignment, Ty.isVolatileQualified(), Ty);
-    return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+    return Fn;
   }
 
   if (!getLangOpts().CPlusPlus ||
@@ -3909,7 +3900,7 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                   AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
 
   FinishFunction();
-  HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+  HelperFn = Fn;
   CGM.setAtomicGetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }
@@ -3953,7 +3944,7 @@ static unsigned getBaseMachOPlatformID(const llvm::Triple &TT) {
   case llvm::Triple::DriverKit:
     return llvm::MachO::PLATFORM_DRIVERKIT;
   default:
-    return /*Unknown platform*/ 0;
+    return llvm::MachO::PLATFORM_UNKNOWN;
   }
 }
 

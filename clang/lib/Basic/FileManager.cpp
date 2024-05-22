@@ -536,8 +536,9 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
+FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
                               bool RequiresNullTerminator) {
+  const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
@@ -548,7 +549,7 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
   if (isVolatile || Entry->isNamedPipe())
     FileSize = -1;
 
-  StringRef Filename = Entry->getName();
+  StringRef Filename = FE.getName();
   // If the file is already open, use the open file descriptor.
   if (Entry->File) {
     auto Result = Entry->File->getBuffer(Filename, FileSize,
@@ -611,54 +612,66 @@ FileManager::getNoncachedStatValue(StringRef Path,
 }
 
 void FileManager::GetUniqueIDMapping(
-    SmallVectorImpl<const FileEntry *> &UIDToFiles) const {
+    SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const {
   UIDToFiles.clear();
   UIDToFiles.resize(NextFileUID);
 
-  // Map file entries
-  for (llvm::StringMap<llvm::ErrorOr<FileEntryRef::MapValue>,
-                       llvm::BumpPtrAllocator>::const_iterator
-           FE = SeenFileEntries.begin(),
-           FEEnd = SeenFileEntries.end();
-       FE != FEEnd; ++FE)
-    if (llvm::ErrorOr<FileEntryRef::MapValue> Entry = FE->getValue()) {
-      if (const auto *FE = Entry->V.dyn_cast<FileEntry *>())
-        UIDToFiles[FE->getUID()] = FE;
-    }
-
-  // Map virtual file entries
-  for (const auto &VFE : VirtualFileEntries)
-    UIDToFiles[VFE->getUID()] = VFE;
+  for (const auto &Entry : SeenFileEntries) {
+    // Only return files that exist and are not redirected.
+    if (!Entry.getValue() || !Entry.getValue()->V.is<FileEntry *>())
+      continue;
+    FileEntryRef FE(Entry);
+    // Add this file if it's the first one with the UID, or if its name is
+    // better than the existing one.
+    OptionalFileEntryRef &ExistingFE = UIDToFiles[FE.getUID()];
+    if (!ExistingFE || FE.getName() < ExistingFE->getName())
+      ExistingFE = FE;
+  }
 }
 
 StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {
-  auto Known = CanonicalNames.find(Dir);
-  if (Known != CanonicalNames.end())
-    return Known->second;
-
-  StringRef CanonicalName(Dir.getName());
-
-  SmallString<4096> CanonicalNameBuf;
-  if (!FS->getRealPath(Dir.getName(), CanonicalNameBuf))
-    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
-
-  CanonicalNames.insert({Dir, CanonicalName});
-  return CanonicalName;
+  return getCanonicalName(Dir, Dir.getName());
 }
 
-StringRef FileManager::getCanonicalName(const FileEntry *File) {
-  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known
-    = CanonicalNames.find(File);
+StringRef FileManager::getCanonicalName(FileEntryRef File) {
+  return getCanonicalName(File, File.getName());
+}
+
+StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
+  llvm::DenseMap<const void *, llvm::StringRef>::iterator Known =
+      CanonicalNames.find(Entry);
   if (Known != CanonicalNames.end())
     return Known->second;
 
-  StringRef CanonicalName(File->getName());
+  // Name comes from FileEntry/DirectoryEntry::getName(), so it is safe to
+  // store it in the DenseMap below.
+  StringRef CanonicalName(Name);
 
-  SmallString<4096> CanonicalNameBuf;
-  if (!FS->getRealPath(File->getName(), CanonicalNameBuf))
-    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
+  SmallString<256> AbsPathBuf;
+  SmallString<256> RealPathBuf;
+  if (!FS->getRealPath(Name, RealPathBuf)) {
+    if (is_style_windows(llvm::sys::path::Style::native)) {
+      // For Windows paths, only use the real path if it doesn't resolve
+      // a substitute drive, as those are used to avoid MAX_PATH issues.
+      AbsPathBuf = Name;
+      if (!FS->makeAbsolute(AbsPathBuf)) {
+        if (llvm::sys::path::root_name(RealPathBuf) ==
+            llvm::sys::path::root_name(AbsPathBuf)) {
+          CanonicalName = RealPathBuf.str().copy(CanonicalNameStorage);
+        } else {
+          // Fallback to using the absolute path.
+          // Simplifying /../ is semantically valid on Windows even in the
+          // presence of symbolic links.
+          llvm::sys::path::remove_dots(AbsPathBuf, /*remove_dot_dot=*/true);
+          CanonicalName = AbsPathBuf.str().copy(CanonicalNameStorage);
+        }
+      }
+    } else {
+      CanonicalName = RealPathBuf.str().copy(CanonicalNameStorage);
+    }
+  }
 
-  CanonicalNames.insert({File, CanonicalName});
+  CanonicalNames.insert({Entry, CanonicalName});
   return CanonicalName;
 }
 

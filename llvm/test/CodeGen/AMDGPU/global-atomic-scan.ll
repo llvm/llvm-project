@@ -6,10 +6,10 @@ define amdgpu_kernel void @atomic_add_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -33,10 +33,10 @@ define amdgpu_kernel void @atomic_add_i32_max_neg_offset(ptr addrspace(1) %out, 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 -1024
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -60,10 +60,10 @@ define amdgpu_kernel void @atomic_add_i32_soffset(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 9000
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -87,10 +87,10 @@ define amdgpu_kernel void @atomic_add_i32_huge_offset(ptr addrspace(1) %out, i32
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 47224239175595
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -115,10 +115,10 @@ define amdgpu_kernel void @atomic_add_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -149,10 +149,10 @@ define amdgpu_kernel void @atomic_add_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -178,10 +178,10 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -211,10 +211,10 @@ define amdgpu_kernel void @atomic_add_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_add_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -236,10 +236,10 @@ define amdgpu_kernel void @atomic_add_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-LABEL: @atomic_add_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -268,10 +268,10 @@ define amdgpu_kernel void @atomic_add_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -295,10 +295,10 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -328,10 +328,10 @@ define amdgpu_kernel void @atomic_and_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -352,10 +352,10 @@ define amdgpu_kernel void @atomic_and_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -383,10 +383,10 @@ define amdgpu_kernel void @atomic_and_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -409,10 +409,10 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -439,10 +439,10 @@ define amdgpu_kernel void @atomic_and_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_and_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -461,10 +461,10 @@ define amdgpu_kernel void @atomic_and_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-LABEL: @atomic_and_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -490,10 +490,10 @@ define amdgpu_kernel void @atomic_and_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -514,10 +514,10 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -544,10 +544,10 @@ define amdgpu_kernel void @atomic_sub_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -571,10 +571,10 @@ define amdgpu_kernel void @atomic_sub_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -605,10 +605,10 @@ define amdgpu_kernel void @atomic_sub_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -634,10 +634,10 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -667,10 +667,10 @@ define amdgpu_kernel void @atomic_sub_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_sub_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -692,10 +692,10 @@ define amdgpu_kernel void @atomic_sub_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-LABEL: @atomic_sub_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -724,10 +724,10 @@ define amdgpu_kernel void @atomic_sub_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -751,10 +751,10 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
 ; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
@@ -784,10 +784,10 @@ define amdgpu_kernel void @atomic_max_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -808,10 +808,10 @@ define amdgpu_kernel void @atomic_max_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -840,10 +840,10 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -866,10 +866,10 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -897,10 +897,10 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_max_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -919,10 +919,10 @@ define amdgpu_kernel void @atomic_max_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-LABEL: @atomic_max_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -949,10 +949,10 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -973,10 +973,10 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1004,10 +1004,10 @@ define amdgpu_kernel void @atomic_umax_i32_offset(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1028,10 +1028,10 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr addrspace(1) %out, ptr
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1060,10 +1060,10 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1086,10 +1086,10 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1117,10 +1117,10 @@ define amdgpu_kernel void @atomic_umax_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_umax_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1139,10 +1139,10 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr addrspace(1) %out, ptr addrsp
 ; IR-LABEL: @atomic_umax_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1169,10 +1169,10 @@ define amdgpu_kernel void @atomic_umax_i32_addr64(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1193,10 +1193,10 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1224,10 +1224,10 @@ define amdgpu_kernel void @atomic_min_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1248,10 +1248,10 @@ define amdgpu_kernel void @atomic_min_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1280,10 +1280,10 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1306,10 +1306,10 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1337,10 +1337,10 @@ define amdgpu_kernel void @atomic_min_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-LABEL: @atomic_min_i32(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1359,10 +1359,10 @@ define amdgpu_kernel void @atomic_min_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-LABEL: @atomic_min_i32_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1389,10 +1389,10 @@ define amdgpu_kernel void @atomic_min_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
@@ -1413,10 +1413,10 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[INDEX:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]

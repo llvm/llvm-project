@@ -11,6 +11,7 @@
 #define _LIBCPP_SSO_ALLOCATOR_H
 
 #include <__config>
+#include <cstddef>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -34,7 +35,7 @@ public:
 template <class _Tp, size_t _Np>
 class _LIBCPP_HIDDEN __sso_allocator
 {
-    typename aligned_storage<sizeof(_Tp) * _Np>::type buf_;
+    alignas(_Tp) std::byte buf_[sizeof(_Tp) * _Np];
     bool __allocated_;
 public:
     typedef size_t            size_type;
@@ -46,14 +47,14 @@ public:
         using other = __sso_allocator<U, _Np>;
     };
 
-    _LIBCPP_INLINE_VISIBILITY __sso_allocator() throw() : __allocated_(false) {}
-    _LIBCPP_INLINE_VISIBILITY __sso_allocator(const __sso_allocator&) throw() : __allocated_(false) {}
-    template <class _Up> _LIBCPP_INLINE_VISIBILITY __sso_allocator(const __sso_allocator<_Up, _Np>&) throw()
+    _LIBCPP_HIDE_FROM_ABI __sso_allocator() throw() : __allocated_(false) {}
+    _LIBCPP_HIDE_FROM_ABI __sso_allocator(const __sso_allocator&) throw() : __allocated_(false) {}
+    template <class _Up> _LIBCPP_HIDE_FROM_ABI __sso_allocator(const __sso_allocator<_Up, _Np>&) throw()
          : __allocated_(false) {}
 private:
     __sso_allocator& operator=(const __sso_allocator&);
 public:
-    _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, typename __sso_allocator<void, _Np>::const_pointer = nullptr)
+    _LIBCPP_HIDE_FROM_ABI pointer allocate(size_type __n, typename __sso_allocator<void, _Np>::const_pointer = nullptr)
     {
         if (!__allocated_ && __n <= _Np)
         {
@@ -62,18 +63,18 @@ public:
         }
         return allocator<_Tp>().allocate(__n);
     }
-    _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type __n)
+    _LIBCPP_HIDE_FROM_ABI void deallocate(pointer __p, size_type __n)
     {
         if (__p == (pointer)&buf_)
             __allocated_ = false;
         else
             allocator<_Tp>().deallocate(__p, __n);
     }
-    _LIBCPP_INLINE_VISIBILITY size_type max_size() const throw() {return size_type(~0) / sizeof(_Tp);}
+    _LIBCPP_HIDE_FROM_ABI size_type max_size() const throw() {return size_type(~0) / sizeof(_Tp);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator==(const __sso_allocator& __a) const {return &buf_ == &__a.buf_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator!=(const __sso_allocator& __a) const {return &buf_ != &__a.buf_;}
 };
 

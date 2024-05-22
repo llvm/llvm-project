@@ -1,6 +1,7 @@
 ; Tests that coro-split will convert coro.resume followed by a suspend to a
 ; musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define void @fakeresume1(ptr)  {
 entry:
@@ -36,7 +37,7 @@ await.ready:
     i8 1, label %exit
   ]
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -57,7 +58,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 

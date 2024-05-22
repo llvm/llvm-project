@@ -102,6 +102,17 @@ struct type_caster<MlirAttribute> {
   }
 };
 
+/// Casts object -> MlirBlock.
+template <>
+struct type_caster<MlirBlock> {
+  PYBIND11_TYPE_CASTER(MlirBlock, _("MlirBlock"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToBlock(capsule.ptr());
+    return !mlirBlockIsNull(value);
+  }
+};
+
 /// Casts object -> MlirContext.
 template <>
 struct type_caster<MlirContext> {
@@ -223,6 +234,7 @@ struct type_caster<MlirValue> {
     return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Value")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
         .release();
   };
 };
@@ -483,13 +495,19 @@ public:
           .attr("replace")(superCls.attr("__name__"), captureTypeName);
     });
     if (getTypeIDFunction) {
+      // 'get_static_typeid' method.
+      // This is modeled as a static method instead of a static property because
+      // `def_property_readonly_static` is not available in `pure_subclass` and
+      // we do not want to introduce the complexity that pybind uses to
+      // implement it.
+      def_staticmethod("get_static_typeid",
+                       [getTypeIDFunction]() { return getTypeIDFunction(); });
       py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
           .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-              getTypeIDFunction(),
-              pybind11::cpp_function(
-                  [thisClass = thisClass](const py::object &mlirType) {
-                    return thisClass(mlirType);
-                  }));
+              getTypeIDFunction())(pybind11::cpp_function(
+              [thisClass = thisClass](const py::object &mlirType) {
+                return thisClass(mlirType);
+              }));
     }
   }
 };

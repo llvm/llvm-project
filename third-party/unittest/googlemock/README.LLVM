@@ -1,7 +1,7 @@
 LLVM notes
 ----------
 
-This directory contains the 'googlemock' component of Google Test 1.10.0, with
+This directory contains the 'googlemock' component of Google Test 1.14.0, with
 all elements removed except for the actual source code, to minimize the
 addition to the LLVM distribution.
 
@@ -10,7 +10,6 @@ Cleaned up as follows:
 # Remove all the unnecessary files and directories
 $ rm -f CMakeLists.txt configure* Makefile* CHANGES CONTRIBUTORS README README.md .gitignore
 $ rm -rf build-aux make msvc scripts test docs
-$ rm -f `find . -name \*\.pump`
 $ rm -f src/gmock_main.cc
 
 # Put the license in the consistent place for LLVM.
@@ -18,6 +17,3 @@ $ mv LICENSE LICENSE.TXT
 
 Modified as follows:
 * Support for std::begin/std::end in gmock-matchers.h
-* IWYU pragmas
-* Disabled -Wdeprecated-copy for clang
-* Added IWYU pragmas from https://github.com/google/googletest/commit/100f6fbf5f81a82d163c1e29735e8a2936eacd4f

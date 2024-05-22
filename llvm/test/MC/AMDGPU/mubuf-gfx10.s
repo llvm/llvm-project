@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 buffer_load_sbyte off, s[8:11], s3 glc slc lds
 // GFX10: buffer_load_sbyte off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x25,0xe0,0x00,0x00,0x42,0x03]

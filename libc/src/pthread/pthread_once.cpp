@@ -12,7 +12,7 @@
 
 #include <pthread.h> // For pthread_once_t and __pthread_once_func_t definitions.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_once,
                    (pthread_once_t * flag, __pthread_once_func_t func)) {
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, pthread_once,
                   reinterpret_cast<CallOnceCallback *>(func));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

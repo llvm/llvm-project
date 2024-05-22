@@ -81,7 +81,7 @@ with Context() as ctx, Location.unknown():
         # CHECK-SAME: indexing_maps = [#[[$POOL_MAP_I]], #[[$POOL_MAP_K]], #[[$POOL_MAP_O]]]
         # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: f32)
-        # CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT]], %[[IN:.+]] : f32
+        # CHECK-NEXT:   %[[MAX:.+]] = arith.maximumf %[[OUT]], %[[IN:.+]] : f32
         # CHECK-NEXT:   linalg.yield %[[MAX]] : f32
         # CHECK-NEXT: -> tensor<1x2x4x1xf32>
         @func.FuncOp.from_py_func(
@@ -132,7 +132,7 @@ with Context() as ctx, Location.unknown():
             )
 
         # CHECK-LABEL: @test_f32f32_min_pooling
-        # CHECK:   = arith.minf
+        # CHECK:   = arith.minimumf
         @func.FuncOp.from_py_func(
             RankedTensorType.get((1, 4, 16, 1), f32),
             RankedTensorType.get((2, 2), f32),

@@ -22,7 +22,7 @@ entry:
   ret void
 ; CHECK-LABEL: @test1
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 }
@@ -37,7 +37,7 @@ entry:
   ret void
 ; CHECK-LABEL: @test2
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 }

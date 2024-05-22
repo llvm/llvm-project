@@ -136,10 +136,10 @@ TEST_F(MapAllocatorTest, SecondaryCombinations) {
          AlignLog++) {
       const scudo::uptr Align = 1U << AlignLog;
       for (scudo::sptr Delta = -128; Delta <= 128; Delta += 8) {
-        if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
+        if ((1LL << SizeLog) + Delta <= 0)
           continue;
-        const scudo::uptr UserSize =
-            scudo::roundUp((1U << SizeLog) + Delta, MinAlign);
+        const scudo::uptr UserSize = scudo::roundUp(
+            static_cast<scudo::uptr>((1LL << SizeLog) + Delta), MinAlign);
         const scudo::uptr Size =
             HeaderSize + UserSize + (Align > MinAlign ? Align - HeaderSize : 0);
         void *P = Allocator->allocate(Options, Size, Align);
@@ -160,7 +160,8 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
   std::vector<void *> V;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(Allocator->allocate(Options, (std::rand() % 16) * PageSize));
+    V.push_back(Allocator->allocate(
+        Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize));
   auto Lambda = [&V](scudo::uptr Block) {
     EXPECT_NE(std::find(V.begin(), V.end(), reinterpret_cast<void *>(Block)),
               V.end());
@@ -215,8 +216,9 @@ struct MapAllocatorWithReleaseTest : public MapAllocatorTest {
     }
     for (scudo::uptr I = 0; I < 128U; I++) {
       // Deallocate 75% of the blocks.
-      const bool Deallocate = (rand() & 3) != 0;
-      void *P = Allocator->allocate(Options, (std::rand() % 16) * PageSize);
+      const bool Deallocate = (std::rand() & 3) != 0;
+      void *P = Allocator->allocate(
+          Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize);
       if (Deallocate)
         Allocator->deallocate(Options, P);
       else

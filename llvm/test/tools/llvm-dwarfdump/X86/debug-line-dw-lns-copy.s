@@ -1,11 +1,11 @@
 # RUN: llvm-mc -filetype obj -triple x86_64-pc-linux %s -o %t.o
 # RUN: llvm-dwarfdump -debug-line %t.o | FileCheck %s
 
-# CHECK:      Address            Line   Column File   ISA Discriminator Flags
-# CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-# CHECK-NEXT: 0x0000000000000000      1      0      1   0             1  is_stmt
-# CHECK-NEXT: 0x0000000000000001      2      0      1   0             0  is_stmt
-# CHECK-NEXT: 0x0000000000000001      2      0      1   0             0  is_stmt end_sequence
+# CHECK:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+# CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+# CHECK-NEXT: 0x0000000000000000      1      0      1   0             1       0  is_stmt
+# CHECK-NEXT: 0x0000000000000001      2      0      1   0             0       0  is_stmt
+# CHECK-NEXT: 0x0000000000000001      2      0      1   0             0       0  is_stmt end_sequence
 
 .section .debug_line,"",@progbits
 .Line_table_start0:

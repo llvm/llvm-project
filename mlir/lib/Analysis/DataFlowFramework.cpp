@@ -7,7 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "dataflow"
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -43,6 +51,8 @@ void AnalysisState::addDependency(ProgramPoint dependent,
   });
 }
 
+void AnalysisState::dump() const { print(llvm::errs()); }
+
 //===----------------------------------------------------------------------===//
 // ProgramPoint
 //===----------------------------------------------------------------------===//
@@ -55,9 +65,9 @@ void ProgramPoint::print(raw_ostream &os) const {
   if (auto *programPoint = llvm::dyn_cast<GenericProgramPoint *>(*this))
     return programPoint->print(os);
   if (auto *op = llvm::dyn_cast<Operation *>(*this))
-    return op->print(os);
+    return op->print(os, OpPrintingFlags().skipRegions());
   if (auto value = llvm::dyn_cast<Value>(*this))
-    return value.print(os);
+    return value.print(os, OpPrintingFlags().skipRegions());
   return get<Block *>()->print(os);
 }
 

@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -330,4 +331,32 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     FTruncOpLowering
   >(converter);
   // clang-format on
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToLLVMPatternInterface implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Implement the interface to convert Math to LLVM.
+struct MathToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateMathToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertMathToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, math::MathDialect *dialect) {
+    dialect->addInterfaces<MathToLLVMDialectInterface>();
+  });
 }

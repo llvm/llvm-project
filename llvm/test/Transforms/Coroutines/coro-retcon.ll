@@ -33,7 +33,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -75,7 +75,7 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 8)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.resume.0, ptr undef }, ptr [[PTR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.resume.0, ptr poison }, ptr [[PTR]], 1
 ; CHECK-NEXT:    ret { ptr, ptr } [[TMP1]]
 ;
 ; CORO-LABEL: @g(
@@ -86,7 +86,7 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_SPILL_ADDR]], align 8
 ; CORO-NEXT:    [[PTR_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME]], ptr [[TMP0]], i32 0, i32 0
 ; CORO-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[PTR_RELOAD_ADDR]], align 8
-; CORO-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } undef, ptr @g.resume.0, 0
+; CORO-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } poison, ptr @g.resume.0, 0
 ; CORO-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } [[TMP1]], ptr [[PTR_RELOAD]], 1
 ; CORO-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
@@ -103,7 +103,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -137,14 +137,14 @@ cleanup:
   call void @use_var_ptr(ptr %a)
   %al = load i32, ptr %a
   call void @use_var(i32 %al)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare void @use_var(i32)

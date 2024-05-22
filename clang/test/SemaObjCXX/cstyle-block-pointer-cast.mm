@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wno-objc-root-class %s
-// radar 7562285
 
 typedef int (^blocktype)(int a, int b);
 

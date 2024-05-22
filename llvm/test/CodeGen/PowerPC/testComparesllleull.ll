@@ -67,10 +67,10 @@ define dso_local void @test_llleull_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llleull_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subc r4, r4, r3
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    subfe r3, r3, r3
 ; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, %b
@@ -84,10 +84,10 @@ define dso_local void @test_llleull_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llleull_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subc r4, r4, r3
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    subfe r3, r3, r3
 ; CHECK-NEXT:    not r3, r3
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, %b

@@ -13,6 +13,7 @@
 
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
@@ -180,6 +181,13 @@ namespace clang {
                                                  unsigned Index);
     static void setAnonymousDeclForMerging(ASTReader &Reader, DeclContext *DC,
                                            unsigned Index, NamedDecl *D);
+
+    /// Commit to a primary definition of the class RD, which is known to be
+    /// a definition of the class. We might not have read the definition data
+    /// for it yet. If we haven't then allocate placeholder definition data
+    /// now too.
+    static CXXRecordDecl *getOrFakePrimaryClassDefinition(ASTReader &Reader,
+                                                          CXXRecordDecl *RD);
 
     /// Results from loading a RedeclarableDecl.
     class RedeclarableResult {
@@ -350,9 +358,7 @@ namespace clang {
     }
 
     void VisitClassTemplatePartialSpecializationDecl(
-                                     ClassTemplatePartialSpecializationDecl *D);
-    void VisitClassScopeFunctionSpecializationDecl(
-                                       ClassScopeFunctionSpecializationDecl *D);
+        ClassTemplatePartialSpecializationDecl *D);
     RedeclarableResult
     VisitVarTemplateSpecializationDeclImpl(VarTemplateSpecializationDecl *D);
 
@@ -476,9 +482,8 @@ namespace {
 
 /// Iterator over the redeclarations of a declaration that have already
 /// been merged into the same redeclaration chain.
-template<typename DeclT>
-class MergedRedeclIterator {
-  DeclT *Start;
+template <typename DeclT> class MergedRedeclIterator {
+  DeclT *Start = nullptr;
   DeclT *Canonical = nullptr;
   DeclT *Current = nullptr;
 
@@ -578,6 +583,9 @@ void ASTDeclReader::Visit(Decl *D) {
 }
 
 void ASTDeclReader::VisitDecl(Decl *D) {
+  BitsUnpacker DeclBits(Record.readInt());
+  bool HasStandaloneLexicalDC = DeclBits.getNextBit();
+
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
       isa<ParmVarDecl, ObjCTypeParamDecl>(D)) {
     // We don't want to deserialize the DeclContext of a template
@@ -587,7 +595,8 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     // return type of the function).  Use the translation unit DeclContext as a
     // placeholder.
     GlobalDeclID SemaDCIDForTemplateParmDecl = readDeclID();
-    GlobalDeclID LexicalDCIDForTemplateParmDecl = readDeclID();
+    GlobalDeclID LexicalDCIDForTemplateParmDecl =
+        HasStandaloneLexicalDC ? readDeclID() : 0;
     if (!LexicalDCIDForTemplateParmDecl)
       LexicalDCIDForTemplateParmDecl = SemaDCIDForTemplateParmDecl;
     Reader.addPendingDeclContextInfo(D,
@@ -596,34 +605,45 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     D->setDeclContext(Reader.getContext().getTranslationUnitDecl());
   } else {
     auto *SemaDC = readDeclAs<DeclContext>();
-    auto *LexicalDC = readDeclAs<DeclContext>();
+    auto *LexicalDC =
+        HasStandaloneLexicalDC ? readDeclAs<DeclContext>() : nullptr;
     if (!LexicalDC)
       LexicalDC = SemaDC;
-    DeclContext *MergedSemaDC = Reader.MergedDeclContexts.lookup(SemaDC);
+    // If the context is a class, we might not have actually merged it yet, in
+    // the case where the definition comes from an update record.
+    DeclContext *MergedSemaDC;
+    if (auto *RD = dyn_cast<CXXRecordDecl>(SemaDC))
+      MergedSemaDC = getOrFakePrimaryClassDefinition(Reader, RD);
+    else
+      MergedSemaDC = Reader.MergedDeclContexts.lookup(SemaDC);
     // Avoid calling setLexicalDeclContext() directly because it uses
     // Decl::getASTContext() internally which is unsafe during derialization.
     D->setDeclContextsImpl(MergedSemaDC ? MergedSemaDC : SemaDC, LexicalDC,
                            Reader.getContext());
   }
   D->setLocation(ThisDeclLoc);
-  D->InvalidDecl = Record.readInt();
-  if (Record.readInt()) { // hasAttrs
+
+  D->InvalidDecl = DeclBits.getNextBit();
+  bool HasAttrs = DeclBits.getNextBit();
+  D->setImplicit(DeclBits.getNextBit());
+  D->Used = DeclBits.getNextBit();
+  IsDeclMarkedUsed |= D->Used;
+  D->setReferenced(DeclBits.getNextBit());
+  D->setTopLevelDeclInObjCContainer(DeclBits.getNextBit());
+  D->setAccess((AccessSpecifier)DeclBits.getNextBits(/*Width=*/2));
+  D->FromASTFile = true;
+  auto ModuleOwnership =
+      (Decl::ModuleOwnershipKind)DeclBits.getNextBits(/*Width=*/3);
+  bool ModulePrivate =
+      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
+
+  if (HasAttrs) {
     AttrVec Attrs;
     Record.readAttributes(Attrs);
     // Avoid calling setAttrs() directly because it uses Decl::getASTContext()
     // internally which is unsafe during derialization.
     D->setAttrsImpl(Attrs, Reader.getContext());
   }
-  D->setImplicit(Record.readInt());
-  D->Used = Record.readInt();
-  IsDeclMarkedUsed |= D->Used;
-  D->setReferenced(Record.readInt());
-  D->setTopLevelDeclInObjCContainer(Record.readInt());
-  D->setAccess((AccessSpecifier)Record.readInt());
-  D->FromASTFile = true;
-  auto ModuleOwnership = (Decl::ModuleOwnershipKind)Record.readInt();
-  bool ModulePrivate =
-      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
 
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
@@ -739,15 +759,17 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   VisitTypeDecl(TD);
 
   TD->IdentifierNamespace = Record.readInt();
-  TD->setTagKind((TagDecl::TagKind)Record.readInt());
-  if (!isa<CXXRecordDecl>(TD))
-    TD->setCompleteDefinition(Record.readInt());
-  TD->setEmbeddedInDeclarator(Record.readInt());
-  TD->setFreeStanding(Record.readInt());
-  TD->setCompleteDefinitionRequired(Record.readInt());
+
+  BitsUnpacker TagDeclBits(Record.readInt());
+  TD->setTagKind(
+      static_cast<TagTypeKind>(TagDeclBits.getNextBits(/*Width=*/3)));
+  TD->setCompleteDefinition(TagDeclBits.getNextBit());
+  TD->setEmbeddedInDeclarator(TagDeclBits.getNextBit());
+  TD->setFreeStanding(TagDeclBits.getNextBit());
+  TD->setCompleteDefinitionRequired(TagDeclBits.getNextBit());
   TD->setBraceRange(readSourceRange());
 
-  switch (Record.readInt()) {
+  switch (TagDeclBits.getNextBits(/*Width=*/2)) {
   case 0:
     break;
   case 1: { // ExtInfo
@@ -776,11 +798,13 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
   else
     ED->setIntegerType(Record.readType());
   ED->setPromotionType(Record.readType());
-  ED->setNumPositiveBits(Record.readInt());
-  ED->setNumNegativeBits(Record.readInt());
-  ED->setScoped(Record.readInt());
-  ED->setScopedUsingClassTag(Record.readInt());
-  ED->setFixed(Record.readInt());
+
+  BitsUnpacker EnumDeclBits(Record.readInt());
+  ED->setNumPositiveBits(EnumDeclBits.getNextBits(/*Width=*/8));
+  ED->setNumNegativeBits(EnumDeclBits.getNextBits(/*Width=*/8));
+  ED->setScoped(EnumDeclBits.getNextBit());
+  ED->setScopedUsingClassTag(EnumDeclBits.getNextBit());
+  ED->setFixed(EnumDeclBits.getNextBit());
 
   ED->setHasODRHash(true);
   ED->ODRHash = Record.readInt();
@@ -823,18 +847,22 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RedeclarableResult Redecl = VisitTagDecl(RD);
-  RD->setHasFlexibleArrayMember(Record.readInt());
-  RD->setAnonymousStructOrUnion(Record.readInt());
-  RD->setHasObjectMember(Record.readInt());
-  RD->setHasVolatileMember(Record.readInt());
-  RD->setNonTrivialToPrimitiveDefaultInitialize(Record.readInt());
-  RD->setNonTrivialToPrimitiveCopy(Record.readInt());
-  RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveDefaultInitializeCUnion(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveDestructCUnion(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
-  RD->setParamDestroyedInCallee(Record.readInt());
-  RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
+
+  BitsUnpacker RecordDeclBits(Record.readInt());
+  RD->setHasFlexibleArrayMember(RecordDeclBits.getNextBit());
+  RD->setAnonymousStructOrUnion(RecordDeclBits.getNextBit());
+  RD->setHasObjectMember(RecordDeclBits.getNextBit());
+  RD->setHasVolatileMember(RecordDeclBits.getNextBit());
+  RD->setNonTrivialToPrimitiveDefaultInitialize(RecordDeclBits.getNextBit());
+  RD->setNonTrivialToPrimitiveCopy(RecordDeclBits.getNextBit());
+  RD->setNonTrivialToPrimitiveDestroy(RecordDeclBits.getNextBit());
+  RD->setHasNonTrivialToPrimitiveDefaultInitializeCUnion(
+      RecordDeclBits.getNextBit());
+  RD->setHasNonTrivialToPrimitiveDestructCUnion(RecordDeclBits.getNextBit());
+  RD->setHasNonTrivialToPrimitiveCopyCUnion(RecordDeclBits.getNextBit());
+  RD->setParamDestroyedInCallee(RecordDeclBits.getNextBit());
+  RD->setArgPassingRestrictions(
+      (RecordArgPassingKind)RecordDeclBits.getNextBits(/*Width=*/2));
   return Redecl;
 }
 
@@ -937,27 +965,16 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
 
     // Template args as written.
-    SmallVector<TemplateArgumentLoc, 8> TemplArgLocs;
-    SourceLocation LAngleLoc, RAngleLoc;
-    bool HasTemplateArgumentsAsWritten = Record.readInt();
-    if (HasTemplateArgumentsAsWritten) {
-      unsigned NumTemplateArgLocs = Record.readInt();
-      TemplArgLocs.reserve(NumTemplateArgLocs);
-      for (unsigned i = 0; i != NumTemplateArgLocs; ++i)
-        TemplArgLocs.push_back(Record.readTemplateArgumentLoc());
-
-      LAngleLoc = readSourceLocation();
-      RAngleLoc = readSourceLocation();
-    }
+    TemplateArgumentListInfo TemplArgsWritten;
+    bool HasTemplateArgumentsAsWritten = Record.readBool();
+    if (HasTemplateArgumentsAsWritten)
+      Record.readTemplateArgumentListInfo(TemplArgsWritten);
 
     SourceLocation POI = readSourceLocation();
 
     ASTContext &C = Reader.getContext();
-    TemplateArgumentList *TemplArgList
-      = TemplateArgumentList::CreateCopy(C, TemplArgs);
-    TemplateArgumentListInfo TemplArgsInfo(LAngleLoc, RAngleLoc);
-    for (unsigned i = 0, e = TemplArgLocs.size(); i != e; ++i)
-      TemplArgsInfo.addArgument(TemplArgLocs[i]);
+    TemplateArgumentList *TemplArgList =
+        TemplateArgumentList::CreateCopy(C, TemplArgs);
 
     MemberSpecializationInfo *MSInfo = nullptr;
     if (Record.readInt()) {
@@ -972,7 +989,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     FunctionTemplateSpecializationInfo *FTInfo =
         FunctionTemplateSpecializationInfo::Create(
             C, FD, Template, TSK, TemplArgList,
-            HasTemplateArgumentsAsWritten ? &TemplArgsInfo : nullptr, POI,
+            HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr, POI,
             MSInfo);
     FD->TemplateOrSpecialization = FTInfo;
 
@@ -1003,21 +1020,20 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   }
   case FunctionDecl::TK_DependentFunctionTemplateSpecialization: {
     // Templates.
-    UnresolvedSet<8> TemplDecls;
-    unsigned NumTemplates = Record.readInt();
-    while (NumTemplates--)
-      TemplDecls.addDecl(readDeclAs<NamedDecl>());
+    UnresolvedSet<8> Candidates;
+    unsigned NumCandidates = Record.readInt();
+    while (NumCandidates--)
+      Candidates.addDecl(readDeclAs<NamedDecl>());
 
     // Templates args.
-    TemplateArgumentListInfo TemplArgs;
-    unsigned NumArgs = Record.readInt();
-    while (NumArgs--)
-      TemplArgs.addArgument(Record.readTemplateArgumentLoc());
-    TemplArgs.setLAngleLoc(readSourceLocation());
-    TemplArgs.setRAngleLoc(readSourceLocation());
+    TemplateArgumentListInfo TemplArgsWritten;
+    bool HasTemplateArgumentsAsWritten = Record.readBool();
+    if (HasTemplateArgumentsAsWritten)
+      Record.readTemplateArgumentListInfo(TemplArgsWritten);
 
-    FD->setDependentTemplateSpecialization(Reader.getContext(),
-                                           TemplDecls, TemplArgs);
+    FD->setDependentTemplateSpecialization(
+        Reader.getContext(), Candidates,
+        HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr);
     // These are not merged; we don't need to merge redeclarations of dependent
     // template friends.
     break;
@@ -1047,34 +1063,38 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   // FunctionDecl's body is handled last at ASTDeclReader::Visit,
   // after everything else is read.
+  BitsUnpacker FunctionDeclBits(Record.readInt());
 
-  FD->setStorageClass(static_cast<StorageClass>(Record.readInt()));
-  FD->setInlineSpecified(Record.readInt());
-  FD->setImplicitlyInline(Record.readInt());
-  FD->setVirtualAsWritten(Record.readInt());
+  FD->setStorageClass((StorageClass)FunctionDeclBits.getNextBits(/*Width=*/3));
+  FD->setInlineSpecified(FunctionDeclBits.getNextBit());
+  FD->setImplicitlyInline(FunctionDeclBits.getNextBit());
+  FD->setVirtualAsWritten(FunctionDeclBits.getNextBit());
   // We defer calling `FunctionDecl::setPure()` here as for methods of
   // `CXXTemplateSpecializationDecl`s, we may not have connected up the
   // definition (which is required for `setPure`).
-  const bool Pure = Record.readInt();
-  FD->setHasInheritedPrototype(Record.readInt());
-  FD->setHasWrittenPrototype(Record.readInt());
-  FD->setDeletedAsWritten(Record.readInt());
-  FD->setTrivial(Record.readInt());
-  FD->setTrivialForCall(Record.readInt());
-  FD->setDefaulted(Record.readInt());
-  FD->setExplicitlyDefaulted(Record.readInt());
-  FD->setIneligibleOrNotSelected(Record.readInt());
-  FD->setHasImplicitReturnZero(Record.readInt());
-  FD->setConstexprKind(static_cast<ConstexprSpecKind>(Record.readInt()));
-  FD->setUsesSEHTry(Record.readInt());
-  FD->setHasSkippedBody(Record.readInt());
-  FD->setIsMultiVersion(Record.readInt());
-  FD->setLateTemplateParsed(Record.readInt());
-  FD->setFriendConstraintRefersToEnclosingTemplate(Record.readInt());
+  const bool Pure = FunctionDeclBits.getNextBit();
+  FD->setHasInheritedPrototype(FunctionDeclBits.getNextBit());
+  FD->setHasWrittenPrototype(FunctionDeclBits.getNextBit());
+  FD->setDeletedAsWritten(FunctionDeclBits.getNextBit());
+  FD->setTrivial(FunctionDeclBits.getNextBit());
+  FD->setTrivialForCall(FunctionDeclBits.getNextBit());
+  FD->setDefaulted(FunctionDeclBits.getNextBit());
+  FD->setExplicitlyDefaulted(FunctionDeclBits.getNextBit());
+  FD->setIneligibleOrNotSelected(FunctionDeclBits.getNextBit());
+  FD->setHasImplicitReturnZero(FunctionDeclBits.getNextBit());
+  FD->setConstexprKind(
+      (ConstexprSpecKind)FunctionDeclBits.getNextBits(/*Width=*/2));
+  FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
+  FD->setHasSkippedBody(FunctionDeclBits.getNextBit());
+  FD->setIsMultiVersion(FunctionDeclBits.getNextBit());
+  FD->setLateTemplateParsed(FunctionDeclBits.getNextBit());
+  FD->setFriendConstraintRefersToEnclosingTemplate(
+      FunctionDeclBits.getNextBit());
+  FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
 
-  FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
   FD->EndRangeLoc = readSourceLocation();
-  FD->setDefaultLoc(readSourceLocation());
+  if (FD->isExplicitlyDefaulted())
+    FD->setDefaultLoc(readSourceLocation());
 
   FD->ODRHash = Record.readInt();
   FD->setHasODRHash(true);
@@ -1152,7 +1172,8 @@ void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
     Reader.getContext().setObjCMethodRedeclaration(MD,
                                        readDeclAs<ObjCMethodDecl>());
 
-  MD->setDeclImplementation((ObjCMethodDecl::ImplementationControl)Record.readInt());
+  MD->setDeclImplementation(
+      static_cast<ObjCImplementationControl>(Record.readInt()));
   MD->setObjCDeclQualifier((Decl::ObjCDeclQualifier)Record.readInt());
   MD->setRelatedResultType(Record.readInt());
   MD->setReturnType(Record.readType());
@@ -1575,26 +1596,29 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
   RedeclarableResult Redecl = VisitRedeclarable(VD);
   VisitDeclaratorDecl(VD);
 
-  VD->VarDeclBits.SClass = (StorageClass)Record.readInt();
-  VD->VarDeclBits.TSCSpec = Record.readInt();
-  VD->VarDeclBits.InitStyle = Record.readInt();
-  VD->VarDeclBits.ARCPseudoStrong = Record.readInt();
+  BitsUnpacker VarDeclBits(Record.readInt());
+  VD->VarDeclBits.SClass = (StorageClass)VarDeclBits.getNextBits(/*Width=*/3);
+  VD->VarDeclBits.TSCSpec = VarDeclBits.getNextBits(/*Width=*/2);
+  VD->VarDeclBits.InitStyle = VarDeclBits.getNextBits(/*Width=*/2);
+  VD->VarDeclBits.ARCPseudoStrong = VarDeclBits.getNextBit();
   bool HasDeducedType = false;
   if (!isa<ParmVarDecl>(VD)) {
     VD->NonParmVarDeclBits.IsThisDeclarationADemotedDefinition =
-        Record.readInt();
-    VD->NonParmVarDeclBits.ExceptionVar = Record.readInt();
-    VD->NonParmVarDeclBits.NRVOVariable = Record.readInt();
-    VD->NonParmVarDeclBits.CXXForRangeDecl = Record.readInt();
-    VD->NonParmVarDeclBits.ObjCForDecl = Record.readInt();
-    VD->NonParmVarDeclBits.IsInline = Record.readInt();
-    VD->NonParmVarDeclBits.IsInlineSpecified = Record.readInt();
-    VD->NonParmVarDeclBits.IsConstexpr = Record.readInt();
-    VD->NonParmVarDeclBits.IsInitCapture = Record.readInt();
-    VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope = Record.readInt();
-    VD->NonParmVarDeclBits.ImplicitParamKind = Record.readInt();
-    VD->NonParmVarDeclBits.EscapingByref = Record.readInt();
-    HasDeducedType = Record.readInt();
+        VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.ExceptionVar = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.NRVOVariable = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.CXXForRangeDecl = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.ObjCForDecl = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsInline = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsInlineSpecified = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsConstexpr = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsInitCapture = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope =
+        VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.ImplicitParamKind =
+        VarDeclBits.getNextBits(/*Width*/ 3);
+    VD->NonParmVarDeclBits.EscapingByref = VarDeclBits.getNextBit();
+    HasDeducedType = VarDeclBits.getNextBit();
   }
 
   // If this variable has a deduced type, defer reading that type until we are
@@ -1606,24 +1630,24 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->setType(Reader.GetType(DeferredTypeID));
   DeferredTypeID = 0;
 
-  auto VarLinkage = Linkage(Record.readInt());
+  auto VarLinkage = Linkage(VarDeclBits.getNextBits(/*Width=*/3));
   VD->setCachedLinkage(VarLinkage);
 
   // Reconstruct the one piece of the IdentifierNamespace that we need.
-  if (VD->getStorageClass() == SC_Extern && VarLinkage != NoLinkage &&
+  if (VD->getStorageClass() == SC_Extern && VarLinkage != Linkage::None &&
       VD->getLexicalDeclContext()->isFunctionOrMethod())
     VD->setLocalExternDecl();
+
+  if (VarDeclBits.getNextBit()) {
+    Reader.DefinitionSource[VD] =
+        Loc.F->Kind == ModuleKind::MK_MainFile ||
+        Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
+  }
 
   if (VD->hasAttr<BlocksAttr>()) {
     Expr *CopyExpr = Record.readExpr();
     if (CopyExpr)
       Reader.getContext().setBlockVarCopyInit(VD, CopyExpr, Record.readInt());
-  }
-
-  if (Record.readInt()) {
-    Reader.DefinitionSource[VD] =
-        Loc.F->Kind == ModuleKind::MK_MainFile ||
-        Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
   }
 
   enum VarKind {
@@ -1679,10 +1703,12 @@ void ASTDeclReader::VisitImplicitParamDecl(ImplicitParamDecl *PD) {
 
 void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   VisitVarDecl(PD);
-  unsigned isObjCMethodParam = Record.readInt();
-  unsigned scopeDepth = Record.readInt();
-  unsigned scopeIndex = Record.readInt();
-  unsigned declQualifier = Record.readInt();
+
+  BitsUnpacker ParmVarDeclBits(Record.readInt());
+  unsigned isObjCMethodParam = ParmVarDeclBits.getNextBit();
+  unsigned scopeDepth = ParmVarDeclBits.getNextBits(/*Width=*/7);
+  unsigned scopeIndex = ParmVarDeclBits.getNextBits(/*Width=*/8);
+  unsigned declQualifier = ParmVarDeclBits.getNextBits(/*Width=*/7);
   if (isObjCMethodParam) {
     assert(scopeDepth == 0);
     PD->setObjCMethodScopeInfo(scopeIndex);
@@ -1690,10 +1716,14 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   } else {
     PD->setScopeInfo(scopeDepth, scopeIndex);
   }
-  PD->ParmVarDeclBits.IsKNRPromoted = Record.readInt();
-  PD->ParmVarDeclBits.HasInheritedDefaultArg = Record.readInt();
-  if (Record.readInt()) // hasUninstantiatedDefaultArg.
+  PD->ParmVarDeclBits.IsKNRPromoted = ParmVarDeclBits.getNextBit();
+
+  PD->ParmVarDeclBits.HasInheritedDefaultArg = ParmVarDeclBits.getNextBit();
+  if (ParmVarDeclBits.getNextBit()) // hasUninstantiatedDefaultArg.
     PD->setUninstantiatedDefaultArg(Record.readExpr());
+
+  if (ParmVarDeclBits.getNextBit()) // Valid explicit object parameter
+    PD->ExplicitObjectParameterIntroducerLoc = Record.readSourceLocation();
 
   // FIXME: If this is a redeclaration of a function from another module, handle
   // inheritance of default arguments.
@@ -1772,7 +1802,7 @@ void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
 
 void ASTDeclReader::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   VisitDecl(D);
-  D->setLanguage((LinkageSpecDecl::LanguageIDs)Record.readInt());
+  D->setLanguage(static_cast<LinkageSpecLanguageIDs>(Record.readInt()));
   D->setExternLoc(readSourceLocation());
   D->setRBraceLoc(readSourceLocation());
 }
@@ -1790,8 +1820,10 @@ void ASTDeclReader::VisitLabelDecl(LabelDecl *D) {
 void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarable(D);
   VisitNamedDecl(D);
-  D->setInline(Record.readInt());
-  D->setNested(Record.readInt());
+
+  BitsUnpacker NamespaceDeclBits(Record.readInt());
+  D->setInline(NamespaceDeclBits.getNextBit());
+  D->setNested(NamespaceDeclBits.getNextBit());
   D->LocStart = readSourceLocation();
   D->RBraceLoc = readSourceLocation();
 
@@ -1926,8 +1958,16 @@ void ASTDeclReader::VisitUnresolvedUsingIfExistsDecl(
 void ASTDeclReader::ReadCXXDefinitionData(
     struct CXXRecordDecl::DefinitionData &Data, const CXXRecordDecl *D,
     Decl *LambdaContext, unsigned IndexInLambdaContext) {
-#define FIELD(Name, Width, Merge) Data.Name = Record.readInt();
+
+  BitsUnpacker CXXRecordDeclBits = Record.readInt();
+
+#define FIELD(Name, Width, Merge)                                              \
+  if (!CXXRecordDeclBits.canGetNextNBits(Width))                         \
+    CXXRecordDeclBits.updateValue(Record.readInt());                           \
+  Data.Name = CXXRecordDeclBits.getNextBits(Width);
+
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
+#undef FIELD
 
   // Note: the caller has deserialized the IsLambda bit already.
   Data.ODRHash = Record.readInt();
@@ -1962,12 +2002,15 @@ void ASTDeclReader::ReadCXXDefinitionData(
     using Capture = LambdaCapture;
 
     auto &Lambda = static_cast<CXXRecordDecl::LambdaDefinitionData &>(Data);
-    Lambda.DependencyKind = Record.readInt();
-    Lambda.IsGenericLambda = Record.readInt();
-    Lambda.CaptureDefault = Record.readInt();
-    Lambda.NumCaptures = Record.readInt();
+
+    BitsUnpacker LambdaBits(Record.readInt());
+    Lambda.DependencyKind = LambdaBits.getNextBits(/*Width=*/2);
+    Lambda.IsGenericLambda = LambdaBits.getNextBit();
+    Lambda.CaptureDefault = LambdaBits.getNextBits(/*Width=*/2);
+    Lambda.NumCaptures = LambdaBits.getNextBits(/*Width=*/15);
+    Lambda.HasKnownInternalLinkage = LambdaBits.getNextBit();
+
     Lambda.NumExplicitCaptures = Record.readInt();
-    Lambda.HasKnownInternalLinkage = Record.readInt();
     Lambda.ManglingNumber = Record.readInt();
     if (unsigned DeviceManglingNumber = Record.readInt())
       Reader.getContext().DeviceLambdaManglingNumbers[D] = DeviceManglingNumber;
@@ -1982,19 +2025,24 @@ void ASTDeclReader::ReadCXXDefinitionData(
     Lambda.MethodTyInfo = readTypeSourceInfo();
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {
       SourceLocation Loc = readSourceLocation();
-      bool IsImplicit = Record.readInt();
-      auto Kind = static_cast<LambdaCaptureKind>(Record.readInt());
+      BitsUnpacker CaptureBits(Record.readInt());
+      bool IsImplicit = CaptureBits.getNextBit();
+      auto Kind =
+          static_cast<LambdaCaptureKind>(CaptureBits.getNextBits(/*Width=*/3));
       switch (Kind) {
       case LCK_StarThis:
       case LCK_This:
       case LCK_VLAType:
-        *ToCapture++ = Capture(Loc, IsImplicit, Kind, nullptr,SourceLocation());
+        new (ToCapture)
+            Capture(Loc, IsImplicit, Kind, nullptr, SourceLocation());
+        ToCapture++;
         break;
       case LCK_ByCopy:
       case LCK_ByRef:
-        auto *Var = readDeclAs<VarDecl>();
+        auto *Var = readDeclAs<ValueDecl>();
         SourceLocation EllipsisLoc = readSourceLocation();
-        *ToCapture++ = Capture(Loc, IsImplicit, Kind, Var, EllipsisLoc);
+        new (ToCapture) Capture(Loc, IsImplicit, Kind, Var, EllipsisLoc);
+        ToCapture++;
         break;
       }
     }
@@ -2508,14 +2556,6 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   }
 }
 
-void ASTDeclReader::VisitClassScopeFunctionSpecializationDecl(
-                                    ClassScopeFunctionSpecializationDecl *D) {
-  VisitDecl(D);
-  D->Specialization = readDeclAs<CXXMethodDecl>();
-  if (Record.readInt())
-    D->TemplateArgs = Record.readASTTemplateArgumentListInfo();
-}
-
 void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
 
@@ -2621,15 +2661,12 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   D->setDeclaredWithTypename(Record.readInt());
 
   if (Record.readBool()) {
-    NestedNameSpecifierLoc NNS = Record.readNestedNameSpecifierLoc();
-    DeclarationNameInfo DN = Record.readDeclarationNameInfo();
-    ConceptDecl *NamedConcept = Record.readDeclAs<ConceptDecl>();
-    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+    ConceptReference *CR = nullptr;
     if (Record.readBool())
-        ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
+      CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
-    D->setTypeConstraint(NNS, DN, /*FoundDecl=*/nullptr, NamedConcept,
-                         ArgsAsWritten, ImmediatelyDeclaredConstraint);
+
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
     if ((D->ExpandedParameterPack = Record.readInt()))
       D->NumExpanded = Record.readInt();
   }
@@ -3013,7 +3050,7 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Expr *Priv = Record.readExpr();
   D->setInitializerData(Orig, Priv);
   Expr *Init = Record.readExpr();
-  auto IK = static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt());
+  auto IK = static_cast<OMPDeclareReductionInitKind>(Record.readInt());
   D->setInitializer(Init, IK);
   D->PrevDeclInScope = readDeclID();
 }
@@ -3199,6 +3236,32 @@ uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset) {
   return LocalOffset + M.GlobalBitOffset;
 }
 
+CXXRecordDecl *
+ASTDeclReader::getOrFakePrimaryClassDefinition(ASTReader &Reader,
+                                               CXXRecordDecl *RD) {
+  // Try to dig out the definition.
+  auto *DD = RD->DefinitionData;
+  if (!DD)
+    DD = RD->getCanonicalDecl()->DefinitionData;
+
+  // If there's no definition yet, then DC's definition is added by an update
+  // record, but we've not yet loaded that update record. In this case, we
+  // commit to DC being the canonical definition now, and will fix this when
+  // we load the update record.
+  if (!DD) {
+    DD = new (Reader.getContext()) struct CXXRecordDecl::DefinitionData(RD);
+    RD->setCompleteDefinition(true);
+    RD->DefinitionData = DD;
+    RD->getCanonicalDecl()->DefinitionData = DD;
+
+    // Track that we did this horrible thing so that we can fix it later.
+    Reader.PendingFakeDefinitionData.insert(
+        std::make_pair(DD, ASTReader::PendingFakeDefinitionKind::Fake));
+  }
+
+  return DD->Definition;
+}
+
 /// Find the context in which we should search for previous declarations when
 /// looking for declarations to merge.
 DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
@@ -3206,29 +3269,8 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
   if (auto *ND = dyn_cast<NamespaceDecl>(DC))
     return ND->getOriginalNamespace();
 
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
-    // Try to dig out the definition.
-    auto *DD = RD->DefinitionData;
-    if (!DD)
-      DD = RD->getCanonicalDecl()->DefinitionData;
-
-    // If there's no definition yet, then DC's definition is added by an update
-    // record, but we've not yet loaded that update record. In this case, we
-    // commit to DC being the canonical definition now, and will fix this when
-    // we load the update record.
-    if (!DD) {
-      DD = new (Reader.getContext()) struct CXXRecordDecl::DefinitionData(RD);
-      RD->setCompleteDefinition(true);
-      RD->DefinitionData = DD;
-      RD->getCanonicalDecl()->DefinitionData = DD;
-
-      // Track that we did this horrible thing so that we can fix it later.
-      Reader.PendingFakeDefinitionData.insert(
-          std::make_pair(DD, ASTReader::PendingFakeDefinitionKind::Fake));
-    }
-
-    return DD->Definition;
-  }
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
+    return getOrFakePrimaryClassDefinition(Reader, RD);
 
   if (auto *RD = dyn_cast<RecordDecl>(DC))
     return RD->getDefinition();
@@ -3862,9 +3904,6 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION:
     D = VarTemplatePartialSpecializationDecl::CreateDeserialized(Context, ID);
     break;
-  case DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION:
-    D = ClassScopeFunctionSpecializationDecl::CreateDeserialized(Context, ID);
-    break;
   case DECL_FUNCTION_TEMPLATE:
     D = FunctionTemplateDecl::CreateDeserialized(Context, ID);
     break;
@@ -4442,7 +4481,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
         VTSD->setPointOfInstantiation(POI);
       } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-        VD->getMemberSpecializationInfo()->setPointOfInstantiation(POI);
+        MemberSpecializationInfo *MSInfo = VD->getMemberSpecializationInfo();
+        assert(MSInfo && "No member specialization information");
+        MSInfo->setPointOfInstantiation(POI);
       } else {
         auto *FD = cast<FunctionDecl>(D);
         if (auto *FTSInfo = FD->TemplateOrSpecialization
@@ -4517,7 +4558,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
                     !Reader.PendingFakeDefinitionData.count(OldDD));
       RD->setParamDestroyedInCallee(Record.readInt());
       RD->setArgPassingRestrictions(
-          (RecordDecl::ArgPassingKind)Record.readInt());
+          static_cast<RecordArgPassingKind>(Record.readInt()));
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.
@@ -4554,7 +4595,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
         }
       }
 
-      RD->setTagKind((TagTypeKind)Record.readInt());
+      RD->setTagKind(static_cast<TagTypeKind>(Record.readInt()));
       RD->setLocation(readSourceLocation());
       RD->setLocStart(readSourceLocation());
       RD->setBraceRange(readSourceRange());

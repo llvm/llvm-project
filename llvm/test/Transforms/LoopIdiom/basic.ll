@@ -481,7 +481,7 @@ define void @test10(ptr %X) nounwind ssp {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_INC10:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC12:%.*]], [[FOR_INC10]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i64 [[INDVAR]], 100
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY5:%.*]]
 ; CHECK:       for.body5:
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i32 [ 0, [[BB_NPH]] ], [ [[INC:%.*]], [[FOR_BODY5]] ]
@@ -682,13 +682,13 @@ define void @PR14241(ptr %s, i64 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[END_IDX:%.*]] = add i64 [[SIZE:%.*]], -1
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, ptr [[S:%.*]], i64 [[END_IDX]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[S]], i64 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[S]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[S]], ptr align 4 [[UGLYGEP]], i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[S]], ptr align 4 [[SCEVGEP]], i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[S]], [[ENTRY:%.*]] ], [ [[NEXT_PTR:%.*]], [[WHILE_BODY]] ]
@@ -800,11 +800,11 @@ define noalias ptr @test17(ptr nocapture readonly %a, i32 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[TMP5]]
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[C]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP6]], 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[UGLYGEP]], ptr align 4 [[UGLYGEP1]], i64 [[TMP7]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 [[TMP7]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[DEC10_IN:%.*]] = phi i32 [ [[DEC10:%.*]], [[WHILE_BODY]] ], [ [[C]], [[WHILE_BODY_PREHEADER]] ]
@@ -900,7 +900,7 @@ define void @test19(ptr nocapture %X) {
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 99, [[ENTRY]] ], [ [[DEC5:%.*]], [[FOR_INC4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[INDVAR]], -100
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 9900
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_06]], 100
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
@@ -1048,8 +1048,8 @@ exit:
 define void @PR46179_positive_stride(ptr %Src, i64 %Size) {
 ; CHECK-LABEL: @PR46179_positive_stride(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[UGLYGEP]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[SCEVGEP]], i64 [[SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1087,8 +1087,8 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 define void @loop_with_memcpy_PR46179_positive_stride(ptr %Src, i64 %Size) {
 ; CHECK-LABEL: @loop_with_memcpy_PR46179_positive_stride(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[UGLYGEP]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[SCEVGEP]], i64 [[SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1125,8 +1125,8 @@ define void @PR46179_negative_stride(ptr %Src, i64 %Size) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[SIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[UGLYGEP]], ptr align 1 [[SRC]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SRC]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
@@ -1166,8 +1166,8 @@ define void @loop_with_memcpy_PR46179_negative_stride(ptr %Src, i64 %Size) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[SIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[UGLYGEP]], ptr align 1 [[SRC]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SRC]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
@@ -1202,13 +1202,13 @@ for.end:                                      ; preds = %.for.body, %bb.nph
 define void @loop_with_memcpy_stride16(ptr %Src, i64 %Size) {
 ; CHECK-LABEL: @loop_with_memcpy_stride16(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 16
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SIZE:%.*]], i64 16)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[UGLYGEP]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SRC]], ptr align 1 [[SCEVGEP]], i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ 0, [[BB_NPH:%.*]] ]
@@ -1550,8 +1550,8 @@ loop:
 define void @prefer_memcpy_over_memmove(ptr noalias %Src, ptr noalias %Dest, i64 %Size) {
 ; CHECK-LABEL: @prefer_memcpy_over_memmove(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 42
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST:%.*]], ptr align 1 [[UGLYGEP]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 42
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST:%.*]], ptr align 1 [[SCEVGEP]], i64 [[SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1594,7 +1594,9 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [[CLASS_CMSPULOG:%.*]], ptr [[TMP0:%.*]], i64 0, i32 8, i64 [[TMP5]]
-; CHECK-NEXT:    store i32 trunc (i64 and (i64 ptrtoint (ptr @G to i64), i64 16777215) to i32), ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @G to i64), 16777215
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[AND]] to i32
+; CHECK-NEXT:    store i32 [[TRUNC]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP3]], 511
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP2]], label [[TMP8:%.*]]
 ; CHECK:       8:
@@ -1607,7 +1609,9 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
   %4 = add nuw nsw i32 %3, 1
   %5 = zext i32 %3 to i64
   %6 = getelementptr %class.CMSPULog, ptr %0, i64 0, i32 8, i64 %5
-  store i32 trunc (i64 and (i64 ptrtoint (ptr @G to i64), i64 16777215) to i32), ptr %6, align 4
+  %and = and i64 ptrtoint (ptr @G to i64), 16777215
+  %trunc = trunc i64 %and to i32
+  store i32 %trunc, ptr %6, align 4
   %7 = icmp ult i32 %3, 511
   br i1 %7, label %2, label %8
 

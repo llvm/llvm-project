@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: extract_2xi16
 ; GCN: buffer_load_ushort

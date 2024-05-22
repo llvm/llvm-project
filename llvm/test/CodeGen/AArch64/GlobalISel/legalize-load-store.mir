@@ -7,7 +7,9 @@ body: |
     liveins: $x0
 
     ; CHECK-LABEL: name: test_load
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load (s8))
     ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LOAD]], 1
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASSERT_ZEXT]](s8)
@@ -62,7 +64,9 @@ body: |
     liveins: $x0, $w1
 
     ; CHECK-LABEL: name: test_store
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -518,7 +522,9 @@ body: |
     liveins: $x0, $w1
 
     ; CHECK-LABEL: name: test_trunc_store
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: %val64:_(s64) = COPY $x2
     ; CHECK-NEXT: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s8))
@@ -599,8 +605,11 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
-    ; CHECK-NEXT: $s0 = COPY [[BUILD_VECTOR]](<2 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $s0 = COPY [[TRUNC]](<2 x s16>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1(<2 x s16>) = G_LOAD %0(p0) :: (load (<2 x s16>))
@@ -679,8 +688,8 @@ body:             |
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
     ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LOAD]], 1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ASSERT_ZEXT]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: %ext:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: $x0 = COPY %ext(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

@@ -45,7 +45,6 @@ baz
 
 #endif
 
-// rdar://6505352
 // -Wundef should not warn about use of undefined identifier if not live.
 #if (!defined(XXX) || XXX > 42)
 #endif

@@ -6,7 +6,7 @@ func.func @dynamic_2d_pad_tensor(%input_tensor: tensor<?x?xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_2dtiling"}: tensor<?x?xf32> to tensor<?x?xf32>
+    } {__internal_transform__ = "pad_2dtiling"}: tensor<?x?xf32> to tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 //  CHECK-DAG:  #[[MAP0:.+]] = affine_map<()[s0] -> (s0 + 8)>
@@ -38,7 +38,7 @@ func.func @dynamic_2d_pad_tensor_inner_tiling(%input_tensor: tensor<?x?xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_inner_tiling"}: tensor<?x?xf32> to tensor<?x?xf32>
+    } {__internal_transform__ = "pad_inner_tiling"}: tensor<?x?xf32> to tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 //   CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 + 8)>
@@ -68,7 +68,7 @@ func.func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_2dtiling"} : tensor<7x9xf32> to tensor<15x16xf32>
+    } {__internal_transform__ = "pad_2dtiling"} : tensor<7x9xf32> to tensor<15x16xf32>
   return %0 : tensor<15x16xf32>
 }
 // CHECK-LABEL: func @static_pad_tensor(
@@ -95,7 +95,7 @@ func.func @static_pad_tensor_inner_tiling(%input_tensor: tensor<7x9xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_inner_tiling"} : tensor<7x9xf32> to tensor<15x16xf32>
+    } {__internal_transform__ = "pad_inner_tiling"} : tensor<7x9xf32> to tensor<15x16xf32>
   return %0 : tensor<15x16xf32>
 }
 // CHECK-LABEL: func @static_pad_tensor_inner_tiling(
@@ -122,7 +122,7 @@ func.func @dynamic_2d_pad_tensor_outer_tiling(%input_tensor: tensor<?x?xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_outer_tiling"}: tensor<?x?xf32> to tensor<?x?xf32>
+    } {__internal_transform__ = "pad_outer_tiling"}: tensor<?x?xf32> to tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 // CHECK-LABEL: func @dynamic_2d_pad_tensor_outer_tiling
@@ -134,7 +134,7 @@ func.func @static_pad_tensor_outer_tiling(%input_tensor: tensor<7x9xf32>,
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
       tensor.yield %pad_value : f32
-    } {__internal_linalg_transform__ = "pad_inner_tiling"} : tensor<7x9xf32> to tensor<15x16xf32>
+    } {__internal_transform__ = "pad_inner_tiling"} : tensor<7x9xf32> to tensor<15x16xf32>
   return %0 : tensor<15x16xf32>
 }
 // CHECK-LABEL: func @static_pad_tensor_outer_tiling

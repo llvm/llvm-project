@@ -19,7 +19,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerException(
 
 void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
     const Throwables &Exceptions) {
-  if (Exceptions.size() == 0)
+  if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
   ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
@@ -316,6 +316,34 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 }
 } // namespace
 
+static bool canThrow(const FunctionDecl *Func) {
+  const auto *FunProto = Func->getType()->getAs<FunctionProtoType>();
+  if (!FunProto)
+    return true;
+
+  switch (FunProto->canThrow()) {
+  case CT_Cannot:
+    return false;
+  case CT_Dependent: {
+    const Expr *NoexceptExpr = FunProto->getNoexceptExpr();
+    if (!NoexceptExpr)
+      return true; // no noexept - can throw
+
+    if (NoexceptExpr->isValueDependent())
+      return true; // depend on template - some instance can throw
+
+    bool Result = false;
+    if (!NoexceptExpr->EvaluateAsBooleanCondition(Result, Func->getASTContext(),
+                                                  /*InConstantContext=*/true))
+      return true;  // complex X condition in noexcept(X), cannot validate,
+                    // assume that may throw
+    return !Result; // noexcept(false) - can throw
+  }
+  default:
+    return true;
+  };
+}
+
 bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
     const Type *HandlerTy, const ASTContext &Context) {
   llvm::SmallVector<const Type *, 8> TypesToDelete;
@@ -376,7 +404,7 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
     ThrownExceptions.erase(T);
 
   reevaluateBehaviour();
-  return TypesToDelete.size() > 0;
+  return !TypesToDelete.empty();
 }
 
 ExceptionAnalyzer::ExceptionInfo &
@@ -409,7 +437,7 @@ void ExceptionAnalyzer::ExceptionInfo::clear() {
 }
 
 void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
-  if (ThrownExceptions.size() == 0)
+  if (ThrownExceptions.empty())
     if (ContainsUnknown)
       Behaviour = State::Unknown;
     else
@@ -421,7 +449,7 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
-  if (CallStack.count(Func))
+  if (!Func || CallStack.count(Func) || (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {

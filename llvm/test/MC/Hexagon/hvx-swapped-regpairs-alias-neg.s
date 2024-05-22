@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -mcpu=hexagonv67 -mhvx -filetype=asm %s 2>%t; FileCheck  --implicit-check-not="error:" %s <%t
+# RUN: not llvm-mc -triple=hexagon -mcpu=hexagonv67 -mhvx -filetype=asm %s 2>%t; FileCheck  --implicit-check-not="error:" %s <%t
 
 {
   v1:0 = #0

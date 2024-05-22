@@ -487,18 +487,13 @@ CLI-NUM-CONFLICT: Global defines:2:45: error: string variable with name 'STRVAR'
  CLI-NUM-CONFLICT-NEXT: Global define #2: #STRVAR=42 (parsed as: {{\[\[#STRVAR:42\]\]}})
 CLI-NUM-CONFLICT-NEXT: {{^}}                                            ^{{$}}
 
-; Numeric variable definition with too big value.
-RUN: %ProtectFileCheckOutput \
-RUN: not FileCheck --check-prefix BIGVAL --input-file %s %s 2>&1 \
-RUN:   | FileCheck --strict-whitespace --check-prefix BIGVAL-MSG %s
+; Numeric variable definition with big value.
+RUN: FileCheck --check-prefix BIGVAL --input-file %s %s
 
 BIG VALUE
 NUMVAR: 10000000000000000000000
 BIGVAL-LABEL: BIG VALUE
 BIGVAL-NEXT: NUMVAR: [[#NUMVAR:]]
-BIGVAL-MSG: numeric-expression.txt:[[#@LINE-3]]:9: error: unable to represent numeric value
- BIGVAL-MSG-NEXT: {{N}}UMVAR: 10000000000000000000000
-BIGVAL-MSG-NEXT: {{^}}        ^{{$}}
 
 ; Verify that when a variable is set to an expression the expression is still
 ; checked.
@@ -557,31 +552,21 @@ REDEF-NEW-FMT-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: format differe
 REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,UNSI:\]\]}}
 REDEF-NEW-FMT-MSG-NEXT:    {{^}}                              ^{{$}}
 
-; Numeric expression with overflow.
-RUN: %ProtectFileCheckOutput \
-RUN: not FileCheck --check-prefix OVERFLOW --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefix OVERFLOW-MSG --strict-whitespace %s
+; Numeric expression with big resulting value.
+RUN: FileCheck --check-prefix OVERFLOW --input-file %s %s
 
-OVERFLOW
-BIGVAR=10000000000000000
-OVERFLOW-LABEL: OVERFLOW
-OVERFLOW-NEXT: BIGVAR: [[#BIGVAR:0x8000000000000000+0x8000000000000000]]
-OVERFLOW-MSG: numeric-expression.txt:[[#@LINE-1]]:27: error: unable to substitute variable or numeric expression
-OVERFLOW-MSG-NEXT: {{O}}VERFLOW-NEXT: BIGVAR: {{\[\[#BIGVAR:0x8000000000000000\+0x8000000000000000\]\]}}
-OVERFLOW-MSG-NEXT:    {{^}}                          ^{{$}}
+OVERFLOW EXPRESSION
+BIGVAL: 10000000000000000
+OVERFLOW-LABEL: OVERFLOW EXPRESSION
+OVERFLOW-NEXT: BIGVAL: [[#%X,0x8000000000000000+0x8000000000000000]]
 
-; Numeric expression with underflow.
-RUN: %ProtectFileCheckOutput \
-RUN: not FileCheck --check-prefix UNDERFLOW --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefix UNDERFLOW-MSG --strict-whitespace %s
+; Numeric expression with big negative resulting value.
+RUN: FileCheck --check-prefix UNDERFLOW --input-file %s %s
 
-UNDERFLOW
-TINYVAR=-10000000000000000
-UNDERFLOW-LABEL: UNDERFLOW
-UNDERFLOW-NEXT: TINYVAR: [[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000]]
-UNDERFLOW-MSG: numeric-expression.txt:[[#@LINE-1]]:29: error: unable to substitute variable or numeric expression
-UNDERFLOW-MSG-NEXT: {{U}}NDERFLOW-NEXT: TINYVAR: {{\[\[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000\]\]}}
-UNDERFLOW-MSG-NEXT:    {{^}}                            ^{{$}}
+UNDERFLOW EXPRESSION
+TINYVAR: -18446744073709551616 # -0x10000000000000000
+UNDERFLOW-LABEL: UNDERFLOW EXPRESSION
+UNDERFLOW-NEXT: TINYVAR: [[#%d,-0x8000000000000000-0x8000000000000000]]
 
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-MISSING-CLOSING-BRACKET --input-file %s %s 2>&1 \

@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple armv7-apple-darwin -fdump-record-layouts %s 2>/dev/null \
 // RUN:            | FileCheck %s
 
-// rdar://22275433
-
 #pragma ms_struct on
 
 union A {

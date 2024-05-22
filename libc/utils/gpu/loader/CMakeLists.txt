@@ -29,7 +29,15 @@ else()
 endif()
 
 # Add a custom target to be used for testing.
-if(TARGET amdhsa_loader AND LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Overriding binary for the GPU loader.")
+if(LIBC_GPU_LOADER_EXECUTABLE)
+  add_custom_target(libc.utils.gpu.loader)
+  set_target_properties(
+    libc.utils.gpu.loader
+    PROPERTIES
+      EXECUTABLE "${LIBC_GPU_LOADER_EXECUTABLE}"
+  )
+elseif(TARGET amdhsa_loader AND LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   add_custom_target(libc.utils.gpu.loader)
   add_dependencies(libc.utils.gpu.loader amdhsa_loader)
   set_target_properties(

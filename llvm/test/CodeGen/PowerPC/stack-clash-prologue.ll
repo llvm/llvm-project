@@ -539,8 +539,8 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    stdux r1, r1, r0
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
 ; CHECK-LE-NEXT:    .cfi_offset r30, -16
-; CHECK-LE-NEXT:    addi r4, r1, 64
 ; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    addi r4, r1, 64
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 64(r1)
@@ -619,8 +619,8 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r0
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
 ; CHECK-LE-NEXT:    .cfi_offset r30, -16
-; CHECK-LE-NEXT:    addi r4, r1, 2048
 ; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    addi r4, r1, 2048
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 2048(r1)
@@ -726,8 +726,8 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r0
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
 ; CHECK-LE-NEXT:    .cfi_offset r30, -16
-; CHECK-LE-NEXT:    addi r4, r1, 1024
 ; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    addi r4, r1, 1024
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 1024(r1)
@@ -839,23 +839,23 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-LE-NEXT:    lis r5, 1
 ; CHECK-LE-NEXT:    mr r31, r1
 ; CHECK-LE-NEXT:    li r6, 1
+; CHECK-LE-NEXT:    sldi r4, r4, 2
 ; CHECK-LE-NEXT:    addi r3, r3, 15
 ; CHECK-LE-NEXT:    ori r5, r5, 0
 ; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
-; CHECK-LE-NEXT:    sldi r4, r4, 2
 ; CHECK-LE-NEXT:    add r5, r31, r5
 ; CHECK-LE-NEXT:    rldicl r3, r3, 4, 31
 ; CHECK-LE-NEXT:    stwx r6, r5, r4
 ; CHECK-LE-NEXT:    li r4, -32768
-; CHECK-LE-NEXT:    neg r7, r3
+; CHECK-LE-NEXT:    li r6, -4096
+; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    ld r3, 0(r1)
-; CHECK-LE-NEXT:    and r4, r7, r4
-; CHECK-LE-NEXT:    mr r7, r4
-; CHECK-LE-NEXT:    li r4, -4096
-; CHECK-LE-NEXT:    divd r5, r7, r4
-; CHECK-LE-NEXT:    mulld r4, r5, r4
-; CHECK-LE-NEXT:    sub r5, r7, r4
-; CHECK-LE-NEXT:    add r4, r1, r7
+; CHECK-LE-NEXT:    and r4, r5, r4
+; CHECK-LE-NEXT:    mr r5, r4
+; CHECK-LE-NEXT:    divd r7, r5, r6
+; CHECK-LE-NEXT:    add r4, r1, r5
+; CHECK-LE-NEXT:    mulld r6, r7, r6
+; CHECK-LE-NEXT:    sub r5, r5, r6
 ; CHECK-LE-NEXT:    stdux r3, r1, r5
 ; CHECK-LE-NEXT:    cmpd r1, r4
 ; CHECK-LE-NEXT:    beq cr0, .LBB11_4

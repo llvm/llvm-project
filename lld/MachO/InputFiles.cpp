@@ -185,6 +185,27 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+template <class Header>
+static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+  uint32_t cpuType;
+  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
+
+  if (hdr->cputype != cpuType) {
+    Architecture arch =
+        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+
+    msg(toString(file) + " has architecture " + getArchitectureName(arch) +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
+    return false;
+  }
+
+  return checkCompatibility(file);
+}
+
 // This cache mostly exists to store system libraries (and .tbds) as they're
 // loaded, rather than the input archives, which are already cached at a higher
 // level, and other files like the filelist that are only read once.
@@ -299,7 +320,7 @@ static std::optional<size_t> getRecordSize(StringRef segname, StringRef name) {
 static Error parseCallGraph(ArrayRef<uint8_t> data,
                             std::vector<CallGraphEntry> &callGraph) {
   TimeTraceScope timeScope("Parsing call graph section");
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   while (!reader.empty()) {
     uint32_t fromIndex, toIndex;
     uint64_t count;
@@ -929,10 +950,26 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   section.subsections.push_back({0, isec});
 }
 
+template <class LP>
+void ObjFile::parseLinkerOptions(SmallVectorImpl<StringRef> &LCLinkerOptions) {
+  using Header = typename LP::mach_header;
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+
+  for (auto *cmd : findCommands<linker_option_command>(hdr, LC_LINKER_OPTION)) {
+    StringRef data{reinterpret_cast<const char *>(cmd + 1),
+                   cmd->cmdsize - sizeof(linker_option_command)};
+    parseLCLinkerOption(LCLinkerOptions, this, cmd->count, data);
+  }
+}
+
+SmallVector<StringRef> macho::unprocessedLCLinkerOptions;
 ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                 bool lazy, bool forceHidden)
-    : InputFile(ObjKind, mb, lazy), modTime(modTime), forceHidden(forceHidden) {
+                 bool lazy, bool forceHidden, bool compatArch,
+                 bool builtFromBitcode)
+    : InputFile(ObjKind, mb, lazy), modTime(modTime), forceHidden(forceHidden),
+      builtFromBitcode(builtFromBitcode) {
   this->archiveName = std::string(archiveName);
+  this->compatArch = compatArch;
   if (lazy) {
     if (target->wordSize == 8)
       parseLazy<LP64>();
@@ -955,28 +992,17 @@ template <class LP> void ObjFile::parse() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  uint32_t cpuType;
-  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
-  if (hdr->cputype != cpuType) {
-    Architecture arch =
-        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-    auto msg = config->errorForArchMismatch
-                   ? static_cast<void (*)(const Twine &)>(error)
-                   : warn;
-    msg(toString(this) + " has architecture " + getArchitectureName(arch) +
-        " which is incompatible with target architecture " +
-        getArchitectureName(config->arch()));
+  // If we've already checked the arch, then don't need to check again.
+  if (!compatArch)
     return;
-  }
-
-  if (!checkCompatibility(this))
+  if (!(compatArch = compatWithTargetArch(this, hdr)))
     return;
 
-  for (auto *cmd : findCommands<linker_option_command>(hdr, LC_LINKER_OPTION)) {
-    StringRef data{reinterpret_cast<const char *>(cmd + 1),
-                   cmd->cmdsize - sizeof(linker_option_command)};
-    parseLCLinkerOption(this, cmd->count, data);
-  }
+  // We will resolve LC linker options once all native objects are loaded after
+  // LTO is finished.
+  SmallVector<StringRef, 4> LCLinkerOptions;
+  parseLinkerOptions<LP>(LCLinkerOptions);
+  unprocessedLCLinkerOptions.append(LCLinkerOptions);
 
   ArrayRef<SectionHeader> sectionHeaders;
   if (const load_command *cmd = findCommand(hdr, LP::segmentLCType)) {
@@ -1026,6 +1052,12 @@ template <class LP> void ObjFile::parseLazy() {
 
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+
+  if (!compatArch)
+    return;
+  if (!(compatArch = compatWithTargetArch(this, hdr)))
+    return;
+
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
   if (!cmd)
     return;
@@ -1490,13 +1522,22 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 }
 
 std::string ObjFile::sourceFile() const {
+  const char *unitName = compileUnit->getUnitDIE().getShortName();
+  // DWARF allows DW_AT_name to be absolute, in which case nothing should be
+  // prepended. As for the styles, debug info can contain paths from any OS, not
+  // necessarily an OS we're currently running on. Moreover different
+  // compilation units can be compiled on different operating systems and linked
+  // together later.
+  if (sys::path::is_absolute(unitName, llvm::sys::path::Style::posix) ||
+      sys::path::is_absolute(unitName, llvm::sys::path::Style::windows))
+    return unitName;
   SmallString<261> dir(compileUnit->getCompilationDir());
   StringRef sep = sys::path::get_separator();
   // We don't use `path::append` here because we want an empty `dir` to result
   // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
+  if (!dir.ends_with(sep))
     dir += sep;
-  return (dir + compileUnit->getUnitDIE().getShortName()).str();
+  return (dir + unitName).str();
 }
 
 lld::DWARFCache *ObjFile::getDwarf() {
@@ -2089,22 +2130,51 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
       forceHidden(forceHidden) {}
 
 void ArchiveFile::addLazySymbols() {
+  // Avoid calling getMemoryBufferRef() on zero-symbol archive
+  // since that crashes.
+  if (file->isEmpty() || file->getNumberOfSymbols() == 0)
+    return;
+
+  Error err = Error::success();
+  auto child = file->child_begin(err);
+  // Ignore the I/O error here - will be reported later.
+  if (!err) {
+    Expected<MemoryBufferRef> mbOrErr = child->getMemoryBufferRef();
+    if (!mbOrErr) {
+      llvm::consumeError(mbOrErr.takeError());
+    } else {
+      if (identify_magic(mbOrErr->getBuffer()) == file_magic::macho_object) {
+        if (target->wordSize == 8)
+          compatArch = compatWithTargetArch(
+              this, reinterpret_cast<const LP64::mach_header *>(
+                        mbOrErr->getBufferStart()));
+        else
+          compatArch = compatWithTargetArch(
+              this, reinterpret_cast<const ILP32::mach_header *>(
+                        mbOrErr->getBufferStart()));
+        if (!compatArch)
+          return;
+      }
+    }
+  }
+
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazyArchive(sym.getName(), this, sym);
 }
 
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden) {
+                  uint64_t offsetInArchive, bool forceHidden, bool compatArch) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden);
+    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden,
+                         compatArch);
   case file_magic::bitcode:
     return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
-                             forceHidden);
+                             forceHidden, compatArch);
   default:
     return createStringError(inconvertibleErrorCode(),
                              mb.getBufferIdentifier() +
@@ -2128,8 +2198,9 @@ Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!modTime)
     return modTime.takeError();
 
-  Expected<InputFile *> file = loadArchiveMember(
-      *mb, toTimeT(*modTime), getName(), c.getChildOffset(), forceHidden);
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
+                        forceHidden, compatArch);
 
   if (!file)
     return file.takeError();
@@ -2192,12 +2263,19 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive, bool lazy, bool forceHidden)
+                         uint64_t offsetInArchive, bool lazy, bool forceHidden,
+                         bool compatArch)
     : InputFile(BitcodeKind, mb, lazy), forceHidden(forceHidden) {
   this->archiveName = std::string(archiveName);
+  this->compatArch = compatArch;
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
+
+  // If the parent archive already determines that the arch is not compat with
+  // target, then just return.
+  if (!compatArch)
+    return;
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two members with the same name are provided, this causes a
@@ -2222,9 +2300,16 @@ void BitcodeFile::parse() {
   // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
   // "winning" symbol will then be marked as Prevailing at LTO compilation
   // time.
-  symbols.clear();
-  for (const lto::InputFile::Symbol &objSym : obj->symbols())
-    symbols.push_back(createBitcodeSymbol(objSym, *this));
+  symbols.resize(obj->symbols().size());
+
+  // Process defined symbols first. See the comment at the end of
+  // ObjFile<>::parseSymbols.
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (!it.value().isUndefined())
+      symbols[it.index()] = createBitcodeSymbol(it.value(), *this);
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (it.value().isUndefined())
+      symbols[it.index()] = createBitcodeSymbol(it.value(), *this);
 }
 
 void BitcodeFile::parseLazy() {

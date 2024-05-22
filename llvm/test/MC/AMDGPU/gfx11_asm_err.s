@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
 
 s_delay_alu
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
@@ -43,6 +43,15 @@ v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_add3_u32_e64_dpp v5, v1, 42, v0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_add3_u32_e64_dpp v5, v1, s2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_add3_u32_e64_dpp v5, v1, 42, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cvt_f32_i32_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
@@ -143,3 +152,15 @@ v_fmac_f32_e64_dpp v5, v2, 0x1234 quad_perm:[3,2,1,0]
 
 s_load_dword s1, s[2:3], s0 0x1
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+scratch_store_b128 off, v[2:5], s0 offset:8000000
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 13-bit signed offset
+
+flat_atomic_add_f32 v1, v[0:1], v2 offset:-1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit unsigned offset
+
+s_load_b96 s[20:22], s[2:3], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_buffer_load_b96 s[20:22], s[4:7], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

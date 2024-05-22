@@ -16,9 +16,9 @@ define void @main() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
+; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 4, .LC0@toc@l(3)
+; CHECK-NEXT:    ld 3, .LC1@toc@l(5)
 ; CHECK-NEXT:    addi 3, 3, 124
 ; CHECK-NEXT:    bl testFunc
 ; CHECK-NEXT:    nop
@@ -46,43 +46,41 @@ L.entry:
 define void @testFunc(ptr nocapture %r, ptr nocapture readonly %k) {
 ; CHECK-LABEL: testFunc:
 ; CHECK:       # %bb.0: # %L.entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    std 0, 48(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl .L2$pb
-; CHECK-NEXT:  .L2$pb:
-; CHECK-NEXT:    lwz 4, 0(4)
-; CHECK-NEXT:    mflr 5
-; CHECK-NEXT:    addi 4, 4, -1
-; CHECK-NEXT:    cmplwi 4, 5
-; CHECK-NEXT:    bgt 0, .LBB2_6
-; CHECK-NEXT:  # %bb.1: # %L.entry
-; CHECK-NEXT:    addis 6, 2, .LC2@toc@ha
-; CHECK-NEXT:    rldic 4, 4, 2, 30
-; CHECK-NEXT:    ld 6, .LC2@toc@l(6)
-; CHECK-NEXT:    lwax 4, 4, 6
-; CHECK-NEXT:    add 4, 4, 5
-; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    lwz 5, 0(4)
 ; CHECK-NEXT:    li 4, -3
-; CHECK-NEXT:    bctr
+; CHECK-NEXT:    cmpwi 5, 4
+; CHECK-NEXT:    bge 0, .LBB2_6
+; CHECK-NEXT:  # %bb.1: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 1
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.2: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 2
+; CHECK-NEXT:    beq 0, .LBB2_5
+; CHECK-NEXT:  # %bb.3: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 3
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.4: # %L.LB3_307
+; CHECK-NEXT:    blr
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_2: # %infloop11
+; CHECK-NEXT:  .LBB2_5: # %infloop11
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    b .LBB2_2
+; CHECK-NEXT:    b .LBB2_5
+; CHECK-NEXT:  .LBB2_6: # %L.entry
+; CHECK-NEXT:    beq 0, .LBB2_10
+; CHECK-NEXT:  # %bb.7: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 5
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.8: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 6
+; CHECK-NEXT:    bnelr 0
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_3: # %infloop
+; CHECK-NEXT:  .LBB2_9: # %infloop
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    b .LBB2_3
-; CHECK-NEXT:  .LBB2_4: # %L.LB3_321.split
+; CHECK-NEXT:    b .LBB2_9
+; CHECK-NEXT:  .LBB2_10: # %L.LB3_321.split
 ; CHECK-NEXT:    li 4, 5
-; CHECK-NEXT:  .LBB2_5: # %L.LB3_307.sink.split
+; CHECK-NEXT:  .LBB2_11: # %L.LB3_307.sink.split
 ; CHECK-NEXT:    stw 4, 0(3)
-; CHECK-NEXT:  .LBB2_6: # %L.LB3_307
-; CHECK-NEXT:    addi 1, 1, 32
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 L.entry:
   %0 = load i32, ptr %k, align 4

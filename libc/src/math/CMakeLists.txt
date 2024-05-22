@@ -27,6 +27,7 @@ function(add_math_entrypoint_object name)
       ALIAS
       DEPENDS
         .${LIBC_TARGET_ARCHITECTURE}.vendor.${name}
+      VENDOR
     )
     return()
   endif()
@@ -53,14 +54,23 @@ function(add_math_entrypoint_object name)
   )
 endfunction()
 
+add_math_entrypoint_object(acos)
 add_math_entrypoint_object(acosf)
+add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
 
+add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
 
+add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
 
+add_math_entrypoint_object(atan2)
+add_math_entrypoint_object(atan2f)
+
+add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
 
 add_math_entrypoint_object(ceil)
@@ -70,19 +80,26 @@ add_math_entrypoint_object(ceill)
 add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
 add_math_entrypoint_object(copysignl)
+add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 
+add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
 
+add_math_entrypoint_object(exp)
 add_math_entrypoint_object(expf)
 
+add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
 
+add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 
+add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
 add_math_entrypoint_object(fabs)
@@ -170,6 +187,13 @@ add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
 
+add_math_entrypoint_object(nexttoward)
+add_math_entrypoint_object(nexttowardf)
+add_math_entrypoint_object(nexttowardl)
+
+add_math_entrypoint_object(pow)
+add_math_entrypoint_object(powf)
+
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
 add_math_entrypoint_object(remainderl)
@@ -190,10 +214,13 @@ add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
 
+add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+
+add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
 
 add_math_entrypoint_object(sqrt)
@@ -202,7 +229,12 @@ add_math_entrypoint_object(sqrtl)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
+
+add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
+
+add_math_entrypoint_object(tgamma)
+add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

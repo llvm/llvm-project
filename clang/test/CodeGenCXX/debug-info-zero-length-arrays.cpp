@@ -1,5 +1,4 @@
 // RUN: %clang -target x86_64-unknown-unknown -fverbose-asm -g -O0 -S -emit-llvm %s -o - | FileCheck %s
-// <rdar://problem/12566646>
 
 class A {
   int x[];

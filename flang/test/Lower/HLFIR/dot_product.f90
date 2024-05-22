@@ -70,3 +70,15 @@ endsubroutine
 ! CHECK-NEXT:    hlfir.assign %[[PROD]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:   }
+
+! CHECK-LABEL: func.func @_QPdot_product5
+! CHECK:    %[[LHS:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdot_product5Elhs"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:    %[[C3:.*]] = arith.constant 3 : index
+! CHECK:    %[[RHS_SHAPE:.*]] = fir.shape %[[C3]] : (index) -> !fir.shape<1>
+! CHECK:    %[[RHS:.*]]:2 = hlfir.declare %{{.*}}(%[[RHS_SHAPE]]) {uniq_name = "_QFdot_product5Erhs"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+! CHECK:    {{.*}} = hlfir.dot_product %[[LHS]]#0 %[[RHS]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<3xi32>>) -> i32
+subroutine dot_product5(lhs, rhs, res)
+  integer :: lhs(:), rhs(3)
+  integer :: res
+  res = dot_product(lhs, rhs)
+endsubroutine

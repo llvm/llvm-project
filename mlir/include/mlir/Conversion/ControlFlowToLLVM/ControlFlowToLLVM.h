@@ -16,6 +16,7 @@
 #include <memory>
 
 namespace mlir {
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -37,6 +38,9 @@ void populateControlFlowToLLVMConversionPatterns(LLVMTypeConverter &converter,
 void populateAssertToLLVMConversionPattern(LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns,
                                            bool abortOnFailure = true);
+
+void registerConvertControlFlowToLLVMInterface(DialectRegistry &registry);
+
 } // namespace cf
 } // namespace mlir
 

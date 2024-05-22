@@ -59,6 +59,7 @@ set(SANITIZER_NOLIBC_SOURCES
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cpp
   sanitizer_allocator_checks.cpp
+  sanitizer_dl.cpp
   sanitizer_linux_libcdep.cpp
   sanitizer_mac_libcdep.cpp
   sanitizer_posix_libcdep.cpp
@@ -87,10 +88,13 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_libcdep.cpp
   sanitizer_symbolizer_mac.cpp
   sanitizer_symbolizer_markup.cpp
+  sanitizer_symbolizer_markup_fuchsia.cpp
   sanitizer_symbolizer_posix_libcdep.cpp
   sanitizer_symbolizer_report.cpp
+  sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_unwind_linux_libcdep.cpp
+  sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
   )
 
@@ -139,6 +143,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_deadlock_detector_interface.h
   sanitizer_dense_map.h
   sanitizer_dense_map_info.h
+  sanitizer_dl.h
   sanitizer_errno.h
   sanitizer_errno_codes.h
   sanitizer_file.h
@@ -187,10 +192,11 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_stoptheworld.h
   sanitizer_suppressions.h
   sanitizer_symbolizer.h
-  sanitizer_symbolizer_fuchsia.h
+  sanitizer_symbolizer_markup_constants.h
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
   sanitizer_symbolizer_mac.h
+  sanitizer_symbolizer_markup.h
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_aarch64.inc
   sanitizer_syscall_linux_arm.inc
@@ -354,4 +360,15 @@ endif()
 # Unit tests for common sanitizer runtime.
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
+endif()
+
+
+foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  # Library implementing InternalSymbolizer. Empty by default.
+  add_library(RTSanitizerCommonSymbolizerInternal.${arch}
+              OBJECT IMPORTED GLOBAL)
+endforeach()
+
+if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  add_subdirectory(symbolizer)
 endif()

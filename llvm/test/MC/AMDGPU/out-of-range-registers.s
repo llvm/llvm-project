@@ -1,12 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,VI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SIVICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefixes=SIVICI,CIVI9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefixes=GFX9,CIVI9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SIVICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefixes=SIVICI,CIVI9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefixes=GFX9,CIVI9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 s_add_i32 s106, s0, s1
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range

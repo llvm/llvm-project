@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX11 %s
 
 lds_param_load v17, attr33.x
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number

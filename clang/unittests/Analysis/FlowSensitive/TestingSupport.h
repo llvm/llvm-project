@@ -43,6 +43,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -142,6 +143,12 @@ template <typename AnalysisT> struct AnalysisInputs {
     BuiltinOptions = std::move(Options);
     return std::move(*this);
   }
+  AnalysisInputs<AnalysisT> &&
+  withSolverFactory(std::function<std::unique_ptr<Solver>()> Factory) && {
+    assert(Factory);
+    SolverFactory = std::move(Factory);
+    return std::move(*this);
+  }
 
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
@@ -169,6 +176,10 @@ template <typename AnalysisT> struct AnalysisInputs {
   tooling::FileContentMappings ASTBuildVirtualMappedFiles = {};
   /// Configuration options for the built-in model.
   DataflowAnalysisContext::Options BuiltinOptions;
+  /// SAT solver factory.
+  std::function<std::unique_ptr<Solver>()> SolverFactory = [] {
+    return std::make_unique<WatchedLiteralsSolver>();
+  };
 };
 
 /// Returns assertions based on annotations that are present after statements in
@@ -229,12 +240,15 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     };
   }
 
-  for (const ast_matchers::BoundNodes &BN :
-       ast_matchers::match(ast_matchers::functionDecl(
-                               ast_matchers::hasBody(ast_matchers::stmt()),
-                               AI.TargetFuncMatcher)
-                               .bind("target"),
-                           Context)) {
+  SmallVector<ast_matchers::BoundNodes, 1> MatchResult = ast_matchers::match(
+      ast_matchers::functionDecl(ast_matchers::hasBody(ast_matchers::stmt()),
+                                 AI.TargetFuncMatcher)
+          .bind("target"),
+      Context);
+  if (MatchResult.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "didn't find any matching target functions");
+  for (const ast_matchers::BoundNodes &BN : MatchResult) {
     // Get the AST node of the target function.
     const FunctionDecl *Target = BN.getNodeAs<FunctionDecl>("target");
     if (Target == nullptr)
@@ -247,7 +261,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     auto &CFCtx = *MaybeCFCtx;
 
     // Initialize states for running dataflow analysis.
-    DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>(),
+    DataflowAnalysisContext DACtx(AI.SolverFactory(),
                                   {/*Opts=*/AI.BuiltinOptions});
     Environment InitEnv(DACtx, *Target);
     auto Analysis = AI.MakeAnalysis(Context, InitEnv);
@@ -384,17 +398,31 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
 using BuiltinOptions = DataflowAnalysisContext::Options;
 
-/// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
-/// verify the results.
+/// Runs dataflow on function named `TargetFun` in `Code` with a `NoopAnalysis`
+/// and calls `VerifyResults` to verify the results.
 llvm::Error checkDataflowWithNoopAnalysis(
     llvm::StringRef Code,
     std::function<
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
-        VerifyResults,
-    DataflowAnalysisOptions Options,
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
+
+/// Runs dataflow on function matched by `TargetFuncMatcher` in `Code` with a
+/// `NoopAnalysis` and calls `VerifyResults` to verify the results.
+llvm::Error checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
@@ -440,58 +468,68 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
   return *cast<ValueT>(Env.getValue(*VD));
 }
 
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
+                            const ValueDecl &Field, const Environment &Env) {
+  if (Loc == nullptr)
+    return nullptr;
+  StorageLocation *FieldLoc = Loc->getChild(Field);
+  if (FieldLoc == nullptr)
+    return nullptr;
+  return Env.getValue(*FieldLoc);
+}
+
 /// Creates and owns constraints which are boolean values.
 class ConstraintContext {
+  unsigned NextAtom = 0;
+  llvm::BumpPtrAllocator A;
+
+  const Formula *make(Formula::Kind K,
+                      llvm::ArrayRef<const Formula *> Operands) {
+    return &Formula::create(A, K, Operands);
+  }
+
 public:
-  // Creates an atomic boolean value.
-  BoolValue *atom() {
-    Vals.push_back(std::make_unique<AtomicBoolValue>());
-    return Vals.back().get();
+  // Returns a reference to a fresh atomic variable.
+  const Formula *atom() {
+    return &Formula::create(A, Formula::AtomRef, {}, NextAtom++);
   }
 
-  // Creates an instance of the Top boolean value.
-  BoolValue *top() {
-    Vals.push_back(std::make_unique<TopBoolValue>());
-    return Vals.back().get();
+  // Returns a reference to a literal boolean value.
+  const Formula *literal(bool B) {
+    return &Formula::create(A, Formula::Literal, {}, B);
   }
 
-  // Creates a boolean conjunction value.
-  BoolValue *conj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<ConjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean conjunction.
+  const Formula *conj(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::And, {LHS, RHS});
   }
 
-  // Creates a boolean disjunction value.
-  BoolValue *disj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<DisjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean disjunction.
+  const Formula *disj(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Or, {LHS, RHS});
   }
 
-  // Creates a boolean negation value.
-  BoolValue *neg(BoolValue *SubVal) {
-    Vals.push_back(std::make_unique<NegationValue>(*SubVal));
-    return Vals.back().get();
+  // Creates a boolean negation.
+  const Formula *neg(const Formula *Operand) {
+    return make(Formula::Not, {Operand});
   }
 
-  // Creates a boolean implication value.
-  BoolValue *impl(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<ImplicationValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean implication.
+  const Formula *impl(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Implies, {LHS, RHS});
   }
 
-  // Creates a boolean biconditional value.
-  BoolValue *iff(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<BiconditionalValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean biconditional.
+  const Formula *iff(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Equal, {LHS, RHS});
   }
-
-private:
-  std::vector<std::unique_ptr<BoolValue>> Vals;
 };
+
+/// Parses a list of formulas, separated by newlines, and returns them.
+/// On parse errors, calls `ADD_FAILURE()` to fail the current test.
+std::vector<const Formula *> parseFormulas(Arena &A, StringRef Lines);
 
 } // namespace test
 } // namespace dataflow

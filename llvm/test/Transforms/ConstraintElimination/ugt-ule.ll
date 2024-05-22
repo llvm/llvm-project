@@ -9,13 +9,11 @@ define void @test(ptr %m, ptr %ptr) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult ptr [[M:%.*]], [[PTR:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[BB_1:%.*]], label [[BB_2:%.*]]
 ; CHECK:       bb.1:
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp uge ptr [[M]], [[PTR]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    br label [[BB_2_NEXT:%.*]]
 ; CHECK:       bb.2.next:
-; CHECK-NEXT:    [[CMP_3:%.*]] = icmp uge ptr [[M]], [[PTR]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;

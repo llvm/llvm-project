@@ -1,5 +1,6 @@
 ; Simple basic correctness check testcase.  Both alloca's should be eliminated.
 ; RUN: opt < %s -passes='debugify,mem2reg,check-debugify' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='debugify,mem2reg,check-debugify' -S 2>&1 --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK-NOT: alloca
 ; CHECK: CheckModuleDebugify: PASS

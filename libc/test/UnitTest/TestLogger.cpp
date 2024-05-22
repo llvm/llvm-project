@@ -6,13 +6,13 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 // cpp::string_view specialization
 template <>
 TestLogger &TestLogger::operator<< <cpp::string_view>(cpp::string_view str) {
-  __llvm_libc::write_to_stderr(str);
+  LIBC_NAMESPACE::write_to_stderr(str);
   return *this;
 }
 
@@ -50,9 +50,8 @@ template <typename T> TestLogger &TestLogger::operator<<(T t) {
   if constexpr (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
                 sizeof(T) > sizeof(uint64_t)) {
     static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
-    char buf[IntegerToString::hex_bufsize<T>()];
-    IntegerToString::hex(t, buf, false);
-    return *this << "0x" << cpp::string_view(buf, sizeof(buf));
+    const IntegerToString<T, radix::Hex::WithPrefix> buffer(t);
+    return *this << buffer.view();
   } else {
     return *this << cpp::to_string(t);
   }
@@ -84,4 +83,4 @@ template TestLogger &TestLogger::operator<< <cpp::UInt<320>>(cpp::UInt<320>);
 TestLogger tlog;
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

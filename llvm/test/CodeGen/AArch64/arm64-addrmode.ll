@@ -42,7 +42,7 @@ define void @t3(ptr %object) {
 define void @t4(ptr %object) {
 ; CHECK-LABEL: t4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %object, i64 4096
@@ -67,9 +67,9 @@ define void @t5(i64 %a) {
 define void @t6(i64 %a, ptr %object) {
 ; CHECK-LABEL: t6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
-; CHECK-NEXT:    add x9, x1, x0, lsl #3
-; CHECK-NEXT:    ldr xzr, [x9, x8]
+; CHECK-NEXT:    add x8, x1, x0, lsl #3
+; CHECK-NEXT:    mov w9, #32768 // =0x8000
+; CHECK-NEXT:    ldr xzr, [x8, x9]
 ; CHECK-NEXT:    ret
   %tmp1 = getelementptr inbounds i64, ptr %object, i64 %a
   %incdec.ptr = getelementptr inbounds i64, ptr %tmp1, i64 4096
@@ -81,7 +81,7 @@ define void @t6(i64 %a, ptr %object) {
 define void @t7(i64 %a) {
 ; CHECK-LABEL: t7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov w8, #65535 // =0xffff
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 65535   ;0xffff
@@ -93,7 +93,7 @@ define void @t7(i64 %a) {
 define void @t8(i64 %a) {
 ; CHECK-LABEL: t8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-4662
+; CHECK-NEXT:    mov x8, #-4662 // =0xffffffffffffedca
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = sub i64 %a, 4662   ;-4662 is 0xffffffffffffedca
@@ -105,7 +105,7 @@ define void @t8(i64 %a) {
 define void @t9(i64 %a) {
 ; CHECK-LABEL: t9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-305463297
+; CHECK-NEXT:    mov x8, #-305463297 // =0xffffffffedcaffff
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 -305463297, %a   ;-305463297 is 0xffffffffedcaffff
@@ -117,7 +117,7 @@ define void @t9(i64 %a) {
 define void @t10(i64 %a) {
 ; CHECK-LABEL: t10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #81909218222800896
+; CHECK-NEXT:    mov x8, #81909218222800896 // =0x123000000000000
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 81909218222800896   ;0x123000000000000
@@ -129,7 +129,7 @@ define void @t10(i64 %a) {
 define void @t11(i64 %a) {
 ; CHECK-LABEL: t11:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #17767
+; CHECK-NEXT:    mov w8, #17767 // =0x4567
 ; CHECK-NEXT:    movk w8, #291, lsl #16
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -209,3 +209,89 @@ define void @t17(i64 %a) {
   %3 = load volatile i64, ptr %2, align 8
   ret void
 }
+
+define i32 @LdOffset_i8(ptr %a)  {
+; CHECK-LABEL: LdOffset_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    ldrb w0, [x0, x8]
+; CHECK-NEXT:    ret
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
+  %val = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %val to i32
+  ret i32 %conv
+}
+
+define i32 @LdOffset_i16(ptr %a)  {
+; CHECK-LABEL: LdOffset_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    ldrsh w0, [x0, x8]
+; CHECK-NEXT:    ret
+  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
+  %val = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %val to i32
+  ret i32 %conv
+}
+
+define i32 @LdOffset_i32(ptr %a)  {
+; CHECK-LABEL: LdOffset_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #31200 // =0x79e0
+; CHECK-NEXT:    movk w8, #63, lsl #16
+; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    ret
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
+  %val = load i32, ptr %arrayidx, align 4
+  ret i32 %val
+}
+
+define i64 @LdOffset_i64_multi_offset(ptr %a) {
+; CHECK-LABEL: LdOffset_i64_multi_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, #2031, lsl #12 // =8318976
+; CHECK-NEXT:    ldr x9, [x8, #960]
+; CHECK-NEXT:    ldr x8, [x8, #3016]
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992
+  %val0 = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %a, i64 1040249
+  %val1 = load i64, ptr %arrayidx1, align 8
+  %add = add nsw i64 %val1, %val0
+  ret i64 %add
+}
+
+define i64 @LdOffset_i64_multi_offset_with_commmon_base(ptr %a) {
+; CHECK-LABEL: LdOffset_i64_multi_offset_with_commmon_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, #507, lsl #12 // =2076672
+; CHECK-NEXT:    ldr x9, [x8, #26464]
+; CHECK-NEXT:    ldr x8, [x8, #26496]
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
+  %b = getelementptr inbounds i16, ptr %a, i64 1038336
+  %arrayidx = getelementptr inbounds i64, ptr %b, i64 3308
+  %val0 = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 3312
+  %val1 = load i64, ptr %arrayidx1, align 8
+  %add = add nsw i64 %val1, %val0
+  ret i64 %add
+}
+
+; Negative test: the offset is odd
+define i32 @LdOffset_i16_odd_offset(ptr nocapture noundef readonly %a)  {
+; CHECK-LABEL: LdOffset_i16_odd_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #56953 // =0xde79
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    ldrsh w0, [x0, x8]
+; CHECK-NEXT:    ret
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039993
+  %val = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %val to i32
+  ret i32 %conv
+}
+

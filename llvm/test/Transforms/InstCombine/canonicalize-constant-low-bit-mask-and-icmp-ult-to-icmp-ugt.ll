@@ -62,8 +62,8 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat_edgecase0(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 0>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
@@ -186,8 +186,8 @@ define i1 @oneuse0(i8 %x) {
 
 define i1 @n0(i8 %x) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -5
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 4 ; power-of-two, but invalid.
@@ -208,8 +208,8 @@ define i1 @n1(i8 %x, i8 %y, i8 %notx) {
 
 define <2 x i1> @n2(<2 x i8> %x) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -17>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 16> ; only the first one is valid.

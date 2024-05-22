@@ -40,8 +40,7 @@ if (current_toolchain != host_toolchain) {
 }
 
 supported_toolchains = []
-# TODO(lgrey): Test Linux
-if (host_os == "mac") {
+if (host_os == "linux" || host_os == "mac") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 

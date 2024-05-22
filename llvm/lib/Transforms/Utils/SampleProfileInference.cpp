@@ -159,7 +159,7 @@ public:
 
   /// Get the total flow from a given source node.
   /// Returns a list of pairs (target node, amount of flow to the target).
-  const std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
+  std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
     std::vector<std::pair<uint64_t, int64_t>> Flow;
     for (const auto &Edge : Edges[Src]) {
       if (Edge.Flow > 0)

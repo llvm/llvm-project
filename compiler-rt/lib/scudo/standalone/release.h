@@ -80,20 +80,53 @@ private:
   MapPlatformData *Data = nullptr;
 };
 
-// A buffer pool which holds a fixed number of static buffers for fast buffer
-// allocation. If the request size is greater than `StaticBufferSize`, it'll
+class FragmentationRecorder {
+public:
+  FragmentationRecorder() = default;
+
+  uptr getReleasedPagesCount() const { return ReleasedPagesCount; }
+
+  void releasePageRangeToOS(uptr From, uptr To) {
+    DCHECK_EQ((To - From) % getPageSizeCached(), 0U);
+    ReleasedPagesCount += (To - From) / getPageSizeCached();
+  }
+
+private:
+  uptr ReleasedPagesCount = 0;
+};
+
+// A buffer pool which holds a fixed number of static buffers of `uptr` elements
+// for fast buffer allocation. If the request size is greater than
+// `StaticBufferNumElements` or if all the static buffers are in use, it'll
 // delegate the allocation to map().
-template <uptr StaticBufferCount, uptr StaticBufferSize> class BufferPool {
+template <uptr StaticBufferCount, uptr StaticBufferNumElements>
+class BufferPool {
 public:
   // Preserve 1 bit in the `Mask` so that we don't need to do zero-check while
   // extracting the least significant bit from the `Mask`.
   static_assert(StaticBufferCount < SCUDO_WORDSIZE, "");
-  static_assert(isAligned(StaticBufferSize, SCUDO_CACHE_LINE_SIZE), "");
+  static_assert(isAligned(StaticBufferNumElements * sizeof(uptr),
+                          SCUDO_CACHE_LINE_SIZE),
+                "");
 
-  // Return a buffer which is at least `BufferSize`.
-  uptr *getBuffer(const uptr BufferSize) {
-    if (UNLIKELY(BufferSize > StaticBufferSize))
-      return getDynamicBuffer(BufferSize);
+  struct Buffer {
+    // Pointer to the buffer's memory, or nullptr if no buffer was allocated.
+    uptr *Data = nullptr;
+
+    // The index of the underlying static buffer, or StaticBufferCount if this
+    // buffer was dynamically allocated. This value is initially set to a poison
+    // value to aid debugging.
+    uptr BufferIndex = ~static_cast<uptr>(0);
+
+    // Only valid if BufferIndex == StaticBufferCount.
+    MemMapT MemMap = {};
+  };
+
+  // Return a zero-initialized buffer which can contain at least the given
+  // number of elements, or nullptr on failure.
+  Buffer getBuffer(const uptr NumElements) {
+    if (UNLIKELY(NumElements > StaticBufferNumElements))
+      return getDynamicBuffer(NumElements);
 
     uptr index;
     {
@@ -108,69 +141,55 @@ public:
     }
 
     if (index >= StaticBufferCount)
-      return getDynamicBuffer(BufferSize);
+      return getDynamicBuffer(NumElements);
 
-    const uptr Offset = index * StaticBufferSize;
-    memset(&RawBuffer[Offset], 0, StaticBufferSize);
-    return &RawBuffer[Offset];
+    Buffer Buf;
+    Buf.Data = &RawBuffer[index * StaticBufferNumElements];
+    Buf.BufferIndex = index;
+    memset(Buf.Data, 0, StaticBufferNumElements * sizeof(uptr));
+    return Buf;
   }
 
-  void releaseBuffer(uptr *Buffer, const uptr BufferSize) {
-    const uptr index = getStaticBufferIndex(Buffer, BufferSize);
-    if (index < StaticBufferCount) {
+  void releaseBuffer(Buffer Buf) {
+    DCHECK_NE(Buf.Data, nullptr);
+    DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
+    if (Buf.BufferIndex != StaticBufferCount) {
       ScopedLock L(Mutex);
-      DCHECK_EQ((Mask & (static_cast<uptr>(1) << index)), 0U);
-      Mask |= static_cast<uptr>(1) << index;
+      DCHECK_EQ((Mask & (static_cast<uptr>(1) << Buf.BufferIndex)), 0U);
+      Mask |= static_cast<uptr>(1) << Buf.BufferIndex;
     } else {
-      unmap(reinterpret_cast<void *>(Buffer),
-            roundUp(BufferSize, getPageSizeCached()));
+      Buf.MemMap.unmap(Buf.MemMap.getBase(), Buf.MemMap.getCapacity());
     }
   }
 
-  bool isStaticBufferTestOnly(uptr *Buffer, uptr BufferSize) {
-    return getStaticBufferIndex(Buffer, BufferSize) < StaticBufferCount;
+  bool isStaticBufferTestOnly(const Buffer &Buf) {
+    DCHECK_NE(Buf.Data, nullptr);
+    DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
+    return Buf.BufferIndex != StaticBufferCount;
   }
 
 private:
-  uptr getStaticBufferIndex(uptr *Buffer, uptr BufferSize) {
-    if (UNLIKELY(BufferSize > StaticBufferSize))
-      return StaticBufferCount;
-
-    const uptr BufferBase = reinterpret_cast<uptr>(Buffer);
-    const uptr RawBufferBase = reinterpret_cast<uptr>(RawBuffer);
-
-    if (BufferBase < RawBufferBase ||
-        BufferBase >= RawBufferBase + sizeof(RawBuffer)) {
-      return StaticBufferCount;
-    }
-
-    DCHECK_LE(BufferSize, StaticBufferSize);
-    DCHECK_LE(BufferBase + BufferSize, RawBufferBase + sizeof(RawBuffer));
-    DCHECK_EQ((BufferBase - RawBufferBase) % StaticBufferSize, 0U);
-
-    const uptr index =
-        (BufferBase - RawBufferBase) / (StaticBufferSize * sizeof(uptr));
-    DCHECK_LT(index, StaticBufferCount);
-    return index;
-  }
-
-  uptr *getDynamicBuffer(const uptr BufferSize) {
+  Buffer getDynamicBuffer(const uptr NumElements) {
     // When using a heap-based buffer, precommit the pages backing the
     // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
     // where page fault exceptions are skipped as the allocated memory
     // is accessed. So far, this is only enabled on Fuchsia. It hasn't proven a
     // performance benefit on other platforms.
     const uptr MmapFlags = MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
-    return reinterpret_cast<uptr *>(
-        map(nullptr, roundUp(BufferSize, getPageSizeCached()), "scudo:counters",
-            MmapFlags, &MapData));
+    const uptr MappedSize =
+        roundUp(NumElements * sizeof(uptr), getPageSizeCached());
+    Buffer Buf;
+    if (Buf.MemMap.map(/*Addr=*/0, MappedSize, "scudo:counters", MmapFlags)) {
+      Buf.Data = reinterpret_cast<uptr *>(Buf.MemMap.getBase());
+      Buf.BufferIndex = StaticBufferCount;
+    }
+    return Buf;
   }
 
   HybridMutex Mutex;
   // '1' means that buffer index is not used. '0' means the buffer is in use.
   uptr Mask GUARDED_BY(Mutex) = ~static_cast<uptr>(0);
-  uptr RawBuffer[StaticBufferCount * StaticBufferSize] GUARDED_BY(Mutex);
-  [[no_unique_address]] MapPlatformData MapData = {};
+  uptr RawBuffer[StaticBufferCount * StaticBufferNumElements] GUARDED_BY(Mutex);
 };
 
 // A Region page map is used to record the usage of pages in the regions. It
@@ -185,23 +204,17 @@ private:
 class RegionPageMap {
 public:
   RegionPageMap()
-      : Regions(0),
-        NumCounters(0),
-        CounterSizeBitsLog(0),
-        CounterMask(0),
-        PackingRatioLog(0),
-        BitOffsetMask(0),
-        SizePerRegion(0),
-        BufferSize(0),
-        Buffer(nullptr) {}
+      : Regions(0), NumCounters(0), CounterSizeBitsLog(0), CounterMask(0),
+        PackingRatioLog(0), BitOffsetMask(0), SizePerRegion(0),
+        BufferNumElements(0) {}
   RegionPageMap(uptr NumberOfRegions, uptr CountersPerRegion, uptr MaxValue) {
     reset(NumberOfRegions, CountersPerRegion, MaxValue);
   }
   ~RegionPageMap() {
     if (!isAllocated())
       return;
-    Buffers.releaseBuffer(Buffer, BufferSize);
-    Buffer = nullptr;
+    Buffers.releaseBuffer(Buffer);
+    Buffer = {};
   }
 
   // Lock of `StaticBuffer` is acquired conditionally and there's no easy way to
@@ -216,7 +229,7 @@ public:
     Regions = NumberOfRegion;
     NumCounters = CountersPerRegion;
 
-    constexpr uptr MaxCounterBits = sizeof(*Buffer) * 8UL;
+    constexpr uptr MaxCounterBits = sizeof(*Buffer.Data) * 8UL;
     // Rounding counter storage size up to the power of two allows for using
     // bit shifts calculating particular counter's Index and offset.
     const uptr CounterSizeBits =
@@ -233,11 +246,11 @@ public:
     SizePerRegion =
         roundUp(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
         PackingRatioLog;
-    BufferSize = SizePerRegion * sizeof(*Buffer) * Regions;
-    Buffer = Buffers.getBuffer(BufferSize);
+    BufferNumElements = SizePerRegion * Regions;
+    Buffer = Buffers.getBuffer(BufferNumElements);
   }
 
-  bool isAllocated() const { return !!Buffer; }
+  bool isAllocated() const { return Buffer.Data != nullptr; }
 
   uptr getCount() const { return NumCounters; }
 
@@ -246,7 +259,8 @@ public:
     DCHECK_LT(I, NumCounters);
     const uptr Index = I >> PackingRatioLog;
     const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
-    return (Buffer[Region * SizePerRegion + Index] >> BitOffset) & CounterMask;
+    return (Buffer.Data[Region * SizePerRegion + Index] >> BitOffset) &
+           CounterMask;
   }
 
   void inc(uptr Region, uptr I) const {
@@ -255,8 +269,8 @@ public:
     const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
     DCHECK_LT(BitOffset, SCUDO_WORDSIZE);
     DCHECK_EQ(isAllCounted(Region, I), false);
-    Buffer[Region * SizePerRegion + Index] += static_cast<uptr>(1U)
-                                              << BitOffset;
+    Buffer.Data[Region * SizePerRegion + Index] += static_cast<uptr>(1U)
+                                                   << BitOffset;
   }
 
   void incN(uptr Region, uptr I, uptr N) const {
@@ -267,7 +281,7 @@ public:
     const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
     DCHECK_LT(BitOffset, SCUDO_WORDSIZE);
     DCHECK_EQ(isAllCounted(Region, I), false);
-    Buffer[Region * SizePerRegion + Index] += N << BitOffset;
+    Buffer.Data[Region * SizePerRegion + Index] += N << BitOffset;
   }
 
   void incRange(uptr Region, uptr From, uptr To) const {
@@ -286,7 +300,7 @@ public:
     const uptr Index = I >> PackingRatioLog;
     const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
     DCHECK_LT(BitOffset, SCUDO_WORDSIZE);
-    Buffer[Region * SizePerRegion + Index] |= CounterMask << BitOffset;
+    Buffer.Data[Region * SizePerRegion + Index] |= CounterMask << BitOffset;
   }
   void setAsAllCountedRange(uptr Region, uptr From, uptr To) const {
     DCHECK_LE(From, To);
@@ -309,9 +323,16 @@ public:
     return get(Region, I) == CounterMask;
   }
 
-  uptr getBufferSize() const { return BufferSize; }
+  uptr getBufferNumElements() const { return BufferNumElements; }
 
 private:
+  // We may consider making this configurable if there are cases which may
+  // benefit from this.
+  static const uptr StaticBufferCount = 2U;
+  static const uptr StaticBufferNumElements = 512U;
+  using BufferPoolT = BufferPool<StaticBufferCount, StaticBufferNumElements>;
+  static BufferPoolT Buffers;
+
   uptr Regions;
   uptr NumCounters;
   uptr CounterSizeBitsLog;
@@ -320,14 +341,8 @@ private:
   uptr BitOffsetMask;
 
   uptr SizePerRegion;
-  uptr BufferSize;
-  uptr *Buffer;
-
-  // We may consider making this configurable if there are cases which may
-  // benefit from this.
-  static const uptr StaticBufferCount = 2U;
-  static const uptr StaticBufferSize = 512U;
-  static BufferPool<StaticBufferCount, StaticBufferSize> Buffers;
+  uptr BufferNumElements;
+  BufferPoolT::Buffer Buffer;
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {

@@ -41,11 +41,11 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
   for (const StringRef Pattern : Names) {
-    if (Pattern.startswith("::")) {
+    if (Pattern.starts_with("::")) {
       if (FullNameTrimmed == Pattern)
         return true;
-    } else if (FullNameTrimmedRef.endswith(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).endswith("::")) {
+    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
+               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
       return true;
     }
   }
@@ -67,11 +67,9 @@ AST_MATCHER_P(CallExpr, hasLastArgument,
 // function had parameters defined (this is useful to check if there is only one
 // variadic argument).
 AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
-  if (Node.getMethodDecl()->isFunctionTemplateSpecialization())
-    return Node.getNumArgs() == Node.getMethodDecl()
-                                    ->getPrimaryTemplate()
-                                    ->getTemplatedDecl()
-                                    ->getNumParams();
+  if (const FunctionTemplateDecl *Primary =
+          Node.getMethodDecl()->getPrimaryTemplate())
+    return Node.getNumArgs() == Primary->getTemplatedDecl()->getNumParams();
 
   return Node.getNumArgs() == Node.getMethodDecl()->getNumParams();
 }

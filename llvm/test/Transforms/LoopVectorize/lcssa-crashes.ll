@@ -16,8 +16,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1, 0
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_I_I_I:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[FOR_END_I_I_I:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_LR_PH_I_I_I]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_I_I_I:%.*]]
@@ -28,7 +27,7 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end.i.i.i:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ undef, [[FOR_INC_I_I_I]] ], [ undef, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    unreachable
@@ -129,8 +128,7 @@ define i32 @pr57508(ptr %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 2000
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 2001, 2000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]

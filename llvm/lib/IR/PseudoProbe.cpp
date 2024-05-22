@@ -64,8 +64,6 @@ std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
     Probe.Discriminator = 0;
     if (const DebugLoc &DLoc = Inst.getDebugLoc())
       Probe.Discriminator = DLoc->getDiscriminator();
-    assert(Probe.Discriminator == 0 &&
-           "Unexpected non-zero FS-discriminator for IR pseudo probes");
     return Probe;
   }
 

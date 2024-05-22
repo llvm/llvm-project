@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <thread>
 
 namespace fuzzer {
 

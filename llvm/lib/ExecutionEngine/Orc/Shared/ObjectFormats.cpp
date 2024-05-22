@@ -19,6 +19,7 @@ StringRef MachODataCommonSectionName = "__DATA,__common";
 StringRef MachODataDataSectionName = "__DATA,__data";
 StringRef MachOEHFrameSectionName = "__TEXT,__eh_frame";
 StringRef MachOCompactUnwindInfoSectionName = "__TEXT,__unwind_info";
+StringRef MachOCStringSectionName = "__TEXT,__cstring";
 StringRef MachOModInitFuncSectionName = "__DATA,__mod_init_func";
 StringRef MachOObjCCatListSectionName = "__DATA,__objc_catlist";
 StringRef MachOObjCCatList2SectionName = "__DATA,__objc_catlist2";
@@ -56,7 +57,19 @@ StringRef MachOInitSectionNames[19] = {
 };
 
 StringRef ELFEHFrameSectionName = ".eh_frame";
+
 StringRef ELFInitArrayFuncSectionName = ".init_array";
+StringRef ELFInitFuncSectionName = ".init";
+StringRef ELFFiniArrayFuncSectionName = ".fini_array";
+StringRef ELFFiniFuncSectionName = ".fini";
+StringRef ELFCtorArrayFuncSectionName = ".ctors";
+StringRef ELFDtorArrayFuncSectionName = ".dtors";
+
+StringRef ELFInitSectionNames[3]{
+    ELFInitArrayFuncSectionName,
+    ELFInitFuncSectionName,
+    ELFCtorArrayFuncSectionName,
+};
 
 StringRef ELFThreadBSSSectionName = ".tbss";
 StringRef ELFThreadDataSectionName = ".tdata";
@@ -80,14 +93,16 @@ bool isMachOInitializerSection(StringRef QualifiedName) {
 }
 
 bool isELFInitializerSection(StringRef SecName) {
-  if (SecName.consume_front(ELFInitArrayFuncSectionName) &&
-      (SecName.empty() || SecName[0] == '.'))
-    return true;
+  for (StringRef InitSection : ELFInitSectionNames) {
+    StringRef Name = SecName;
+    if (Name.consume_front(InitSection) && (Name.empty() || Name[0] == '.'))
+      return true;
+  }
   return false;
 }
 
 bool isCOFFInitializerSection(StringRef SecName) {
-  return SecName.startswith(".CRT");
+  return SecName.starts_with(".CRT");
 }
 
 } // namespace orc

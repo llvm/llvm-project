@@ -10,7 +10,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/DynamicLoader.h"
 
-#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
+#include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernel.h"
 #include "ThreadFreeBSDKernel.h"
 
@@ -262,7 +262,7 @@ Status ProcessFreeBSDKernel::DoLoadCore() {
 DynamicLoader *ProcessFreeBSDKernel::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderStatic::GetPluginNameStatic()));
+        this, DynamicLoaderFreeBSDKernel::GetPluginNameStatic()));
   return m_dyld_up.get();
 }
 

@@ -20,8 +20,8 @@ func.func @_QPdot_product1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = 
 // CHECK-DAG:     %[[LHS_ARG:.*]] = fir.convert %[[LHS_VAR]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[RHS_ARG:.*]] = fir.convert %[[RHS_VAR]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranADotProductInteger4(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
-// CHECK-NEXT:    hlfir.assign %[[NONE]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
+// CHECK:         %[[RES_VAL:.*]] = fir.call @_FortranADotProductInteger4(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK-NEXT:    hlfir.assign %[[RES_VAL]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
 
@@ -44,8 +44,9 @@ func.func @_QPdot_product2(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.b
 // CHECK-DAG:     %[[LHS_ARG:.*]] = fir.convert %[[LHS_VAR]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 // CHECK-DAG:     %[[RHS_ARG:.*]] = fir.convert %[[RHS_VAR]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranADotProductLogical(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
-// CHECK-NEXT:    hlfir.assign %[[NONE]] to %[[RES_VAR]]#0 : i1, !fir.ref<!fir.logical<4>>
+// CHECK:         %[[RES_VAL:.*]] = fir.call @_FortranADotProductLogical(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK-NEXT:    %[[CAST:.*]] = fir.convert %[[RES_VAL]] : (i1) -> !fir.logical<4>
+// CHECK-NEXT:    hlfir.assign %[[CAST]] to %[[RES_VAR]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
 
@@ -74,7 +75,32 @@ func.func @_QPdot_product2(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.b
 // CHECK-DAG:     %[[LHS_ARG:.*]] = fir.convert %[[LHS_BOX]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[RHS_ARG:.*]] = fir.convert %[[RHS_BOX]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranADotProductInteger4(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
-// CHECK-NEXT:    hlfir.assign %[[NONE]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
+// CHECK:         %[[RES_VAL:.*]] = fir.call @_FortranADotProductInteger4(%[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK-NEXT:    hlfir.assign %[[RES_VAL]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
+
+// Test that DOT_PRODUCT's i1 result is casted to !fir.logical.
+// Otherwise, the using fir.store becomes invalid.
+func.func @_QPdot_product4(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "lhs"}, %arg1: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "rhs"}) {
+  %temp = fir.alloca !fir.logical<4>
+  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFdot_product2Elhs"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg1 {uniq_name = "_QFdot_product2Erhs"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %2 = hlfir.dot_product %0#0 %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.logical<4>
+  fir.store %2 to %temp : !fir.ref<!fir.logical<4>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPdot_product4(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "lhs"},
+// CHECK-SAME:        %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "rhs"}) {
+// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4>
+// CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdot_product2Elhs"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFdot_product2Erhs"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+// CHECK:           %[[VAL_5:.*]] = fir.absent !fir.box<!fir.logical<4>>
+// CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+// CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+// CHECK:           %[[VAL_12:.*]] = fir.call @_FortranADotProductLogical(%[[VAL_9]], %[[VAL_10]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i1
+// CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i1) -> !fir.logical<4>
+// CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<!fir.logical<4>>
+// CHECK:           return
+// CHECK:         }

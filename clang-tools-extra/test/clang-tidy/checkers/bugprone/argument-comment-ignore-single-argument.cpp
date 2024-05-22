@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy %s bugprone-argument-comment %t -- \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:     {key: bugprone-argument-comment.IgnoreSingleArgument, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentBoolLiterals, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentIntegerLiterals, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentFloatLiterals, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentUserDefinedLiterals, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentStringLiterals, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentNullPtrs, value: true}, \
-// RUN:     {key: bugprone-argument-comment.CommentCharacterLiterals, value: true}]}" --
+// RUN:   -config="{CheckOptions: { \
+// RUN:     bugprone-argument-comment.IgnoreSingleArgument: true, \
+// RUN:     bugprone-argument-comment.CommentBoolLiterals: true, \
+// RUN:     bugprone-argument-comment.CommentIntegerLiterals: true, \
+// RUN:     bugprone-argument-comment.CommentFloatLiterals: true, \
+// RUN:     bugprone-argument-comment.CommentUserDefinedLiterals: true, \
+// RUN:     bugprone-argument-comment.CommentStringLiterals: true, \
+// RUN:     bugprone-argument-comment.CommentNullPtrs: true, \
+// RUN:     bugprone-argument-comment.CommentCharacterLiterals: true}}" --
 
 struct A {
   void foo(bool abc);

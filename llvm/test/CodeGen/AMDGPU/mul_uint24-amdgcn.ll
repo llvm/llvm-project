@@ -555,9 +555,8 @@ define i64 @test_umul48_i64(i64 %lhs, i64 %rhs) {
 ; GCN-LABEL: test_umul48_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_u32_u24_e32 v3, v0, v2
 ; GCN-NEXT:    v_mul_hi_u32_u24_e32 v1, v0, v2
-; GCN-NEXT:    v_mov_b32_e32 v0, v3
+; GCN-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %lhs24 = and i64 %lhs, 16777215
   %rhs24 = and i64 %rhs, 16777215
@@ -569,12 +568,10 @@ define <2 x i64> @test_umul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GCN-LABEL: test_umul48_v2i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_u32_u24_e32 v5, v0, v4
 ; GCN-NEXT:    v_mul_hi_u32_u24_e32 v1, v0, v4
-; GCN-NEXT:    v_mul_u32_u24_e32 v4, v2, v6
+; GCN-NEXT:    v_mul_u32_u24_e32 v0, v0, v4
 ; GCN-NEXT:    v_mul_hi_u32_u24_e32 v3, v2, v6
-; GCN-NEXT:    v_mov_b32_e32 v0, v5
-; GCN-NEXT:    v_mov_b32_e32 v2, v4
+; GCN-NEXT:    v_mul_u32_u24_e32 v2, v2, v6
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %lhs24 = and <2 x i64> %lhs, <i64 16777215, i64 16777215>
   %rhs24 = and <2 x i64> %rhs, <i64 16777215, i64 16777215>

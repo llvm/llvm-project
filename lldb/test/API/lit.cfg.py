@@ -45,7 +45,7 @@ def find_sanitizer_runtime(name):
 
 
 def find_shlibpath_var():
-    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "OpenBSD", "SunOS"]:
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
@@ -123,6 +123,7 @@ if is_configured("llvm_use_sanitizer"):
             )
 
     if "Thread" in config.llvm_use_sanitizer:
+        config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
         if "Darwin" in config.host_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
@@ -247,7 +248,7 @@ if (
     "lldb-repro-capture" in config.available_features
     or "lldb-repro-replay" in config.available_features
 ):
-    dotest_cmd += ["--skip-category=lldb-vscode", "--skip-category=std-module"]
+    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]

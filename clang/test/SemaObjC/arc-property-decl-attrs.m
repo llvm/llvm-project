@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify %s
-// rdar://9340606
 
 @interface Foo {
 @public
@@ -66,7 +65,6 @@
 @property(unsafe_unretained) __autoreleasing id z; // expected-error {{unsafe_unretained property 'z' may not also be declared __autoreleasing}}
 @end
 
-// rdar://9396329
 @interface Super
 @property (readonly, retain) id foo;
 @property (readonly, weak) id fee;
@@ -78,9 +76,6 @@
 @property (readwrite) id fee;
 @property (readwrite) id frr;
 @end
-
-// rdar://20152386
-// rdar://20383235
 
 @interface NSObject @end
 
@@ -105,7 +100,6 @@
 @property(nonatomic, weak, nonnull, readonly) id ROdelegate; // expected-error {{property attributes 'nonnull' and 'weak' are mutually exclusive}}
 @end
 
-// rdar://problem/23931441
 @protocol P
 @property(readonly, retain) id prop;
 @end
@@ -122,7 +116,6 @@ __attribute__((objc_root_class))
 @synthesize prop;
 @end
 
-// rdar://31579994
 // Verify that the all of the property declarations in inherited protocols are
 // compatible when synthesing a property from a protocol.
 
@@ -253,7 +246,6 @@ __attribute__((objc_root_class))
 
 @end
 
-// rdar://39024725
 // Allow strong readwrite property and a readonly one.
 @protocol StrongCollision
 

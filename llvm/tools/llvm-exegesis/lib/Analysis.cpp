@@ -13,7 +13,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -390,7 +389,7 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
       OS << "<li><span class=\"mono\">";
       writeEscaped<kEscapeHtml>(OS,
                                 SM.getProcResource(WPR.ProcResourceIdx)->Name);
-      OS << "</span>: " << WPR.Cycles << "</li>";
+      OS << "</span>: " << WPR.ReleaseAtCycle << "</li>";
     }
     OS << "</ul></td>";
     // Idealized port pressure.

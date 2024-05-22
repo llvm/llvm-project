@@ -15,7 +15,7 @@
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // 2^6 * log2(e)
 constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = x_u & FPBits::EXP_MANT_MASK;
 
   // When |x| >= 15, or x is inf or nan, or |x| <= 0.078125
   if (LIBC_UNLIKELY((x_abs >= 0x4170'0000U) || (x_abs <= 0x3da0'0000U))) {
@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
     if (LIBC_UNLIKELY(xbits.is_nan()))
       return x + 1.0f; // sNaN to qNaN + signal
 
-    const double SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
+    constexpr float SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
 
     bool sign = xbits.get_sign();
     int idx = static_cast<int>(sign);
@@ -90,7 +90,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   // -hi = floor(-k * 2^(-MID_BITS))
   // exp_mhi = shift -hi to the exponent field of double precision.
   int64_t exp_mhi = static_cast<int64_t>(mk >> ExpBase::MID_BITS)
-                    << fputil::FloatProperties<double>::MANTISSA_WIDTH;
+                    << fputil::FloatProperties<double>::FRACTION_LEN;
   // mh = 2^(-hi - mid)
   int64_t mh_bits = ExpBase::EXP_2_MID[mk & ExpBase::MID_MASK] + exp_mhi;
   double mh = fputil::FPBits<double>(uint64_t(mh_bits)).get_val();
@@ -118,4 +118,4 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   return static_cast<float>((r - mh) / (r + mh));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

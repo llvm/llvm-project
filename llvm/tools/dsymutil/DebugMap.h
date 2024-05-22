@@ -21,6 +21,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_DEBUGMAP_H
 #define LLVM_TOOLS_DSYMUTIL_DEBUGMAP_H
 
+#include "RelocationMap.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -134,22 +135,6 @@ public:
 /// linked binary for all the linked atoms in this object file.
 class DebugMapObject {
 public:
-  struct SymbolMapping {
-    std::optional<yaml::Hex64> ObjectAddress;
-    yaml::Hex64 BinaryAddress;
-    yaml::Hex32 Size;
-
-    SymbolMapping(std::optional<uint64_t> ObjectAddr, uint64_t BinaryAddress,
-                  uint32_t Size)
-        : BinaryAddress(BinaryAddress), Size(Size) {
-      if (ObjectAddr)
-        ObjectAddress = *ObjectAddr;
-    }
-
-    /// For YAML IO support
-    SymbolMapping() = default;
-  };
-
   using YAMLSymbolMapping = std::pair<std::string, SymbolMapping>;
   using DebugMapEntry = StringMapEntry<SymbolMapping>;
 
@@ -175,16 +160,22 @@ public:
 
   uint8_t getType() const { return Type; }
 
-  iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
-    return make_range(Symbols.begin(), Symbols.end());
-  }
-
   bool empty() const { return Symbols.empty(); }
 
   void addWarning(StringRef Warning) {
     Warnings.push_back(std::string(Warning));
   }
   const std::vector<std::string> &getWarnings() const { return Warnings; }
+
+  const std::optional<RelocationMap> &getRelocationMap() const {
+    return RelocMap;
+  }
+  void setRelocationMap(dsymutil::RelocationMap &RM);
+
+  const std::optional<std::string> &getInstallName() const {
+    return InstallName;
+  }
+  void setInstallName(StringRef IN);
 
   void print(raw_ostream &OS) const;
 #ifndef NDEBUG
@@ -200,9 +191,12 @@ private:
 
   std::string Filename;
   sys::TimePoint<std::chrono::seconds> Timestamp;
-  StringMap<SymbolMapping> Symbols;
+  StringMap<struct SymbolMapping> Symbols;
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
   uint8_t Type;
+
+  std::optional<RelocationMap> RelocMap;
+  std::optional<std::string> InstallName;
 
   std::vector<std::string> Warnings;
 
@@ -229,22 +223,14 @@ namespace yaml {
 
 using namespace llvm::dsymutil;
 
-template <>
-struct MappingTraits<std::pair<std::string, DebugMapObject::SymbolMapping>> {
-  static void mapping(IO &io,
-                      std::pair<std::string, DebugMapObject::SymbolMapping> &s);
+template <> struct MappingTraits<std::pair<std::string, SymbolMapping>> {
+  static void mapping(IO &io, std::pair<std::string, SymbolMapping> &s);
   static const bool flow = true;
 };
 
 template <> struct MappingTraits<dsymutil::DebugMapObject> {
   struct YamlDMO;
   static void mapping(IO &io, dsymutil::DebugMapObject &DMO);
-};
-
-template <> struct ScalarTraits<Triple> {
-  static void output(const Triple &val, void *, raw_ostream &out);
-  static StringRef input(StringRef scalar, void *, Triple &value);
-  static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 };
 
 template <>

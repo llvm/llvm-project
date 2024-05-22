@@ -1,12 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctions -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
 
 void check_note_at_correct_open(void) {
   FILE *F1 = tmpfile(); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'tmpfile' is successful}}
   if (!F1)
     // expected-note@-1 {{'F1' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -27,6 +28,7 @@ void check_note_at_correct_open(void) {
 
 void check_note_fopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -37,11 +39,13 @@ void check_note_fopen(void) {
 
 void check_note_freopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}
     return;
   F = freopen(0, "w", F); // expected-note {{Stream reopened here}}
+  // stdargs-note@-1 {{'freopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -52,6 +56,7 @@ void check_note_freopen(void) {
 
 void check_note_leak_2(int c) {
   FILE *F1 = fopen("foo1.c", "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fopen' is successful}}
   if (!F1)
     // expected-note@-1 {{'F1' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -59,6 +64,7 @@ void check_note_leak_2(int c) {
     // expected-note@-4 {{Taking false branch}}
     return;
   FILE *F2 = fopen("foo2.c", "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fopen' is successful}}
   if (!F2) {
     // expected-note@-1 {{'F2' is non-null}}
     // expected-note@-2 {{Taking false branch}}
@@ -84,6 +90,7 @@ void check_note_leak_2(int c) {
 void check_track_null(void) {
   FILE *F;
   F = fopen("foo1.c", "r"); // expected-note {{Value assigned to 'F'}} expected-note {{Assuming pointer value is null}}
+  // stdargs-note@-1 {{'fopen' fails}}
   if (F != NULL) {          // expected-note {{Taking false branch}} expected-note {{'F' is equal to NULL}}
     fclose(F);
     return;

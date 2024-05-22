@@ -1,4 +1,4 @@
-! RUN: llvm-mc -arch=sparcv9 -filetype=obj %s | llvm-objdump -d - | FileCheck %s --check-prefix=BIN
+! RUN: llvm-mc -triple=sparcv9 -filetype=obj %s | llvm-objdump -d - | FileCheck %s --check-prefix=BIN
 
         !! SPARCv9/SPARC64 BPr branches have different offset encoding from the others,
         !! make sure that our offset bits don't trample on other fields.

@@ -22,6 +22,7 @@
 
 namespace mlir {
 class ModuleOp;
+class Operation;
 } // namespace mlir
 
 namespace fir {
@@ -42,6 +43,12 @@ void setKindMapping(mlir::ModuleOp mod, KindMapping &kindMap);
 /// Get the KindMapping instance from the Module. If none was set, returns a
 /// default.
 KindMapping getKindMapping(mlir::ModuleOp mod);
+
+/// Get the KindMapping instance that is in effect for the specified
+/// operation. The KindMapping is taken from the operation itself,
+/// if the operation is a ModuleOp, or from its parent ModuleOp.
+/// If a ModuleOp cannot be reached, the function returns default KindMapping.
+KindMapping getKindMapping(mlir::Operation *op);
 
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`

@@ -60,8 +60,6 @@
 @implementation XCRemoteComputerManager(x) // expected-error {{reimplementation of category 'x' for class 'XCRemoteComputerManager'}}
 @end
 
-// <rdar://problem/7249233>
-
 @protocol MultipleCat_P
 -(void) im0; // expected-note {{method 'im0' declared here}}
 @end
@@ -75,12 +73,11 @@
 @implementation MultipleCat_I // expected-warning {{method 'im0' in protocol 'MultipleCat_P' not implemented}}
 @end
 
-// <rdar://problem/7680391> - Handle nameless categories with no name that refer
-// to an undefined class
+// Handle nameless categories with no name that refer to an undefined class.
 @interface RDar7680391 () @end // expected-error{{cannot find interface declaration}}
 
-// <rdar://problem/8891119> - Handle @synthesize being used in conjunction
-// with explicitly declared accessor.
+// Handle @synthesize being used in conjunction with explicitly declared
+// accessor.
 @interface RDar8891119 {
   id _name;
 }
@@ -95,12 +92,10 @@
 @synthesize name = _name;
 @end
 
-// rdar://10968158
 @class I; // expected-note {{forward declaration}}
 @implementation I(cat) // expected-error{{cannot find interface declaration}}
 @end
 
-// <rdar://problem/11478173>
 @interface Unrelated
 - foo;
 @end

@@ -1,5 +1,6 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
+  AddAliasTags.cpp
   AffinePromotion.cpp
   AffineDemotion.cpp
   AnnotateConstant.cpp
@@ -16,12 +17,17 @@ add_flang_library(FIRTransforms
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
+  OMPFunctionFiltering.cpp
+  OMPMarkDeclareTarget.cpp
+  VScaleAttr.cpp
 
   DEPENDS
   FIRDialect
   FIROptTransformsPassIncGen
+  HLFIROpsIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRBuilder
   FIRCodeGen
   FIRDialect

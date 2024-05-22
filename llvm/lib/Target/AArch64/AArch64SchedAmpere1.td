@@ -22,7 +22,7 @@ def Ampere1Model : SchedMachineModel {
   let LoadLatency           =   4;  // Optimistic load latency
   let MispredictPenalty     =  10;  // Branch mispredict penalty
   let LoopMicroOpBufferSize =  32;  // Instruction queue size
-  let CompleteModel = 1;
+  let CompleteModel = 0;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     SMEUnsupported.F,
@@ -936,9 +936,13 @@ def : InstRW<[Ampere1Write_4cyc_1Z], (instregex "^FMOV[WX][HSD]r")>;
 def : InstRW<[Ampere1Write_1cyc_1A],
         (instregex "ADC(W|X)r", "SBC(W|X)r")>;
 def : InstRW<[Ampere1Write_Arith],
-        (instregex "(ADD|AND|BIC|EON|EOR|ORN|ORR|SUB)(W|X)r")>;
+        (instregex "(ADD|AND|BIC|EON|EOR|ORN|ORR|SUB)(W|X)r[sx]")>;
+def : InstRW<[Ampere1Write_1cyc_1AB],
+        (instregex "(ADD|AND|BIC|EON|EOR|ORN|ORR|SUB)(W|X)r[ri]")>;
 def : InstRW<[Ampere1Write_ArithFlagsetting],
-        (instregex "(ADD|AND|BIC|SUB)S(W|X)r")>;
+        (instregex "(ADD|AND|BIC|SUB)S(W|X)r[sx]")>;
+def : InstRW<[Ampere1Write_1cyc_1A],
+        (instregex "(ADD|AND|BIC|SUB)S(W|X)r[ri]")>;
 def : InstRW<[Ampere1Write_1cyc_1A],
         (instregex "(ADC|SBC)S(W|X)r")>;
 def : InstRW<[Ampere1Write_1cyc_1A], (instrs RMIF)>;

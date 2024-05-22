@@ -64,7 +64,7 @@ template <class _ForwardIterator>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last)
 {
-    return _VSTD::min_element(__first, __last, __less<>());
+    return std::min_element(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

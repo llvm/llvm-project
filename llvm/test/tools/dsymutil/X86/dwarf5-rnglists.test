@@ -32,28 +32,37 @@
 #RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix DWARF-CHECK
-#
+
 #RUN: dsymutil --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+#RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix DWARF-CHECK
+
+#RUN: dsymutil --linker llvm --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
 
 #CHECK: No errors.
 
 #DWARF-CHECK: DW_TAG_compile_unit
+#DWARF-CHECK:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 #DWARF-CHECK: DW_TAG_lexical_block
 #DWARF-CHECK:   DW_AT_ranges [DW_FORM_sec_offset]     (0x0000000c
 #DWARF-CHECK:      [0x0000000100000f79, 0x0000000100000f96)
 #DWARF-CHECK:      [0x0000000100000fad, 0x0000000100000fb4))
-#DWARF-CHECK-NOT: debug_addr
 #DWARF-CHECK: .debug_rnglists contents:
-#DWARF-CHECK: 0x00000000: range list header: length = 0x0000001d, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+#DWARF-CHECK: 0x00000000: range list header: length = 0x00000011, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 #DWARF-CHECK: ranges:
-#DWARF-CHECK: 0x0000000c: [DW_RLE_start_length]:  0x0000000100000f79, 0x000000000000001d => [0x0000000100000f79, 0x0000000100000f96)
-#DWARF-CHECK: 0x00000016: [DW_RLE_start_length]:  0x0000000100000fad, 0x0000000000000007 => [0x0000000100000fad, 0x0000000100000fb4)
-#DWARF-CHECK: 0x00000020: [DW_RLE_end_of_list ]
-#DWARF-CHECK-NOT: debug_addr
+#DWARF-CHECK: 0x0000000c: [DW_RLE_base_addressx]:  0x0000000000000003
+#DWARF-CHECK: 0x0000000e: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x000000000000001d
+#DWARF-CHECK: 0x00000011: [DW_RLE_offset_pair  ]:  0x0000000000000034, 0x000000000000003b
+#DWARF-CHECK: 0x00000014: [DW_RLE_end_of_list  ]
 #
 #UPD-DWARF-CHECK: DW_TAG_compile_unit
+#UPD-DWARF-CHECK:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 #UPD-DWARF-CHECK: DW_TAG_lexical_block
 #UPD-DWARF-CHECK:   DW_AT_ranges [DW_FORM_rnglistx]       (indexed (0x0) rangelist = 0x00000010
 #UPD-DWARF-CHECK:     [0x0000000000000009, 0x0000000000000026)

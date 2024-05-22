@@ -1,21 +1,36 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
-// RUN: %{command}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_reduction = {
   indexing_maps = [
@@ -48,7 +63,7 @@ module {
 
   // Regular MIN reduction: stored i32 elements AND implicit zeros.
   // Note that dealing with the implicit zeros is taken care of
-  // by the sparse compiler to preserve semantics of the "original".
+  // by the sparsifier to preserve semantics of the "original".
   func.func @min2(%arga: tensor<32xi32, #SV>, %argx: tensor<i32>) -> tensor<i32> {
     %c = tensor.extract %argx[] : tensor<i32>
     %0 = linalg.generic #trait_reduction

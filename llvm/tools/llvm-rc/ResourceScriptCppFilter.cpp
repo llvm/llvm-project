@@ -67,7 +67,7 @@ bool Filter::parseLine(StringRef Line) {
   // false since the preprocessing directives should be filtered out.
 
   Line.consume_front("line");
-  if (!Line.startswith(" "))
+  if (!Line.starts_with(" "))
     return false; // Not a line directive (pragma etc).
 
   // #line 123 "path/file.h"

@@ -88,7 +88,7 @@ let SchedModel = SwiftModel in {
   def SwiftWriteP0ThreeCycleThreeUops : SchedWriteRes<[SwiftUnitP0]> {
     let Latency = 3;
     let NumMicroOps = 3;
-    let ResourceCycles = [3];
+    let ReleaseAtCycles = [3];
   }
   // Plain load without writeback.
   def SwiftWriteP2ThreeCycle : SchedWriteRes<[SwiftUnitP2]> {
@@ -261,7 +261,7 @@ let SchedModel = SwiftModel in {
   def SwiftP0P0P01FiveCycle : SchedWriteRes<[SwiftUnitP0, SwiftUnitP01]> {
     let Latency = 5;
     let NumMicroOps = 3;
-    let ResourceCycles = [2, 1];
+    let ReleaseAtCycles = [2, 1];
   }
   def SwiftWrite1Cycle : SchedWriteRes<[]> {
     let Latency = 1;
@@ -283,7 +283,7 @@ let SchedModel = SwiftModel in {
   def Swift2P03P01FiveCycle : SchedWriteRes<[SwiftUnitP0, SwiftUnitP01]> {
     let Latency = 7;
     let NumMicroOps = 5;
-    let ResourceCycles = [2, 3];
+    let ReleaseAtCycles = [2, 3];
   }
 
   // Aliasing sub-target specific WriteRes to generic ones
@@ -313,7 +313,7 @@ let SchedModel = SwiftModel in {
   def SwiftDiv : SchedWriteRes<[SwiftUnitP0, SwiftUnitDiv]> {
     let NumMicroOps = 1;
     let Latency = 14;
-    let ResourceCycles = [1, 14];
+    let ReleaseAtCycles = [1, 14];
   }
   // 4.2.18 Integer Divide
   def : WriteRes<WriteDIV, [SwiftUnitDiv]>; // Workaround.
@@ -653,15 +653,15 @@ let SchedModel = SwiftModel in {
   // Serializing instructions.
   def SwiftWaitP0For15Cy : SchedWriteRes<[SwiftUnitP0]> {
     let Latency = 15;
-    let ResourceCycles = [15];
+    let ReleaseAtCycles = [15];
   }
   def SwiftWaitP1For15Cy : SchedWriteRes<[SwiftUnitP1]> {
     let Latency = 15;
-    let ResourceCycles = [15];
+    let ReleaseAtCycles = [15];
   }
   def SwiftWaitP2For15Cy : SchedWriteRes<[SwiftUnitP2]> {
     let Latency = 15;
-    let ResourceCycles = [15];
+    let ReleaseAtCycles = [15];
   }
   def : InstRW<[SwiftWaitP0For15Cy, SwiftWaitP1For15Cy, SwiftWaitP2For15Cy],
         (instregex "VMRS")>;
@@ -684,7 +684,7 @@ let SchedModel = SwiftModel in {
     def SwiftVLDMPerm#Num : SchedWriteRes<[SwiftUnitP1]> {
       let Latency = 0;
       let NumMicroOps = Num;
-      let ResourceCycles = [Num];
+      let ReleaseAtCycles = [Num];
     }
   }
 
@@ -860,17 +860,17 @@ let SchedModel = SwiftModel in {
   // 4.2.43 Advanced SIMD, Element or Structure Load and Store
   def SwiftWrite2xP2FourCy : SchedWriteRes<[SwiftUnitP2]> {
       let Latency = 4;
-      let ResourceCycles = [2];
+      let ReleaseAtCycles = [2];
   }
   def SwiftWrite3xP2FourCy : SchedWriteRes<[SwiftUnitP2]> {
       let Latency = 4;
-      let ResourceCycles = [3];
+      let ReleaseAtCycles = [3];
   }
   foreach Num = 1-2 in {
     def SwiftExt#Num#xP0 : SchedWriteRes<[SwiftUnitP0]> {
       let Latency = 0;
       let NumMicroOps = Num;
-      let ResourceCycles = [Num];
+      let ReleaseAtCycles = [Num];
     }
   }
   // VLDx
@@ -1038,12 +1038,12 @@ let SchedModel = SwiftModel in {
   def SwiftDiv17 : SchedWriteRes<[SwiftUnitP0, SwiftUnitDiv]> {
     let NumMicroOps = 1;
     let Latency = 17;
-    let ResourceCycles = [1, 15];
+    let ReleaseAtCycles = [1, 15];
   }
   def SwiftDiv32 : SchedWriteRes<[SwiftUnitP0, SwiftUnitDiv]> {
     let NumMicroOps = 1;
     let Latency = 32;
-    let ResourceCycles = [1, 30];
+    let ReleaseAtCycles = [1, 30];
   }
   def : InstRW<[SwiftDiv17], (instregex "VDIVS", "VSQRTS")>;
   def : InstRW<[SwiftDiv32], (instregex "VDIVD", "VSQRTD")>;
@@ -1086,7 +1086,7 @@ let SchedModel = SwiftModel in {
   def : InstRW<[SwiftWriteP01OneCycle2x], (instregex "ABS")>;
   // Preload.
   def : WriteRes<WritePreLd, [SwiftUnitP2]> { let Latency = 0;
-    let ResourceCycles = [0];
+    let ReleaseAtCycles = [0];
   }
 
 }

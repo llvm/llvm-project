@@ -47,6 +47,16 @@ func.func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tenso
 
 // -----
 
+func.func @dce_self_linalg_copy(%arg0 : memref<?xf32>) {
+  linalg.copy ins(%arg0: memref<?xf32>) outs(%arg0: memref<?xf32>)
+  return
+}
+
+// CHECK-LABEL: @dce_self_linalg_copy
+//   CHECK-NOT:   copy
+
+// -----
+
 // CHECK-LABEL: func @tensor.cast(
 func.func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
   -> tensor<3x?xf32>
@@ -326,6 +336,85 @@ func.func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x
 }
 
 // -----
+//       CHECK: func @fold_fill_extract
+//  CHECK-SAME:   %[[ARG0:.+]]: i1
+func.func @fold_fill_extract(%arg0 : i1) -> i1 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  %empty_dynamic = tensor.empty(%c1) : tensor<1x2x3x?xi1>
+  %filled = linalg.fill ins(%arg0 : i1) outs(%empty_dynamic : tensor<1x2x3x?xi1>) -> tensor<1x2x3x?xi1>
+
+  %extracted = tensor.extract %filled[%c0, %c0, %c0, %c0] : tensor<1x2x3x?xi1>
+
+  //  CHECK:   return %[[ARG0]]
+  return %extracted : i1
+}
+
+// -----
+
+func.func @fill_pack() -> tensor<24x32x16x16xf32> {
+  %dest = tensor.empty() : tensor<384x512xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<24x32x16x16xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%dest : tensor<384x512xf32>) -> tensor<384x512xf32>
+  %pack = tensor.pack %1 inner_dims_pos = [0, 1] inner_tiles = [16, 16] into %0 : tensor<384x512xf32> -> tensor<24x32x16x16xf32>
+  return %pack : tensor<24x32x16x16xf32>
+}
+// CHECK-LABEL: func.func @fill_pack
+// CHECK:         %[[PACKED_EMPTY:.+]] = tensor.empty() : tensor<24x32x16x16xf32>
+// CHECK:         %[[FILL:.+]] = linalg.fill ins(%{{.+}}) outs(%[[PACKED_EMPTY]]
+// CHECK:         return %[[FILL]]
+
+// -----
+
+func.func @fill_pack_general() -> tensor<1x1x8x4x4x8xi32>{
+  %c0_i32 = arith.constant 0 : i32
+  %alloc = memref.alloc() : memref<1x1x8x4x4x8xi32>
+  %9 = tensor.empty() : tensor<1x1x16x64xi32>
+  %extracted_slice_15 = tensor.extract_slice %9[0, 0, 0, 0] [1, 1, 16, 64] [1, 1, 1, 1] : tensor<1x1x16x64xi32> to tensor<1x1x16x64xi32>
+  %16 = linalg.fill ins(%c0_i32 : i32) outs(%extracted_slice_15 : tensor<1x1x16x64xi32>) -> tensor<1x1x16x64xi32>
+  %0 = bufferization.to_tensor %alloc restrict writable : memref<1x1x8x4x4x8xi32>
+  %pack_18 = tensor.pack %16 outer_dims_perm = [0, 1, 3, 2] inner_dims_pos = [2, 3] inner_tiles = [4, 8] into %0 : tensor<1x1x16x64xi32> -> tensor<1x1x8x4x4x8xi32>
+  return %pack_18 : tensor<1x1x8x4x4x8xi32>
+}
+
+// CHECK-LABEL: func.func @fill_pack_general
+// CHECK:         %[[ALLOC:.+]] = memref.alloc() : memref<1x1x8x4x4x8xi32>
+// CHECK:         %[[TENSOR:.+]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:         %[[FILL:.+]] = linalg.fill ins(%{{.+}}) outs(%[[TENSOR]]
+// CHECK:         return %[[FILL]]
+
+// -----
+
+#map = affine_map<()[s0] -> (s0 ceildiv 16)>
+func.func @dynamic_fill_pack(%arg0: tensor<?x?xf32>) -> tensor<?x?x16x16xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %dim = tensor.dim %0, %c0 : tensor<?x?xf32>
+  %dim_0 = tensor.dim %0, %c1 : tensor<?x?xf32>
+  %1 = affine.apply #map()[%dim]
+  %2 = affine.apply #map()[%dim_0]
+  %3 = tensor.empty(%1, %2) : tensor<?x?x16x16xf32>
+  %pack = tensor.pack %0 padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [16, 16] into %3 : tensor<?x?xf32> -> tensor<?x?x16x16xf32>
+  return %pack : tensor<?x?x16x16xf32>
+}
+// CHECK-DAG:   #[[MAP:.+]] = affine_map<()[s0] -> (s0 ceildiv 16)>
+// CHECK:       func.func @dynamic_fill_pack
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK:         %[[D0:.+]] = tensor.dim %[[DEST]], %[[C0]]
+// CHECK:         %[[D1:.+]] = tensor.dim %[[DEST]], %[[C1]]
+// CHECK:         %[[PACKED_D0:.+]] = affine.apply #[[MAP]]()[%[[D0]]]
+// CHECK:         %[[PACKED_D1:.+]] = affine.apply #[[MAP]]()[%[[D1]]]
+// CHECK:         %[[PACKED_EMPTY:.+]] = tensor.empty(%[[PACKED_D0]], %[[PACKED_D1]]) : tensor<?x?x16x16xf32>
+// CHECK:         %[[FILL:.+]] = linalg.fill ins(%{{.+}}) outs(%[[PACKED_EMPTY]]
+// CHECK:         return %[[FILL]]
+
+// -----
 
 // CHECK: func @fold_self_copy
 func.func @fold_self_copy(%0 : memref<4x16xf32>) {
@@ -371,9 +460,8 @@ func.func @fold_static_pad_fill() -> tensor<412x276xf32> {
 
 //  CHECK-DAG:   %[[I1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
-//      CHECK:   %[[OF:.+]] = linalg.fill ins(%[[F0]] : f32) outs(%[[SRC]] : tensor<8x?x16x32xf32>)
 //      CHECK:   %[[S0:.+]] = affine.apply #[[MAP0]]()[%[[LOW0]]]
-//      CHECK:   %[[DIM1:.+]] = tensor.dim %[[OF]], %[[I1]] : tensor<8x?x16x32xf32>
+//      CHECK:   %[[DIM1:.+]] = tensor.dim %[[SRC]], %[[I1]] : tensor<8x?x16x32xf32>
 //      CHECK:   %[[S1:.+]] = affine.apply #[[MAP1]]()[%[[DIM1]]]
 //      CHECK:   %[[S2:.+]] = affine.apply #[[MAP2]]()[%[[HIGH2]]]
 //      CHECK:   %[[S3:.+]] = affine.apply #[[MAP3]]()[%[[LOW3]], %[[HIGH3]]]
@@ -871,3 +959,61 @@ func.func @cast_producer_mixed(%arg0 : tensor<5xf32>, %arg1: memref<?xf32>) {
 //  CHECK-SAME:    iterator_types = ["parallel"]
 //  CHECK-SAME:  } ins(%[[ARG1]] : tensor<5xf32>)
 //  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {
+
+// -----
+
+// CHECK-LABEL: dead_softmax
+func.func @dead_softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
+  %0 = tensor.empty() : tensor<16x64x256xf32>
+  // CHECK-NOT: linalg.softmax
+  %1 = linalg.softmax dimension(1)
+    ins(%arg0 : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
+  return %arg0 : tensor<16x64x256xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_dim_of_dest_style_op
+//       CHECK: tensor.dim
+//       CHECK: tensor.dim
+//   CHECK-NOT: tensor.dim
+//       CHECK: return
+func.func @canonicalize_dim_of_dest_style_op(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0_0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %dim1_0 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
+  %0 = tensor.empty(%dim0_0, %dim1_0) : tensor<?x?xf32>
+  %1 = linalg.copy ins(%arg0 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %dim0_1 = tensor.dim %1, %c0 : tensor<?x?xf32>
+  %dim1_1 = tensor.dim %1, %c1 : tensor<?x?xf32>
+  %2 = tensor.empty(%dim0_1, %dim1_1) : tensor<?x?xf32>
+  %3 = linalg.copy ins(%1 : tensor<?x?xf32>) outs(%2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %3: tensor<?x?xf32>
+}
+// -----
+
+// CHECK-LABEL: func @canonicalize_fill_to_copy_input(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//       CHECK:   %[[ZERO:.+]] = arith.constant 0.0
+//       CHECK:   linalg.fill ins(%[[ZERO]] : f32) outs(%[[ARG1]] : tensor<?x?xf32>)
+func.func @canonicalize_fill_to_copy_input(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %copy = linalg.copy ins(%fill : tensor<?x?xf32>) outs(%arg1 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %copy : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_fill_to_copy_dest(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//       CHECK:   linalg.copy ins(%[[ARG1]] : tensor<?x?xf32>) outs(%[[ARG0]] : tensor<?x?xf32>)
+func.func @canonicalize_fill_to_copy_dest(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %copy = linalg.copy ins(%arg1 : tensor<?x?xf32>) outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %copy : tensor<?x?xf32>
+}

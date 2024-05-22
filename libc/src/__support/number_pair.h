@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
-#define LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
+#define LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
 
 #include "CPP/type_traits.h"
-#include "named_pair.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-DEFINE_NAMED_PAIR_TEMPLATE(NumberPair, lo, hi);
+template <typename T> struct NumberPair {
+  T lo;
+  T hi;
+};
 
 template <typename T>
 cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, NumberPair<T>>
@@ -29,6 +31,6 @@ split(T a) {
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H

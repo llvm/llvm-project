@@ -5,7 +5,6 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Analysis/Interval.h"
@@ -26,6 +25,7 @@
 #include <assert.h>
 #include <cstdint>
 #include <optional>
+#include <queue>
 #include <sstream>
 #include <unordered_map>
 
@@ -1979,20 +1979,23 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
                      I, Fn.getParent()->getDataLayout())) {
         // Find markers linked to this alloca.
         for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(Info->Base)) {
-          // Discard the fragment if it covers the entire variable.
-          std::optional<DIExpression::FragmentInfo> FragInfo =
-              [&Info, DAI]() -> std::optional<DIExpression::FragmentInfo> {
-            DIExpression::FragmentInfo F;
-            F.OffsetInBits = Info->OffsetInBits;
-            F.SizeInBits = Info->SizeInBits;
-            if (auto ExistingFrag = DAI->getExpression()->getFragmentInfo())
-              F.OffsetInBits += ExistingFrag->OffsetInBits;
-            if (auto Sz = DAI->getVariable()->getSizeInBits()) {
-              if (F.OffsetInBits == 0 && F.SizeInBits == *Sz)
-                return std::nullopt;
-            }
-            return F;
-          }();
+          std::optional<DIExpression::FragmentInfo> FragInfo;
+
+          // Skip this assignment if the affected bits are outside of the
+          // variable fragment.
+          if (!at::calculateFragmentIntersect(
+                  I.getModule()->getDataLayout(), Info->Base,
+                  Info->OffsetInBits, Info->SizeInBits, DAI, FragInfo) ||
+              (FragInfo && FragInfo->SizeInBits == 0))
+            continue;
+
+          // FragInfo from calculateFragmentIntersect is nullopt if the
+          // resultant fragment matches DAI's fragment or entire variable - in
+          // which case copy the fragment info from DAI. If FragInfo is still
+          // nullopt after the copy it means "no fragment info" instead, which
+          // is how it is usually interpreted.
+          if (!FragInfo)
+            FragInfo = DAI->getExpression()->getFragmentInfo();
 
           DebugVariable DV = DebugVariable(DAI->getVariable(), FragInfo,
                                            DAI->getDebugLoc().getInlinedAt());
@@ -2266,14 +2269,14 @@ static bool
 removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
                                         FunctionVarLocsBuilder &FnVarLocs) {
   bool Changed = false;
-  SmallDenseMap<DebugAggregate, BitVector> VariableDefinedBits;
+  SmallDenseMap<DebugAggregate, BitVector> VariableDefinedBytes;
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be seperated by debug
   // instructions.
   for (const Instruction &I : reverse(*BB)) {
     if (!isa<DbgVariableIntrinsic>(I)) {
       // Sequence of consecutive defs ended. Clear map for the next one.
-      VariableDefinedBits.clear();
+      VariableDefinedBytes.clear();
     }
 
     // Get the location defs that start just before this instruction.
@@ -2292,9 +2295,15 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       DebugAggregate Aggr =
           getAggregate(FnVarLocs.getVariable(RIt->VariableID));
       uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
+      uint64_t SizeInBytes = divideCeil(SizeInBits, 8);
 
-      if (SizeInBits == 0) {
+      // Cutoff for large variables to prevent expensive bitvector operations.
+      const uint64_t MaxSizeBytes = 2048;
+
+      if (SizeInBytes == 0 || SizeInBytes > MaxSizeBytes) {
         // If the size is unknown (0) then keep this location def to be safe.
+        // Do the same for defs of large variables, which would be expensive
+        // to represent with a BitVector.
         NewDefsReversed.push_back(*RIt);
         continue;
       }
@@ -2302,23 +2311,24 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       // Only keep this location definition if it is not fully eclipsed by
       // other definitions in this wedge that come after it
 
-      // Inert the bits the location definition defines.
+      // Inert the bytes the location definition defines.
       auto InsertResult =
-          VariableDefinedBits.try_emplace(Aggr, BitVector(SizeInBits));
+          VariableDefinedBytes.try_emplace(Aggr, BitVector(SizeInBytes));
       bool FirstDefinition = InsertResult.second;
-      BitVector &DefinedBits = InsertResult.first->second;
+      BitVector &DefinedBytes = InsertResult.first->second;
 
       DIExpression::FragmentInfo Fragment =
           RIt->Expr->getFragmentInfo().value_or(
               DIExpression::FragmentInfo(SizeInBits, 0));
       bool InvalidFragment = Fragment.endInBits() > SizeInBits;
+      uint64_t StartInBytes = Fragment.startInBits() / 8;
+      uint64_t EndInBytes = divideCeil(Fragment.endInBits(), 8);
 
-      // If this defines any previously undefined bits, keep it.
+      // If this defines any previously undefined bytes, keep it.
       if (FirstDefinition || InvalidFragment ||
-          DefinedBits.find_first_unset_in(Fragment.startInBits(),
-                                          Fragment.endInBits()) != -1) {
+          DefinedBytes.find_first_unset_in(StartInBytes, EndInBytes) != -1) {
         if (!InvalidFragment)
-          DefinedBits.set(Fragment.startInBits(), Fragment.endInBits());
+          DefinedBytes.set(StartInBytes, EndInBytes);
         NewDefsReversed.push_back(*RIt);
         continue;
       }

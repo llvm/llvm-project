@@ -69,9 +69,9 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op,
      %arg1: !transform.op<"linalg.matmul">,
      %arg2: !transform.op<"linalg.elemwise_binary">):
-  transform.test_print_remark_at_operand %matmul, "matmul"
+  transform.test_print_remark_at_operand %arg1, "matmul"
       : !transform.op<"linalg.matmul">
-  transform.test_print_remark_at_operand %elemwise, "elemwise_binaries"
+  transform.test_print_remark_at_operand %arg2, "elemwise_binaries"
       : !transform.op<"linalg.elemwise_binary">
   transform.yield
 }
@@ -93,7 +93,7 @@ The `matmul.mlir` file contains _both_ the payload IR function _and_ the transfo
 
 ```sh
 matmul.mlir:7:13: remark: matmul
-  %matmul = linalg.matmul
+  %matmul = linalg.matmul ins(%lhs, %rhs: tensor<512x512xf32>, tensor<512x512xf32>)
             ^
 matmul.mlir:7:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 matmul.mlir:10:13: remark: elemwise_binaries
@@ -119,13 +119,13 @@ transform.sequence failures(propagate) {
      %arg1: !transform.op<"linalg.matmul">,
      %arg2: !transform.op<"linalg.elemwise_binary">):
   // The actual tiling transformation takes tile sizes as attributes.
-  %loop, %tiled = transform.structured.tile_to_forall_op %arg1 tile_sizes [4, 32]
-    : (!transform.op<"linalg.matmul") -> (!transform.any_op, !transform.any_op)
+  %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
+    : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
   transform.yield
 }
 ```
 
-The transformation returns two handles, as indicated in its [documentation](https://mlir.llvm.org/docs/Dialects/Transform/#transformstructuredtile_to_forall_op-mlirtransformtiletoforallop):
+The transformation returns two handles, as indicated in its [documentation](https://mlir.llvm.org/docs/Dialects/Transform/#transformstructuredtile_using_forall-transformtiletoforallop):
 
 *   A handle to the `scf.forall` “multi-for” loop around tensors.
 *   A handle to `linalg.generic` operating on the subset of the original data.
@@ -176,7 +176,7 @@ transform.sequence failures(propagate) {
      %arg1: !transform.op<"linalg.matmul">,
      %arg2: !transform.op<"linalg.elemwise_binary">):
   // The actual tiling transformation takes tile sizes as attributes.
-  %loop, %tiled = transform.structured.tile_to_forall_op %arg1 tile_sizes [4, 32]
+  %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
       : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
   // This is trying to use an invalidated handle leading to undefined behavior.
@@ -191,7 +191,7 @@ However, with the expensive checks enabled in the interpreter, a nice diagnostic
 $ mlir-opt matmul.mlir --pass-pipeline="
     builtin.module(test-transform-dialect-interpreter{
         bind-first-extra-to-ops=linalg.matmul
-        bind-second-extra-to-ops=linalg.elemwise_binary,
+        bind-second-extra-to-ops=linalg.elemwise_binary
         enable-expensive-checks})"
 ```
 
@@ -203,7 +203,7 @@ matmul.mlir:26:9: note: handle to invalidated ops
   %mm = transform.cast %matmul : !transform.op<"linalg.matmul"> to !transform.any_op
         ^
 matmul.mlir:27:19: note: invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them
-  %loop, %tiled = transform.structured.tile_to_forall_op %mm tile_sizes [4, 32]
+  %loop, %tiled = transform.structured.tile_using_forall %mm tile_sizes [4, 32]
 ```
 
 One may observe that some operations such as `transform.cast` do not consume the operand (because they don’t erase the corresponding operation). So what would happen if we tried to use that operand instead? 
@@ -219,7 +219,7 @@ transform.sequence failures(propagate) {
       to !transform.any_op
 
   // The actual tiling transformation takes tile sizes as attributes.
-  %loop, %tiled = transform.structured.tile_to_forall_op %arg1 tile_sizes [4, 32]
+  %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
     : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
   // Consuming an operand invalidates the consumed handle and any other handle that is
@@ -240,7 +240,7 @@ matmul.mlir:21:29: note: handle to invalidated ops
 ^bb0(%root: !transform.any_op, %matmul: !transform.op<"linalg.matmul">, %elemwise: !transform.op<"linalg.elemwise_binary">):
                             ^
 matmul.mlir:27:19: note: invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them
-  %loop, %tiled = transform.structured.tile_to_forall_op %mm tile_sizes [4, 32]
+  %loop, %tiled = transform.structured.tile_using_forall %mm tile_sizes [4, 32]
 ```
 
 ## Chaining Transformations with Handles
@@ -259,25 +259,29 @@ transform.sequence failures(propagate) {
       : (!transform.op<"linalg.elemwise_binary">)
       -> (!transform.any_op, !transform.any_op)
 
-  // The actual tiling transformation takes tile sizes as attributes. It produces a
-  // handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_to_forall_op %max tile_sizes [8, 32]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  // The actual tiling transformation takes tile sizes as attributes. It
+  // produces a handle to the loop generated during tiling.
+  %loop, %tiled_max =
+      transform.structured.tile_using_forall %max tile_sizes [8, 32]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
-  // operations one-by-one. This requires the operation that is being fused
-  // to define the value used within the loop, so the order of such fusions
-  // is important. We could also use "transform.merge_handles" to obtain
-  // a single handle to all operations and give it to `fuse_into_containing_op`
-  // that would take care of the ordering in this case.
-  %add_fused = transform.structured.fuse_into_containing_op %add into %loop
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
-  %matmul_fused = transform.structured.fuse_into_containing_op %arg1 into %loop
-      : (!transform.op<"linalg.matmul">, !transform.any_op) -> !transform.any_op
+  // operations one by one. This requires the operation that is being fused to
+  // define the value used within the loop, so the order of such fusions is
+  // important. We could also use "transform.merge_handles" to obtain a single
+  // handle to all operations and give it to `fuse_into_containing_op` that
+  // would take care of the ordering in this case.
+  %loop_0, %tiled_add =
+      transform.structured.fuse_into_containing_op %add into %loop
+        : (!transform.any_op, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
+  %loop_1, %tiled_matmul =
+      transform.structured.fuse_into_containing_op %arg1 into %loop
+        : (!transform.op<"linalg.matmul">, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
 
   transform.yield
 }
-
 ```
 
 This achieves the desired tiling and fusion.
@@ -294,48 +298,58 @@ transform.sequence failures(propagate) {
   // Since the %arg2 handle is associated with both elementwise operations,
   // we need to split it into two handles so we can target only the second
   // elementwise operation.
-  %add, %max = transform.split_handle %arg2 : (!transform.op<"linalg.elemwise_binary">)
-      -> (!transform.any_op, !transform.any_op)
+  %add, %max = transform.split_handle %arg2
+      : (!transform.op<"linalg.elemwise_binary">)
+        -> (!transform.any_op, !transform.any_op)
 
-  // The actual tiling transformation takes tile sizes as attributes. It produces a
-  // handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_to_forall_op %max tile_sizes [8, 32]
+  // The actual tiling transformation takes tile sizes as attributes. It
+  // produces a handle to the loop generated during tiling.
+  %loop, %tiled = transform.structured.tile_using_forall %max tile_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
-  // operations one-by-one. This requires the operation that is being fused
-  // to define the value used within the loop, so the order of such fusions
-  // is important. We could also use "transform.merge_handles" to obtain
-  // a single handle to all operations and give it to `fuse_into_containing_op`
-  // that would take care of the ordering in this case.
-  %add_fused = transform.structured.fuse_into_containing_op %add into %loop
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
-  %matmul_fused = transform.structured.fuse_into_containing_op %arg1 into %loop
-      : (!transform.op<"linalg.matmul">, !transform.any_op) -> !transform.any_op
+  // operations one by one. This requires the operation that is being fused to
+  // define the value used within the loop, so the order of such fusions is
+  // important. We could also use "transform.merge_handles" to obtain a single
+  // handle to all operations and give it to `fuse_into_containing_op` that
+  // would take care of the ordering in this case.
+  %add_fused, %loop_0 =
+      transform.structured.fuse_into_containing_op %add into %loop
+        : (!transform.any_op, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
+  %matmul_fused, %loop_1 =
+      transform.structured.fuse_into_containing_op %arg1 into %loop
+        : (!transform.op<"linalg.matmul">, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
 
   // Tile again to get the desired size. Note that this time this tiles the
   // "add" operation and fuses matmul into the loop, but doesn't affect the
   // "max" operation. This illustrates the precise targeting with the transform
   // dialect. Otherwise, it is difficult to differentiate "add" and "max", both
   // of which having the same kind.
-  %loop_2, %tiled_2 = transform.structured.tile_to_forall_op %add_fused tile_sizes [4, 4]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  %matmul_fused_2 = transform.structured.fuse_into_containing_op %matmul_fused into %loop_2
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
+  %loop_2, %tiled_2 =
+      transform.structured.tile_using_forall %add_fused tile_sizes [4, 4]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %matmul_fused_2, %loop_3 =
+      transform.structured.fuse_into_containing_op %matmul_fused into %loop_2
+        : (!transform.any_op, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
 
   // Since outlining is currently only implemented for region-holding operations
   // such as loops, use tiling to size 1 to materialize the outer loop that is
   // going to be outlined.
-  %outline_target, %_ = transform.structured.tile_to_forall_op %tiled_2 tile_sizes [1]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  transform.structured.fuse_into_containing_op %matmul_fused_2 into %outline_target
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
+  %outline_target, %_ =
+      transform.structured.tile_using_forall %tiled_2 tile_sizes [1]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.structured.fuse_into_containing_op %matmul_fused_2
+      into %outline_target
+        : (!transform.any_op, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
   %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   transform.yield
 }
-
 ```
 
 This additional transformation also illustrates handle invalidation for nested operations. The `transform.loop.outline` operation consumes the handle to the loop, which invalidates it and all handles to any operations nested in it, such as `%2`. Attempting to use this handle will cause undefined behavior. (Note that it isn’t strictly necessary for this specific form of the outlining to consume the operand as the implementation only _moves_ the region without recreating the operations, but the author of the transformation chose to invalidate the handle anyway.)
@@ -347,7 +361,7 @@ test/Examples/transform/Ch1/invalidation-2.mlir:109:3: error: op uses a handle i
   transform.test_print_remark_at_operand %outline_target, "outlined loop" : !transform.any_op
   ^
 test/Examples/transform/Ch1/invalidation-2.mlir:102:25: note: handle to invalidated ops
-  %outline_target, %_ = transform.structured.tile_to_forall_op %tiled_2 tile_sizes [1]
+  %outline_target, %_ = transform.structured.tile_using_forall %tiled_2 tile_sizes [1]
                         ^
 test/Examples/transform/Ch1/invalidation-2.mlir:106:18: note: invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them
   %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}

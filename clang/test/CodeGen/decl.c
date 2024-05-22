@@ -19,7 +19,6 @@ void test1(void) {
 }
 
 
-// rdar://7346691
 void test2(void) {
   // This should codegen as a "@test2.x" global + memcpy.
   int x[] = { 1, 2, 3, 4, 6, 8, 9, 10, 123, 231, 123,23, 24 };
@@ -78,13 +77,11 @@ void test6(void) {
   test6f(&x);
 }
 
-// rdar://7657600
 struct test7s { int a; int b; } test7[] = {
   {1, 2},
   {4},
 };
 
-// rdar://7872531
 #pragma pack(push, 2)
 struct test8s { int f0; char f1; } test8g = {};
 
@@ -104,7 +101,7 @@ void init_error(void) {
 
 
 
-// rdar://8147692 - ABI crash in recursive struct-through-function-pointer.
+// ABI crash in recursive struct-through-function-pointer.
 typedef struct {
   int x5a;
 } x5;

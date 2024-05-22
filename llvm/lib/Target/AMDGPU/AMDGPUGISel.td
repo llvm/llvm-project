@@ -31,6 +31,10 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3modsnoncanonicalizing :
+    GIComplexOperandMatcher<s32, "selectVOP3ModsNonCanonicalizing">,
+    GIComplexPatternEquiv<VOP3ModsNonCanonicalizing>;
+
 def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;
@@ -101,6 +105,11 @@ def gi_global_saddr :
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
     GIComplexPatternEquiv<MUBUFScratchOffset>;
+
+def gi_buf_soffset :
+    GIComplexOperandMatcher<s32, "selectBUFSOffset">,
+    GIComplexPatternEquiv<BUFSOffset>;
+
 def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
@@ -375,3 +384,6 @@ def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
+
+def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
+  GISDNodeXFormEquiv<FPPow2ToExponentXForm>;

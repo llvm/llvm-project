@@ -20,7 +20,7 @@ define void @bn_mul_comba8(ptr nocapture %r, ptr nocapture readonly %a, ptr noca
 ; CHECK-ITIN:    mulhdu
 ; CHECK-ITIN-NEXT:    mulld
 ; CHECK-ITIN-NEXT:    mulhdu
-; CHECK-ITIN-NEXT:    mulld
+; CHECK-ITIN:    mulld
 ; CHECK-ITIN-NEXT:    mulhdu
 
   %1 = load i64, ptr %a, align 8

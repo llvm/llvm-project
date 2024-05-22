@@ -8,9 +8,10 @@
 
 # Flang drivers
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 There are two main drivers in Flang:
@@ -60,7 +61,7 @@ Note that similarly to `-Xclang` in `clang`, you can use `-Xflang` to forward a
 frontend specific flag from the _compiler_ directly to the _frontend_ driver,
 e.g.:
 
-```lang=bash
+```bash
 flang-new -Xflang -fdebug-dump-parse-tree input.f95
 ```
 
@@ -68,7 +69,7 @@ In the invocation above, `-fdebug-dump-parse-tree` is forwarded to `flang-new
 -fc1`. Without the forwarding flag, `-Xflang`, you would see the following
 warning:
 
-```lang=bash
+```bash
 flang-new: warning: argument unused during compilation:
 ```
 
@@ -240,16 +241,14 @@ at times. Sometimes the easiest approach is to find an existing option that has
 similar semantics to your new option and start by copying that.
 
 For every new option, you will also have to define the visibility of the new
-option. This is controlled through the `Flags` field. You can use the following
-Flang specific option flags to control this:
+option. This is controlled through the `Visibility` field. You can use the
+following Flang specific visibility flags to control this:
   * `FlangOption` - this option will be available in the `flang-new` compiler driver,
   * `FC1Option` - this option will be available in the `flang-new -fc1` frontend driver,
-  * `FlangOnlyOption` - this option will not be visible in Clang drivers.
 
-Please make sure that options that you add are only visible in drivers that can
-support it. For example, options that only make sense for Fortran input files
-(e.g. `-ffree-form`) should not be visible in Clang and be marked as
-`FlangOnlyOption`.
+Options that are supported by clang should explicitly specify `ClangOption` in
+`Visibility`, and options that are only supported in Flang should not specify
+`ClangOption`.
 
 When deciding what `OptionGroup` to use when defining a new option in the
 `Options.td` file, many new options fall into one of the following two
@@ -271,12 +270,12 @@ two different places, depending on which driver they belong to:
 The parsing will depend on the semantics encoded in the TableGen definition.
 
 When adding a compiler driver option (i.e. an option that contains
-`FlangOption` among its `Flags`) that you also intend to be understood by the
-frontend, make sure that it is either forwarded to `flang-new -fc1` or translated
-into some other option that is accepted by the frontend driver. In the case of
-options that contain both `FlangOption` and `FC1Option` among its flags, we
-usually just forward from `flang-new` to `flang-new -fc1`. This is then tested in
-`flang/test/Driver/frontend-forward.F90`.
+`FlangOption` among in it's `Visibility`) that you also intend to be understood
+by the frontend, make sure that it is either forwarded to `flang-new -fc1` or
+translated into some other option that is accepted by the frontend driver. In
+the case of options that contain both `FlangOption` and `FC1Option` among its
+flags, we usually just forward from `flang-new` to `flang-new -fc1`. This is
+then tested in `flang/test/Driver/frontend-forward.F90`.
 
 What follows is usually very dependant on the meaning of the corresponding
 option. In general, regular compiler flags (e.g. `-ffree-form`) are mapped to

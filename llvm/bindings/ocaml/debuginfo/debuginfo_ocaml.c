@@ -837,7 +837,7 @@ value llvm_di_type_get_line(value DType) {
 }
 
 value llvm_di_type_get_flags(value DType) {
-  LLVMDIFlags Flags = LLVMDITypeGetLine(Metadata_val(DType));
+  LLVMDIFlags Flags = LLVMDITypeGetFlags(Metadata_val(DType));
   return alloc_diflags(Flags);
 }
 

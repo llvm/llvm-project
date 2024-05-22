@@ -93,7 +93,7 @@ public:
   void addRegMasked(MCPhysReg Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
       LaneBitmask UnitMask = (*Unit).second;
-      if (UnitMask.none() || (UnitMask & Mask).any())
+      if ((UnitMask & Mask).any())
         Units.set((*Unit).first);
     }
   }
@@ -161,15 +161,15 @@ private:
 
 /// Returns an iterator range over all physical register and mask operands for
 /// \p MI and bundled instructions. This also skips any debug operands.
-inline iterator_range<filter_iterator<
-    ConstMIBundleOperands, std::function<bool(const MachineOperand &)>>>
+inline iterator_range<
+    filter_iterator<ConstMIBundleOperands, bool (*)(const MachineOperand &)>>
 phys_regs_and_masks(const MachineInstr &MI) {
-  std::function<bool(const MachineOperand &)> Pred =
-      [](const MachineOperand &MOP) {
-        return MOP.isRegMask() ||
-               (MOP.isReg() && !MOP.isDebug() && MOP.getReg().isPhysical());
-      };
-  return make_filter_range(const_mi_bundle_ops(MI), Pred);
+  auto Pred = [](const MachineOperand &MOP) {
+    return MOP.isRegMask() ||
+           (MOP.isReg() && !MOP.isDebug() && MOP.getReg().isPhysical());
+  };
+  return make_filter_range(const_mi_bundle_ops(MI),
+                           static_cast<bool (*)(const MachineOperand &)>(Pred));
 }
 
 } // end namespace llvm

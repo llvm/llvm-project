@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -verify -Wproperty-attribute-mismatch %s
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -fsyntax-only -verify -Wproperty-attribute-mismatch %s
-// rdar://12103400
 
 @class NSString;
 
@@ -47,7 +46,6 @@
 @property (assign) NSString* readonlyProp;
 @end
 
-// rdar://12214070
 @interface radar12214070
 @property (nonatomic, atomic, readonly) float propertyName; // expected-error {{property attributes 'atomic' and 'nonatomic' are mutually exclusive}}
 							    

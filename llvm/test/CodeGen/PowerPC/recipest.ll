@@ -16,9 +16,9 @@ define double @foo_fmf(double %a, double %b) nounwind {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    frsqrte 0, 2
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI0_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 4, .LCPI0_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 5, .LCPI0_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
+; CHECK-P7-NEXT:    lfs 5, .LCPI0_1@toc@l(3)
 ; CHECK-P7-NEXT:    fmul 3, 2, 0
 ; CHECK-P7-NEXT:    fmadd 3, 3, 0, 4
 ; CHECK-P7-NEXT:    fmul 0, 0, 5
@@ -35,17 +35,17 @@ define double @foo_fmf(double %a, double %b) nounwind {
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    xsrsqrtedp 0, 2
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-P8-NEXT:    lfs 5, .LCPI0_0@toc@l(3)
-; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
-; CHECK-P8-NEXT:    xsmuldp 4, 2, 0
-; CHECK-P8-NEXT:    fmr 6, 3
-; CHECK-P8-NEXT:    xsmaddadp 6, 4, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 6
-; CHECK-P8-NEXT:    xsmuldp 2, 2, 0
-; CHECK-P8-NEXT:    xsmaddadp 3, 2, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
+; CHECK-P8-NEXT:    xvcvsxwdp 4, 34
+; CHECK-P8-NEXT:    xsmuldp 3, 2, 0
+; CHECK-P8-NEXT:    fmr 5, 4
+; CHECK-P8-NEXT:    xsmaddadp 5, 3, 0
+; CHECK-P8-NEXT:    lfs 3, .LCPI0_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 3
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
+; CHECK-P8-NEXT:    xsmuldp 2, 2, 0
+; CHECK-P8-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 3
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
@@ -123,12 +123,12 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    frsqrtes 0, 2
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI3_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 3, .LCPI3_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 4, .LCPI3_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI3_1@toc@ha
 ; CHECK-P7-NEXT:    fmuls 2, 2, 0
 ; CHECK-P7-NEXT:    fmadds 2, 2, 0, 3
-; CHECK-P7-NEXT:    fmuls 0, 0, 4
+; CHECK-P7-NEXT:    lfs 3, .LCPI3_1@toc@l(3)
+; CHECK-P7-NEXT:    fmuls 0, 0, 3
 ; CHECK-P7-NEXT:    fmuls 0, 0, 2
 ; CHECK-P7-NEXT:    fmul 1, 1, 0
 ; CHECK-P7-NEXT:    blr
@@ -138,11 +138,11 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 2
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-P8-NEXT:    lfs 4, .LCPI3_0@toc@l(3)
 ; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
 ; CHECK-P8-NEXT:    xsmulsp 2, 2, 0
 ; CHECK-P8-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 4
+; CHECK-P8-NEXT:    lfs 2, .LCPI3_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmulsp 0, 0, 2
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
@@ -195,9 +195,9 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    frsqrte 0, 2
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI5_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 4, .LCPI5_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 5, .LCPI5_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
+; CHECK-P7-NEXT:    lfs 5, .LCPI5_1@toc@l(3)
 ; CHECK-P7-NEXT:    fmul 3, 2, 0
 ; CHECK-P7-NEXT:    fmadd 3, 3, 0, 4
 ; CHECK-P7-NEXT:    fmul 0, 0, 5
@@ -215,17 +215,17 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    xsrsqrtedp 0, 2
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; CHECK-P8-NEXT:    lfs 5, .LCPI5_0@toc@l(3)
-; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
-; CHECK-P8-NEXT:    xsmuldp 4, 2, 0
-; CHECK-P8-NEXT:    fmr 6, 3
-; CHECK-P8-NEXT:    xsmaddadp 6, 4, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 6
-; CHECK-P8-NEXT:    xsmuldp 2, 2, 0
-; CHECK-P8-NEXT:    xsmaddadp 3, 2, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
+; CHECK-P8-NEXT:    xvcvsxwdp 4, 34
+; CHECK-P8-NEXT:    xsmuldp 3, 2, 0
+; CHECK-P8-NEXT:    fmr 5, 4
+; CHECK-P8-NEXT:    xsmaddadp 5, 3, 0
+; CHECK-P8-NEXT:    lfs 3, .LCPI5_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 3
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
+; CHECK-P8-NEXT:    xsmuldp 2, 2, 0
+; CHECK-P8-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 3
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
 ; CHECK-P8-NEXT:    xsrsp 0, 0
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
@@ -287,12 +287,12 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    frsqrtes 0, 2
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI7_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 3, .LCPI7_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 4, .LCPI7_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
 ; CHECK-P7-NEXT:    fmuls 2, 2, 0
 ; CHECK-P7-NEXT:    fmadds 2, 2, 0, 3
-; CHECK-P7-NEXT:    fmuls 0, 0, 4
+; CHECK-P7-NEXT:    lfs 3, .LCPI7_1@toc@l(3)
+; CHECK-P7-NEXT:    fmuls 0, 0, 3
 ; CHECK-P7-NEXT:    fmuls 0, 0, 2
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    blr
@@ -302,11 +302,11 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 2
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; CHECK-P8-NEXT:    lfs 4, .LCPI7_0@toc@l(3)
 ; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
 ; CHECK-P8-NEXT:    xsmulsp 2, 2, 0
 ; CHECK-P8-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 4
+; CHECK-P8-NEXT:    lfs 2, .LCPI7_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmulsp 0, 0, 2
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
@@ -380,12 +380,12 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    frsqrtes 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI10_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 4, .LCPI10_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 5, .LCPI10_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI10_1@toc@ha
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    fmadds 1, 1, 0, 4
-; CHECK-P7-NEXT:    fmuls 0, 0, 5
+; CHECK-P7-NEXT:    lfs 4, .LCPI10_1@toc@l(3)
+; CHECK-P7-NEXT:    fmuls 0, 0, 4
 ; CHECK-P7-NEXT:    fmuls 0, 0, 1
 ; CHECK-P7-NEXT:    fres 1, 2
 ; CHECK-P7-NEXT:    fmuls 4, 0, 1
@@ -399,11 +399,11 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 1
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; CHECK-P8-NEXT:    lfs 5, .LCPI10_0@toc@l(3)
 ; CHECK-P8-NEXT:    xvcvsxwdp 4, 34
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    xsmaddasp 4, 1, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 5
+; CHECK-P8-NEXT:    lfs 1, .LCPI10_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmulsp 0, 0, 1
 ; CHECK-P8-NEXT:    xsresp 1, 2
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 4
 ; CHECK-P8-NEXT:    xsmulsp 4, 0, 1
@@ -465,18 +465,18 @@ define float @rsqrt_fmul_safe(float %a, float %b, float %c) {
 define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P7-LABEL: hoo_fmf:
 ; CHECK-P7:       # %bb.0:
-; CHECK-P7-NEXT:    vspltisw 4, -1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
+; CHECK-P7-NEXT:    vspltisw 4, -1
 ; CHECK-P7-NEXT:    vrsqrtefp 5, 3
 ; CHECK-P7-NEXT:    addi 3, 3, .LCPI12_0@toc@l
+; CHECK-P7-NEXT:    vslw 4, 4, 4
 ; CHECK-P7-NEXT:    lvx 0, 0, 3
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI12_1@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .LCPI12_1@toc@l
-; CHECK-P7-NEXT:    lvx 1, 0, 3
-; CHECK-P7-NEXT:    vslw 4, 4, 4
 ; CHECK-P7-NEXT:    vmaddfp 3, 3, 5, 4
+; CHECK-P7-NEXT:    addi 3, 3, .LCPI12_1@toc@l
 ; CHECK-P7-NEXT:    vmaddfp 3, 3, 5, 0
-; CHECK-P7-NEXT:    vmaddfp 5, 5, 1, 4
+; CHECK-P7-NEXT:    lvx 0, 0, 3
+; CHECK-P7-NEXT:    vmaddfp 5, 5, 0, 4
 ; CHECK-P7-NEXT:    vmaddfp 3, 5, 3, 4
 ; CHECK-P7-NEXT:    vmaddfp 2, 2, 3, 4
 ; CHECK-P7-NEXT:    blr
@@ -485,14 +485,14 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xvrsqrtesp 0, 35
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI12_1@toc@ha
 ; CHECK-P8-NEXT:    addi 3, 3, .LCPI12_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x 2, 0, 3
-; CHECK-P8-NEXT:    addi 3, 4, .LCPI12_1@toc@l
-; CHECK-P8-NEXT:    lxvd2x 3, 0, 3
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI12_1@toc@ha
 ; CHECK-P8-NEXT:    xvmulsp 1, 35, 0
+; CHECK-P8-NEXT:    addi 3, 3, .LCPI12_1@toc@l
 ; CHECK-P8-NEXT:    xvmaddasp 2, 1, 0
-; CHECK-P8-NEXT:    xvmulsp 0, 0, 3
+; CHECK-P8-NEXT:    lxvd2x 1, 0, 3
+; CHECK-P8-NEXT:    xvmulsp 0, 0, 1
 ; CHECK-P8-NEXT:    xvmulsp 0, 0, 2
 ; CHECK-P8-NEXT:    xvmulsp 34, 34, 0
 ; CHECK-P8-NEXT:    blr
@@ -523,27 +523,27 @@ define <4 x float> @hoo_safe(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P7-NEXT:    addi 3, 1, -32
 ; CHECK-P7-NEXT:    stvx 3, 0, 3
 ; CHECK-P7-NEXT:    addi 3, 1, -48
-; CHECK-P7-NEXT:    lfs 0, -20(1)
-; CHECK-P7-NEXT:    lfs 3, -24(1)
-; CHECK-P7-NEXT:    lfs 1, -32(1)
-; CHECK-P7-NEXT:    lfs 2, -28(1)
-; CHECK-P7-NEXT:    stvx 2, 0, 3
-; CHECK-P7-NEXT:    addi 3, 1, -16
-; CHECK-P7-NEXT:    fsqrts 0, 0
-; CHECK-P7-NEXT:    lfs 4, -36(1)
+; CHECK-P7-NEXT:    lfs 3, -20(1)
+; CHECK-P7-NEXT:    lfs 2, -24(1)
+; CHECK-P7-NEXT:    lfs 0, -32(1)
+; CHECK-P7-NEXT:    lfs 1, -28(1)
 ; CHECK-P7-NEXT:    fsqrts 3, 3
+; CHECK-P7-NEXT:    stvx 2, 0, 3
+; CHECK-P7-NEXT:    lfs 4, -36(1)
 ; CHECK-P7-NEXT:    fsqrts 2, 2
 ; CHECK-P7-NEXT:    fsqrts 1, 1
-; CHECK-P7-NEXT:    fdivs 0, 4, 0
-; CHECK-P7-NEXT:    stfs 0, -4(1)
-; CHECK-P7-NEXT:    lfs 0, -40(1)
-; CHECK-P7-NEXT:    fdivs 0, 0, 3
-; CHECK-P7-NEXT:    stfs 0, -8(1)
-; CHECK-P7-NEXT:    lfs 0, -44(1)
-; CHECK-P7-NEXT:    fdivs 0, 0, 2
-; CHECK-P7-NEXT:    stfs 0, -12(1)
-; CHECK-P7-NEXT:    lfs 0, -48(1)
-; CHECK-P7-NEXT:    fdivs 0, 0, 1
+; CHECK-P7-NEXT:    fsqrts 0, 0
+; CHECK-P7-NEXT:    addi 3, 1, -16
+; CHECK-P7-NEXT:    fdivs 3, 4, 3
+; CHECK-P7-NEXT:    stfs 3, -4(1)
+; CHECK-P7-NEXT:    lfs 3, -40(1)
+; CHECK-P7-NEXT:    fdivs 2, 3, 2
+; CHECK-P7-NEXT:    stfs 2, -8(1)
+; CHECK-P7-NEXT:    lfs 2, -44(1)
+; CHECK-P7-NEXT:    fdivs 1, 2, 1
+; CHECK-P7-NEXT:    stfs 1, -12(1)
+; CHECK-P7-NEXT:    lfs 1, -48(1)
+; CHECK-P7-NEXT:    fdivs 0, 1, 0
 ; CHECK-P7-NEXT:    stfs 0, -16(1)
 ; CHECK-P7-NEXT:    lvx 2, 0, 3
 ; CHECK-P7-NEXT:    blr
@@ -710,12 +710,12 @@ define <4 x float> @hoo2_safe(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P7-LABEL: hoo2_safe:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    addi 3, 1, -32
-; CHECK-P7-NEXT:    addi 4, 1, -48
 ; CHECK-P7-NEXT:    stvx 3, 0, 3
-; CHECK-P7-NEXT:    stvx 2, 0, 4
+; CHECK-P7-NEXT:    addi 3, 1, -48
+; CHECK-P7-NEXT:    stvx 2, 0, 3
+; CHECK-P7-NEXT:    addi 3, 1, -16
 ; CHECK-P7-NEXT:    lfs 0, -20(1)
 ; CHECK-P7-NEXT:    lfs 1, -36(1)
-; CHECK-P7-NEXT:    addi 3, 1, -16
 ; CHECK-P7-NEXT:    fdivs 0, 1, 0
 ; CHECK-P7-NEXT:    lfs 1, -40(1)
 ; CHECK-P7-NEXT:    stfs 0, -4(1)
@@ -754,9 +754,9 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrte 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI20_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 3, .LCPI20_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 4, .LCPI20_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI20_1@toc@ha
+; CHECK-P7-NEXT:    lfs 4, .LCPI20_1@toc@l(3)
 ; CHECK-P7-NEXT:    fmul 2, 1, 0
 ; CHECK-P7-NEXT:    fmadd 2, 2, 0, 3
 ; CHECK-P7-NEXT:    fmul 0, 0, 4
@@ -778,17 +778,17 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
-; CHECK-P8-NEXT:    lfs 4, .LCPI20_0@toc@l(3)
-; CHECK-P8-NEXT:    xvcvsxwdp 2, 34
-; CHECK-P8-NEXT:    xsmuldp 3, 1, 0
-; CHECK-P8-NEXT:    fmr 5, 2
-; CHECK-P8-NEXT:    xsmaddadp 5, 3, 0
+; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
+; CHECK-P8-NEXT:    xsmuldp 2, 1, 0
+; CHECK-P8-NEXT:    fmr 4, 3
+; CHECK-P8-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-P8-NEXT:    lfs 2, .LCPI20_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 2
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
-; CHECK-P8-NEXT:    xsmaddadp 2, 1, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 1, 4
-; CHECK-P8-NEXT:    xsmuldp 1, 0, 2
+; CHECK-P8-NEXT:    xsmaddadp 3, 1, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 1, 2
+; CHECK-P8-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-P8-NEXT:    blr
 ; CHECK-P8-NEXT:  .LBB20_2:
 ; CHECK-P8-NEXT:    xssqrtdp 1, 1
@@ -832,9 +832,9 @@ define double @foo3_fmf_crbits_off(double %a) #2 {
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrte 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI21_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 3, .LCPI21_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 4, .LCPI21_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI21_1@toc@ha
+; CHECK-P7-NEXT:    lfs 4, .LCPI21_1@toc@l(3)
 ; CHECK-P7-NEXT:    fmul 2, 1, 0
 ; CHECK-P7-NEXT:    fmadd 2, 2, 0, 3
 ; CHECK-P7-NEXT:    fmul 0, 0, 4
@@ -850,8 +850,8 @@ define double @foo3_fmf_crbits_off(double %a) #2 {
 ;
 ; CHECK-P8-LABEL: foo3_fmf_crbits_off:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsabsdp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI21_1@toc@ha
+; CHECK-P8-NEXT:    xsabsdp 0, 1
 ; CHECK-P8-NEXT:    lfd 2, .LCPI21_1@toc@l(3)
 ; CHECK-P8-NEXT:    xscmpudp 0, 0, 2
 ; CHECK-P8-NEXT:    blt 0, .LBB21_2
@@ -859,17 +859,17 @@ define double @foo3_fmf_crbits_off(double %a) #2 {
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
-; CHECK-P8-NEXT:    lfs 4, .LCPI21_0@toc@l(3)
-; CHECK-P8-NEXT:    xvcvsxwdp 2, 34
-; CHECK-P8-NEXT:    xsmuldp 3, 1, 0
-; CHECK-P8-NEXT:    fmr 5, 2
-; CHECK-P8-NEXT:    xsmaddadp 5, 3, 0
+; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
+; CHECK-P8-NEXT:    xsmuldp 2, 1, 0
+; CHECK-P8-NEXT:    fmr 4, 3
+; CHECK-P8-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-P8-NEXT:    lfs 2, .LCPI21_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 2
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
-; CHECK-P8-NEXT:    xsmaddadp 2, 1, 0
-; CHECK-P8-NEXT:    xsmuldp 0, 1, 4
-; CHECK-P8-NEXT:    xsmuldp 1, 0, 2
+; CHECK-P8-NEXT:    xsmaddadp 3, 1, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 1, 2
+; CHECK-P8-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-P8-NEXT:    blr
 ; CHECK-P8-NEXT:  .LBB21_2:
 ; CHECK-P8-NEXT:    xssqrtdp 1, 1
@@ -935,12 +935,12 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrtes 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI23_1@toc@ha
 ; CHECK-P7-NEXT:    lfs 2, .LCPI23_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 3, .LCPI23_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    fmadds 0, 1, 0, 2
-; CHECK-P7-NEXT:    fmuls 1, 1, 3
+; CHECK-P7-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
+; CHECK-P7-NEXT:    fmuls 1, 1, 2
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    blr
 ; CHECK-P7-NEXT:  .LBB23_2:
@@ -950,8 +950,8 @@ define float @goo3_fmf(float %a) nounwind {
 ;
 ; CHECK-P8-LABEL: goo3_fmf:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsabsdp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
+; CHECK-P8-NEXT:    xsabsdp 0, 1
 ; CHECK-P8-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
 ; CHECK-P8-NEXT:    fcmpu 0, 0, 2
 ; CHECK-P8-NEXT:    xxlxor 0, 0, 0
@@ -960,11 +960,11 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 1
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
-; CHECK-P8-NEXT:    lfs 3, .LCPI23_0@toc@l(3)
 ; CHECK-P8-NEXT:    xvcvsxwdp 2, 34
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    xsmaddasp 2, 1, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 1, 3
+; CHECK-P8-NEXT:    lfs 0, .LCPI23_0@toc@l(3)
+; CHECK-P8-NEXT:    xsmulsp 0, 1, 0
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 2
 ; CHECK-P8-NEXT:  .LBB23_2:
 ; CHECK-P8-NEXT:    fmr 1, 0
@@ -1017,22 +1017,22 @@ define float @goo3_safe(float %a) nounwind {
 define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P7-LABEL: hoo3_fmf:
 ; CHECK-P7:       # %bb.0:
-; CHECK-P7-NEXT:    vspltisw 3, -1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
+; CHECK-P7-NEXT:    vspltisw 3, -1
 ; CHECK-P7-NEXT:    vrsqrtefp 4, 2
 ; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_0@toc@l
+; CHECK-P7-NEXT:    vslw 3, 3, 3
 ; CHECK-P7-NEXT:    lvx 0, 0, 3
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI25_1@toc@ha
 ; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_1@toc@l
-; CHECK-P7-NEXT:    lvx 1, 0, 3
-; CHECK-P7-NEXT:    vslw 3, 3, 3
 ; CHECK-P7-NEXT:    vmaddfp 5, 2, 4, 3
+; CHECK-P7-NEXT:    lvx 1, 0, 3
 ; CHECK-P7-NEXT:    vmaddfp 4, 5, 4, 0
 ; CHECK-P7-NEXT:    vmaddfp 5, 5, 1, 3
-; CHECK-P7-NEXT:    vxor 0, 0, 0
 ; CHECK-P7-NEXT:    vmaddfp 3, 5, 4, 3
-; CHECK-P7-NEXT:    vcmpeqfp 2, 2, 0
-; CHECK-P7-NEXT:    vsel 2, 3, 0, 2
+; CHECK-P7-NEXT:    vxor 4, 4, 4
+; CHECK-P7-NEXT:    vcmpeqfp 2, 2, 4
+; CHECK-P7-NEXT:    vsel 2, 3, 4, 2
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: hoo3_fmf:
@@ -1042,14 +1042,14 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xvrsqrtesp 0, 34
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI25_1@toc@ha
 ; CHECK-P8-NEXT:    addi 3, 3, .LCPI25_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x 2, 0, 3
-; CHECK-P8-NEXT:    addi 3, 4, .LCPI25_1@toc@l
-; CHECK-P8-NEXT:    lxvd2x 3, 0, 3
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI25_1@toc@ha
 ; CHECK-P8-NEXT:    xvmulsp 1, 34, 0
+; CHECK-P8-NEXT:    addi 3, 3, .LCPI25_1@toc@l
 ; CHECK-P8-NEXT:    xvmaddasp 2, 1, 0
-; CHECK-P8-NEXT:    xvmulsp 0, 1, 3
+; CHECK-P8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-P8-NEXT:    xvmulsp 0, 1, 0
 ; CHECK-P8-NEXT:    xvmulsp 34, 0, 2
 ; CHECK-P8-NEXT:    blr
 ; CHECK-P8-NEXT:  .LBB25_2:
@@ -1119,19 +1119,19 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    ftsqrt 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI27_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI27_1@toc@ha
-; CHECK-P7-NEXT:    lfs 3, .LCPI27_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 0, .LCPI27_1@toc@l(4)
+; CHECK-P7-NEXT:    lfs 0, .LCPI27_0@toc@l(3)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
+; CHECK-P7-NEXT:    lfs 3, .LCPI27_1@toc@l(3)
 ; CHECK-P7-NEXT:    bc 12, 2, .LBB27_3
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrte 4, 1
 ; CHECK-P7-NEXT:    fmul 5, 1, 4
-; CHECK-P7-NEXT:    fmadd 5, 5, 4, 3
-; CHECK-P7-NEXT:    fmul 4, 4, 0
+; CHECK-P7-NEXT:    fmadd 5, 5, 4, 0
+; CHECK-P7-NEXT:    fmul 4, 4, 3
 ; CHECK-P7-NEXT:    fmul 4, 4, 5
 ; CHECK-P7-NEXT:    fmul 1, 1, 4
-; CHECK-P7-NEXT:    fmadd 4, 1, 4, 3
-; CHECK-P7-NEXT:    fmul 1, 1, 0
+; CHECK-P7-NEXT:    fmadd 4, 1, 4, 0
+; CHECK-P7-NEXT:    fmul 1, 1, 3
 ; CHECK-P7-NEXT:    fmul 1, 1, 4
 ; CHECK-P7-NEXT:    ftsqrt 0, 2
 ; CHECK-P7-NEXT:    bc 4, 2, .LBB27_4
@@ -1145,13 +1145,13 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P7-NEXT:  .LBB27_4:
 ; CHECK-P7-NEXT:    frsqrte 4, 2
 ; CHECK-P7-NEXT:    fmul 5, 2, 4
-; CHECK-P7-NEXT:    fmadd 5, 5, 4, 3
-; CHECK-P7-NEXT:    fmul 4, 4, 0
+; CHECK-P7-NEXT:    fmadd 5, 5, 4, 0
+; CHECK-P7-NEXT:    fmul 4, 4, 3
 ; CHECK-P7-NEXT:    fmul 4, 4, 5
 ; CHECK-P7-NEXT:    fmul 2, 2, 4
-; CHECK-P7-NEXT:    fmadd 3, 2, 4, 3
-; CHECK-P7-NEXT:    fmul 0, 2, 0
-; CHECK-P7-NEXT:    fmul 2, 0, 3
+; CHECK-P7-NEXT:    fmadd 0, 2, 4, 0
+; CHECK-P7-NEXT:    fmul 2, 2, 3
+; CHECK-P7-NEXT:    fmul 2, 2, 0
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: hoo4_fmf:
@@ -1164,16 +1164,16 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P8-NEXT:    addi 3, 3, .LCPI27_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x 2, 0, 3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
+; CHECK-P8-NEXT:    xvmuldp 1, 34, 0
 ; CHECK-P8-NEXT:    addi 3, 3, .LCPI27_1@toc@l
-; CHECK-P8-NEXT:    lxvd2x 3, 0, 3
-; CHECK-P8-NEXT:    xxlor 4, 2, 2
-; CHECK-P8-NEXT:    xvmuldp 1, 34, 0
-; CHECK-P8-NEXT:    xvmaddadp 4, 1, 0
+; CHECK-P8-NEXT:    xxlor 3, 2, 2
+; CHECK-P8-NEXT:    xvmaddadp 3, 1, 0
+; CHECK-P8-NEXT:    lxvd2x 1, 0, 3
+; CHECK-P8-NEXT:    xvmuldp 0, 0, 1
 ; CHECK-P8-NEXT:    xvmuldp 0, 0, 3
-; CHECK-P8-NEXT:    xvmuldp 0, 0, 4
-; CHECK-P8-NEXT:    xvmuldp 1, 34, 0
-; CHECK-P8-NEXT:    xvmaddadp 2, 1, 0
-; CHECK-P8-NEXT:    xvmuldp 0, 1, 3
+; CHECK-P8-NEXT:    xvmuldp 3, 34, 0
+; CHECK-P8-NEXT:    xvmaddadp 2, 3, 0
+; CHECK-P8-NEXT:    xvmuldp 0, 3, 1
 ; CHECK-P8-NEXT:    xvmuldp 34, 0, 2
 ; CHECK-P8-NEXT:    blr
 ; CHECK-P8-NEXT:  .LBB27_2:

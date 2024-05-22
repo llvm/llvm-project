@@ -39,6 +39,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::opt;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 
@@ -50,7 +51,7 @@ namespace {
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -111,9 +112,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -453,6 +458,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   config->sharedMemory = args.hasArg(OPT_shared_memory);
+  config->soName = args.getLastArgValue(OPT_soname);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
@@ -472,6 +478,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relocatable = args.hasArg(OPT_relocatable);
   config->gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !config->relocatable);
+  for (auto *arg : args.filtered(OPT_keep_section))
+    config->keepSections.insert(arg->getValue());
   config->mergeDataSegments =
       args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !config->relocatable);
@@ -494,8 +502,10 @@ static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
 
-  config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
+  config->tableBase = args::getInteger(args, OPT_table_base, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 0);
+  config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
+  config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
@@ -567,6 +577,17 @@ static void setConfigs() {
     if (config->exportTable)
       error("-shared/-pie is incompatible with --export-table");
     config->importTable = true;
+  } else {
+    // Default table base.  Defaults to 1, reserving 0 for the NULL function
+    // pointer.
+    if (!config->tableBase)
+      config->tableBase = 1;
+    // The default offset for static/global data, for when --global-base is
+    // not specified on the command line.  The precise value of 1024 is
+    // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
+    // emscripten used prior to wasm-ld).
+    if (!config->globalBase && !config->relocatable && !config->stackFirst)
+      config->globalBase = 1024;
   }
 
   if (config->relocatable) {
@@ -586,7 +607,6 @@ static void setConfigs() {
       config->memoryImport =
           std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
     }
-    config->importUndefined = true;
   }
 
   // If neither export-memory nor import-memory is specified, default to
@@ -660,8 +680,11 @@ static void checkOptions(opt::InputArgList &args) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 
-  if (config->globalBase && config->isPic) {
-    error("--global-base may not be used with -shared/-pie");
+  if (config->isPic) {
+    if (config->globalBase)
+      error("--global-base may not be used with -shared/-pie");
+    if (config->tableBase)
+      error("--table-base may not be used with -shared/-pie");
   }
 }
 
@@ -898,52 +921,61 @@ static void processStubLibrariesPreLTO() {
 
 static void processStubLibraries() {
   log("-- processStubLibraries");
-  for (auto &stub_file : symtab->stubFiles) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
-      if (!sym || !sym->isUndefined()) {
-        LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: " << name << "\n");
-        continue;
-      }
-      // The first stub library to define a given symbol sets this and
-      // definitions in later stub libraries are ignored.
-      if (sym->forceImport)
-        continue;  // Already handled
-      sym->forceImport = true;
-      if (sym->traced)
-        message(toString(stub_file) + ": importing " + name);
-      else
-        LLVM_DEBUG(llvm::dbgs()
-                   << toString(stub_file) << ": importing " << name << "\n");
-      for (const auto dep : deps) {
-        auto* needed = symtab->find(dep);
-        if (!needed) {
-          error(toString(stub_file) + ": undefined symbol: " + dep +
-                ". Required by " + toString(*sym));
-        } else if (needed->isUndefined()) {
-          error(toString(stub_file) +
-                ": undefined symbol: " + toString(*needed) +
-                ". Required by " + toString(*sym));
-        } else {
-          if (needed->traced)
-            message(toString(stub_file) + ": exported " + toString(*needed) +
-                    " due to import of " + name);
+  bool depsAdded = false;
+  do {
+    depsAdded = false;
+    for (auto &stub_file : symtab->stubFiles) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "processing stub file: " << stub_file->getName() << "\n");
+      for (auto [name, deps]: stub_file->symbolDependencies) {
+        auto* sym = symtab->find(name);
+        if (!sym || !sym->isUndefined()) {
+          if (sym && sym->traced)
+            message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs()
-                       << "force export: " << toString(*needed) << "\n");
-          needed->forceExport = true;
-          if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
-            lazy->fetch();
-            if (!config->whyExtract.empty())
-              config->whyExtractRecords.emplace_back(stub_file->getName(),
-                                                     sym->getFile(), *sym);
+            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
+          continue;
+        }
+        // The first stub library to define a given symbol sets this and
+        // definitions in later stub libraries are ignored.
+        if (sym->forceImport)
+          continue;  // Already handled
+        sym->forceImport = true;
+        if (sym->traced)
+          message(toString(stub_file) + ": importing " + name);
+        else
+          LLVM_DEBUG(llvm::dbgs()
+                     << toString(stub_file) << ": importing " << name << "\n");
+        for (const auto dep : deps) {
+          auto* needed = symtab->find(dep);
+          if (!needed) {
+            error(toString(stub_file) + ": undefined symbol: " + dep +
+                  ". Required by " + toString(*sym));
+          } else if (needed->isUndefined()) {
+            error(toString(stub_file) +
+                  ": undefined symbol: " + toString(*needed) +
+                  ". Required by " + toString(*sym));
+          } else {
+            if (needed->traced)
+              message(toString(stub_file) + ": exported " + toString(*needed) +
+                      " due to import of " + name);
+            else
+              LLVM_DEBUG(llvm::dbgs()
+                         << "force export: " << toString(*needed) << "\n");
+            needed->forceExport = true;
+            if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
+              depsAdded = true;
+              lazy->fetch();
+              if (!config->whyExtract.empty())
+                config->whyExtractRecords.emplace_back(stub_file->getName(),
+                                                       sym->getFile(), *sym);
+            }
           }
         }
       }
     }
-  }
+  } while (depsAdded);
+
   log("-- done processStubLibraries");
 }
 

@@ -25,6 +25,8 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +51,9 @@ static cl::opt<bool>
     MultiRotate("loop-rotate-multi", cl::init(false), cl::Hidden,
                 cl::desc("Allow loop rotation multiple times in order to reach "
                          "a better latch exit"));
+
+// Probability that a rotated loop has zero trip count / is never entered.
+static constexpr uint32_t ZeroTripCountWeights[] = {1, 127};
 
 namespace {
 /// A simple loop rotation transformation.
@@ -154,7 +159,8 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
     SmallVector<DbgValueInst *, 1> DbgValues;
-    llvm::findDbgValues(DbgValues, OrigHeaderVal);
+    SmallVector<DPValue *, 1> DPValues;
+    llvm::findDbgValues(DbgValues, OrigHeaderVal, &DPValues);
     for (auto &DbgValue : DbgValues) {
       // The original users in the OrigHeader are already using the original
       // definitions.
@@ -174,6 +180,29 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
       else
         NewVal = UndefValue::get(OrigHeaderVal->getType());
       DbgValue->replaceVariableLocationOp(OrigHeaderVal, NewVal);
+    }
+
+    // RemoveDIs: duplicate implementation for non-instruction debug-info
+    // storage in DPValues.
+    for (DPValue *DPV : DPValues) {
+      // The original users in the OrigHeader are already using the original
+      // definitions.
+      BasicBlock *UserBB = DPV->getMarker()->getParent();
+      if (UserBB == OrigHeader)
+        continue;
+
+      // Users in the OrigPreHeader need to use the value to which the
+      // original definitions are mapped and anything else can be handled by
+      // the SSAUpdater. To avoid adding PHINodes, check if the value is
+      // available in UserBB, if not substitute undef.
+      Value *NewVal;
+      if (UserBB == OrigPreheader)
+        NewVal = OrigPreHeaderVal;
+      else if (SSA.HasValueForBlock(UserBB))
+        NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
+      else
+        NewVal = UndefValue::get(OrigHeaderVal->getType());
+      DPV->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
   }
 }
@@ -242,6 +271,123 @@ static bool canRotateDeoptimizingLatchExit(Loop *L) {
     });
   }
   return false;
+}
+
+static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
+                                bool HasConditionalPreHeader,
+                                bool SuccsSwapped) {
+  MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
+  if (WeightMD == nullptr)
+    return;
+
+  // LoopBI should currently be a clone of PreHeaderBI with the same
+  // metadata. But we double check to make sure we don't have a degenerate case
+  // where instsimplify changed the instructions.
+  if (WeightMD != getBranchWeightMDNode(LoopBI))
+    return;
+
+  SmallVector<uint32_t, 2> Weights;
+  extractFromBranchWeightMD(WeightMD, Weights);
+  if (Weights.size() != 2)
+    return;
+  uint32_t OrigLoopExitWeight = Weights[0];
+  uint32_t OrigLoopBackedgeWeight = Weights[1];
+
+  if (SuccsSwapped)
+    std::swap(OrigLoopExitWeight, OrigLoopBackedgeWeight);
+
+  // Update branch weights. Consider the following edge-counts:
+  //
+  //    |  |--------             |
+  //    V  V       |             V
+  //   Br i1 ...   |            Br i1 ...
+  //   |       |   |            |     |
+  //  x|      y|   |  becomes:  |   y0|  |-----
+  //   V       V   |            |     V  V    |
+  // Exit    Loop  |            |    Loop     |
+  //           |   |            |   Br i1 ... |
+  //           -----            |   |      |  |
+  //                          x0| x1|   y1 |  |
+  //                            V   V      ----
+  //                            Exit
+  //
+  // The following must hold:
+  //  -  x == x0 + x1        # counts to "exit" must stay the same.
+  //  - y0 == x - x0 == x1   # how often loop was entered at all.
+  //  - y1 == y - y0         # How often loop was repeated (after first iter.).
+  //
+  // We cannot generally deduce how often we had a zero-trip count loop so we
+  // have to make a guess for how to distribute x among the new x0 and x1.
+
+  uint32_t ExitWeight0;    // aka x0
+  uint32_t ExitWeight1;    // aka x1
+  uint32_t EnterWeight;    // aka y0
+  uint32_t LoopBackWeight; // aka y1
+  if (OrigLoopExitWeight > 0 && OrigLoopBackedgeWeight > 0) {
+    ExitWeight0 = 0;
+    if (HasConditionalPreHeader) {
+      // Here we cannot know how many 0-trip count loops we have, so we guess:
+      if (OrigLoopBackedgeWeight >= OrigLoopExitWeight) {
+        // If the loop count is bigger than the exit count then we set
+        // probabilities as if 0-trip count nearly never happens.
+        ExitWeight0 = ZeroTripCountWeights[0];
+        // Scale up counts if necessary so we can match `ZeroTripCountWeights`
+        // for the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
+        while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
+          // ... but don't overflow.
+          uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
+          if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
+              (OrigLoopExitWeight & HighBit) != 0)
+            break;
+          OrigLoopBackedgeWeight <<= 1;
+          OrigLoopExitWeight <<= 1;
+        }
+      } else {
+        // If there's a higher exit-count than backedge-count then we set
+        // probabilities as if there are only 0-trip and 1-trip cases.
+        ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
+      }
+    }
+    ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
+    EnterWeight = ExitWeight1;
+    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+  } else if (OrigLoopExitWeight == 0) {
+    if (OrigLoopBackedgeWeight == 0) {
+      // degenerate case... keep everything zero...
+      ExitWeight0 = 0;
+      ExitWeight1 = 0;
+      EnterWeight = 0;
+      LoopBackWeight = 0;
+    } else {
+      // Special case "LoopExitWeight == 0" weights which behaves like an
+      // endless where we don't want loop-enttry (y0) to be the same as
+      // loop-exit (x1).
+      ExitWeight0 = 0;
+      ExitWeight1 = 0;
+      EnterWeight = 1;
+      LoopBackWeight = OrigLoopBackedgeWeight;
+    }
+  } else {
+    // loop is never entered.
+    assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
+    ExitWeight0 = 1;
+    ExitWeight1 = 1;
+    EnterWeight = 0;
+    LoopBackWeight = 0;
+  }
+
+  const uint32_t LoopBIWeights[] = {
+      SuccsSwapped ? LoopBackWeight : ExitWeight1,
+      SuccsSwapped ? ExitWeight1 : LoopBackWeight,
+  };
+  setBranchWeights(LoopBI, LoopBIWeights);
+  if (HasConditionalPreHeader) {
+    const uint32_t PreHeaderBIWeights[] = {
+        SuccsSwapped ? EnterWeight : ExitWeight0,
+        SuccsSwapped ? ExitWeight0 : EnterWeight,
+    };
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
+  }
 }
 
 /// Rotate loop LP. Return true if the loop is rotated.
@@ -363,7 +509,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // loop.  Otherwise loop is not suitable for rotation.
     BasicBlock *Exit = BI->getSuccessor(0);
     BasicBlock *NewHeader = BI->getSuccessor(1);
-    if (L->contains(Exit))
+    bool BISuccsSwapped = L->contains(Exit);
+    if (BISuccsSwapped)
       std::swap(Exit, NewHeader);
     assert(NewHeader && "Unable to determine new loop header");
     assert(L->contains(NewHeader) && !L->contains(Exit) &&
@@ -394,19 +541,31 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // duplication.
     using DbgIntrinsicHash =
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
-    auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
+    auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
       return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
                D->getVariable()},
               D->getExpression()};
     };
+
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
     for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DbgIntrinsics.insert(makeHash(DII));
-      else
+        // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
+        // to collect DPValues attached to any other debug intrinsics.
+        for (const DPValue &DPV : DII->getDbgValueRange())
+          DbgIntrinsics.insert(makeHash(&DPV));
+      } else {
         break;
+      }
     }
+
+    // Build DPValue hashes for DPValues attached to the terminator, which isn't
+    // considered in the loop above.
+    for (const DPValue &DPV :
+         OrigPreheader->getTerminator()->getDbgValueRange())
+      DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
@@ -415,6 +574,29 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     for (Instruction &I : *OrigHeader)
       if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
         NoAliasDeclInstructions.push_back(Decl);
+
+    Module *M = OrigHeader->getModule();
+
+    // Track the next DPValue to clone. If we have a sequence where an
+    // instruction is hoisted instead of being cloned:
+    //    DPValue blah
+    //    %foo = add i32 0, 0
+    //    DPValue xyzzy
+    //    %bar = call i32 @foobar()
+    // where %foo is hoisted, then the DPValue "blah" will be seen twice, once
+    // attached to %foo, then when %foo his hoisted it will "fall down" onto the
+    // function call:
+    //    DPValue blah
+    //    DPValue xyzzy
+    //    %bar = call i32 @foobar()
+    // causing it to appear attached to the call too.
+    //
+    // To avoid this, cloneDebugInfoFrom takes an optional "start cloning from
+    // here" position to account for this behaviour. We point it at any DPValues
+    // on the next instruction, here labelled xyzzy, before we hoist %foo.
+    // Later, we only only clone DPValues from that position (xyzzy) onwards,
+    // which avoids cloning DPValue "blah" multiple times.
+    std::optional<DPValue::self_iterator> NextDbgInst = std::nullopt;
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -428,7 +610,21 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       if (L->hasLoopInvariantOperands(Inst) && !Inst->mayReadFromMemory() &&
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
           !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
+
+        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
+          auto DbgValueRange =
+              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
+          RemapDPValueRange(M, DbgValueRange, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+          // Erase anything we've seen before.
+          for (DPValue &DPV : make_early_inc_range(DbgValueRange))
+            if (DbgIntrinsics.count(makeHash(&DPV)))
+              DPV.eraseFromParent();
+        }
+
+        NextDbgInst = I->getDbgValueRange().begin();
         Inst->moveBefore(LoopEntryBranch);
+
         ++NumInstrsHoisted;
         continue;
       }
@@ -438,6 +634,17 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       C->insertBefore(LoopEntryBranch);
 
       ++NumInstrsDuplicated;
+
+      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
+        auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInst);
+        RemapDPValueRange(M, Range, ValueMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        NextDbgInst = std::nullopt;
+        // Erase anything we've seen before.
+        for (DPValue &DPV : make_early_inc_range(Range))
+          if (DbgIntrinsics.count(makeHash(&DPV)))
+            DPV.eraseFromParent();
+      }
 
       // Eagerly remap the operands of the instruction.
       RemapInstruction(C, ValueMap,
@@ -501,12 +708,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // as U1'' and U1' scopes will not be compatible wrt to the local restrict
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
-      Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
+      BasicBlock::iterator NewHeaderInsertionPoint =
+          NewHeader->getFirstNonPHIIt();
       for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
         Instruction *NewNAD = NAD->clone();
-        NewNAD->insertBefore(NewHeaderInsertionPoint);
+        NewNAD->insertBefore(*NewHeader, NewHeaderInsertionPoint);
       }
 
       // Scopes must now be duplicated, once for OrigHeader and once for
@@ -553,6 +761,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // OrigPreHeader's old terminator (the original branch into the loop), and
     // remove the corresponding incoming values from the PHI nodes in OrigHeader.
     LoopEntryBranch->eraseFromParent();
+    OrigPreheader->flushTerminatorDbgValues();
 
     // Update MemorySSA before the rewrite call below changes the 1:1
     // instruction:cloned_instruction_or_value mapping.
@@ -605,9 +814,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // to split as many edges.
     BranchInst *PHBI = cast<BranchInst>(OrigPreheader->getTerminator());
     assert(PHBI->isConditional() && "Should be clone of BI condbr!");
-    if (!isa<ConstantInt>(PHBI->getCondition()) ||
-        PHBI->getSuccessor(cast<ConstantInt>(PHBI->getCondition())->isZero()) !=
-        NewHeader) {
+    const Value *Cond = PHBI->getCondition();
+    const bool HasConditionalPreHeader =
+        !isa<ConstantInt>(Cond) ||
+        PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
+
+    updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
+
+    if (HasConditionalPreHeader) {
       // The conditional branch can't be folded, handle the general case.
       // Split edges as necessary to preserve LoopSimplify form.
 

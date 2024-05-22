@@ -298,8 +298,12 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S) {
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP) {
   std::lock_guard<std::mutex> Lock(SSP.PoolMutex);
+  SmallVector<std::pair<StringRef, int>, 0> Vec;
   for (auto &KV : SSP.Pool)
-    OS << KV.first() << ": " << KV.second << "\n";
+    Vec.emplace_back(KV.first(), KV.second);
+  llvm::sort(Vec, less_first());
+  for (auto &[K, V] : Vec)
+    OS << K << ": " << V << "\n";
   return OS;
 }
 

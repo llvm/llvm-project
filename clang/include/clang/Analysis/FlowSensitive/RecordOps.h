@@ -21,24 +21,24 @@ namespace dataflow {
 
 /// Copies a record (struct, class, or union) from `Src` to `Dst`.
 ///
-/// This performs a deep copy, i.e. it copies every field and recurses on
-/// fields of record type. It also copies properties from the `StructValue`
-/// associated with `Src` to the `StructValue` associated with `Dst` (if these
-/// `StructValue`s exist).
+/// This performs a deep copy, i.e. it copies every field (including synthetic
+/// fields) and recurses on fields of record type. It also copies properties
+/// from the `RecordValue` associated with `Src` to the `RecordValue` associated
+/// with `Dst` (if these `RecordValue`s exist).
 ///
-/// If there is a `StructValue` associated with `Dst` in the environment, this
-/// function creates a new `StructValue` and associates it with `Dst`; clients
-/// need to be aware of this and must not assume that the `StructValue`
+/// If there is a `RecordValue` associated with `Dst` in the environment, this
+/// function creates a new `RecordValue` and associates it with `Dst`; clients
+/// need to be aware of this and must not assume that the `RecordValue`
 /// associated with `Dst` remains the same after the call.
 ///
-/// We create a new `StructValue` rather than modifying properties on the old
-/// `StructValue` because the old `StructValue` may be shared with other
+/// We create a new `RecordValue` rather than modifying properties on the old
+/// `RecordValue` because the old `RecordValue` may be shared with other
 /// `Environment`s, and we don't want changes to properties to be visible there.
 ///
 /// Requirements:
 ///
 ///  `Src` and `Dst` must have the same canonical unqualified type.
-void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
+void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
                 Environment &Env);
 
 /// Returns whether the records `Loc1` and `Loc2` are equal.
@@ -47,10 +47,11 @@ void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
 /// retrieved from `Env2`. A convenience overload retrieves values for `Loc1`
 /// and `Loc2` from the same environment.
 ///
-/// This performs a deep comparison, i.e. it compares every field and recurses
-/// on fields of record type. Fields of reference type compare equal if they
-/// refer to the same storage location. If `StructValue`s are associated with
-/// `Loc1` and `Loc2`, it also compares the properties on those `StructValue`s.
+/// This performs a deep comparison, i.e. it compares every field (including
+/// synthetic fields) and recurses on fields of record type. Fields of reference
+/// type compare equal if they refer to the same storage location. If
+/// `RecordValue`s are associated with `Loc1` and Loc2`, it also compares the
+/// properties on those `RecordValue`s.
 ///
 /// Note on how to interpret the result:
 /// - If this returns true, the records are guaranteed to be equal at runtime.
@@ -60,12 +61,11 @@ void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
 /// Requirements:
 ///
 ///  `Src` and `Dst` must have the same canonical unqualified type.
-bool recordsEqual(const AggregateStorageLocation &Loc1, const Environment &Env1,
-                  const AggregateStorageLocation &Loc2,
-                  const Environment &Env2);
+bool recordsEqual(const RecordStorageLocation &Loc1, const Environment &Env1,
+                  const RecordStorageLocation &Loc2, const Environment &Env2);
 
-inline bool recordsEqual(const AggregateStorageLocation &Loc1,
-                         const AggregateStorageLocation &Loc2,
+inline bool recordsEqual(const RecordStorageLocation &Loc1,
+                         const RecordStorageLocation &Loc2,
                          const Environment &Env) {
   return recordsEqual(Loc1, Env, Loc2, Env);
 }

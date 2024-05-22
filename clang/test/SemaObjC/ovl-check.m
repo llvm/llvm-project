@@ -17,7 +17,7 @@ typedef const __attribute__((objc_bridge(id))) void * CFTypeRef;
 - (void) test2:(Iface1 *)arg;
 @end
 
-// PR26085, rdar://problem/24111333
+// PR26085
 void testTakesIface1(id x, Iface1 *arg) {
   // This should resolve silently to `TakesIface1`.
   [x test:arg];

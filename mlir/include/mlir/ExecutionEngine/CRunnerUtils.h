@@ -149,7 +149,7 @@ struct StridedMemRefType {
     return data[curOffset];
   }
 
-  StridedMemrefIterator<T, N> begin() { return {*this}; }
+  StridedMemrefIterator<T, N> begin() { return {*this, offset}; }
   StridedMemrefIterator<T, N> end() { return {*this, -1}; }
 
   // This operator[] is extremely slow and only for sugaring purposes.
@@ -181,7 +181,7 @@ struct StridedMemRefType<T, 1> {
     return (*this)[*indices.begin()];
   }
 
-  StridedMemrefIterator<T, 1> begin() { return {*this}; }
+  StridedMemrefIterator<T, 1> begin() { return {*this, offset}; }
   StridedMemrefIterator<T, 1> end() { return {*this, -1}; }
 
   T &operator[](int64_t idx) { return *(data + offset + idx * strides[0]); }
@@ -202,8 +202,8 @@ struct StridedMemRefType<T, 0> {
     return data[offset];
   }
 
-  StridedMemrefIterator<T, 0> begin() { return {*this}; }
-  StridedMemrefIterator<T, 0> end() { return {*this, 1}; }
+  StridedMemrefIterator<T, 0> begin() { return {*this, offset}; }
+  StridedMemrefIterator<T, 0> end() { return {*this, offset + 1}; }
 };
 
 /// Iterate over all elements in a strided memref.
@@ -364,7 +364,7 @@ public:
     return data[curOffset];
   }
 
-  DynamicMemRefIterator<T> begin() { return {*this}; }
+  DynamicMemRefIterator<T> begin() { return {*this, offset}; }
   DynamicMemRefIterator<T> end() { return {*this, -1}; }
 
   // This operator[] is extremely slow and only for sugaring purposes.
@@ -465,12 +465,11 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printI64(int64_t i);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printU64(uint64_t u);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printF32(float f);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printF64(double d);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void printString(char const *s);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printOpen();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printClose();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
-extern "C" MLIR_CRUNNERUTILS_EXPORT void printF16(uint16_t bits);  // bits!
-extern "C" MLIR_CRUNNERUTILS_EXPORT void printBF16(uint16_t bits); // bits!
 
 //===----------------------------------------------------------------------===//
 // Small runtime support library for timing execution and printing GFLOPS

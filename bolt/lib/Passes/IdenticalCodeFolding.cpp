@@ -32,9 +32,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bool> UseDFS("icf-dfs",
-                            cl::desc("use DFS ordering when using -icf option"),
-                            cl::ReallyHidden, cl::cat(BoltOptCategory));
+static cl::opt<bool>
+    ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
+              cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 TimeICF("time-icf",
@@ -170,7 +170,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   // Process both functions in either DFS or existing order.
   SmallVector<const BinaryBasicBlock *, 0> OrderA;
   SmallVector<const BinaryBasicBlock *, 0> OrderB;
-  if (opts::UseDFS) {
+  if (opts::ICFUseDFS) {
     copy(A.dfs(), std::back_inserter(OrderA));
     copy(B.dfs(), std::back_inserter(OrderB));
   } else {
@@ -360,9 +360,9 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
-      BF.computeHash(opts::UseDFS, [&BC](const MCOperand &Op) {
-        return hashInstOperand(BC, Op);
-      });
+      BF.computeHash(
+          opts::ICFUseDFS, HashFunction::Default,
+          [&BC](const MCOperand &Op) { return hashInstOperand(BC, Op); });
     };
 
     ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {

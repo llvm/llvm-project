@@ -63,7 +63,7 @@ define <vscale x 4 x i32> @add_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @add_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: add_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -93,7 +93,7 @@ define <vscale x 2 x i64> @add_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @add_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: add_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -168,7 +168,7 @@ define <vscale x 4 x i32> @sub_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @sub_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sub_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -198,7 +198,7 @@ define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @sub_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: sub_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    sub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -323,7 +323,7 @@ define <vscale x 4 x i32> @subr_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @subr_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: subr_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
@@ -353,7 +353,7 @@ define <vscale x 2 x i64> @subr_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @subr_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: subr_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    sub z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
@@ -449,8 +449,8 @@ define <vscale x 8 x i16> @smax_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @smax_i16_out_of_range(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: smax_i16_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #129
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov w8, #129 // =0x81
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -636,8 +636,8 @@ define <vscale x 4 x i32> @smin_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @smin_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: smin_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -794,8 +794,8 @@ define <vscale x 4 x i32> @umax_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umax_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umax_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -951,8 +951,8 @@ define <vscale x 4 x i32> @umin_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umin_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umin_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret

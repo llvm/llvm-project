@@ -9,7 +9,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -69,6 +68,16 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy).getCallee());
     EXPECT_FALSE(isLibFunc(F, LF));
+  }
+
+  // i64 @labs(i32)
+  {
+    auto *InvalidLabsFTy = FunctionType::get(Type::getInt64Ty(Context),
+                                             {Type::getInt32Ty(Context)},
+                                             /*isVarArg=*/false);
+    auto *F = cast<Function>(
+        M->getOrInsertFunction("labs", InvalidLabsFTy).getCallee());
+    EXPECT_FALSE(isLibFunc(F, LibFunc_labs));
   }
 }
 

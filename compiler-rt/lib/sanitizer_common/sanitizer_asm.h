@@ -62,7 +62,11 @@
 
 #if !defined(__APPLE__)
 # define ASM_HIDDEN(symbol) .hidden symbol
-# define ASM_TYPE_FUNCTION(symbol) .type symbol, %function
+# if defined(__arm__) || defined(__aarch64__)
+#  define ASM_TYPE_FUNCTION(symbol) .type symbol, %function
+# else
+#  define ASM_TYPE_FUNCTION(symbol) .type symbol, @function
+# endif
 # define ASM_SIZE(symbol) .size symbol, .-symbol
 # define ASM_SYMBOL(symbol) symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) symbol

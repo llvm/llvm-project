@@ -51,9 +51,10 @@ struct __copy_loop {
 
     _OutIter& __result_;
 
-    _LIBCPP_HIDE_FROM_ABI _CopySegment(_OutIter& __result) : __result_(__result) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit _CopySegment(_OutIter& __result)
+        : __result_(__result) {}
 
-    _LIBCPP_HIDE_FROM_ABI void
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
     operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
       __result_ = std::__copy<_AlgPolicy>(__lfirst, __llast, std::move(__result_)).second;
     }
@@ -72,7 +73,7 @@ struct __copy_loop {
                               !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) {
+  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
     using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
 
@@ -112,7 +113,7 @@ __copy(_InIter __first, _Sent __last, _OutIter __result) {
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   return std::__copy<_ClassicAlgPolicy>(__first, __last, __result).second;
 }

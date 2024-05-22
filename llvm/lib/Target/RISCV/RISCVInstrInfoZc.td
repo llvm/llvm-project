@@ -8,8 +8,6 @@
 ///
 /// This file describes the RISC-V instructions from the 'Zc*' compressed
 /// instruction extensions, version 1.0.3.
-/// This version is still experimental as the 'Zc*' extensions haven't been
-/// ratified yet.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,13 +15,12 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def uimm2_lsb0 : Operand<XLenVT>,
+def uimm2_lsb0 : RISCVOp,
                  ImmLeaf<XLenVT, [{return isShiftedUInt<1, 1>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2, "Lsb0">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_UIMM2_LSB0";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -32,11 +29,10 @@ def uimm2_lsb0 : Operand<XLenVT>,
   }];
 }
 
-def uimm8ge32 : Operand<XLenVT> {
+def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
   let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_UIMM8_GE32";
-  let OperandNamespace = "RISCVOp";
 }
 
 def RlistAsmOperand : AsmOperandClass {
@@ -129,10 +125,16 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
   let Constraints = "$rd = $rd_wb";
 }
 
-class RVInstZcCPPP<dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+class RVInstZcCPPP<bits<5> funct5, string opcodestr>
+    : RVInst16<(outs), (ins rlist:$rlist, spimm:$spimm),
+               opcodestr, "$rlist, $spimm", [], InstFormatOther> {
+  bits<4> rlist;
+  bits<16> spimm;
 
   let Inst{1-0} = 0b10;
+  let Inst{3-2} = spimm{5-4};
+  let Inst{7-4} = rlist;
+  let Inst{12-8} = funct5;
   let Inst{15-13} = 0b101;
 }
 
@@ -189,49 +191,17 @@ def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
 } // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
 
 let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in 
-def CM_PUSH : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
-    "cm.push", "{$rlist}, $spimm"> {
-  bits<4> rlist;
-  bits<16> spimm;
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+def CM_PUSH : RVInstZcCPPP<0b11000, "cm.push">;
 
-  let Inst{12-8} = 0b11000;
-  let Inst{7-4} = rlist;
-  let Inst{3-2} = spimm{5-4};
-}
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def CM_POPRET : RVInstZcCPPP<0b11110, "cm.popret">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
-def CM_POPRET : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
-    "cm.popret", "{$rlist}, $spimm"> {
-  bits<4> rlist;
-  bits<16> spimm;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def CM_POPRETZ : RVInstZcCPPP<0b11100, "cm.popretz">;
 
-  let Inst{12-8} = 0b11110;
-  let Inst{7-4} = rlist;
-  let Inst{3-2} = spimm{5-4};
-}
-
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
-def CM_POPRETZ : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
-    "cm.popretz", "{$rlist}, $spimm"> {
-  bits<4> rlist;
-  bits<16> spimm;
-
-  let Inst{12-8} = 0b11100;
-  let Inst{7-4} = rlist;
-  let Inst{3-2} = spimm{5-4};
-}
-
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
-def CM_POP : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
-    "cm.pop", "{$rlist}, $spimm"> {
-  bits<4> rlist;
-  bits<16> spimm;
-
-  let Inst{12-8} = 0b11010;
-  let Inst{7-4} = rlist;
-  let Inst{3-2} = spimm{5-4};
-}
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">;
 } // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
 
 let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],
@@ -311,9 +281,9 @@ def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZcb] in {
-def : InstAlias<"c.lbu $rd, (${rs1})",(C_LBU GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.lhu $rd, (${rs1})",(C_LHU GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.lh $rd, (${rs1})", (C_LH GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.sb $rd, (${rs1})", (C_SB GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.sh $rd, (${rs1})", (C_SH GPRC:$rd, GPRC:$rs1, 0)>;
+def : InstAlias<"c.lbu $rd, (${rs1})",(C_LBU GPRC:$rd, GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.lhu $rd, (${rs1})",(C_LHU GPRC:$rd, GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.lh $rd, (${rs1})", (C_LH GPRC:$rd, GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.sb $rd, (${rs1})", (C_SB GPRC:$rd, GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.sh $rd, (${rs1})", (C_SH GPRC:$rd, GPRC:$rs1, 0), 0>;
 }

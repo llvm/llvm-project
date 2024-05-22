@@ -90,6 +90,18 @@ using u8streampos = fpos<char_traits<char8_t>::state_type>; // C++20
 using u16streampos = fpos<char_traits<char16_t>::state_type>;
 using u32streampos = fpos<char_traits<char32_t>::state_type>;
 
+template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT>>
+    class basic_syncbuf;                          // C++20
+
+using syncbuf = basic_syncbuf<char>;              // C++20
+using wsyncbuf = basic_syncbuf<wchar_t>;          // C++20
+
+template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT>>
+    class basic_osyncstream;                      // C++20
+
+using osyncstream = basic_osyncstream<char>;      // C++20
+using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
+
 }  // std
 
 */
@@ -121,12 +133,34 @@ template <class _CharT, class _Traits = char_traits<_CharT> >
 
 template <class _State>             class _LIBCPP_TEMPLATE_VIS fpos;
 typedef fpos<mbstate_t>    streampos;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef fpos<mbstate_t>    wstreampos;
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef fpos<mbstate_t>    u8streampos;
 #endif
 typedef fpos<mbstate_t>    u16streampos;
 typedef fpos<mbstate_t>    u32streampos;
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
+class basic_syncbuf;
+
+using syncbuf  = basic_syncbuf<char>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wsyncbuf = basic_syncbuf<wchar_t>;
+#endif
+
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
+class basic_osyncstream;
+
+using osyncstream  = basic_osyncstream<char>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wosyncstream = basic_osyncstream<wchar_t>;
+#endif
+
+#endif // _LIBCPP_STD_VER >=20
 
 // Include other forward declarations here
 template <class _Tp, class _Alloc = allocator<_Tp> >
@@ -145,13 +179,13 @@ class __save_flags
     __save_flags(const __save_flags&);
     __save_flags& operator=(const __save_flags&);
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __save_flags(__stream_type& __stream)
         : __stream_(__stream),
           __fmtflags_(__stream.flags()),
           __fill_(__stream.fill())
         {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~__save_flags()
     {
         __stream_.flags(__fmtflags_);

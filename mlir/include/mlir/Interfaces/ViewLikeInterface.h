@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 
@@ -31,6 +32,11 @@ bool sameOffsetsSizesAndStrides(
     OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
     llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp);
 
+/// Helper method to compute the number of dynamic entries of `staticVals`,
+/// up to `idx`.
+unsigned getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
+                                     unsigned idx);
+
 } // namespace detail
 } // namespace mlir
 
@@ -38,6 +44,47 @@ bool sameOffsetsSizesAndStrides(
 #include "mlir/Interfaces/ViewLikeInterface.h.inc"
 
 namespace mlir {
+
+/// Pattern to rewrite dynamic offsets/sizes/strides of view/slice-like ops as
+/// constant arguments. This pattern assumes that the op has a suitable builder
+/// that takes a result type, a "source" operand and mixed offsets, sizes and
+/// strides.
+///
+/// `OpType` is the type of op to which this pattern is applied. `ResultTypeFn`
+/// returns the new result type of the op, based on the new offsets, sizes and
+/// strides. `CastOpFunc` is used to generate a cast op if the result type of
+/// the op has changed.
+template <typename OpType, typename ResultTypeFn, typename CastOpFunc>
+class OpWithOffsetSizesAndStridesConstantArgumentFolder final
+    : public OpRewritePattern<OpType> {
+public:
+  using OpRewritePattern<OpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpType op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<OpFoldResult> mixedOffsets(op.getMixedOffsets());
+    SmallVector<OpFoldResult> mixedSizes(op.getMixedSizes());
+    SmallVector<OpFoldResult> mixedStrides(op.getMixedStrides());
+
+    // No constant operands were folded, just return;
+    if (failed(foldDynamicIndexList(mixedOffsets, /*onlyNonNegative=*/true)) &&
+        failed(foldDynamicIndexList(mixedSizes, /*onlyNonNegative=*/true)) &&
+        failed(foldDynamicIndexList(mixedStrides)))
+      return failure();
+
+    // Create the new op in canonical form.
+    auto resultType =
+        ResultTypeFn()(op, mixedOffsets, mixedSizes, mixedStrides);
+    if (!resultType)
+      return failure();
+    auto newOp =
+        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
+                                mixedOffsets, mixedSizes, mixedStrides);
+    CastOpFunc()(rewriter, op, newOp);
+
+    return success();
+  }
+};
 
 /// Printer hook for custom directive in assemblyFormat.
 ///

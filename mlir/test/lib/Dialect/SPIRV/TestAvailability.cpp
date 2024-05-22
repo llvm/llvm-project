@@ -212,7 +212,7 @@ void ConvertToTargetEnv::runOnOperation() {
   func::FuncOp fn = getOperation();
 
   auto targetEnv = dyn_cast_or_null<spirv::TargetEnvAttr>(
-      fn.getOperation()->getAttr(spirv::getTargetEnvAttrName()));
+      fn.getOperation()->getDiscardableAttr(spirv::getTargetEnvAttrName()));
   if (!targetEnv) {
     fn.emitError("missing 'spirv.target_env' attribute");
     return signalPassFailure();

@@ -315,7 +315,7 @@ for.body:
   %arrayidxb1 = getelementptr inbounds float, ptr %b, i64 %iv
   %0 = load float, ptr %arrayidxb1, align 4
   %add1 = fadd float %0, %add.phi2
-  %or = or i64 %iv, 1
+  %or = or disjoint i64 %iv, 1
   %arrayidxb2 = getelementptr inbounds float, ptr %b, i64 %or
   %1 = load float, ptr %arrayidxb2, align 4
   %add2 = fadd float %1, %add.phi1

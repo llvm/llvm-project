@@ -15,7 +15,7 @@
 #include <signal.h>
 #include <sys/syscall.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sigaltstack,
                    (const stack_t *__restrict ss, stack_t *__restrict oss)) {
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, sigaltstack,
     }
   }
 
-  int ret = __llvm_libc::syscall_impl(SYS_sigaltstack, ss, oss);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sigaltstack, ss, oss);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -42,4 +42,4 @@ LLVM_LIBC_FUNCTION(int, sigaltstack,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

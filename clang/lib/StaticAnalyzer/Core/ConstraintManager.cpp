@@ -91,7 +91,7 @@ ConstraintManager::assumeDualImpl(ProgramStateRef &State,
 
 ConstraintManager::ProgramStatePair
 ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
-  auto AssumeFun = [&](bool Assumption) {
+  auto AssumeFun = [&, Cond](bool Assumption) {
     return assumeInternal(State, Cond, Assumption);
   };
   return assumeDualImpl(State, AssumeFun);

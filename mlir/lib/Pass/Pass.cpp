@@ -18,6 +18,7 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,9 +36,19 @@ using namespace mlir::detail;
 // PassExecutionAction
 //===----------------------------------------------------------------------===//
 
+PassExecutionAction::PassExecutionAction(ArrayRef<IRUnit> irUnits,
+                                         const Pass &pass)
+    : Base(irUnits), pass(pass) {}
+
 void PassExecutionAction::print(raw_ostream &os) const {
   os << llvm::formatv("`{0}` running `{1}` on Operation `{2}`", tag,
                       pass.getName(), getOp()->getName());
+}
+
+Operation *PassExecutionAction::getOp() const {
+  ArrayRef<IRUnit> irUnits = getContextIRUnits();
+  return irUnits.empty() ? nullptr
+                         : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -423,6 +434,23 @@ LogicalResult OpPassManager::initialize(MLIRContext *context,
   }
   return success();
 }
+
+llvm::hash_code OpPassManager::hash() {
+  llvm::hash_code hashCode{};
+  for (Pass &pass : getPasses()) {
+    // If this pass isn't an adaptor, directly hash it.
+    auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
+    if (!adaptor) {
+      hashCode = llvm::hash_combine(hashCode, &pass);
+      continue;
+    }
+    // Otherwise, hash recursively each of the adaptors pass managers.
+    for (OpPassManager &adaptorPM : adaptor->getPassManagers())
+      llvm::hash_combine(hashCode, adaptorPM.hash());
+  }
+  return hashCode;
+}
+
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
@@ -820,19 +848,21 @@ LogicalResult PassManager::run(Operation *op) {
   if (failed(getImpl().finalizePassList(context)))
     return failure();
 
+  // Notify the context that we start running a pipeline for bookkeeping.
+  context->enterMultiThreadedExecution();
+
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
-  if (newInitKey != initializationKey) {
+  llvm::hash_code pipelineKey = hash();
+  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;
+    pipelineKey = pipelineInitializationKey;
   }
 
   // Construct a top level analysis manager for the pipeline.
   ModuleAnalysisManager am(op, instrumentor.get());
-
-  // Notify the context that we start running a pipeline for book keeping.
-  context->enterMultiThreadedExecution();
 
   // If reproducer generation is enabled, run the pass manager with crash
   // handling enabled.

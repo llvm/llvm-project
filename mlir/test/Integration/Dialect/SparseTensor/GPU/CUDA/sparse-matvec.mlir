@@ -2,14 +2,14 @@
 // NOTE: this test requires gpu-sm80
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="enable-runtime-library=false parallelization-strategy=dense-outer-loop gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71" \
+// RUN:   --sparsifier="enable-runtime-library=false parallelization-strategy=dense-outer-loop gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
 // RUN: | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 module {
   // Compute matrix vector y = Ax

@@ -1,7 +1,7 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GFX89 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX89 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GFX89 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX89 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 exp null v4, v3, v2, v1
 // SI: exp null v4, v3, v2, v1 ; encoding: [0x9f,0x00,0x00,0xf8,0x04,0x03,0x02,0x01]

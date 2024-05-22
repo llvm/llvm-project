@@ -109,7 +109,6 @@ namespace test5 {
   }
 }
 
-// rdar://problem/8592139
 namespace test6 {
   void foo(id);
   void foo(A*) __attribute__((unavailable)); // expected-note {{marked unavailable here}}

@@ -24,11 +24,11 @@ void test0(void) {
   // CHECK-NEXT: ret void
 }
 
-// rdar://problem/9821110 - precise lifetime should suppress extension
-// rdar://problem/22172983 - should work for calls via property syntax, too
+// precise lifetime should suppress extension
+// should work for calls via property syntax, too
 @interface Test1
 - (char*) interior __attribute__((objc_returns_inner_pointer));
-// Should we allow this on properties? Yes! see // rdar://14990439
+// Should we allow this on properties? Yes!
 @property (nonatomic, readonly) char * PropertyReturnsInnerPointer __attribute__((objc_returns_inner_pointer));
 @end
 extern Test1 *test1_helper(void);

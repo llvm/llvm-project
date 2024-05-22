@@ -29,16 +29,19 @@ Writer::SectionHeader Writer::createSectionHeader(const Section &S,
   SectionSize = S.Contents.size();
   if (HasName)
     SectionSize += getULEB128Size(S.Name.size()) + S.Name.size();
-  // Pad the LEB value out to 5 bytes to make it a predictable size, and
-  // match the behavior of clang.
-  encodeULEB128(SectionSize, OS, 5);
+  // If we read this section from an object file, use its original size for the
+  // padding of the LEB value to avoid changing the file size. Otherwise, pad
+  // out to 5 bytes to make it predictable, and match the behavior of clang.
+  unsigned HeaderSecSizeEncodingLen =
+      S.HeaderSecSizeEncodingLen ? *S.HeaderSecSizeEncodingLen : 5;
+  encodeULEB128(SectionSize, OS, HeaderSecSizeEncodingLen);
   if (HasName) {
     encodeULEB128(S.Name.size(), OS);
     OS << S.Name;
   }
   // Total section size is the content size plus 1 for the section type and
-  // 5 for the LEB-encoded size.
-  SectionSize = SectionSize + 1 + 5;
+  // the LEB-encoded size.
+  SectionSize = SectionSize + 1 + HeaderSecSizeEncodingLen;
   return Header;
 }
 

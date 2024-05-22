@@ -66,14 +66,6 @@ public:
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatLinearConstraints; }
 
-  static bool classof(const IntegerRelation *cst) {
-    return cst->getKind() >= Kind::FlatLinearConstraints &&
-           cst->getKind() <= Kind::FlatAffineRelation;
-  }
-
-  /// Clones this object.
-  std::unique_ptr<FlatLinearConstraints> clone() const;
-
   /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
@@ -290,20 +282,6 @@ public:
   /// Creates an affine constraint system from an IntegerSet.
   explicit FlatLinearValueConstraints(IntegerSet set, ValueRange operands = {});
 
-  // Construct a hyperrectangular constraint set from ValueRanges that represent
-  // induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
-  // expected to match one to one. The order of variables and constraints is:
-  //
-  // ivs | lbs | ubs | eq/ineq
-  // ----+-----+-----+---------
-  //   1   -1     0      >= 0
-  // ----+-----+-----+---------
-  //  -1    0     1      >= 0
-  //
-  // All dimensions as set as VarKind::SetDim.
-  static FlatLinearValueConstraints
-  getHyperrectangular(ValueRange ivs, ValueRange lbs, ValueRange ubs);
-
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatLinearValueConstraints; }
 
@@ -338,9 +316,6 @@ public:
     for (unsigned i = start; i < end; i++)
       values->push_back(getValue(i));
   }
-  inline void getAllValues(SmallVectorImpl<Value> *values) const {
-    getValues(0, getNumDimAndSymbolVars(), values);
-  }
 
   inline ArrayRef<std::optional<Value>> getMaybeValues() const {
     return {values.data(), values.size()};
@@ -358,9 +333,6 @@ public:
     assert(pos < getNumDimAndSymbolVars() && "Invalid position");
     return values[pos].has_value();
   }
-
-  /// Returns true if at least one variable has an associated Value.
-  bool hasValues() const;
 
   unsigned appendDimVar(ValueRange vals);
   using FlatLinearConstraints::appendDimVar;
@@ -402,10 +374,10 @@ public:
       setValue(i, values[i - start]);
   }
 
-  /// Looks up the position of the variable with the specified Value. Returns
-  /// true if found (false otherwise). `pos` is set to the (column) position of
-  /// the variable.
-  bool findVar(Value val, unsigned *pos) const;
+  /// Looks up the position of the variable with the specified Value starting
+  /// with variables at offset `offset`. Returns true if found (false
+  /// otherwise). `pos` is set to the (column) position of the variable.
+  bool findVar(Value val, unsigned *pos, unsigned offset = 0) const;
 
   /// Returns true if a variable with the specified Value exists, false
   /// otherwise.

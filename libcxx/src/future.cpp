@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
-
-#ifndef _LIBCPP_HAS_NO_THREADS
-
 #include <future>
 #include <string>
 
@@ -59,8 +55,13 @@ _LIBCPP_DIAGNOSTIC_POP
 const error_category&
 future_category() noexcept
 {
-    static __future_error_category __f;
-    return __f;
+    union AvoidDestroyingFutureCategory {
+        __future_error_category future_error_category;
+        constexpr explicit AvoidDestroyingFutureCategory() : future_error_category() {}
+        ~AvoidDestroyingFutureCategory() {}
+    };
+    constinit static AvoidDestroyingFutureCategory helper;
+    return helper.future_error_category;
 }
 
 future_error::future_error(error_code __ec)
@@ -199,9 +200,7 @@ promise<void>::~promise()
     {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         if (!__state_->__has_value() && __state_->use_count() > 1)
-            __state_->set_exception(make_exception_ptr(
-                      future_error(make_error_code(future_errc::broken_promise))
-                                                      ));
+            __state_->set_exception(make_exception_ptr(future_error(future_errc::broken_promise)));
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __state_->__release_shared();
     }
@@ -265,5 +264,3 @@ shared_future<void>::operator=(const shared_future& __rhs)
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !_LIBCPP_HAS_NO_THREADS

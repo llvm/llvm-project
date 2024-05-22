@@ -2,6 +2,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeMember {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
         name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
         byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
@@ -13,6 +18,18 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMember, lldb::eDescriptionLevelBrief)
 }
 
 STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMemberFunction, lldb::eDescriptionLevelBrief)
+
+%extend lldb::SBTypeMemberFunction {
+#ifdef SWIGPYTHON
+    %pythoncode%{
+      # operator== is a free function, which swig does not handle, so we inject
+      # our own equality operator here
+      def __eq__(self, other):
+        return not self.__ne__(other)
+
+    %}
+#endif
+}
 
 STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 
@@ -27,6 +44,14 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
                     template_args.append(self.GetTemplateArgumentType(i))
                 return template_args
             return None
+
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __len__(self):
+            return self.GetByteSize()
 
         module = property(GetModule, None, doc='''A read only property that returns the module in which type is defined.''')
         name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
@@ -121,6 +146,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeList {
 #ifdef SWIGPYTHON
     %pythoncode%{
+    # operator== is a free function, which swig does not handle, so we inject
+    # our own equality operator here
+    def __eq__(self, other):
+        return not self.__ne__(other)
+
     def __iter__(self):
         '''Iterate over all types in a lldb.SBTypeList object.'''
         return lldb_iter(self, 'GetSize', 'GetTypeAtIndex')

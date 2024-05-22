@@ -4,9 +4,22 @@ class F<string name>: Flag<["--", "-"], name>;
 class J<string name>: Joined<["--", "-"], name>;
 class S<string name>: Separate<["--", "-"], name>;
 
+// Convenience classes for long options which only accept two dashes. For lld
+// specific or newer long options, we prefer two dashes to avoid collision with
+// short options. For many others, we have to accept both forms to be compatible
+// with GNU ld.
+class FF<string name> : Flag<["--"], name>;
+class JJ<string name>: Joined<["--"], name>;
+
 multiclass Eq<string name, string help> {
   def NAME: Separate<["--", "-"], name>;
   def NAME # _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>,
+    HelpText<help>;
+}
+
+multiclass EEq<string name, string help> {
+  def NAME: Separate<["--"], name>;
+  def NAME # _eq: Joined<["--"], name # "=">, Alias<!cast<Separate>(NAME)>,
     HelpText<help>;
 }
 
@@ -119,6 +132,10 @@ defm reproduce: Eq<"reproduce",
      "Write a tar file containing input files and command line options to reproduce link">;
 defm require_defined: Eq<"require-defined",
      "Force symbol to be added to symbol table as an undefined one">;
+defm threads
+    : EEq<"threads",
+         "Number of threads. '1' disables multi-threading. By default all "
+         "available hardware threads are used">;
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
@@ -130,6 +147,37 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def version: F<"version">, HelpText<"Display the version number and exit">;
 defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
      MetaVarName<"<symbol>">;
+
+
+def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
+  HelpText<"Optimization level for LTO">;
+def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
+  HelpText<"Codegen optimization level for LTO">;
+def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
+  HelpText<"Perform context sensitive PGO instrumentation">;
+def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
+  HelpText<"Context sensitive profile file path">;
+
+def thinlto_jobs_eq: JJ<"thinlto-jobs=">,
+  HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+
+def plugin_opt_eq_minus: J<"plugin-opt=-">,
+  HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
+def: J<"plugin-opt=thinlto">;
+
+def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
+def: F<"plugin-opt=cs-profile-generate">,
+  Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
+def: J<"plugin-opt=cs-profile-path=">,
+  Alias<lto_cs_profile_file>, HelpText<"Alias for --lto-cs-profile-file">;
+def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
+  HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
+def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
+def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
+
+// This may be either an unhandled LLVMgold.so feature or GCC passed
+// -plugin-opt=path/to/{liblto_plugin.so,lto-wrapper}
+def plugin_opt_eq : J<"plugin-opt=">;
 
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,
@@ -148,6 +196,9 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+  MetaVarName<"<arg>">;
+def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -155,6 +206,7 @@ def alias_Bdynamic_dy: Flag<["-"], "dy">, Alias<Bdynamic>;
 def alias_Bstatic_dn: Flag<["-"], "dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: Flag<["-"], "non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
+def alias_dll: F<"dll">, Alias<shared>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_no_dynamicbase: F<"no-dynamicbase">, Alias<disable_dynamicbase>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
@@ -164,7 +216,6 @@ def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 // Ignored options
 def: Joined<["-"], "O">;
 def: F<"as-needed">;
-def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
 def: F<"end-group">;
@@ -174,6 +225,11 @@ defm: EqNoHelp<"minor-image-version">;
 def: F<"no-undefined">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
-defm: EqNoHelp<"plugin-opt">;
 defm: EqNoHelp<"sysroot">;
+def: F<"sort-common">;
 def: F<"start-group">;
+
+// Ignore GCC collect2 LTO plugin related options. Note that we don't support
+// GCC LTO, but GCC collect2 passes these options even in non-LTO mode.
+def: J<"plugin-opt=-fresolution=">;
+def: J<"plugin-opt=-pass-through=">;

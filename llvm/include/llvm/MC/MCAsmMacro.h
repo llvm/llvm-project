@@ -46,7 +46,7 @@ public:
     Slash,     // '/'
     BackSlash, // '\'
     LParen, RParen, LBrac, RBrac, LCurly, RCurly,
-    Star, Dot, Comma, Dollar, Equal, EqualEqual,
+    Question, Star, Dot, Comma, Dollar, Equal, EqualEqual,
 
     Pipe, PipePipe, Caret,
     Amp, AmpAmp, Exclaim, ExclaimEqual, Percent, Hash,

@@ -19,7 +19,7 @@ program sample
         y = y + 10
     
     !$omp atomic update hint(5)
-        y = x
+        y = x + y
     
     !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(7) capture
@@ -95,6 +95,7 @@ program sample
         x = 10 * y
 
     !$omp atomic write hint(a)
+    !ERROR: RHS expression on atomic assignment statement cannot access 'x'
         x = y + x
 
     !$omp atomic hint(abs(-1)) write

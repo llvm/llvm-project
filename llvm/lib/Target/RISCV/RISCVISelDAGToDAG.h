@@ -30,7 +30,7 @@ public:
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
-                             CodeGenOpt::Level OptLevel)
+                             CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -43,7 +43,8 @@ public:
 
   void Select(SDNode *Node) override;
 
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -53,6 +54,7 @@ public:
   bool SelectAddrRegImmINX(SDValue Addr, SDValue &Base, SDValue &Offset) {
     return SelectAddrRegImm(Addr, Base, Offset, true);
   }
+  bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
                              SDValue &Base, SDValue &Index, SDValue &Scale);
@@ -128,9 +130,15 @@ public:
 
   bool selectVSplat(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5(SDValue N, SDValue &SplatVal);
-  bool selectVSplatUimm5(SDValue N, SDValue &SplatVal);
+  bool selectVSplatUimm(SDValue N, unsigned Bits, SDValue &SplatVal);
+  template <unsigned Bits> bool selectVSplatUimmBits(SDValue N, SDValue &Val) {
+    return selectVSplatUimm(N, Bits, Val);
+  }
   bool selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5Plus1NonZero(SDValue N, SDValue &SplatVal);
+  // Matches the splat of a value which can be extended or truncated, such that
+  // only the bottom 8 bits are preserved.
+  bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
   bool selectFPImm(SDValue N, SDValue &Imm);
 
   bool selectRVVSimm5(SDValue N, unsigned Width, SDValue &Imm);
@@ -179,10 +187,10 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
-  bool doPeepholeMaskedRVV(SDNode *Node);
+  bool doPeepholeMaskedRVV(MachineSDNode *Node);
   bool doPeepholeMergeVVMFold();
-  bool performVMergeToVMv(SDNode *N);
-  bool performCombineVMergeAndVOps(SDNode *N, bool IsTA);
+  bool doPeepholeNoRegPassThru();
+  bool performCombineVMergeAndVOps(SDNode *N);
 };
 
 namespace RISCV {
@@ -254,8 +262,8 @@ struct VLX_VSXPseudo {
 struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
-  uint16_t UnmaskedTUPseudo;
   uint8_t MaskOpIdx;
+  uint8_t MaskAffectsResult : 1;
 };
 
 #define GET_RISCVVSSEGTable_DECL

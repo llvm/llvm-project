@@ -180,7 +180,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && PreferVectorWidth >= 512)
+    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
       return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
       return TypeSize::getFixed(256);
@@ -1469,7 +1469,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(BaseTp);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask);
+  Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
@@ -1480,6 +1480,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // registers are the same.
   if (Kind == TTI::SK_Broadcast)
     LT.first = 1;
+
+  // Treat <X x bfloat> shuffles as <X x half>.
+  if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
+    LT.second = LT.second.changeVectorElementType(MVT::f16);
 
   // Subvector extractions are free if they start at the beginning of a
   // vector and cheap if the subvectors are aligned.
@@ -1596,7 +1600,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             BaseTp->getElementType()->getPrimitiveSizeInBits() &&
         LegalVT.getVectorNumElements() <
             cast<FixedVectorType>(BaseTp)->getNumElements()) {
-
       unsigned VecTySize = DL.getTypeStoreSize(BaseTp);
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
@@ -1621,6 +1624,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
         // this operation is 0.
+        NumOfDests =
+            getTypeLegalizationCost(
+                FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
+                .first;
         unsigned E = *NumOfDests.getValue();
         unsigned NormalizedVF =
             LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
@@ -1635,7 +1642,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
             [this, SingleOpTy, CostKind, &PrevSrcReg, &PrevRegMask,
              &Cost](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
-              if (!ShuffleVectorInst::isIdentityMask(RegMask)) {
+              if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
                 // Check if the previous register can be just copied to the next
                 // one.
                 if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
@@ -3945,6 +3952,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2, 3, 1, 3 } },
     { ISD::ROTR,       MVT::i64,     {  2, 3, 1, 3 } },
+    { X86ISD::VROTLI,  MVT::i64,     {  1, 1, 1, 1 } },
     { ISD::FSHL,       MVT::i64,     {  4, 4, 1, 4 } },
     { ISD::SMAX,       MVT::i64,     {  1,  3,  2,  3 } },
     { ISD::SMIN,       MVT::i64,     {  1,  3,  2,  3 } },
@@ -3984,6 +3992,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::i32,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i16,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i8,      {  2,  3,  1,  3 } },
+    { X86ISD::VROTLI,  MVT::i32,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i16,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i8,      {  1,  1,  1,  1 } },
     { ISD::FSHL,       MVT::i32,     {  4,  4,  1,  4 } },
     { ISD::FSHL,       MVT::i16,     {  4,  4,  2,  5 } },
     { ISD::FSHL,       MVT::i8,      {  4,  4,  2,  5 } },
@@ -4039,8 +4050,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
         ISD = ISD::ROTL;
+        // Handle scalar constant rotation amounts.
+        // TODO: Handle vector + funnel-shift cases.
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::fshr:
@@ -4048,8 +4064,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
+        // Handle scalar constant rotation amount.
+        // TODO: Handle vector + funnel-shift cases.
         ISD = ISD::ROTR;
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::maxnum:
@@ -5572,7 +5593,7 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   }
 
   if (Idx == ImmIdx) {
-    int NumConstants = divideCeil(BitSize, 64);
+    uint64_t NumConstants = divideCeil(BitSize, 64);
     InstructionCost Cost = X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
@@ -5671,15 +5692,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
-    for (unsigned i = 1; i < GEP->getNumOperands(); ++i) {
-      if (isa<Constant>(GEP->getOperand(i)))
+    for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
+      if (isa<Constant>(GEP->getOperand(I)))
         continue;
-      Type *IndxTy = GEP->getOperand(i)->getType();
+      Type *IndxTy = GEP->getOperand(I)->getType();
       if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
         IndxTy = IndexVTy->getElementType();
       if ((IndxTy->getPrimitiveSizeInBits() == 64 &&
-          !isa<SExtInst>(GEP->getOperand(i))) ||
-         ++NumOfVarIndices > 1)
+           !isa<SExtInst>(GEP->getOperand(I))) ||
+          ++NumOfVarIndices > 1)
         return IndexSize; // 64
     }
     return (unsigned)32;
@@ -5746,8 +5767,8 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
   }
 
   InstructionCost AddressUnpackCost = getScalarizationOverhead(
-      FixedVectorType::get(ScalarTy->getPointerTo(), VF), DemandedElts,
-      /*Insert=*/false, /*Extract=*/true, CostKind);
+      FixedVectorType::get(PointerType::getUnqual(ScalarTy->getContext()), VF),
+      DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
 
   // The cost of the scalar loads/stores.
   InstructionCost MemoryOpCost =
@@ -5837,6 +5858,9 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
     return true;
 
   if (ScalarTy->isHalfTy() && ST->hasBWI())
+    return true;
+
+  if (ScalarTy->isBFloatTy() && ST->hasBF16())
     return true;
 
   if (!ScalarTy->isIntegerTy())
@@ -5941,9 +5965,7 @@ bool X86TTIImpl::forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
          (ST->hasAVX512() && (NumElts == 2 || (NumElts == 4 && !ST->hasVLX())));
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
-  if (!supportsGather())
-    return false;
+bool X86TTIImpl::isLegalMaskedGatherScatter(Type *DataTy, Align Alignment) {
   Type *ScalarTy = DataTy->getScalarType();
   if (ScalarTy->isPointerTy())
     return true;
@@ -5956,6 +5978,12 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
 
   unsigned IntWidth = ScalarTy->getIntegerBitWidth();
   return IntWidth == 32 || IntWidth == 64;
+}
+
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+  if (!supportsGather() || !ST->preferGather())
+    return false;
+  return isLegalMaskedGatherScatter(DataTy, Alignment);
 }
 
 bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
@@ -5993,9 +6021,9 @@ bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType, Align Alignment) {
   // AVX2 doesn't support scatter
-  if (!ST->hasAVX512())
+  if (!ST->hasAVX512() || !ST->preferScatter())
     return false;
-  return isLegalMaskedGather(DataType, Alignment);
+  return isLegalMaskedGatherScatter(DataType, Alignment);
 }
 
 bool X86TTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
@@ -6103,7 +6131,8 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512()) Options.LoadSizes.push_back(64);
+    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+      Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
   }
@@ -6294,16 +6323,18 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     bool UseMaskForCond, bool UseMaskForGaps) {
   auto *VecTy = cast<FixedVectorType>(BaseTy);
 
-  auto isSupportedOnAVX512 = [&](Type *VecTy, bool HasBW) {
+  auto isSupportedOnAVX512 = [&](Type *VecTy) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
         EltTy->isIntegerTy(32) || EltTy->isPointerTy())
       return true;
     if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8) || EltTy->isHalfTy())
-      return HasBW;
+      return ST->hasBWI();
+    if (EltTy->isBFloatTy())
+      return ST->hasBF16();
     return false;
   };
-  if (ST->hasAVX512() && isSupportedOnAVX512(VecTy, ST->hasBWI()))
+  if (ST->hasAVX512() && isSupportedOnAVX512(VecTy))
     return getInterleavedMemoryOpCostAVX512(
         Opcode, VecTy, Factor, Indices, Alignment,
         AddressSpace, CostKind, UseMaskForCond, UseMaskForGaps);

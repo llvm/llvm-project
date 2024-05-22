@@ -823,12 +823,12 @@ bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
     dfsan_origin origin_id = o.raw_id();
     o = o.getNextChainedOrigin(&stack);
     if (o.isChainedOrigin())
-      out->append(
+      out->AppendF(
           "  %sOrigin value: 0x%x, Taint value was stored to memory at%s\n",
           d.Origin(), origin_id, d.Default());
     else
-      out->append("  %sOrigin value: 0x%x, Taint value was created at%s\n",
-                  d.Origin(), origin_id, d.Default());
+      out->AppendF("  %sOrigin value: 0x%x, Taint value was created at%s\n",
+                   d.Origin(), origin_id, d.Default());
 
     // Includes a trailing newline, so no need to add it again.
     stack.PrintTo(out);
@@ -849,9 +849,9 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
 
   const dfsan_origin origin = *__dfsan::origin_for(addr);
 
-  out->append("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
-              d.Origin(), label, addr, description ? description : "",
-              d.Default());
+  out->AppendF("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
+               d.Origin(), label, addr, description ? description : "",
+               d.Default());
 
   Origin o = Origin::FromRawId(origin);
   return PrintOriginTraceFramesToStr(o, out);

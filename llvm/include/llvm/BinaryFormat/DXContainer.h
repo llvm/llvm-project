@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 namespace llvm {
+template <typename T> struct EnumEntry;
 
 // The DXContainer file format is arranged as a header and "parts". Semantically
 // parts are similar to sections in other object file formats. The File format
@@ -273,6 +274,27 @@ static_assert(sizeof(PipelinePSVInfo) == 4 * sizeof(uint32_t),
 
 namespace PSV {
 
+#define SEMANTIC_KIND(Val, Enum) Enum = Val,
+enum class SemanticKind : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
+
+#define COMPONENT_TYPE(Val, Enum) Enum = Val,
+enum class ComponentType : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
+
+#define INTERPOLATION_MODE(Val, Enum) Enum = Val,
+enum class InterpolationMode : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
+
 namespace v0 {
 struct RuntimeInfo {
   PipelinePSVInfo StageInfo;
@@ -302,6 +324,34 @@ struct ResourceBindInfo {
   }
 };
 
+struct SignatureElement {
+  uint32_t NameOffset;
+  uint32_t IndicesOffset;
+
+  uint8_t Rows;
+  uint8_t StartRow;
+  uint8_t Cols : 4;
+  uint8_t StartCol : 2;
+  uint8_t Allocated : 1;
+  uint8_t Unused : 1;
+  SemanticKind Kind;
+
+  ComponentType Type;
+  InterpolationMode Mode;
+  uint8_t DynamicMask : 4;
+  uint8_t Stream : 2;
+  uint8_t Unused2 : 2;
+  uint8_t Reserved;
+
+  void swapBytes() {
+    sys::swapByteOrder(NameOffset);
+    sys::swapByteOrder(IndicesOffset);
+  }
+};
+
+static_assert(sizeof(SignatureElement) == 4 * sizeof(uint32_t),
+              "PSV Signature elements must fit in 16 bytes.");
+
 } // namespace v0
 
 namespace v1 {
@@ -326,7 +376,7 @@ struct RuntimeInfo : public v0::RuntimeInfo {
   // PSVSignatureElement counts
   uint8_t SigInputElements;
   uint8_t SigOutputElements;
-  uint8_t SigPatchConstOrPrimElements;
+  uint8_t SigPatchOrPrimElements;
 
   // Number of packed vectors per signature
   uint8_t SigInputVectors;
@@ -375,6 +425,74 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 } // namespace v2
 } // namespace PSV
+
+#define COMPONENT_PRECISION(Val, Enum) Enum = Val,
+enum class SigMinPrecision : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
+
+#define D3D_SYSTEM_VALUE(Val, Enum) Enum = Val,
+enum class D3DSystemValue : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
+
+#define COMPONENT_TYPE(Val, Enum) Enum = Val,
+enum class SigComponentType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+
+struct ProgramSignatureHeader {
+  uint32_t ParamCount;
+  uint32_t FirstParamOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParamCount);
+    sys::swapByteOrder(FirstParamOffset);
+  }
+};
+
+struct ProgramSignatureElement {
+  uint32_t Stream;     // Stream index (parameters must appear in non-decreasing
+                       // stream order)
+  uint32_t NameOffset; // Offset from the start of the ProgramSignatureHeader to
+                       // the start of the null terminated string for the name.
+  uint32_t Index;      // Semantic Index
+  D3DSystemValue SystemValue; // Semantic type. Similar to PSV::SemanticKind.
+  SigComponentType CompType;  // Type of bits.
+  uint32_t Register;          // Register Index (row index)
+  uint8_t Mask;               // Mask (column allocation)
+
+  // The ExclusiveMask has a different meaning for input and output signatures.
+  // For an output signature, masked components of the output register are never
+  // written to.
+  // For an input signature, masked components of the input register are always
+  // read.
+  uint8_t ExclusiveMask;
+
+  uint16_t Unused;
+  SigMinPrecision MinPrecision; // Minimum precision of input/output data
+
+  void swapBytes() {
+    sys::swapByteOrder(Stream);
+    sys::swapByteOrder(NameOffset);
+    sys::swapByteOrder(Index);
+    sys::swapByteOrder(SystemValue);
+    sys::swapByteOrder(CompType);
+    sys::swapByteOrder(Register);
+    sys::swapByteOrder(Mask);
+    sys::swapByteOrder(ExclusiveMask);
+    sys::swapByteOrder(MinPrecision);
+  }
+};
+
+static_assert(sizeof(ProgramSignatureElement) == 32,
+              "ProgramSignatureElement is misaligned");
 
 } // namespace dxbc
 } // namespace llvm

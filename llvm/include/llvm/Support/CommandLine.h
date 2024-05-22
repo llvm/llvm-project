@@ -552,6 +552,7 @@ struct OptionValueBase : public GenericOptionValue {
   // Some options may take their value from a different data type.
   template <class DT> void setValue(const DT & /*V*/) {}
 
+  // Returns whether this instance matches the argument.
   bool compare(const DataType & /*V*/) const { return false; }
 
   bool compare(const GenericOptionValue & /*V*/) const override {
@@ -587,7 +588,8 @@ public:
     Value = V;
   }
 
-  bool compare(const DataType &V) const { return Valid && (Value != V); }
+  // Returns whether this instance matches V.
+  bool compare(const DataType &V) const { return Valid && (Value == V); }
 
   bool compare(const GenericOptionValue &V) const override {
     const OptionValueCopy<DataType> &VC =
@@ -861,7 +863,10 @@ public:
   ///
   template <class DT>
   void addLiteralOption(StringRef Name, const DT &V, StringRef HelpStr) {
-    assert(findOption(Name) == Values.size() && "Option already exists!");
+#ifndef NDEBUG
+    if (findOption(Name) != Values.size())
+      report_fatal_error("Option " + Name + " already exists!");
+#endif
     OptionInfo X(Name, static_cast<DataType>(V), HelpStr);
     Values.push_back(X);
     AddLiteralOption(Owner, Name);
@@ -1442,7 +1447,7 @@ class opt
   }
 
   void printOptionValue(size_t GlobalWidth, bool Force) const override {
-    if (Force || this->getDefault().compare(this->getValue())) {
+    if (Force || !this->getDefault().compare(this->getValue())) {
       cl::printOptionDiff<ParserClass>(*this, Parser, this->getValue(),
                                        this->getDefault(), GlobalWidth);
     }

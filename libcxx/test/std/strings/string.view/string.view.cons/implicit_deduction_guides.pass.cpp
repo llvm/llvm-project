@@ -25,9 +25,9 @@
 // (2)  basic_string_view(const basic_string_view&)
 // (3)  basic_string_view(const CharT*, size_type)
 // (4)  basic_string_view(const CharT*)
-int main(int, char**)
-{
-  { // Testing (1)
+int main(int, char**) {
+  {
+    // Testing (1)
     // Nothing to do. Cannot deduce without any arguments.
   }
   { // Testing (2)

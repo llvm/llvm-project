@@ -9,10 +9,11 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -186,15 +187,123 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
     }
     return DiagnosedSilenceableFailure::success();
   }
+  if (std::optional<ArrayAttr> contractionOps = getContraction()) {
+    Block &body = linalgOp->getRegion(0).front();
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    bool result = linalg::detail::isContractionBody(
+        body,
+        [&](Operation *elem, Operation *red) {
+          return elem->getName().getStringRef() ==
+                     (*contractionOps)[0].cast<StringAttr>().getValue() &&
+                 red->getName().getStringRef() ==
+                     (*contractionOps)[1].cast<StringAttr>().getValue();
+        },
+        os);
+    if (result)
+      return DiagnosedSilenceableFailure::success();
+    return emitSilenceableError() << "contraction: " << os.str();
+  }
   return emitDefiniteFailure() << "unknown body condition";
 }
 
 LogicalResult transform::MatchStructuredBodyOp::verify() {
-  if (getReductionPosition() && getPassthrough()) {
-    return emitOpError() << "reduction position and passthrough conditions are "
-                            "mutually exclusive";
+  int64_t numOptions = getReductionPosition().has_value() + getPassthrough() +
+                       getContraction().has_value();
+
+  if (numOptions > 1) {
+    std::string attributeNames;
+    llvm::raw_string_ostream os(attributeNames);
+    llvm::interleaveComma(ArrayRef<StringAttr>{getReductionPositionAttrName(),
+                                               getPassthroughAttrName(),
+                                               getContractionAttrName()},
+                          os);
+    return emitOpError() << "only one of {" << os.str() << "} is allowed";
+  }
+
+  if (std::optional<ArrayAttr> contractionAttr = getContraction()) {
+    if (contractionAttr->size() != 2) {
+      return emitOpError() << "expects " << getContractionAttrName()
+                           << " to contain two elements";
+    }
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchStructuredClassifyContractionDimsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchStructuredClassifyContractionDimsOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  FailureOr<linalg::ContractionDimensions> contractionDims =
+      linalg::inferContractionDims(cast<linalg::LinalgOp>(current));
+  if (failed(contractionDims))
+    return emitSilenceableError() << "could not infer contraction dimensions";
+
+  MLIRContext *context = current->getContext();
+  Builder builder(context);
+  auto makeI64Attrs = [&](ArrayRef<unsigned> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](unsigned value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(getBatch().cast<OpResult>(),
+                    makeI64Attrs(contractionDims->batch));
+  results.setParams(getM().cast<OpResult>(), makeI64Attrs(contractionDims->m));
+  results.setParams(getN().cast<OpResult>(), makeI64Attrs(contractionDims->n));
+  results.setParams(getK().cast<OpResult>(), makeI64Attrs(contractionDims->k));
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchStructuredClassifyConvolutionDimsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchStructuredClassifyConvolutionDimsOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  FailureOr<linalg::ConvolutionDimensions> convolutionDims =
+      linalg::inferConvolutionDims(cast<linalg::LinalgOp>(current));
+  if (failed(convolutionDims))
+    return emitSilenceableError() << "could not infer convolution dimensions";
+
+  MLIRContext *context = current->getContext();
+  Builder builder(context);
+  auto makeI64Attrs = [&](ArrayRef<unsigned> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](unsigned value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(getBatch().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->batch));
+  results.setParams(getOutputImage().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->outputImage));
+  results.setParams(getOutputChannel().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->outputChannel));
+  results.setParams(getFilterLoop().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->filterLoop));
+  results.setParams(getInputChannel().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->inputChannel));
+  results.setParams(getDepth().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->depth));
+
+  auto makeI64AttrsFromI64 = [&](ArrayRef<int64_t> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](int64_t value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(getStrides().cast<OpResult>(),
+                    makeI64AttrsFromI64(convolutionDims->strides));
+  results.setParams(getDilations().cast<OpResult>(),
+                    makeI64AttrsFromI64(convolutionDims->dilations));
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -619,7 +728,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
 
   Value result = linalgOp.getTiedOpResult(linalgOp.getDpsInitOperand(position));
   if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
-    results.setValues(cast<OpResult>(getResult()), result);
+    results.setValues(cast<OpResult>(getResult()), {result});
     return DiagnosedSilenceableFailure::success();
   }
 

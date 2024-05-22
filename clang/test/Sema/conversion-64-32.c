@@ -4,8 +4,6 @@ int test0(long v) {
   return v; // expected-warning {{implicit conversion loses integer precision}}
 }
 
-
-// rdar://9546171
 typedef int  int4  __attribute__ ((vector_size(16)));
 typedef long long long2 __attribute__((__vector_size__(16)));
 

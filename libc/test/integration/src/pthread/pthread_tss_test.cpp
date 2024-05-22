@@ -34,8 +34,8 @@ static void dtor(void *data) {
 static void dtor_failure(void *) { ASSERT_TRUE(false); }
 
 static void *func(void *obj) {
-  ASSERT_EQ(__llvm_libc::pthread_setspecific(key, &child_thread_data), 0);
-  int *d = reinterpret_cast<int *>(__llvm_libc::pthread_getspecific(key));
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, &child_thread_data), 0);
+  int *d = reinterpret_cast<int *>(LIBC_NAMESPACE::pthread_getspecific(key));
   ASSERT_TRUE(d != nullptr);
   ASSERT_EQ(&child_thread_data, d);
   ASSERT_EQ(*d, THREAD_DATA_INITVAL);
@@ -45,37 +45,37 @@ static void *func(void *obj) {
 
 static void *func_null_val(void *) {
   // null value, we should not call dtor
-  ASSERT_EQ(__llvm_libc::pthread_setspecific(key, nullptr), 0);
-  ASSERT_EQ(__llvm_libc::pthread_getspecific(key), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getspecific(key), nullptr);
   return nullptr;
 }
 
 static void standard_usage_test() {
-  ASSERT_EQ(__llvm_libc::pthread_key_create(&key, &dtor), 0);
-  ASSERT_EQ(__llvm_libc::pthread_setspecific(key, &main_thread_data), 0);
-  int *d = reinterpret_cast<int *>(__llvm_libc::pthread_getspecific(key));
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(&key, &dtor), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, &main_thread_data), 0);
+  int *d = reinterpret_cast<int *>(LIBC_NAMESPACE::pthread_getspecific(key));
   ASSERT_TRUE(d != nullptr);
   ASSERT_EQ(&main_thread_data, d);
   ASSERT_EQ(*d, THREAD_DATA_INITVAL);
 
   pthread_t th;
   int arg = 0xBAD;
-  ASSERT_EQ(__llvm_libc::pthread_create(&th, nullptr, &func, &arg), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, &func, &arg), 0);
   void *retval = &child_thread_data; // Init to some non-nullptr val.
-  ASSERT_EQ(__llvm_libc::pthread_join(th, &retval), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, &retval), 0);
   ASSERT_EQ(retval, nullptr);
   ASSERT_EQ(arg, THREAD_RUN_VAL);
   ASSERT_EQ(child_thread_data, THREAD_DATA_FINIVAL);
-  ASSERT_EQ(__llvm_libc::pthread_key_delete(key), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
 }
 
 static void null_value_test() {
   pthread_t th;
-  ASSERT_EQ(__llvm_libc::pthread_key_create(&key, &dtor_failure), 0);
-  ASSERT_EQ(__llvm_libc::pthread_create(&th, nullptr, &func_null_val, nullptr),
-            0);
-  ASSERT_EQ(__llvm_libc::pthread_join(th, nullptr), 0);
-  ASSERT_EQ(__llvm_libc::pthread_key_delete(key), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(&key, &dtor_failure), 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_create(&th, nullptr, &func_null_val, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
 }
 
 TEST_MAIN() {

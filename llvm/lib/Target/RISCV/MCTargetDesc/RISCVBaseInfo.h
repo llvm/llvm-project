@@ -110,6 +110,9 @@ enum {
 
   HasRoundModeOpShift = IsSignExtendingOpWShift + 1,
   HasRoundModeOpMask = 1 << HasRoundModeOpShift,
+
+  UsesVXRMShift = HasRoundModeOpShift + 1,
+  UsesVXRMMask = 1 << UsesVXRMShift,
 };
 
 enum VLMUL : uint8_t {
@@ -172,6 +175,9 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
   return TSFlags & HasRoundModeOpMask;
 }
 
+/// \returns true if this instruction uses vxrm
+static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
+
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   // This method is only called if we expect to have a VL operand, and all
@@ -195,6 +201,35 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
 static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
   assert(hasVecPolicyOp(Desc.TSFlags));
   return Desc.getNumOperands() - 1;
+}
+
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getFRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
+    return -1;
+
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4 |
+  // | policy         | sew  | vl  | frm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
+}
+
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getVXRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || !usesVXRM(TSFlags))
+    return -1;
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4  |
+  // | policy         | sew  | vl  | vxrm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
 }
 
 // Is the first def operand tied to the first use operand. This is true for
@@ -357,7 +392,6 @@ int getLoadFPImm(APFloat FPImm);
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
-  const char *AltName;
   const char *DeprecatedName;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
@@ -381,9 +415,22 @@ struct SysReg {
       return true;
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
+
+  bool haveVendorRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
+    // Not in 32-bit mode.
+    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
+      return false;
+    // No required feature associated with the system register.
+    if (FeaturesRequired.none())
+      return false;
+    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+  }
 };
 
+struct SiFiveReg : SysReg {};
+
 #define GET_SysRegsList_DECL
+#define GET_SiFiveRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
@@ -488,6 +535,8 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 
+std::optional<RISCVII::VLMUL>
+getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW);
 } // namespace RISCVVType
 
 namespace RISCVRVC {

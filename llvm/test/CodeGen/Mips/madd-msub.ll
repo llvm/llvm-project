@@ -42,22 +42,22 @@ define i64 @madd1(i32 %a, i32 %b, i32 %c) nounwind readnone {
 ;
 ; 64-LABEL: madd1:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    sll $1, $4, 0
-; 64-NEXT:    sll $2, $5, 0
-; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    sll $4, $4, 0
+; 64-NEXT:    sll $5, $5, 0
+; 64-NEXT:    dmult $5, $4
 ; 64-NEXT:    mflo $1
-; 64-NEXT:    sll $2, $6, 0
+; 64-NEXT:    sll $6, $6, 0
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    daddu $2, $1, $2
+; 64-NEXT:    daddu $2, $1, $6
 ;
 ; 64R6-LABEL: madd1:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    sll $2, $5, 0
-; 64R6-NEXT:    dmul $1, $2, $1
-; 64R6-NEXT:    sll $2, $6, 0
+; 64R6-NEXT:    sll $4, $4, 0
+; 64R6-NEXT:    sll $5, $5, 0
+; 64R6-NEXT:    dmul $1, $5, $4
+; 64R6-NEXT:    sll $6, $6, 0
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    daddu $2, $1, $2
+; 64R6-NEXT:    daddu $2, $1, $6
 ;
 ; 16-LABEL: madd1:
 ; 16:       # %bb.0: # %entry
@@ -173,18 +173,18 @@ define i64 @madd3(i32 %a, i32 %b, i64 %c) nounwind readnone {
 ;
 ; 64-LABEL: madd3:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    sll $1, $4, 0
-; 64-NEXT:    sll $2, $5, 0
-; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    sll $4, $4, 0
+; 64-NEXT:    sll $5, $5, 0
+; 64-NEXT:    dmult $5, $4
 ; 64-NEXT:    mflo $1
 ; 64-NEXT:    jr $ra
 ; 64-NEXT:    daddu $2, $1, $6
 ;
 ; 64R6-LABEL: madd3:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    sll $2, $5, 0
-; 64R6-NEXT:    dmul $1, $2, $1
+; 64R6-NEXT:    sll $4, $4, 0
+; 64R6-NEXT:    sll $5, $5, 0
+; 64R6-NEXT:    dmul $1, $5, $4
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    daddu $2, $1, $6
 ;
@@ -291,22 +291,22 @@ define i64 @msub1(i32 %a, i32 %b, i32 %c) nounwind readnone {
 ;
 ; 64-LABEL: msub1:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    sll $1, $4, 0
-; 64-NEXT:    sll $2, $5, 0
-; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    sll $4, $4, 0
+; 64-NEXT:    sll $5, $5, 0
+; 64-NEXT:    dmult $5, $4
 ; 64-NEXT:    mflo $1
-; 64-NEXT:    sll $2, $6, 0
+; 64-NEXT:    sll $6, $6, 0
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    dsubu $2, $2, $1
+; 64-NEXT:    dsubu $2, $6, $1
 ;
 ; 64R6-LABEL: msub1:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    sll $2, $5, 0
-; 64R6-NEXT:    dmul $1, $2, $1
-; 64R6-NEXT:    sll $2, $6, 0
+; 64R6-NEXT:    sll $4, $4, 0
+; 64R6-NEXT:    sll $5, $5, 0
+; 64R6-NEXT:    dmul $1, $5, $4
+; 64R6-NEXT:    sll $6, $6, 0
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    dsubu $2, $2, $1
+; 64R6-NEXT:    dsubu $2, $6, $1
 ;
 ; 16-LABEL: msub1:
 ; 16:       # %bb.0: # %entry
@@ -424,18 +424,18 @@ define i64 @msub3(i32 %a, i32 %b, i64 %c) nounwind readnone {
 ;
 ; 64-LABEL: msub3:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    sll $1, $4, 0
-; 64-NEXT:    sll $2, $5, 0
-; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    sll $4, $4, 0
+; 64-NEXT:    sll $5, $5, 0
+; 64-NEXT:    dmult $5, $4
 ; 64-NEXT:    mflo $1
 ; 64-NEXT:    jr $ra
 ; 64-NEXT:    dsubu $2, $6, $1
 ;
 ; 64R6-LABEL: msub3:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    sll $2, $5, 0
-; 64R6-NEXT:    dmul $1, $2, $1
+; 64R6-NEXT:    sll $4, $4, 0
+; 64R6-NEXT:    sll $5, $5, 0
+; 64R6-NEXT:    dmul $1, $5, $4
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    dsubu $2, $6, $1
 ;
@@ -546,22 +546,22 @@ define i64 @msub5(i32 %a, i32 %b, i32 %c) {
 ;
 ; 64-LABEL: msub5:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    sll $1, $4, 0
-; 64-NEXT:    sll $2, $5, 0
-; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    sll $4, $4, 0
+; 64-NEXT:    sll $5, $5, 0
+; 64-NEXT:    dmult $5, $4
 ; 64-NEXT:    mflo $1
-; 64-NEXT:    sll $2, $6, 0
+; 64-NEXT:    sll $6, $6, 0
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    dsubu $2, $1, $2
+; 64-NEXT:    dsubu $2, $1, $6
 ;
 ; 64R6-LABEL: msub5:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    sll $2, $5, 0
-; 64R6-NEXT:    dmul $1, $2, $1
-; 64R6-NEXT:    sll $2, $6, 0
+; 64R6-NEXT:    sll $4, $4, 0
+; 64R6-NEXT:    sll $5, $5, 0
+; 64R6-NEXT:    dmul $1, $5, $4
+; 64R6-NEXT:    sll $6, $6, 0
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    dsubu $2, $1, $2
+; 64R6-NEXT:    dsubu $2, $1, $6
 ;
 ; 16-LABEL: msub5:
 ; 16:       # %bb.0: # %entry

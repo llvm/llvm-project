@@ -1,5 +1,5 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | fir-opt --fir-polymorphic-op | FileCheck --check-prefix=CFG %s
+! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | fir-opt --fir-polymorphic-op | FileCheck --check-prefix=CFG %s
 module select_type_lower_test
   type p1
     integer :: a

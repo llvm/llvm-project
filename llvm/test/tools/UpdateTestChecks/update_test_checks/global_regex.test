@@ -1,0 +1,7 @@
+# REQUIRES: x86-registered-target
+## Basic test checking that update_test_checks.py works correctly
+# RUN: cp -f %S/Inputs/global_regex.ll %t.ll && %update_test_checks %t.ll --check-globals --global-value-regex "OnlyFoo"
+# RUN: diff -u %t.ll %S/Inputs/global_regex.ll.expected
+## Verify that running without the --global-value-regex flag respects UTC_ARGS
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/global_regex.ll.expected

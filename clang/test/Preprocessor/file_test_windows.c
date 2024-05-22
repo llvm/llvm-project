@@ -25,12 +25,12 @@ filename: __FILE__
 #include "Inputs/include-file-test/file_test.h"
 
 // CHECK: filename: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
-// CHECK: filename: "A:\\UNLIKELY_PATH\\empty/Inputs/include-file-test/file_test.h"
+// CHECK: filename: "A:\\UNLIKELY_PATH\\empty\\Inputs/include-file-test/file_test.h"
 // CHECK: basefile: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
 // CHECK-NOT: filename:
 
 // CHECK-EVIL: filename: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
-// CHECK-EVIL: filename: "A:\\UNLIKELY_PATH=empty/Inputs/include-file-test/file_test.h"
+// CHECK-EVIL: filename: "A:\\UNLIKELY_PATH=empty\\Inputs/include-file-test/file_test.h"
 // CHECK-EVIL: basefile: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
 // CHECK-EVIL-NOT: filename:
 

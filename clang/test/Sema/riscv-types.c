@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v \
-// RUN: -target-feature +experimental-zvfh -ast-print %s | FileCheck %s
+// RUN: -target-feature +zvfh -target-feature +experimental-zvfbfmin -ast-print %s | FileCheck %s
 
 void bar(void) {
   // CHECK: __rvv_int64m1_t x0;
@@ -136,6 +136,25 @@ void bar(void) {
 
   // CHECK: __rvv_int32m1x2_t x44;
   __rvv_int32m1x2_t x44;
+
+  // CHECK: __rvv_bfloat16m1_t x45;
+  __rvv_bfloat16m1_t x45;
+
+  // CHECK: __rvv_bfloat16m2_t x46;
+  __rvv_bfloat16m2_t x46;
+
+  // CHECK: __rvv_bfloat16m4_t x47;
+  __rvv_bfloat16m4_t x47;
+
+  // CHECK: __rvv_bfloat16m8_t x48;
+  __rvv_bfloat16m8_t x48;
+
+  // CHECK: __rvv_bfloat16mf4_t x49;
+  __rvv_bfloat16mf4_t x49;
+
+  // CHECK: __rvv_bfloat16mf2_t x50;
+  __rvv_bfloat16mf2_t x50;
+
 }
 
 typedef __rvv_bool4_t vbool4_t;

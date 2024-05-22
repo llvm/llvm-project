@@ -135,7 +135,8 @@ define i1 @fcmp_isfinite_and_class_subnormal(half %x) {
 
 define i1 @fcmp_isfinite_or_class_subnormal(half %x) {
 ; CHECK-LABEL: @fcmp_isfinite_or_class_subnormal(
-; CHECK-NEXT:    [[SUBNORMAL_CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[SUBNORMAL_CLASS:%.*]] = fcmp one half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[SUBNORMAL_CLASS]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -148,8 +149,9 @@ define i1 @fcmp_isfinite_or_class_subnormal(half %x) {
 ; -> isfinite
 define i1 @fcmp_issubnormal_or_class_finite(half %x) {
 ; CHECK-LABEL: @fcmp_issubnormal_or_class_finite(
-; CHECK-NEXT:    [[IS_FINITE_CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 504)
-; CHECK-NEXT:    ret i1 [[IS_FINITE_CLASS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one half [[TMP1]], 0xH7C00
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
   %is.subnormal = fcmp olt half %fabs, 0xH0400
@@ -161,8 +163,9 @@ define i1 @fcmp_issubnormal_or_class_finite(half %x) {
 ; -> isfinite
 define i1 @class_finite_or_fcmp_issubnormal(half %x) {
 ; CHECK-LABEL: @class_finite_or_fcmp_issubnormal(
-; CHECK-NEXT:    [[IS_FINITE_CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 504)
-; CHECK-NEXT:    ret i1 [[IS_FINITE_CLASS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one half [[TMP1]], 0xH7C00
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
   %is.subnormal = fcmp olt half %fabs, 0xH0400
@@ -174,8 +177,8 @@ define i1 @class_finite_or_fcmp_issubnormal(half %x) {
 ; -> issubnormal
 define i1 @fcmp_issubnormal_and_class_finite(half %x) {
 ; CHECK-LABEL: @fcmp_issubnormal_and_class_finite(
-; CHECK-NEXT:    [[IS_FINITE_CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 240)
-; CHECK-NEXT:    ret i1 [[IS_FINITE_CLASS]]
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
   %is.subnormal = fcmp olt half %fabs, 0xH0400
@@ -186,8 +189,8 @@ define i1 @fcmp_issubnormal_and_class_finite(half %x) {
 
 define i1 @class_inf_or_fcmp_issubnormal(half %x) {
 ; CHECK-LABEL: @class_inf_or_fcmp_issubnormal(
-; CHECK-NEXT:    [[IS_INF_CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 756)
-; CHECK-NEXT:    ret i1 [[IS_INF_CLASS]]
+; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 756)
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
   %is.subnormal = fcmp olt half %fabs, 0xH0400
@@ -199,8 +202,9 @@ define i1 @class_inf_or_fcmp_issubnormal(half %x) {
 ; -> isfinite
 define <2 x i1> @class_finite_or_fcmp_issubnormal_vector(<2 x half> %x) {
 ; CHECK-LABEL: @class_finite_or_fcmp_issubnormal_vector(
-; CHECK-NEXT:    [[IS_FINITE_CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[X:%.*]], i32 504)
-; CHECK-NEXT:    ret <2 x i1> [[IS_FINITE_CLASS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one <2 x half> [[TMP1]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
   %is.subnormal = fcmp olt <2 x half> %fabs, <half 0xH0400, half 0xH0400>

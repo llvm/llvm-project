@@ -831,8 +831,9 @@ namespace StmtExpr {
     case 0:
       return 0;
 
-      ({
-        case 1: // expected-note {{not supported}}
+      ({  // expected-note {{jump enters a statement expression}}
+        case 1:// expected-error {{cannot jump from switch statement to this case label}} \
+               // expected-note  {{not supported}}
           return 1;
       });
     }
@@ -1038,7 +1039,7 @@ const char Cs[] = {'a', 'b'}; // expected-note 2{{declared here}}
 void foo() __attribute__((enable_if(sum(Cs) == 'a' + 'b', "")));
 void run() { foo(); }
 
-static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum(Cs)'}}
+static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum<2>(Cs)'}}
 constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
 }
 
@@ -1273,4 +1274,34 @@ namespace TemporaryWithBadPointer {
     get_bad_pointer(),
     (dbt2.wp = nullptr, 0)
   };
+}
+
+namespace UninitCompoundAssign {
+constexpr int scalar(int a) {
+  int sum; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  sum += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(scalar(3), ""); // expected-error {{constant expression}} \
+                              // expected-note {{in call to 'scalar(3)'}}
+
+constexpr int array(int a) {
+  int arr[3]; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  arr[1] += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(array(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'array(3)'}}
+
+struct Foo {
+  int val; // cxx14-note{{member not initialized by constructor}}
+  constexpr Foo() {} // cxx14-warning {{constexpr constructor that does not initialize all members is a C++20 extension}}
+};
+constexpr int field(int a) {
+  Foo f;
+  f.val += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(field(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'field(3)'}}
 }

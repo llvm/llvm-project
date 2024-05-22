@@ -1,7 +1,6 @@
 // Tests UAF detection where Allocate/Deallocate/Use
 // happen in separate threads.
 // RUN: %clang_hwasan %s -o %t && not %run %t 2>&1 | FileCheck %s
-// REQUIRES: stable-runtime
 
 #include <pthread.h>
 #include <stdlib.h>

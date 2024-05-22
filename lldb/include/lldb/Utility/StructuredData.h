@@ -9,10 +9,10 @@
 #ifndef LLDB_UTILITY_STRUCTUREDDATA_H
 #define LLDB_UTILITY_STRUCTUREDDATA_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -247,62 +248,32 @@ public:
       return success;
     }
 
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = string_value->GetValue();
-          return true;
-        }
+    std::optional<llvm::StringRef> GetItemAtIndexAsString(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *string_value = item_sp->GetAsString())
+          return string_value->GetValue();
       }
-      return false;
+      return {};
     }
 
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result,
-                                llvm::StringRef default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result = default_val;
-      return success;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = ConstString(string_value->GetValue());
-          return true;
-        }
+    /// Retrieves the element at index \a idx from a StructuredData::Array if it
+    /// is a Dictionary.
+    ///
+    /// \param[in] idx
+    ///   The index of the element to retrieve.
+    ///
+    /// \return
+    ///   If the element at index \a idx is a Dictionary, this method returns a
+    ///   valid pointer to the Dictionary wrapped in a std::optional. If the
+    ///   element is not a Dictionary or the index is invalid, this returns
+    ///   std::nullopt. Note that the underlying Dictionary pointer is never
+    ///   nullptr.
+    std::optional<Dictionary *> GetItemAtIndexAsDictionary(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *dict = item_sp->GetAsDictionary())
+          return dict;
       }
-      return false;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result,
-                                const char *default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result.SetCString(default_val);
-      return success;
-    }
-
-    bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsDictionary();
-        return (result != nullptr);
-      }
-      return false;
-    }
-
-    bool GetItemAtIndexAsArray(size_t idx, Array *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsArray();
-        return (result != nullptr);
-      }
-      return false;
+      return {};
     }
 
     void Push(const ObjectSP &item) { m_items.push_back(item); }
@@ -442,34 +413,25 @@ public:
 
     size_t GetSize() const { return m_dict.size(); }
 
-    void ForEach(std::function<bool(ConstString key, Object *object)> const
+    void ForEach(std::function<bool(llvm::StringRef key, Object *object)> const
                      &callback) const {
       for (const auto &pair : m_dict) {
-        if (!callback(pair.first, pair.second.get()))
+        if (!callback(pair.first(), pair.second.get()))
           break;
       }
     }
 
     ArraySP GetKeys() const {
       auto array_sp = std::make_shared<Array>();
-      collection::const_iterator iter;
-      for (iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
-        auto key_object_sp = std::make_shared<String>();
-        key_object_sp->SetValue(iter->first.AsCString());
+      for (auto iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
+        auto key_object_sp = std::make_shared<String>(iter->first());
         array_sp->Push(key_object_sp);
       }
       return array_sp;
     }
 
     ObjectSP GetValueForKey(llvm::StringRef key) const {
-      ObjectSP value_sp;
-      if (!key.empty()) {
-        ConstString key_cs(key);
-        collection::const_iterator iter = m_dict.find(key_cs);
-        if (iter != m_dict.end())
-          value_sp = iter->second;
-      }
-      return value_sp;
+      return m_dict.lookup(key);
     }
 
     bool GetValueForKeyAsBoolean(llvm::StringRef key, bool &result) const {
@@ -558,15 +520,10 @@ public:
       return false;
     }
 
-    bool HasKey(llvm::StringRef key) const {
-      ConstString key_cs(key);
-      collection::const_iterator search = m_dict.find(key_cs);
-      return search != m_dict.end();
-    }
+    bool HasKey(llvm::StringRef key) const { return m_dict.contains(key); }
 
     void AddItem(llvm::StringRef key, ObjectSP value_sp) {
-      ConstString key_cs(key);
-      m_dict[key_cs] = std::move(value_sp);
+      m_dict.insert_or_assign(key, std::move(value_sp));
     }
 
     template <typename T> void AddIntegerItem(llvm::StringRef key, T value) {
@@ -596,8 +553,7 @@ public:
     void GetDescription(lldb_private::Stream &s) const override;
 
   protected:
-    typedef std::map<ConstString, ObjectSP> collection;
-    collection m_dict;
+    llvm::StringMap<ObjectSP> m_dict;
   };
 
   class Null : public Object {

@@ -16,8 +16,11 @@ target triple = "hexagon"
 ; Function Attrs: nounwind
 define void @f0() local_unnamed_addr #0 {
 b0:
-  store ptr inttoptr (i32 and (i32 sext (i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32), i32 -65536) to ptr), ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 1), align 4
-  store ptr inttoptr (i32 and (i32 sext (i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32), i32 -65536) to ptr), ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 6), align 8
+  %ext = sext i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32
+  %and = and i32 %ext, -65536
+  %ptr = inttoptr i32 %and to ptr
+  store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 1), align 4
+  store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 6), align 8
   tail call void @f1()
   %v0 = load ptr, ptr @g1, align 8
   tail call void @llvm.hexagon.Y5.l2fetch(ptr %v0, i64 -9223372036854775808)

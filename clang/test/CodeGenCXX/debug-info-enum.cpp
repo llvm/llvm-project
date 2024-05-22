@@ -29,7 +29,6 @@ void foo() {
 }
 
 namespace test2 {
-// rdar://8195980
 // CHECK: [[E2]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e"
 // CHECK-SAME:                      scope: [[TEST2:![0-9]+]]
 // CHECK-SAME:                      elements: [[TEST1_ENUMS]]

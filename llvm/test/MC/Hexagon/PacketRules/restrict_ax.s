@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=asm %s 2>%t; FileCheck %s <%t
+# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2>%t; FileCheck %s <%t
 
 { r0=memw_locked(r0)
   r1=sfadd(r0,r0) }

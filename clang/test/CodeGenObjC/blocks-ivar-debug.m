@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -debug-info-kind=limited %s -fblocks -S -o %t
-// Radar 7959934
 
 @interface NSObject {
   struct objc_object *isa;

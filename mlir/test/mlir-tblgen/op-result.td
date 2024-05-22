@@ -5,6 +5,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
+  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;

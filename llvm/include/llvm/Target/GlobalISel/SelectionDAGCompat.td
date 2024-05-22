@@ -39,6 +39,10 @@ class GINodeEquiv<Instruction i, SDNode node> {
   // SelectionDAG has one setcc for all compares. This differentiates
   // for G_ICMP and G_FCMP.
   Instruction IfFloatingPoint = ?;
+
+  // SelectionDAG does not differentiate between convergent and non-convergent
+  // intrinsics. This specifies an alternate opcode for a convergent intrinsic.
+  Instruction IfConvergent = ?;
 }
 
 // These are defined in the same order as the G_* instructions.
@@ -102,14 +106,26 @@ def : GINodeEquiv<G_FDIV, fdiv>;
 def : GINodeEquiv<G_FREM, frem>;
 def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_FEXP2, fexp2>;
+def : GINodeEquiv<G_FEXP10, fexp10>;
 def : GINodeEquiv<G_FLOG2, flog2>;
 def : GINodeEquiv<G_FLDEXP, fldexp>;
 def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;
 def : GINodeEquiv<G_IS_FPCLASS, is_fpclass>;
-def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
+
+def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
+  let IfConvergent = G_INTRINSIC_CONVERGENT;
+}
+
+def : GINodeEquiv<G_GET_FPMODE, get_fpmode>;
+def : GINodeEquiv<G_SET_FPMODE, set_fpmode>;
+def : GINodeEquiv<G_RESET_FPMODE, reset_fpmode>;
+
 // ISD::INTRINSIC_VOID can also be handled with G_INTRINSIC_W_SIDE_EFFECTS.
-def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
-def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
+let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
+  def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
+  def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
+}
+
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
@@ -133,6 +149,7 @@ def : GINodeEquiv<G_FRINT, frint>;
 def : GINodeEquiv<G_FNEARBYINT, fnearbyint>;
 def : GINodeEquiv<G_INTRINSIC_TRUNC, ftrunc>;
 def : GINodeEquiv<G_INTRINSIC_ROUND, fround>;
+def : GINodeEquiv<G_INTRINSIC_ROUNDEVEN, froundeven>;
 def : GINodeEquiv<G_INTRINSIC_LRINT, lrint>;
 def : GINodeEquiv<G_FCOPYSIGN, fcopysign>;
 def : GINodeEquiv<G_SMIN, smin>;
@@ -152,6 +169,15 @@ def : GINodeEquiv<G_ROTL, rotl>;
 def : GINodeEquiv<G_LROUND, lround>;
 def : GINodeEquiv<G_LLROUND, llround>;
 def : GINodeEquiv<G_VECREDUCE_FADD, vecreduce_fadd>;
+def : GINodeEquiv<G_VECREDUCE_FMAX, vecreduce_fmax>;
+def : GINodeEquiv<G_VECREDUCE_FMIN, vecreduce_fmin>;
+def : GINodeEquiv<G_VECREDUCE_FMAXIMUM, vecreduce_fmaximum>;
+def : GINodeEquiv<G_VECREDUCE_FMINIMUM, vecreduce_fminimum>;
+def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
+def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
+def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;
+def : GINodeEquiv<G_VECREDUCE_SMAX, vecreduce_smax>;
+def : GINodeEquiv<G_VECREDUCE_ADD, vecreduce_add>;
 
 def : GINodeEquiv<G_STRICT_FADD, strict_fadd>;
 def : GINodeEquiv<G_STRICT_FSUB, strict_fsub>;
@@ -187,18 +213,16 @@ def : GINodeEquiv<G_ICMP, setcc> {
 // separate nodes for them. This GINodeEquiv maps the non-atomic stores to
 // G_STORE with a non-atomic MachineMemOperand.
 def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = true; }
+def : GINodeEquiv<G_STORE, atomic_store> {
+  let CheckMMOIsNonAtomic = false;
+  let CheckMMOIsAtomic = true;
+}
 
 def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsNonAtomic = false;
   let CheckMMOIsAtomic = true;
   let IfSignExtend = G_SEXTLOAD;
   let IfZeroExtend = G_ZEXTLOAD;
-}
-
-// Operands are swapped for atomic_store vs. regular store
-def : GINodeEquiv<G_STORE, atomic_store> {
-  let CheckMMOIsNonAtomic = false;
-  let CheckMMOIsAtomic = true;
 }
 
 def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;

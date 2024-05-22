@@ -1,33 +1,27 @@
-//
 // NOTE: this test requires gpu-sm80
+//
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE: %{run} = \
+// DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
+// DEFINE:   mlir-cpu-runner \
+// DEFINE:   --shared-libs=%mlir_cuda_runtime \
+// DEFINE:   --shared-libs=%mlir_c_runner_utils \
+// DEFINE:   --e main --entry-point-result=void \
+// DEFINE: | FileCheck %s
 //
 // with RT lib:
 //
-// RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="enable-runtime-library=true enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71" \
-// RUN: | TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
-// RUN:   mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_c_runner_utils \
-// RUN:   --e entry --entry-point-result=void \
-// RUN: | FileCheck %s
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
 //
 // without RT lib:
 //
-// RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="enable-runtime-library=false enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71" \
-// RUN: | TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
-// RUN:   mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_c_runner_utils \
-// RUN:   --e entry --entry-point-result=void \
-// RUN: | FileCheck %s
-//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #trait_sampled_dense_dense = {
@@ -83,7 +77,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     llvm.call @mgpuCreateSparseEnv() : () -> ()
     %d0 = arith.constant 0.0 : f32
     %c0 = arith.constant 0 : index

@@ -46,14 +46,12 @@ static void f12(void);
 // PR7923
 static void unused(void) { unused(); }  // expected-warning{{not needed and will not be emitted}}
 
-// rdar://8728293
 static void cleanupMalloc(char * const * const allocation) { }
 void f13(void) {
   char * const __attribute__((cleanup(cleanupMalloc))) a;
   (void)a;
 }
 
-// rdar://12233989
 extern void a(void) __attribute__((unused));
 extern void b(void) __attribute__((unused));
 

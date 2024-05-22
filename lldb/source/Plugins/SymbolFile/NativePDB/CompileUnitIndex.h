@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"

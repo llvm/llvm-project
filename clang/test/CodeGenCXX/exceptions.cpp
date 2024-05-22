@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck --check-prefixes=CHECK,CHECK11,THROWEND11 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions -fassume-nothrow-exception-dtor | FileCheck --check-prefixes=CHECK,CHECK11,NOTHROWEND11 %s
 
 // CHECK: %[[STRUCT_TEST13_A:.*]] = type { i32, i32 }
 
@@ -75,7 +76,6 @@ namespace test1 {
     return new A(B().x);
   }
 
-  //   rdar://11904428
   //   Terminate landing pads should call __cxa_begin_catch first.
   // CHECK98:      define linkonce_odr hidden void @__clang_call_terminate(ptr %0) [[NI_NR_NUW:#[0-9]+]] comdat
   // CHECK98-NEXT:   [[T0:%.*]] = call ptr @__cxa_begin_catch(ptr %0) [[NUW:#[0-9]+]]
@@ -214,7 +214,6 @@ namespace test3 {
     return new(foo(),bar()) A(5);
   }
 
-  // rdar://problem/8439196
   A *b(bool cond) {
 
     // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1 zeroext
@@ -481,11 +480,16 @@ namespace test10 {
 
   // CHECK98:      call void @__cxa_end_catch()
   // CHECK98-NEXT: br label
-  // CHECK11:      invoke void @__cxa_end_catch()
-  // CHECK11-NEXT: to label
+  // THROWEND11:        invoke void @__cxa_end_catch()
+  // THROWEND11-NEXT:   to label %invoke.cont[[#]] unwind label %terminate.lpad
+  // NOTHROWEND11:      call void @__cxa_end_catch()
+  // NOTHROWEND11-NEXT: br label %try.cont
 
   // CHECK:      invoke void @__cxa_rethrow()
   // CHECK:      unreachable
+
+  // CHECK:      terminate.lpad:
+  // CHECK:        call void @__clang_call_terminate(
 }
 
 // Ensure that an exception in a constructor destroys

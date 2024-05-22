@@ -131,6 +131,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_HW_WATCH);
   ECase(NT_ARM_SVE);
   ECase(NT_ARM_PAC_MASK);
+  ECase(NT_ARM_TAGGED_ADDR_CTRL);
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
@@ -607,6 +608,10 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1101, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1102, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1103, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -714,6 +719,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     ECase(SHT_MSP430_ATTRIBUTES);
     break;
   case ELF::EM_AARCH64:
+    ECase(SHT_AARCH64_AUTH_RELR);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
     break;
@@ -1285,10 +1291,10 @@ StringRef ScalarTraits<ELFYAML::YAMLIntUInt>::input(StringRef Scalar, void *Ctx,
   StringRef ErrMsg = "invalid number";
   // We do not accept negative hex numbers because their meaning is ambiguous.
   // For example, would -0xfffffffff mean 1 or INT32_MIN?
-  if (Scalar.empty() || Scalar.startswith("-0x"))
+  if (Scalar.empty() || Scalar.starts_with("-0x"))
     return ErrMsg;
 
-  if (Scalar.startswith("-")) {
+  if (Scalar.starts_with("-")) {
     const int64_t MinVal = Is64 ? INT64_MIN : INT32_MIN;
     long long Int;
     if (getAsSignedInteger(Scalar, /*Radix=*/0, Int) || (Int < MinVal))
@@ -1384,6 +1390,7 @@ static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
   IO.mapOptional("Entries", Section.Entries);
+  IO.mapOptional("PGOAnalyses", Section.PGOAnalyses);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::StackSizesSection &Section) {
@@ -1553,7 +1560,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
     TypeStr = getStringValue(IO, "Type");
-    if (TypeStr.startswith("SHT_") || isInteger(TypeStr))
+    if (TypeStr.starts_with("SHT_") || isInteger(TypeStr))
       IO.mapRequired("Type", Type);
   }
 
@@ -1817,6 +1824,28 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
+    IO &IO, ELFYAML::PGOAnalysisMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
+  IO.mapOptional("PGOBBEntries", E.PGOBBEntries);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
+    IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("BBFreq", E.BBFreq);
+  IO.mapOptional("Successors", E.Successors);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
+    mapping(IO &IO,
+            ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("ID", E.ID);
+  IO.mapRequired("BrProb", E.BrProb);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

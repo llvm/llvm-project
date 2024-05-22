@@ -190,8 +190,7 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
-      auto *NewBCType = PointerType::getWithSamePointeeType(
-          cast<PointerType>(BC->getType()), ADDRESS_SPACE_PARAM);
+      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC);
     }
@@ -407,9 +406,7 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr,
-      PointerType::getWithSamePointeeType(cast<PointerType>(Ptr->getType()),
-                                          ADDRESS_SPACE_GLOBAL),
+      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
       Ptr->getName(), &*InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
                                               Ptr->getName(), &*InsertPt);
@@ -430,7 +427,8 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
   auto HandleIntToPtr = [this](Value &V) {
     if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
       SmallVector<User *, 16> UsersToUpdate(V.users());
-      llvm::for_each(UsersToUpdate, [&](User *U) { markPointerAsGlobal(U); });
+      for (User *U : UsersToUpdate)
+        markPointerAsGlobal(U);
     }
   };
   if (TM.getDrvInterface() == NVPTX::CUDA) {

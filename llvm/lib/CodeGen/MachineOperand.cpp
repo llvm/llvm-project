@@ -11,13 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/StableHashing.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"

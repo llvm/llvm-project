@@ -1177,11 +1177,6 @@
 // ARMEABIHARDFP:#define __arm 1
 // ARMEABIHARDFP:#define __arm__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=armv6-unknown-cloudabi-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARMV6-CLOUDABI %s
-//
-// ARMV6-CLOUDABI:#define __CloudABI__ 1
-// ARMV6-CLOUDABI:#define __arm__ 1
-
 // RUN: %clang -E -dM -ffreestanding -target arm-netbsd-eabi %s -o - | FileCheck -match-full-lines -check-prefix ARM-NETBSD %s
 
 // ARM-NETBSD-NOT:#define _LP64

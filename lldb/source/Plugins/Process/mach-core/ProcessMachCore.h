@@ -86,7 +86,15 @@ protected:
 
 private:
   void CreateMemoryRegions();
-  void LoadBinariesViaMetadata();
+
+  bool LoadBinaryViaLowmemUUID();
+
+  /// \return
+  ///   True if any metadata were found indicating the binary that should
+  ///   be loaded, regardless of whether the specified binary could be found.
+  ///   False if no metadata were present.
+  bool LoadBinariesViaMetadata();
+
   void LoadBinariesViaExhaustiveSearch();
   void LoadBinariesAndSetDYLD();
   void CleanupMemoryRegionPermissions();

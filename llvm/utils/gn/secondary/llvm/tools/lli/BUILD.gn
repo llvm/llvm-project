@@ -9,6 +9,7 @@ executable("lli") {
     "//llvm/lib/ExecutionEngine/Interpreter",
     "//llvm/lib/ExecutionEngine/MCJIT",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Debugging",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/ExecutionEngine/Orc/TargetProcess",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",

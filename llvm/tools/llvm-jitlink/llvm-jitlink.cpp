@@ -18,7 +18,9 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -30,6 +32,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -55,7 +58,6 @@
 
 #include <cstring>
 #include <deque>
-#include <list>
 #include <string>
 
 #ifdef LLVM_ON_UNIX
@@ -140,6 +142,11 @@ static cl::opt<bool>
                     cl::desc("Enable debugger suppport (default = !-noexec)"),
                     cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
 
+static cl::opt<bool> PerfSupport("perf-support",
+                                 cl::desc("Enable perf profiling support"),
+                                 cl::init(false), cl::Hidden,
+                                 cl::cat(JITLinkCategory));
+
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -180,11 +187,6 @@ static cl::opt<std::string> ShowLinkGraphs(
     cl::desc("Takes a posix regex and prints the link graphs of all files "
              "matching that regex after fixups have been applied"),
     cl::Optional, cl::cat(JITLinkCategory));
-
-static cl::opt<bool> ShowSizes(
-    "show-sizes",
-    cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
-    cl::init(false), cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
@@ -248,10 +250,14 @@ static cl::opt<bool> UseSharedMemory(
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  errs() << "Linking in runtime functions\n"
+         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -388,13 +394,6 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   return Error::success();
 }
 
-static uint64_t computeTotalBlockSizes(LinkGraph &G) {
-  uint64_t TotalSize = 0;
-  for (auto *B : G.blocks())
-    TotalSize += B->getSize();
-  return TotalSize;
-}
-
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   constexpr orc::ExecutorAddrDiff DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
@@ -513,7 +512,7 @@ public:
     auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
-      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetimePolicy()};
+      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetime()};
     FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](
@@ -693,11 +692,12 @@ getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
 }
 
 static Error loadProcessSymbols(Session &S) {
+  S.ProcessSymsJD = &S.ES.createBareJITDylib("Process");
   auto FilterMainEntryPoint =
       [EPName = S.ES.intern(EntryPointName)](SymbolStringPtr Name) {
         return Name != EPName;
       };
-  S.MainJD->addGenerator(
+  S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
           S.ES, std::move(FilterMainEntryPoint))));
 
@@ -708,8 +708,9 @@ static Error loadDylibs(Session &S) {
   LLVM_DEBUG(dbgs() << "Loading dylibs...\n");
   for (const auto &Dylib : Dylibs) {
     LLVM_DEBUG(dbgs() << "  " << Dylib << "\n");
-    if (auto Err = S.loadAndLinkDynamicLibrary(*S.MainJD, Dylib))
-      return Err;
+    auto DL = S.getOrLoadDynamicLibrary(Dylib);
+    if (!DL)
+      return DL.takeError();
   }
 
   return Error::success();
@@ -964,63 +965,79 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ES.setErrorReporter(reportLLVMJITLinkError);
 
-  if (auto MainJDOrErr = ES.createJITDylib("main"))
-    MainJD = &*MainJDOrErr;
-  else {
-    Err = MainJDOrErr.takeError();
-    return;
-  }
-
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*this));
-  else {
-    // This symbol is used in testcases.
-    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
-    ExitOnErr(TestResultJD.define(absoluteSymbols(
-        {{ES.intern("llvm_jitlink_setTestResultOverride"),
-          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
-           JITSymbolFlags::Exported}}})));
-    MainJD->addToLinkOrder(TestResultJD);
-  }
 
   ExitOnErr(loadDylibs(*this));
 
   auto &TT = ES.getTargetTriple();
 
-  if (DebuggerSupport && TT.isOSBinFormatMachO())
-    ObjLayer.addPlugin(ExitOnErr(
-        GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
+  if (DebuggerSupport && TT.isOSBinFormatMachO()) {
+    if (!ProcessSymsJD) {
+      Err = make_error<StringError>("MachO debugging requires process symbols",
+                                    inconvertibleErrorCode());
+      return;
+    }
+    ObjLayer.addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
+        this->ES, *ProcessSymsJD, TT)));
+  }
+
+  if (PerfSupport && TT.isOSBinFormatELF()) {
+    if (!ProcessSymsJD) {
+      Err = make_error<StringError>("MachO debugging requires process symbols",
+                                    inconvertibleErrorCode());
+      return;
+    }
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
+        this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
+  }
 
   // Set up the platform.
-  if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
-    if (auto P =
-            MachOPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
-      ES.setPlatform(std::move(*P));
-    else {
-      Err = P.takeError();
-      return;
-    }
-  } else if (TT.isOSBinFormatELF() && !OrcRuntime.empty()) {
-    if (auto P =
-            ELFNixPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
-      ES.setPlatform(std::move(*P));
-    else {
-      Err = P.takeError();
-      return;
-    }
-  } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
-    auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
-      if (!DLLName.ends_with_insensitive(".dll"))
-        return make_error<StringError>("DLLName not ending with .dll",
-                                       inconvertibleErrorCode());
-      return loadAndLinkDynamicLibrary(JD, DLLName);
-    };
+  if (!OrcRuntime.empty()) {
+    assert(ProcessSymsJD && "ProcessSymsJD should have been set");
+    PlatformJD = &ES.createBareJITDylib("Platform");
+    PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
-    if (auto P = COFFPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str(),
-                                      std::move(LoadDynLibrary))) 
-      ES.setPlatform(std::move(*P));
-     else {
-      Err = P.takeError();
+    if (TT.isOSBinFormatMachO()) {
+      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                         OrcRuntime.c_str()))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else if (TT.isOSBinFormatELF()) {
+      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                          OrcRuntime.c_str()))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else if (TT.isOSBinFormatCOFF()) {
+      auto LoadDynLibrary = [&, this](JITDylib &JD,
+                                      StringRef DLLName) -> Error {
+        if (!DLLName.ends_with_insensitive(".dll"))
+          return make_error<StringError>("DLLName not ending with .dll",
+                                         inconvertibleErrorCode());
+        return loadAndLinkDynamicLibrary(JD, DLLName);
+      };
+
+      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                        OrcRuntime.c_str(),
+                                        std::move(LoadDynLibrary)))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else {
+      Err = make_error<StringError>(
+          "-" + OrcRuntime.ArgStr + " specified, but format " +
+              Triple::getObjectFormatTypeName(TT.getObjectFormat()) +
+              " not supported",
+          inconvertibleErrorCode());
       return;
     }
   } else if (TT.isOSBinFormatELF()) {
@@ -1030,6 +1047,24 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
           ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+  }
+
+  if (auto MainJDOrErr = ES.createJITDylib("main"))
+    MainJD = &*MainJDOrErr;
+  else {
+    Err = MainJDOrErr.takeError();
+    return;
+  }
+
+  if (NoProcessSymbols) {
+    // This symbol is used in testcases, but we're not reflecting process
+    // symbols so we'll need to make it available some other way.
+    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
+    ExitOnErr(TestResultJD.define(absoluteSymbols(
+        {{ES.intern("llvm_jitlink_setTestResultOverride"),
+          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
+           JITSymbolFlags::Exported}}})));
+    MainJD->addToLinkOrder(TestResultJD);
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -1105,17 +1140,6 @@ void Session::modifyPassConfig(const Triple &TT,
 
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
-
-  if (ShowSizes) {
-    PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
-      SizeBeforePruning += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      SizeAfterFixups += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-  }
 
   if (ShowRelocatedSectionContents)
     PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
@@ -1272,6 +1296,10 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   if (DebuggerSupport.getNumOccurrences() == 0 && NoExec)
     DebuggerSupport = false;
 
+  if (!OrcRuntime.empty() && NoProcessSymbols)
+    return make_error<StringError>("-orc-runtime requires process symbols",
+                                   inconvertibleErrorCode());
+
   // If -slab-allocate is passed, check that we're not trying to use it in
   // -oop-executor or -oop-executor-connect mode.
   //
@@ -1371,6 +1399,13 @@ static Error createJITDylibs(Session &S,
     }
   }
 
+  if (S.PlatformJD)
+    S.JDSearchOrder.push_back(
+        {S.PlatformJD, JITDylibLookupFlags::MatchExportedSymbolsOnly});
+  if (S.ProcessSymsJD)
+    S.JDSearchOrder.push_back(
+        {S.ProcessSymsJD, JITDylibLookupFlags::MatchExportedSymbolsOnly});
+
   LLVM_DEBUG({
     dbgs() << "Dylib search order is [ ";
     for (auto &KV : S.JDSearchOrder)
@@ -1411,7 +1446,8 @@ static Error addAbsoluteSymbols(Session &S,
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
+    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr,
+                           AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -1421,23 +1457,67 @@ static Error addAliases(Session &S,
                         const std::map<unsigned, JITDylib *> &IdxToJD) {
   // Define absolute symbols.
   LLVM_DEBUG(dbgs() << "Defining aliases...\n");
+
+  DenseMap<std::pair<JITDylib *, JITDylib *>, SymbolAliasMap> Reexports;
   for (auto AliasItr = Aliases.begin(), AliasEnd = Aliases.end();
        AliasItr != AliasEnd; ++AliasItr) {
-    unsigned AliasArgIdx = Aliases.getPosition(AliasItr - Aliases.begin());
-    auto &JD = *std::prev(IdxToJD.lower_bound(AliasArgIdx))->second;
 
-    StringRef AliasStmt = *AliasItr;
-    size_t EqIdx = AliasStmt.find_first_of('=');
-    if (EqIdx == StringRef::npos)
-      return make_error<StringError>("Invalid alias definition \"" + AliasStmt +
-                                         "\". Syntax: <name>=<addr>",
-                                     inconvertibleErrorCode());
-    StringRef Alias = AliasStmt.substr(0, EqIdx).trim();
-    StringRef Aliasee = AliasStmt.substr(EqIdx + 1).trim();
+    auto BadExpr = [&]() {
+      return make_error<StringError>(
+          "Invalid alias definition \"" + *AliasItr +
+              "\". Syntax: [<dst-jd>:]<alias>=[<src-jd>:]<aliasee>",
+          inconvertibleErrorCode());
+    };
 
-    SymbolAliasMap SAM;
-    SAM[S.ES.intern(Alias)] = {S.ES.intern(Aliasee), JITSymbolFlags::Exported};
-    if (auto Err = JD.define(symbolAliases(std::move(SAM))))
+    auto GetJD = [&](StringRef JDName) -> Expected<JITDylib *> {
+      if (JDName.empty()) {
+        unsigned AliasArgIdx = Aliases.getPosition(AliasItr - Aliases.begin());
+        return std::prev(IdxToJD.lower_bound(AliasArgIdx))->second;
+      }
+
+      auto *JD = S.ES.getJITDylibByName(JDName);
+      if (!JD)
+        return make_error<StringError>(StringRef("In alias definition \"") +
+                                           *AliasItr + "\" no dylib named " +
+                                           JDName,
+                                       inconvertibleErrorCode());
+
+      return JD;
+    };
+
+    {
+      // First split on '=' to get alias and aliasee.
+      StringRef AliasStmt = *AliasItr;
+      auto [AliasExpr, AliaseeExpr] = AliasStmt.split('=');
+      if (AliaseeExpr.empty())
+        return BadExpr();
+
+      auto [AliasJDName, Alias] = AliasExpr.split(':');
+      if (Alias.empty())
+        std::swap(AliasJDName, Alias);
+
+      auto AliasJD = GetJD(AliasJDName);
+      if (!AliasJD)
+        return AliasJD.takeError();
+
+      auto [AliaseeJDName, Aliasee] = AliaseeExpr.split(':');
+      if (Aliasee.empty())
+        std::swap(AliaseeJDName, Aliasee);
+
+      if (AliaseeJDName.empty() && !AliasJDName.empty())
+        AliaseeJDName = AliasJDName;
+      auto AliaseeJD = GetJD(AliaseeJDName);
+      if (!AliaseeJD)
+        return AliaseeJD.takeError();
+
+      Reexports[{*AliasJD, *AliaseeJD}][S.ES.intern(Alias)] = {
+          S.ES.intern(Aliasee), JITSymbolFlags::Exported};
+    }
+  }
+
+  for (auto &[JDs, AliasMap] : Reexports) {
+    auto [DstJD, SrcJD] = JDs;
+    if (auto Err = DstJD->define(reexports(*SrcJD, std::move(AliasMap))))
       return Err;
   }
 
@@ -1467,8 +1547,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
-    if (StringRef(InputFile).endswith(".a") ||
-        StringRef(InputFile).endswith(".lib"))
+    if (StringRef(InputFile).ends_with(".a") ||
+        StringRef(InputFile).ends_with(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
@@ -1568,7 +1648,7 @@ static Error addLibraries(Session &S,
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     StringRef InputFile = *InputFileItr;
-    if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
+    if (!InputFile.ends_with(".a") && !InputFile.ends_with(".lib"))
       continue;
     LibraryLoad LL;
     LL.LibName = InputFile.str();
@@ -1771,6 +1851,14 @@ static Error addLibraries(Session &S,
                                      inconvertibleErrorCode());
   }
 
+  // Add platform and process symbols if available.
+  for (auto &[Idx, JD] : IdxToJD) {
+    if (S.PlatformJD)
+      JD->addToLinkOrder(*S.PlatformJD);
+    if (S.ProcessSymsJD)
+      JD->addToLinkOrder(*S.ProcessSymsJD);
+  }
+
   return Error::success();
 }
 
@@ -1879,14 +1967,11 @@ getTargetInfo(const Triple &TT,
           std::move(MAI), std::move(Ctx), std::move(Disassembler),
           std::move(MII), std::move(MIA), std::move(InstPrinter)};
 }
-
-static Error runChecks(Session &S) {
+static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   if (CheckFiles.empty())
     return Error::success();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
-
-  auto TI = getTargetInfo(S.ES.getTargetTriple(), S.Features);
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
     return S.isSymbolRegistered(Symbol);
@@ -1910,8 +1995,9 @@ static Error runChecks(Session &S) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.ES.getTargetTriple().isLittleEndian() ? support::little : support::big,
-      TI.Disassembler.get(), TI.InstPrinter.get(), dbgs());
+      S.ES.getTargetTriple().isLittleEndian() ? llvm::endianness::little
+                                              : llvm::endianness::big,
+      TT, StringRef(), Features, dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";
   for (auto &CheckFile : CheckFiles) {
@@ -1932,19 +2018,6 @@ static Error addSelfRelocations(LinkGraph &G) {
               *Sym, G, *TI.Disassembler, *TI.MIA))
         return Err;
   return Error::success();
-}
-
-static void dumpSessionStats(Session &S) {
-  if (!ShowSizes)
-    return;
-  if (!OrcRuntime.empty())
-    outs() << "Note: Session stats include runtime and entry point lookup, but "
-              "not JITDylib initialization/deinitialization.\n";
-  if (ShowSizes)
-    outs() << "  Total size of all blocks before pruning: "
-           << S.SizeBeforePruning
-           << "\n  Total size of all blocks after fixups: " << S.SizeAfterFixups
-           << "\n";
 }
 
 static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
@@ -2036,7 +2109,9 @@ int main(int argc, char *argv[]) {
   auto [TT, Features] = getFirstFileTripleAndFeatures();
   ExitOnErr(sanitizeArguments(TT, argv[0]));
 
-  auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
+  auto S = ExitOnErr(Session::Create(TT, Features));
+
+  enableStatistics(*S, !OrcRuntime.empty());
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
@@ -2063,8 +2138,6 @@ int main(int argc, char *argv[]) {
   if (ShowAddrs)
     S->dumpSessionInfo(outs());
 
-  dumpSessionStats(*S);
-
   if (!EntryPoint) {
     if (Timers)
       Timers->JITLinkTG.printAll(errs());
@@ -2072,13 +2145,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  ExitOnErr(runChecks(*S));
-
-  if (NoExec)
-    return 0;
+  ExitOnErr(runChecks(*S, std::move(TT), std::move(Features)));
 
   int Result = 0;
-  {
+  if (!NoExec) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())

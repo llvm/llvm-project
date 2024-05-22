@@ -158,13 +158,14 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
     LLT ValTy(VA.getValVT());
@@ -283,14 +284,15 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
@@ -298,8 +300,9 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(const CallLowering::ArgInfo &Arg, unsigned RegIndex,
-                            Register Addr, LLT MemTy, MachinePointerInfo &MPO,
-                            CCValAssign &VA) override {
+                            Register Addr, LLT MemTy,
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
@@ -532,8 +535,8 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   }
 
   SMEAttrs Attrs(F);
-  if (Attrs.hasNewZAInterface() ||
-      (!Attrs.hasStreamingInterface() && Attrs.hasStreamingBody()))
+  if (Attrs.hasZAState() || Attrs.hasStreamingInterfaceOrBody() ||
+      Attrs.hasStreamingCompatibleInterface())
     return true;
 
   return false;
@@ -564,6 +567,11 @@ void AArch64CallLowering::saveVarArgRegisters(
     if (IsWin64CC) {
       GPRIdx = MFI.CreateFixedObject(GPRSaveSize,
                                      -static_cast<int>(GPRSaveSize), false);
+      if (GPRSaveSize & 15)
+        // The extra size here, if triggered, will always be 8.
+        MFI.CreateFixedObject(16 - (GPRSaveSize & 15),
+                              -static_cast<int>(alignTo(GPRSaveSize, 16)),
+                              false);
     } else
       GPRIdx = MFI.CreateStackObject(GPRSaveSize, Align(8), false);
 
@@ -824,9 +832,9 @@ bool AArch64CallLowering::doCallerAndCalleePassArgsTheSameWay(
 
 bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
     CallLoweringInfo &Info, MachineFunction &MF,
-    SmallVectorImpl<ArgInfo> &OutArgs) const {
+    SmallVectorImpl<ArgInfo> &OrigOutArgs) const {
   // If there are no outgoing arguments, then we are done.
-  if (OutArgs.empty())
+  if (OrigOutArgs.empty())
     return true;
 
   const Function &CallerF = MF.getFunction();
@@ -846,6 +854,9 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
 
   AArch64OutgoingValueAssigner CalleeAssigner(AssignFnFixed, AssignFnVarArg,
                                               Subtarget, /*IsReturn*/ false);
+  // determineAssignments() may modify argument flags, so make a copy.
+  SmallVector<ArgInfo, 8> OutArgs;
+  append_range(OutArgs, OrigOutArgs);
   if (!determineAssignments(CalleeAssigner, OutArgs, OutInfo)) {
     LLVM_DEBUG(dbgs() << "... Could not analyze call operands.\n");
     return false;

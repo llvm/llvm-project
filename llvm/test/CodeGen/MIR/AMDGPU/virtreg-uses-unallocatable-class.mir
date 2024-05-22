@@ -1,3 +1,4 @@
+# UNSUPPORTED: reverse_iteration
 # RUN: not llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=none -o - %s 2>&1 | FileCheck %s
 
 # Check a diagnostic is emitted if non-allocatable classes are used

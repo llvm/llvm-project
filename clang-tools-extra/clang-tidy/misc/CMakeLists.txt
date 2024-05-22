@@ -18,6 +18,7 @@ add_custom_target(genconfusable DEPENDS Confusables.inc)
 
 add_clang_library(clangTidyMiscModule
   ConstCorrectnessCheck.cpp
+  CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
   ConfusableIdentifierCheck.cpp
   HeaderIncludeCycleCheck.cpp
@@ -48,6 +49,7 @@ add_clang_library(clangTidyMiscModule
   DEPENDS
   omp_gen
   genconfusable
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyMiscModule

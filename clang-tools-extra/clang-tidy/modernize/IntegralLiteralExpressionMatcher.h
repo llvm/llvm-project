@@ -39,21 +39,14 @@ public:
 private:
   bool advance();
   bool consume(tok::TokenKind Kind);
-  bool nonTerminalChainedExpr(
-      bool (IntegralLiteralExpressionMatcher::*NonTerminal)(),
-      const std::function<bool(Token)> &IsKind);
-  template <tok::TokenKind Kind>
-  bool nonTerminalChainedExpr(
-      bool (IntegralLiteralExpressionMatcher::*NonTerminal)()) {
-    return nonTerminalChainedExpr(NonTerminal,
-                                  [](Token Tok) { return Tok.is(Kind); });
-  }
-  template <tok::TokenKind K1, tok::TokenKind K2, tok::TokenKind... Ks>
-  bool nonTerminalChainedExpr(
-      bool (IntegralLiteralExpressionMatcher::*NonTerminal)()) {
-    return nonTerminalChainedExpr(
-        NonTerminal, [](Token Tok) { return Tok.isOneOf(K1, K2, Ks...); });
-  }
+  template <typename NonTerminalFunctor, typename IsKindFunctor>
+  bool nonTerminalChainedExpr(const NonTerminalFunctor &NonTerminal,
+                              const IsKindFunctor &IsKind);
+  template <tok::TokenKind Kind, typename NonTerminalFunctor>
+  bool nonTerminalChainedExpr(const NonTerminalFunctor &NonTerminal);
+  template <tok::TokenKind K1, tok::TokenKind K2, tok::TokenKind... Ks,
+            typename NonTerminalFunctor>
+  bool nonTerminalChainedExpr(const NonTerminalFunctor &NonTerminal);
 
   bool unaryOperator();
   bool unaryExpr();

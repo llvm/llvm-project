@@ -10,7 +10,7 @@
 // RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K         %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -U__STDC_WANT_LIB_EXT1__
 // RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K         %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -D__STDC_WANT_LIB_EXT1__=1
 // RUN: %check_clang_tidy -check-suffix=WITH-ANNEX-K-CERT-ONLY  %s bugprone-unsafe-functions %t -- \
-// RUN:   -config="{CheckOptions: [{key: bugprone-unsafe-functions.ReportMoreUnsafeFunctions, value: false}]}" \
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportMoreUnsafeFunctions: false}}" \
 // RUN:                                                                                            -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
 
 typedef __SIZE_TYPE__ size_t;

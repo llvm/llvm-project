@@ -193,6 +193,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_TYPE_INDEX_LEB:
     return typeMap[reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_I32:
     return getFunctionSymbol(reloc.Index)->getFunctionIndex();
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_I32:
@@ -759,7 +760,7 @@ void ArchiveFile::addMember(const Archive::Symbol *sym) {
                 sym->getName());
 
   InputFile *obj = createObjectFile(mb, getName(), c.getChildOffset());
-  symtab->addFile(obj);
+  symtab->addFile(obj, sym->getName());
 }
 
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
@@ -825,9 +826,9 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
 
 bool BitcodeFile::doneLTO = false;
 
-void BitcodeFile::parse() {
+void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {
-    error(toString(this) + ": attempt to add bitcode file after LTO.");
+    error(toString(this) + ": attempt to add bitcode file after LTO (" + symName + ")");
     return;
   }
 

@@ -82,7 +82,7 @@ let NumMicroOps = 0 in {
   def : WriteRes<LSU, [Z196_LSUnit]>;
   def : WriteRes<FPU, [Z196_FPUnit]>;
   def : WriteRes<DFU, [Z196_DFUnit]>;
-  foreach Num = 2-6 in { let ResourceCycles = [Num] in {
+  foreach Num = 2-6 in { let ReleaseAtCycles = [Num] in {
     def : WriteRes<!cast<SchedWrite>("FXU"#Num), [Z196_FXUnit]>;
     def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z196_LSUnit]>;
     def : WriteRes<!cast<SchedWrite>("FPU"#Num), [Z196_FPUnit]>;

@@ -31,9 +31,8 @@ AST_MATCHER_P2(Stmt, argumentOf, bool, AllowPartialMove, StatementMatcher,
                Ref) {
   if (AllowPartialMove) {
     return stmt(anyOf(Ref, hasDescendant(Ref))).matches(Node, Finder, Builder);
-  } else {
-    return Ref.matches(Node, Finder, Builder);
   }
+  return Ref.matches(Node, Finder, Builder);
 }
 } // namespace
 
@@ -63,30 +62,34 @@ void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(isConstQualified(), substTemplateTypeParmType()))))),
           optionally(hasType(qualType(references(templateTypeParmType(
               hasDeclaration(templateTypeParmDecl().bind("template-type"))))))),
-          anyOf(hasAncestor(cxxConstructorDecl(
-                    ToParam, isDefinition(), unless(isMoveConstructor()),
-                    optionally(hasDescendant(MoveCallMatcher)))),
-                hasAncestor(functionDecl(
-                    unless(cxxConstructorDecl()), ToParam,
-                    unless(cxxMethodDecl(isMoveAssignmentOperator())),
-                    hasBody(optionally(hasDescendant(MoveCallMatcher))))))),
+          hasDeclContext(
+              functionDecl(
+                  isDefinition(), unless(isDeleted()), unless(isDefaulted()),
+                  unless(cxxConstructorDecl(isMoveConstructor())),
+                  unless(cxxMethodDecl(isMoveAssignmentOperator())), ToParam,
+                  anyOf(cxxConstructorDecl(
+                            optionally(hasDescendant(MoveCallMatcher))),
+                        functionDecl(unless(cxxConstructorDecl()),
+                                     optionally(hasBody(
+                                         hasDescendant(MoveCallMatcher))))))
+                  .bind("func"))),
       this);
 }
 
 void RvalueReferenceParamNotMovedCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
+  const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *TemplateType =
       Result.Nodes.getNodeAs<TemplateTypeParmDecl>("template-type");
 
-  if (!Param)
+  if (!Param || !Function)
     return;
 
   if (IgnoreUnnamedParams && Param->getName().empty())
     return;
 
-  const auto *Function = dyn_cast<FunctionDecl>(Param->getDeclContext());
-  if (!Function)
+  if (!Param->isUsed() && Param->hasAttr<UnusedAttr>())
     return;
 
   if (IgnoreNonDeducedTemplateTypes && TemplateType)

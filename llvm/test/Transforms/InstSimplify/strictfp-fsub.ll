@@ -13,17 +13,17 @@ define float @fsub_x_p0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_defaultenv(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_x_p0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
@@ -31,47 +31,47 @@ define float @fsub_nnan_x_p0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebmaytrap(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_ebstrict(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebstrict(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[A]]
 ;
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; Test with a fast math flag set but that flag is not "nnan".
 define float @fsub_ninf_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_ninf_x_p0_ebstrict(
-; CHECK-NEXT:    [[RET:%.*]] = call ninf float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call ninf float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call ninf float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call ninf float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; Round to -inf and if x is zero then the result is -0.0: must not fire
 define float @fsub_x_p0_neginf(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_neginf(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -79,10 +79,10 @@ define float @fsub_x_p0_neginf(float %a) #0 {
 ; Round to -inf and if x is zero then the result is -0.0: must not fire
 define float @fsub_x_p0_dynamic(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_dynamic(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -91,7 +91,7 @@ define float @fsub_nsz_x_p0_neginf(float %a) #0 {
 ; CHECK-LABEL: @fsub_nsz_x_p0_neginf(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore") #0
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -100,7 +100,7 @@ define float @fsub_nsz_x_p0_dynamic(float %a) #0 {
 ; CHECK-LABEL: @fsub_nsz_x_p0_dynamic(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -113,17 +113,17 @@ define float @fold_fsub_nsz_x_n0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_x_n0_defaultenv(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %sub
 }
 
 ; Missing nnan: must not fire.
 define float @fold_fsub_nsz_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_x_n0_ebmaytrap(
-; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %sub
 }
 
@@ -131,27 +131,27 @@ define float @fold_fsub_nnan_nsz_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nnan_nsz_x_n0_ebmaytrap(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
-  %sub = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %sub = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %sub
 }
 
 ; Missing nnan: must not fire.
 define float @fold_fsub_nsz_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_x_n0_ebstrict(
-; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %sub
 }
 
 ; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_nsz_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_nnan_x_n0_ebstrict(
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[A]]
 ;
-  %sub = call nsz nnan float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %sub = call nsz nnan float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %sub
 }
 
@@ -162,67 +162,67 @@ define float @fold_fsub_nsz_nnan_x_n0_ebstrict(float %a) #0 {
 
 define float @fold_fsub_fabs_x_n0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_x_n0_defaultenv(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret float [[ABSA]]
 ;
-  %absa = call float @llvm.fabs.f32(float %a)
-  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %sub
 }
 
 ; Missing nnan: must not fire.
 define float @fold_fsub_fabs_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_x_n0_ebmaytrap(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %absa = call float @llvm.fabs.f32(float %a)
-  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %sub
 }
 
 define float @fold_fsub_fabs_nnan_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_nnan_x_n0_ebmaytrap(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[ABSA]]
 ;
-  %absa = call float @llvm.fabs.f32(float %a)
-  %sub = call nnan float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call nnan float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %sub
 }
 
 ; Missing nnan: must not fire.
 define float @fold_fsub_fabs_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_x_n0_ebstrict(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %absa = call float @llvm.fabs.f32(float %a)
-  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %sub
 }
 
 ; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_fabs_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_nnan_x_n0_ebstrict(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[ABSA]]
 ;
-  %absa = call float @llvm.fabs.f32(float %a)
-  %sub = call nnan float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call nnan float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %sub
 }
 
 define float @fold_fsub_sitofp_x_n0_defaultenv(i32 %a) #0 {
 ; CHECK-LABEL: @fold_fsub_sitofp_x_n0_defaultenv(
-; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[FPA]]
 ;
-  %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %sub = call float @llvm.experimental.constrained.fsub.f32(float %fpa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %fpa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %sub
 }
 
@@ -235,7 +235,7 @@ define float @fsub_fneg_n0_fnX_defaultenv(float %a) #0 {
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -243,11 +243,11 @@ define float @fsub_fneg_n0_fnX_defaultenv(float %a) #0 {
 define float @fsub_fneg_n0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_n0_fnX_ebmaytrap(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %nega = fneg float %a
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
@@ -256,7 +256,7 @@ define float @fsub_fneg_nnan_n0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
@@ -264,11 +264,11 @@ define float @fsub_fneg_nnan_n0_fnX_ebmaytrap(float %a) #0 {
 define float @fsub_fneg_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_n0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %nega = fneg float %a
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -276,11 +276,11 @@ define float @fsub_fneg_n0_fnX_ebstrict(float %a) #0 {
 define float @fsub_fneg_nnan_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nnan_n0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[A]]
 ;
   %nega = fneg float %a
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -291,60 +291,60 @@ define float @fsub_fneg_nnan_n0_fnX_ebstrict(float %a) #0 {
 ; TODO: This won't fire without m_FNeg() knowing the constrained intrinsics.
 define float @fsub_fsub_n0_fnX_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_n0_fnX_defaultenv(
-; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_fsub_n0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_n0_fnX_ebmaytrap(
-; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; TODO: This won't fire without m_FNeg() knowing the constrained intrinsics.
 define float @fsub_fsub_nnan_n0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nnan_n0_fnX_ebmaytrap(
-; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_fsub_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_n0_fnX_ebstrict(
-; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %nega = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; TODO: This won't fire without m_FNeg() knowing the constrained intrinsics.
 define float @fsub_fsub_nnan_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nnan_n0_fnX_ebstrict(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %nega = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -357,7 +357,7 @@ define float @fsub_fneg_nsz_p0_fnX_defaultenv(float %a) #0 {
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -365,11 +365,11 @@ define float @fsub_fneg_nsz_p0_fnX_defaultenv(float %a) #0 {
 define float @fsub_fneg_nsz_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_ebmaytrap(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %nega = fneg float %a
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
@@ -378,7 +378,7 @@ define float @fsub_fneg_nsz_nnan_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
-  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
@@ -386,11 +386,11 @@ define float @fsub_fneg_nsz_nnan_p0_fnX_ebmaytrap(float %a) #0 {
 define float @fsub_fneg_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %nega = fneg float %a
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -398,11 +398,11 @@ define float @fsub_fneg_nsz_p0_fnX_ebstrict(float %a) #0 {
 define float @fsub_fneg_nnan_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nnan_nsz_p0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[A]]
 ;
   %nega = fneg float %a
-  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -413,60 +413,60 @@ define float @fsub_fneg_nnan_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; TODO: Need constrained intrinsic support in m_FNeg() and m_FSub to fire.
 define float @fsub_fsub_p0_nsz_fnX_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_p0_nsz_fnX_defaultenv(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_fsub_nsz_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nsz_p0_fnX_ebmaytrap(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_FNeg() and m_FSub to fire.
 define float @fsub_fsub_nnan_nsz_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nnan_nsz_p0_fnX_ebmaytrap(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %nega = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_fsub_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nsz_p0_fnX_ebstrict(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %nega = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_FNeg() and m_FSub to fire.
 define float @fsub_fsub_nnan_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fsub_nnan_nsz_p0_fnX_ebstrict(
-; CHECK-NEXT:    [[NEGA:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEGA:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %nega = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %nega = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -477,10 +477,10 @@ define float @fsub_fsub_nnan_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; Missing nnan: must not fire.
 define float @fsub_x_x_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_x_defaultenv(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -488,37 +488,37 @@ define float @fsub_nnan_x_x_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_x_defaultenv(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_x_x_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_x_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; TODO: This will fold if we allow non-default floating point environments.
 define float @fsub_nnan_x_x_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_x_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nnan: must not fire.
 define float @fsub_x_x_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_x_ebstrict(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -526,10 +526,10 @@ define float @fsub_x_x_ebstrict(float %a) #0 {
 ; The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_x_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_x_ebstrict(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -540,24 +540,24 @@ define float @fsub_nnan_x_x_ebstrict(float %a) #0 {
 ; Missing nsz and reassoc: must not fire
 define float @fsub_fsub_y_x_x_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_y_x_x_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fsub_fsub_fmf_y_x_x_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_fmf_y_x_x_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -567,60 +567,60 @@ define float @fsub_fsub_fmf_y_x_x_defaultenv(float %x, float %y) #0 {
 ; "fpexcept.ignore" instruction. This must not fire.
 define float @fsub_fsub_fmf_y_x_x_ebmaytrap_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_fmf_y_x_x_ebmaytrap_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nsz and reassoc: must not fire
 define float @fsub_fsub_y_x_x_ebmaytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_y_x_x_ebmaytrap(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fsub_fsub_fmf_y_x_x_ebmaytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_fmf_y_x_x_ebmaytrap(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nsz and reassoc: must not fire
 define float @fsub_fsub_y_x_x_ebstrict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_y_x_x_ebstrict(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fsub_fsub_fmf_y_x_x_ebstrict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_fmf_y_x_x_ebstrict(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[INNER]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %inner = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %y, float %inner, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
@@ -632,24 +632,24 @@ define float @fsub_fsub_fmf_y_x_x_ebstrict(float %x, float %y) #0 {
 ; Missing nsz and reassoc: must not fire
 define float @fadd_fsub_x_y_y_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_x_y_y_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fadd_fsub_fmf_x_y_y_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_fmf_x_y_y_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
@@ -657,69 +657,69 @@ define float @fadd_fsub_fmf_x_y_y_defaultenv(float %x, float %y) #0 {
 ; "fpexcept.ignore" instruction. This must not fire.
 define float @fadd_fsub_fmf_x_y_y_ebmaytrap_defaultenv(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_fmf_x_y_y_ebmaytrap_defaultenv(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
 }
 
 ; Missing nsz and reassoc: must not fire
 define float @fadd_fsub_x_y_y_ebmaytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_x_y_y_ebmaytrap(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fadd_fsub_fmf_x_y_y_ebmaytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_fmf_x_y_y_ebmaytrap(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
 }
 
 ; Missing nsz and reassoc: must not fire
 define float @fadd_fsub_x_y_y_ebstrict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_x_y_y_ebstrict(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 ; TODO: Need constrained intrinsic support in m_c_FAdd() and m_FSub to fire.
 define float @fadd_fsub_fmf_x_y_y_ebstrict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_fmf_x_y_y_ebstrict(
-; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[INNER:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[RET:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[INNER]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %inner = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %ret = call nsz reassoc float @llvm.experimental.constrained.fsub.f32(float %inner, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
 }
 
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata) #0
-declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata) #0
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 
-declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata) #0
+declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
 
 attributes #0 = { strictfp }

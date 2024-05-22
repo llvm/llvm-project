@@ -300,7 +300,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
     return false;
   }
   auto FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry) {
     return false;
   }
@@ -1334,6 +1334,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
 extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
     cxxDeductionGuideDecl;
 
+/// Matches concept declarations.
+///
+/// Example matches integral
+/// \code
+///   template<typename T>
+///   concept integral = std::is_integral_v<T>;
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl>
+    conceptDecl;
+
 /// Matches variable declarations.
 ///
 /// Note: this does not match declarations of member variables, which are
@@ -1971,6 +1981,45 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDeleteExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
 
+/// Matches a loop initializing the elements of an array in a number of contexts:
+///  * in the implicit copy/move constructor for a class with an array member
+///  * when a lambda-expression captures an array by value
+///  * when a decomposition declaration decomposes an array
+///
+/// Given
+/// \code
+///   void testLambdaCapture() {
+///     int a[10];
+///     auto Lam1 = [a]() {
+///       return;
+///     };
+///   }
+/// \endcode
+/// arrayInitLoopExpr() matches the implicit loop that initializes each element of
+/// the implicit array field inside the lambda object, that represents the array `a`
+/// captured by value.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+    arrayInitLoopExpr;
+
+/// The arrayInitIndexExpr consists of two subexpressions: a common expression
+/// (the source array) that is evaluated once up-front, and a per-element initializer
+/// that runs once for each array element. Within the per-element initializer,
+/// the current index may be obtained via an ArrayInitIndexExpr.
+///
+/// Given
+/// \code
+///   void testStructBinding() {
+///     int a[2] = {1, 2};
+///     auto [x, y] = a;
+///   }
+/// \endcode
+/// arrayInitIndexExpr() matches the array index that implicitly iterates
+/// over the array `a` to copy each element to the anonymous array
+/// that backs the structured binding `[x, y]` elements of which are
+/// referred to by their aliases `x` and `y`.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+    arrayInitIndexExpr;
+
 /// Matches array subscript expressions.
 ///
 /// Given
@@ -2469,6 +2518,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
 /// Matches GNU __builtin_choose_expr.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr>
     chooseExpr;
+
+/// Matches builtin function __builtin_convertvector.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+    convertVectorExpr;
 
 /// Matches GNU __null expression.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr>
@@ -3875,7 +3928,7 @@ AST_MATCHER_P(CallExpr, callee, internal::Matcher<Stmt>,
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     callee, AST_POLYMORPHIC_SUPPORTED_TYPES(ObjCMessageExpr, CallExpr),
     internal::Matcher<Decl>, InnerMatcher, 1) {
-  if (const auto *CallNode = dyn_cast<CallExpr>(&Node))
+  if (isa<CallExpr>(&Node))
     return callExpr(hasDeclaration(InnerMatcher))
         .matches(Node, Finder, Builder);
   else {
@@ -6885,9 +6938,24 @@ AST_POLYMORPHIC_MATCHER_P(hasSize,
 ///     T data[Size];
 ///   };
 /// \endcode
-/// dependentSizedArrayType
+/// dependentSizedArrayType()
 ///   matches "T data[Size]"
 extern const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+
+/// Matches C++ extended vector type where either the type or size is
+/// dependent.
+///
+/// Given
+/// \code
+///   template<typename T, int Size>
+///   class vector {
+///     typedef T __attribute__((ext_vector_type(Size))) type;
+///   };
+/// \endcode
+/// dependentSizedExtVectorType()
+///   matches "T __attribute__((ext_vector_type(Size)))"
+extern const AstTypeMatcher<DependentSizedExtVectorType>
+    dependentSizedExtVectorType;
 
 /// Matches C arrays with unspecified size.
 ///
@@ -7189,6 +7257,18 @@ AST_TYPELOC_TRAVERSE_MATCHER_DECL(
 /// typedefType()
 ///   matches "typedef int X"
 extern const AstTypeMatcher<TypedefType> typedefType;
+
+/// Matches qualified types when the qualifier is applied via a macro.
+///
+/// Given
+/// \code
+///   #define CDECL __attribute__((cdecl))
+///   typedef void (CDECL *X)();
+///   typedef void (__attribute__((cdecl)) *Y)();
+/// \endcode
+/// macroQualifiedType()
+///   matches the type of the typedef declaration of \c X but not \c Y.
+extern const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
 
 /// Matches enum types.
 ///

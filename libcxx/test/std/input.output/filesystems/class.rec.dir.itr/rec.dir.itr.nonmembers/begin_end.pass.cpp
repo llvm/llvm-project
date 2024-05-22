@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -17,14 +17,14 @@
 // recursive_directory_iterator begin(recursive_directory_iterator iter) noexcept;
 // recursive_directory_iterator end(recursive_directory_iterator iter) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void test_function_signatures()

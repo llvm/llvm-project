@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
-#define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
+#ifndef LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
+#define LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
@@ -18,23 +18,12 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+// TODO: evaluate which functions from this file are actually used.
 
-LIBC_INLINE uint32_t as_uint32_bits(float x) {
-  return cpp::bit_cast<uint32_t>(x);
-}
+namespace LIBC_NAMESPACE {
 
-LIBC_INLINE uint64_t as_uint64_bits(double x) {
-  return cpp::bit_cast<uint64_t>(x);
-}
-
-LIBC_INLINE float as_float(uint32_t x) { return cpp::bit_cast<float>(x); }
-
+// TODO: Remove this, or move it to exp_utils.cpp which is its only user.
 LIBC_INLINE double as_double(uint64_t x) { return cpp::bit_cast<double>(x); }
-
-LIBC_INLINE uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }
-
-LIBC_INLINE uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
 
 // Values to trigger underflow and overflow.
 template <typename T> struct XFlowValues;
@@ -102,6 +91,6 @@ LIBC_INLINE constexpr float invalid(T x) {
   return isnan(x) ? y : with_errno(y, EDOM);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_MATH_UTILS_H
+#endif // LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H

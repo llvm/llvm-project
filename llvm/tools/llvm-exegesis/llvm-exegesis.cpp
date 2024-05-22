@@ -262,6 +262,12 @@ static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
                           "allows for the use of memory annotations")),
     cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
 
+static cl::opt<unsigned> BenchmarkRepeatCount(
+    "benchmark-repeat-count",
+    cl::desc("The number of times to repeat measurements on the benchmark k "
+             "before aggregating the results"),
+    cl::cat(BenchmarkOptions), cl::init(30));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -291,6 +297,9 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
   const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
+  const auto &ET = State.getExegesisTarget();
+  const auto AvailableFeatures = State.getSubtargetInfo().getFeatureBits();
+
   if (NumSetFlags != 1) {
     ExitOnErr.setBanner("llvm-exegesis: ");
     ExitWithError("please provide one and only one of 'opcode-index', "
@@ -304,8 +313,11 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
     std::vector<unsigned> Result;
     unsigned NumOpcodes = State.getInstrInfo().getNumOpcodes();
     Result.reserve(NumOpcodes);
-    for (unsigned I = 0, E = NumOpcodes; I < E; ++I)
+    for (unsigned I = 0, E = NumOpcodes; I < E; ++I) {
+      if (!ET.isOpcodeAvailable(I, AvailableFeatures))
+        continue;
       Result.push_back(I);
+    }
     return Result;
   }
   // Resolve opcode name -> opcode.
@@ -398,8 +410,18 @@ static void runBenchmarkConfigurations(
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
-      AllResults.emplace_back(
-          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpFile)));
+      auto [Err, InstrBenchmark] =
+          Runner.runConfiguration(std::move(RC), DumpFile);
+      if (Err) {
+        // Errors from executing the snippets are fine.
+        // All other errors are a framework issue and should fail.
+        if (!Err.isA<SnippetExecutionFailure>()) {
+          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          exit(1);
+        }
+        InstrBenchmark.Error = toString(std::move(Err));
+      }
+      AllResults.push_back(std::move(InstrBenchmark));
     }
     Benchmark &Result = AllResults.front();
 
@@ -471,10 +493,15 @@ void benchmarkMain() {
   if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
+  if (ExecutionMode == BenchmarkRunner::ExecutionModeE::SubProcess &&
+      UseDummyPerfCounters)
+    ExitWithError("Dummy perf counters are not supported in the subprocess "
+                  "execution mode.");
+
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          ResultAggMode));
+          BenchmarkRepeatCount, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
@@ -492,11 +519,8 @@ void benchmarkMain() {
   }
 
   BitVector AllReservedRegs;
-  llvm::for_each(Repetitors,
-                 [&AllReservedRegs](
-                     const std::unique_ptr<const SnippetRepetitor> &Repetitor) {
-                   AllReservedRegs |= Repetitor->getReservedRegs();
-                 });
+  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
+    AllReservedRegs |= Repetitor->getReservedRegs();
 
   std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {
@@ -525,8 +549,10 @@ void benchmarkMain() {
     for (const auto &Configuration : Configurations) {
       if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
           (Configuration.Key.MemoryMappings.size() != 0 ||
-           Configuration.Key.MemoryValues.size() != 0))
-        ExitWithError("Memory annotations are only supported in subprocess "
+           Configuration.Key.MemoryValues.size() != 0 ||
+           Configuration.Key.SnippetAddress != 0))
+        ExitWithError("Memory and snippet address annotations are only "
+                      "supported in subprocess "
                       "execution mode");
     }
   }

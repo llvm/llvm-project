@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -Wuninitialized -fblocks -verify %s 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -Wuninitialized -fblocks -x objective-c -fobjc-arc -DARC -verify %s
 
-// rdar://10817031
-
 int main(void) {
     void (^arc_fail)(void) = ^(void) {
 #ifdef ARC
@@ -15,4 +13,4 @@ int main(void) {
        arc_fail(); // BOOM
     };
 }
-// CHECK: {8:12-8:12}:"__block "
+// CHECK: {6:12-6:12}:"__block "

@@ -245,7 +245,7 @@ define <1 x i64> @dotproduct_i64_v8(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = mul <1 x i64> [[BLOCK27]], [[SPLAT_SPLAT29]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <1 x i64> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <1 x i64> [[TMP22]], <1 x i64> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x i64> undef, <1 x i64> [[TMP23]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x i64> poison, <1 x i64> [[TMP23]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    ret <1 x i64> [[TMP24]]
 ;
 entry:

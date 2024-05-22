@@ -6,7 +6,6 @@
 
 
 // Tests for signed integer overflow stuff.
-// rdar://7432000 rdar://7221421
 void test1(void) {
   // DEFAULT-LABEL: define{{.*}} void @test1
   // WRAPV-LABEL: define{{.*}} void @test1

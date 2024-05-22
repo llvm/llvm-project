@@ -354,8 +354,8 @@ define noalias ptr @test23() nounwind uwtable ssp {
 define void @test24(ptr %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: @test24(
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr %a, align 4
@@ -514,13 +514,12 @@ define void @test34(ptr noalias %p) {
   store i32 0, ptr %p
   ret void
 }
-; Same as previous case, but with an sret argument.
-; TODO: The first store could be eliminated if sret is not visible on unwind.
-define void @test34_sret(ptr noalias sret(i32) %p) {
-; CHECK-LABEL: @test34_sret(
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
+
+; Same as previous case, but with a dead_on_unwind argument.
+define void @test34_dead_on_unwind(ptr noalias dead_on_unwind %p) {
+; CHECK-LABEL: @test34_dead_on_unwind(
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr %p

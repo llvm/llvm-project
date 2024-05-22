@@ -214,32 +214,37 @@ private:
 
   /// Returns an accumulator factory that creates an op specified by opName.
   AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
+    using Kind = gpu::AllReduceOperation;
     bool isFloatingPoint = isa<FloatType>(valueType);
     switch (opName) {
-    case gpu::AllReduceOperation::ADD:
+    case Kind::ADD:
       return isFloatingPoint ? getFactory<arith::AddFOp>()
                              : getFactory<arith::AddIOp>();
-    case gpu::AllReduceOperation::MUL:
+    case Kind::MUL:
       return isFloatingPoint ? getFactory<arith::MulFOp>()
                              : getFactory<arith::MulIOp>();
-    case gpu::AllReduceOperation::AND:
+    case Kind::MINSI:
+      return getFactory<arith::MinSIOp>();
+    case Kind::MINUI:
+      return getFactory<arith::MinUIOp>();
+    case Kind::MINF:
+      return getFactory<arith::MinNumFOp>();
+    case Kind::MAXSI:
+      return getFactory<arith::MaxSIOp>();
+    case Kind::MAXUI:
+      return getFactory<arith::MaxUIOp>();
+    case Kind::MAXF:
+      return getFactory<arith::MaxNumFOp>();
+    case Kind::AND:
       return getFactory<arith::AndIOp>();
-    case gpu::AllReduceOperation::OR:
+    case Kind::OR:
       return getFactory<arith::OrIOp>();
-    case gpu::AllReduceOperation::XOR:
+    case Kind::XOR:
       return getFactory<arith::XOrIOp>();
-    case gpu::AllReduceOperation::MAX:
-      return isFloatingPoint
-                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
-                                 arith::CmpFPredicate::UGT>()
-                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
-                                 arith::CmpIPredicate::ugt>();
-    case gpu::AllReduceOperation::MIN:
-      return isFloatingPoint
-                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
-                                 arith::CmpFPredicate::ULT>()
-                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
-                                 arith::CmpIPredicate::ult>();
+    case Kind::MINIMUMF:
+      return getFactory<arith::MinimumFOp>();
+    case Kind::MAXIMUMF:
+      return getFactory<arith::MaximumFOp>();
     }
     llvm_unreachable("unknown GPU AllReduceOperation");
   }
@@ -247,18 +252,8 @@ private:
   /// Returns an accumulator factory that creates an op of type T.
   template <typename T>
   AccumulatorFactory getFactory() {
-    return [&](Value lhs, Value rhs) {
+    return [this](Value lhs, Value rhs) {
       return create<T>(lhs.getType(), lhs, rhs);
-    };
-  }
-
-  /// Returns an accumulator for comparison such as min, max. T is the type
-  /// of the compare op.
-  template <typename T, typename PredicateEnum, PredicateEnum predicate>
-  AccumulatorFactory getCmpFactory() const {
-    return [&](Value lhs, Value rhs) {
-      Value cmp = rewriter.create<T>(loc, predicate, lhs, rhs);
-      return rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
     };
   }
 
@@ -387,8 +382,8 @@ private:
   static constexpr int kSubgroupSize = 32;
 };
 
-struct GpuAllReduceConversion : public RewritePattern {
-  explicit GpuAllReduceConversion(MLIRContext *context)
+struct GpuAllReduceRewrite : public RewritePattern {
+  explicit GpuAllReduceRewrite(MLIRContext *context)
       : RewritePattern(gpu::GPUFuncOp::getOperationName(), 1, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
@@ -417,5 +412,5 @@ struct GpuAllReduceConversion : public RewritePattern {
 } // namespace
 
 void mlir::populateGpuAllReducePatterns(RewritePatternSet &patterns) {
-  patterns.add<GpuAllReduceConversion>(patterns.getContext());
+  patterns.add<GpuAllReduceRewrite>(patterns.getContext());
 }

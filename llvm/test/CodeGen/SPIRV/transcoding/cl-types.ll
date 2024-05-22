@@ -18,7 +18,7 @@
 ;; ) {
 ;; }
 
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: OpCapability Sampled1D
 ; CHECK-SPIRV-DAG: OpCapability SampledBuffer
@@ -37,17 +37,6 @@
 
 ; CHECK-SPIRV:     %[[#SAMP_CONST:]] = OpConstantSampler %[[#SAMP]] None 0 Linear
 
-%opencl.pipe_ro_t = type opaque
-%opencl.pipe_wo_t = type opaque
-%opencl.image3d_ro_t = type opaque
-%opencl.image2d_array_ro_t = type opaque
-%opencl.image1d_buffer_ro_t = type opaque
-%opencl.image1d_ro_t = type opaque
-%opencl.image1d_wo_t = type opaque
-%opencl.image2d_rw_t = type opaque
-%opencl.image2d_ro_t = type opaque
-%opencl.sampler_t = type opaque
-
 ; CHECK-SPIRV: %[[#]] = OpFunctionParameter %[[#PIPE_RD]]
 ; CHECK-SPIRV: %[[#]] = OpFunctionParameter %[[#PIPE_WR]]
 ; CHECK-SPIRV: %[[#]] = OpFunctionParameter %[[#IMG1D_RD]]
@@ -60,28 +49,28 @@
 ; CHECK-SPIRV: %[[#SAMP_ARG:]] = OpFunctionParameter %[[#SAMP]]
 
 define spir_kernel void @foo(
-  %opencl.pipe_ro_t addrspace(1)* nocapture %a,
-  %opencl.pipe_wo_t addrspace(1)* nocapture %b,
-  %opencl.image1d_ro_t addrspace(1)* nocapture %c1,
-  %opencl.image2d_ro_t addrspace(1)* nocapture %d1,
-  %opencl.image3d_ro_t addrspace(1)* nocapture %e1,
-  %opencl.image2d_array_ro_t addrspace(1)* nocapture %f1,
-  %opencl.image1d_buffer_ro_t addrspace(1)* nocapture %g1,
-  %opencl.image1d_wo_t addrspace(1)* nocapture %c2,
-  %opencl.image2d_rw_t addrspace(1)* nocapture %d3,
-  %opencl.sampler_t addrspace(2)* %s) {
+  target("spirv.Pipe", 0) %a,
+  target("spirv.Pipe", 1) %b,
+  target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %c1,
+  target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %d1,
+  target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %e1,
+  target("spirv.Image", void, 1, 0, 1, 0, 0, 0, 0) %f1,
+  target("spirv.Image", void, 5, 0, 0, 0, 0, 0, 0) %g1,
+  target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 1) %c2,
+  target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 2) %d3,
+  target("spirv.Sampler") %s) {
 entry:
 ; CHECK-SPIRV: %[[#SAMPIMG_VAR1:]] = OpSampledImage %[[#SAMPIMG]] %[[#IMG_ARG]] %[[#SAMP_ARG]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SAMPIMG_VAR1]]
-  %.tmp = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(%opencl.image2d_ro_t addrspace(1)* %d1, %opencl.sampler_t addrspace(2)* %s, <4 x i32> zeroinitializer, float 1.000000e+00)
+  %.tmp = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %d1, target("spirv.Sampler") %s, <4 x i32> zeroinitializer, float 1.000000e+00)
 
 ; CHECK-SPIRV: %[[#SAMPIMG_VAR2:]] = OpSampledImage %[[#SAMPIMG]] %[[#IMG_ARG]] %[[#SAMP_CONST]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SAMPIMG_VAR2]]
-  %0 = call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 32)
-  %.tmp2 = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(%opencl.image2d_ro_t addrspace(1)* %d1, %opencl.sampler_t addrspace(2)* %0, <4 x i32> zeroinitializer, float 1.000000e+00)
+  %0 = call target("spirv.Sampler") @__translate_sampler_initializer(i32 32)
+  %.tmp2 = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %d1, target("spirv.Sampler") %0, <4 x i32> zeroinitializer, float 1.000000e+00)
   ret void
 }
 
-declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t addrspace(2)*, <4 x i32>, float)
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv4_if(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0), target("spirv.Sampler"), <4 x i32>, float)
 
-declare %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32)
+declare target("spirv.Sampler") @__translate_sampler_initializer(i32)

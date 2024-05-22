@@ -4,8 +4,8 @@
 define i1 @ptest_v16i1_256bit_min_sve(ptr %a, ptr %b) vscale_range(2, 0) {
 ; CHECK-LABEL: ptest_v16i1_256bit_min_sve:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcmne p1.s, p0/z, z0.s, #0.0
@@ -101,9 +101,9 @@ define i1 @ptest_and_v16i1_512bit_sve(ptr %a, ptr %b) vscale_range(4, 4) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    fcmne p1.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmne p0.s, p1/z, z0.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b

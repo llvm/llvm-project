@@ -5,9 +5,9 @@
 // UNSUPPORTED: system-windows
 // UNSUPPORTED: system-darwin
 
+// RUN: %clang -std=gnu++11 -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-O2 -g" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 
 // A simple loop of assignments.
 // With optimization level > 0 the compiler reorders basic blocks

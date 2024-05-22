@@ -43,8 +43,6 @@ _start:
 // FAR-EMPTY:
 // FAR-NEXT:  <__ARMv5LongLdrPcThunk_target>:
 // FAR-NEXT:   1000008:      	ldr	pc, [pc, #-4]           @ 0x100000c <__ARMv5LongLdrPcThunk_target+0x4>
-// FAR-EMPTY:
-// FAR-NEXT:  <$d>:
 // FAR-NEXT:   100000c: 00 00 00 06  	.word	0x06000000
 
 // FAR-EB-LABEL: <_start>:
@@ -53,8 +51,6 @@ _start:
 // FAR-EB-EMPTY:
 // FAR-EB-NEXT:  <__ARMv5LongLdrPcThunk_target>:
 // FAR-EB-NEXT:   1000008:      	ldr	pc, [pc, #-4]           @ 0x100000c <__ARMv5LongLdrPcThunk_target+0x4>
-// FAR-EB-EMPTY:
-// FAR-EB-NEXT:  <$d>:
 // FAR-EB-NEXT:   100000c: 06 00 00 00  	.word	0x06000000
 
 // FAR-PIE-LABEL: <_start>:
@@ -64,8 +60,6 @@ _start:
 // FAR-PIE-NEXT:  <__ARMv4PILongThunk_target>:
 // FAR-PIE-NEXT:   1000008:      	ldr	r12, [pc]               @ 0x1000010 <__ARMv4PILongThunk_target+0x8>
 // FAR-PIE-NEXT:                	add	pc, pc, r12
-// FAR-PIE-EMPTY:
-// FAR-PIE-NEXT:  <$d>:
 // FAR-PIE-NEXT:   1000010: ec ff ff 04  	.word	0x04ffffec
 
 // FAR-EB-PIE-LABEL: <_start>:
@@ -75,8 +69,6 @@ _start:
 // FAR-EB-PIE-NEXT:  <__ARMv4PILongThunk_target>:
 // FAR-EB-PIE-NEXT:   1000008:      	ldr	r12, [pc]               @ 0x1000010 <__ARMv4PILongThunk_target+0x8>
 // FAR-EB-PIE-NEXT:                	add	pc, pc, r12
-// FAR-EB-PIE-EMPTY:
-// FAR-EB-PIE-NEXT:  <$d>:
 // FAR-EB-PIE-NEXT:   1000010: 04 ff ff ec  	.word	0x04ffffec
 
 // NEAR-LABEL: <_start>:

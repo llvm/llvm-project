@@ -3,9 +3,9 @@ Test some SBValue APIs.
 """
 
 import lldb
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 
 class ValueAPITestCase(TestBase):
@@ -151,13 +151,17 @@ class ValueAPITestCase(TestBase):
         # smaller type to a larger as we often wouldn't know how to get the extra data:
         val_f = target.EvaluateExpression("f")
         bad_cast = val_s.Cast(val_f.GetType())
-        self.assertFailure(bad_cast.GetError(),
-                           "Can only cast to a type that is equal to or smaller than the orignal type.")
+        self.assertFailure(
+            bad_cast.GetError(),
+            "Can only cast to a type that is equal to or smaller than the orignal type.",
+        )
         weird_cast = val_f.Cast(val_s.GetType())
-        self.assertSuccess(weird_cast.GetError(),
-                        "Can cast from a larger to a smaller")
-        self.assertEqual(weird_cast.GetChildMemberWithName("a").GetValueAsSigned(0), 33,
-                         "Got the right value")
+        self.assertSuccess(weird_cast.GetError(), "Can cast from a larger to a smaller")
+        self.assertEqual(
+            weird_cast.GetChildMemberWithName("a").GetValueAsSigned(0),
+            33,
+            "Got the right value",
+        )
 
         # Check that lldb.value implements truth testing.
         self.assertFalse(lldb.value(frame0.FindVariable("bogus")))
@@ -201,4 +205,19 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("sinthex").GetValueAsSigned(),
             -526164208,
             "signed sinthex == -526164208",
+        )
+
+        # Check that hex value printing works as expected.
+        self.assertEqual(
+            frame0.FindVariable("fixed_int_ptr").GetValue(),
+            "0x000000aa" if target.addr_size == 4 else "0x00000000000000aa",
+        )
+        self.runCmd("settings set target.show-hex-variable-values-with-leading-zeroes false")
+        self.assertEqual(
+            frame0.FindVariable("another_fixed_int_ptr").GetValue(),
+            "0xaa",
+        )
+        self.assertEqual(
+            frame0.FindVariable("a_null_int_ptr").GetValue(),
+            "0x0",
         )

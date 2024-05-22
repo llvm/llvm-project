@@ -3,7 +3,7 @@
 // RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=/tmp,%S %s does-not-exist.cpp 2>&1 | FileCheck -check-prefix=FILT %s
 // RUN: not llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=/tmp,%S 2>&1 | FileCheck -check-prefix=NO_FILES %s
 
-// NO_FILES: Source files must be specified when -show-functions=true is specified
+// NO_FILES: source files must be specified when -show-functions=true is specified
 
 // CHECK: Regions    Missed Regions     Cover   Functions  Missed Functions  Executed  Instantiations   Missed Insts.  Executed       Lines      Missed Lines     Cover
 // CHECK-NEXT: ---

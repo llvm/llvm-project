@@ -711,7 +711,12 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
   // Handle constant address.
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
     // Can't handle alternate code models yet.
-    if (TM.getCodeModel() != CodeModel::Small)
+    if (TM.getCodeModel() != CodeModel::Small &&
+        TM.getCodeModel() != CodeModel::Medium)
+      return false;
+
+    // Can't handle large objects yet.
+    if (TM.isLargeGlobalValue(GV))
       return false;
 
     // Can't handle TLS yet.
@@ -1044,7 +1049,8 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
   // Handle constant address.
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
     // Can't handle alternate code models yet.
-    if (TM.getCodeModel() != CodeModel::Small)
+    if (TM.getCodeModel() != CodeModel::Small &&
+        TM.getCodeModel() != CodeModel::Medium)
       return false;
 
     // RIP-relative addresses can't have additional register operands.
@@ -2391,7 +2397,7 @@ bool X86FastISel::X86SelectIntToFP(const Instruction *I, bool IsSigned) {
     return false;
 
   // TODO: We could sign extend narrower types.
-  MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
+  EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
   if (SrcVT != MVT::i32 && SrcVT != MVT::i64)
     return false;
 
@@ -3231,13 +3237,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (Subtarget->useIndirectThunkCalls())
     return false;
 
-  // Handle only C, fastcc, and webkit_js calling conventions for now.
+  // Handle only C and fastcc calling conventions for now.
   switch (CC) {
   default: return false;
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Tail:
-  case CallingConv::WebKit_JS:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::X86_FastCall:
@@ -3284,9 +3289,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (auto *CI = dyn_cast<ConstantInt>(Val)) {
       if (CI->getBitWidth() < 32) {
         if (Flags.isSExt())
-          Val = ConstantExpr::getSExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().sext(32));
         else
-          Val = ConstantExpr::getZExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().zext(32));
       }
     }
 
@@ -3519,6 +3524,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     assert(GV && "Not a direct call");
     // See if we need any target-specific flags on the GV operand.
     unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
+    if (OpFlags == X86II::MO_PLT && !Is64Bit &&
+        TM.getRelocationModel() == Reloc::Static && isa<Function>(GV) &&
+        cast<Function>(GV)->isIntrinsic())
+      OpFlags = X86II::MO_NO_FLAG;
 
     // This will be a direct call, or an indirect call through memory for
     // NonLazyBind calls or dllimport calls.
@@ -3765,7 +3774,8 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   // Can't handle alternate code models yet.
   CodeModel::Model CM = TM.getCodeModel();
-  if (CM != CodeModel::Small && CM != CodeModel::Large)
+  if (CM != CodeModel::Small && CM != CodeModel::Medium &&
+      CM != CodeModel::Large)
     return 0;
 
   // Get opcode and regclass of the output for the given load instruction.
@@ -3803,7 +3813,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
   else if (OpFlag == X86II::MO_GOTOFF)
     PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
-  else if (Subtarget->is64Bit() && TM.getCodeModel() == CodeModel::Small)
+  else if (Subtarget->is64Bit() && TM.getCodeModel() != CodeModel::Large)
     PICBase = X86::RIP;
 
   // Create the load from the constant pool.
@@ -3833,8 +3843,11 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
 }
 
 unsigned X86FastISel::X86MaterializeGV(const GlobalValue *GV, MVT VT) {
-  // Can't handle alternate code models yet.
-  if (TM.getCodeModel() != CodeModel::Small)
+  // Can't handle large GlobalValues yet.
+  if (TM.getCodeModel() != CodeModel::Small &&
+      TM.getCodeModel() != CodeModel::Medium)
+    return 0;
+  if (TM.isLargeGlobalValue(GV))
     return 0;
 
   // Materialize addresses with LEA/MOV instructions.

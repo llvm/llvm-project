@@ -63,7 +63,7 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          const APInt &value) {
   TypedAttr attr;
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
+  if (dyn_cast<IntegerType>(type)) {
     attr = rewriter.getIntegerAttr(type, value);
   } else {
     auto vecTy = cast<VectorType>(type);

@@ -19,8 +19,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   assert(std::char_traits<wchar_t>::lt(L'\0', L'A') == (L'\0' < L'A'));
   assert(std::char_traits<wchar_t>::lt(L'A', L'\0') == (L'A' < L'\0'));
 

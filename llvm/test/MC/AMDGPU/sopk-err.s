@@ -1,16 +1,16 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck --check-prefix=VI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck --check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX9-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX11-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX11-ERR --implicit-check-not=error: %s
 
 s_setreg_b32  0x1f803, s2
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid immediate: only 16-bit values are legal

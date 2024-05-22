@@ -109,7 +109,7 @@ entry:
   ret double %0
 }
 
-define float @fma32_strict(float %a, float %b, float %c) nounwind readnone ssp {
+define float @fma32_strict(float %a, float %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fma32_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
@@ -119,7 +119,7 @@ entry:
   ret float %0
 }
 
-define float @fnma32_strict(float %a, float %b, float %c) nounwind readnone ssp {
+define float @fnma32_strict(float %a, float %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fnma32_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmadd s0, s0, s1, s2
@@ -130,7 +130,7 @@ entry:
   ret float %neg
 }
 
-define float @fms32_strict(float %a, float %b, float %c) nounwind readnone ssp {
+define float @fms32_strict(float %a, float %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fms32_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmsub s0, s0, s1, s2
@@ -141,7 +141,7 @@ entry:
   ret float %0
 }
 
-define float @fms32_com_strict(float %a, float %b, float %c) nounwind readnone ssp {
+define float @fms32_com_strict(float %a, float %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fms32_com_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmsub s0, s0, s1, s2
@@ -152,7 +152,7 @@ entry:
   ret float %0
 }
 
-define float @fnms32_strict(float %a, float %b, float %c) nounwind readnone ssp {
+define float @fnms32_strict(float %a, float %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fnms32_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmsub s0, s0, s1, s2
@@ -163,7 +163,7 @@ entry:
   ret float %0
 }
 
-define double @fma64_strict(double %a, double %b, double %c) nounwind readnone ssp {
+define double @fma64_strict(double %a, double %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fma64_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmadd d0, d0, d1, d2
@@ -173,7 +173,7 @@ entry:
   ret double %0
 }
 
-define double @fnma64_strict(double %a, double %b, double %c) nounwind readnone ssp {
+define double @fnma64_strict(double %a, double %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fnma64_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmadd d0, d0, d1, d2
@@ -184,7 +184,7 @@ entry:
   ret double %neg
 }
 
-define double @fms64_strict(double %a, double %b, double %c) nounwind readnone ssp {
+define double @fms64_strict(double %a, double %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fms64_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmsub d0, d0, d1, d2
@@ -195,7 +195,7 @@ entry:
   ret double %0
 }
 
-define double @fms64_com_strict(double %a, double %b, double %c) nounwind readnone ssp {
+define double @fms64_com_strict(double %a, double %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fms64_com_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmsub d0, d0, d1, d2
@@ -206,7 +206,7 @@ entry:
   ret double %0
 }
 
-define double @fnms64_strict(double %a, double %b, double %c) nounwind readnone ssp {
+define double @fnms64_strict(double %a, double %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fnms64_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmsub d0, d0, d1, d2
@@ -222,11 +222,11 @@ entry:
 define float @negated_constant(float %x) {
 ; CHECK-LABEL: negated_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1037565952
+; CHECK-NEXT:    mov w8, #-1037565952 // =0xc2280000
 ; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov w8, #1109917696
-; CHECK-NEXT:    fmul s1, s0, s1
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmul s1, s0, s1
 ; CHECK-NEXT:    fmadd s0, s0, s2, s1
 ; CHECK-NEXT:    ret
   %m = fmul float %x, 42.0

@@ -166,7 +166,7 @@ TEST(AddressingModes, AddressingModes) {
 
   std::unique_ptr<TargetMachine> TM(
       T->createTargetMachine(TT, "generic", "", TargetOptions(), std::nullopt,
-                             std::nullopt, CodeGenOpt::Default));
+                             std::nullopt, CodeGenOptLevel::Default));
   AArch64Subtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
                       TM->getTargetCPU(), TM->getTargetFeatureString(), *TM,
                       true);

@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // Store and manipulate positive double precision numbers at |Precision| bits.
@@ -177,4 +177,4 @@ public:
 };
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

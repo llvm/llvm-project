@@ -376,9 +376,9 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   /// BreakContinueStack - Keep counts of breaks and continues inside loops.
   struct BreakContinue {
-    uint64_t BreakCount;
-    uint64_t ContinueCount;
-    BreakContinue() : BreakCount(0), ContinueCount(0) {}
+    uint64_t BreakCount = 0;
+    uint64_t ContinueCount = 0;
+    BreakContinue() = default;
   };
   SmallVector<BreakContinue, 8> BreakContinueStack;
 
@@ -755,7 +755,8 @@ void PGOHash::combine(HashType Type) {
   // Pass through MD5 if enough work has built up.
   if (Count && Count % NumTypesPerWord == 0) {
     using namespace llvm::support;
-    uint64_t Swapped = endian::byte_swap<uint64_t, little>(Working);
+    uint64_t Swapped =
+        endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
     MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     Working = 0;
   }
@@ -781,7 +782,8 @@ uint64_t PGOHash::finalize() {
       MD5.update({(uint8_t)Working});
     } else {
       using namespace llvm::support;
-      uint64_t Swapped = endian::byte_swap<uint64_t, little>(Working);
+      uint64_t Swapped =
+          endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
       MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     }
   }
@@ -952,15 +954,12 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
                                       llvm::Value *StepV) {
-  if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
-    return;
-  if (!Builder.GetInsertBlock())
+  if (!RegionCounterMap || !Builder.GetInsertBlock())
     return;
 
   unsigned Counter = (*RegionCounterMap)[S];
-  auto *I8PtrTy = llvm::Type::getInt8PtrTy(CGM.getLLVMContext());
 
-  llvm::Value *Args[] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+  llvm::Value *Args[] = {FuncNameVar,
                          Builder.getInt64(FunctionHash),
                          Builder.getInt32(NumRegionCounters),
                          Builder.getInt32(Counter), StepV};
@@ -998,7 +997,7 @@ void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
     auto BuilderInsertPoint = Builder.saveIP();
     Builder.SetInsertPoint(ValueSite);
     llvm::Value *Args[5] = {
-        llvm::ConstantExpr::getBitCast(FuncNameVar, Builder.getInt8PtrTy()),
+        FuncNameVar,
         Builder.getInt64(FunctionHash),
         Builder.CreatePtrToInt(ValuePtr, Builder.getInt64Ty()),
         Builder.getInt32(ValueKind),

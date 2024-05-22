@@ -13,10 +13,10 @@ static const char *getTestFilter(int argc, char *argv[]) {
 }
 
 extern "C" int main(int argc, char **argv, char **envp) {
-  __llvm_libc::testing::argc = argc;
-  __llvm_libc::testing::argv = argv;
-  __llvm_libc::testing::envp = envp;
+  LIBC_NAMESPACE::testing::argc = argc;
+  LIBC_NAMESPACE::testing::argv = argv;
+  LIBC_NAMESPACE::testing::envp = envp;
 
   const char *TestFilter = getTestFilter(argc, argv);
-  return __llvm_libc::testing::Test::runTests(TestFilter);
+  return LIBC_NAMESPACE::testing::Test::runTests(TestFilter);
 }

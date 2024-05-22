@@ -1186,9 +1186,8 @@ define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vect
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm0
 ; CHECK-NEXT:    vpsraq $48, (%rdi), %ymm1
-; CHECK-NEXT:    vpmovqd %ymm1, %xmm1
-; CHECK-NEXT:    vpmovqd %ymm0, %xmm0
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpackssdw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    retq
   %a = load <8 x i64>, <8 x i64>* %x
   %b = ashr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>
@@ -2011,7 +2010,7 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -2024,7 +2023,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>

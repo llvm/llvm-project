@@ -226,7 +226,7 @@ private:
 
       if (Int->isSuccessor(NodeHeader)) {
         // If we were in the successor list from before... remove from succ list
-        llvm::erase_value(Int->Successors, NodeHeader);
+        llvm::erase(Int->Successors, NodeHeader);
       }
 
       // Now that we have discovered that Node is in the interval, perhaps some

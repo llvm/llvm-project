@@ -46,6 +46,7 @@ using namespace mlir::detail;
 ///                      `:` (tensor-type | vector-type)
 ///                    | `strided` `<` `[` comma-separated-int-or-question `]`
 ///                      (`,` `offset` `:` integer-literal)? `>`
+///                    | distinct-attribute
 ///                    | extended-attribute
 ///
 Attribute Parser::parseAttribute(Type type) {
@@ -154,6 +155,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a strided layout attribute.
   case Token::kw_strided:
     return parseStridedLayoutAttr();
+
+  // Parse a distinct attribute.
+  case Token::kw_distinct:
+    return parseDistinctAttr(type);
 
   // Parse a string attribute.
   case Token::string: {
@@ -304,7 +309,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     else
       return emitWrongTokenError("expected attribute name");
 
-    if (nameId->size() == 0)
+    if (nameId->empty())
       return emitError("expected valid attribute name");
 
     if (!seenKeys.insert(*nameId).second)
@@ -655,7 +660,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
     const Token &token = signAndToken.second;
 
     // Handle hexadecimal float literals.
-    if (token.is(Token::integer) && token.getSpelling().startswith("0x")) {
+    if (token.is(Token::integer) && token.getSpelling().starts_with("0x")) {
       std::optional<APFloat> result;
       if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
                                                 eltTy.getFloatSemantics(),
@@ -730,8 +735,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
     return nullptr;
   }
 
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big) {
+  if (llvm::endianness::native == llvm::endianness::big) {
     // Convert endianess in big-endian(BE) machines. `rawData` is
     // little-endian(LE) because HEX in raw data of dense element attribute
     // is always LE format. It is converted into BE here to be used in BE
@@ -1213,4 +1217,63 @@ Attribute Parser::parseStridedLayoutAttr() {
     return nullptr;
   return StridedLayoutAttr::get(getContext(), *offset, strides);
   // return getChecked<StridedLayoutAttr>(loc,getContext(), *offset, strides);
+}
+
+/// Parse a distinct attribute.
+///
+///  distinct-attribute ::= `distinct`
+///                         `[` integer-literal `]<` attribute-value `>`
+///
+Attribute Parser::parseDistinctAttr(Type type) {
+  SMLoc loc = getToken().getLoc();
+  consumeToken(Token::kw_distinct);
+  if (parseToken(Token::l_square, "expected '[' after 'distinct'"))
+    return {};
+
+  // Parse the distinct integer identifier.
+  Token token = getToken();
+  if (parseToken(Token::integer, "expected distinct ID"))
+    return {};
+  std::optional<uint64_t> value = token.getUInt64IntegerValue();
+  if (!value) {
+    emitError("expected an unsigned 64-bit integer");
+    return {};
+  }
+
+  // Parse the referenced attribute.
+  if (parseToken(Token::r_square, "expected ']' to close distinct ID") ||
+      parseToken(Token::less, "expected '<' after distinct ID"))
+    return {};
+
+  Attribute referencedAttr;
+  if (getToken().is(Token::greater)) {
+    consumeToken();
+    referencedAttr = builder.getUnitAttr();
+  } else {
+    referencedAttr = parseAttribute(type);
+    if (!referencedAttr) {
+      emitError("expected attribute");
+      return {};
+    }
+
+    if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
+      return {};
+  }
+
+  // Add the distinct attribute to the parser state, if it has not been parsed
+  // before. Otherwise, check if the parsed reference attribute matches the one
+  // found in the parser state.
+  DenseMap<uint64_t, DistinctAttr> &distinctAttrs =
+      state.symbols.distinctAttributes;
+  auto it = distinctAttrs.find(*value);
+  if (it == distinctAttrs.end()) {
+    DistinctAttr distinctAttr = DistinctAttr::create(referencedAttr);
+    it = distinctAttrs.try_emplace(*value, distinctAttr).first;
+  } else if (it->getSecond().getReferencedAttr() != referencedAttr) {
+    emitError(loc, "referenced attribute does not match previous definition: ")
+        << it->getSecond().getReferencedAttr();
+    return {};
+  }
+
+  return it->getSecond();
 }

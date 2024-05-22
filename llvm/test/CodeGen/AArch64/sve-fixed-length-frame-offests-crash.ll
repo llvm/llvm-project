@@ -11,58 +11,53 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
 ; CHECK-LABEL: func1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    str x29, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w29, -64
-; CHECK-NEXT:    add x8, sp, #64
-; CHECK-NEXT:    add x9, sp, #128
-; CHECK-NEXT:    add x10, sp, #160
-; CHECK-NEXT:    add x11, sp, #192
+; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x20, sp, #192
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x10]
+; CHECK-NEXT:    add x11, sp, #176
+; CHECK-NEXT:    add x10, sp, #144
+; CHECK-NEXT:    add x9, sp, #112
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    add x20, sp, #176
+; CHECK-NEXT:    ldp x13, x12, [sp, #328]
+; CHECK-NEXT:    ldr x15, [sp, #104]
+; CHECK-NEXT:    ldur q4, [sp, #88]
+; CHECK-NEXT:    ldp x16, x17, [sp, #208]
+; CHECK-NEXT:    ldr x19, [sp, #272]
+; CHECK-NEXT:    ldp x21, x22, [sp, #352]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x11]
-; CHECK-NEXT:    ldp x18, x19, [sp, #368]
-; CHECK-NEXT:    add x21, sp, #160
-; CHECK-NEXT:    add x22, sp, #128
-; CHECK-NEXT:    ldp x24, x14, [sp, #296]
-; CHECK-NEXT:    add x23, sp, #64
-; CHECK-NEXT:    ldr x25, [sp, #288]
-; CHECK-NEXT:    ldp x9, x8, [sp, #344]
-; CHECK-NEXT:    ldp x11, x10, [sp, #328]
-; CHECK-NEXT:    ldp x13, x12, [sp, #312]
-; CHECK-NEXT:    ldr x15, [sp, #120]
-; CHECK-NEXT:    ldur q4, [sp, #104]
-; CHECK-NEXT:    ldp x16, x17, [sp, #224]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x10]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ldp x8, x14, [sp, #312]
+; CHECK-NEXT:    ldp x10, x9, [sp, #296]
+; CHECK-NEXT:    ldp x18, x11, [sp, #280]
 ; CHECK-NEXT:    st1d { z3.d }, p0, [x20]
-; CHECK-NEXT:    st1d { z2.d }, p0, [x21]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x22]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x23]
-; CHECK-NEXT:    stp x18, x19, [sp, #368]
-; CHECK-NEXT:    stp x25, x24, [sp, #288]
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    stp x16, x17, [sp, #224]
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    stur q4, [sp, #104]
-; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    str x15, [sp, #120]
-; CHECK-NEXT:    stp x14, x13, [sp, #304]
-; CHECK-NEXT:    stp x12, x11, [sp, #320]
-; CHECK-NEXT:    stp x10, x9, [sp, #336]
-; CHECK-NEXT:    str x8, [sp, #352]
-; CHECK-NEXT:    ldp x29, x25, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    add x20, sp, #144
+; CHECK-NEXT:    st1d { z2.d }, p0, [x20]
+; CHECK-NEXT:    add x20, sp, #112
+; CHECK-NEXT:    st1d { z1.d }, p0, [x20]
+; CHECK-NEXT:    add x20, sp, #48
+; CHECK-NEXT:    st1d { z0.d }, p0, [x20]
+; CHECK-NEXT:    stp x21, x22, [sp, #352]
+; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    stp x19, x18, [sp, #272]
+; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    stp x16, x17, [sp, #208]
+; CHECK-NEXT:    stur q4, [sp, #88]
+; CHECK-NEXT:    str x15, [sp, #104]
+; CHECK-NEXT:    stp x11, x10, [sp, #288]
+; CHECK-NEXT:    stp x9, x8, [sp, #304]
+; CHECK-NEXT:    stp x14, x13, [sp, #320]
+; CHECK-NEXT:    str x12, [sp, #336]
+; CHECK-NEXT:    ldr x29, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    b func2
                              ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr %v13, ptr %v14,  ptr %v15, ptr %v16,
                              ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,

@@ -216,10 +216,10 @@ entry:
 define <8 x float> @addp_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: addp_v8f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64 v2.4s, v0.4s
-; CHECK-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fadd v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    rev64 v2.4s, v1.4s
+; CHECK-NEXT:    rev64 v3.4s, v0.4s
+; CHECK-NEXT:    fadd v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    fadd v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>

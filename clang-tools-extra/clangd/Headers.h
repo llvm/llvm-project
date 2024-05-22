@@ -173,6 +173,11 @@ public:
 
   std::vector<Inclusion> MainFileIncludes;
 
+  // The entries of the header search path. (HeaderSearch::search_dir_range())
+  // Only includes the plain-directory entries (not header maps or frameworks).
+  // All paths are canonical (FileManager::getCanonicalPath()).
+  std::vector<std::string> SearchPathsCanonical;
+
   // We reserve HeaderID(0) for the main file and will manually check for that
   // in getID and getOrCreateID because the UniqueID is not stable when the
   // content of the main file changes.

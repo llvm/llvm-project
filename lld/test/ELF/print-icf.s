@@ -2,20 +2,19 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/print-icf.s -o %t1
-# RUN: ld.lld %t %t1 -o %t2 --icf=all --print-icf-sections | FileCheck %s
+# RUN: ld.lld %t %t1 -o %t2 --icf=all --print-icf-sections | FileCheck %s --match-full-lines --strict-whitespace
 # RUN: ld.lld %t %t1 -o %t2 --icf=all --no-print-icf-sections --print-icf-sections | FileCheck %s
-# RUN: ld.lld %t %t1 -o %t2 --icf=all --print-icf-sections --no-print-icf-sections | FileCheck -allow-empty -check-prefix=PRINT %s
+# RUN: ld.lld %t %t1 -o %t2 --icf=all --print-icf-sections --no-print-icf-sections | count 0
 
-# CHECK: selected section {{.*}}:(.text.f2)
-# CHECK:   removing identical section {{.*}}:(.text.f4)
-# CHECK:   removing identical section {{.*}}:(.text.f7)
-# CHECK: selected section {{.*}}:(.text.f1)
-# CHECK:   removing identical section {{.*}}:(.text.f3)
-# CHECK:   removing identical section {{.*}}:(.text.f5)
-# CHECK:   removing identical section {{.*}}:(.text.f6)
-
-# PRINT-NOT: selected
-# PRINT-NOT: removing
+#  CHECK-NOT:{{.}}
+#      CHECK:selected section {{.*}}:(.text.f1)
+# CHECK-NEXT:  removing identical section {{.*}}:(.text.f3)
+# CHECK-NEXT:  removing identical section {{.*}}:(.text.f5)
+# CHECK-NEXT:  removing identical section {{.*}}:(.text.f6)
+#      CHECK:selected section {{.*}}:(.text.f2)
+# CHECK-NEXT:  removing identical section {{.*}}:(.text.f4)
+# CHECK-NEXT:  removing identical section {{.*}}:(.text.f7)
+#  CHECK-NOT:{{.}}
 
 .globl _start, f1, f2
 _start:

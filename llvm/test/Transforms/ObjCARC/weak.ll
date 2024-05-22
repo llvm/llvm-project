@@ -14,24 +14,24 @@ declare void @llvm.objc.copyWeak(ptr, ptr)
 define void @test0(ptr %p, ptr %q) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
-; CHECK-NEXT:    store i1 true, ptr undef, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

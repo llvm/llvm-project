@@ -146,7 +146,7 @@ bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
                                                    TypeConverter &converter,
                                                    bool returnOpAlwaysLegal) {
   // If this is a `return` and the user pass wants to convert/transform across
-  // function boundaries, then `converter` is invoked to check whether the the
+  // function boundaries, then `converter` is invoked to check whether the
   // `return` op is legal.
   if (isa<ReturnOp>(op) && !returnOpAlwaysLegal)
     return converter.isLegal(op);

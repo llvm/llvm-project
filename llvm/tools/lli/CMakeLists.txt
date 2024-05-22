@@ -12,8 +12,9 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCJIT
   Object
-  OrcShared
   OrcJIT
+  OrcDebugging
+  OrcShared
   OrcTargetProcess
   Passes
   RuntimeDyld

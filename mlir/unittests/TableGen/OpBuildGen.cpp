@@ -131,7 +131,7 @@ TEST_F(OpBuildGenTest, BasicBuildMethods) {
 /// single variadic arg x
 /// {single variadic result, non-variadic result, multiple variadic results}
 ///
-/// Specifically to test that that ODS framework does not generate ambiguous
+/// Specifically to test that ODS framework does not generate ambiguous
 /// build() methods that fail to compile.
 
 /// Test build methods for an Op with a single varadic arg and a single

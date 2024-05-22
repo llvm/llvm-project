@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFLinkerImpl.h"
+#include "DependencyTracker.h"
 
 std::unique_ptr<llvm::dwarflinker_parallel::DWARFLinker>
 llvm::dwarflinker_parallel::DWARFLinker::createLinker(

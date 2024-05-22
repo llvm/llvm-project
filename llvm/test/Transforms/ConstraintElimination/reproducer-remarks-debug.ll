@@ -4,11 +4,11 @@
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK:      Condition   %c.2 = icmp eq ptr %a, null implied by dominating constraints
-; CHECK-NEXT: %a + -1 * null <= 0
+; CHECK:      Condition icmp eq ptr %a, null implied by dominating constraints
+; CHECK-NEXT: %a <= 0
 ; CHECK-NEXT: Creating reproducer for   %c.2 = icmp eq ptr %a, null
 ; CHECK-NEXT:   found external input ptr %a
-; CHECK-NEXT:   Materializing assumption   %c.1 = icmp eq ptr %a, null
+; CHECK-NEXT:   Materializing assumption icmp eq ptr %a, null
 
 define i1 @test_ptr_null_constant(ptr %a) {
 ; CHECK-LABEL: define i1 @"{{.+}}test_ptr_null_constantrepro"(ptr %a) {

@@ -457,7 +457,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 31);
+    isec->icfEqClass[0] = xxh3_64bits(isec->data) | (1ull << 31);
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.

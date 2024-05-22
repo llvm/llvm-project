@@ -30,6 +30,7 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
 
   const bool IsArch32Bit = getToolChain().getTriple().isArch32Bit();
@@ -37,6 +38,11 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // Only support 32 and 64 bit.
   if (!IsArch32Bit && !IsArch64Bit)
     llvm_unreachable("Unsupported bit width value.");
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
 
   // Specify the mode in which the as(1) command operates.
   if (IsArch32Bit) {
@@ -82,7 +88,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
   for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
     llvm::StringRef ArgString(CmdArgs[i]);
 
-    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+    if (ArgString.starts_with("-bE:") || ArgString.starts_with("-bexport:") ||
         ArgString == "-bexpall" || ArgString == "-bexpfull")
       return true;
 
@@ -90,8 +96,8 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
     if (ArgString == "-b" && i + 1 < Size) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
-      if (ArgNextString.startswith("E:") ||
-          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+      if (ArgNextString.starts_with("E:") ||
+          ArgNextString.starts_with("export:") || ArgNextString == "expall" ||
           ArgNextString == "expfull")
         return true;
     }
@@ -227,7 +233,15 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -429,11 +443,20 @@ void AIX::addClangTargetOptions(
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const {
-  // Add linker option -u__llvm_profile_runtime to cause runtime
-  // initialization to occur.
-  if (needsProfileRT(Args))
+  if (needsProfileRT(Args)) {
+    // Add linker option -u__llvm_profile_runtime to cause runtime
+    // initialization to occur.
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+
+    if (const auto *A =
+            Args.getLastArgNoClaim(options::OPT_fprofile_update_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "atomic" || Val == "prefer-atomic")
+        CmdArgs.push_back("-latomic");
+    }
+  }
+
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 

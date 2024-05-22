@@ -91,6 +91,13 @@ public:
     }
   }
 
+  size_t size() const {
+    size_t Size = 1;
+    for (const auto *Child : Children)
+      Size += Child->size();
+    return Size;
+  }
+
   ~AnnotatedLine() {
     for (AnnotatedLine *Child : Children)
       delete Child;
@@ -142,6 +149,16 @@ public:
     return startsWith(tok::kw_namespace) || startsWith(TT_NamespaceMacro) ||
            startsWith(tok::kw_inline, tok::kw_namespace) ||
            startsWith(tok::kw_export, tok::kw_namespace);
+  }
+
+  FormatToken *getFirstNonComment() const {
+    assert(First);
+    return First->is(tok::comment) ? First->getNextNonComment() : First;
+  }
+
+  FormatToken *getLastNonComment() const {
+    assert(Last);
+    return Last->is(tok::comment) ? Last->getPreviousNonComment() : Last;
   }
 
   FormatToken *First;

@@ -83,6 +83,58 @@ func.func @loop_for_single_index_argument(%arg0: index) {
 
 // -----
 
+func.func @not_enough_loop_results(%arg0: index, %init: f32) {
+  // expected-error @below{{mismatch in number of loop-carried values and defined values}}
+  "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_for_incorrect_result_type(%arg0: index, %init: f32) {
+  // expected-error @below{{0-th region iter_arg and 0-th loop result have different type: 'f32' != 'f64'}}
+  "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32) -> (f64)
+  return
+}
+
+// -----
+
+func.func @too_many_iter_args(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of inits and region iter_args: 1 != 2}}
+  %x = "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter, %iter : f32, f32
+    }
+  ) : (index, index, index, f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @too_few_yielded_values(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of region iter_args and yielded values: 2 != 1}}
+  %x, %x2 = "scf.for"(%arg0, %arg0, %arg0, %init, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32, f32) -> (f32, f32)
+  return
+}
+
+// -----
+
 func.func @loop_if_not_i1(%arg0: index) {
   // expected-error@+1 {{operand #0 must be 1-bit signless integer}}
   "scf.if"(%arg0) ({}, {}) : (index) -> ()
@@ -139,7 +191,7 @@ func.func @parallel_body_arguments_wrong_type(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -151,7 +203,7 @@ func.func @parallel_body_wrong_number_of_arguments(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -409,7 +461,7 @@ func.func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : ind
 func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
-  // expected-error @+1 {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
+  // expected-error @below {{1-th region iter_arg and 1-th yielded value have different type: 'f32' != 'i32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
     %sn = arith.addf %si, %si : f32
@@ -418,7 +470,6 @@ func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : ind
   }
   return
 }
-
 
 // -----
 
@@ -478,11 +529,25 @@ func.func @while_empty_region() {
 // -----
 
 func.func @while_empty_block() {
-  // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
+  // expected-error @below {{expects a non-empty block}}
   scf.while : () -> () {
-   ^bb0:
+  ^bb0:
   } do {
-   ^bb0:
+  ^bb0:
+  }
+}
+
+// -----
+
+func.func @while_invalid_terminator() {
+  // expected-error @below {{expects the 'before' region to terminate with 'scf.condition'}}
+  scf.while : () -> () {
+  ^bb0:
+    // expected-note @below{{terminator here}}
+    "test.foo"() : () -> ()
+  } do {
+  ^bb0:
+    "test.bar"() : () -> ()
   }
 }
 
@@ -689,7 +754,7 @@ func.func @parallel_missing_terminator(%0 : index) {
   ^bb0(%arg1: index):
     // expected-note @below {{terminator here}}
     %2 = "arith.constant"() {value = 1.000000e+00 : f32} : () -> f32
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
   return
 }
 

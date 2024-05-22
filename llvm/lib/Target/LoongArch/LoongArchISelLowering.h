@@ -21,7 +21,6 @@
 
 namespace llvm {
 class LoongArchSubtarget;
-struct LoongArchRegisterInfo;
 namespace LoongArchISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -110,6 +109,20 @@ enum NodeType : unsigned {
 
   // Read CPU configuration information operation
   CPUCFG,
+
+  // Vector Shuffle
+  VREPLVE,
+
+  // Extended vector element extraction
+  VPICK_SEXT_ELT,
+  VPICK_ZEXT_ELT,
+
+  // Vector comparisons
+  VALL_ZERO,
+  VANY_ZERO,
+  VALL_NONZERO,
+  VANY_NONZERO,
+
   // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD
@@ -202,6 +215,11 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  bool isLegalICmpImmediate(int64_t Imm) const override;
+  bool isLegalAddImmediate(int64_t Imm) const override;
+  bool isZExtFree(SDValue Val, EVT VT2) const override;
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+
   bool hasAndNotCompare(SDValue Y) const override;
 
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
@@ -210,6 +228,10 @@ public:
       EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
+
+  bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
+    return false;
+  }
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -243,6 +265,7 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
@@ -256,6 +279,9 @@ private:
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -264,13 +290,14 @@ private:
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
 
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 

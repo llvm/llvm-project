@@ -59,6 +59,10 @@ public:
   /// the specified block.
   void insertBefore(Block *block);
 
+  /// Insert this block (which must not already be in a region) right after
+  /// the specified block.
+  void insertAfter(Block *block);
+
   /// Unlink this block from its current region and insert it right before the
   /// specific block.
   void moveBefore(Block *block);
@@ -207,8 +211,11 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Get the terminator operation of this block. This function asserts that
-  /// the block has a valid terminator operation.
+  /// the block might have a valid terminator operation.
   Operation *getTerminator();
+
+  /// Check whether this block might have a terminator.
+  bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
   // Predecessors and successors.

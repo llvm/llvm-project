@@ -71,7 +71,7 @@ enum class GlobalTypeHashAlg : uint16_t {
 /// TypeIndex that refers to B with a previously-computed global hash for B.  As
 /// this is a recursive algorithm (e.g. the global hash of B also depends on the
 /// global hashes of the types that B refers to), a global hash can uniquely
-/// identify identify that A occurs in another stream that has a completely
+/// identify that A occurs in another stream that has a completely
 /// different graph structure.  Although the hash itself is slower to compute,
 /// probing is much faster with a globally hashed type, because the hash itself
 /// is considered "as good as" the original type.  Since type records can be

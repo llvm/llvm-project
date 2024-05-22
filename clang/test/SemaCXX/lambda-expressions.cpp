@@ -150,9 +150,10 @@ namespace Array {
   int &f(int *p);
   char &f(...);
   void g() {
-    int n = -1;
+    int n = -1;   // expected-note {{declared here}}
     [=] {
-      int arr[n]; // VLA
+      int arr[n]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                     expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
     } ();
 
     const int m = -1;
@@ -381,6 +382,14 @@ namespace PR18128 {
   };
 }
 
+namespace gh67687 {
+struct S {
+  int n;
+  int a = (4, []() { return n; }());  // expected-error {{'this' cannot be implicitly captured in this context}} \
+                                      // expected-note {{explicitly capture 'this'}}
+};
+}
+
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
@@ -515,7 +524,6 @@ int main() {
 A<int> a;
 }
 
-// rdar://22032373
 namespace rdar22032373 {
 void foo() {
   auto blk = [](bool b) {
@@ -714,4 +722,13 @@ void foo() {
   // CHECK: AlignedAttr
   // CHECK-NEXT: ConstantExpr
   // CHECK-NEXT: value: Int 2
+}
+
+void GH48527() {
+  auto a = []()__attribute__((b(({ return 0; })))){}; // expected-warning {{unknown attribute 'b' ignored}}
+}
+
+void GH67492() {
+  constexpr auto test = 42;
+  auto lambda = (test, []() noexcept(true) {});
 }

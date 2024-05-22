@@ -28,13 +28,13 @@ define float @fmaxnm(i32 %i1, i32 %i2) #0 {
 define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
 ; CHECK-LABEL: not_fmaxnm_maybe_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-8388608
 ; CHECK-NEXT:    ucvtf s0, w0
 ; CHECK-NEXT:    ucvtf s1, w1
-; CHECK-NEXT:    fmov s3, #17.00000000
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fadd s1, s1, s3
-; CHECK-NEXT:    fmul s0, s0, s2
+; CHECK-NEXT:    mov w8, #-8388608 // =0xff800000
+; CHECK-NEXT:    fmov s2, #17.00000000
+; CHECK-NEXT:    fmov s3, w8
+; CHECK-NEXT:    fmul s0, s0, s3
+; CHECK-NEXT:    fadd s1, s1, s2
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    fcsel s0, s0, s1, pl
 ; CHECK-NEXT:    ret

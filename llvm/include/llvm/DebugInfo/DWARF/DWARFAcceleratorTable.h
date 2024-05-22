@@ -56,6 +56,14 @@ public:
     /// recorded in this Accelerator Entry.
     virtual std::optional<uint64_t> getCUOffset() const = 0;
 
+    /// Returns the Offset of the Type Unit associated with this
+    /// Accelerator Entry or std::nullopt if the Type Unit offset is not
+    /// recorded in this Accelerator Entry.
+    virtual std::optional<uint64_t> getLocalTUOffset() const {
+      // Default return for accelerator tables that don't support type units.
+      return std::nullopt;
+    }
+
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -424,6 +432,7 @@ public:
 
   public:
     std::optional<uint64_t> getCUOffset() const override;
+    std::optional<uint64_t> getLocalTUOffset() const override;
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name
@@ -433,8 +442,16 @@ public:
     /// which will handle that check itself). Note that entries in NameIndexes
     /// which index just a single Compilation Unit are implicitly associated
     /// with that unit, so this function will return 0 even without an explicit
-    /// DW_IDX_compile_unit attribute.
+    /// DW_IDX_compile_unit attribute, unless there is a DW_IDX_type_unit
+    /// attribute.
     std::optional<uint64_t> getCUIndex() const;
+
+    /// Returns the Index into the Local Type Unit list of the owning Name
+    /// Index or std::nullopt if this Accelerator Entry does not have an
+    /// associated Type Unit. It is up to the user to verify that the
+    /// returned Index is valid in the owning NameIndex (or use
+    /// getLocalTUOffset(), which will handle that check itself).
+    std::optional<uint64_t> getLocalTUIndex() const;
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
@@ -742,6 +759,28 @@ public:
   /// there is no Name Index covering that unit.
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
 };
+
+/// If `Name` is the name of a templated function that includes template
+/// parameters, returns a substring of `Name` containing no template
+/// parameters.
+/// E.g.: StripTemplateParameters("foo<int>") = "foo".
+std::optional<StringRef> StripTemplateParameters(StringRef Name);
+
+struct ObjCSelectorNames {
+  /// For "-[A(Category) method:]", this would be "method:"
+  StringRef Selector;
+  /// For "-[A(Category) method:]", this would be "A(category)"
+  StringRef ClassName;
+  /// For "-[A(Category) method:]", this would be "A"
+  std::optional<StringRef> ClassNameNoCategory;
+  /// For "-[A(Category) method:]", this would be "A method:"
+  std::optional<std::string> MethodNameNoCategory;
+};
+
+/// If `Name` is the AT_name of a DIE which refers to an Objective-C selector,
+/// returns an instance of ObjCSelectorNames. The Selector and ClassName fields
+/// are guaranteed to be non-empty in the result.
+std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
 
 } // end namespace llvm
 

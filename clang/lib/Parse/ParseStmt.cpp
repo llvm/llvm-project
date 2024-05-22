@@ -14,6 +14,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
@@ -234,10 +235,7 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
-    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
-         (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
-             ParsedStmtContext()) &&
-        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
+    if (((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
@@ -446,6 +444,14 @@ Retry:
     ConsumeAnnotationToken();
     return StmtError();
 
+  case tok::annot_pragma_cx_limited_range:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope)
+        << "STDC CX_LIMITED_RANGE";
+    ConsumeAnnotationToken();
+    return StmtError();
+
   case tok::annot_pragma_float_control:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
@@ -473,6 +479,9 @@ Retry:
   case tok::annot_attr_openmp:
     // Do not prohibit attributes if they were OpenMP attributes.
     return ParseOpenMPDeclarativeOrExecutableDirective(StmtCtx);
+
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveStmt();
 
   case tok::annot_pragma_ms_pointers_to_members:
     ProhibitAttributes(CXX11Attrs);
@@ -697,6 +706,18 @@ StmtResult Parser::ParseSEHLeaveStatement() {
   return Actions.ActOnSEHLeaveStmt(LeaveLoc, getCurScope());
 }
 
+static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
+  // When in C mode (but not Microsoft extensions mode), diagnose use of a
+  // label that is followed by a declaration rather than a statement.
+  if (!P.getLangOpts().CPlusPlus && !P.getLangOpts().MicrosoftExt &&
+      isa<DeclStmt>(SubStmt)) {
+    P.Diag(SubStmt->getBeginLoc(),
+           P.getLangOpts().C23
+               ? diag::warn_c23_compat_label_followed_by_declaration
+               : diag::ext_c_label_followed_by_declaration);
+  }
+}
+
 /// ParseLabeledStatement - We have an identifier and a ':' after it.
 ///
 ///       label:
@@ -711,9 +732,10 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   Token IdentTok = Tok;  // Save the whole token.
   ConsumeToken();  // eat the identifier.
@@ -762,6 +784,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   if (SubStmt.isInvalid())
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
+  DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
+
   LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
                                               IdentTok.getLocation());
   Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
@@ -780,9 +804,10 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
                                       bool MissingCase, ExprResult Expr) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   // It is very common for code to contain many case statements recursively
   // nested, as in (but usually without indentation):
@@ -908,6 +933,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     // Broken sub-stmt shouldn't prevent forming the case statement properly.
     if (SubStmt.isInvalid())
       SubStmt = Actions.ActOnNullStmt(SourceLocation());
+    DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
     Actions.ActOnCaseStmtBody(DeepestParsedCaseStmt, SubStmt.get());
   }
 
@@ -923,9 +949,10 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::kw_default) && "Not a default stmt!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   SourceLocation DefaultLoc = ConsumeToken();  // eat the 'default'.
 
@@ -959,6 +986,7 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   if (SubStmt.isInvalid())
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
+  DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
   return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
                                   SubStmt.get(), getCurScope());
 }
@@ -1046,6 +1074,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_fenv_round:
       HandlePragmaFEnvRound();
       break;
+    case tok::annot_pragma_cx_limited_range:
+      HandlePragmaCXLimitedRange();
+      break;
     case tok::annot_pragma_float_control:
       HandlePragmaFloatControl();
       break;
@@ -1075,8 +1106,8 @@ void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
                   ? diag::warn_cxx20_compat_label_end_of_compound_statement
                   : diag::ext_cxx_label_end_of_compound_statement);
   } else {
-    Diag(Tok, getLangOpts().C2x
-                  ? diag::warn_c2x_compat_label_end_of_compound_statement
+    Diag(Tok, getLangOpts().C23
+                  ? diag::warn_c23_compat_label_end_of_compound_statement
                   : diag::ext_c_label_end_of_compound_statement);
   }
 }
@@ -1894,7 +1925,8 @@ StmtResult Parser::ParseDoStatement() {
   ExprResult Cond = ParseExpression();
   // Correct the typos in condition before closing the scope.
   if (Cond.isUsable())
-    Cond = Actions.CorrectDelayedTyposInExpr(Cond);
+    Cond = Actions.CorrectDelayedTyposInExpr(Cond, /*InitDecl=*/nullptr,
+                                             /*RecoverUncorrectedTypos=*/true);
   else {
     if (!Tok.isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
       SkipUntil(tok::semi);
@@ -2157,11 +2189,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         // for-range-declaration next.
         bool MightBeForRangeStmt = !ForRangeInfo.ParsedForRangeDecl();
         ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
+        SourceLocation SecondPartStart = Tok.getLocation();
+        Sema::ConditionKind CK = Sema::ConditionKind::Boolean;
         SecondPart = ParseCXXCondition(
-            nullptr, ForLoc, Sema::ConditionKind::Boolean,
+            /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr,
-            /*EnterForConditionScope*/ true);
+            /*EnterForConditionScope=*/true);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
@@ -2177,6 +2211,19 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
                 << FixItHint::CreateRemoval(EmptyInitStmtSemiLoc);
           }
         }
+
+        if (SecondPart.isInvalid()) {
+          ExprResult CondExpr = Actions.CreateRecoveryExpr(
+              SecondPartStart,
+              Tok.getLocation() == SecondPartStart ? SecondPartStart
+                                                   : PrevTokLocation,
+              {}, Actions.PreferredConditionType(CK));
+          if (!CondExpr.isInvalid())
+            SecondPart = Actions.ActOnCondition(getCurScope(), ForLoc,
+                                                CondExpr.get(), CK,
+                                                /*MissingOK=*/false);
+        }
+
       } else {
         // We permit 'continue' and 'break' in the condition of a for loop.
         getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);

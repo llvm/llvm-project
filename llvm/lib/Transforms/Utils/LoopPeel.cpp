@@ -351,11 +351,20 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     MaxPeelCount =
         std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
-  auto ComputePeelCount = [&](Value *Condition) -> void {
-    if (!Condition->getType()->isIntegerTy())
+  const unsigned MaxDepth = 4;
+  std::function<void(Value *, unsigned)> ComputePeelCount =
+      [&](Value *Condition, unsigned Depth) -> void {
+    if (!Condition->getType()->isIntegerTy() || Depth >= MaxDepth)
       return;
 
     Value *LeftVal, *RightVal;
+    if (match(Condition, m_And(m_Value(LeftVal), m_Value(RightVal))) ||
+        match(Condition, m_Or(m_Value(LeftVal), m_Value(RightVal)))) {
+      ComputePeelCount(LeftVal, Depth + 1);
+      ComputePeelCount(RightVal, Depth + 1);
+      return;
+    }
+
     CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
@@ -443,7 +452,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (SelectInst *SI = dyn_cast<SelectInst>(&I))
-        ComputePeelCount(SI->getCondition());
+        ComputePeelCount(SI->getCondition(), 0);
     }
 
     auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -454,7 +463,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     if (L.getLoopLatch() == BB)
       continue;
 
-    ComputePeelCount(BI->getCondition());
+    ComputePeelCount(BI->getCondition(), 0);
   }
 
   return DesiredPeelCount;
@@ -624,21 +633,24 @@ struct WeightInfo {
 /// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
 /// go to exit.
 /// Then, Estimated ExitCount = F / E.
-/// For I-th (counting from 0) peeled off iteration we set the the weights for
+/// For I-th (counting from 0) peeled off iteration we set the weights for
 /// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
 /// The probability to go to exit 1/(EC-I) increases. At the same time
 /// the estimated exit count in the remainder loop reduces by I.
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
 static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  MDBuilder MDB(Term->getContext());
-  Term->setMetadata(LLVMContext::MD_prof,
-                    MDB.createBranchWeights(Info.Weights));
+  setBranchWeights(*Term, Info.Weights);
   for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
     if (SubWeight != 0)
-      Info.Weights[Idx] = Info.Weights[Idx] > SubWeight
-                              ? Info.Weights[Idx] - SubWeight
-                              : 1;
+      // Don't set the probability of taking the edge from latch to loop header
+      // to less than 1:1 ratio (meaning Weight should not be lower than
+      // SubWeight), as this could significantly reduce the loop's hotness,
+      // which would be incorrect in the case of underestimating the trip count.
+      Info.Weights[Idx] =
+          Info.Weights[Idx] > SubWeight
+              ? std::max(Info.Weights[Idx] - SubWeight, SubWeight)
+              : SubWeight;
 }
 
 /// Initialize the weights for all exiting blocks.
@@ -683,14 +695,6 @@ static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
 
     WeightInfos.insert({Term, {std::move(Weights), std::move(SubWeights)}});
   }
-}
-
-/// Update the weights of original exiting block after peeling off all
-/// iterations.
-static void fixupBranchWeights(Instruction *Term, const WeightInfo &Info) {
-  MDBuilder MDB(Term->getContext());
-  Term->setMetadata(LLVMContext::MD_prof,
-                    MDB.createBranchWeights(Info.Weights));
 }
 
 /// Clones the body of the loop L, putting it between \p InsertTop and \p
@@ -1028,8 +1032,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
-  for (const auto &[Term, Info] : Weights)
-    fixupBranchWeights(Term, Info);
+  for (const auto &[Term, Info] : Weights) {
+    setBranchWeights(*Term, Info.Weights);
+  }
 
   // Update Metadata for count of peeled off iterations.
   unsigned AlreadyPeeled = 0;
@@ -1042,6 +1047,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   // We modified the loop, update SE.
   SE->forgetTopmostLoop(L);
+  SE->forgetBlockAndLoopDispositions();
 
 #ifdef EXPENSIVE_CHECKS
   // Finally DomtTree must be correct.

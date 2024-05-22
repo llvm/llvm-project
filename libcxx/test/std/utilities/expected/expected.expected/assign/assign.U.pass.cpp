@@ -7,9 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: clang-14, apple-clang-14
-
 //  template<class U = T>
 //   constexpr expected& operator=(U&& v);
 //
@@ -55,7 +52,7 @@ static_assert(std::is_assignable_v<std::expected<int, int>&, int>);
 static_assert(std::is_assignable_v<std::expected<int, int>&, std::expected<int, int>>);
 
 // remove_cvref_t<U> is a specialization of unexpected
-// it is true because it covered the unepxected overload
+// it is true because it covered the unexpected overload
 static_assert(std::is_assignable_v<std::expected<int, int>&, std::unexpected<int>>);
 
 // !is_constructible_v<T, U>

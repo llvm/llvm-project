@@ -20,9 +20,49 @@
 using namespace llvm;
 using namespace bolt;
 
-namespace {
-class LinuxKernelRewriter final : public MetadataRewriter {
+namespace opts {
 
+static cl::opt<bool>
+    PrintORC("print-orc",
+             cl::desc("print ORC unwind information for instructions"),
+             cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    DumpORC("dump-orc", cl::desc("dump raw ORC unwind information (sorted)"),
+            cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+} // namespace opts
+
+/// Linux Kernel supports stack unwinding using ORC (oops rewind capability).
+/// ORC state at every IP can be described by the following data structure.
+struct ORCState {
+  int16_t SPOffset;
+  int16_t BPOffset;
+  int16_t Info;
+
+  bool operator==(const ORCState &Other) const {
+    return SPOffset == Other.SPOffset && BPOffset == Other.BPOffset &&
+           Info == Other.Info;
+  }
+
+  bool operator!=(const ORCState &Other) const { return !(*this == Other); }
+};
+
+/// Basic printer for ORC entry. It does not provide the same level of
+/// information as objtool (for now).
+inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
+  if (opts::PrintORC)
+    OS << format("{sp: %d, bp: %d, info: 0x%x}", E.SPOffset, E.BPOffset,
+                 E.Info);
+  return OS;
+}
+
+namespace {
+
+/// Section terminator ORC entry.
+static ORCState NullORC = {0, 0, 0};
+
+class LinuxKernelRewriter final : public MetadataRewriter {
   /// Linux Kernel special sections point to a specific instruction in many
   /// cases. Unlike SDTMarkerInfo, these markers can come from different
   /// sections.
@@ -36,6 +76,31 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Map linux kernel program locations/instructions to their pointers in
   /// special linux kernel sections
   std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;
+
+  /// Linux ORC sections.
+  ErrorOr<BinarySection &> ORCUnwindSection = std::errc::bad_address;
+  ErrorOr<BinarySection &> ORCUnwindIPSection = std::errc::bad_address;
+
+  /// Size of entries in ORC sections.
+  static constexpr size_t ORC_UNWIND_ENTRY_SIZE = 6;
+  static constexpr size_t ORC_UNWIND_IP_ENTRY_SIZE = 4;
+
+  struct ORCListEntry {
+    uint64_t IP;        /// Instruction address.
+    BinaryFunction *BF; /// Binary function corresponding to the entry.
+    ORCState ORC;       /// Stack unwind info in ORC format.
+
+    bool operator<(const ORCListEntry &Other) const {
+      if (IP < Other.IP)
+        return 1;
+      if (IP > Other.IP)
+        return 0;
+      return ORC == NullORC;
+    }
+  };
+
+  using ORCListType = std::vector<ORCListEntry>;
+  ORCListType ORCEntries;
 
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
@@ -64,6 +129,15 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Update LKMarkers' locations for the output binary.
   void updateLKMarkers();
 
+  /// Read ORC unwind information and annotate instructions.
+  Error readORCTables();
+
+  /// Update ORC for functions once CFG is constructed.
+  Error processORCPostCFG();
+
+  /// Update ORC data in the binary.
+  Error rewriteORCTables();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -72,17 +146,29 @@ public:
       : MetadataRewriter("linux-kernel-rewriter", BC) {}
 
   Error preCFGInitializer() override {
-    if (opts::LinuxKernelMode) {
-      processLKSections();
-      if (Error E = markInstructions())
-        return E;
-    }
+    processLKSections();
+    if (Error E = markInstructions())
+      return E;
+
+    if (Error E = readORCTables())
+      return E;
+
+    return Error::success();
+  }
+
+  Error postCFGInitializer() override {
+    if (Error E = processORCPostCFG())
+      return E;
 
     return Error::success();
   }
 
   Error postEmitFinalizer() override {
     updateLKMarkers();
+
+    if (Error E = rewriteORCTables())
+      return E;
+
     return Error::success();
   }
 };
@@ -360,6 +446,182 @@ void LinuxKernelRewriter::updateLKMarkers() {
   for (const std::pair<const std::string, uint64_t> &KV : PatchCounts)
     outs() << "  Section: " << KV.first << ", patch-counts: " << KV.second
            << '\n';
+}
+
+Error LinuxKernelRewriter::readORCTables() {
+  // NOTE: we should ignore relocations for orc tables as the tables are sorted
+  // post-link time and relocations are not updated.
+  ORCUnwindSection = BC.getUniqueSectionByName(".orc_unwind");
+  ORCUnwindIPSection = BC.getUniqueSectionByName(".orc_unwind_ip");
+
+  if (!ORCUnwindSection && !ORCUnwindIPSection)
+    return Error::success();
+
+  if (!ORCUnwindSection || !ORCUnwindIPSection)
+    return createStringError(errc::executable_format_error,
+                             "missing ORC section");
+
+  const uint64_t NumEntries =
+      ORCUnwindIPSection->getSize() / ORC_UNWIND_IP_ENTRY_SIZE;
+  if (ORCUnwindSection->getSize() != NumEntries * ORC_UNWIND_ENTRY_SIZE ||
+      ORCUnwindIPSection->getSize() != NumEntries * ORC_UNWIND_IP_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "ORC entries number mismatch detected");
+
+  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
+  DataExtractor OrcDE = DataExtractor(ORCUnwindSection->getContents(),
+                                      BC.AsmInfo->isLittleEndian(),
+                                      BC.AsmInfo->getCodePointerSize());
+  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getContents(),
+                                     BC.AsmInfo->isLittleEndian(),
+                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor ORCCursor(0);
+  DataExtractor::Cursor IPCursor(0);
+  uint64_t PrevIP = 0;
+  for (uint32_t Index = 0; Index < NumEntries; ++Index) {
+    const uint64_t IP =
+        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+
+    // Consume the status of the cursor.
+    if (!IPCursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading ORC IP table");
+
+    if (IP < PrevIP && opts::Verbosity)
+      errs() << "BOLT-WARNING: out of order IP 0x" << Twine::utohexstr(IP)
+             << " detected while reading ORC\n";
+
+    PrevIP = IP;
+
+    // Store all entries, includes those we are not going to update as the
+    // tables need to be sorted globally before being written out.
+    ORCEntries.push_back(ORCListEntry());
+    ORCListEntry &Entry = ORCEntries.back();
+
+    Entry.IP = IP;
+    Entry.ORC.SPOffset = (int16_t)OrcDE.getU16(ORCCursor);
+    Entry.ORC.BPOffset = (int16_t)OrcDE.getU16(ORCCursor);
+    Entry.ORC.Info = (int16_t)OrcDE.getU16(ORCCursor);
+
+    // Consume the status of the cursor.
+    if (!ORCCursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading ORC");
+
+    BinaryFunction *&BF = Entry.BF;
+    BF = BC.getBinaryFunctionContainingAddress(IP, /*CheckPastEnd*/ true);
+
+    // If the entry immediately pointing past the end of the function is not
+    // the terminator entry, then it does not belong to this function.
+    if (BF && BF->getAddress() + BF->getSize() == IP && Entry.ORC != NullORC)
+      BF = 0;
+
+    // If terminator entry points to the start of the function, then it belongs
+    // to a different function that contains the previous IP.
+    if (BF && BF->getAddress() == IP && Entry.ORC == NullORC)
+      BF = BC.getBinaryFunctionContainingAddress(IP - 1);
+
+    if (!BF) {
+      if (opts::Verbosity)
+        errs() << "BOLT-WARNING: no binary function found matching ORC 0x"
+               << Twine::utohexstr(IP) << ": " << Entry.ORC << '\n';
+      continue;
+    }
+
+    if (Entry.ORC == NullORC)
+      continue;
+
+    BF->setHasORC(true);
+
+    if (!BF->hasInstructions())
+      continue;
+
+    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
+    if (!Inst)
+      return createStringError(
+          errc::executable_format_error,
+          "no instruction at address 0x%" PRIx64 " in .orc_unwind_ip", IP);
+
+    // Some addresses will have two entries associated with them. The first
+    // one being a "weak" section terminator. Since we ignore the terminator,
+    // we should only assign one entry per instruction.
+    if (BC.MIB->hasAnnotation(*Inst, "ORC"))
+      return createStringError(
+          errc::executable_format_error,
+          "duplicate non-terminal ORC IP 0x%" PRIx64 " in .orc_unwind_ip", IP);
+
+    BC.MIB->addAnnotation(*Inst, "ORC", Entry.ORC);
+  }
+
+  // Older kernels could contain unsorted tables in the file as the tables  were
+  // sorted during boot time.
+  llvm::sort(ORCEntries);
+
+  if (opts::DumpORC) {
+    outs() << "BOLT-INFO: ORC unwind information:\n";
+    for (const ORCListEntry &E : ORCEntries) {
+      outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
+      if (E.BF)
+        outs() << ": " << *E.BF;
+      outs() << '\n';
+    }
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::processORCPostCFG() {
+  // Propagate ORC to the rest of the function. We can annotate every
+  // instruction in every function, but to minimize the overhead, we annotate
+  // the first instruction in every basic block to reflect the state at the
+  // entry. This way, the ORC state can be calculated based on annotations
+  // regardless of the basic block layout. Note that if we insert/delete
+  // instructions, we must take care to attach ORC info to the new/deleted ones.
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+
+    std::optional<ORCState> CurrentState;
+    for (BinaryBasicBlock &BB : BF) {
+      for (MCInst &Inst : BB) {
+        ErrorOr<ORCState> State =
+            BC.MIB->tryGetAnnotationAs<ORCState>(Inst, "ORC");
+
+        if (State) {
+          CurrentState = *State;
+          continue;
+        }
+
+        // In case there was no ORC entry that matched the function start
+        // address, we need to propagate ORC state from the previous entry.
+        if (!CurrentState) {
+          auto It =
+              llvm::partition_point(ORCEntries, [&](const ORCListEntry &E) {
+                return E.IP < BF.getAddress();
+              });
+          if (It != ORCEntries.begin())
+            It = std::prev(It);
+
+          if (It->ORC == NullORC && BF.hasORC())
+            errs() << "BOLT-WARNING: ORC unwind info excludes prologue for "
+                   << BF << '\n';
+
+          CurrentState = It->ORC;
+          if (It->ORC != NullORC)
+            BF.setHasORC(true);
+        }
+
+        // While printing ORC, attach info to every instruction for convenience.
+        if (opts::PrintORC || &Inst == &BB.front())
+          BC.MIB->addAnnotation(Inst, "ORC", *CurrentState);
+      }
+    }
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::rewriteORCTables() {
+  // TODO:
+  return Error::success();
 }
 } // namespace
 

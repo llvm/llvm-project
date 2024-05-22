@@ -17,15 +17,11 @@ define void @test_or_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -78,15 +74,11 @@ define void @test_or_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -143,16 +135,10 @@ define i1 @test_or_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i4 2, [[X]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ugt i4 2, [[A]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
@@ -224,16 +210,10 @@ define i1 @test_or_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i4 2, [[X]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ugt i4 2, [[A]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
@@ -306,12 +286,8 @@ define i1 @test_or_chain_with_other_conds_ule(i4 %x, i4 %y, i4 %z, i4 %a, i1 %ar
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, true
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_8]]
@@ -371,12 +347,8 @@ define i1 @test_or_chain_with_and_ule(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, true
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_8]]
@@ -442,24 +414,20 @@ define void @test_or_as_add_ult(i8 %init_val, i8 %high) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ult i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_0]])
-; CHECK-NEXT:    [[I_1:%.*]] = or i8 [[START]], 1
+; CHECK-NEXT:    [[I_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[I_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[I_2:%.*]] = or i8 [[START]], 2
+; CHECK-NEXT:    [[I_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i8 [[I_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[START_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[START_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    [[START_3:%.*]] = or disjoint i8 [[START]], 3
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_4]], [[HIGH]]
@@ -475,10 +443,10 @@ entry:
 then:                                          ; preds = %entry
   %f.0 = icmp ult i8 %start, %high
   call void @use(i1 %f.0)
-  %i.1 = or i8 %start, 1
+  %i.1 = or disjoint i8 %start, 1
   %f.1 = icmp ult i8 %i.1, %high
   call void @use(i1 %f.1)
-  %i.2 = or i8 %start, 2
+  %i.2 = or disjoint i8 %start, 2
   %f.2 = icmp ult i8 %i.2, %high
   call void @use(i1 %f.2)
   ret void
@@ -486,13 +454,13 @@ then:                                          ; preds = %entry
 end:                                           ; preds = %entry
   %t.0 = icmp ult i8 %start, %high
   call void @use(i1 %t.0)
-  %start.1 = or i8 %start, 1
+  %start.1 = or disjoint i8 %start, 1
   %t.1 = icmp ult i8 %start.1, %high
   call void @use(i1 %t.1)
-  %start.2 = or i8 %start, 2
+  %start.2 = or disjoint i8 %start, 2
   %t.2 = icmp ult i8 %start.2, %high
   call void @use(i1 %t.2)
-  %start.3 = or i8 %start, 3
+  %start.3 = or disjoint i8 %start, 3
   %t.3 = icmp ult i8 %start.3, %high
   call void @use(i1 %t.3)
   %start.4 = or i8 %start, 4
@@ -511,24 +479,20 @@ define void @test_or_as_add_ule(i8 %init_val, i8 %high) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ule i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_0]])
-; CHECK-NEXT:    [[I_1:%.*]] = or i8 [[START]], 1
+; CHECK-NEXT:    [[I_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[I_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[I_2:%.*]] = or i8 [[START]], 2
+; CHECK-NEXT:    [[I_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i8 [[I_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ule i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[START_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[START_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    [[START_3:%.*]] = or disjoint i8 [[START]], 3
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[START_4]], [[HIGH]]
@@ -547,10 +511,10 @@ entry:
 then:                                          ; preds = %entry
   %f.0 = icmp ule i8 %start, %high
   call void @use(i1 %f.0)
-  %i.1 = or i8 %start, 1
+  %i.1 = or disjoint i8 %start, 1
   %f.1 = icmp ule i8 %i.1, %high
   call void @use(i1 %f.1)
-  %i.2 = or i8 %start, 2
+  %i.2 = or disjoint i8 %start, 2
   %f.2 = icmp ule i8 %i.2, %high
   call void @use(i1 %f.2)
   ret void
@@ -558,13 +522,13 @@ then:                                          ; preds = %entry
 end:                                           ; preds = %entry
   %t.0 = icmp ule i8 %start, %high
   call void @use(i1 %t.0)
-  %start.1 = or i8 %start, 1
+  %start.1 = or disjoint i8 %start, 1
   %t.1 = icmp ule i8 %start.1, %high
   call void @use(i1 %t.1)
-  %start.2 = or i8 %start, 2
+  %start.2 = or disjoint i8 %start, 2
   %t.2 = icmp ule i8 %start.2, %high
   call void @use(i1 %t.2)
-  %start.3 = or i8 %start, 3
+  %start.3 = or disjoint i8 %start, 3
   %t.3 = icmp ule i8 %start.3, %high
   call void @use(i1 %t.3)
   %start.4 = or i8 %start, 4
@@ -587,24 +551,20 @@ define void @test_or_as_add_ugt(i8 %init_val, i8 %high) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_0]])
-; CHECK-NEXT:    [[I_1:%.*]] = or i8 [[START]], 1
+; CHECK-NEXT:    [[I_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[I_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[I_2:%.*]] = or i8 [[START]], 2
+; CHECK-NEXT:    [[I_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[I_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[START_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[START_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    [[START_3:%.*]] = or disjoint i8 [[START]], 3
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i8 [[START_4]], [[HIGH]]
@@ -623,10 +583,10 @@ entry:
 then:                                          ; preds = %entry
   %t.0 = icmp ugt i8 %start, %high
   call void @use(i1 %t.0)
-  %i.1 = or i8 %start, 1
+  %i.1 = or disjoint i8 %start, 1
   %t.1 = icmp ugt i8 %i.1, %high
   call void @use(i1 %t.1)
-  %i.2 = or i8 %start, 2
+  %i.2 = or disjoint i8 %start, 2
   %t.2 = icmp ugt i8 %i.2, %high
   call void @use(i1 %t.2)
   ret void
@@ -634,13 +594,13 @@ then:                                          ; preds = %entry
 end:                                           ; preds = %entry
   %f.0 = icmp ugt i8 %start, %high
   call void @use(i1 %f.0)
-  %start.1 = or i8 %start, 1
+  %start.1 = or disjoint i8 %start, 1
   %f.1 = icmp ugt i8 %start.1, %high
   call void @use(i1 %f.1)
-  %start.2 = or i8 %start, 2
+  %start.2 = or disjoint i8 %start, 2
   %f.2 = icmp ugt i8 %start.2, %high
   call void @use(i1 %f.2)
-  %start.3 = or i8 %start, 3
+  %start.3 = or disjoint i8 %start, 3
   %f.3 = icmp ugt i8 %start.3, %high
   call void @use(i1 %f.3)
   %start.4 = or i8 %start, 4
@@ -662,24 +622,20 @@ define void @test_or_as_add_uge(i8 %init_val, i8 %high) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_0]])
-; CHECK-NEXT:    [[I_1:%.*]] = or i8 [[START]], 1
+; CHECK-NEXT:    [[I_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[I_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[I_2:%.*]] = or i8 [[START]], 2
+; CHECK-NEXT:    [[I_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[I_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[START_1:%.*]] = or disjoint i8 [[START]], 1
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
-; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[START_2:%.*]] = or disjoint i8 [[START]], 2
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    [[START_3:%.*]] = or disjoint i8 [[START]], 3
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
@@ -698,10 +654,10 @@ entry:
 then:                                          ; preds = %entry
   %t.0 = icmp ugt i8 %start, %high
   call void @use(i1 %t.0)
-  %i.1 = or i8 %start, 1
+  %i.1 = or disjoint i8 %start, 1
   %t.1 = icmp uge i8 %i.1, %high
   call void @use(i1 %t.1)
-  %i.2 = or i8 %start, 2
+  %i.2 = or disjoint i8 %start, 2
   %t.2 = icmp uge i8 %i.2, %high
   call void @use(i1 %t.2)
   ret void
@@ -709,13 +665,13 @@ then:                                          ; preds = %entry
 end:                                           ; preds = %entry
   %f.0 = icmp ugt i8 %start, %high
   call void @use(i1 %f.0)
-  %start.1 = or i8 %start, 1
+  %start.1 = or disjoint i8 %start, 1
   %f.1 = icmp uge i8 %start.1, %high
   call void @use(i1 %f.1)
-  %start.2 = or i8 %start, 2
+  %start.2 = or disjoint i8 %start, 2
   %f.2 = icmp uge i8 %start.2, %high
   call void @use(i1 %f.2)
-  %start.3 = or i8 %start, 3
+  %start.3 = or disjoint i8 %start, 3
   %f.3 = icmp uge i8 %start.3, %high
   call void @use(i1 %f.3)
   %start.4 = or i8 %start, 4
@@ -787,6 +743,71 @@ end:                                           ; preds = %entry
   %c.4 = icmp uge i8 %start.4, %high
   call void @use(i1 %c.4)
   %start.5 = or i8 %start, 5
+  %c.5 = icmp uge i8 %start.5, %high
+  call void @use(i1 %c.5)
+
+  ret void
+}
+
+; Nothing in the IR implies the disjoint flag, but we can still use it
+; to decompose into an add.
+define void @test_decompose_explicit_disjoint(i8 %start, i8 %high) {
+; CHECK-LABEL: @test_decompose_explicit_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_PLUS_3:%.*]] = add nuw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[START_PLUS_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[I_1:%.*]] = or disjoint i8 [[START]], 1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[I_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[I_2:%.*]] = or disjoint i8 [[START]], 2
+; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[I_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    [[START_1:%.*]] = or disjoint i8 [[START]], 1
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[START_2:%.*]] = or disjoint i8 [[START]], 2
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[START_3:%.*]] = or disjoint i8 [[START]], 3
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[START_4:%.*]] = or disjoint i8 [[START]], 4
+; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[START_5:%.*]] = or disjoint i8 [[START]], 5
+; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i8 [[START_5]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %start.plus.3 = add nuw i8 %start, 3
+  %c.1 = icmp uge i8 %start.plus.3, %high
+  br i1 %c.1, label %then, label %end
+
+then:                                          ; preds = %entry
+  %i.1 = or disjoint i8 %start, 1
+  %t.1 = icmp uge i8 %i.1, %high
+  call void @use(i1 %t.1)
+  %i.2 = or disjoint i8 %start, 2
+  %t.2 = icmp uge i8 %i.2, %high
+  call void @use(i1 %t.2)
+  ret void
+
+end:                                           ; preds = %entry
+  %start.1 = or disjoint i8 %start, 1
+  %f.1 = icmp uge i8 %start.1, %high
+  call void @use(i1 %f.1)
+  %start.2 = or disjoint i8 %start, 2
+  %f.2 = icmp uge i8 %start.2, %high
+  call void @use(i1 %f.2)
+  %start.3 = or disjoint i8 %start, 3
+  %f.3 = icmp uge i8 %start.3, %high
+  call void @use(i1 %f.3)
+  %start.4 = or disjoint i8 %start, 4
+  %c.4 = icmp uge i8 %start.4, %high
+  call void @use(i1 %c.4)
+  %start.5 = or disjoint i8 %start, 5
   %c.5 = icmp uge i8 %start.5, %high
   call void @use(i1 %c.5)
 

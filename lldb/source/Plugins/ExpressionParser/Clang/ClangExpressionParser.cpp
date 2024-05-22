@@ -71,7 +71,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -575,8 +574,8 @@ ClangExpressionParser::ClangExpressionParser(
     // FIXME: We should ask the driver for the appropriate default flags.
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
-    lang_opts.DoubleSquareBracketAttributes = true;
     lang_opts.CPlusPlus11 = true;
+    lang_opts.BuiltinHeadersInSystemModules = true;
 
     // The Darwin libc expects this macro to be set.
     lang_opts.GNUCVersion = 40201;
@@ -835,13 +834,13 @@ public:
     case CodeCompletionResult::RK_Declaration:
       return !(
           Result.Declaration->getIdentifier() &&
-          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+          Result.Declaration->getIdentifier()->getName().starts_with(Filter));
     case CodeCompletionResult::RK_Keyword:
-      return !StringRef(Result.Keyword).startswith(Filter);
+      return !StringRef(Result.Keyword).starts_with(Filter);
     case CodeCompletionResult::RK_Macro:
-      return !Result.Macro->getName().startswith(Filter);
+      return !Result.Macro->getName().starts_with(Filter);
     case CodeCompletionResult::RK_Pattern:
-      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+      return !StringRef(Result.Pattern->getAsString()).starts_with(Filter);
     }
     // If we trigger this assert or the above switch yields a warning, then
     // CodeCompletionResult has been enhanced with more kinds of completion
@@ -905,7 +904,7 @@ private:
     }
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
-    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
+    if (llvm::StringRef(ToInsert).starts_with("$__lldb_"))
       return std::nullopt;
     if (ToInsert.empty())
       return std::nullopt;
@@ -1079,13 +1078,14 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // While parsing the Sema will call this consumer with the provided
   // completion suggestions.
   if (completion_consumer) {
-    auto main_file = source_mgr.getFileEntryForID(source_mgr.getMainFileID());
+    auto main_file =
+        source_mgr.getFileEntryRefForID(source_mgr.getMainFileID());
     auto &PP = m_compiler->getPreprocessor();
     // Lines and columns start at 1 in Clang, but code completion positions are
     // indexed from 0, so we need to add 1 to the line and column here.
     ++completion_line;
     ++completion_column;
-    PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
+    PP.SetCodeCompletionPoint(*main_file, completion_line, completion_column);
   }
 
   ASTConsumer *ast_transformer =

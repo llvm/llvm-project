@@ -1,0 +1,3 @@
+RUN: not llvm-remarkutil size-diff %p/Inputs/no-instruction-count-remarks.yaml %p/Inputs/no-instruction-count-remarks.yaml --parser=yaml 2>&1 | FileCheck %s
+
+; CHECK: error: File {{.*}} did not contain any instruction-count remarks!

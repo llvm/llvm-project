@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -emit-pch -o %t.pch
 // RUN: %clang_cc1 %s -include-pch %t.pch
 
-// rdar://12239321 Make sure we don't emit a bogus
+// Make sure we don't emit a bogus
 //     error: field designator 'e' does not refer to a non-static data member
 
 #ifndef HEADER

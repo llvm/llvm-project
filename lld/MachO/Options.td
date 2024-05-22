@@ -1,5 +1,10 @@
 include "llvm/Option/OptParser.td"
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // Flags that lld/MachO understands but ld64 doesn't. These take
 // '--' instead of '-' and use dashes instead of underscores, so
 // they don't collide with the ld64 compat options.
@@ -130,6 +135,9 @@ def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context senstive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
     HelpText<"Context sensitive profile file path">, Group<grp_lld>;
+defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
+  "turn on warnings about profile cfg mismatch (default)",
+  "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -791,7 +799,6 @@ def allow_sub_type_mismatches : Flag<["-"], "allow_sub_type_mismatches">,
     Group<grp_rare>;
 def no_uuid : Flag<["-"], "no_uuid">,
     HelpText<"Do not generate the LC_UUID load command">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def root_safe : Flag<["-"], "root_safe">,
     HelpText<"Set the MH_ROOT_SAFE bit in the mach-o header">,

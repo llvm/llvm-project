@@ -43,9 +43,7 @@ namespace {
 using namespace llvm::opt;
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -58,12 +56,7 @@ enum ID {
 #undef PREFIX
 
 const llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,      NAME,      HELPTEXT,                                           \
-   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
-   PARAM,       FLAGS,     OPT_##GROUP,                                        \
-   OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -82,8 +75,8 @@ enum ResourceDirRecipeKind {
 
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
+static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
-static bool OptimizeArgs;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
@@ -155,10 +148,32 @@ static void ParseArgs(int argc, char **argv) {
     Format = *FormatType;
   }
 
+  std::vector<std::string> OptimizationFlags =
+      Args.getAllArgValues(OPT_optimize_args_EQ);
+  OptimizeArgs = ScanningOptimizations::None;
+  for (const auto &Arg : OptimizationFlags) {
+    auto Optimization =
+        llvm::StringSwitch<std::optional<ScanningOptimizations>>(Arg)
+            .Case("none", ScanningOptimizations::None)
+            .Case("header-search", ScanningOptimizations::HeaderSearch)
+            .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("all", ScanningOptimizations::All)
+            .Default(std::nullopt);
+    if (!Optimization) {
+      llvm::errs()
+          << ToolName
+          << ": for the --optimize-args option: Cannot find option named '"
+          << Arg << "'\n";
+      std::exit(1);
+    }
+    OptimizeArgs |= *Optimization;
+  }
+  if (OptimizationFlags.empty())
+    OptimizeArgs = ScanningOptimizations::Default;
+
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
 
-  OptimizeArgs = Args.hasArg(OPT_optimize_args);
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
@@ -270,8 +285,8 @@ public:
         OutputFile.str(),
         ErrorFile.str(),
     };
-    if (const int RC = llvm::sys::ExecuteAndWait(
-            ClangBinaryPath, PrintResourceDirArgs, {}, Redirects)) {
+    if (llvm::sys::ExecuteAndWait(ClangBinaryPath, PrintResourceDirArgs, {},
+                                  Redirects)) {
       auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
       llvm::errs() << ErrorBuf.get()->getBuffer();
       return "";
@@ -358,14 +373,23 @@ public:
   }
 
   void mergeDeps(ModuleDepsGraph Graph, size_t InputIndex) {
-    std::unique_lock<std::mutex> ul(Lock);
-    for (const ModuleDeps &MD : Graph) {
-      auto I = Modules.find({MD.ID, 0});
-      if (I != Modules.end()) {
-        I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
-        continue;
+    std::vector<ModuleDeps *> NewMDs;
+    {
+      std::unique_lock<std::mutex> ul(Lock);
+      for (const ModuleDeps &MD : Graph) {
+        auto I = Modules.find({MD.ID, 0});
+        if (I != Modules.end()) {
+          I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
+          continue;
+        }
+        auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+        NewMDs.push_back(&Res->second);
       }
-      Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+      // First call to \c getBuildArguments is somewhat expensive. Let's call it
+      // on the current thread (instead of the main one), and outside the
+      // critical section.
+      for (ModuleDeps *MD : NewMDs)
+        (void)MD->getBuildArguments();
     }
   }
 
@@ -389,7 +413,7 @@ public:
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
-      if (roundTripCommand(M.second.BuildArguments, *Diags))
+      if (roundTripCommand(M.second.getBuildArguments(), *Diags))
         return true;
 
     for (auto &&I : Inputs)
@@ -418,7 +442,7 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.BuildArguments},
+          {"command-line", MD.getBuildArguments()},
       };
       OutModules.push_back(std::move(O));
     }
@@ -472,8 +496,7 @@ private:
     mutable size_t InputIndex;
 
     bool operator==(const IndexedModuleID &Other) const {
-      return std::tie(ID.ModuleName, ID.ContextHash) ==
-             std::tie(Other.ID.ModuleName, Other.ID.ContextHash);
+      return ID == Other.ID;
     }
 
     bool operator<(const IndexedModuleID &Other) const {
@@ -493,7 +516,7 @@ private:
 
     struct Hasher {
       std::size_t operator()(const IndexedModuleID &IMID) const {
-        return llvm::hash_combine(IMID.ID.ModuleName, IMID.ID.ContextHash);
+        return llvm::hash_value(IMID.ID);
       }
     };
   };
@@ -807,9 +830,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                 // Also, clang-cl adds ".obj" extension if none is found.
                 if ((Arg == "-o" || Arg == "/o") && I != R)
                   LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                else if (Arg.starts_with("/Fo") || Arg.starts_with("-Fo"))
                   LastO = Arg.drop_front(3).str();
-                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                else if (Arg.starts_with("/o") || Arg.starts_with("-o"))
                   LastO = Arg.drop_front(2).str();
 
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
@@ -880,7 +903,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
     Pool.async([&, I]() {
-      llvm::StringSet<> AlreadySeenModules;
+      llvm::DenseSet<ModuleID> AlreadySeenModules;
       while (auto MaybeInputIndex = GetNextInputIndex()) {
         size_t LocalIndex = *MaybeInputIndex;
         const tooling::CompileCommand *Input = &Inputs[LocalIndex];

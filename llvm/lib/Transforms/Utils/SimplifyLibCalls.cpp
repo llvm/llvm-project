@@ -1148,7 +1148,7 @@ Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
   // fold strstr(x, x) -> x.
   if (CI->getArgOperand(0) == CI->getArgOperand(1))
-    return B.CreateBitCast(CI->getArgOperand(0), CI->getType());
+    return CI->getArgOperand(0);
 
   // fold strstr(a, b) == a -> strncmp(a, b, strlen(b)) == 0
   if (isOnlyUsedInEqualityComparison(CI, CI->getArgOperand(0))) {
@@ -1176,7 +1176,7 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 
   // fold strstr(x, "") -> x.
   if (HasStr2 && ToFindStr.empty())
-    return B.CreateBitCast(CI->getArgOperand(0), CI->getType());
+    return CI->getArgOperand(0);
 
   // If both strings are known, constant fold it.
   if (HasStr1 && HasStr2) {
@@ -1186,16 +1186,13 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
       return Constant::getNullValue(CI->getType());
 
     // strstr("abcd", "bc") -> gep((char*)"abcd", 1)
-    Value *Result = castToCStr(CI->getArgOperand(0), B);
-    Result =
-        B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), Result, Offset, "strstr");
-    return B.CreateBitCast(Result, CI->getType());
+    return B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), CI->getArgOperand(0),
+                                        Offset, "strstr");
   }
 
   // fold strstr(x, "y") -> strchr(x, 'y').
   if (HasStr2 && ToFindStr.size() == 1) {
-    Value *StrChr = emitStrChr(CI->getArgOperand(0), ToFindStr[0], B, TLI);
-    return StrChr ? B.CreateBitCast(StrChr, CI->getType()) : nullptr;
+    return emitStrChr(CI->getArgOperand(0), ToFindStr[0], B, TLI);
   }
 
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
@@ -1392,7 +1389,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (isOnlyUsedInEqualityComparison(CI, SrcStr))
       // S is dereferenceable so it's safe to load from it and fold
       //   memchr(S, C, N) == S to N && *S == C for any C and N.
-      // TODO: This is safe even even for nonconstant S.
+      // TODO: This is safe even for nonconstant S.
       return memChrToCharCompare(CI, Size, B, DL);
 
     // From now on we need a constant length and constant array.
@@ -1534,12 +1531,10 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
 
   // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
   if (Len == 1) {
-    Value *LHSV =
-        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(LHS, B), "lhsc"),
-                     CI->getType(), "lhsv");
-    Value *RHSV =
-        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(RHS, B), "rhsc"),
-                     CI->getType(), "rhsv");
+    Value *LHSV = B.CreateZExt(B.CreateLoad(B.getInt8Ty(), LHS, "lhsc"),
+                               CI->getType(), "lhsv");
+    Value *RHSV = B.CreateZExt(B.CreateLoad(B.getInt8Ty(), RHS, "rhsc"),
+                               CI->getType(), "rhsv");
     return B.CreateSub(LHSV, RHSV, "chardiff");
   }
 
@@ -1845,7 +1840,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     StringRef CallerName = CI->getFunction()->getName();
     if (!CallerName.empty() && CallerName.back() == 'f' &&
         CallerName.size() == (CalleeName.size() + 1) &&
-        CallerName.startswith(CalleeName))
+        CallerName.starts_with(CalleeName))
       return nullptr;
   }
 
@@ -2380,8 +2375,8 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   FMF.setNoSignedZeros();
   B.setFastMathFlags(FMF);
 
-  Intrinsic::ID IID = Callee->getName().startswith("fmin") ? Intrinsic::minnum
-                                                           : Intrinsic::maxnum;
+  Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
+                                                            : Intrinsic::maxnum;
   Function *F = Intrinsic::getDeclaration(CI->getModule(), IID, CI->getType());
   return copyFlags(
       *CI, B.CreateCall(F, {CI->getArgOperand(0), CI->getArgOperand(1)}));
@@ -3078,7 +3073,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
     if (!CI->getArgOperand(2)->getType()->isIntegerTy())
       return nullptr;
     Value *V = B.CreateTrunc(CI->getArgOperand(2), B.getInt8Ty(), "char");
-    Value *Ptr = castToCStr(Dest, B);
+    Value *Ptr = Dest;
     B.CreateStore(V, Ptr);
     Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), Ptr, B.getInt32(1), "nul");
     B.CreateStore(B.getInt8(0), Ptr);
@@ -3105,9 +3100,6 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
-      // Handle mismatched pointer types (goes away with typeless pointers?).
-      V = B.CreatePointerCast(V, B.getInt8PtrTy());
-      Dest = B.CreatePointerCast(Dest, B.getInt8PtrTy());
       Value *PtrDiff = B.CreatePtrDiff(B.getInt8Ty(), V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
@@ -3273,7 +3265,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
     if (!CI->getArgOperand(3)->getType()->isIntegerTy())
       return nullptr;
     Value *V = B.CreateTrunc(CI->getArgOperand(3), B.getInt8Ty(), "char");
-    Value *Ptr = castToCStr(DstArg, B);
+    Value *Ptr = DstArg;
     B.CreateStore(V, Ptr);
     Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), Ptr, B.getInt32(1), "nul");
     B.CreateStore(B.getInt8(0), Ptr);
@@ -3409,8 +3401,7 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
     // If this is writing one byte, turn it into fputc.
     // This optimisation is only valid, if the return value is unused.
     if (Bytes == 1 && CI->use_empty()) { // fwrite(S,1,1,F) -> fputc(S[0],F)
-      Value *Char = B.CreateLoad(B.getInt8Ty(),
-                                 castToCStr(CI->getArgOperand(0), B), "char");
+      Value *Char = B.CreateLoad(B.getInt8Ty(), CI->getArgOperand(0), "char");
       Type *IntTy = B.getIntNTy(TLI->getIntSize());
       Value *Cast = B.CreateIntCast(Char, IntTy, /*isSigned*/ true, "chari");
       Value *NewCI = emitFPutC(Cast, CI->getArgOperand(3), B, TLI);

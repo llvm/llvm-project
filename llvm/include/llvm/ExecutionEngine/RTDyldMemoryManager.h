@@ -68,7 +68,7 @@ public:
   /// Register EH frames in the current process.
   static void registerEHFramesInProcess(uint8_t *Addr, size_t Size);
 
-  /// Deregister EH frames in the current proces.
+  /// Deregister EH frames in the current process.
   static void deregisterEHFramesInProcess(uint8_t *Addr, size_t Size);
 
   void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override;

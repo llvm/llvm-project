@@ -46,7 +46,7 @@ enum IMAKind {
 
   /// The reference may be to an instance member, but it might be invalid if
   /// so, because the context is not an instance method.
-  IMA_Mixed_StaticContext,
+  IMA_Mixed_StaticOrExplicitContext,
 
   /// The reference may be to an instance member, but it is invalid if
   /// so, because the context is from an unrelated class.
@@ -63,7 +63,7 @@ enum IMAKind {
 
   /// The reference may be to an unresolved using declaration and the
   /// context is not an instance method.
-  IMA_Unresolved_StaticContext,
+  IMA_Unresolved_StaticOrExplicitContext,
 
   // The reference refers to a field which is not a member of the containing
   // class, which is allowed because we're in C++11 mode and the context is
@@ -72,7 +72,7 @@ enum IMAKind {
 
   /// All possible referrents are instance members and the current
   /// context is not an instance method.
-  IMA_Error_StaticContext,
+  IMA_Error_StaticOrExplicitContext,
 
   /// All possible referrents are instance members of an unrelated
   /// class.
@@ -91,11 +91,14 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   DeclContext *DC = SemaRef.getFunctionLevelDeclContext();
 
-  bool isStaticContext = SemaRef.CXXThisTypeOverride.isNull() &&
-    (!isa<CXXMethodDecl>(DC) || cast<CXXMethodDecl>(DC)->isStatic());
+  bool isStaticOrExplicitContext =
+      SemaRef.CXXThisTypeOverride.isNull() &&
+      (!isa<CXXMethodDecl>(DC) || cast<CXXMethodDecl>(DC)->isStatic() ||
+       cast<CXXMethodDecl>(DC)->isExplicitObjectMemberFunction());
 
   if (R.isUnresolvableResult())
-    return isStaticContext ? IMA_Unresolved_StaticContext : IMA_Unresolved;
+    return isStaticOrExplicitContext ? IMA_Unresolved_StaticOrExplicitContext
+                                     : IMA_Unresolved;
 
   // Collect all the declaring classes of instance members we find.
   bool hasNonInstance = false;
@@ -152,12 +155,12 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   // If the current context is not an instance method, it can't be
   // an implicit member reference.
-  if (isStaticContext) {
+  if (isStaticOrExplicitContext) {
     if (hasNonInstance)
-      return IMA_Mixed_StaticContext;
+      return IMA_Mixed_StaticOrExplicitContext;
 
     return AbstractInstanceResult ? AbstractInstanceResult
-                                  : IMA_Error_StaticContext;
+                                  : IMA_Error_StaticOrExplicitContext;
   }
 
   CXXRecordDecl *contextClass;
@@ -167,7 +170,7 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
     contextClass = RD;
   else
     return AbstractInstanceResult ? AbstractInstanceResult
-                                  : IMA_Error_StaticContext;
+                                  : IMA_Error_StaticOrExplicitContext;
 
   // [class.mfct.non-static]p3:
   // ...is used in the body of a non-static member function of class X,
@@ -214,14 +217,31 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   CXXRecordDecl *RepClass = dyn_cast<CXXRecordDecl>(Rep->getDeclContext());
 
   bool InStaticMethod = Method && Method->isStatic();
+  bool InExplicitObjectMethod =
+      Method && Method->isExplicitObjectMemberFunction();
   bool IsField = isa<FieldDecl>(Rep) || isa<IndirectFieldDecl>(Rep);
 
+  std::string Replacement;
+  if (InExplicitObjectMethod) {
+    DeclarationName N = Method->getParamDecl(0)->getDeclName();
+    if (!N.isEmpty()) {
+      Replacement.append(N.getAsString());
+      Replacement.append(".");
+    }
+  }
   if (IsField && InStaticMethod)
     // "invalid use of member 'x' in static member function"
-    SemaRef.Diag(Loc, diag::err_invalid_member_use_in_static_method)
-        << Range << nameInfo.getName();
-  else if (ContextClass && RepClass && SS.isEmpty() && !InStaticMethod &&
-           !RepClass->Equals(ContextClass) && RepClass->Encloses(ContextClass))
+    SemaRef.Diag(Loc, diag::err_invalid_member_use_in_method)
+        << Range << nameInfo.getName() << /*static*/ 0;
+  else if (IsField && InExplicitObjectMethod) {
+    auto Diag = SemaRef.Diag(Loc, diag::err_invalid_member_use_in_method)
+                << Range << nameInfo.getName() << /*explicit*/ 1;
+    if (!Replacement.empty())
+      Diag << FixItHint::CreateInsertion(Loc, Replacement);
+  } else if (ContextClass && RepClass && SS.isEmpty() &&
+             !InExplicitObjectMethod && !InStaticMethod &&
+             !RepClass->Equals(ContextClass) &&
+             RepClass->Encloses(ContextClass))
     // Unqualified lookup in a non-static member function found a member of an
     // enclosing class.
     SemaRef.Diag(Loc, diag::err_nested_non_static_member_use)
@@ -229,9 +249,16 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   else if (IsField)
     SemaRef.Diag(Loc, diag::err_invalid_non_static_member_use)
       << nameInfo.getName() << Range;
-  else
+  else if (!InExplicitObjectMethod)
     SemaRef.Diag(Loc, diag::err_member_call_without_object)
-      << Range;
+        << Range << /*static*/ 0;
+  else {
+    const auto *Callee = dyn_cast<CXXMethodDecl>(Rep);
+    auto Diag = SemaRef.Diag(Loc, diag::err_member_call_without_object)
+                << Range << Callee->isExplicitObjectMemberFunction();
+    if (!Replacement.empty())
+      Diag << FixItHint::CreateInsertion(Loc, Replacement);
+  }
 }
 
 /// Builds an expression which might be an implicit member expression.
@@ -255,13 +282,13 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
-  case IMA_Mixed_StaticContext:
-  case IMA_Unresolved_StaticContext:
+  case IMA_Mixed_StaticOrExplicitContext:
+  case IMA_Unresolved_StaticOrExplicitContext:
     if (TemplateArgs || TemplateKWLoc.isValid())
       return BuildTemplateIdExpr(SS, TemplateKWLoc, R, false, TemplateArgs);
     return AsULE ? AsULE : BuildDeclarationNameExpr(SS, R, false);
 
-  case IMA_Error_StaticContext:
+  case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:
     diagnoseInstanceReference(*this, SS, R.getRepresentativeDecl(),
                               R.getLookupNameInfo());
@@ -1687,6 +1714,16 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                             ObjCImpDecl, HasTemplateArgs, TemplateKWLoc);
   }
 
+  // HLSL supports implicit conversion of scalar types to single element vector
+  // rvalues in member expressions.
+  if (S.getLangOpts().HLSL && BaseType->isScalarType()) {
+    QualType VectorTy = S.Context.getExtVectorType(BaseType, 1);
+    BaseExpr = S.ImpCastExprToType(BaseExpr.get(), VectorTy, CK_VectorSplat,
+                                   BaseExpr.get()->getValueKind());
+    return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS, ObjCImpDecl,
+                            HasTemplateArgs, TemplateKWLoc);
+  }
+
   S.Diag(OpLoc, diag::err_typecheck_member_reference_struct_union)
     << BaseType << BaseExpr.get()->getSourceRange() << MemberLoc;
 
@@ -1897,20 +1934,11 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
     baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
-    if (getLangOpts().HLSL && ThisTy.getTypePtr()->isPointerType()) {
-      ThisTy = ThisTy.getTypePtr()->getPointeeType();
-      return BuildMemberReferenceExpr(baseExpr, ThisTy,
-                                      /*OpLoc*/ SourceLocation(),
-                                      /*IsArrow*/ false, SS, TemplateKWLoc,
-                                      /*FirstQualifierInScope*/ nullptr, R,
-                                      TemplateArgs, S);
-    }
   }
 
-  return BuildMemberReferenceExpr(baseExpr, ThisTy,
-                                  /*OpLoc*/ SourceLocation(),
-                                  /*IsArrow*/ true,
-                                  SS, TemplateKWLoc,
-                                  /*FirstQualifierInScope*/ nullptr,
-                                  R, TemplateArgs, S);
+  return BuildMemberReferenceExpr(
+      baseExpr, ThisTy,
+      /*OpLoc=*/SourceLocation(),
+      /*IsArrow=*/!getLangOpts().HLSL, SS, TemplateKWLoc,
+      /*FirstQualifierInScope=*/nullptr, R, TemplateArgs, S);
 }

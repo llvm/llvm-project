@@ -455,13 +455,13 @@ define float @v_test_known_not_snan_round_input_fmed3_r_i_i_f32(float %a) #0 {
 ; GCN-LABEL: v_test_known_not_snan_round_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-NEXT:    v_sub_f32_e32 v2, v0, v1
+; GCN-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
 ; GCN-NEXT:    s_brev_b32 s4, -2
-; GCN-NEXT:    v_trunc_f32_e32 v2, v0
-; GCN-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; GCN-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GCN-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-NEXT:    v_add_f32_e32 v0, v2, v0
+; GCN-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %known.not.snan = call float @llvm.round.f32(float %a)
@@ -516,7 +516,7 @@ define float @v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32(float %a, i32 %b
 ; GCN-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %known.not.snan = call float @llvm.amdgcn.ldexp.f32(float %a, i32 %b)
+  %known.not.snan = call float @llvm.ldexp.f32.i32(float %a, i32 %b)
   %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
   ret float %med
@@ -658,7 +658,7 @@ declare float @llvm.maxnum.f32(float, float) #1
 declare float @llvm.copysign.f32(float, float) #1
 declare float @llvm.fma.f32(float, float, float) #1
 declare float @llvm.fmuladd.f32(float, float, float) #1
-declare float @llvm.amdgcn.ldexp.f32(float, i32) #1
+declare float @llvm.ldexp.f32.i32(float, i32) #1
 declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
 declare float @llvm.amdgcn.frexp.mant.f32(float) #1

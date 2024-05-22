@@ -414,7 +414,8 @@ public:
 
   static Expected<std::unique_ptr<MachOObjectFile>>
   create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
+         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0,
+         size_t MachOFilesetEntryOffset = 0);
 
   static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch);
 
@@ -697,6 +698,8 @@ public:
   getRoutinesCommand64(const LoadCommandInfo &L) const;
   MachO::thread_command
   getThreadCommand(const LoadCommandInfo &L) const;
+  MachO::fileset_entry_command
+  getFilesetEntryLoadCommand(const LoadCommandInfo &L) const;
 
   MachO::any_relocation_info getRelocation(DataRefImpl Rel) const;
   MachO::data_in_code_entry getDice(DataRefImpl Rel) const;
@@ -760,6 +763,8 @@ public:
 
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }
 
+  size_t getMachOFilesetEntryOffset() const { return MachOFilesetEntryOffset; }
+
   static bool classof(const Binary *v) {
     return v->isMachO();
   }
@@ -784,16 +789,11 @@ public:
 
   static std::string getBuildPlatform(uint32_t platform) {
     switch (platform) {
-    case MachO::PLATFORM_MACOS: return "macos";
-    case MachO::PLATFORM_IOS: return "ios";
-    case MachO::PLATFORM_TVOS: return "tvos";
-    case MachO::PLATFORM_WATCHOS: return "watchos";
-    case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
-    case MachO::PLATFORM_MACCATALYST: return "macCatalyst";
-    case MachO::PLATFORM_IOSSIMULATOR: return "iossimulator";
-    case MachO::PLATFORM_TVOSSIMULATOR: return "tvossimulator";
-    case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
-    case MachO::PLATFORM_DRIVERKIT: return "driverkit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case MachO::PLATFORM_##platform:                                             \
+    return #name;
+#include "llvm/BinaryFormat/MachO.def"
     default:
       std::string ret;
       raw_string_ostream ss(ret);
@@ -839,7 +839,8 @@ public:
 private:
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
                   Error &Err, uint32_t UniversalCputype = 0,
-                  uint32_t UniversalIndex = 0);
+                  uint32_t UniversalIndex = 0,
+                  size_t MachOFilesetEntryOffset = 0);
 
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
 
@@ -867,6 +868,7 @@ private:
   const char *DyldExportsTrieLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
+  size_t MachOFilesetEntryOffset = 0;
 };
 
 /// DiceRef

@@ -4207,7 +4207,7 @@ define i16 @and_zext_zext(i8 %x, i4 %y) {
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %zx = zext i8 %x to i16
@@ -4755,4 +4755,28 @@ define i8 @canonicalize_logic_first_xor_bad_constants2(i8 %x) {
   %a = add i8 %x, 96  ; 01100000
   %r = xor i8 %a, 32  ; 00100000
   ret i8 %r
+}
+
+@g = external global i8
+
+define i32 @canonicalize_logic_first_constexpr(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = and i32 add (i32 ptrtoint (ptr @g to i32), i32 48), -10
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 ptrtoint (ptr @g to i32), 48
+  %r = and i32 %a, -10
+  ret i32 %r
+}
+
+define i32 @canonicalize_logic_first_constexpr_nuw(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr_nuw
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = and i32 add (i32 ptrtoint (ptr @g to i32), i32 48), -10
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 ptrtoint (ptr @g to i32), 48
+  %r = and i32 %a, -10
+  ret i32 %r
 }

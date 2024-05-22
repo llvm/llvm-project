@@ -15,6 +15,56 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.memref.memref_to_llvm_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["getTypeConverterType"]>]> {
+  let description = [{
+    This operation provides an "LLVMTypeConverter" that lowers memref types to
+    LLVM types.
+
+    The type converter can be customized as follows:
+    - `use_aligned_alloc`: Use aligned_alloc in place of malloc for heap
+      allocations.
+    - `index_bitwidth`: Bitwidth of the index type, "0" indicates the size of a
+      machine word.
+    - `use_generic_functions`: Use generic allocation and deallocation functions
+      instead of the classic "malloc", "aligned_alloc" and "free" functions.
+    // TODO: the following two options don't really make sense for 
+    // memref_to_llvm_type_converter specifically.
+    // We should have a single to_llvm_type_converter.
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+      pointers to the MemRef element types.
+    - `data-layout`: String description (LLVM format) of the data layout that is
+      expected on the produced module.
+  }];
+
+  let arguments = (ins
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_aligned_alloc,
+      DefaultValuedOptionalAttr<I64Attr, "64">:$index_bitwidth,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
+      OptionalAttr<StrAttr>:$data_layout);
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyAllocToAllocaOp : Op<Transform_Dialect,
+    "apply_patterns.memref.alloc_to_alloca",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface, ["populatePatternsWithState"]>]> {
+  let description = [{
+    Collects patterns to rewrite scoped dynamic allocation (`alloc`/`dealloc`
+    pairs) into automatic allocation (`alloca`) in the same scope, for memrefs
+    of static shape.
+
+    The `size_limit` attribute controls the maximum allocated memory (in bytes,
+    subject to data layout) for which the pattern applies.
+  }];
+
+  let arguments = (ins
+    OptionalAttr<I64Attr>:$size_limit);
+  let assemblyFormat = "(`size_limit` `(` $size_limit^ `)`)? attr-dict";
+}
+
 def ApplyExpandOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.memref.expand_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -91,6 +141,69 @@ def ApplyResolveRankedShapedTypeResultDimsPatternsOp : Op<Transform_Dialect,
 }
 
 def Transform_MemRefAllocOp : Transform_ConcreteOpType<"memref.alloc">;
+def Transform_MemRefAllocaOp : Transform_ConcreteOpType<"memref.alloca">;
+
+def MemRefAllocaToGlobalOp :
+  Op<Transform_Dialect, "memref.alloca_to_global",
+     [TransformOpInterface,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Inserts a new `memref.global` for each provided `memref.alloca` into the
+    nearest symbol table (e.g., a `builtin.module`) and replaces it with a
+    `memref.get_global`. This is useful, for example, for allocations that
+    should reside in the shared memory of a GPU, which have to be declared as
+    globals.
+
+    #### Example
+
+    Consider the following transform op:
+
+    ```mlir
+    %get_global, %global =
+        transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    ```
+
+    and the following input payload:
+
+    ```mlir
+    module {
+      func.func @func() {
+        %alloca = memref.alloca() : memref<2x32xf32>
+        // usages of %alloca...
+      }
+    }
+    ```
+
+    then applying the transform op to the payload would result in the following
+    output IR:
+
+    ```mlir
+    module {
+      memref.global "private" @alloc : memref<2x32xf32>
+      func.func @func() {
+        %alloca = memref.get_global @alloc : memref<2x32xf32>
+        // usages of %alloca...
+      }
+    }
+    ```
+
+    #### Return modes
+
+    Succeeds always. The returned handles refer to the `memref.get_global` and
+    `memref.global` ops that were inserted by the transformation.
+  }];
+
+  let arguments = (ins Transform_MemRefAllocaOp:$alloca);
+  let results = (outs TransformHandleTypeInterface:$getGlobal,
+                  TransformHandleTypeInterface:$global);
+
+  let assemblyFormat = [{
+    $alloca attr-dict `:` functional-type(operands, results)
+  }];
+}
 
 def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
@@ -121,6 +234,44 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
+}
+
+def MemRefEraseDeadAllocAndStoresOp
+    : Op<Transform_Dialect, "memref.erase_dead_alloc_and_stores", [
+      TransformEachOpTrait, TransformOpInterface,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      ReportTrackingListenerFailuresOpTrait
+    ]> {
+  let description = [{
+    This applies memory optimization on memref. In particular it does store to
+    load forwarding, dead store elimination and dead alloc elimination.
+
+    #### Return modes
+
+    This operation applies a set of memory optimization on the whole region of
+    the operand.
+
+    The transformation does not consume the target handle. It modifies the
+    payload. Dead allocations, loads and stores are silently dropped from all
+    mappings.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type($target, results)";
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
 }
 
 def MemRefMakeLoopIndependentOp

@@ -15,15 +15,15 @@ RUN:   FileCheck %s --check-prefix=NOTFOUND
 
 # Use cp to write the debug binary to an appropriately-named file in the llvm
 # debuginfod cache.
-RUN: cp %p/Inputs/embedded-source %t/llvmcache-7361776989772977641
+RUN: cp %p/Inputs/embedded-source %t/llvmcache-17908201640401622315
 
 # Write a broken "binary" under %t/broken.
 RUN: mkdir %t/broken
-RUN: echo "bad" > %t/broken/llvmcache-7361776989772977641
+RUN: echo "bad" > %t/broken/llvmcache-17908201640401622315
 
 # Write the stripped binary under %t/stripped-cache.
 RUN: mkdir %t/stripped-cache
-RUN: cp %t/stripped %t/stripped-cache/llvmcache-7361776989772977641
+RUN: cp %t/stripped %t/stripped-cache/llvmcache-17908201640401622315
 
 # Write to a debug info directory as well.
 RUN: mkdir -p %t/debug/.build-id/15
@@ -53,7 +53,7 @@ RUN: env DEBUGINFOD_CACHE_PATH=%t/broken llvm-objdump -d --source --debuginfod \
 RUN:   %t/stripped 2> %t.err | \
 RUN:   FileCheck %s --check-prefix=NOTFOUND
 RUN: FileCheck %s --check-prefix=BADBINARYERROR -DPATH=%t --input-file %t.err
-BADBINARYERROR: warning: '[[PATH]]/broken{{[/\\]}}llvmcache-7361776989772977641': The file was not recognized as a valid object file
+BADBINARYERROR: warning: '[[PATH]]/broken{{[/\\]}}llvmcache-17908201640401622315': The file was not recognized as a valid object file
 
 # Use the original binary if the fetched binary has no debug info.
 RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-cache llvm-objdump -d --source \
@@ -86,8 +86,8 @@ RUN:   FileCheck %s --check-prefix=SYMBOLS
 
 # Use debuginfod to recover section headers, but not symbols.
 RUN: mkdir %t/stripped-symbols
-RUN: cp %p/Inputs/embedded-source %t/stripped-symbols/llvmcache-7361776989772977641
-RUN: llvm-strip %t/stripped-symbols/llvmcache-7361776989772977641
+RUN: cp %p/Inputs/embedded-source %t/stripped-symbols/llvmcache-17908201640401622315
+RUN: llvm-strip %t/stripped-symbols/llvmcache-17908201640401622315
 RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-symbols llvm-objdump -d \
 RUN:   --debuginfod %t/stripped | \
 RUN:   FileCheck %s --check-prefix=SECTIONS
@@ -95,8 +95,8 @@ RUN:   FileCheck %s --check-prefix=SECTIONS
 # Don't use debuginfod if neither section headers nor symbols can be recovered.
 RUN: mkdir %t/stripped-sections
 RUN: echo "" | llvm-mc -filetype=obj -triple x86_64 > \
-RUN:   %t/stripped-sections/llvmcache-7361776989772977641
-RUN: llvm-strip --strip-sections %t/stripped-sections/llvmcache-7361776989772977641
+RUN:   %t/stripped-sections/llvmcache-17908201640401622315
+RUN: llvm-strip --strip-sections %t/stripped-sections/llvmcache-17908201640401622315
 RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-sections llvm-objdump -d \
 RUN:   --debuginfod %t/stripped | \
 RUN:   FileCheck %s --check-prefix=NOSECTIONS

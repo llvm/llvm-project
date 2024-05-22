@@ -59,10 +59,6 @@ bool LibcxxWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring_view
 
-bool LibcxxOptionalSummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &options); // libc++ std::optional<>
-
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions

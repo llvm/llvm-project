@@ -266,12 +266,13 @@ AttributeExpr *AttributeExpr::create(Context &ctx, SMRange loc,
 //===----------------------------------------------------------------------===//
 
 CallExpr *CallExpr::create(Context &ctx, SMRange loc, Expr *callable,
-                           ArrayRef<Expr *> arguments, Type resultType) {
+                           ArrayRef<Expr *> arguments, Type resultType,
+                           bool isNegated) {
   unsigned allocSize = CallExpr::totalSizeToAlloc<Expr *>(arguments.size());
   void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(CallExpr));
 
-  CallExpr *expr =
-      new (rawData) CallExpr(loc, resultType, callable, arguments.size());
+  CallExpr *expr = new (rawData)
+      CallExpr(loc, resultType, callable, arguments.size(), isNegated);
   std::uninitialized_copy(arguments.begin(), arguments.end(),
                           expr->getArguments().begin());
   return expr;

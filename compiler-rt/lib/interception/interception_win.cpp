@@ -1,4 +1,4 @@
-//===-- interception_linux.cpp ----------------------------------*- C++ -*-===//
+//===-- interception_win.cpp ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -431,7 +431,8 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
 // The following prologues cannot be patched because of the short jump
 // jumping to the patching region.
 
-#if SANITIZER_WINDOWS64
+// Short jump patterns  below are only for x86_64.
+#  if SANITIZER_WINDOWS_x64
 // ntdll!wcslen in Win11
 //   488bc1          mov     rax,rcx
 //   0fb710          movzx   edx,word ptr [rax]
@@ -457,7 +458,12 @@ static const u8 kPrologueWithShortJump2[] = {
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
-#if SANITIZER_WINDOWS64
+#if SANITIZER_ARM64
+  // An ARM64 instruction is 4 bytes long.
+  return 4;
+#endif
+
+#  if SANITIZER_WINDOWS_x64
   if (memcmp((u8*)address, kPrologueWithShortJump1,
              sizeof(kPrologueWithShortJump1)) == 0 ||
       memcmp((u8*)address, kPrologueWithShortJump2,
@@ -539,7 +545,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 7;
   }
 
-#if SANITIZER_WINDOWS64
+#  if SANITIZER_WINDOWS_x64
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
@@ -572,6 +578,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x018a:  // mov al, byte ptr [rcx]
       return 2;
 
+    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;
@@ -619,7 +626,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
     case 0x25ff48:    // 48 ff 25 XX XX XX XX :
                       //   rex.W jmp QWORD PTR [rip + XXXXXXXX]
-
+    case 0x158D4C:    // 4c 8d 15 XX XX XX XX : lea r10, [rip + XX]
       // Instructions having offset relative to 'rip' need offset adjustment.
       if (rel_offset)
         *rel_offset = 3;
@@ -721,16 +728,22 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
     size_t instruction_size = GetInstructionSize(from + cursor, &rel_offset);
     if (!instruction_size)
       return false;
-    _memcpy((void*)(to + cursor), (void*)(from + cursor),
+    _memcpy((void *)(to + cursor), (void *)(from + cursor),
             (size_t)instruction_size);
     if (rel_offset) {
-      uptr delta = to - from;
-      uptr relocated_offset = *(u32*)(to + cursor + rel_offset) - delta;
-#if SANITIZER_WINDOWS64
-      if (relocated_offset + 0x80000000U >= 0xFFFFFFFFU)
+#  if SANITIZER_WINDOWS64
+      // we want to make sure that the new relative offset still fits in 32-bits
+      // this will be untrue if relocated_offset \notin [-2**31, 2**31)
+      s64 delta = to - from;
+      s64 relocated_offset = *(s32 *)(to + cursor + rel_offset) - delta;
+      if (-0x8000'0000ll > relocated_offset || relocated_offset > 0x7FFF'FFFFll)
         return false;
-#endif
-      *(u32*)(to + cursor + rel_offset) = relocated_offset;
+#  else
+      // on 32-bit, the relative offset will always be correct
+      s32 delta = to - from;
+      s32 relocated_offset = *(s32 *)(to + cursor + rel_offset) - delta;
+#  endif
+      *(s32 *)(to + cursor + rel_offset) = relocated_offset;
     }
     cursor += instruction_size;
   }

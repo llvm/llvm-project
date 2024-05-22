@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
-#define LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
+#define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
 #ifdef LIBC_COPT_USE_C_ASSERT
 
@@ -25,24 +25,25 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
+// This is intended to be removed in a future patch to use a similar design to
+// below, but it's necessary for the external assert.
 LIBC_INLINE void report_assertion_failure(const char *assertion,
                                           const char *filename, unsigned line,
                                           const char *funcname) {
-  char line_str[IntegerToString::dec_bufsize<unsigned>()];
-  IntegerToString::dec(line, line_str);
-  __llvm_libc::write_to_stderr(filename);
-  __llvm_libc::write_to_stderr(":");
-  __llvm_libc::write_to_stderr(line_str);
-  __llvm_libc::write_to_stderr(": Assertion failed: '");
-  __llvm_libc::write_to_stderr(assertion);
-  __llvm_libc::write_to_stderr("' in function: '");
-  __llvm_libc::write_to_stderr(funcname);
-  __llvm_libc::write_to_stderr("'\n");
+  const IntegerToString<unsigned> line_buffer(line);
+  write_to_stderr(filename);
+  write_to_stderr(":");
+  write_to_stderr(line_buffer.view());
+  write_to_stderr(": Assertion failed: '");
+  write_to_stderr(assertion);
+  write_to_stderr("' in function: '");
+  write_to_stderr(funcname);
+  write_to_stderr("'\n");
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
@@ -59,16 +60,27 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   do {                                                                         \
   } while (false)
 #else
+
+// Convert __LINE__ to a string using macros. The indirection is necessary
+// because otherwise it will turn "__LINE__" into a string, not its value. The
+// value is evaluated in the indirection step.
+#define __LIBC_MACRO_TO_STR(x) #x
+#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
+#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
+
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
     if (!(COND)) {                                                             \
-      __llvm_libc::report_assertion_failure(#COND, __FILE__, __LINE__,         \
-                                            __PRETTY_FUNCTION__);              \
-      __llvm_libc::quick_exit(0xFF);                                           \
+      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__           \
+                                               ": Assertion failed: '" #COND   \
+                                               "' in function: '");            \
+      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
+      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
+      LIBC_NAMESPACE::quick_exit(0xFF);                                        \
     }                                                                          \
   } while (false)
 #endif // NDEBUG
 
 #endif // LIBC_COPT_USE_C_ASSERT
 
-#endif // LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H

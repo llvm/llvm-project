@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -393,6 +395,39 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
 
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
+}
+
+bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction kind");
+
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  return Mask.size() == 1;
+}
+
+void CombinerHelper::applyShuffleToExtract(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInsertPt(*MI.getParent(), MI);
+
+  int I = MI.getOperand(3).getShuffleMask()[0];
+  Register Src1 = MI.getOperand(1).getReg();
+  LLT Src1Ty = MRI.getType(Src1);
+  int Src1NumElts = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+  Register SrcReg;
+  if (I >= Src1NumElts) {
+    SrcReg = MI.getOperand(2).getReg();
+    I -= Src1NumElts;
+  } else if (I >= 0)
+    SrcReg = Src1;
+
+  if (I < 0)
+    Builder.buildUndef(DstReg);
+  else if (!MRI.getType(SrcReg).isVector())
+    Builder.buildCopy(DstReg, SrcReg);
+  else
+    Builder.buildExtractVectorElementConstant(DstReg, SrcReg, I);
+
+  MI.eraseFromParent();
 }
 
 namespace {
@@ -910,160 +945,332 @@ void CombinerHelper::applySextInRegOfLoad(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
-                                            Register &Base, Register &Offset) {
-  auto &MF = *MI.getParent()->getParent();
-  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
+}
 
-#ifndef NDEBUG
-  unsigned Opcode = MI.getOpcode();
-  assert(Opcode == TargetOpcode::G_LOAD || Opcode == TargetOpcode::G_SEXTLOAD ||
-         Opcode == TargetOpcode::G_ZEXTLOAD || Opcode == TargetOpcode::G_STORE);
-#endif
-
-  Base = MI.getOperand(1).getReg();
-  MachineInstr *BaseDef = MRI.getUniqueVRegDef(Base);
-  if (BaseDef && BaseDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+/// Return true if 'MI' is a load or a store that may be fold it's address
+/// operand into the load / store addressing mode.
+static bool canFoldInAddressingMode(GLoadStore *MI, const TargetLowering &TLI,
+                                    MachineRegisterInfo &MRI) {
+  TargetLowering::AddrMode AM;
+  auto *MF = MI->getMF();
+  auto *Addr = getOpcodeDef<GPtrAdd>(MI->getPointerReg(), MRI);
+  if (!Addr)
     return false;
 
-  LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
-  // FIXME: The following use traversal needs a bail out for patholigical cases.
-  for (auto &Use : MRI.use_nodbg_instructions(Base)) {
-    if (Use.getOpcode() != TargetOpcode::G_PTR_ADD)
+  AM.HasBaseReg = true;
+  if (auto CstOff = getIConstantVRegVal(Addr->getOffsetReg(), MRI))
+    AM.BaseOffs = CstOff->getSExtValue(); // [reg +/- imm]
+  else
+    AM.Scale = 1; // [reg +/- reg]
+
+  return TLI.isLegalAddressingMode(
+      MF->getDataLayout(), AM,
+      getTypeForLLT(MI->getMMO().getMemoryType(),
+                    MF->getFunction().getContext()),
+      MI->getMMO().getAddrSpace());
+}
+
+static unsigned getIndexedOpc(unsigned LdStOpc) {
+  switch (LdStOpc) {
+  case TargetOpcode::G_LOAD:
+    return TargetOpcode::G_INDEXED_LOAD;
+  case TargetOpcode::G_STORE:
+    return TargetOpcode::G_INDEXED_STORE;
+  case TargetOpcode::G_ZEXTLOAD:
+    return TargetOpcode::G_INDEXED_ZEXTLOAD;
+  case TargetOpcode::G_SEXTLOAD:
+    return TargetOpcode::G_INDEXED_SEXTLOAD;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
+bool CombinerHelper::isIndexedLoadStoreLegal(GLoadStore &LdSt) const {
+  // Check for legality.
+  LLT PtrTy = MRI.getType(LdSt.getPointerReg());
+  LLT Ty = MRI.getType(LdSt.getReg(0));
+  LLT MemTy = LdSt.getMMO().getMemoryType();
+  SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
+      {{MemTy, MemTy.getSizeInBits(), AtomicOrdering::NotAtomic}});
+  unsigned IndexedOpc = getIndexedOpc(LdSt.getOpcode());
+  SmallVector<LLT> OpTys;
+  if (IndexedOpc == TargetOpcode::G_INDEXED_STORE)
+    OpTys = {PtrTy, Ty, Ty};
+  else
+    OpTys = {Ty, PtrTy}; // For G_INDEXED_LOAD, G_INDEXED_[SZ]EXTLOAD
+
+  LegalityQuery Q(IndexedOpc, OpTys, MemDescrs);
+  return isLegal(Q);
+}
+
+static cl::opt<unsigned> PostIndexUseThreshold(
+    "post-index-use-threshold", cl::Hidden, cl::init(32),
+    cl::desc("Number of uses of a base pointer to check before it is no longer "
+             "considered for post-indexing."));
+
+bool CombinerHelper::findPostIndexCandidate(GLoadStore &LdSt, Register &Addr,
+                                            Register &Base, Register &Offset,
+                                            bool &RematOffset) {
+  // We're looking for the following pattern, for either load or store:
+  // %baseptr:_(p0) = ...
+  // G_STORE %val(s64), %baseptr(p0)
+  // %offset:_(s64) = G_CONSTANT i64 -256
+  // %new_addr:_(p0) = G_PTR_ADD %baseptr, %offset(s64)
+  const auto &TLI = getTargetLowering();
+
+  Register Ptr = LdSt.getPointerReg();
+  // If the store is the only use, don't bother.
+  if (MRI.hasOneNonDBGUse(Ptr))
+    return false;
+
+  if (!isIndexedLoadStoreLegal(LdSt))
+    return false;
+
+  if (getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Ptr, MRI))
+    return false;
+
+  MachineInstr *StoredValDef = getDefIgnoringCopies(LdSt.getReg(0), MRI);
+  auto *PtrDef = MRI.getVRegDef(Ptr);
+
+  unsigned NumUsesChecked = 0;
+  for (auto &Use : MRI.use_nodbg_instructions(Ptr)) {
+    if (++NumUsesChecked > PostIndexUseThreshold)
+      return false; // Try to avoid exploding compile time.
+
+    auto *PtrAdd = dyn_cast<GPtrAdd>(&Use);
+    // The use itself might be dead. This can happen during combines if DCE
+    // hasn't had a chance to run yet. Don't allow it to form an indexed op.
+    if (!PtrAdd || MRI.use_nodbg_empty(PtrAdd->getReg(0)))
       continue;
 
-    Offset = Use.getOperand(2).getReg();
-    if (!ForceLegalIndexing &&
-        !TLI.isIndexingLegal(MI, Base, Offset, /*IsPre*/ false, MRI)) {
-      LLVM_DEBUG(dbgs() << "    Ignoring candidate with illegal addrmode: "
-                        << Use);
+    // Check the user of this isn't the store, otherwise we'd be generate a
+    // indexed store defining its own use.
+    if (StoredValDef == &Use)
       continue;
-    }
+
+    Offset = PtrAdd->getOffsetReg();
+    if (!ForceLegalIndexing &&
+        !TLI.isIndexingLegal(LdSt, PtrAdd->getBaseReg(), Offset,
+                             /*IsPre*/ false, MRI))
+      continue;
 
     // Make sure the offset calculation is before the potentially indexed op.
-    // FIXME: we really care about dependency here. The offset calculation might
-    // be movable.
-    MachineInstr *OffsetDef = MRI.getUniqueVRegDef(Offset);
-    if (!OffsetDef || !dominates(*OffsetDef, MI)) {
-      LLVM_DEBUG(dbgs() << "    Ignoring candidate with offset after mem-op: "
-                        << Use);
-      continue;
+    MachineInstr *OffsetDef = MRI.getVRegDef(Offset);
+    RematOffset = false;
+    if (!dominates(*OffsetDef, LdSt)) {
+      // If the offset however is just a G_CONSTANT, we can always just
+      // rematerialize it where we need it.
+      if (OffsetDef->getOpcode() != TargetOpcode::G_CONSTANT)
+        continue;
+      RematOffset = true;
     }
 
-    // FIXME: check whether all uses of Base are load/store with foldable
-    // addressing modes. If so, using the normal addr-modes is better than
-    // forming an indexed one.
+    for (auto &BasePtrUse : MRI.use_nodbg_instructions(PtrAdd->getBaseReg())) {
+      if (&BasePtrUse == PtrDef)
+        continue;
 
-    bool MemOpDominatesAddrUses = true;
-    for (auto &PtrAddUse :
-         MRI.use_nodbg_instructions(Use.getOperand(0).getReg())) {
-      if (!dominates(MI, PtrAddUse)) {
-        MemOpDominatesAddrUses = false;
-        break;
+      // If the user is a later load/store that can be post-indexed, then don't
+      // combine this one.
+      auto *BasePtrLdSt = dyn_cast<GLoadStore>(&BasePtrUse);
+      if (BasePtrLdSt && BasePtrLdSt != &LdSt &&
+          dominates(LdSt, *BasePtrLdSt) &&
+          isIndexedLoadStoreLegal(*BasePtrLdSt))
+        return false;
+
+      // Now we're looking for the key G_PTR_ADD instruction, which contains
+      // the offset add that we want to fold.
+      if (auto *BasePtrUseDef = dyn_cast<GPtrAdd>(&BasePtrUse)) {
+        Register PtrAddDefReg = BasePtrUseDef->getReg(0);
+        for (auto &BaseUseUse : MRI.use_nodbg_instructions(PtrAddDefReg)) {
+          // If the use is in a different block, then we may produce worse code
+          // due to the extra register pressure.
+          if (BaseUseUse.getParent() != LdSt.getParent())
+            return false;
+
+          if (auto *UseUseLdSt = dyn_cast<GLoadStore>(&BaseUseUse))
+            if (canFoldInAddressingMode(UseUseLdSt, TLI, MRI))
+              return false;
+        }
+        if (!dominates(LdSt, BasePtrUse))
+          return false; // All use must be dominated by the load/store.
       }
     }
 
-    if (!MemOpDominatesAddrUses) {
-      LLVM_DEBUG(
-          dbgs() << "    Ignoring candidate as memop does not dominate uses: "
-                 << Use);
-      continue;
-    }
-
-    LLVM_DEBUG(dbgs() << "    Found match: " << Use);
-    Addr = Use.getOperand(0).getReg();
+    Addr = PtrAdd->getReg(0);
+    Base = PtrAdd->getBaseReg();
     return true;
   }
 
   return false;
 }
 
-bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
+bool CombinerHelper::findPreIndexCandidate(GLoadStore &LdSt, Register &Addr,
                                            Register &Base, Register &Offset) {
-  auto &MF = *MI.getParent()->getParent();
+  auto &MF = *LdSt.getParent()->getParent();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
 
-#ifndef NDEBUG
-  unsigned Opcode = MI.getOpcode();
-  assert(Opcode == TargetOpcode::G_LOAD || Opcode == TargetOpcode::G_SEXTLOAD ||
-         Opcode == TargetOpcode::G_ZEXTLOAD || Opcode == TargetOpcode::G_STORE);
-#endif
-
-  Addr = MI.getOperand(1).getReg();
-  MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_PTR_ADD, Addr, MRI);
-  if (!AddrDef || MRI.hasOneNonDBGUse(Addr))
+  Addr = LdSt.getPointerReg();
+  if (!mi_match(Addr, MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Offset))) ||
+      MRI.hasOneNonDBGUse(Addr))
     return false;
-
-  Base = AddrDef->getOperand(1).getReg();
-  Offset = AddrDef->getOperand(2).getReg();
-
-  LLVM_DEBUG(dbgs() << "Found potential pre-indexed load_store: " << MI);
 
   if (!ForceLegalIndexing &&
-      !TLI.isIndexingLegal(MI, Base, Offset, /*IsPre*/ true, MRI)) {
-    LLVM_DEBUG(dbgs() << "    Skipping, not legal for target");
+      !TLI.isIndexingLegal(LdSt, Base, Offset, /*IsPre*/ true, MRI))
     return false;
-  }
+
+  if (!isIndexedLoadStoreLegal(LdSt))
+    return false;
 
   MachineInstr *BaseDef = getDefIgnoringCopies(Base, MRI);
-  if (BaseDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
-    LLVM_DEBUG(dbgs() << "    Skipping, frame index would need copy anyway.");
+  if (BaseDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
     return false;
-  }
 
-  if (MI.getOpcode() == TargetOpcode::G_STORE) {
+  if (auto *St = dyn_cast<GStore>(&LdSt)) {
     // Would require a copy.
-    if (Base == MI.getOperand(0).getReg()) {
-      LLVM_DEBUG(dbgs() << "    Skipping, storing base so need copy anyway.");
+    if (Base == St->getValueReg())
       return false;
-    }
 
     // We're expecting one use of Addr in MI, but it could also be the
     // value stored, which isn't actually dominated by the instruction.
-    if (MI.getOperand(0).getReg() == Addr) {
-      LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses");
+    if (St->getValueReg() == Addr)
       return false;
-    }
   }
+
+  // Avoid increasing cross-block register pressure.
+  for (auto &AddrUse : MRI.use_nodbg_instructions(Addr))
+    if (AddrUse.getParent() != LdSt.getParent())
+      return false;
 
   // FIXME: check whether all uses of the base pointer are constant PtrAdds.
   // That might allow us to end base's liveness here by adjusting the constant.
+  bool RealUse = false;
+  for (auto &AddrUse : MRI.use_nodbg_instructions(Addr)) {
+    if (!dominates(LdSt, AddrUse))
+      return false; // All use must be dominated by the load/store.
 
-  for (auto &UseMI : MRI.use_nodbg_instructions(Addr)) {
-    if (!dominates(MI, UseMI)) {
-      LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses.");
-      return false;
+    // If Ptr may be folded in addressing mode of other use, then it's
+    // not profitable to do this transformation.
+    if (auto *UseLdSt = dyn_cast<GLoadStore>(&AddrUse)) {
+      if (!canFoldInAddressingMode(UseLdSt, TLI, MRI))
+        RealUse = true;
+    } else {
+      RealUse = true;
     }
   }
+  return RealUse;
+}
+
+bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
+                                                     BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
+
+  // Check if there is a load that defines the vector being extracted from.
+  auto *LoadMI = getOpcodeDef<GLoad>(MI.getOperand(1).getReg(), MRI);
+  if (!LoadMI)
+    return false;
+
+  Register Vector = MI.getOperand(1).getReg();
+  LLT VecEltTy = MRI.getType(Vector).getElementType();
+
+  assert(MRI.getType(MI.getOperand(0).getReg()) == VecEltTy);
+
+  // Checking whether we should reduce the load width.
+  if (!MRI.hasOneNonDBGUse(Vector))
+    return false;
+
+  // Check if the defining load is simple.
+  if (!LoadMI->isSimple())
+    return false;
+
+  // If the vector element type is not a multiple of a byte then we are unable
+  // to correctly compute an address to load only the extracted element as a
+  // scalar.
+  if (!VecEltTy.isByteSized())
+    return false;
+
+  // Check if the new load that we are going to create is legal
+  // if we are in the post-legalization phase.
+  MachineMemOperand MMO = LoadMI->getMMO();
+  Align Alignment = MMO.getAlign();
+  MachinePointerInfo PtrInfo;
+  uint64_t Offset;
+
+  // Finding the appropriate PtrInfo if offset is a known constant.
+  // This is required to create the memory operand for the narrowed load.
+  // This machine memory operand object helps us infer about legality
+  // before we proceed to combine the instruction.
+  if (auto CVal = getIConstantVRegVal(Vector, MRI)) {
+    int Elt = CVal->getZExtValue();
+    // FIXME: should be (ABI size)*Elt.
+    Offset = VecEltTy.getSizeInBits() * Elt / 8;
+    PtrInfo = MMO.getPointerInfo().getWithOffset(Offset);
+  } else {
+    // Discard the pointer info except the address space because the memory
+    // operand can't represent this new access since the offset is variable.
+    Offset = VecEltTy.getSizeInBits() / 8;
+    PtrInfo = MachinePointerInfo(MMO.getPointerInfo().getAddrSpace());
+  }
+
+  Alignment = commonAlignment(Alignment, Offset);
+
+  Register VecPtr = LoadMI->getPointerReg();
+  LLT PtrTy = MRI.getType(VecPtr);
+
+  MachineFunction &MF = *MI.getMF();
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, VecEltTy);
+
+  LegalityQuery::MemDesc MMDesc(*NewMMO);
+
+  LegalityQuery Q = {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}};
+
+  if (!isLegalOrBeforeLegalizer(Q))
+    return false;
+
+  // Load must be allowed and fast on the target.
+  LLVMContext &C = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+  unsigned Fast = 0;
+  if (!getTargetLowering().allowsMemoryAccess(C, DL, VecEltTy, *NewMMO,
+                                              &Fast) ||
+      !Fast)
+    return false;
+
+  Register Result = MI.getOperand(0).getReg();
+  Register Index = MI.getOperand(2).getReg();
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    GISelObserverWrapper DummyObserver;
+    LegalizerHelper Helper(B.getMF(), DummyObserver, B);
+    //// Get pointer to the vector element.
+    Register finalPtr = Helper.getVectorElementPointer(
+        LoadMI->getPointerReg(), MRI.getType(LoadMI->getOperand(0).getReg()),
+        Index);
+    // New G_LOAD instruction.
+    B.buildLoad(Result, finalPtr, PtrInfo, Alignment);
+    // Remove original GLOAD instruction.
+    LoadMI->eraseFromParent();
+  };
 
   return true;
 }
 
-bool CombinerHelper::tryCombineIndexedLoadStore(MachineInstr &MI) {
-  IndexedLoadStoreMatchInfo MatchInfo;
-  if (matchCombineIndexedLoadStore(MI, MatchInfo)) {
-    applyCombineIndexedLoadStore(MI, MatchInfo);
-    return true;
-  }
-  return false;
-}
+bool CombinerHelper::matchCombineIndexedLoadStore(
+    MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo) {
+  auto &LdSt = cast<GLoadStore>(MI);
 
-bool CombinerHelper::matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo) {
-  unsigned Opcode = MI.getOpcode();
-  if (Opcode != TargetOpcode::G_LOAD && Opcode != TargetOpcode::G_SEXTLOAD &&
-      Opcode != TargetOpcode::G_ZEXTLOAD && Opcode != TargetOpcode::G_STORE)
+  if (LdSt.isAtomic())
     return false;
 
-  // For now, no targets actually support these opcodes so don't waste time
-  // running these unless we're forced to for testing.
-  if (!ForceLegalIndexing)
-    return false;
-
-  MatchInfo.IsPre = findPreIndexCandidate(MI, MatchInfo.Addr, MatchInfo.Base,
+  MatchInfo.IsPre = findPreIndexCandidate(LdSt, MatchInfo.Addr, MatchInfo.Base,
                                           MatchInfo.Offset);
   if (!MatchInfo.IsPre &&
-      !findPostIndexCandidate(MI, MatchInfo.Addr, MatchInfo.Base,
-                              MatchInfo.Offset))
+      !findPostIndexCandidate(LdSt, MatchInfo.Addr, MatchInfo.Base,
+                              MatchInfo.Offset, MatchInfo.RematOffset))
     return false;
 
   return true;
@@ -1072,28 +1279,21 @@ bool CombinerHelper::matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadS
 void CombinerHelper::applyCombineIndexedLoadStore(
     MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo) {
   MachineInstr &AddrDef = *MRI.getUniqueVRegDef(MatchInfo.Addr);
-  MachineIRBuilder MIRBuilder(MI);
+  Builder.setInstrAndDebugLoc(MI);
   unsigned Opcode = MI.getOpcode();
   bool IsStore = Opcode == TargetOpcode::G_STORE;
-  unsigned NewOpcode;
-  switch (Opcode) {
-  case TargetOpcode::G_LOAD:
-    NewOpcode = TargetOpcode::G_INDEXED_LOAD;
-    break;
-  case TargetOpcode::G_SEXTLOAD:
-    NewOpcode = TargetOpcode::G_INDEXED_SEXTLOAD;
-    break;
-  case TargetOpcode::G_ZEXTLOAD:
-    NewOpcode = TargetOpcode::G_INDEXED_ZEXTLOAD;
-    break;
-  case TargetOpcode::G_STORE:
-    NewOpcode = TargetOpcode::G_INDEXED_STORE;
-    break;
-  default:
-    llvm_unreachable("Unknown load/store opcode");
+  unsigned NewOpcode = getIndexedOpc(Opcode);
+
+  // If the offset constant didn't happen to dominate the load/store, we can
+  // just clone it as needed.
+  if (MatchInfo.RematOffset) {
+    auto *OldCst = MRI.getVRegDef(MatchInfo.Offset);
+    auto NewCst = Builder.buildConstant(MRI.getType(MatchInfo.Offset),
+                                        *OldCst->getOperand(1).getCImm());
+    MatchInfo.Offset = NewCst.getReg(0);
   }
 
-  auto MIB = MIRBuilder.buildInstr(NewOpcode);
+  auto MIB = Builder.buildInstr(NewOpcode);
   if (IsStore) {
     MIB.addDef(MatchInfo.Addr);
     MIB.addUse(MI.getOperand(0).getReg());
@@ -1105,6 +1305,7 @@ void CombinerHelper::applyCombineIndexedLoadStore(
   MIB.addUse(MatchInfo.Base);
   MIB.addUse(MatchInfo.Offset);
   MIB.addImm(MatchInfo.IsPre);
+  MIB->cloneMemRefs(*MI.getMF(), MI);
   MI.eraseFromParent();
   AddrDef.eraseFromParent();
 
@@ -1271,13 +1472,7 @@ void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI,
   Observer.changedInstr(*BrCond);
 }
 
-static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
-  if (Ty.isVector())
-    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
-                                Ty.getNumElements());
-  return IntegerType::get(C, Ty.getSizeInBits());
-}
-
+ 
 bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI) {
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -1394,7 +1589,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (AccessTy) {
     AMNew.HasBaseReg = true;
     TargetLoweringBase::AddrMode AMOld;
-    AMOld.BaseOffs = MaybeImm2Val->Value.getSExtValue();
+    AMOld.BaseOffs = MaybeImmVal->Value.getSExtValue();
     AMOld.HasBaseReg = true;
     unsigned AS = MRI.getType(Add2).getAddressSpace();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -1456,7 +1651,7 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
 
   // Pass the combined immediate to the apply function.
   MatchInfo.Imm =
-      (MaybeImmVal->Value.getSExtValue() + MaybeImm2Val->Value).getSExtValue();
+      (MaybeImmVal->Value.getZExtValue() + MaybeImm2Val->Value).getZExtValue();
   MatchInfo.Reg = Base;
 
   // There is no simple replacement for a saturating unsigned left shift that
@@ -1535,7 +1730,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
   // Find a matching one-use shift by constant.
   const Register C1 = MI.getOperand(2).getReg();
   auto MaybeImmVal = getIConstantVRegValWithLookThrough(C1, MRI);
-  if (!MaybeImmVal)
+  if (!MaybeImmVal || MaybeImmVal->Value == 0)
     return false;
 
   const uint64_t C1Val = MaybeImmVal->Value.getZExtValue();
@@ -1685,6 +1880,8 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
 bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
                                              RegisterImmPair &MatchData) {
   assert(MI.getOpcode() == TargetOpcode::G_SHL && KB);
+  if (!getTargetLowering().isDesirableToPullExtFromShl(MI))
+    return false;
 
   Register LHS = MI.getOperand(1).getReg();
 
@@ -2248,35 +2445,6 @@ void CombinerHelper::applyCombineExtOfExt(
   }
 }
 
-void CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-
-  Builder.setInstrAndDebugLoc(MI);
-  Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
-                   MI.getFlags());
-  MI.eraseFromParent();
-}
-
-bool CombinerHelper::matchCombineFAbsOfFNeg(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
-  Register Src = MI.getOperand(1).getReg();
-  Register NegSrc;
-
-  if (!mi_match(Src, MRI, m_GFNeg(m_Reg(NegSrc))))
-    return false;
-
-  MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(NegSrc);
-    Observer.changedInstr(MI);
-  };
-  return true;
-}
-
 bool CombinerHelper::matchCombineTruncOfExt(
     MachineInstr &MI, std::pair<Register, unsigned> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");
@@ -2580,6 +2748,16 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
          MaybeCst->getSExtValue() == C;
 }
 
+bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP, double C) {
+  if (!MOP.isReg())
+    return false;
+  std::optional<FPValueAndVReg> MaybeCst;
+  if (!mi_match(MOP.getReg(), MRI, m_GFCstOrSplat(MaybeCst)))
+    return false;
+
+  return MaybeCst->Value.isExactlyValue(C);
+}
+
 void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
                                                      unsigned OpIdx) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
@@ -2597,6 +2775,45 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+}
+
+bool CombinerHelper::matchConstantLargerBitWidth(MachineInstr &MI,
+                                                 unsigned ConstIdx) {
+  Register ConstReg = MI.getOperand(ConstIdx).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  // Get the shift amount
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  if (!VRegAndVal)
+    return false;
+
+  // Return true of shift amount >= Bitwidth
+  return (VRegAndVal->Value.uge(DstTy.getSizeInBits()));
+}
+
+void CombinerHelper::applyFunnelShiftConstantModulo(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_FSHL ||
+          MI.getOpcode() == TargetOpcode::G_FSHR) &&
+         "This is not a funnel shift operation");
+
+  Register ConstReg = MI.getOperand(3).getReg();
+  LLT ConstTy = MRI.getType(ConstReg);
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  assert((VRegAndVal) && "Value is not a constant");
+
+  // Calculate the new Shift Amount = Old Shift Amount % BitWidth
+  APInt NewConst = VRegAndVal->Value.urem(
+      APInt(ConstTy.getSizeInBits(), DstTy.getScalarSizeInBits()));
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto NewConstInstr = Builder.buildConstant(ConstTy, NewConst.getZExtValue());
+  Builder.buildInstr(
+      MI.getOpcode(), {MI.getOperand(0)},
+      {MI.getOperand(1), MI.getOperand(2), NewConstInstr.getReg(0)});
+
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
@@ -2649,6 +2866,13 @@ void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+}
+
+void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, ConstantFP *CFP) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildFConstant(MI.getOperand(0), CFP->getValueAPF());
   MI.eraseFromParent();
 }
 
@@ -3246,7 +3470,7 @@ bool CombinerHelper::matchFoldBinOpIntoSelect(MachineInstr &MI,
 
   unsigned BinOpcode = MI.getOpcode();
 
-  // We know know one of the operands is a select of constants. Now verify that
+  // We know that one of the operands is a select of constants. Now verify that
   // the other binary operator operand is either a constant, or we can handle a
   // variable.
   bool CanFoldNonConst =
@@ -4141,8 +4365,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
-          TargetOpcode::G_UBFX, Ty, ExtractTy))
+  if (LI && !LI->isLegalOrCustom({TargetOpcode::G_UBFX, {Ty, ExtractTy}}))
     return false;
 
   int64_t AndImm, LSBImm;
@@ -4228,8 +4451,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   const Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
-          TargetOpcode::G_UBFX, Ty, ExtractTy))
+  if (LI && !LI->isLegalOrCustom({TargetOpcode::G_UBFX, {Ty, ExtractTy}}))
     return false;
 
   // Try to match shr (and x, c1), c2
@@ -4279,20 +4501,20 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
 }
 
 bool CombinerHelper::reassociationCanBreakAddressingModePattern(
-    MachineInstr &PtrAdd) {
-  assert(PtrAdd.getOpcode() == TargetOpcode::G_PTR_ADD);
+    MachineInstr &MI) {
+  auto &PtrAdd = cast<GPtrAdd>(MI);
 
-  Register Src1Reg = PtrAdd.getOperand(1).getReg();
-  MachineInstr *Src1Def = getOpcodeDef(TargetOpcode::G_PTR_ADD, Src1Reg, MRI);
+  Register Src1Reg = PtrAdd.getBaseReg();
+  auto *Src1Def = getOpcodeDef<GPtrAdd>(Src1Reg, MRI);
   if (!Src1Def)
     return false;
 
-  Register Src2Reg = PtrAdd.getOperand(2).getReg();
+  Register Src2Reg = PtrAdd.getOffsetReg();
 
   if (MRI.hasOneNonDBGUse(Src1Reg))
     return false;
 
-  auto C1 = getIConstantVRegVal(Src1Def->getOperand(2).getReg(), MRI);
+  auto C1 = getIConstantVRegVal(Src1Def->getOffsetReg(), MRI);
   if (!C1)
     return false;
   auto C2 = getIConstantVRegVal(Src2Reg, MRI);
@@ -4303,7 +4525,7 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
   const APInt &C2APIntVal = *C2;
   const int64_t CombinedValue = (C1APIntVal + C2APIntVal).getSExtValue();
 
-  for (auto &UseMI : MRI.use_nodbg_instructions(Src1Reg)) {
+  for (auto &UseMI : MRI.use_nodbg_instructions(PtrAdd.getReg(0))) {
     // This combine may end up running before ptrtoint/inttoptr combines
     // manage to eliminate redundant conversions, so try to look through them.
     MachineInstr *ConvUseMI = &UseMI;
@@ -4316,9 +4538,8 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
       ConvUseMI = &*MRI.use_instr_nodbg_begin(DefReg);
       ConvUseOpc = ConvUseMI->getOpcode();
     }
-    auto LoadStore = ConvUseOpc == TargetOpcode::G_LOAD ||
-                     ConvUseOpc == TargetOpcode::G_STORE;
-    if (!LoadStore)
+    auto *LdStMI = dyn_cast<GLoadStore>(ConvUseMI);
+    if (!LdStMI)
       continue;
     // Is x[offset2] already not a legal addressing mode? If so then
     // reassociating the constants breaks nothing (we test offset2 because
@@ -4326,11 +4547,9 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
     TargetLoweringBase::AddrMode AM;
     AM.HasBaseReg = true;
     AM.BaseOffs = C2APIntVal.getSExtValue();
-    unsigned AS =
-        MRI.getType(ConvUseMI->getOperand(1).getReg()).getAddressSpace();
-    Type *AccessTy =
-        getTypeForLLT(MRI.getType(ConvUseMI->getOperand(0).getReg()),
-                      PtrAdd.getMF()->getFunction().getContext());
+    unsigned AS = MRI.getType(LdStMI->getPointerReg()).getAddressSpace();
+    Type *AccessTy = getTypeForLLT(LdStMI->getMMO().getMemoryType(),
+                                   PtrAdd.getMF()->getFunction().getContext());
     const auto &TLI = *PtrAdd.getMF()->getSubtarget().getTargetLowering();
     if (!TLI.isLegalAddressingMode(PtrAdd.getMF()->getDataLayout(), AM,
                                    AccessTy, AS))
@@ -4475,7 +4694,12 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
   Register OpLHSLHS = OpLHSDef->getOperand(1).getReg();
   Register OpLHSRHS = OpLHSDef->getOperand(2).getReg();
 
-  if (isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSRHS), MRI)) {
+  // If the inner op is (X op C), pull the constant out so it can be folded with
+  // other constants in the expression tree. Folding is not guaranteed so we
+  // might have (C1 op C2). In that case do not pull a constant out because it
+  // won't help and can lead to infinite loops.
+  if (isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSRHS), MRI) &&
+      !isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSLHS), MRI)) {
     if (isConstantOrConstantSplatVector(*OpRHSDef, MRI)) {
       // (Opc (Opc X, C1), C2) -> (Opc X, (Opc C1, C2))
       MatchInfo = [=](MachineIRBuilder &B) {
@@ -4484,8 +4708,7 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
       };
       return true;
     }
-    if (getTargetLowering().isReassocProfitable(MRI, OpLHS, OpRHS) &&
-        MRI.hasOneNonDBGUse(OpLHSLHS)) {
+    if (getTargetLowering().isReassocProfitable(MRI, OpLHS, OpRHS)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
       MatchInfo = [=](MachineIRBuilder &B) {
@@ -4515,13 +4738,61 @@ bool CombinerHelper::matchReassocCommBinOp(MachineInstr &MI,
   return false;
 }
 
-bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
+bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register SrcOp = MI.getOperand(1).getReg();
+
+  if (auto MaybeCst = ConstantFoldCastOp(MI.getOpcode(), DstTy, SrcOp, MRI)) {
+    MatchInfo = *MaybeCst;
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) {
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);
   if (!MaybeCst)
     return false;
   MatchInfo = *MaybeCst;
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldFPBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo =
+      ConstantFP::get(MI.getMF()->getFunction().getContext(), *MaybeCst);
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
+                                          ConstantFP *&MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FMA ||
+         MI.getOpcode() == TargetOpcode::G_FMAD);
+  auto [_, Op1, Op2, Op3] = MI.getFirst4Regs();
+
+  const ConstantFP *Op3Cst = getConstantFPVRegVal(Op3, MRI);
+  if (!Op3Cst)
+    return false;
+
+  const ConstantFP *Op2Cst = getConstantFPVRegVal(Op2, MRI);
+  if (!Op2Cst)
+    return false;
+
+  const ConstantFP *Op1Cst = getConstantFPVRegVal(Op1, MRI);
+  if (!Op1Cst)
+    return false;
+
+  APFloat Op1F = Op1Cst->getValueAPF();
+  Op1F.fusedMultiplyAdd(Op2Cst->getValueAPF(), Op3Cst->getValueAPF(),
+                        APFloat::rmNearestTiesToEven);
+  MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
   return true;
 }
 
@@ -6014,12 +6285,36 @@ bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
   return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
 }
 
-bool CombinerHelper::tryCombine(MachineInstr &MI) {
-  if (tryCombineCopy(MI))
+bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  auto *LHSDef = MRI.getVRegDef(LHS);
+  if (getIConstantVRegVal(LHS, MRI).has_value())
     return true;
-  if (tryCombineExtendingLoads(MI))
-    return true;
-  if (tryCombineIndexedLoadStore(MI))
-    return true;
-  return false;
+
+  // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute
+  // as long as we don't already have a constant on the RHS.
+  if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
+    return false;
+  return MRI.getVRegDef(RHS)->getOpcode() !=
+             TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
+         !getIConstantVRegVal(RHS, MRI);
+}
+
+bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  std::optional<FPValueAndVReg> ValAndVReg;
+  if (!mi_match(LHS, MRI, m_GFCstOrSplat(ValAndVReg)))
+    return false;
+  return !mi_match(RHS, MRI, m_GFCstOrSplat(ValAndVReg));
+}
+
+void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
+  Observer.changingInstr(MI);
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  MI.getOperand(1).setReg(RHSReg);
+  MI.getOperand(2).setReg(LHSReg);
+  Observer.changedInstr(MI);
 }

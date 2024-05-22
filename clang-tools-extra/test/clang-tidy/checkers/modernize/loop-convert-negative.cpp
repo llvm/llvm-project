@@ -5,6 +5,22 @@
 // CHECK-FIXES-NOT: for ({{.*[^:]:[^:].*}})
 // CHECK-MESSAGES-NOT: modernize-loop-convert
 
+namespace somenamespace {
+  template <class T> auto begin(T& t) -> decltype(t.begin());
+  template <class T> auto begin(const T& t) -> decltype(t.begin());
+  template <class T> auto end(T& t) -> decltype(t.end());
+  template <class T> auto end(const T& t) -> decltype(t.end());
+  template <class T> auto size(const T& t) -> decltype(t.size());
+} // namespace somenamespace
+
+struct SomeClass {
+  template <class T> static auto begin(T& t) -> decltype(t.begin());
+  template <class T> static auto begin(const T& t) -> decltype(t.begin());
+  template <class T> static auto end(T& t) -> decltype(t.end());
+  template <class T> static auto end(const T& t) -> decltype(t.end());
+  template <class T> static auto size(const T& t) -> decltype(t.size());
+};
+
 namespace Negative {
 
 const int N = 6;
@@ -92,7 +108,7 @@ void multipleArrays() {
   }
 }
 
-}
+} // namespace Negative
 
 namespace NegativeIterator {
 
@@ -103,6 +119,10 @@ U Tu;
 struct BadBeginEnd : T {
   iterator notBegin();
   iterator notEnd();
+  iterator begin(int);
+  iterator end(int);
+  iterator begin();
+  iterator end();
 };
 
 void notBeginOrEnd() {
@@ -111,6 +131,9 @@ void notBeginOrEnd() {
     int K = *I;
 
   for (T::iterator I = Bad.begin(), E = Bad.notEnd();  I != E; ++I)
+    int K = *I;
+
+  for (T::iterator I = Bad.begin(0), E = Bad.end(0);  I != E; ++I)
     int K = *I;
 }
 
@@ -202,6 +225,8 @@ void differentContainers() {
   T Other;
   for (T::iterator I = Tt.begin(), E = Other.end();  I != E; ++I)
     int K = *I;
+  for (T::iterator I = begin(Tt), E = end(Other);  I != E; ++I)
+    int K = *I;
 
   for (T::iterator I = Other.begin(), E = Tt.end();  I != E; ++I)
     int K = *I;
@@ -212,6 +237,24 @@ void differentContainers() {
 
   for (S::iterator I = OtherS.begin(), E = Ss.end();  I != E; ++I)
     MutableVal K = *I;
+}
+
+void mixedMemberAndADL() {
+  for (T::iterator I = Tt.begin(), E = end(Tt);  I != E; ++I)
+    int K = *I;
+  for (T::iterator I = begin(Tt), E = Tt.end();  I != E; ++I)
+    int K = *I;
+  for (T::iterator I = std::begin(Tt), E = Tt.end();  I != E; ++I)
+    int K = *I;
+  for (T::iterator I = std::begin(Tt), E = end(Tt);  I != E; ++I)
+    int K = *I;
+}
+
+void nonADLOrStdCalls() {
+  for (T::iterator I = SomeClass::begin(Tt), E = SomeClass::end(Tt);  I != E; ++I)
+    int K = *I;
+  for (T::iterator I = somenamespace::begin(Tt), E = somenamespace::end(Tt);  I != E; ++I)
+    int K = *I;
 }
 
 void wrongIterators() {
@@ -377,6 +420,13 @@ void wrongEnd() {
   int Bad;
   for (int I = 0, E = V.size(); I < Bad; ++I)
     Sum += V[I];
+}
+
+void nonADLOrStdCalls() {
+  for (int I = 0, E = somenamespace::size(V); E != I; ++I)
+    printf("Fibonacci number is %d\n", V[I]);
+  for (int I = 0, E = SomeClass::size(V); E != I; ++I)
+    printf("Fibonacci number is %d\n", V[I]);
 }
 
 // Checks to see that non-const member functions are not called on the container

@@ -47,7 +47,7 @@ public:
     SpecialMemberFunctionKind FunctionKind;
     bool IsDeleted;
 
-    bool operator==(const SpecialMemberFunctionData &Other) {
+    bool operator==(const SpecialMemberFunctionData &Other) const {
       return (Other.FunctionKind == FunctionKind) &&
              (Other.IsDeleted == IsDeleted);
     }
@@ -62,7 +62,7 @@ public:
 private:
   void checkForMissingMembers(
       const ClassDefId &ID,
-      llvm::ArrayRef<SpecialMemberFunctionData> DefinedSpecialMembers);
+      llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers);
 
   const bool AllowMissingMoveFunctions;
   const bool AllowSoleDefaultDtor;
@@ -83,13 +83,13 @@ struct DenseMapInfo<
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
   static inline ClassDefId getEmptyKey() {
-    return ClassDefId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                      "EMPTY");
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                      "EMPTY"};
   }
 
   static inline ClassDefId getTombstoneKey() {
-    return ClassDefId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                      "TOMBSTONE");
+    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                      "TOMBSTONE"};
   }
 
   static unsigned getHashValue(ClassDefId Val) {

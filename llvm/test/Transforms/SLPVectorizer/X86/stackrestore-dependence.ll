@@ -4,13 +4,13 @@
 ; The test checks that loads should not be moved below a stackrestore boundary.
 define void @stackrestore1(ptr %out) {
 ; CHECK-LABEL: @stackrestore1(
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[LOCAL_ALLOCA:%.*]] = alloca [16 x i8], align 4
 ; CHECK-NEXT:    store <4 x float> <float 0x3FF3333340000000, float 0x3FF3333340000000, float 0x3FF3333340000000, float 0x3FF3333340000000>, ptr [[LOCAL_ALLOCA]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[LOCAL_ALLOCA]], align 4
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %stack = call ptr @llvm.stacksave()

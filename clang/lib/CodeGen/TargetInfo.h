@@ -81,6 +81,9 @@ public:
       CodeGen::CodeGenModule &CGM,
       const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {}
 
+  /// Provides a convenient hook to handle extra target-specific globals.
+  virtual void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const {}
+
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,

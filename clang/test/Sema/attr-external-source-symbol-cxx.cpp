@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -fdouble-square-bracket-attributes %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
 
 template<class T>
 class Class {

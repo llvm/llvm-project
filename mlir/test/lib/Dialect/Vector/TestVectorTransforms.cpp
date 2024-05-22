@@ -55,6 +55,7 @@ struct TestVectorToVectorLowering
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
 
   Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),
@@ -419,6 +420,25 @@ struct TestVectorReduceToContractPatternsPatterns
   }
 };
 
+struct TestVectorChainedReductionFoldingPatterns
+    : public PassWrapper<TestVectorChainedReductionFoldingPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorChainedReductionFoldingPatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-chained-reduction-folding-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to fold chained vector reductions";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateChainedVectorReductionFoldingPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestFlattenVectorTransferPatterns
     : public PassWrapper<TestFlattenVectorTransferPatterns,
                          OperationPass<func::FuncOp>> {
@@ -434,6 +454,8 @@ struct TestFlattenVectorTransferPatterns
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
+    registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -547,6 +569,11 @@ struct TestVectorDistribution
       llvm::cl::desc("Test distribution of transfer write"),
       llvm::cl::init(false)};
 
+  Option<unsigned> maxTransferWriteElements{
+      *this, "max-transfer-write-elements",
+      llvm::cl::desc("Maximum number of transfer write elements to distribute"),
+      llvm::cl::init(1)};
+
   Option<bool> hoistUniform{*this, "hoist-uniform",
                             llvm::cl::desc("Test hoist uniform"),
                             llvm::cl::init(false)};
@@ -593,12 +620,20 @@ struct TestVectorDistribution
                          .getResult(0);
       return result;
     };
-    if (distributeTransferWriteOps) {
+    if (distributeTransferWriteOps && propagateDistribution) {
       RewritePatternSet patterns(ctx);
-      populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
+      vector::populatePropagateWarpVectorDistributionPatterns(
+          patterns, distributionFn, shuffleFn, /*benefit=*/1,
+          /*readBenefit=*/0);
+      vector::populateDistributeReduction(patterns, warpReduction, 1);
+      populateDistributeTransferWriteOpPatterns(patterns, distributionFn, 2);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    }
-    if (propagateDistribution) {
+    } else if (distributeTransferWriteOps) {
+      RewritePatternSet patterns(ctx);
+      populateDistributeTransferWriteOpPatterns(patterns, distributionFn,
+                                                maxTransferWriteElements);
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    } else if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(
           patterns, distributionFn, shuffleFn);
@@ -680,7 +715,8 @@ struct TestCreateVectorBroadcast
       auto targetShape =
           cast<VectorType>(op->getResult(0).getType()).getShape();
       auto arrayAttr =
-          cast<DenseI64ArrayAttr>(op->getAttr("broadcast_dims")).asArrayRef();
+          cast<DenseI64ArrayAttr>(op->getDiscardableAttr("broadcast_dims"))
+              .asArrayRef();
       llvm::SetVector<int64_t> broadcastedDims;
       broadcastedDims.insert(arrayAttr.begin(), arrayAttr.end());
       OpBuilder b(op);
@@ -741,6 +777,31 @@ struct TestFoldArithExtensionIntoVectorContractPatterns
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestVectorEmulateMaskedLoadStore final
+    : public PassWrapper<TestVectorEmulateMaskedLoadStore,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorEmulateMaskedLoadStore)
+
+  StringRef getArgument() const override {
+    return "test-vector-emulate-masked-load-store";
+  }
+  StringRef getDescription() const override {
+    return "Test patterns that emulate the maskedload/maskedstore op by "
+           " memref.load/store and scf.if";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
+                scf::SCFDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorMaskedLoadStoreEmulationPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -764,6 +825,8 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
+  PassRegistration<TestVectorChainedReductionFoldingPatterns>();
+
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
   PassRegistration<TestVectorScanLowering>();
@@ -779,6 +842,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorGatherLowering>();
 
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
+
+  PassRegistration<TestVectorEmulateMaskedLoadStore>();
 }
 } // namespace test
 } // namespace mlir

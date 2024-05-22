@@ -13,7 +13,7 @@
 
 extern "C" int main(int argc, char **argv, char **envp);
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The AMDGPU architecture provides a fixed frequency clock used for obtaining
 // real time. However, the frequency of this clock varies between cards and can
@@ -37,25 +37,20 @@ static void call_init_array_callbacks(int argc, char **argv, char **env) {
 
 static void call_fini_array_callbacks() {
   size_t fini_array_size = __fini_array_end - __fini_array_start;
-  for (size_t i = 0; i < fini_array_size; ++i)
-    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+  for (size_t i = fini_array_size; i > 0; --i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
-_begin(int argc, char **argv, char **env, void *rpc_shared_buffer) {
-  // We need to set up the RPC client first in case any of the constructors
-  // require it.
-  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::DEFAULT_PORT_COUNT,
-                                 rpc_shared_buffer);
-
+_begin(int argc, char **argv, char **env) {
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
   // callbacks.
-  __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
-  __llvm_libc::call_init_array_callbacks(argc, argv, env);
+  LIBC_NAMESPACE::atexit(&LIBC_NAMESPACE::call_fini_array_callbacks);
+  LIBC_NAMESPACE::call_init_array_callbacks(argc, argv, env);
 }
 
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
@@ -70,5 +65,5 @@ _end(int retval) {
   // Only a single thread should call `exit` here, the rest should gracefully
   // return from the kernel. This is so only one thread calls the destructors
   // registred with 'atexit' above.
-  __llvm_libc::exit(retval);
+  LIBC_NAMESPACE::exit(retval);
 }

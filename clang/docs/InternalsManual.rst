@@ -477,9 +477,8 @@ mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.
 Then ``-verify`` compares the list of produced diagnostics to the list of
 expected ones.  If they disagree, it prints out its own output.  Full
-documentation for the ``-verify`` mode can be found in the Clang API
-documentation for `VerifyDiagnosticConsumer
-</doxygen/classclang_1_1VerifyDiagnosticConsumer.html#details>`_.
+documentation for the ``-verify`` mode can be found at
+:ref:`verifying-diagnostics`.
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
@@ -663,9 +662,11 @@ Then, specify additional attributes via mix-ins:
 * ``HelpText`` holds the text that will be printed besides the option name when
   the user requests help (e.g. via ``clang --help``).
 * ``Group`` specifies the "category" of options this option belongs to. This is
-  used by various tools to filter certain options of interest.
-* ``Flags`` may contain a number of "tags" associated with the option. This
-  enables more granular filtering than the ``Group`` attribute.
+  used by various tools to categorize and sometimes filter options.
+* ``Flags`` may contain "tags" associated with the option. These may affect how
+  the option is rendered, or if it's hidden in some contexts.
+* ``Visibility`` should be used to specify the drivers in which a particular
+  option would be available. This attribute will impact tool --help
 * ``Alias`` denotes that the option is an alias of another option. This may be
   combined with ``AliasArgs`` that holds the implied value.
 
@@ -674,12 +675,14 @@ Then, specify additional attributes via mix-ins:
     // Options.td
 
     def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
-  +   Group<f_Group>, Flags<[CC1Option]>,
+  +   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   +   HelpText<"Load pass plugin from a dynamic shared object file.">;
 
-New options are recognized by the Clang driver unless marked with the
-``NoDriverOption`` flag. On the other hand, options intended for the ``-cc1``
-frontend must be explicitly marked with the ``CC1Option`` flag.
+New options are recognized by the ``clang`` driver mode if ``Visibility`` is
+not specified or contains ``ClangOption``. Options intended for ``clang -cc1``
+must be explicitly marked with the ``CC1Option`` flag. Flags that specify
+``CC1Option`` but not ``ClangOption`` will only be accessible via ``-cc1``.
+This is similar for other driver modes, such as ``clang-cl`` or ``flang``.
 
 Next, parse (or manufacture) the command line arguments in the Clang driver and
 use them to construct the ``-cc1`` job:
@@ -874,7 +877,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
+  def fignore_exceptions : Flag<["-"], "fignore-exceptions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
 
 **Negative Flag**
@@ -884,7 +888,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
+  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 
 **Negative and Positive Flag**
@@ -898,9 +903,9 @@ line.
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
-    PosFlag<SetTrue, [], "Use the legacy pass manager in LLVM">,
-    NegFlag<SetFalse, [], "Use the new pass manager in LLVM">,
-    BothFlags<[CC1Option]>>;
+    PosFlag<SetTrue, [], [], "Use the legacy pass manager in LLVM">,
+    NegFlag<SetFalse, [], [], "Use the new pass manager in LLVM">,
+    BothFlags<[], [ClangOption, CC1Option]>>;
 
 With most such pair of flags, the ``-cc1`` frontend accepts only the flag that
 changes the default key path value. The Clang driver is responsible for
@@ -912,10 +917,11 @@ full names of both flags. The positive flag would then be named
 ``flegacy-pass-manager`` and the negative ``fno-legacy-pass-manager``.
 ``BoolOption`` also implies the ``-`` prefix for both flags. It's also possible
 to use ``BoolFOption`` that implies the ``"f"`` prefix and ``Group<f_Group>``.
-The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value, an
-array of elements passed to the ``Flag`` class and the help text. The optional
-``BothFlags`` class holds an array of ``Flag`` elements that are common for both
-the positive and negative flag and their common help text suffix.
+The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value,
+arrays of elements passed to the ``Flag`` and ``Visibility`` classes and the
+help text. The optional ``BothFlags`` class holds arrays of ``Flag`` and
+``Visibility`` elements that are common for both the positive and negative flag
+and their common help text suffix.
 
 **String**
 
@@ -924,7 +930,8 @@ the option appears on the command line, the argument value is simply copied.
 
 .. code-block:: text
 
-  def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
+  def isysroot : JoinedOrSeparate<["-"], "isysroot">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -935,7 +942,8 @@ vector.
 
 .. code-block:: text
 
-  def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
+  def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
 
 **Integer**
@@ -946,7 +954,8 @@ and the result is assigned to the key path on success.
 
 .. code-block:: text
 
-  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
+  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
@@ -963,7 +972,8 @@ comma-separated string values and elements of the array within
 
 .. code-block:: text
 
-  def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
+  def mthread_model : Separate<["-"], "mthread-model">,
+    Visibility<[ClangOption, CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
     MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
@@ -983,7 +993,8 @@ Finally, the command line is parsed according to the primary annotation.
 
 .. code-block:: text
 
-  def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
+  def fms_extensions : Flag<["-"], "fms-extensions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
     ImpliedByAnyOf<[fms_compatibility.KeyPath], "true">;
 
@@ -994,7 +1005,8 @@ true.
 
 .. code-block:: text
 
-  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
+  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
     ShouldParseIf<fopenmp.KeyPath>;
 
@@ -2863,7 +2875,7 @@ are created implicitly. The following spellings are accepted:
                       syntax and placement.
   ``CXX11``           Spelled with a C++-style ``[[attr]]`` syntax with an
                       optional vendor-specific namespace.
-  ``C2x``             Spelled with a C-style ``[[attr]]`` syntax with an
+  ``C23``             Spelled with a C-style ``[[attr]]`` syntax with an
                       optional vendor-specific namespace.
   ``Declspec``        Spelled with a Microsoft-style ``__declspec(attr)``
                       syntax.
@@ -2895,7 +2907,7 @@ are created implicitly. The following spellings are accepted:
 
 The C++ standard specifies that “any [non-standard attribute] that is not
 recognized by the implementation is ignored” (``[dcl.attr.grammar]``).
-The rule for C is similar. This makes ``CXX11`` and ``C2x`` spellings
+The rule for C is similar. This makes ``CXX11`` and ``C23`` spellings
 unsuitable for attributes that affect the type system, that change the
 binary interface of the code, or that have other similar semantic meaning.
 
@@ -3295,6 +3307,175 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
+
+Testing
+-------
+All functional changes to Clang should come with test coverage demonstrating
+the change in behavior.
+
+.. _verifying-diagnostics:
+
+Verifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^
+Clang ``-cc1`` supports the ``-verify`` command line option as a way to
+validate diagnostic behavior. This option will use special comments within the
+test file to verify that expected diagnostics appear in the correct source
+locations. If all of the expected diagnostics match the actual output of Clang,
+then the invocation will return normally. If there are discrepancies between
+the expected and actual output, Clang will emit detailed information about
+which expected diagnostics were not seen or which unexpected diagnostics were
+seen, etc. A complete example is:
+
+.. code-block: c++
+
+  // RUN: %clang_cc1 -verify %s
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+If the test is run and the expected error is emitted on the expected line, the
+diagnostic verifier will pass. However, if the expected error does not appear
+or appears in a different location than expected, or if additional diagnostics
+appear, the diagnostic verifier will fail and emit information as to why.
+
+The ``-verify`` command optionally accepts a comma-delimited list of one or
+more verification prefixes that can be used to craft those special comments.
+Each prefix must start with a letter and contain only alphanumeric characters,
+hyphens, and underscores. ``-verify`` by itself is equivalent to
+``-verify=expected``, meaning that special comments will start with
+``expected``. Using different prefixes makes it easier to have separate
+``RUN:`` lines in the same test file which result in differing diagnostic
+behavior. For example:
+
+.. code-block:: c++
+
+  // RUN: %clang_cc1 -verify=foo,bar %s
+
+  int A = B; // foo-error {{use of undeclared identifier 'B'}}
+  int C = D; // bar-error {{use of undeclared identifier 'D'}}
+  int E = F; // expected-error {{use of undeclared identifier 'F'}}
+
+The verifier will recognize ``foo-error`` and ``bar-error`` as special comments
+but will not recognize ``expected-error`` as one because the ``-verify`` line
+does not contain that as a prefix. Thus, this test would fail verification
+because an unexpected diagnostic would appear on the declaration of ``E``.
+
+Multiple occurrences accumulate prefixes.  For example,
+``-verify -verify=foo,bar -verify=baz`` is equivalent to
+``-verify=expected,foo,bar,baz``.
+
+Specifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^^
+Indicating that a line expects an error or a warning is simple. Put a comment
+on the line that has the diagnostic, use
+``expected-{error,warning,remark,note}`` to tag if it's an expected error,
+warning, remark, or note (respectively), and place the expected text between
+``{{`` and ``}}`` markers. The full text doesn't have to be included, only
+enough to ensure that the correct diagnostic was emitted. (Note: full text
+should be included in test cases unless there is a compelling reason to use
+truncated text instead.)
+
+Here's an example of the most commonly used way to specify expected
+diagnostics:
+
+.. code-block:: c++
+
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+You can place as many diagnostics on one line as you wish. To make the code
+more readable, you can use slash-newline to separate out the diagnostics.
+
+Alternatively, it is possible to specify the line on which the diagnostic
+should appear by appending ``@<line>`` to ``expected-<type>``, for example:
+
+.. code-block:: c++
+
+  #warning some text
+  // expected-warning@10 {{some text}}
+
+The line number may be absolute (as above), or relative to the current line by
+prefixing the number with either ``+`` or ``-``.
+
+If the diagnostic is generated in a separate file, for example in a shared
+header file, it may be beneficial to be able to declare the file in which the
+diagnostic will appear, rather than placing the ``expected-*`` directive in the
+actual file itself. This can be done using the following syntax:
+
+.. code-block:: c++
+
+  // expected-error@path/include.h:15 {{error message}}
+
+The path can be absolute or relative and the same search paths will be used as
+for ``#include`` directives. The line number in an external file may be
+substituted with ``*`` meaning that any line number will match (useful where
+the included file is, for example, a system header where the actual line number
+may change and is not critical).
+
+As an alternative to specifying a fixed line number, the location of a
+diagnostic can instead be indicated by a marker of the form ``#<marker>``.
+Markers are specified by including them in a comment, and then referenced by
+appending the marker to the diagnostic with ``@#<marker>``, as with:
+
+.. code-block:: c++
+
+  #warning some text  // #1
+  // ... other code ...
+  // expected-warning@#1 {{some text}}
+
+The name of a marker used in a directive must be unique within the compilation.
+
+The simple syntax above allows each specification to match exactly one
+diagnostic. You can use the extended syntax to customize this. The extended
+syntax is ``expected-<type> <n> {{diag text}}``, where ``<type>`` is one of
+``error``, ``warning``, ``remark``, or ``note``, and ``<n>`` is a positive
+integer. This allows the diagnostic to appear as many times as specified. For
+example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 2 {{previous declaration is here}}
+
+Where the diagnostic is expected to occur a minimum number of times, this can
+be specified by appending a ``+`` to the number. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0+ {{previous declaration is here}}
+  void g(); // expected-note 1+ {{previous declaration is here}}
+
+In the first example, the diagnostic becomes optional, i.e. it will be
+swallowed if it occurs, but will not generate an error if it does not occur. In
+the second example, the diagnostic must occur at least once. As a short-hand,
+"one or more" can be specified simply by ``+``. For example:
+
+.. code-block:: c++
+
+  void g(); // expected-note + {{previous declaration is here}}
+
+A range can also be specified by ``<n>-<m>``. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0-1 {{previous declaration is here}}
+
+In this example, the diagnostic may appear only once, if at all.
+
+Regex matching mode may be selected by appending ``-re`` to the diagnostic type
+and including regexes wrapped in double curly braces in the directive, such as:
+
+.. code-block:: text
+
+  expected-error-re {{format specifies type 'wchar_t **' (aka '{{.+}}')}}
+
+Examples matching error: "variable has incomplete type 'struct s'"
+
+.. code-block:: c++
+
+  // expected-error {{variable has incomplete type 'struct s'}}
+  // expected-error {{variable has incomplete type}}
+
+  // expected-error-re {{variable has type 'struct {{.}}'}}
+  // expected-error-re {{variable has type 'struct {{.*}}'}}
+  // expected-error-re {{variable has type 'struct {{(.*)}}'}}
+  // expected-error-re {{variable has type 'struct{{[[:space:]](.*)}}'}}
 
 Feature Test Macros
 ===================

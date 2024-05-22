@@ -22,10 +22,11 @@ Features
   machine, you can expect that LLD runs more than twice as fast as the GNU
   gold linker. Your mileage may vary, though.
 
-- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon, MIPS
-  32/64 big/little-endian, PowerPC, PowerPC64, RISC-V, SPARC V9, x86-32 and
-  x86-64. Among these, AArch64, ARM (>= v4), PowerPC, PowerPC64, RISC-V, x86-32
-  and x86-64 have production quality. MIPS seems decent too.
+- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon,
+  LoongArch, MIPS 32/64 big/little-endian, PowerPC, PowerPC64, RISC-V,
+  SPARC V9, x86-32 and x86-64. Among these, AArch64, ARM (>= v4), LoongArch,
+  PowerPC, PowerPC64, RISC-V, x86-32 and x86-64 have production quality.
+  MIPS seems decent too.
 
 - It is always a cross-linker, meaning that it always supports all the
   above targets however it was built. In fact, we don't provide a

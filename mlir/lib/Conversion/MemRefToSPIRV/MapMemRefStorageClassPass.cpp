@@ -20,7 +20,7 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -205,7 +205,7 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
 static bool isLegalType(Type type) {
   if (auto memRefType = dyn_cast<BaseMemRefType>(type)) {
     Attribute spaceAttr = memRefType.getMemorySpace();
-    return spaceAttr && isa<spirv::StorageClassAttr>(spaceAttr);
+    return isa_and_nonnull<spirv::StorageClassAttr>(spaceAttr);
   }
   return true;
 }

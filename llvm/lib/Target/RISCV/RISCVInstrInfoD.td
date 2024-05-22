@@ -54,12 +54,12 @@ def FPR64IN32X : RegisterOperand<GPRPF64> {
   let ParserMatchClass = GPRPF64AsFPR;
 }
 
-def DExt       : ExtInfo<"", "", [HasStdExtD], FPR64, FPR32, FPR64, ?>;
+def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
 
 def ZdinxExt   : ExtInfo<"_INX", "RVZfinx", [HasStdExtZdinx, IsRV64],
-                         FPR64INX, FPR32INX, FPR64INX, ?>;
+                         f64, FPR64INX, FPR32INX, FPR64INX, ?>;
 def Zdinx32Ext : ExtInfo<"_IN32X", "RV32Zdinx", [HasStdExtZdinx, IsRV32],
-                         FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
+                         f64, FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
 
 defvar DExts     = [DExt, ZdinxExt, Zdinx32Ext];
 defvar DExtsRV64 = [DExt, ZdinxExt];
@@ -78,7 +78,7 @@ def FSD : FPStore_r<0b011, "fsd", FPR64, WriteFST64>;
 } // Predicates = [HasStdExtD]
 
 foreach Ext = DExts in {
-  let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64] in {
+  let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64Addend] in {
     defm FMADD_D  : FPFMA_rrr_frm_m<OPC_MADD,  0b01, "fmadd.d",  Ext>;
     defm FMSUB_D  : FPFMA_rrr_frm_m<OPC_MSUB,  0b01, "fmsub.d",  Ext>;
     defm FNMSUB_D : FPFMA_rrr_frm_m<OPC_NMSUB, 0b01, "fnmsub.d", Ext>;
@@ -86,11 +86,11 @@ foreach Ext = DExts in {
   }
 
   let SchedRW = [WriteFAdd64, ReadFAdd64, ReadFAdd64] in {
-    defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", Ext, /*Commutable*/1>;
+    defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", Ext, Commutable=1>;
     defm FSUB_D : FPALU_rr_frm_m<0b0000101, "fsub.d", Ext>;
   }
   let SchedRW = [WriteFMul64, ReadFMul64, ReadFMul64] in
-  defm FMUL_D : FPALU_rr_frm_m<0b0001001, "fmul.d", Ext, /*Commutable*/1>;
+  defm FMUL_D : FPALU_rr_frm_m<0b0001001, "fmul.d", Ext, Commutable=1>;
 
   let SchedRW = [WriteFDiv64, ReadFDiv64, ReadFDiv64] in
   defm FDIV_D : FPALU_rr_frm_m<0b0001101, "fdiv.d", Ext>;
@@ -107,20 +107,20 @@ foreach Ext = DExts in {
   }
 
   let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
-    defm FMIN_D   : FPALU_rr_m<0b0010101, 0b000, "fmin.d", Ext, /*Commutable*/1>;
-    defm FMAX_D   : FPALU_rr_m<0b0010101, 0b001, "fmax.d", Ext, /*Commutable*/1>;
+    defm FMIN_D   : FPALU_rr_m<0b0010101, 0b000, "fmin.d", Ext, Commutable=1>;
+    defm FMAX_D   : FPALU_rr_m<0b0010101, 0b001, "fmax.d", Ext, Commutable=1>;
   }
 
   defm FCVT_S_D : FPUnaryOp_r_frm_m<0b0100000, 0b00001, Ext, Ext.F32Ty,
                                     Ext.PrimaryTy, "fcvt.s.d">,
                   Sched<[WriteFCvtF64ToF32, ReadFCvtF64ToF32]>;
 
-  defm FCVT_D_S : FPUnaryOp_r_m<0b0100001, 0b00000, 0b000, Ext, Ext.PrimaryTy,
-                                Ext.F32Ty, "fcvt.d.s">,
+  defm FCVT_D_S : FPUnaryOp_r_frmlegacy_m<0b0100001, 0b00000, Ext, Ext.PrimaryTy,
+                                          Ext.F32Ty, "fcvt.d.s">,
                   Sched<[WriteFCvtF32ToF64, ReadFCvtF32ToF64]>;
 
   let SchedRW = [WriteFCmp64, ReadFCmp64, ReadFCmp64] in {
-    defm FEQ_D : FPCmp_rr_m<0b1010001, 0b010, "feq.d", Ext, /*Commutable*/1>;
+    defm FEQ_D : FPCmp_rr_m<0b1010001, 0b010, "feq.d", Ext, Commutable=1>;
     defm FLT_D : FPCmp_rr_m<0b1010001, 0b001, "flt.d", Ext>;
     defm FLE_D : FPCmp_rr_m<0b1010001, 0b000, "fle.d", Ext>;
   }
@@ -140,12 +140,12 @@ foreach Ext = DExts in {
                                      "fcvt.wu.d">,
                    Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 
-  defm FCVT_D_W : FPUnaryOp_r_m<0b1101001, 0b00000, 0b000, Ext, Ext.PrimaryTy, GPR,
-                                "fcvt.d.w">,
+  defm FCVT_D_W : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00000, Ext, Ext.PrimaryTy, GPR,
+                                          "fcvt.d.w">,
                   Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 
-  defm FCVT_D_WU : FPUnaryOp_r_m<0b1101001, 0b00001, 0b000, Ext, Ext.PrimaryTy, GPR,
-                                 "fcvt.d.wu">,
+  defm FCVT_D_WU : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00001, Ext, Ext.PrimaryTy, GPR,
+                                           "fcvt.d.wu">,
                    Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 } // foreach Ext = DExts
 
@@ -240,7 +240,7 @@ let Predicates = [HasStdExtD] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64:$rs1), (FCVT_S_D FPR64:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
+def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV64] in {
@@ -248,7 +248,7 @@ let Predicates = [HasStdExtZdinx, IsRV64] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64INX:$rs1), (FCVT_S_D_INX FPR64INX:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_INX FPR32INX:$rs1)>;
+def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_INX FPR32INX:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
@@ -256,7 +256,7 @@ let Predicates = [HasStdExtZdinx, IsRV32] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64IN32X:$rs1), (FCVT_S_D_IN32X FPR64IN32X:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_IN32X FPR32INX:$rs1)>;
+def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_IN32X FPR32INX:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
 // [u]int<->double conversion patterns must be gated on IsRV32 or IsRV64, so
@@ -277,11 +277,12 @@ def : Pat<(any_fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, FRM_DYN)>;
 def : Pat<(fneg FPR64:$rs1), (FSGNJN_D $rs1, $rs1)>;
 def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
 
-def : Pat<(riscv_fpclass FPR64:$rs1), (FCLASS_D $rs1)>;
+def : Pat<(riscv_fclass FPR64:$rs1), (FCLASS_D $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D, FPR64>;
+def : PatFprFpr<fcopysign, FSGNJ_D, FPR64, f64>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
-def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2))>;
+def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2,
+                                                              FRM_RNE))>;
 def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
                                                               FRM_DYN))>;
 
@@ -312,13 +313,13 @@ def : Pat<(any_fsqrt FPR64INX:$rs1), (FSQRT_D_INX FPR64INX:$rs1, FRM_DYN)>;
 def : Pat<(fneg FPR64INX:$rs1), (FSGNJN_D_INX $rs1, $rs1)>;
 def : Pat<(fabs FPR64INX:$rs1), (FSGNJX_D_INX $rs1, $rs1)>;
 
-def : Pat<(riscv_fpclass FPR64INX:$rs1), (FCLASS_D_INX $rs1)>;
+def : Pat<(riscv_fclass FPR64INX:$rs1), (FCLASS_D_INX $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX>;
+def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
           (FSGNJN_D_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2))>;
+          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_INX $rs2, FRM_DYN))>;
 
@@ -349,13 +350,13 @@ def : Pat<(any_fsqrt FPR64IN32X:$rs1), (FSQRT_D_IN32X FPR64IN32X:$rs1, FRM_DYN)>
 def : Pat<(fneg FPR64IN32X:$rs1), (FSGNJN_D_IN32X $rs1, $rs1)>;
 def : Pat<(fabs FPR64IN32X:$rs1), (FSGNJX_D_IN32X $rs1, $rs1)>;
 
-def : Pat<(riscv_fpclass FPR64IN32X:$rs1), (FCLASS_D_IN32X $rs1)>;
+def : Pat<(riscv_fclass FPR64IN32X:$rs1), (FCLASS_D_IN32X $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X>;
+def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X, f64>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, (fneg FPR64IN32X:$rs2)),
           (FSGNJN_D_IN32X $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_INX $rs2))>;
+          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64IN32X:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_IN32X $rs2, FRM_DYN))>;
 
@@ -386,6 +387,8 @@ def : Pat<(fneg (any_fma_nsz FPR64IN32X:$rs1, FPR64IN32X:$rs2, FPR64IN32X:$rs3))
 foreach Ext = DExts in {
   defm : PatFprFpr_m<fminnum, FMIN_D, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_D, Ext>;
+  defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
+  defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
 }
 
 /// Setcc
@@ -394,12 +397,12 @@ foreach Ext = DExts in {
 
 // Match non-signaling FEQ_D
 foreach Ext = DExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext, f64>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext, f64>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext>;
 }
 
 let Predicates = [HasStdExtD] in {
@@ -465,7 +468,7 @@ def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLE, FLE_D_IN32X, f64>;
 let Predicates = [HasStdExtD] in {
 defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64, f64>;
 
-def PseudoFROUND_D : PseudoFROUND<FPR64>;
+def PseudoFROUND_D : PseudoFROUND<FPR64, f64>;
 
 /// Loads
 
@@ -494,7 +497,7 @@ def SplitF64Pseudo
 let Predicates = [HasStdExtZdinx, IsRV64] in {
 defm Select_FPR64INX : SelectCC_GPR_rrirr<FPR64INX, f64>;
 
-def PseudoFROUND_D_INX : PseudoFROUND<FPR64INX>;
+def PseudoFROUND_D_INX : PseudoFROUND<FPR64INX, f64>;
 
 /// Loads
 def : LdPat<load, LD, f64>;
@@ -506,7 +509,7 @@ def : StPat<store, SD, GPR, f64>;
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 defm Select_FPR64IN32X : SelectCC_GPR_rrirr<FPR64IN32X, f64>;
 
-def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X>;
+def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X, f64>;
 
 /// Loads
 let isCall = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in
@@ -535,7 +538,7 @@ def SplitF64Pseudo_INX
              [(set GPR:$dst1, GPR:$dst2, (RISCVSplitF64 FPR64IN32X:$src))]>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
-let Predicates = [HasStdExtD, IsRV32] in {
+let Predicates = [HasStdExtD] in {
 
 // double->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, FRM_RTZ)>;
@@ -552,9 +555,9 @@ def : Pat<(i32 (any_lrint FPR64:$rs1)), (FCVT_W_D $rs1, FRM_DYN)>;
 def : Pat<(i32 (any_lround FPR64:$rs1)), (FCVT_W_D $rs1, FRM_RMM)>;
 
 // [u]int->double.
-def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1)>;
-def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1)>;
-} // Predicates = [HasStdExtD, IsRV32]
+def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1, FRM_RNE)>;
+def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1, FRM_RNE)>;
+} // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 
@@ -573,8 +576,8 @@ def : Pat<(i32 (any_lrint FPR64IN32X:$rs1)), (FCVT_W_D_IN32X $rs1, FRM_DYN)>;
 def : Pat<(i32 (any_lround FPR64IN32X:$rs1)), (FCVT_W_D_IN32X $rs1, FRM_RMM)>;
 
 // [u]int->double.
-def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W_IN32X GPR:$rs1)>;
-def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU_IN32X GPR:$rs1)>;
+def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W_IN32X GPR:$rs1, FRM_RNE)>;
+def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU_IN32X GPR:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
 let Predicates = [HasStdExtD, IsRV64] in {
@@ -590,8 +593,8 @@ def : Pat<(riscv_any_fcvt_w_rv64 FPR64:$rs1, timm:$frm),  (FCVT_W_D $rs1, timm:$
 def : Pat<(riscv_any_fcvt_wu_rv64 FPR64:$rs1, timm:$frm), (FCVT_WU_D $rs1, timm:$frm)>;
 
 // [u]int32->fp
-def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
-def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
+def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1, FRM_RNE)>;
+def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1, FRM_RNE)>;
 
 // Saturating double->[u]int64.
 def : Pat<(i64 (riscv_fcvt_x FPR64:$rs1, timm:$frm)), (FCVT_L_D $rs1, timm:$frm)>;
@@ -627,8 +630,8 @@ def : Pat<(riscv_any_fcvt_w_rv64 FPR64INX:$rs1, timm:$frm),  (FCVT_W_D_INX $rs1,
 def : Pat<(riscv_any_fcvt_wu_rv64 FPR64INX:$rs1, timm:$frm), (FCVT_WU_D_INX $rs1, timm:$frm)>;
 
 // [u]int32->fp
-def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W_INX $rs1)>;
-def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU_INX $rs1)>;
+def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W_INX $rs1, FRM_RNE)>;
+def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU_INX $rs1, FRM_RNE)>;
 
 // Saturating double->[u]int64.
 def : Pat<(i64 (riscv_fcvt_x FPR64INX:$rs1, timm:$frm)), (FCVT_L_D_INX $rs1, timm:$frm)>;

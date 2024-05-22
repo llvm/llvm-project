@@ -323,6 +323,42 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   int_as_one = __builtin_elementwise_min(int_as_one, b);
 }
 
+void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
+                                  long long int i1, long long int i2, short si,
+                                  _BitInt(31) bi1, _BitInt(31) bi2) {
+  
+
+  // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
+  // CHECK-NEXT: call i64 @llvm.bitreverse.i64(i64 [[I1]])
+  i2 = __builtin_elementwise_bitreverse(i1);
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, ptr %vi1.addr, align 16
+  // CHECK-NEXT: call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[VI1]])
+  vi2 = __builtin_elementwise_bitreverse(vi1);
+
+  // CHECK:      [[CVI2:%.+]] = load <8 x i16>, ptr %cvi2, align 16
+  // CHECK-NEXT: call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[CVI2]])
+  const si8 cvi2 = vi2;
+  vi2 = __builtin_elementwise_bitreverse(cvi2);
+
+  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
+  // CHECK-NEXT: call i31 @llvm.bitreverse.i31(i31 [[BI1]])
+  bi2 = __builtin_elementwise_bitreverse(bi1);
+
+  // CHECK:      [[IA1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
+  // CHECK-NEXT: call i32 @llvm.bitreverse.i32(i32 [[IA1]])
+  b = __builtin_elementwise_bitreverse(int_as_one);
+
+  // CHECK:   call i32 @llvm.bitreverse.i32(i32 -10)
+  b = __builtin_elementwise_bitreverse(-10);
+
+  // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
+  // CHECK-NEXT: [[SI_EXT:%.+]] = sext i16 [[SI]] to i32
+  // CHECK-NEXT: [[RES:%.+]] = call i32 @llvm.bitreverse.i32(i32 [[SI_EXT]])
+  // CHECK-NEXT: = trunc i32 [[RES]] to i16
+  si = __builtin_elementwise_bitreverse(si);
+}
+
 void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
                                    float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_ceil(
@@ -452,6 +488,26 @@ void test_builtin_elementwise_log2(float f1, float f2, double d1, double d2,
   vf2 = __builtin_elementwise_log2(vf1);
 }
 
+void test_builtin_elementwise_pow(float f1, float f2, double d1, double d2,
+                                      float4 vf1, float4 vf2) {
+
+  // CHECK-LABEL: define void @test_builtin_elementwise_pow(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK:      [[F2:%.+]] = load float, ptr %f2.addr, align 4
+  // CHECK-NEXT:  call float @llvm.pow.f32(float [[F1]], float [[F2]])
+  f2 = __builtin_elementwise_pow(f1, f2);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK:      [[D2:%.+]] = load double, ptr %d2.addr, align 8
+  // CHECK-NEXT: call double @llvm.pow.f64(double [[D1]], double [[D2]])
+  d2 = __builtin_elementwise_pow(d1, d2);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK:      [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.pow.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
+  vf2 = __builtin_elementwise_pow(vf1, vf2);
+}
+
 void test_builtin_elementwise_roundeven(float f1, float f2, double d1, double d2,
                                         float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_roundeven(
@@ -530,6 +586,22 @@ void test_builtin_elementwise_sin(float f1, float f2, double d1, double d2,
   // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
   // CHECK-NEXT: call <4 x float> @llvm.sin.v4f32(<4 x float> [[VF1]])
   vf2 = __builtin_elementwise_sin(vf1);
+}
+
+void test_builtin_elementwise_sqrt(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_sqrt(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.sqrt.f32(float [[F1]])
+  f2 = __builtin_elementwise_sqrt(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.sqrt.f64(double [[D1]])
+  d2 = __builtin_elementwise_sqrt(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_sqrt(vf1);
 }
 
 void test_builtin_elementwise_trunc(float f1, float f2, double d1, double d2,

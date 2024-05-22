@@ -1,4 +1,5 @@
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 define dso_local i32 @_Z3fooi(i32 %a) !dbg !7 {
 entry:

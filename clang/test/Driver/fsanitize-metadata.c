@@ -1,7 +1,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fexperimental-sanitize-metadata=all -fno-experimental-sanitize-metadata=all %s -### 2>&1 | FileCheck %s
 // CHECK-NOT: -fexperimental-sanitize-metadata
 
-// RUN: %clang --target=x86_64-linux-gnu -fexperimental-sanitize-metadata=bad_arg %s -### 2>&1 | FileCheck -check-prefix=CHECK-INVALID %s
+// RUN: not %clang --target=x86_64-linux-gnu -fexperimental-sanitize-metadata=bad_arg %s -### 2>&1 | FileCheck -check-prefix=CHECK-INVALID %s
 // CHECK-INVALID: error: unsupported argument 'bad_arg' to option '-fexperimental-sanitize-metadata='
 
 // RUN: %clang --target=x86_64-linux-gnu -fexperimental-sanitize-metadata=covered %s -### 2>&1 | FileCheck -check-prefix=CHECK-COVERED %s

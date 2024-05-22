@@ -11,7 +11,6 @@ namespace test2 __attribute__((visibility("hidden"))) {
 
 #pragma GCC visibility pop // expected-error{{#pragma visibility pop with no matching #pragma visibility push}}
 
-// <rdar://problem/10871094>
 struct A {
   #pragma GCC visibility push(protected)
   #pragma GCC visibility pop

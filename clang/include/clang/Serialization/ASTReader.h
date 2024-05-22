@@ -38,6 +38,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PagedVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -199,7 +200,7 @@ public:
   /// \returns true to indicate the preprocessor options are invalid, or false
   /// otherwise.
   virtual bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                       bool Complain,
+                                       bool ReadMacros, bool Complain,
                                        std::string &SuggestedPredefines) {
     return false;
   }
@@ -274,7 +275,7 @@ public:
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool Complain,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -304,15 +305,13 @@ public:
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
                              bool Complain) override;
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
-
-private:
-  void Error(const char *Msg);
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -325,7 +324,8 @@ class SimpleASTReaderListener : public ASTReaderListener {
 public:
   SimpleASTReaderListener(Preprocessor &PP) : PP(PP) {}
 
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 };
 
@@ -485,7 +485,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the type with
   /// ID = (I + 1) << FastQual::Width has already been loaded
-  std::vector<QualType> TypesLoaded;
+  llvm::PagedVector<QualType> TypesLoaded;
 
   using GlobalTypeMapType =
       ContinuousRangeMap<serialization::TypeID, ModuleFile *, 4>;
@@ -499,7 +499,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the declaration with ID
   /// = I + 1 has already been loaded.
-  std::vector<Decl *> DeclsLoaded;
+  llvm::PagedVector<Decl *> DeclsLoaded;
 
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
@@ -937,7 +937,7 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
 
-public:
+private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
     SourceLocation ImportLoc;
@@ -946,7 +946,6 @@ public:
         : ID(ID), ImportLoc(ImportLoc) {}
   };
 
-private:
   /// A list of modules that were imported by precompiled headers or
   /// any other non-module AST file and have not yet been made visible. If a
   /// module is made visible in the ASTReader, it will be transfered to
@@ -1391,7 +1390,6 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
-  void readIncludedFiles(ModuleFile &F, StringRef Blob, Preprocessor &PP);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
@@ -1426,7 +1424,7 @@ private:
   RecordLocation TypeCursorForIndex(unsigned Index);
   void LoadedDecl(unsigned Index, Decl *D);
   Decl *ReadDeclRecord(serialization::DeclID ID);
-  void markIncompleteDeclChain(Decl *Canon);
+  void markIncompleteDeclChain(Decl *D);
 
   /// Returns the most recent declaration of a declaration (which must be
   /// of a redeclarable kind) that is either local or has already been loaded
@@ -1633,12 +1631,17 @@ public:
   /// capabilities, represented as a bitset of the enumerators of
   /// LoadFailureCapabilities.
   ///
-  /// \param Imported optional out-parameter to append the list of modules
-  /// that were imported by precompiled headers or any other non-module AST file
+  /// \param LoadedModuleFile The optional out-parameter refers to the new
+  /// loaded modules. In case the module specified by FileName is already
+  /// loaded, the module file pointer referred by NewLoadedModuleFile wouldn't
+  /// change. Otherwise if the AST file get loaded successfully,
+  /// NewLoadedModuleFile would refer to the address of the new loaded top level
+  /// module. The state of NewLoadedModuleFile is unspecified if the AST file
+  /// isn't loaded successfully.
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
-                        SmallVectorImpl<ImportedSubmodule> *Imported = nullptr);
+                        ModuleFile **NewLoadedModuleFile = nullptr);
 
   /// Make the entities in the given module and any of its (non-explicit)
   /// submodules visible to name lookup.
@@ -1816,7 +1819,7 @@ public:
   SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
-  HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
+  HeaderFileInfo GetHeaderFileInfo(FileEntryRef FE) override;
 
   void ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag);
 
@@ -2090,7 +2093,7 @@ public:
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
 
   void ReadWeakUndeclaredIdentifiers(
-           SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WI) override;
+      SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
 
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 
@@ -2148,6 +2151,12 @@ public:
 
   /// Read the source location entry with index ID.
   bool ReadSLocEntry(int ID) override;
+  /// Get the index ID for the loaded SourceLocation offset.
+  int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override;
+  /// Try to read the offset of the SLocEntry at the given index in the given
+  /// module file.
+  llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
+                                                        unsigned Index);
 
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.
@@ -2194,7 +2203,7 @@ public:
 
   /// Retrieve the global selector ID that corresponds to this
   /// the local selector ID in a given module.
-  serialization::SelectorID getGlobalSelectorID(ModuleFile &F,
+  serialization::SelectorID getGlobalSelectorID(ModuleFile &M,
                                                 unsigned LocalID) const;
 
   /// Read the contents of a CXXCtorInitializer array.
@@ -2374,6 +2383,13 @@ public:
   /// Loads comments ranges.
   void ReadComments() override;
 
+  /// Visit all the input file infos of the given module file.
+  void visitInputFileInfos(
+      serialization::ModuleFile &MF, bool IncludeSystem,
+      llvm::function_ref<void(const serialization::InputFileInfo &IFI,
+                              bool IsSystem)>
+          Visitor);
+
   /// Visit all the input files of the given module file.
   void visitInputFiles(serialization::ModuleFile &MF,
                        bool IncludeSystem, bool Complain,
@@ -2386,6 +2402,48 @@ public:
                                llvm::function_ref<void(FileEntryRef)> Visitor);
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
+};
+
+/// A simple helper class to unpack an integer to bits and consuming
+/// the bits in order.
+class BitsUnpacker {
+  constexpr static uint32_t BitsIndexUpbound = 32;
+
+public:
+  BitsUnpacker(uint32_t V) { updateValue(V); }
+  BitsUnpacker(const BitsUnpacker &) = delete;
+  BitsUnpacker(BitsUnpacker &&) = delete;
+  BitsUnpacker operator=(const BitsUnpacker &) = delete;
+  BitsUnpacker operator=(BitsUnpacker &&) = delete;
+  ~BitsUnpacker() = default;
+
+  void updateValue(uint32_t V) {
+    Value = V;
+    CurrentBitsIndex = 0;
+  }
+
+  bool getNextBit() {
+    assert(isValid());
+    return Value & (1 << CurrentBitsIndex++);
+  }
+
+  uint32_t getNextBits(uint32_t Width) {
+    assert(isValid());
+    assert(Width < BitsIndexUpbound);
+    uint32_t Ret = (Value >> CurrentBitsIndex) & ((1 << Width) - 1);
+    CurrentBitsIndex += Width;
+    return Ret;
+  }
+
+  bool canGetNextNBits(uint32_t Width) const {
+    return CurrentBitsIndex + Width < BitsIndexUpbound;
+  }
+
+private:
+  bool isValid() const { return CurrentBitsIndex < BitsIndexUpbound; }
+
+  uint32_t Value;
+  uint32_t CurrentBitsIndex = ~0;
 };
 
 } // namespace clang

@@ -506,11 +506,11 @@ if.end:                                           ; preds = %for.body, %if.else
 ;
 ; CHECK-32: mr 3, 4
 ; CHECK-32-NEXT: mr 5, 4
-; CHECK-32-NEXT: mr 6, 4
+; ENABLE-32-NEXT: stw 0, 72(1)
+; CHECK-32: mr 6, 4
 ; CHECK-32-NEXT: mr 7, 4
 ; CHECK-32-NEXT: mr 8, 4
 ; CHECK-32-NEXT: mr 9, 4
-; ENABLE-32-NEXT: stw 0, 72(1)
 ;
 ; CHECK-NEXT: bl {{.*}}someVariadicFunc
 ; CHECK: slwi 3, 3, 3

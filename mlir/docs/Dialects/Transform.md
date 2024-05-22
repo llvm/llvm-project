@@ -1,6 +1,6 @@
 # Transform Dialect
 
-Fine-grain transformation control dialect. See [../Tutorials/transform](tutorial) for more introductory information.
+Fine-grain transformation control dialect. See [tutorial](../Tutorials/transform) for more introductory information.
 
 [TOC]
 
@@ -63,6 +63,24 @@ Transform IR ops support operand values that are mapped to multiple payload
 objects. They usually apply the respective transformation for every mapped
 object ("batched execution"). Deviations from this convention are described in
 the documentation of Transform IR ops.
+
+Parameters, such as `%1` in the above example, have two logical roles in
+transform IR. In parameter based control, they carry the values needed to
+execute the explicit control defined by the transforms, for example:
+
+```mlir
+%0 = transform.match.structured.rank %linalg_op_handle : !transform.param<index>
+%1 = transform.param.constant 3 : i32 -> !transform.param<index>
+transform.execute_if_cmpi eq %0, %1 : !transform.param<index>, !transform.param<index>
+// Some nested body of transform ops
+```
+
+Alternatively, parameters can associate with the payload IR where the specific
+value at execution time has no bearing on the execution of the transform IR. In
+other words, parameters can either associate with the transform IR or the
+payload IR.  Note that it is generally discouraged to use parameters containing
+arbitrary attributes within transform control. Parameter based control should
+try to be explicitly typed when possible.
 
 The transform IR values have transform IR types, which should implement exactly one of:
 
@@ -405,9 +423,17 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/BufferizationTransformOps.md"]
 
+## Func Transform Operations
+
+[include "Dialects/FuncTransformOps.md"]
+
 ## GPU Transform Operations
 
 [include "Dialects/GPUTransformOps.md"]
+
+## Loop (extension) Transform Operations
+
+[include "Dialects/LoopExtensionOps.md"]
 
 ## Loop (SCF) Transform Operations
 

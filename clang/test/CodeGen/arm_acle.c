@@ -332,7 +332,7 @@ uint64_t test_rorll(uint64_t x, uint32_t y) {
 // ARM-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[T:%.*]], i1 false)
 // ARM-NEXT:    ret i32 [[TMP0]]
 //
-uint32_t test_clz(uint32_t t) {
+unsigned test_clz(uint32_t t) {
   return __clz(t);
 }
 
@@ -345,10 +345,9 @@ uint32_t test_clz(uint32_t t) {
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[T:%.*]], i1 false)
 // AArch64-NEXT:    [[CAST_I:%.*]] = trunc i64 [[TMP0]] to i32
-// AArch64-NEXT:    [[CONV_I:%.*]] = sext i32 [[CAST_I]] to i64
-// AArch64-NEXT:    ret i64 [[CONV_I]]
+// AArch64-NEXT:    ret i32 [[CAST_I]]
 //
-long test_clzl(long t) {
+unsigned test_clzl(unsigned long t) {
   return __clzl(t);
 }
 
@@ -356,10 +355,9 @@ long test_clzl(long t) {
 // ARM-NEXT:  entry:
 // ARM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[T:%.*]], i1 false)
 // ARM-NEXT:    [[CAST_I:%.*]] = trunc i64 [[TMP0]] to i32
-// ARM-NEXT:    [[CONV_I:%.*]] = sext i32 [[CAST_I]] to i64
-// ARM-NEXT:    ret i64 [[CONV_I]]
+// ARM-NEXT:    ret i32 [[CAST_I]]
 //
-uint64_t test_clzll(uint64_t t) {
+unsigned test_clzll(uint64_t t) {
   return __clzll(t);
 }
 
@@ -1692,6 +1690,22 @@ int32_t test_jcvt(double v) {
 }
 #endif
 
+#if defined(__ARM_FEATURE_DIRECTED_ROUNDING) && defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_rintn(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call double @llvm.roundeven.f64(double [[TMP0:%.*]])
+double test_rintn(double a) {
+  return __rintn(a);
+}
+
+// AArch64-LABEL: @test_rintnf(
+// AArch64-NEXT: entry:
+// AArch64-NEXT:      call float @llvm.roundeven.f32(float [[TMP0:%.*]])
+float test_rintnf(float b) {
+  return __rintnf(b);
+}
+#endif
 
 #if defined(__ARM_64BIT_STATE) && defined(__ARM_FEATURE_RNG)
 

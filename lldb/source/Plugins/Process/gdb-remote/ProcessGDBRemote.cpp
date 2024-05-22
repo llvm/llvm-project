@@ -24,11 +24,11 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -36,6 +36,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -48,7 +49,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -113,7 +113,7 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
     return;
   }
   StreamFile stream(std::move(file.get()));
-  ((ProcessGDBRemote *)p)->GetGDBRemote().DumpHistory(stream);
+  ((Process *)p)->DumpPluginHistory(stream);
 }
 } // namespace lldb
 
@@ -129,8 +129,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ProcessGDBRemote::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ProcessGDBRemote::GetPluginNameStatic();
   }
 
   PluginProperties() : Properties() {
@@ -203,6 +203,11 @@ lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     process_sp = std::shared_ptr<ProcessGDBRemote>(
         new ProcessGDBRemote(target_sp, listener_sp));
   return process_sp;
+}
+
+void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
+  GDBRemoteCommunicationClient &gdb_comm(GetGDBRemote());
+  gdb_comm.DumpHistory(s);
 }
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
@@ -298,7 +303,7 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 
   // The general Finalize is going to try to destroy the process and that
   // SHOULD shut down the async thread.  However, if we don't kill it it will
@@ -894,11 +899,8 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
              process_arch.GetTriple().getTriple());
   }
 
-  if (int addressable_bits = m_gdb_comm.GetAddressingBits()) {
-    lldb::addr_t address_mask = ~((1ULL << addressable_bits) - 1);
-    SetCodeAddressMask(address_mask);
-    SetDataAddressMask(address_mask);
-  }
+  AddressableBits addressable_bits = m_gdb_comm.GetAddressableBits();
+  addressable_bits.SetProcessMasks(*this);
 
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
@@ -996,10 +998,11 @@ void ProcessGDBRemote::LoadStubBinaries() {
       const bool force_symbol_search = true;
       const bool notify = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       DynamicLoader::LoadBinaryWithUUIDAndAddress(
           this, "", standalone_uuid, standalone_value,
           standalone_value_is_offset, force_symbol_search, notify,
-          set_address_in_target);
+          set_address_in_target, allow_memory_image_last_resort);
     }
   }
 
@@ -1028,10 +1031,12 @@ void ProcessGDBRemote::LoadStubBinaries() {
 
       const bool force_symbol_search = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       // Second manually load this binary into the Target.
       DynamicLoader::LoadBinaryWithUUIDAndAddress(
           this, llvm::StringRef(), uuid, addr, value_is_slide,
-          force_symbol_search, notify, set_address_in_target);
+          force_symbol_search, notify, set_address_in_target,
+          allow_memory_image_last_resort);
     }
   }
 }
@@ -1607,6 +1612,22 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   return false;
 }
 
+void ProcessGDBRemote::ParseExpeditedRegisters(
+    ExpeditedRegisterMap &expedited_register_map, ThreadSP thread_sp) {
+  ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
+  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+
+  for (const auto &pair : expedited_register_map) {
+    StringExtractor reg_value_extractor(pair.second);
+    WritableDataBufferSP buffer_sp(
+        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+    uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+        eRegisterKindProcessPlugin, pair.first);
+    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+  }
+}
+
 ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     lldb::tid_t tid, ExpeditedRegisterMap &expedited_register_map,
     uint8_t signo, const std::string &thread_name, const std::string &reason,
@@ -1637,35 +1658,24 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   }
 
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+  RegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
 
-  gdb_reg_ctx_sp->InvalidateIfNeeded(true);
+  reg_ctx_sp->InvalidateIfNeeded(true);
 
   auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
   if (iter != m_thread_ids.end())
     SetThreadPc(thread_sp, iter - m_thread_ids.begin());
 
-  for (const auto &pair : expedited_register_map) {
-    StringExtractor reg_value_extractor(pair.second);
-    WritableDataBufferSP buffer_sp(
-        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
-    uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
-        eRegisterKindProcessPlugin, pair.first);
-    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
-  }
+  ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
-  // AArch64 SVE specific code below calls AArch64SVEReconfigure to update
-  // SVE register sizes and offsets if value of VG register has changed
-  // since last stop.
-  const ArchSpec &arch = GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
-    GDBRemoteRegisterContext *reg_ctx_sp =
-        static_cast<GDBRemoteRegisterContext *>(
-            gdb_thread->GetRegisterContext().get());
-
-    if (reg_ctx_sp)
-      reg_ctx_sp->AArch64SVEReconfigure();
+  if (reg_ctx_sp->ReconfigureRegisterInfo()) {
+    // Now we have changed the offsets of all the registers, so the values
+    // will be corrupted.
+    reg_ctx_sp->InvalidateAllRegisters();
+    // Expedited registers values will never contain registers that would be
+    // resized by a reconfigure. So we are safe to continue using these
+    // values.
+    ParseExpeditedRegisters(expedited_register_map, thread_sp);
   }
 
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
@@ -1780,30 +1790,38 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // disable/step/re-enable it, so one of the valid watchpoint
           // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
+          // FIXME NativeThreadLinux::SetStoppedByWatchpoint sends this
+          // up as
+          //  <address within wp range> <wp hw index> <actual accessed addr>
+          // but this is not reading the <wp hw index>.  Seems like it
+          // wouldn't work on MIPS, where that third field is important.
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
-          uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
-          WatchpointSP wp_sp;
+          WatchpointResourceSP wp_resource_sp;
           if (wp_hit_addr != LLDB_INVALID_ADDRESS) {
-            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
+            wp_resource_sp =
+                m_watchpoint_resource_list.FindByAddress(wp_hit_addr);
             // On MIPS, \a wp_hit_addr outside the range of a watched
             // region means we should silently continue, it is a false hit.
             ArchSpec::Core core = GetTarget().GetArchitecture().GetCore();
-            if (!wp_sp && core >= ArchSpec::kCore_mips_first &&
+            if (!wp_resource_sp && core >= ArchSpec::kCore_mips_first &&
                 core <= ArchSpec::kCore_mips_last)
               silently_continue = true;
           }
-          if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
-            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-          if (wp_sp) {
-            wp_sp->SetHardwareIndex(wp_index);
-            watch_id = wp_sp->GetID();
-          }
-          if (watch_id == LLDB_INVALID_WATCH_ID) {
+          if (!wp_resource_sp && wp_addr != LLDB_INVALID_ADDRESS)
+            wp_resource_sp = m_watchpoint_resource_list.FindByAddress(wp_addr);
+          if (!wp_resource_sp) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
+            watch_id = LLDB_INVALID_SITE_ID;
+          } else {
+            // LWP_TODO: This is hardcoding a single Watchpoint in a
+            // Resource, need to add
+            // StopInfo::CreateStopReasonWithWatchpointResource which
+            // represents all watchpoints that were tripped at this stop.
+            watch_id = wp_resource_sp->GetConstituentAtIndex(0)->GetID();
           }
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
               *thread_sp, watch_id, silently_continue));
@@ -1921,24 +1939,23 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
 lldb::ThreadSP
 ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
-  static ConstString g_key_tid("tid");
-  static ConstString g_key_name("name");
-  static ConstString g_key_reason("reason");
-  static ConstString g_key_metype("metype");
-  static ConstString g_key_medata("medata");
-  static ConstString g_key_qaddr("qaddr");
-  static ConstString g_key_dispatch_queue_t("dispatch_queue_t");
-  static ConstString g_key_associated_with_dispatch_queue(
+  static constexpr llvm::StringLiteral g_key_tid("tid");
+  static constexpr llvm::StringLiteral g_key_name("name");
+  static constexpr llvm::StringLiteral g_key_reason("reason");
+  static constexpr llvm::StringLiteral g_key_metype("metype");
+  static constexpr llvm::StringLiteral g_key_medata("medata");
+  static constexpr llvm::StringLiteral g_key_qaddr("qaddr");
+  static constexpr llvm::StringLiteral g_key_dispatch_queue_t(
+      "dispatch_queue_t");
+  static constexpr llvm::StringLiteral g_key_associated_with_dispatch_queue(
       "associated_with_dispatch_queue");
-  static ConstString g_key_queue_name("qname");
-  static ConstString g_key_queue_kind("qkind");
-  static ConstString g_key_queue_serial_number("qserialnum");
-  static ConstString g_key_registers("registers");
-  static ConstString g_key_memory("memory");
-  static ConstString g_key_address("address");
-  static ConstString g_key_bytes("bytes");
-  static ConstString g_key_description("description");
-  static ConstString g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_queue_name("qname");
+  static constexpr llvm::StringLiteral g_key_queue_kind("qkind");
+  static constexpr llvm::StringLiteral g_key_queue_serial_number("qserialnum");
+  static constexpr llvm::StringLiteral g_key_registers("registers");
+  static constexpr llvm::StringLiteral g_key_memory("memory");
+  static constexpr llvm::StringLiteral g_key_description("description");
+  static constexpr llvm::StringLiteral g_key_signal("signal");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -1966,7 +1983,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
                         &queue_name, &queue_kind, &queue_serial_number](
-                           ConstString key,
+                           llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
       // thread in big endian hex
@@ -2024,10 +2041,10 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
 
       if (registers_dict) {
         registers_dict->ForEach(
-            [&expedited_register_map](ConstString key,
+            [&expedited_register_map](llvm::StringRef key,
                                       StructuredData::Object *object) -> bool {
               uint32_t reg;
-              if (llvm::to_integer(key.AsCString(), reg))
+              if (llvm::to_integer(key, reg))
                 expedited_register_map[reg] =
                     std::string(object->GetStringValue());
               return true; // Keep iterating through all array items
@@ -2084,7 +2101,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
   switch (stop_type) {
   case 'T':
   case 'S': {
-    // This is a bit of a hack, but is is required. If we did exec, we need to
+    // This is a bit of a hack, but it is required. If we did exec, we need to
     // clear our thread lists and also know to rebuild our dynamic register
     // info before we lookup and threads and populate the expedited register
     // values so we need to know this right away so we can cleanup and update
@@ -2117,6 +2134,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     QueueKind queue_kind = eQueueKindUnknown;
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
+    AddressableBits addressable_bits;
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
         // exception type in big endian hex
@@ -2227,19 +2245,15 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         lldb::addr_t wp_addr = LLDB_INVALID_ADDRESS;
         value.getAsInteger(16, wp_addr);
 
-        WatchpointSP wp_sp =
-            GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-        uint32_t wp_index = LLDB_INVALID_INDEX32;
-
-        if (wp_sp)
-          wp_index = wp_sp->GetHardwareIndex();
+        WatchpointResourceSP wp_resource_sp =
+            m_watchpoint_resource_list.FindByAddress(wp_addr);
 
         // Rewrite gdb standard watch/rwatch/awatch to
         // "reason:watchpoint" + "description:ADDR",
         // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
-        ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
+        ostr.Printf("%" PRIu64, wp_addr);
         description = std::string(ostr.GetString());
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
@@ -2264,9 +2278,17 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key.compare("addressing_bits") == 0) {
         uint64_t addressing_bits;
         if (!value.getAsInteger(0, addressing_bits)) {
-          addr_t address_mask = ~((1ULL << addressing_bits) - 1);
-          SetCodeAddressMask(address_mask);
-          SetDataAddressMask(address_mask);
+          addressable_bits.SetAddressableBits(addressing_bits);
+        }
+      } else if (key.compare("low_mem_addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addressable_bits.SetLowmemAddressableBits(addressing_bits);
+        }
+      } else if (key.compare("high_mem_addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
@@ -2294,6 +2316,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid = m_thread_ids.front();
       }
     }
+
+    addressable_bits.SetProcessMasks(*this);
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -2353,8 +2377,10 @@ Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
   if (m_public_state.GetValue() == eStateAttaching) {
-    // We are being asked to halt during an attach. We need to just close our
-    // file handle and debugserver will go away, and we can be done...
+    // We are being asked to halt during an attach. We used to just close our
+    // file handle and debugserver will go away, but with remote proxies, it
+    // is better to send a positive signal, so let's send the interrupt first...
+    caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
     m_gdb_comm.Disconnect();
   } else
     caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
@@ -3089,100 +3115,182 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
 }
 
 // Pre-requisite: wp != NULL.
-static GDBStoppointType GetGDBStoppointType(Watchpoint *wp) {
-  assert(wp);
-  bool watch_read = wp->WatchpointRead();
-  bool watch_write = wp->WatchpointWrite();
+static GDBStoppointType
+GetGDBStoppointType(const WatchpointResourceSP &wp_res_sp) {
+  assert(wp_res_sp);
+  bool read = wp_res_sp->WatchpointResourceRead();
+  bool write = wp_res_sp->WatchpointResourceWrite();
 
-  // watch_read and watch_write cannot both be false.
-  assert(watch_read || watch_write);
-  if (watch_read && watch_write)
+  assert((read || write) &&
+         "WatchpointResource type is neither read nor write");
+  if (read && write)
     return eWatchpointReadWrite;
-  else if (watch_read)
+  else if (read)
     return eWatchpointRead;
-  else // Must be watch_write, then.
+  else
     return eWatchpointWrite;
 }
 
-Status ProcessGDBRemote::EnableWatchpoint(Watchpoint *wp, bool notify) {
+Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
-  if (wp) {
-    user_id_t watchID = wp->GetID();
-    addr_t addr = wp->GetLoadAddress();
-    Log *log(GetLog(GDBRLog::Watchpoints));
-    LLDB_LOGF(log, "ProcessGDBRemote::EnableWatchpoint(watchID = %" PRIu64 ")",
-              watchID);
-    if (wp->IsEnabled()) {
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::EnableWatchpoint(watchID = %" PRIu64
-                ") addr = 0x%8.8" PRIx64 ": watchpoint already enabled.",
-                watchID, (uint64_t)addr);
-      return error;
-    }
-
-    GDBStoppointType type = GetGDBStoppointType(wp);
-    // Pass down an appropriate z/Z packet...
-    if (m_gdb_comm.SupportsGDBStoppointPacket(type)) {
-      if (m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr,
-                                                wp->GetByteSize(),
-                                                GetInterruptTimeout()) == 0) {
-        wp->SetEnabled(true, notify);
-        return error;
-      } else
-        error.SetErrorString("sending gdb watchpoint packet failed");
-    } else
-      error.SetErrorString("watchpoints not supported");
-  } else {
-    error.SetErrorString("Watchpoint argument was NULL.");
+  if (!wp_sp) {
+    error.SetErrorString("No watchpoint specified");
+    return error;
   }
-  if (error.Success())
-    error.SetErrorToGenericError();
+  user_id_t watchID = wp_sp->GetID();
+  addr_t addr = wp_sp->GetLoadAddress();
+  Log *log(GetLog(GDBRLog::Watchpoints));
+  LLDB_LOGF(log, "ProcessGDBRemote::EnableWatchpoint(watchID = %" PRIu64 ")",
+            watchID);
+  if (wp_sp->IsEnabled()) {
+    LLDB_LOGF(log,
+              "ProcessGDBRemote::EnableWatchpoint(watchID = %" PRIu64
+              ") addr = 0x%8.8" PRIx64 ": watchpoint already enabled.",
+              watchID, (uint64_t)addr);
+    return error;
+  }
+
+  bool read = wp_sp->WatchpointRead();
+  bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
+  size_t size = wp_sp->GetByteSize();
+
+  // New WatchpointResources needed to implement this Watchpoint.
+  std::vector<WatchpointResourceSP> resources;
+
+  // LWP_TODO: Break up the user's request into pieces that can be watched
+  // given the capabilities of the target cpu / stub software.
+  // As a default, breaking the watched region up into target-pointer-sized,
+  // aligned, groups.
+  //
+  // Beyond the default, a stub can / should inform us of its capabilities,
+  // e.g. a stub that can do AArch64 power-of-2 MASK watchpoints.
+  //
+  // And the cpu may have unique capabilities. AArch64 BAS watchpoints
+  // can watch any sequential bytes in a doubleword, but Intel watchpoints
+  // can only watch 1, 2, 4, 8 bytes within a doubleword.
+  WatchpointResourceSP wp_res_sp =
+      std::make_shared<WatchpointResource>(addr, size, read, write);
+  resources.push_back(wp_res_sp);
+
+  // LWP_TODO: Now that we know the WP Resources needed to implement this
+  // Watchpoint, we need to look at currently allocated Resources in the
+  // Process and if they match, or are within the same memory granule, or
+  // overlapping memory ranges, then we need to combine them.  e.g. one
+  // Watchpoint watching 1 byte at 0x1002 and a second watchpoint watching 1
+  // byte at 0x1003, they must use the same hardware watchpoint register
+  // (Resource) to watch them.
+
+  // This may mean that an existing resource changes its type (read to
+  // read+write) or address range it is watching, in which case the old
+  // watchpoint needs to be disabled and the new Resource addr/size/type
+  // watchpoint enabled.
+
+  // If we modify a shared Resource to accomodate this newly added Watchpoint,
+  // and we are unable to set all of the Resources for it in the inferior, we
+  // will return an error for this Watchpoint and the shared Resource should
+  // be restored.  e.g. this Watchpoint requires three Resources, one which
+  // is shared with another Watchpoint.  We extend the shared Resouce to
+  // handle both Watchpoints and we try to set two new ones.  But if we don't
+  // have sufficient watchpoint register for all 3, we need to show an error
+  // for creating this Watchpoint and we should reset the shared Resource to
+  // its original configuration because it is no longer shared.
+
+  bool set_all_resources = true;
+  std::vector<WatchpointResourceSP> succesfully_set_resources;
+  for (const auto &wp_res_sp : resources) {
+    addr_t addr = wp_res_sp->GetLoadAddress();
+    size_t size = wp_res_sp->GetByteSize();
+    GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
+    if (!m_gdb_comm.SupportsGDBStoppointPacket(type) ||
+        m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
+                                              GetInterruptTimeout())) {
+      set_all_resources = false;
+      break;
+    } else {
+      succesfully_set_resources.push_back(wp_res_sp);
+    }
+  }
+  if (set_all_resources) {
+    wp_sp->SetEnabled(true, notify);
+    for (const auto &wp_res_sp : resources) {
+      // LWP_TODO: If we expanded/reused an existing Resource,
+      // it's already in the WatchpointResourceList.
+      wp_res_sp->AddConstituent(wp_sp);
+      m_watchpoint_resource_list.Add(wp_res_sp);
+    }
+    return error;
+  } else {
+    // We failed to allocate one of the resources.  Unset all
+    // of the new resources we did successfully set in the
+    // process.
+    for (const auto &wp_res_sp : succesfully_set_resources) {
+      addr_t addr = wp_res_sp->GetLoadAddress();
+      size_t size = wp_res_sp->GetByteSize();
+      GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
+      m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
+                                            GetInterruptTimeout());
+    }
+    error.SetErrorString("Setting one of the watchpoint resources failed");
+  }
   return error;
 }
 
-Status ProcessGDBRemote::DisableWatchpoint(Watchpoint *wp, bool notify) {
+Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
-  if (wp) {
-    user_id_t watchID = wp->GetID();
+  if (!wp_sp) {
+    error.SetErrorString("Watchpoint argument was NULL.");
+    return error;
+  }
 
-    Log *log(GetLog(GDBRLog::Watchpoints));
+  user_id_t watchID = wp_sp->GetID();
 
-    addr_t addr = wp->GetLoadAddress();
+  Log *log(GetLog(GDBRLog::Watchpoints));
 
+  addr_t addr = wp_sp->GetLoadAddress();
+
+  LLDB_LOGF(log,
+            "ProcessGDBRemote::DisableWatchpoint (watchID = %" PRIu64
+            ") addr = 0x%8.8" PRIx64,
+            watchID, (uint64_t)addr);
+
+  if (!wp_sp->IsEnabled()) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::DisableWatchpoint (watchID = %" PRIu64
-              ") addr = 0x%8.8" PRIx64,
+              ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
               watchID, (uint64_t)addr);
-
-    if (!wp->IsEnabled()) {
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::DisableWatchpoint (watchID = %" PRIu64
-                ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
-                watchID, (uint64_t)addr);
-      // See also 'class WatchpointSentry' within StopInfo.cpp. This disabling
-      // attempt might come from the user-supplied actions, we'll route it in
-      // order for the watchpoint object to intelligently process this action.
-      wp->SetEnabled(false, notify);
-      return error;
-    }
-
-    if (wp->IsHardware()) {
-      GDBStoppointType type = GetGDBStoppointType(wp);
-      // Pass down an appropriate z/Z packet...
-      if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr,
-                                                wp->GetByteSize(),
-                                                GetInterruptTimeout()) == 0) {
-        wp->SetEnabled(false, notify);
-        return error;
-      } else
-        error.SetErrorString("sending gdb watchpoint packet failed");
-    }
-    // TODO: clear software watchpoints if we implement them
-  } else {
-    error.SetErrorString("Watchpoint argument was NULL.");
+    // See also 'class WatchpointSentry' within StopInfo.cpp. This disabling
+    // attempt might come from the user-supplied actions, we'll route it in
+    // order for the watchpoint object to intelligently process this action.
+    wp_sp->SetEnabled(false, notify);
+    return error;
   }
-  if (error.Success())
-    error.SetErrorToGenericError();
+
+  if (wp_sp->IsHardware()) {
+    bool disabled_all = true;
+
+    std::vector<WatchpointResourceSP> unused_resources;
+    for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
+      if (wp_res_sp->ConstituentsContains(wp_sp)) {
+        GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
+        addr_t addr = wp_res_sp->GetLoadAddress();
+        size_t size = wp_res_sp->GetByteSize();
+        if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
+                                                  GetInterruptTimeout())) {
+          disabled_all = false;
+        } else {
+          wp_res_sp->RemoveConstituent(wp_sp);
+          if (wp_res_sp->GetNumberOfConstituents() == 0)
+            unused_resources.push_back(wp_res_sp);
+        }
+      }
+    }
+    for (auto &wp_res_sp : unused_resources)
+      m_watchpoint_resource_list.Remove(wp_res_sp->GetID());
+
+    wp_sp->SetEnabled(false, notify);
+    if (!disabled_all)
+      error.SetErrorString("Failure disabling one of the watchpoint locations");
+  }
   return error;
 }
 
@@ -3363,23 +3471,20 @@ void ProcessGDBRemote::MonitorDebugserverProcess(
 
   if (state != eStateInvalid && state != eStateUnloaded &&
       state != eStateExited && state != eStateDetached) {
-    char error_str[1024];
-    if (signo) {
-      const char *signal_cstr =
-          process_sp->GetUnixSignals()->GetSignalAsCString(signo);
-      if (signal_cstr)
-        ::snprintf(error_str, sizeof(error_str),
-                   DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
+    StreamString stream;
+    if (signo == 0)
+      stream.Format(DEBUGSERVER_BASENAME " died with an exit status of {0:x8}",
+                    exit_status);
+    else {
+      llvm::StringRef signal_name =
+          process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
+      const char *format_str = DEBUGSERVER_BASENAME " died with signal {0}";
+      if (!signal_name.empty())
+        stream.Format(format_str, signal_name);
       else
-        ::snprintf(error_str, sizeof(error_str),
-                   DEBUGSERVER_BASENAME " died with signal %i", signo);
-    } else {
-      ::snprintf(error_str, sizeof(error_str),
-                 DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x",
-                 exit_status);
+        stream.Format(format_str, signo);
     }
-
-    process_sp->SetExitStatus(-1, error_str);
+    process_sp->SetExitStatus(-1, stream.GetString());
   }
   // Debugserver has exited we need to let our ProcessGDBRemote know that it no
   // longer has a debugserver instance
@@ -4367,7 +4472,7 @@ bool ParseRegisters(
           // and a simple type. Just in case, look for that too (setting both
           // does no harm).
           if (!gdb_type.empty() && !(encoding_set || format_set)) {
-            if (llvm::StringRef(gdb_type).startswith("int")) {
+            if (llvm::StringRef(gdb_type).starts_with("int")) {
               reg_info.format = eFormatHex;
               reg_info.encoding = eEncodingUint;
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
@@ -4377,7 +4482,7 @@ bool ParseRegisters(
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
-                       llvm::StringRef(gdb_type).startswith("vec") ||
+                       llvm::StringRef(gdb_type).starts_with("vec") ||
                        gdb_type == "i387_ext" || gdb_type == "uint128") {
               // lldb doesn't handle 128-bit uints correctly (for ymm*h), so
               // treat them as vector (similarly to xmm/ymm)
@@ -5164,7 +5269,7 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       ProcessGDBRemote *process =
@@ -5186,14 +5291,13 @@ public:
             num_packets, max_send, max_recv, k_recv_amount, json,
             output_stream_sp ? *output_stream_sp : result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
+        return;
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments",
                                    m_cmd_name.c_str());
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 
 protected:
@@ -5213,16 +5317,15 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketHistory() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
-      process->GetGDBRemote().DumpHistory(result.GetOutputStream());
+      process->DumpPluginHistory(result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 };
 
@@ -5240,14 +5343,14 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat("'%s' takes an argument to specify the max "
                                    "amount to be transferred when "
                                    "reading/writing",
                                    m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5259,11 +5362,10 @@ public:
       if (errno == 0 && user_specified_max != 0) {
         process->SetUserSpecifiedMaxMemoryTransferSize(user_specified_max);
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
+        return;
       }
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 };
 
@@ -5284,13 +5386,13 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat(
           "'%s' takes a one or more packet content arguments",
           m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5316,7 +5418,6 @@ public:
           output_strm.Printf("response: %s\n", response.GetStringRef().data());
       }
     }
-    return true;
   }
 };
 
@@ -5333,12 +5434,12 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketMonitor() override = default;
 
-  bool DoExecute(llvm::StringRef command,
+  void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
     if (command.empty()) {
       result.AppendErrorWithFormat("'%s' takes a command string argument",
                                    m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5362,7 +5463,6 @@ public:
       else
         output_strm.Printf("response: %s\n", response.GetStringRef().data());
     }
-    return true;
   }
 };
 
@@ -5442,16 +5542,12 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
     });
   }
 
-  WatchpointList &wps = GetTarget().GetWatchpointList();
-  size_t wp_count = wps.GetSize();
-  for (size_t i = 0; i < wp_count; ++i) {
-    WatchpointSP wp = wps.GetByIndex(i);
-    if (wp->IsEnabled()) {
-      GDBStoppointType type = GetGDBStoppointType(wp.get());
-      m_gdb_comm.SendGDBStoppointTypePacket(type, enable, wp->GetLoadAddress(),
-                                            wp->GetByteSize(),
-                                            GetInterruptTimeout());
-    }
+  for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
+    addr_t addr = wp_res_sp->GetLoadAddress();
+    size_t size = wp_res_sp->GetByteSize();
+    GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
+    m_gdb_comm.SendGDBStoppointTypePacket(type, enable, addr, size,
+                                          GetInterruptTimeout());
   }
 }
 

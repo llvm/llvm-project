@@ -177,8 +177,8 @@ void SPIRVRegularizer::visitCallInst(CallInst &CI) {
   StringRef DemangledName(NameStr);
 
   // TODO: add support for other builtins.
-  if (DemangledName.startswith("fmin") || DemangledName.startswith("fmax") ||
-      DemangledName.startswith("min") || DemangledName.startswith("max"))
+  if (DemangledName.starts_with("fmin") || DemangledName.starts_with("fmax") ||
+      DemangledName.starts_with("min") || DemangledName.starts_with("max"))
     visitCallScalToVec(&CI, MangledName, DemangledName);
   free(NameStr);
 }

@@ -22,10 +22,10 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 
 ; DWARFLINE:		file format elf64-amdgpu
 ; DWARFLINE:		.debug_line contents
-; DWARFLINE:		Address            Line   Column File   ISA Discriminator Flags
-; DWARFLINE:		0x0000000000000000      5      0      0   0             0  is_stmt
-; DWARFLINE-NEXT:	0x0000000000000004      7      3      0   0             0  is_stmt prologue_end
-; DWARFLINE-NEXT:	0x0000000000000008      7      3      0   0             0  is_stmt end_sequence
+; DWARFLINE:		Address            Line   Column File   ISA Discriminator OpIndex Flags
+; DWARFLINE:		0x0000000000000000      5      0      0   0             0       0  is_stmt
+; DWARFLINE-NEXT:	0x0000000000000004      7      3      0   0             0       0  is_stmt prologue_end
+; DWARFLINE-NEXT:	0x0000000000000008      7      3      0   0             0       0  is_stmt end_sequence
 
 entry:
   ret void, !dbg !7

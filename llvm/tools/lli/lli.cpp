@@ -26,6 +26,7 @@
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
@@ -405,7 +406,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   EE.addModule(std::move(M));
 }
 
-CodeGenOpt::Level getOptLevel() {
+CodeGenOptLevel getOptLevel() {
   if (auto Level = CodeGenOpt::parseLevel(OptLevel))
     return *Level;
   WithColor::error(errs(), "lli") << "invalid optimization level.\n";
@@ -446,7 +447,13 @@ int main(int argc, char **argv, char * const *envp) {
 
   ExitOnErr(loadDylibs());
 
-  if (UseJITKind == JITKind::MCJIT)
+  if (EntryFunc.empty()) {
+    WithColor::error(errs(), argv[0])
+        << "--entry-function name cannot be empty\n";
+    exit(1);
+  }
+
+  if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
     disallowOrcOptions();
   else
     return runOrcJIT(argv[0]);
@@ -615,7 +622,7 @@ int main(int argc, char **argv, char * const *envp) {
   } else {
     // Otherwise, if there is a .bc suffix on the executable strip it off, it
     // might confuse the program.
-    if (StringRef(InputFile).endswith(".bc"))
+    if (StringRef(InputFile).ends_with(".bc"))
       InputFile.erase(InputFile.length() - 3);
   }
 
@@ -838,6 +845,17 @@ int mingw_noop_main(void) {
   return 0;
 }
 
+// Try to enable debugger support for the given instance.
+// This alway returns success, but prints a warning if it's not able to enable
+// debugger support.
+Error tryEnableDebugSupport(orc::LLJIT &J) {
+  if (auto Err = enableDebuggerSupport(J)) {
+    [[maybe_unused]] std::string ErrMsg = toString(std::move(Err));
+    LLVM_DEBUG(dbgs() << "lli: " << ErrMsg << "\n");
+  }
+  return Error::success();
+}
+
 int runOrcJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
@@ -918,6 +936,9 @@ int runOrcJIT(const char *ProgName) {
       });
   }
 
+  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
+  Builder.setPrePlatformSetup(tryEnableDebugSupport);
+
   // Set up LLJIT platform.
   LLJITPlatform P = Platform;
   if (P == LLJITPlatform::Auto)
@@ -953,9 +974,6 @@ int runOrcJIT(const char *ProgName) {
       return L;
     });
   }
-
-  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
-  Builder.setEnableDebuggerSupport(true);
 
   auto J = ExitOnErr(Builder.create());
 
@@ -1200,18 +1218,32 @@ Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
 // For real JIT uses, the real compiler support libraries should be linked
 // in, somehow; this is a workaround to let tests pass.
 //
+// We need to make sure that this symbol actually is linked in when we
+// try to export it; if no functions allocate a large enough stack area,
+// nothing would reference it. Therefore, manually declare it and add a
+// reference to it. (Note, the declarations of _alloca/___chkstk_ms/__chkstk
+// are somewhat bogus, these functions use a different custom calling
+// convention.)
+//
 // TODO: Move this into libORC at some point, see
 // https://github.com/llvm/llvm-project/issues/56603.
 #ifdef __MINGW32__
 // This is a MinGW version of #pragma comment(linker, "...") that doesn't
 // require compiling with -fms-extensions.
 #if defined(__i386__)
+#undef _alloca
+extern "C" void _alloca(void);
+static __attribute__((used)) void (*const ref_func)(void) = _alloca;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:_alloca";
 #elif defined(__x86_64__)
+extern "C" void ___chkstk_ms(void);
+static __attribute__((used)) void (*const ref_func)(void) = ___chkstk_ms;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:___chkstk_ms";
 #else
+extern "C" void __chkstk(void);
+static __attribute__((used)) void (*const ref_func)(void) = __chkstk;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:__chkstk";
 #endif

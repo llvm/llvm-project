@@ -592,7 +592,7 @@ bool fromJSON(const llvm::json::Value &, ConfigurationSettings &,
 /// Clangd extension: parameters configurable at `initialize` time.
 /// LSP defines this type as `any`.
 struct InitializationOptions {
-  // What we can change throught the didChangeConfiguration request, we can
+  // What we can change through the didChangeConfiguration request, we can
   // also set through the initialize request (initializationOptions field).
   ConfigurationSettings ConfigSettings;
 
@@ -962,16 +962,6 @@ struct Diagnostic {
 };
 llvm::json::Value toJSON(const Diagnostic &);
 
-/// A LSP-specific comparator used to find diagnostic in a container like
-/// std:map.
-/// We only use the required fields of Diagnostic to do the comparison to avoid
-/// any regression issues from LSP clients (e.g. VScode), see
-/// https://git.io/vbr29
-struct LSPDiagnosticCompare {
-  bool operator()(const Diagnostic &LHS, const Diagnostic &RHS) const {
-    return std::tie(LHS.range, LHS.message) < std::tie(RHS.range, RHS.message);
-  }
-};
 bool fromJSON(const llvm::json::Value &, Diagnostic &, llvm::json::Path);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
 
@@ -1671,6 +1661,16 @@ enum class InlayHintKind {
   /// Uses designator syntax, e.g. `.first:`.
   /// This is a clangd extension.
   Designator = 3,
+
+  /// A hint after function, type or namespace definition, indicating the
+  /// defined symbol name of the definition.
+  ///
+  /// An example of a decl name hint in this position:
+  ///    void func() {
+  ///    } ^
+  /// Uses comment-like syntax like "// func".
+  /// This is a clangd extension.
+  BlockEnd = 4,
 
   /// Other ideas for hints that are not currently implemented:
   ///

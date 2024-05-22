@@ -14,8 +14,8 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_WATCHEDLITERALSSOLVER_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_WATCHEDLITERALSSOLVER_H
 
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
-#include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <limits>
 
@@ -46,7 +46,10 @@ public:
   explicit WatchedLiteralsSolver(std::int64_t WorkLimit)
       : MaxIterations(WorkLimit) {}
 
-  Result solve(llvm::ArrayRef<BoolValue *> Vals) override;
+  Result solve(llvm::ArrayRef<const Formula *> Vals) override;
+
+  // The solver reached its maximum number of iterations.
+  bool reachedLimit() const { return MaxIterations == 0; }
 };
 
 } // namespace dataflow

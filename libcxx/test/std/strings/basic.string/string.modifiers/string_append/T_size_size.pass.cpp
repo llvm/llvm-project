@@ -20,54 +20,40 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
-{
-    if (pos <= sv.size())
-    {
-        s.append(sv, pos, n);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected) {
+  if (pos <= sv.size()) {
+    s.append(sv, pos, n);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.append(sv, pos, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > sv.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.append(sv, pos, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > sv.size());
     }
+  }
 #endif
 }
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test_npos(S s, SV sv, typename S::size_type pos, S expected)
-{
-    if (pos <= sv.size())
-    {
-        s.append(sv, pos);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test_npos(S s, SV sv, typename S::size_type pos, S expected) {
+  if (pos <= sv.size()) {
+    s.append(sv, pos);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.append(sv, pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > sv.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.append(sv, pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > sv.size());
     }
+  }
 #endif
 }
 
@@ -93,8 +79,12 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 
   test(S("12345678901234567890"), SV(), 0, 0, S("12345678901234567890"));
   test(S("12345678901234567890"), SV("12345"), 1, 3, S("12345678901234567890234"));
-  test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-        S("123456789012345678906789012345"));
+  test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10, S("123456789012345678906789012345"));
+
+  // Starting from long string (no SSO)
+  test(S("1234512345678901234567890"), SV(), 0, 0, S("1234512345678901234567890"));
+  test(S("1234512345678901234567890"), SV("12345"), 1, 3, S("1234512345678901234567890234"));
+  test(S("1234512345678901234567890"), SV("12345678901234567890"), 5, 10, S("12345123456789012345678906789012345"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -118,9 +108,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::string s;
     std::string_view sv = "EFGH";
-    char arr[] = "IJKL";
+    char arr[]          = "IJKL";
 
-    s.append("CDEF", 0);    // calls append(const char *, len)
+    s.append("CDEF", 0); // calls append(const char *, len)
     assert(s == "");
     s.clear();
 
@@ -128,29 +118,29 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s == "QRST");
     s.clear();
 
-    s.append(sv, 0);  // calls append(T, pos, npos)
+    s.append(sv, 0); // calls append(T, pos, npos)
     assert(s == sv);
     s.clear();
 
-    s.append(sv, 0, std::string::npos);   // calls append(T, pos, npos)
+    s.append(sv, 0, std::string::npos); // calls append(T, pos, npos)
     assert(s == sv);
     s.clear();
 
-    s.append(arr, 0);     // calls append(const char *, len)
+    s.append(arr, 0); // calls append(const char *, len)
     assert(s == "");
     s.clear();
 
-    s.append(arr, 0, std::string::npos);    // calls append(string("IJKL"), pos, npos)
+    s.append(arr, 0, std::string::npos); // calls append(string("IJKL"), pos, npos)
     assert(s == "IJKL");
     s.clear();
 
-    s.append(arr, 0);     // calls append(const char *, len)
+    s.append(arr, 0); // calls append(const char *, len)
     assert(s == "");
     s.clear();
   }
 
   {
-    std::string s = "ABCD";
+    std::string s       = "ABCD";
     std::string_view sv = s;
     s.append(sv);
     assert(s == "ABCDABCD");
@@ -165,20 +155,20 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   {
-    std::string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string s       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     std::string_view sv = s;
     s.append(sv);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
     sv = s;
     s.append(sv, 0, std::string::npos);
-    assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    assert(s ==
+           "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
   }
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

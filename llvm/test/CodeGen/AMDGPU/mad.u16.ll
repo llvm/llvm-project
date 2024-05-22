@@ -78,6 +78,7 @@ define amdgpu_kernel void @mad_u16(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mad_u16 v0, v1, v2, v0
 ; GFX11-NEXT:    global_store_b16 v3, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,

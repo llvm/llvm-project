@@ -1,0 +1,133 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+
+---
+name:            test_nxv1s8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY [[DEF]](<vscale x 1 x s8>)
+    %0:_(<vscale x 1 x s8>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x s8>) = COPY %0
+...
+
+---
+name:            test_nxv1s16
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1s16
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY [[DEF]](<vscale x 1 x s16>)
+    %0:_(<vscale x 1 x s16>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x s16>) = COPY %0
+...
+
+---
+name:            test_nxv1s32
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY [[DEF]](<vscale x 1 x s32>)
+    %0:_(<vscale x 1 x s32>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x s32>) = COPY %0
+...
+
+---
+name:            test_nxv1s64
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY [[DEF]](<vscale x 1 x s64>)
+    %0:_(<vscale x 1 x s64>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x s64>) = COPY %0
+...
+
+---
+name:            test_nxv4s8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY [[DEF]](<vscale x 4 x s8>)
+    %0:_(<vscale x 4 x s8>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x s8>) = COPY %0
+...
+
+---
+name:            test_nxv4s16
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4s16
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY [[DEF]](<vscale x 4 x s16>)
+    %0:_(<vscale x 4 x s16>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x s16>) = COPY %0
+...
+
+---
+name:            test_nxv4s32
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY [[DEF]](<vscale x 4 x s32>)
+    %0:_(<vscale x 4 x s32>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x s32>) = COPY %0
+...
+
+---
+name:            test_nxv4s64
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY [[DEF]](<vscale x 4 x s64>)
+    %0:_(<vscale x 4 x s64>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x s64>) = COPY %0
+...
+
+---
+name:            test_nxv1p0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1p0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x p0>) = COPY [[DEF]](<vscale x 1 x p0>)
+    %0:_(<vscale x 1 x p0>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x p0>) = COPY %0
+...
+
+---
+name:            test_nxv1sp1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv1sp1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x p0>) = COPY [[DEF]](<vscale x 1 x p0>)
+    %0:_(<vscale x 1 x p0>) = IMPLICIT_DEF
+    %1:_(<vscale x 1 x p0>) = COPY %0
+...
+
+---
+name:            test_nxv4p0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4p0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x p0>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x p0>) = COPY [[DEF]](<vscale x 4 x p0>)
+    %0:_(<vscale x 4 x p0>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x p0>) = COPY %0
+...
+
+---
+name:            test_nxv4p1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_nxv4p1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x p1>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x p1>) = COPY [[DEF]](<vscale x 4 x p1>)
+    %0:_(<vscale x 4 x p1>) = IMPLICIT_DEF
+    %1:_(<vscale x 4 x p1>) = COPY %0
+...

@@ -182,12 +182,12 @@ define <2 x i16> @fneg_xor_select_v2i16(<2 x i1> %cond, <2 x i16> %arg0, <2 x i1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v3, vcc
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
 ; GFX7-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: fneg_xor_select_v2i16:
@@ -1531,6 +1531,7 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, s2, -v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = select i1 %z, double %x, double %y

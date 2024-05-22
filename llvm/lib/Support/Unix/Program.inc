@@ -20,11 +20,13 @@
 #include "Unix.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -340,10 +342,10 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 namespace llvm {
 namespace sys {
 
-#ifndef _AIX
-using ::wait4;
-#else
+#if defined(_AIX)
 static pid_t(wait4)(pid_t pid, int *status, int options, struct rusage *usage);
+#elif !defined(__Fuchsia__)
+using ::wait4;
 #endif
 
 } // namespace sys
@@ -414,6 +416,7 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
   // Parent process: Wait for the child process to terminate.
   int status = 0;
   ProcessInfo WaitResult;
+#ifndef __Fuchsia__
   rusage Info;
   if (ProcStat)
     ProcStat->reset();
@@ -421,6 +424,7 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
   do {
     WaitResult.Pid = sys::wait4(ChildPid, &status, WaitPidOptions, &Info);
   } while (WaitUntilTerminates && WaitResult.Pid == -1 && errno == EINTR);
+#endif
 
   if (WaitResult.Pid != PI.Pid) {
     if (WaitResult.Pid == 0) {
@@ -459,15 +463,17 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
     sigaction(SIGALRM, &Old, nullptr);
   }
 
+#ifndef __Fuchsia__
   if (ProcStat) {
     std::chrono::microseconds UserT = toDuration(Info.ru_utime);
     std::chrono::microseconds KernelT = toDuration(Info.ru_stime);
     uint64_t PeakMemory = 0;
-#ifndef __HAIKU__
+#if !defined(__HAIKU__) && !defined(__MVS__)
     PeakMemory = static_cast<uint64_t>(Info.ru_maxrss);
 #endif
     *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
   }
+#endif
 
   // Return the proper exit status. Detect error conditions
   // so we can return -1 for them and set ErrMsg informatively.
@@ -516,8 +522,12 @@ std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags) {
 }
 
 std::error_code llvm::sys::ChangeStdinToBinary() {
+#ifdef __MVS__
+  return disableAutoConversion(STDIN_FILENO);
+#else
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();
+#endif
 }
 
 std::error_code llvm::sys::ChangeStdoutToBinary() {

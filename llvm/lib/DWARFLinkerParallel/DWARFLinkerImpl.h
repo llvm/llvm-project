@@ -11,29 +11,24 @@
 
 #include "DWARFEmitterImpl.h"
 #include "DWARFLinkerCompileUnit.h"
+#include "DWARFLinkerTypeUnit.h"
+#include "StringEntryToDwarfStringPoolEntryMap.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"
-#include "llvm/DWARFLinkerParallel/StringTable.h"
 
 namespace llvm {
 namespace dwarflinker_parallel {
 
-using Offset2UnitMapTy = DenseMap<uint64_t, CompileUnit *>;
-
-struct RangeAttrPatch;
-struct LocAttrPatch;
-
+/// This class links debug info.
 class DWARFLinkerImpl : public DWARFLinker {
 public:
   DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
                   MessageHandlerTy WarningHandler,
-                  TranslatorFuncTy StringsTranslator)
-      : UniqueUnitID(0), ErrorHandler(ErrorHandler),
-        WarningHandler(WarningHandler),
-        OutputStrings(Strings, StringsTranslator) {}
+                  TranslatorFuncTy StringsTranslator);
 
+  /// Create debug info emitter.
   Error createEmitter(const Triple &TheTriple, OutputFileType FileType,
                       raw_pwrite_stream &OutFile) override;
 
@@ -47,13 +42,11 @@ public:
   /// \pre NoODR, Update options should be set before call to addObjectFile.
   void addObjectFile(
       DWARFFile &File, ObjFileLoaderTy Loader = nullptr,
-      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {}) override {}
+
+      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {}) override;
 
   /// Link debug info for added files.
-  Error link() override {
-    reportWarning("LLVM parallel dwarflinker is not implemented yet.", "");
-    return Error::success();
-  }
+  Error link() override;
 
   /// \defgroup Methods setting various linking options:
   ///
@@ -61,73 +54,74 @@ public:
   ///
 
   /// Allows to generate log of linking process to the standard output.
-  void setVerbosity(bool Verbose) override { Options.Verbose = Verbose; }
+  void setVerbosity(bool Verbose) override {
+    GlobalData.Options.Verbose = Verbose;
+  }
 
   /// Print statistics to standard output.
   void setStatistics(bool Statistics) override {
-    Options.Statistics = Statistics;
+    GlobalData.Options.Statistics = Statistics;
   }
 
   /// Verify the input DWARF.
   void setVerifyInputDWARF(bool Verify) override {
-    Options.VerifyInputDWARF = Verify;
+    GlobalData.Options.VerifyInputDWARF = Verify;
   }
 
   /// Do not unique types according to ODR.
-  void setNoODR(bool NoODR) override { Options.NoODR = NoODR; }
+  void setNoODR(bool NoODR) override { GlobalData.Options.NoODR = NoODR; }
 
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool UpdateIndexTablesOnly) override {
-    Options.UpdateIndexTablesOnly = UpdateIndexTablesOnly;
+    GlobalData.Options.UpdateIndexTablesOnly = UpdateIndexTablesOnly;
   }
 
   /// Allow generating valid, but non-deterministic output.
   void
   setAllowNonDeterministicOutput(bool AllowNonDeterministicOutput) override {
-    Options.AllowNonDeterministicOutput = AllowNonDeterministicOutput;
+    GlobalData.Options.AllowNonDeterministicOutput =
+        AllowNonDeterministicOutput;
   }
 
   /// Set to keep the enclosing function for a static variable.
   void setKeepFunctionForStatic(bool KeepFunctionForStatic) override {
-    Options.KeepFunctionForStatic = KeepFunctionForStatic;
+    GlobalData.Options.KeepFunctionForStatic = KeepFunctionForStatic;
   }
 
   /// Use specified number of threads for parallel files linking.
   void setNumThreads(unsigned NumThreads) override {
-    Options.Threads = NumThreads;
+    GlobalData.Options.Threads = NumThreads;
   }
 
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
-    assert(!llvm::is_contained(Options.AccelTables, Kind));
-    Options.AccelTables.emplace_back(Kind);
+    assert(!llvm::is_contained(GlobalData.getOptions().AccelTables, Kind));
+    GlobalData.Options.AccelTables.emplace_back(Kind);
   }
 
   /// Set prepend path for clang modules.
   void setPrependPath(const std::string &Ppath) override {
-    Options.PrependPath = Ppath;
+    GlobalData.Options.PrependPath = Ppath;
   }
 
   /// Set estimated objects files amount, for preliminary data allocation.
-  void setEstimatedObjfilesAmount(unsigned ObjFilesNum) override {
-    ObjectContexts.reserve(ObjFilesNum);
-  }
+  void setEstimatedObjfilesAmount(unsigned ObjFilesNum) override;
 
   /// Set verification handler which would be used to report verification
   /// errors.
   void
   setInputVerificationHandler(InputVerificationHandlerTy Handler) override {
-    Options.InputVerificationHandler = Handler;
+    GlobalData.Options.InputVerificationHandler = Handler;
   }
 
   /// Set map for Swift interfaces.
   void setSwiftInterfacesMap(SwiftInterfacesMapTy *Map) override {
-    Options.ParseableSwiftInterfaces = Map;
+    GlobalData.Options.ParseableSwiftInterfaces = Map;
   }
 
   /// Set prefix map for objects.
   void setObjectPrefixMap(ObjectPrefixMapTy *Map) override {
-    Options.ObjectPrefixMap = Map;
+    GlobalData.Options.ObjectPrefixMap = Map;
   }
 
   /// Set target DWARF version.
@@ -137,36 +131,28 @@ public:
                                "unsupported DWARF version: %d",
                                TargetDWARFVersion);
 
-    Options.TargetDWARFVersion = TargetDWARFVersion;
+    GlobalData.Options.TargetDWARFVersion = TargetDWARFVersion;
     return Error::success();
   }
   /// @}
 
 protected:
-  /// Reports Warning.
-  void reportWarning(const Twine &Warning, const DWARFFile &File,
-                     const DWARFDie *DIE = nullptr) const {
-    if (WarningHandler != nullptr)
-      WarningHandler(Warning, File.FileName, DIE);
-  }
+  /// Verify input DWARF file.
+  void verifyInput(const DWARFFile &File);
 
-  /// Reports Warning.
-  void reportWarning(const Twine &Warning, StringRef FileName,
-                     const DWARFDie *DIE = nullptr) const {
-    if (WarningHandler != nullptr)
-      WarningHandler(Warning, FileName, DIE);
-  }
+  /// Validate specified options.
+  Error validateAndUpdateOptions();
 
-  /// Reports Error.
-  void reportError(const Twine &Warning, StringRef FileName,
-                   const DWARFDie *DIE = nullptr) const {
-    if (ErrorHandler != nullptr)
-      ErrorHandler(Warning, FileName, DIE);
-  }
+  /// Take already linked compile units and glue them into single file.
+  void glueCompileUnitsAndWriteToTheOutput();
 
-  /// Returns next available unique Compile Unit ID.
-  unsigned getNextUniqueUnitID() { return UniqueUnitID.fetch_add(1); }
+  /// Hold the input and output of the debug info size in bytes.
+  struct DebugInfoSize {
+    uint64_t Input;
+    uint64_t Output;
+  };
 
+  friend class DependencyTracker;
   /// Keeps track of data associated with one object during linking.
   /// i.e. source file descriptor, compilation units, output data
   /// for compilation units common tables.
@@ -176,10 +162,8 @@ protected:
     /// Keep information for referenced clang module: already loaded DWARF info
     /// of the clang module and a CompileUnit of the module.
     struct RefModuleUnit {
-      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit)
-          : File(File), Unit(std::move(Unit)) {}
-      RefModuleUnit(RefModuleUnit &&Other)
-          : File(Other.File), Unit(std::move(Other.Unit)) {}
+      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit);
+      RefModuleUnit(RefModuleUnit &&Other);
       RefModuleUnit(const RefModuleUnit &) = delete;
 
       DWARFFile &File;
@@ -188,7 +172,7 @@ protected:
     using ModuleUnitListTy = SmallVector<RefModuleUnit>;
 
     /// Object file descriptor.
-    DWARFFile &File;
+    DWARFFile &InputDWARFFile;
 
     /// Set of Compilation Units(may be accessed asynchroniously for reading).
     UnitListTy CompileUnits;
@@ -199,117 +183,194 @@ protected:
     /// Size of Debug info before optimizing.
     uint64_t OriginalDebugInfoSize = 0;
 
-    /// Output sections, common for all compilation units.
-    OutTablesFileTy OutDebugInfoBytes;
+    /// Flag indicating that all inter-connected units are loaded
+    /// and the dwarf linking process for these units is started.
+    bool InterCUProcessingStarted = false;
 
-    /// Endianness for the final file.
-    support::endianness Endianess = support::endianness::little;
+    StringMap<uint64_t> &ClangModules;
 
-    LinkContext(DWARFFile &File) : File(File) {
-      if (File.Dwarf) {
-        if (!File.Dwarf->compile_units().empty())
-          CompileUnits.reserve(File.Dwarf->getNumCompileUnits());
+    std::optional<Triple> TargetTriple;
 
-        Endianess = File.Dwarf->isLittleEndian() ? support::endianness::little
-                                                 : support::endianness::big;
-      }
-    }
+    /// Flag indicating that new inter-connected compilation units were
+    /// discovered. It is used for restarting units processing
+    /// if new inter-connected units were found.
+    std::atomic<bool> HasNewInterconnectedCUs = {false};
+
+    std::atomic<bool> HasNewGlobalDependency = {false};
+
+    /// Counter for compile units ID.
+    std::atomic<size_t> &UniqueUnitID;
+
+    LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
+                StringMap<uint64_t> &ClangModules,
+                std::atomic<size_t> &UniqueUnitID,
+                std::optional<Triple> TargetTriple);
+
+    /// Check whether specified \p CUDie is a Clang module reference.
+    /// if \p Quiet is false then display error messages.
+    /// \return first == true if CUDie is a Clang module reference.
+    ///         second == true if module is already loaded.
+    std::pair<bool, bool> isClangModuleRef(const DWARFDie &CUDie,
+                                           std::string &PCMFile,
+                                           unsigned Indent, bool Quiet);
+
+    /// If this compile unit is really a skeleton CU that points to a
+    /// clang module, register it in ClangModules and return true.
+    ///
+    /// A skeleton CU is a CU without children, a DW_AT_gnu_dwo_name
+    /// pointing to the module, and a DW_AT_gnu_dwo_id with the module
+    /// hash.
+    bool registerModuleReference(const DWARFDie &CUDie, ObjFileLoaderTy Loader,
+                                 CompileUnitHandlerTy OnCUDieLoaded,
+                                 unsigned Indent = 0);
+
+    /// Recursively add the debug info in this clang module .pcm
+    /// file (and all the modules imported by it in a bottom-up fashion)
+    /// to ModuleUnits.
+    Error loadClangModule(ObjFileLoaderTy Loader, const DWARFDie &CUDie,
+                          const std::string &PCMFile,
+                          CompileUnitHandlerTy OnCUDieLoaded,
+                          unsigned Indent = 0);
 
     /// Add Compile Unit corresponding to the module.
-    void addModulesCompileUnit(RefModuleUnit &&Unit) {
-      ModulesCompileUnits.emplace_back(std::move(Unit));
+    void addModulesCompileUnit(RefModuleUnit &&Unit);
+
+    /// Computes the total size of the debug info.
+    uint64_t getInputDebugInfoSize() const {
+      uint64_t Size = 0;
+
+      if (InputDWARFFile.Dwarf == nullptr)
+        return Size;
+
+      for (auto &Unit : InputDWARFFile.Dwarf->compile_units())
+        Size += Unit->getLength();
+
+      return Size;
     }
 
-    /// Return Endiannes of the source DWARF information.
-    support::endianness getEndianness() { return Endianess; }
+    /// Link compile units for this context.
+    Error link(TypeUnit *ArtificialTypeUnit);
 
-    /// \returns pointer to compilation unit which corresponds \p Offset.
-    CompileUnit *getUnitForOffset(CompileUnit &CU, uint64_t Offset) const;
+    /// Link specified compile unit until specified stage.
+    void linkSingleCompileUnit(
+        CompileUnit &CU, TypeUnit *ArtificialTypeUnit,
+        enum CompileUnit::Stage DoUntilStage = CompileUnit::Stage::Cleaned);
+
+    /// Emit invariant sections.
+    Error emitInvariantSections();
+
+    /// Clone and emit .debug_frame.
+    Error cloneAndEmitDebugFrame();
+
+    /// Emit FDE record.
+    void emitFDE(uint32_t CIEOffset, uint32_t AddrSize, uint64_t Address,
+                 StringRef FDEBytes, SectionDescriptor &Section);
+
+    std::function<CompileUnit *(uint64_t)> getUnitForOffset =
+        [&](uint64_t Offset) -> CompileUnit * {
+      auto CU = llvm::upper_bound(
+          CompileUnits, Offset,
+          [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
+            return LHS < RHS->getOrigUnit().getNextUnitOffset();
+          });
+
+      return CU != CompileUnits.end() ? CU->get() : nullptr;
+    };
   };
 
-  /// linking options
-  struct DWARFLinkerOptions {
-    /// DWARF version for the output.
-    uint16_t TargetDWARFVersion = 0;
+  /// Enumerate all compile units and assign offsets to their sections and
+  /// strings.
+  void assignOffsets();
 
-    /// Generate processing log to the standard output.
-    bool Verbose = false;
+  /// Enumerate all compile units and assign offsets to their sections.
+  void assignOffsetsToSections();
 
-    /// Print statistics.
-    bool Statistics = false;
+  /// Enumerate all compile units and assign offsets to their strings.
+  void assignOffsetsToStrings();
 
-    /// Verify the input DWARF.
-    bool VerifyInputDWARF = false;
+  /// Print statistic for processed Debug Info.
+  void printStatistic();
 
-    /// Do not unique types according to ODR
-    bool NoODR = false;
+  enum StringDestinationKind : uint8_t { DebugStr, DebugLineStr };
 
-    /// Update index tables.
-    bool UpdateIndexTablesOnly = false;
+  /// Enumerates all strings.
+  void forEachOutputString(
+      function_ref<void(StringDestinationKind, const StringEntry *)>
+          StringHandler);
 
-    /// Whether we want a static variable to force us to keep its enclosing
-    /// function.
-    bool KeepFunctionForStatic = false;
+  /// Enumerates sections for modules, invariant for object files, compile
+  /// units.
+  void forEachObjectSectionsSet(
+      function_ref<void(OutputSections &SectionsSet)> SectionsSetHandler);
 
-    /// Allow to generate valid, but non deterministic output.
-    bool AllowNonDeterministicOutput = false;
+  /// Enumerates all compile and type units.
+  void forEachCompileAndTypeUnit(function_ref<void(DwarfUnit *CU)> UnitHandler);
 
-    /// Number of threads.
-    unsigned Threads = 1;
+  /// Enumerates all comple units.
+  void forEachCompileUnit(function_ref<void(CompileUnit *CU)> UnitHandler);
 
-    /// The accelerator table kinds
-    SmallVector<AccelTableKind, 1> AccelTables;
+  /// Enumerates all patches and update them with the correct values.
+  void patchOffsetsAndSizes();
 
-    /// Prepend path for the clang modules.
-    std::string PrependPath;
+  /// Emit debug sections common for all input files.
+  void emitCommonSectionsAndWriteCompileUnitsToTheOutput();
 
-    /// input verification handler(it might be called asynchronously).
-    InputVerificationHandlerTy InputVerificationHandler = nullptr;
+  /// Emit apple accelerator sections.
+  void emitAppleAcceleratorSections(const Triple &TargetTriple);
 
-    /// A list of all .swiftinterface files referenced by the debug
-    /// info, mapping Module name to path on disk. The entries need to
-    /// be uniqued and sorted and there are only few entries expected
-    /// per compile unit, which is why this is a std::map.
-    /// this is dsymutil specific fag.
-    ///
-    /// (it might be called asynchronously).
-    SwiftInterfacesMapTy *ParseableSwiftInterfaces = nullptr;
+  /// Emit .debug_names section.
+  void emitDWARFv5DebugNamesSection(const Triple &TargetTriple);
 
-    /// A list of remappings to apply to file paths.
-    ///
-    /// (it might be called asynchronously).
-    ObjectPrefixMapTy *ObjectPrefixMap = nullptr;
-  } Options;
+  /// Emit string sections.
+  void emitStringSections();
+
+  /// Cleanup data(string pools) after output sections are generated.
+  void cleanupDataAfterDWARFOutputIsWritten();
+
+  /// Enumerate all compile units and put their data into the output stream.
+  void writeCompileUnitsToTheOutput();
+
+  /// Enumerate common sections and put their data into the output stream.
+  void writeCommonSectionsToTheOutput();
 
   /// \defgroup Data members accessed asinchroniously.
   ///
   /// @{
 
   /// Unique ID for compile unit.
-  std::atomic<unsigned> UniqueUnitID;
+  std::atomic<size_t> UniqueUnitID;
 
-  /// Strings pool. Keeps all strings.
-  StringPool Strings;
+  /// Mapping the PCM filename to the DwoId.
+  StringMap<uint64_t> ClangModules;
+  std::mutex ClangModulesMutex;
 
-  /// error handler(it might be called asynchronously).
-  MessageHandlerTy ErrorHandler = nullptr;
-
-  /// warning handler(it might be called asynchronously).
-  MessageHandlerTy WarningHandler = nullptr;
+  /// Type unit.
+  std::unique_ptr<TypeUnit> ArtificialTypeUnit;
   /// @}
 
   /// \defgroup Data members accessed sequentially.
   ///
   /// @{
+  /// DwarfStringPoolEntries for .debug_str section.
+  StringEntryToDwarfStringPoolEntryMap DebugStrStrings;
 
-  /// Set of strings which should be emitted.
-  StringTable OutputStrings;
+  /// DwarfStringPoolEntries for .debug_line_str section.
+  StringEntryToDwarfStringPoolEntryMap DebugLineStrStrings;
 
   /// Keeps all linking contexts.
   SmallVector<std::unique_ptr<LinkContext>> ObjectContexts;
 
+  /// Common sections.
+  OutputSections CommonSections;
+
   /// The emitter of final dwarf file.
   std::unique_ptr<DwarfEmitterImpl> TheDwarfEmitter;
+
+  /// Overall compile units number.
+  uint64_t OverallNumberOfCU = 0;
+
+  /// Data global for the whole linking process.
+  LinkingGlobalData GlobalData;
   /// @}
 };
 

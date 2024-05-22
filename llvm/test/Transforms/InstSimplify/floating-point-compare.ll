@@ -11,11 +11,29 @@ define i1 @inf0(double %arg) {
   ret i1 %tmp
 }
 
+define i1 @inf0_fabs(double %arg) {
+; CHECK-LABEL: @inf0_fabs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp ogt double %fabs.arg, 0x7FF0000000000000
+  ret i1 %tmp
+}
+
 define i1 @inf1(double %arg) {
 ; CHECK-LABEL: @inf1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %tmp = fcmp ule double %arg, 0x7FF0000000000000
+  ret i1 %tmp
+}
+
+define i1 @inf1_fabs(double %arg) {
+; CHECK-LABEL: @inf1_fabs(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp ule double %fabs.arg, 0x7FF0000000000000
   ret i1 %tmp
 }
 
@@ -29,11 +47,29 @@ define i1 @ninf0(double %arg) {
   ret i1 %tmp
 }
 
+define i1 @ninf0_fabs(double %arg) {
+; CHECK-LABEL: @ninf0_fabs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp olt double %fabs.arg, 0xFFF0000000000000
+  ret i1 %tmp
+}
+
 define i1 @ninf1(double %arg) {
 ; CHECK-LABEL: @ninf1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %tmp = fcmp uge double %arg, 0xFFF0000000000000
+  ret i1 %tmp
+}
+
+define i1 @ninf1_fabs(double %arg) {
+; CHECK-LABEL: @ninf1_fabs(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp uge double %fabs.arg, 0xFFF0000000000000
   ret i1 %tmp
 }
 
@@ -656,8 +692,7 @@ define i1 @assume_nan_ord(float %x) {
 ; CHECK-LABEL: @assume_nan_ord(
 ; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %uno = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno)
@@ -681,8 +716,7 @@ define i1 @assume_nan_uno(float %x) {
 ; CHECK-LABEL: @assume_nan_uno(
 ; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %uno = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno)
@@ -1207,8 +1241,7 @@ define i1 @assumed_positive_ugt_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_ugt_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1220,8 +1253,7 @@ define i1 @assumed_positive_uge_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_uge_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1233,8 +1265,7 @@ define i1 @assumed_positive_une_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_une_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1481,8 +1512,7 @@ define i1 @fcmp_oge_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_oge_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oge float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1494,8 +1524,7 @@ define i1 @fcmp_ult_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_ult_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1507,8 +1536,7 @@ define i1 @fcmp_uge_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_uge_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp uge float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1520,8 +1548,7 @@ define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_olt_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp olt float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1532,10 +1559,7 @@ define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
 define i1 @ogt_zero_fabs_select_negone_or_pinf(i1 %cond) {
 ; CHECK-LABEL: @ogt_zero_fabs_select_negone_or_pinf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float 0x7FF0000000000000
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
-; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[ONE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %select = select i1 %cond, float -1.0, float 0x7FF0000000000000
@@ -1547,10 +1571,7 @@ entry:
 define i1 @ogt_zero_fabs_select_one_or_ninf(i1 %cond) {
 ; CHECK-LABEL: @ogt_zero_fabs_select_one_or_ninf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float 1.000000e+00, float 0xFFF0000000000000
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
-; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[ONE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %select = select i1 %cond, float 1.0, float 0xFFF0000000000000
@@ -1558,6 +1579,195 @@ entry:
   %one = fcmp ogt float %fabs, 0.0
   ret i1 %one
 }
+
+; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
+define float @fast_square_must_be_positive_ieee(float %arg, float %arg1) {
+; CHECK-LABEL: @fast_square_must_be_positive_ieee(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp olt float %i3, 0.000000e+00
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
+define float @fast_square_must_be_positive_ieee_nnan(float %arg, float %arg1) {
+; CHECK-LABEL: @fast_square_must_be_positive_ieee_nnan(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp nnan olt float %i3, 0.000000e+00
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
+define float @fast_square_must_be_positive_daz(float %arg, float %arg1) #0 {
+; CHECK-LABEL: @fast_square_must_be_positive_daz(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp olt float %i3, 0.000000e+00
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
+define float @fast_square_must_be_positive_daz_nnan(float %arg, float %arg1) #0 {
+; CHECK-LABEL: @fast_square_must_be_positive_daz_nnan(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp nnan olt float %i3, 0.000000e+00
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+; Make the compare to negative constant is folded out
+define float @must_be_olt_negative_constant_daz(float %arg, float %arg1) #0 {
+; CHECK-LABEL: @must_be_olt_negative_constant_daz(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp olt float %i3, -1.0
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+; Make the compare to negative constant is folded out
+define float @must_be_olt_negative_constant_daz_nnan(float %arg, float %arg1) #0 {
+; CHECK-LABEL: @must_be_olt_negative_constant_daz_nnan(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
+; CHECK-NEXT:    ret float [[I3]]
+;
+bb:
+  %i = fmul float %arg, %arg
+  %i2 = fmul float %arg1, %arg1
+  %i3 = fadd float %i2, %i
+  %i4 = fcmp nnan olt float %i3, -1.0
+  %i5 = select i1 %i4, float 0.000000e+00, float %i3
+  ret float %i5
+}
+
+define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+; CHECK-LABEL: @is_olt_smallest_normal_dynamic(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+; CHECK-LABEL: @is_olt_smallest_normal_ieee(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+; CHECK-LABEL: @is_olt_smallest_normal_preserve_sign(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+; CHECK-LABEL: @is_olt_smallest_normal_positive_zero(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_dynamic(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_ieee(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_preserve_sign(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_positive_zero(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
 
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
@@ -1578,3 +1788,5 @@ declare double @llvm.sqrt.f64(double)
 declare double @llvm.copysign.f64(double, double)
 declare half @llvm.fabs.f16(half)
 declare void @llvm.assume(i1 noundef)
+
+attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }

@@ -227,7 +227,7 @@ Expected<StringRef> BigArchiveMemberHeader::getRawName() const {
   StringRef NameTerminator = "`\n";
   StringRef NameStringWithNameTerminator =
       StringRef(ArMemHdr->Name, NameLenWithPadding + NameTerminator.size());
-  if (!NameStringWithNameTerminator.endswith(NameTerminator)) {
+  if (!NameStringWithNameTerminator.ends_with(NameTerminator)) {
     uint64_t Offset =
         reinterpret_cast<const char *>(ArMemHdr->Name + NameLenWithPadding) -
         Parent->getData().data();
@@ -315,7 +315,7 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
     return Parent->getStringTable().begin() + StringOffset;
   }
 
-  if (Name.startswith("#1/")) {
+  if (Name.starts_with("#1/")) {
     uint64_t NameLength;
     if (Name.substr(3).rtrim(' ').getAsInteger(10, NameLength)) {
       std::string Buf;
@@ -524,7 +524,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
     // The actual start of the file is after the name and any necessary
     // even-alignment padding.
     StartOfFile += ((Name.size() + 1) >> 1) << 1;
-  } else if (Name.startswith("#1/")) {
+  } else if (Name.starts_with("#1/")) {
     uint64_t NameSize;
     StringRef RawNameSize = Name.substr(3).rtrim(' ');
     if (RawNameSize.getAsInteger(10, NameSize)) {
@@ -671,7 +671,7 @@ Expected<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
   std::unique_ptr<Archive> Ret;
   StringRef Buffer = Source.getBuffer();
 
-  if (Buffer.startswith(BigArchiveMagic))
+  if (Buffer.starts_with(BigArchiveMagic))
     Ret = std::make_unique<BigArchive>(Source, Err);
   else
     Ret = std::make_unique<Archive>(Source, Err);
@@ -711,11 +711,11 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   ErrorAsOutParameter ErrAsOutParam(&Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
-  if (Buffer.startswith(ThinArchiveMagic)) {
+  if (Buffer.starts_with(ThinArchiveMagic)) {
     IsThin = true;
-  } else if (Buffer.startswith(ArchiveMagic)) {
+  } else if (Buffer.starts_with(ArchiveMagic)) {
     IsThin = false;
-  } else if (Buffer.startswith(BigArchiveMagic)) {
+  } else if (Buffer.starts_with(BigArchiveMagic)) {
     Format = K_AIXBIG;
     IsThin = false;
     return;
@@ -800,7 +800,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     return;
   }
 
-  if (Name.startswith("#1/")) {
+  if (Name.starts_with("#1/")) {
     Format = K_BSD;
     // We know this is BSD, so getName will work since there is no string table.
     Expected<StringRef> NameOrErr = C->getName();
@@ -1392,6 +1392,8 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
                                   GlobSymtab32Loc, GlobSymtab32Size, "32-bit");
     if (Err)
       return;
+
+    Has32BitGlobalSymtab = true;
   }
 
   if (GlobSymtab64Offset) {
@@ -1400,6 +1402,8 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
                                   GlobSymtab64Loc, GlobSymtab64Size, "64-bit");
     if (Err)
       return;
+
+    Has64BitGlobalSymtab = true;
   }
 
   SmallVector<GlobalSymtabInfo> SymtabInfos;
@@ -1417,7 +1421,7 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
     // 64-bit global symbol tables, we need to merge them into a single table.
     raw_string_ostream Out(MergedGlobalSymtabBuf);
     uint64_t SymNum = SymtabInfos[0].SymNum + SymtabInfos[1].SymNum;
-    write(Out, SymNum, support::big);
+    write(Out, SymNum, llvm::endianness::big);
     // Merge symbol offset.
     Out << SymtabInfos[0].SymbolOffsetTable;
     Out << SymtabInfos[1].SymbolOffsetTable;

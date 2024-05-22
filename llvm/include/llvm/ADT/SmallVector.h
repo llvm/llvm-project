@@ -326,8 +326,8 @@ public:
 /// copy these types with memcpy, there is no way for the type to observe this.
 /// This catches the important case of std::pair<POD, POD>, which is not
 /// trivially assignable.
-template <typename T, bool = (is_trivially_copy_constructible<T>::value) &&
-                             (is_trivially_move_constructible<T>::value) &&
+template <typename T, bool = (std::is_trivially_copy_constructible<T>::value) &&
+                             (std::is_trivially_move_constructible<T>::value) &&
                              std::is_trivially_destructible<T>::value>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
   friend class SmallVectorTemplateCommon<T>;
@@ -601,15 +601,15 @@ protected:
     RHS.resetToSmall();
   }
 
-public:
-  SmallVectorImpl(const SmallVectorImpl &) = delete;
-
   ~SmallVectorImpl() {
     // Subclass has already destructed this vector's elements.
     // If this wasn't grown from the inline copy, deallocate the old space.
     if (!this->isSmall())
       free(this->begin());
   }
+
+public:
+  SmallVectorImpl(const SmallVectorImpl &) = delete;
 
   void clear() {
     this->destroy_range(this->begin(), this->end());

@@ -766,7 +766,7 @@ class TargetRegisterInfo;
     /// be added from SUnit \p X to SUnit \p Y.
     void AddPredQueued(SUnit *Y, SUnit *X);
 
-    /// Updates the topological ordering to accommodate an an edge to be
+    /// Updates the topological ordering to accommodate an edge to be
     /// removed from the specified node \p N from the predecessors of the
     /// current node \p M.
     void RemovePred(SUnit *M, SUnit *N);

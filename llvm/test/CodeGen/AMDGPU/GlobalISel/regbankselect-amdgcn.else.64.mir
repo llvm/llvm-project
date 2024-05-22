@@ -12,8 +12,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1), [[INT1:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), [[COPY]](s64)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1), [[INT1:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), [[COPY]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s1), %2:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %0
+    %1:_(s1), %2:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %0
 
 ...

@@ -107,9 +107,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
-  if (!isa<OverflowingBinaryOperator>(Inst))
-    return false;
-
+  bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<ConstantInt>(Op))
       return ConstantRange(Const->getValue());
@@ -120,23 +118,32 @@ static bool refineInstruction(SCCPSolver &Solver,
     return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
                             /*UndefAllowed=*/false);
   };
-  auto RangeA = GetRange(Inst.getOperand(0));
-  auto RangeB = GetRange(Inst.getOperand(1));
-  bool Changed = false;
-  if (!Inst.hasNoUnsignedWrap()) {
-    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB,
-        OverflowingBinaryOperator::NoUnsignedWrap);
-    if (NUWRange.contains(RangeA)) {
-      Inst.setHasNoUnsignedWrap();
-      Changed = true;
+
+  if (isa<OverflowingBinaryOperator>(Inst)) {
+    auto RangeA = GetRange(Inst.getOperand(0));
+    auto RangeB = GetRange(Inst.getOperand(1));
+    if (!Inst.hasNoUnsignedWrap()) {
+      auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoUnsignedWrap);
+      if (NUWRange.contains(RangeA)) {
+        Inst.setHasNoUnsignedWrap();
+        Changed = true;
+      }
     }
-  }
-  if (!Inst.hasNoSignedWrap()) {
-    auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB, OverflowingBinaryOperator::NoSignedWrap);
-    if (NSWRange.contains(RangeA)) {
-      Inst.setHasNoSignedWrap();
+    if (!Inst.hasNoSignedWrap()) {
+      auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoSignedWrap);
+      if (NSWRange.contains(RangeA)) {
+        Inst.setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+    auto Range = GetRange(Inst.getOperand(0));
+    if (Range.isAllNonNegative()) {
+      Inst.setNonNeg();
       Changed = true;
     }
   }
@@ -171,6 +178,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    NewInst->setNonNeg();
     break;
   }
   case Instruction::AShr: {
@@ -179,6 +187,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst->setIsExact(Inst.isExact());
     break;
   }
   case Instruction::SDiv:
@@ -191,6 +200,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    if (Inst.getOpcode() == Instruction::SDiv)
+      NewInst->setIsExact(Inst.isExact());
     break;
   }
   default:
@@ -1029,8 +1040,9 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
     return;
   }
 
-  // Unwinding instructions successors are always executable.
-  if (TI.isExceptionalTerminator()) {
+  // We cannot analyze special terminators, so consider all successors
+  // executable.
+  if (TI.isSpecialTerminator()) {
     Succs.assign(TI.getNumSuccessors(), true);
     return;
   }
@@ -1095,13 +1107,6 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
 
     // If we didn't find our destination in the IBR successor list, then we
     // have undefined behavior. Its ok to assume no successor is executable.
-    return;
-  }
-
-  // In case of callbr, we pessimistically assume that all successors are
-  // feasible.
-  if (isa<CallBrInst>(&TI)) {
-    Succs.assign(TI.getNumSuccessors(), true);
     return;
   }
 
@@ -1231,10 +1236,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
 
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
-    Constant *C = ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL);
-    markConstant(&I, C);
-  } else if (I.getDestTy()->isIntegerTy() &&
-             I.getSrcTy()->isIntOrIntVectorTy()) {
+    if (Constant *C =
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
+      return (void)markConstant(&I, C);
+  }
+
+  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy()) {
     auto &LV = getValueState(&I);
     ConstantRange OpRange = getConstantRange(OpSt, I.getSrcTy());
 
@@ -1539,11 +1546,8 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     return (void)markOverdefined(&I);
   }
 
-  Constant *Ptr = Operands[0];
-  auto Indices = ArrayRef(Operands.begin() + 1, Operands.end());
-  Constant *C =
-      ConstantExpr::getGetElementPtr(I.getSourceElementType(), Ptr, Indices);
-  markConstant(&I, C);
+  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
+    markConstant(&I, C);
 }
 
 void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {

@@ -12,6 +12,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -26,55 +27,63 @@ static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
-}
+
+llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
+                                  cl::desc("use DFS order for YAML profile"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
 
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = MB.getError())
-    report_error(Filename, EC);
-  StringRef Buffer = MB.get()->getBuffer();
-  if (Buffer.startswith("---\n"))
-    return true;
+  if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
+    StringRef Buffer = (*MB)->getBuffer();
+    return Buffer.starts_with("---\n");
+  } else {
+    report_error(Filename, MB.getError());
+  }
   return false;
 }
 
-void YAMLProfileReader::buildNameMaps(
-    std::map<uint64_t, BinaryFunction> &Functions) {
+void YAMLProfileReader::buildNameMaps(BinaryContext &BC) {
+  auto lookupFunction = [&](StringRef Name) -> BinaryFunction * {
+    if (BinaryData *BD = BC.getBinaryDataByName(Name))
+      return BC.getFunctionForSymbol(BD->getSymbol());
+    return nullptr;
+  };
+
+  ProfileBFs.reserve(YamlBP.Functions.size());
+
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     StringRef Name = YamlBF.Name;
     const size_t Pos = Name.find("(*");
     if (Pos != StringRef::npos)
       Name = Name.substr(0, Pos);
-    ProfileNameToProfile[Name] = &YamlBF;
+    ProfileFunctionNames.insert(Name);
+    ProfileBFs.push_back(lookupFunction(Name));
     if (const std::optional<StringRef> CommonName = getLTOCommonName(Name))
       LTOCommonNameMap[*CommonName].push_back(&YamlBF);
   }
-  for (auto &BFI : Functions) {
-    const BinaryFunction &Function = BFI.second;
-    for (StringRef Name : Function.getNames())
-      if (const std::optional<StringRef> CommonName = getLTOCommonName(Name))
-        LTOCommonNameFunctionMap[*CommonName].insert(&Function);
+  for (auto &[Symbol, BF] : BC.SymbolToFunctionMap) {
+    StringRef Name = Symbol->getName();
+    if (const std::optional<StringRef> CommonName = getLTOCommonName(Name))
+      LTOCommonNameFunctionMap[*CommonName].insert(BF);
   }
 }
 
 bool YAMLProfileReader::hasLocalsWithFileName() const {
-  for (const StringMapEntry<yaml::bolt::BinaryFunctionProfile *> &KV :
-       ProfileNameToProfile) {
-    const StringRef &FuncName = KV.getKey();
-    if (FuncName.count('/') == 2 && FuncName[0] != '/')
-      return true;
-  }
-  return false;
+  return llvm::any_of(ProfileFunctionNames.keys(), [](StringRef FuncName) {
+    return FuncName.count('/') == 2 && FuncName[0] != '/';
+  });
 }
 
 bool YAMLProfileReader::parseFunctionProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   BinaryContext &BC = BF.getBinaryContext();
 
+  const bool IsDFSOrder = YamlBP.Header.IsDFSOrder;
+  const HashFunction HashFunction = YamlBP.Header.HashFunction;
   bool ProfileMatched = true;
   uint64_t MismatchedBlocks = 0;
   uint64_t MismatchedCalls = 0;
@@ -90,7 +99,8 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(/*UseDFS=*/true)) {
+  if (!opts::IgnoreHash &&
+      YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: function hash mismatch\n";
     ProfileMatched = false;
@@ -102,10 +112,14 @@ bool YAMLProfileReader::parseFunctionProfile(
     ProfileMatched = false;
   }
 
-  BinaryFunction::BasicBlockOrderType DFSOrder = BF.dfs();
+  BinaryFunction::BasicBlockOrderType Order;
+  if (IsDFSOrder)
+    llvm::copy(BF.dfs(), std::back_inserter(Order));
+  else
+    llvm::copy(BF.getLayout().blocks(), std::back_inserter(Order));
 
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-    if (YamlBB.Index >= DFSOrder.size()) {
+    if (YamlBB.Index >= Order.size()) {
       if (opts::Verbosity >= 2)
         errs() << "BOLT-WARNING: index " << YamlBB.Index
                << " is out of bounds\n";
@@ -113,7 +127,7 @@ bool YAMLProfileReader::parseFunctionProfile(
       continue;
     }
 
-    BinaryBasicBlock &BB = *DFSOrder[YamlBB.Index];
+    BinaryBasicBlock &BB = *Order[YamlBB.Index];
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
@@ -197,14 +211,14 @@ bool YAMLProfileReader::parseFunctionProfile(
     }
 
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors) {
-      if (YamlSI.Index >= DFSOrder.size()) {
+      if (YamlSI.Index >= Order.size()) {
         if (opts::Verbosity >= 1)
           errs() << "BOLT-WARNING: index out of bounds for profiled block\n";
         ++MismatchedEdges;
         continue;
       }
 
-      BinaryBasicBlock &SuccessorBB = *DFSOrder[YamlSI.Index];
+      BinaryBasicBlock &SuccessorBB = *Order[YamlSI.Index];
       if (!BB.getSuccessor(SuccessorBB.getLabel())) {
         if (opts::Verbosity >= 1)
           errs() << "BOLT-WARNING: no successor for block " << BB.getName()
@@ -241,9 +255,6 @@ bool YAMLProfileReader::parseFunctionProfile(
            << " edges in profile did not match function " << BF << '\n';
 
   if (!ProfileMatched && opts::InferStaleProfile) {
-    if (opts::Verbosity >= 1)
-      outs() << "BOLT-INFO: applying profile inference for "
-             << "\"" << BF.getPrintName() << "\"\n";
     if (inferStaleProfile(BF, YamlBF)) {
       ProfileMatched = true;
       BF.markProfiled(YamlBP.Header.Flags);
@@ -282,18 +293,20 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
         inconvertibleErrorCode());
 
   // Match profile to function based on a function name.
-  buildNameMaps(BC.getBinaryFunctions());
+  buildNameMaps(BC);
 
   // Preliminary assign function execution count.
-  for (auto &KV : BC.getBinaryFunctions()) {
-    BinaryFunction &BF = KV.second;
-    for (StringRef Name : BF.getNames()) {
-      auto PI = ProfileNameToProfile.find(Name);
-      if (PI != ProfileNameToProfile.end()) {
-        yaml::bolt::BinaryFunctionProfile &YamlBF = *PI->getValue();
-        BF.setExecutionCount(YamlBF.ExecCount);
-        break;
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+    if (!BF)
+      continue;
+    if (!BF->hasProfile()) {
+      BF->setExecutionCount(YamlBF.ExecCount);
+    } else {
+      if (opts::Verbosity >= 1) {
+        errs() << "BOLT-WARNING: dropping duplicate profile for " << YamlBF.Name
+               << '\n';
       }
+      BF = nullptr;
     }
   }
 
@@ -301,9 +314,10 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
-  for (StringRef Name : BF.getNames()) {
-    if (ProfileNameToProfile.contains(Name))
+  for (StringRef Name : BF.getNames())
+    if (ProfileFunctionNames.contains(Name))
       return true;
+  for (StringRef Name : BF.getNames()) {
     if (const std::optional<StringRef> CommonName = getLTOCommonName(Name)) {
       if (LTOCommonNameMap.contains(*CommonName))
         return true;
@@ -314,92 +328,77 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
 }
 
 Error YAMLProfileReader::readProfile(BinaryContext &BC) {
+  if (opts::Verbosity >= 1) {
+    outs() << "BOLT-INFO: YAML profile with hash: ";
+    switch (YamlBP.Header.HashFunction) {
+    case HashFunction::StdHash:
+      outs() << "std::hash\n";
+      break;
+    case HashFunction::XXH3:
+      outs() << "xxh3\n";
+      break;
+    }
+  }
   YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
 
   auto profileMatches = [](const yaml::bolt::BinaryFunctionProfile &Profile,
                            BinaryFunction &BF) {
-    if (opts::IgnoreHash && Profile.NumBasicBlocks == BF.size())
-      return true;
-    if (!opts::IgnoreHash &&
-        Profile.Hash == static_cast<uint64_t>(BF.getHash()))
-      return true;
-    return false;
+    if (opts::IgnoreHash)
+      return Profile.NumBasicBlocks == BF.size();
+    return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
   // We have to do 2 passes since LTO introduces an ambiguity in function
   // names. The first pass assigns profiles that match 100% by name and
   // by hash. The second pass allows name ambiguity for LTO private functions.
-  for (auto &BFI : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
-
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+    if (!BF)
+      continue;
+    BinaryFunction &Function = *BF;
     // Clear function call count that may have been set while pre-processing
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
     // Recompute hash once per function.
     if (!opts::IgnoreHash)
-      Function.computeHash(/*UseDFS=*/true);
+      Function.computeHash(YamlBP.Header.IsDFSOrder,
+                           YamlBP.Header.HashFunction);
 
-    for (StringRef FunctionName : Function.getNames()) {
-      auto PI = ProfileNameToProfile.find(FunctionName);
-      if (PI == ProfileNameToProfile.end())
-        continue;
-
-      yaml::bolt::BinaryFunctionProfile &YamlBF = *PI->getValue();
-      if (profileMatches(YamlBF, Function))
-        matchProfileToFunction(YamlBF, Function);
-    }
+    if (profileMatches(YamlBF, Function))
+      matchProfileToFunction(YamlBF, Function);
   }
 
-  for (auto &BFI : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
-
-    if (ProfiledFunctions.count(&Function))
+  for (const auto &[CommonName, LTOProfiles] : LTOCommonNameMap) {
+    if (!LTOCommonNameFunctionMap.contains(CommonName))
       continue;
-
-    for (StringRef FunctionName : Function.getNames()) {
-      const std::optional<StringRef> CommonName =
-          getLTOCommonName(FunctionName);
-      if (CommonName) {
-        auto I = LTOCommonNameMap.find(*CommonName);
-        if (I == LTOCommonNameMap.end())
-          continue;
-
-        bool ProfileMatched = false;
-        std::vector<yaml::bolt::BinaryFunctionProfile *> &LTOProfiles =
-            I->getValue();
-        for (yaml::bolt::BinaryFunctionProfile *YamlBF : LTOProfiles) {
-          if (YamlBF->Used)
-            continue;
-          if ((ProfileMatched = profileMatches(*YamlBF, Function))) {
-            matchProfileToFunction(*YamlBF, Function);
-            break;
-          }
-        }
-        if (ProfileMatched)
-          break;
-
-        // If there's only one function with a given name, try to
-        // match it partially.
-        if (LTOProfiles.size() == 1 &&
-            LTOCommonNameFunctionMap[*CommonName].size() == 1 &&
-            !LTOProfiles.front()->Used) {
-          matchProfileToFunction(*LTOProfiles.front(), Function);
-          break;
-        }
-      } else {
-        auto PI = ProfileNameToProfile.find(FunctionName);
-        if (PI == ProfileNameToProfile.end())
-          continue;
-
-        yaml::bolt::BinaryFunctionProfile &YamlBF = *PI->getValue();
-        if (!YamlBF.Used) {
-          matchProfileToFunction(YamlBF, Function);
-          break;
+    std::unordered_set<BinaryFunction *> &Functions =
+        LTOCommonNameFunctionMap[CommonName];
+    // Return true if a given profile is matched to one of BinaryFunctions with
+    // matching LTO common name.
+    auto matchProfile = [&](yaml::bolt::BinaryFunctionProfile *YamlBF) {
+      if (YamlBF->Used)
+        return false;
+      for (BinaryFunction *BF : Functions) {
+        if (!ProfiledFunctions.count(BF) && profileMatches(*YamlBF, *BF)) {
+          matchProfileToFunction(*YamlBF, *BF);
+          return true;
         }
       }
-    }
+      return false;
+    };
+    bool ProfileMatched = llvm::any_of(LTOProfiles, matchProfile);
+
+    // If there's only one function with a given name, try to match it
+    // partially.
+    if (!ProfileMatched && LTOProfiles.size() == 1 && Functions.size() == 1 &&
+        !LTOProfiles.front()->Used &&
+        !ProfiledFunctions.count(*Functions.begin()))
+      matchProfileToFunction(*LTOProfiles.front(), **Functions.begin());
   }
+
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
+    if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
+      matchProfileToFunction(YamlBF, *BF);
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)

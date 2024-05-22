@@ -152,7 +152,7 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
 namespace llvm {
 
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
-  if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence()) {
+  if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "
                          "TTI->hasBranchDivergence() is false.\n");
     return false;
@@ -316,7 +316,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBeforePreserving(ToBlock.getTerminator());
     }
   }
   return true;
@@ -345,5 +345,15 @@ PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+void SpeculativeExecutionPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SpeculativeExecutionPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  if (OnlyIfDivergentTarget)
+    OS << "only-if-divergent-target";
+  OS << '>';
 }
 }  // namespace llvm

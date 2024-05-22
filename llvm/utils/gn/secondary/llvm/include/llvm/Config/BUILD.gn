@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
@@ -46,9 +47,6 @@ declare_args() {
   # Enable additional checks that alter the LLVM C++ ABI.
   llvm_enable_abi_breaking_checks = llvm_enable_assertions
 
-  # Iterate unordered llvm containers in reverse.
-  llvm_enable_reverse_iteration = false
-
   # Force enable statistics.
   llvm_force_enable_stats = false
 
@@ -85,6 +83,7 @@ write_cmake_config("config") {
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
+    "HAVE_BUILTIN_THREAD_POINTER=",
     "HAVE_CRASHREPORTERCLIENT_H=",
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
@@ -375,12 +374,6 @@ write_cmake_config("llvm-config") {
     ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    values += [ "LLVM_HAVE_LIBXAR=" ]
-  }
-
   if (llvm_enable_dia_sdk) {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
@@ -410,6 +403,94 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+
+  if (llvm_build_AArch64) {
+    values += [ "LLVM_HAS_AARCH64_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AARCH64_TARGET=" ]
+  }
+
+  if (llvm_build_AMDGPU) {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_ARC_TARGET=" ]
+
+  if (llvm_build_ARM) {
+    values += [ "LLVM_HAS_ARM_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_ARM_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_AVR_TARGET=" ]
+
+  if (llvm_build_BPF) {
+    values += [ "LLVM_HAS_BPF_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_BPF_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_CSKY_TARGET=" ]
+  values += [ "LLVM_HAS_DIRECTX_TARGET=" ]
+  values += [ "LLVM_HAS_HEXAGON_TARGET=" ]
+  values += [ "LLVM_HAS_LANAI_TARGET=" ]
+
+  if (llvm_build_LoongArch) {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_M68K_TARGET=" ]
+
+  if (llvm_build_Mips) {
+    values += [ "LLVM_HAS_MIPS_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_MIPS_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_MSP430_TARGET=" ]
+  values += [ "LLVM_HAS_NVPTX_TARGET=" ]
+
+  if (llvm_build_PowerPC) {
+    values += [ "LLVM_HAS_POWERPC_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_POWERPC_TARGET=" ]
+  }
+
+  if (llvm_build_RISCV) {
+    values += [ "LLVM_HAS_RISCV_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_RISCV_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_SPARC_TARGET=" ]
+  values += [ "LLVM_HAS_SPIRV_TARGET=" ]
+
+  if (llvm_build_SystemZ) {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_VE_TARGET=" ]
+
+  if (llvm_build_WebAssembly) {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=" ]
+  }
+
+  if (llvm_build_X86) {
+    values += [ "LLVM_HAS_X86_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_X86_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_XCORE_TARGET=" ]
+  values += [ "LLVM_HAS_XTENSA_TARGET=" ]
 }
 
 ##############################################################################

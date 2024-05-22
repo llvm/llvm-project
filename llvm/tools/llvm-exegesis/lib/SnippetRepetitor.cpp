@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <array>
-#include <string>
-
 #include "SnippetRepetitor.h"
 #include "Target.h"
 #include "llvm/ADT/Sequence.h"
@@ -106,7 +103,7 @@ public:
         for (const auto &LiveIn : Entry.MBB->liveins())
           Loop.MBB->addLiveIn(LiveIn);
       }
-      for (auto _ : seq(0U, LoopUnrollFactor)) {
+      for (auto _ : seq(LoopUnrollFactor)) {
         (void)_;
         Loop.addInstructions(Instructions);
       }

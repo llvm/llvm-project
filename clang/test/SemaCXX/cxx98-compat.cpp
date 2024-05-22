@@ -24,7 +24,7 @@ template<int ...I>  // expected-warning {{variadic templates are incompatible wi
 class Variadic3 {};
 
 alignas(8) int with_alignas; // expected-warning {{'alignas' is incompatible with C++98}}
-int with_attribute [[ ]]; // expected-warning {{C++11 attribute syntax is incompatible with C++98}}
+int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++ standards before C++11}}
 
 void Literals() {
   (void)u8"str"; // expected-warning {{unicode literals are incompatible with C++98}}
@@ -104,7 +104,7 @@ struct RefQualifier {
 
 auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
 #ifdef CXX14COMPAT
-auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}} 
+auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
 // expected-warning@-1 {{return type deduction is incompatible with C++ standards before C++14}}
 #endif
 

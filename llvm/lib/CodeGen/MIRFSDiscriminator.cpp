@@ -35,10 +35,12 @@ using namespace sampleprofutil;
 
 // TODO(xur): Remove this option and related code once we make true as the
 // default.
+namespace llvm {
 cl::opt<bool> ImprovedFSDiscriminator(
     "improved-fs-discriminator", cl::Hidden, cl::init(false),
     cl::desc("New FS discriminators encoding (incompatible with the original "
              "encoding)"));
+}
 
 char MIRAddFSDiscriminators::ID = 0;
 
@@ -80,8 +82,8 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
   };
   uint64_t Ret = 0;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    Ret = hashCombine(Ret, xxHash64(ArrayRef<uint8_t>(DIL->getLine())));
-    Ret = hashCombine(Ret, xxHash64(DIL->getSubprogramLinkageName()));
+    Ret = hashCombine(Ret, xxh3_64bits(ArrayRef<uint8_t>(DIL->getLine())));
+    Ret = hashCombine(Ret, xxh3_64bits(DIL->getSubprogramLinkageName()));
   }
   return Ret;
 }

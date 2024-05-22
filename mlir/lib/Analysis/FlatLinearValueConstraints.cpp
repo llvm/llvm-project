@@ -67,7 +67,9 @@ private:
 } // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
-// flattened (i.e., semi-affine expressions not handled yet).
+// flattened. For example two specific cases:
+// 1. semi-affine expressions not handled yet.
+// 2. has poison expression (i.e., division by zero).
 static LogicalResult
 getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
                         unsigned numSymbols,
@@ -85,8 +87,10 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
   for (auto expr : exprs) {
     if (!expr.isPureAffine())
       return failure();
-
-    flattener.walkPostOrder(expr);
+    // has poison expression
+    auto flattenResult = flattener.walkPostOrder(expr);
+    if (failed(flattenResult))
+      return failure();
   }
 
   assert(flattener.operandExprStack.size() == exprs.size());
@@ -147,10 +151,6 @@ LogicalResult mlir::getFlattenedAffineExprs(
 //===----------------------------------------------------------------------===//
 // FlatLinearConstraints
 //===----------------------------------------------------------------------===//
-
-std::unique_ptr<FlatLinearConstraints> FlatLinearConstraints::clone() const {
-  return std::make_unique<FlatLinearConstraints>(*this);
-}
 
 // Similar to `composeMap` except that no Values need be associated with the
 // constraint system nor are they looked at -- the dimensions and symbols of
@@ -309,7 +309,7 @@ static bool detectAsMod(const FlatLinearConstraints &cst, unsigned pos,
     // `var_n`), we can proceed.
     // TODO: Handle AffineSymbolExpr as well. There is no reason to restrict it
     // to dims themselves.
-    auto dimExpr = dividendExpr.dyn_cast<AffineDimExpr>();
+    auto dimExpr = dyn_cast<AffineDimExpr>(dividendExpr);
     if (!dimExpr)
       continue;
 
@@ -849,48 +849,6 @@ FlatLinearValueConstraints::FlatLinearValueConstraints(IntegerSet set,
   append(localVarCst);
 }
 
-// Construct a hyperrectangular constraint set from ValueRanges that represent
-// induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
-// expected to match one to one. The order of variables and constraints is:
-//
-// ivs | lbs | ubs | eq/ineq
-// ----+-----+-----+---------
-//   1   -1     0      >= 0
-// ----+-----+-----+---------
-//  -1    0     1      >= 0
-//
-// All dimensions as set as VarKind::SetDim.
-FlatLinearValueConstraints
-FlatLinearValueConstraints::getHyperrectangular(ValueRange ivs, ValueRange lbs,
-                                                ValueRange ubs) {
-  FlatLinearValueConstraints res;
-  unsigned nIvs = ivs.size();
-  assert(nIvs == lbs.size() && "expected as many lower bounds as ivs");
-  assert(nIvs == ubs.size() && "expected as many upper bounds as ivs");
-
-  if (nIvs == 0)
-    return res;
-
-  res.appendDimVar(ivs);
-  unsigned lbsStart = res.appendDimVar(lbs);
-  unsigned ubsStart = res.appendDimVar(ubs);
-
-  MLIRContext *ctx = ivs.front().getContext();
-  for (int ivIdx = 0, e = nIvs; ivIdx < e; ++ivIdx) {
-    // iv - lb >= 0
-    AffineMap lb = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
-                                  getAffineDimExpr(lbsStart + ivIdx, ctx));
-    if (failed(res.addBound(BoundType::LB, ivIdx, lb)))
-      llvm_unreachable("Unexpected FlatLinearValueConstraints creation error");
-    // -iv + ub >= 0
-    AffineMap ub = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
-                                  getAffineDimExpr(ubsStart + ivIdx, ctx));
-    if (failed(res.addBound(BoundType::UB, ivIdx, ub)))
-      llvm_unreachable("Unexpected FlatLinearValueConstraints creation error");
-  }
-  return res;
-}
-
 unsigned FlatLinearValueConstraints::appendDimVar(ValueRange vals) {
   unsigned pos = getNumDimVars();
   return insertVar(VarKind::SetDim, pos, vals);
@@ -938,11 +896,6 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
 
   assert(values.size() == getNumDimAndSymbolVars());
   return absolutePos;
-}
-
-bool FlatLinearValueConstraints::hasValues() const {
-  return llvm::any_of(
-      values, [](const std::optional<Value> &var) { return var.has_value(); });
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
@@ -1009,15 +962,15 @@ areVarsUnique(const FlatLinearValueConstraints &cst, VarKind kind) {
 /// so that they have the union of all variables, with A's original
 /// variables appearing first followed by any of B's variables that didn't
 /// appear in A. Local variables in B that have the same division
-/// representation as local variables in A are merged into one.
+/// representation as local variables in A are merged into one. We allow A
+/// and B to have non-unique values for their variables; in such cases, they are
+/// still aligned with the variables appearing first aligned with those
+/// appearing first in the other system from left to right.
 //  E.g.: Input: A has ((%i, %j) [%M, %N]) and B has (%k, %j) [%P, %N, %M])
 //        Output: both A, B have (%i, %j, %k) [%M, %N, %P]
 static void mergeAndAlignVars(unsigned offset, FlatLinearValueConstraints *a,
                               FlatLinearValueConstraints *b) {
   assert(offset <= a->getNumDimVars() && offset <= b->getNumDimVars());
-  // A merge/align isn't meaningful if a cst's vars aren't distinct.
-  assert(areVarsUnique(*a) && "A's values aren't unique");
-  assert(areVarsUnique(*b) && "B's values aren't unique");
 
   assert(llvm::all_of(
       llvm::drop_begin(a->getMaybeValues(), offset),
@@ -1033,9 +986,12 @@ static void mergeAndAlignVars(unsigned offset, FlatLinearValueConstraints *a,
   {
     // Merge dims from A into B.
     unsigned d = offset;
-    for (auto aDimValue : aDimValues) {
+    for (Value aDimValue : aDimValues) {
       unsigned loc;
-      if (b->findVar(aDimValue, &loc)) {
+      // Find from the position `d` since we'd like to also consider the
+      // possibility of multiple variables with the same `Value`. We align with
+      // the next appearing one.
+      if (b->findVar(aDimValue, &loc, d)) {
         assert(loc >= offset && "A's dim appears in B's aligned range");
         assert(loc < b->getNumDimVars() &&
                "A's dim appears in B's non-dim position");
@@ -1068,14 +1024,11 @@ void FlatLinearValueConstraints::mergeAndAlignVarsWithOther(
 }
 
 /// Merge and align symbols of `this` and `other` such that both get union of
-/// of symbols that are unique. Symbols in `this` and `other` should be
-/// unique. Symbols with Value as `None` are considered to be inequal to all
-/// other symbols.
+/// of symbols. Existing symbols need not be unique; they will be aligned from
+/// left to right with duplicates aligned in the same order. Symbols with Value
+/// as `None` are considered to be inequal to all other symbols.
 void FlatLinearValueConstraints::mergeSymbolVars(
     FlatLinearValueConstraints &other) {
-
-  assert(areVarsUnique(*this, VarKind::Symbol) && "Symbol vars are not unique");
-  assert(areVarsUnique(other, VarKind::Symbol) && "Symbol vars are not unique");
 
   SmallVector<Value, 4> aSymValues;
   getValues(getNumDimVars(), getNumDimAndSymbolVars(), &aSymValues);
@@ -1085,8 +1038,9 @@ void FlatLinearValueConstraints::mergeSymbolVars(
   for (Value aSymValue : aSymValues) {
     unsigned loc;
     // If the var is a symbol in `other`, then align it, otherwise assume that
-    // it is a new symbol
-    if (other.findVar(aSymValue, &loc) && loc >= other.getNumDimVars() &&
+    // it is a new symbol. Search in `other` starting at position `s` since the
+    // left of it is aligned.
+    if (other.findVar(aSymValue, &loc, s) && loc >= other.getNumDimVars() &&
         loc < other.getNumDimAndSymbolVars())
       other.swapVar(s, loc);
     else
@@ -1102,8 +1056,6 @@ void FlatLinearValueConstraints::mergeSymbolVars(
 
   assert(getNumSymbolVars() == other.getNumSymbolVars() &&
          "expected same number of symbols");
-  assert(areVarsUnique(*this, VarKind::Symbol) && "Symbol vars are not unique");
-  assert(areVarsUnique(other, VarKind::Symbol) && "Symbol vars are not unique");
 }
 
 bool FlatLinearValueConstraints::hasConsistentState() const {
@@ -1155,9 +1107,11 @@ FlatLinearValueConstraints::computeAlignedMap(AffineMap map,
   return alignedMap;
 }
 
-bool FlatLinearValueConstraints::findVar(Value val, unsigned *pos) const {
-  unsigned i = 0;
-  for (const auto &mayBeVar : values) {
+bool FlatLinearValueConstraints::findVar(Value val, unsigned *pos,
+                                         unsigned offset) const {
+  unsigned i = offset;
+  for (const auto &mayBeVar :
+       ArrayRef<std::optional<Value>>(values).drop_front(offset)) {
     if (mayBeVar && *mayBeVar == val) {
       *pos = i;
       return true;
@@ -1301,8 +1255,8 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
   for (const auto &operand : llvm::enumerate(operands)) {
     // Compute replacement dim/sym of operand.
     AffineExpr replacement;
-    auto dimIt = std::find(dims.begin(), dims.end(), operand.value());
-    auto symIt = std::find(syms.begin(), syms.end(), operand.value());
+    auto dimIt = llvm::find(dims, operand.value());
+    auto symIt = llvm::find(syms, operand.value());
     if (dimIt != dims.end()) {
       replacement =
           builder.getAffineDimExpr(std::distance(dims.begin(), dimIt));
@@ -1343,7 +1297,7 @@ mlir::getMultiAffineFunctionFromMap(AffineMap map,
          "AffineMap cannot produce divs without local representation");
 
   // TODO: We shouldn't have to do this conversion.
-  Matrix mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
+  Matrix<MPInt> mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
   for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
     for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
       mat(i, j) = flattenedExprs[i][j];

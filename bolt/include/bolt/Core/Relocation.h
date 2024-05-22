@@ -61,7 +61,7 @@ struct Relocation {
 
   /// Handle special cases when relocation should not be processed by BOLT or
   /// change relocation \p Type to proper one before continuing if \p Contents
-  /// and \P Type mismatch occured.
+  /// and \P Type mismatch occurred.
   static bool skipRelocationProcess(uint64_t &Type, uint64_t Contents);
 
   // Adjust value depending on relocation type (make it PC relative or not)
@@ -84,6 +84,7 @@ struct Relocation {
 
   /// Special relocation type that allows the linker to modify the instruction.
   static bool isX86GOTPCRELX(uint64_t Type);
+  static bool isX86GOTPC64(uint64_t Type);
 
   /// Return true if relocation type is NONE
   static bool isNone(uint64_t Type);
@@ -96,6 +97,10 @@ struct Relocation {
 
   /// Return true if relocation type is for thread local storage.
   static bool isTLS(uint64_t Type);
+
+  /// Return true of relocation type is for referencing a specific instruction
+  /// (as opposed to a function, basic block, etc).
+  static bool isInstructionReference(uint64_t Type);
 
   /// Return code for a NONE relocation
   static uint64_t getNone();
@@ -118,6 +123,10 @@ struct Relocation {
   /// Return true if this relocation is R_*_RELATIVE type. Return false
   /// otherwise.
   bool isRelative() const { return isRelative(Type); }
+
+  /// Return true if this relocation is R_*_IRELATIVE type. Return false
+  /// otherwise.
+  bool isIRelative() const { return isIRelative(Type); }
 
   /// Emit relocation at a current \p Streamer' position. The caller is
   /// responsible for setting the position correctly.

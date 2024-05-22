@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 @size = global i32 0		; <ptr> [#uses=1]
 @g0 = external global i32		; <ptr> [#uses=2]
@@ -87,8 +87,8 @@ declare void @g(ptr, ptr)
 ; CHECK: ldw r2, cp[[[INDEX4]]]
 ; r4 & r5 used by InsertSPConstInst() to emit STW_l3r instruction.
 ; CHECK: stw r0, r1[r2]
-; CHECK: ldw r2, sp[0]
 ; CHECK: ldw r1, sp[1]
+; CHECK: ldw r2, sp[0]
 ; CHECK: ldaw r0, sp[0]
 ; scavenge r2 using SR spill slot
 ; CHECK: stw r2, sp[1]

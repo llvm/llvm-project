@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: availability-bad_variant_access-missing && !no-exceptions
-
 // <variant>
 
 // template <class ...Types> class variant;
@@ -21,6 +19,7 @@
 #include <type_traits>
 #include <variant>
 #include <memory>
+#include <vector>
 
 #include "test_macros.h"
 #include "variant_test_helpers.h"
@@ -81,8 +80,10 @@ void test_T_ctor_sfinae() {
     };
     static_assert(!std::is_constructible<V, X>::value,
                   "no boolean conversion in constructor");
-    static_assert(!std::is_constructible<V, std::false_type>::value,
-                  "no converted to bool in constructor");
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
+    static_assert(std::is_constructible<V, std::false_type>::value,
+                  "converted to bool in constructor");
+#endif
   }
   {
     struct X {};
@@ -140,12 +141,12 @@ void test_T_ctor_basic() {
     assert(std::get<0>(v) == "foo");
   }
   {
-    std::variant<bool volatile, std::unique_ptr<int>> v = nullptr;
+    std::variant<bool, std::unique_ptr<int>> v = nullptr;
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
   }
   {
-    std::variant<bool volatile const, int> v = true;
+    std::variant<bool const, int> v = true;
     assert(v.index() == 0);
     assert(std::get<0>(v));
   }
@@ -200,11 +201,21 @@ void test_construction_with_repeated_types() {
   static_assert(std::is_constructible<V, Bar>::value, "");
 }
 
+void test_vector_bool() {
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
+  std::vector<bool> vec = {true};
+  std::variant<bool, int> v = vec[0];
+  assert(v.index() == 0);
+  assert(std::get<0>(v) == true);
+#endif
+}
+
 int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
   test_T_ctor_sfinae();
   test_no_narrowing_check_for_class_types();
   test_construction_with_repeated_types();
+  test_vector_bool();
   return 0;
 }

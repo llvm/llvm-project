@@ -62,7 +62,7 @@ def err_ast_file_out_of_date : Error<
   "%select{PCH|module|AST}0 file '%1' is out of date and "
   "needs to be rebuilt%select{|: %3}2">, DefaultFatal;
 def err_ast_file_invalid : Error<
-  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file">, DefaultFatal;
+  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file: %2">, DefaultFatal;
 def note_module_file_imported_by : Note<
   "imported by %select{|module '%2' in }1'%0'">;
 def err_module_file_not_module : Error<
@@ -128,11 +128,6 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
-
-def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
-  "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
-  InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 
 def warn_reading_std_cxx_module_by_implicit_paths : Warning<
   "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "

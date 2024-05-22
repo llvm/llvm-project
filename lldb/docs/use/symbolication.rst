@@ -1,10 +1,6 @@
 Symbolication
 =============
 
-.. contents::
-   :local:
-
-
 LLDB is separated into a shared library that contains the core of the debugger,
 and a driver that implements debugging and a command interpreter. LLDB can be
 used to symbolicate your crash logs and can often provide more information than

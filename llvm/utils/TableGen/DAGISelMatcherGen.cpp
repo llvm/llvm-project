@@ -147,13 +147,14 @@ namespace {
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)
-: Pattern(pattern), CGP(cgp), NextRecordedOperandNo(0),
-  TheMatcher(nullptr), CurPredicate(nullptr) {
-  // We need to produce the matcher tree for the patterns source pattern.  To do
-  // this we need to match the structure as well as the types.  To do the type
-  // matching, we want to figure out the fewest number of type checks we need to
-  // emit.  For example, if there is only one integer type supported by a
-  // target, there should be no type comparisons at all for integer patterns!
+    : Pattern(pattern), CGP(cgp), NextRecordedOperandNo(0), TheMatcher(nullptr),
+      CurPredicate(nullptr) {
+  // We need to produce the matcher tree for the patterns source pattern.  To
+  // do this we need to match the structure as well as the types.  To do the
+  // type matching, we want to figure out the fewest number of type checks we
+  // need to emit.  For example, if there is only one integer type supported
+  // by a target, there should be no type comparisons at all for integer
+  // patterns!
   //
   // To figure out the fewest number of type checks needed, clone the pattern,
   // remove the types, then perform type inference on the pattern as a whole.
@@ -710,7 +711,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
       if (RC.EnumValue <= 127) {
-        std::string Value = getQualifiedName(Def) + "RegClassID";
+        std::string Value = RC.getQualifiedIdName();
         AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
         ResultOps.push_back(NextRecordedOperandNo++);
       } else {
@@ -1067,7 +1068,7 @@ void MatcherGen::EmitResultCode() {
   SmallVector<unsigned, 8> Results(Ops);
 
   // Apply result permutation.
-  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern()->getNumTypes();
+  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern()->getNumResults();
        ++ResNo) {
     Results[ResNo] = Ops[Pattern.getDstPattern()->getResultIndex(ResNo)];
   }

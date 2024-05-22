@@ -9,7 +9,6 @@ void __attribute__((stdcall, fastcall)) foo3(void); // expected-warning{{'stdcal
 void __attribute__((stdcall)) foo4(); // expected-warning{{'stdcall' calling convention is not supported for this target}}
 void __attribute__((fastcall)) foo4(void); // expected-warning {{'fastcall' calling convention is not supported for this target}}
 
-// rdar://8876096
 void rdar8876096foo1(int i, int j) __attribute__((fastcall, cdecl)); // expected-warning{{'fastcall' calling convention is not supported for this target}}
 void rdar8876096foo2(int i, int j) __attribute__((fastcall, stdcall)); // expected-warning{{'stdcall' calling convention is not supported for this target}} expected-warning {{'fastcall' calling convention is not supported for this target}}
 void rdar8876096foo3(int i, int j) __attribute__((fastcall, regparm(2))); // expected-warning {{'fastcall' calling convention is not supported for this target}}

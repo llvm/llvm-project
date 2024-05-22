@@ -79,10 +79,10 @@ define <4 x i32> @test_api(i32 %0, i16 signext %1, i16 signext %2, <4 x i32> %xm
 ; AVX1-LABEL: test_api:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    movups %xmm1, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movups %xmm1, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movups %xmm1, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movups %xmm1, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)

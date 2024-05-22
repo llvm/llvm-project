@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 // CHECK1:       arrayctor.cont:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP2]], align 16
 // CHECK1-NEXT:    store i64 [[TMP2]], ptr [[__VLA_EXPR0]], align 8
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP59:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP59]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP59]])
 // CHECK1-NEXT:    [[ARRAY_BEGIN7:%.*]] = getelementptr inbounds [5 x %struct.S], ptr [[C]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN7]], i64 5
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]

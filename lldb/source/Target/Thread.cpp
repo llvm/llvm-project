@@ -76,7 +76,7 @@ enum {
 class ThreadOptionValueProperties
     : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
-  ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
+  ThreadOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -100,8 +100,7 @@ public:
 
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
-    m_collection_sp =
-        std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
+    m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
     m_collection_sp->Initialize(g_thread_properties);
   } else
     m_collection_sp =
@@ -1590,12 +1589,12 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   return Status();
 }
 
-void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
-                                     bool stop_format) {
+bool Thread::DumpUsingFormat(Stream &strm, uint32_t frame_idx,
+                             const FormatEntity::Entry *format) {
   ExecutionContext exe_ctx(shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == nullptr)
-    return;
+  if (!process || !format)
+    return false;
 
   StackFrameSP frame_sp;
   SymbolContext frame_sc;
@@ -1607,6 +1606,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
     }
   }
 
+  return FormatEntity::Format(*format, strm, frame_sp ? &frame_sc : nullptr,
+                              &exe_ctx, nullptr, nullptr, false, false);
+}
+
+void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
+                                     bool stop_format) {
+  ExecutionContext exe_ctx(shared_from_this());
+
   const FormatEntity::Entry *thread_format;
   if (stop_format)
     thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
@@ -1615,15 +1622,18 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
 
   assert(thread_format);
 
-  FormatEntity::Format(*thread_format, strm, frame_sp ? &frame_sc : nullptr,
-                       &exe_ctx, nullptr, nullptr, false, false);
+  DumpUsingFormat(strm, frame_idx, thread_format);
 }
 
 void Thread::SettingsInitialize() {}
 
 void Thread::SettingsTerminate() {}
 
-lldb::addr_t Thread::GetThreadPointer() { return LLDB_INVALID_ADDRESS; }
+lldb::addr_t Thread::GetThreadPointer() {
+  if (m_reg_context_sp)
+    return m_reg_context_sp->GetThreadPointer();
+  return LLDB_INVALID_ADDRESS;
+}
 
 addr_t Thread::GetThreadLocalData(const ModuleSP module,
                                   lldb::addr_t tls_file_addr) {

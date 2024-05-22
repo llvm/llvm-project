@@ -44,7 +44,7 @@ operator==(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _D
 template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
           _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
           _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
@@ -117,43 +117,38 @@ public:
     static _LIBCPP_CONSTEXPR const result_type tempering_c = __c;
     static _LIBCPP_CONSTEXPR const size_t tempering_l = __l;
     static _LIBCPP_CONSTEXPR const result_type initialization_multiplier = __f;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
     static _LIBCPP_CONSTEXPR const result_type default_seed = 5489u;
 
     // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     mersenne_twister_engine() : mersenne_twister_engine(default_seed) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit mersenne_twister_engine(result_type __sd) { seed(__sd); }
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit mersenne_twister_engine(result_type __sd = default_seed) {
       seed(__sd);
     }
 #endif
-    template<class _Sseq>
-        _LIBCPP_INLINE_VISIBILITY
-        explicit mersenne_twister_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value>::type* = 0)
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
+        explicit mersenne_twister_engine(_Sseq& __q)
         {seed(__q);}
     _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed);
-    template<class _Sseq>
-        _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, mersenne_twister_engine>::value,
-            void
-        >::type
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
 
     // generating functions
     _LIBCPP_HIDE_FROM_ABI result_type operator()();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
     template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
@@ -202,44 +197,28 @@ private:
     template<class _Sseq>
     _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
 
-    template <size_t __count>
-        _LIBCPP_INLINE_VISIBILITY
+    template <size_t __count, __enable_if_t<__count < __w, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
         static
-        typename enable_if
-        <
-            __count < __w,
-            result_type
-        >::type
+        result_type
         __lshift(result_type __x) {return (__x << __count) & _Max;}
 
-    template <size_t __count>
-        _LIBCPP_INLINE_VISIBILITY
+    template <size_t __count, __enable_if_t<(__count >= __w), int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
         static
-        typename enable_if
-        <
-            (__count >= __w),
-            result_type
-        >::type
+        result_type
         __lshift(result_type) {return result_type(0);}
 
-    template <size_t __count>
-        _LIBCPP_INLINE_VISIBILITY
+    template <size_t __count, __enable_if_t<__count < _Dt, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
         static
-        typename enable_if
-        <
-            __count < _Dt,
-            result_type
-        >::type
+        result_type
         __rshift(result_type __x) {return __x >> __count;}
 
-    template <size_t __count>
-        _LIBCPP_INLINE_VISIBILITY
+    template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
         static
-        typename enable_if
-        <
-            (__count >= _Dt),
-            result_type
-        >::type
+        result_type
         __rshift(result_type) {return result_type(0);}
 };
 
@@ -422,44 +401,44 @@ operator==(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _D
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __y)
 {
     if (__x.__i_ == __y.__i_)
-        return _VSTD::equal(__x.__x_, __x.__x_ + _Np, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + _Np, __y.__x_);
     if (__x.__i_ == 0 || __y.__i_ == 0)
     {
-        size_t __j = _VSTD::min(_Np - __x.__i_, _Np - __y.__i_);
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
+        size_t __j = std::min(_Np - __x.__i_, _Np - __y.__i_);
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
                          __y.__x_ + __y.__i_))
             return false;
         if (__x.__i_ == 0)
-            return _VSTD::equal(__x.__x_ + __j, __x.__x_ + _Np, __y.__x_);
-        return _VSTD::equal(__x.__x_, __x.__x_ + (_Np - __j), __y.__x_ + __j);
+            return std::equal(__x.__x_ + __j, __x.__x_ + _Np, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + (_Np - __j), __y.__x_ + __j);
     }
     if (__x.__i_ < __y.__i_)
     {
         size_t __j = _Np - __y.__i_;
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
                          __y.__x_ + __y.__i_))
             return false;
-        if (!_VSTD::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Np,
+        if (!std::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Np,
                          __y.__x_))
             return false;
-        return _VSTD::equal(__x.__x_, __x.__x_ + __x.__i_,
+        return std::equal(__x.__x_, __x.__x_ + __x.__i_,
                            __y.__x_ + (_Np - (__x.__i_ + __j)));
     }
     size_t __j = _Np - __x.__i_;
-    if (!_VSTD::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
+    if (!std::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
                      __x.__x_ + __x.__i_))
         return false;
-    if (!_VSTD::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Np,
+    if (!std::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Np,
                      __x.__x_))
         return false;
-    return _VSTD::equal(__y.__x_, __y.__x_ + __y.__i_,
+    return std::equal(__y.__x_, __y.__x_ + __y.__i_,
                        __x.__x_ + (_Np - (__y.__i_ + __j)));
 }
 
 template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
           _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
           _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,

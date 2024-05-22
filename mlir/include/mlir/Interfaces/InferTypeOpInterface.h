@@ -237,19 +237,9 @@ private:
 namespace detail {
 // Helper function to infer return tensor returns types given element and
 // shape inference function.
-//
-// TODO: Consider generating typedefs for trait member functions if this usage
-// becomes more common.
-LogicalResult inferReturnTensorTypes(
-    function_ref<
-        LogicalResult(MLIRContext *, std::optional<Location> location,
-                      ValueShapeRange operands, DictionaryAttr attributes,
-                      OpaqueProperties properties, RegionRange regions,
-                      SmallVectorImpl<ShapedTypeComponents> &retComponents)>
-        componentTypeFn,
-    MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
-    SmallVectorImpl<Type> &inferredReturnTypes);
+LogicalResult
+inferReturnTensorTypes(ArrayRef<ShapedTypeComponents> retComponents,
+                       SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
 /// the op. Precondition: op implements InferTypeOpInterface.
@@ -268,6 +258,14 @@ class InferTensorType;
 namespace mlir {
 namespace OpTrait {
 
+template <typename ConcreteType>
+class InferTypeOpAdaptor : public TraitBase<ConcreteType, InferTypeOpAdaptor> {
+};
+
+template <typename ConcreteType>
+class InferShapedTypeOpAdaptor
+    : public TraitBase<ConcreteType, InferShapedTypeOpAdaptor> {};
+
 /// Tensor type inference trait that constructs a tensor from the inferred
 /// shape and elemental types.
 /// Requires: Op implements InferShapedTypeOpInterface and InferTypeOpInterface.
@@ -276,24 +274,7 @@ namespace OpTrait {
 ///   trait is currently only used where the interfaces are, so keep it
 ///   restricted for now).
 template <typename ConcreteType>
-class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {
-public:
-  static LogicalResult
-  inferReturnTypes(MLIRContext *context, std::optional<Location> location,
-                   ValueRange operands, DictionaryAttr attributes,
-                   OpaqueProperties properties, RegionRange regions,
-                   SmallVectorImpl<Type> &inferredReturnTypes) {
-    static_assert(
-        ConcreteType::template hasTrait<InferShapedTypeOpInterface::Trait>(),
-        "requires InferShapedTypeOpInterface to ensure succesful invocation");
-    static_assert(
-        ConcreteType::template hasTrait<InferTypeOpInterface::Trait>(),
-        "requires InferTypeOpInterface to ensure succesful invocation");
-    return ::mlir::detail::inferReturnTensorTypes(
-        ConcreteType::inferReturnTypeComponents, context, location, operands,
-        attributes, properties, regions, inferredReturnTypes);
-  }
-};
+class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {};
 
 } // namespace OpTrait
 } // namespace mlir

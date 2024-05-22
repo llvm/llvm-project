@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-gc-only -fblocks  -emit-llvm -o - %s | FileCheck %s
-// rdar://10150823
 
 @interface Test {
 @package

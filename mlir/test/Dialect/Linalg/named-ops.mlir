@@ -178,7 +178,7 @@ func.func @depthwise_conv_2d_input_nhwc_filter_default_attributes(%input: memref
 // -----
 
 func.func @depthwise_conv_2d_input_nhwc_filter_wrong_stride_element_type_properties(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  // expected-error @+1 {{invalid properties {dilations = dense<1> : vector<2xi64>, operand_segment_sizes = array<i32: 2, 1>, strides = dense<2.000000e+00> : vector<2xf32>} for op linalg.depthwise_conv_2d_nhwc_hwc: Invalid attribute `strides` in property conversion: dense<2.000000e+00> : vector<2xf32>}}
+  // expected-error @+1 {{invalid properties {dilations = dense<1> : vector<2xi64>, operandSegmentSizes = array<i32: 2, 1>, strides = dense<2.000000e+00> : vector<2xf32>} for op linalg.depthwise_conv_2d_nhwc_hwc: Invalid attribute `strides` in property conversion: dense<2.000000e+00> : vector<2xf32>}}
   linalg.depthwise_conv_2d_nhwc_hwc <{dilations = dense<1> : vector<2xi64>, strides = dense<2.0> : vector<2xf32>}>
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
@@ -405,6 +405,38 @@ func.func @conv_2d_ngchw_fgchw(%input: memref<?x?x?x?x?xf32>, %filter: memref<?x
      ins (%input, %filter: memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>)
     outs (%output: memref<?x?x?x?x?xf32>)
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @conv_2d_ngchw_fgchw_dimensions
+func.func @conv_2d_ngchw_fgchw_dimensions(%input: tensor<1x5x3x32x32xf32>, %filter: tensor<2x5x3x3x3xf32>, %init: tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32> {
+  // CHECK:      linalg.conv_2d_ngchw_fgchw
+  // CHECK-SAME:   dilations = dense<1> : tensor<2xi64>
+  // CHECK-SAME:   strides = dense<1> : tensor<2xi64>
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : tensor<1x5x3x32x32xf32>, tensor<2x5x3x3x3xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32>
+  %0 = linalg.conv_2d_ngchw_fgchw {dilations = dense<1> : tensor<2xi64>,
+                                         strides = dense<1> : tensor<2xi64>}
+     ins (%input, %filter: tensor<1x5x3x32x32xf32>, tensor<2x5x3x3x3xf32>)
+    outs (%init: tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32>
+  return %0 : tensor<1x5x2x30x30xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @conv_2d_ngchw_gfchw
+func.func @conv_2d_ngchw_gfchw(%input: tensor<1x5x3x32x32xf32>, %filter: tensor<5x2x3x3x3xf32>, %init: tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32> {
+  // CHECK:      linalg.conv_2d_ngchw_gfchw
+  // CHECK-SAME:   dilations = dense<1> : tensor<2xi64>
+  // CHECK-SAME:   strides = dense<1> : tensor<2xi64>
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : tensor<1x5x3x32x32xf32>, tensor<5x2x3x3x3xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32>
+  %0 = linalg.conv_2d_ngchw_gfchw {dilations = dense<1> : tensor<2xi64>,
+                                         strides = dense<1> : tensor<2xi64>}
+     ins (%input, %filter: tensor<1x5x3x32x32xf32>, tensor<5x2x3x3x3xf32>)
+    outs (%init: tensor<1x5x2x30x30xf32>) -> tensor<1x5x2x30x30xf32>
+  return %0 : tensor<1x5x2x30x30xf32>
 }
 
 // -----
@@ -1100,7 +1132,7 @@ func.func @conv_interface_wrong_input_indexing_map(
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()
-    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operand_segment_sizes = array<i32: 2, 1>, strides = dense<2> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operandSegmentSizes = array<i32: 2, 1>, strides = dense<2> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
 }
 
@@ -1117,7 +1149,7 @@ func.func @conv_interface_wrong_num_operands(
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()
-    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operand_segment_sizes = array<i32: 2, 1>, strides = dense<1> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operandSegmentSizes = array<i32: 2, 1>, strides = dense<1> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
 }
 
@@ -1183,6 +1215,17 @@ func.func @batchmatmul_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7
 func.func @batchmatmul_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
   linalg.batch_matmul_transpose_b ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @batch_mmt4d
+func.func @batch_mmt4d(%arg0: tensor<128x10x32x8x1xf32>, %arg1: tensor<128x80x32x4x1xf32>, %arg2: tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32> {
+  // CHECK: %{{.+}} = linalg.batch_mmt4d
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<128x10x32x8x1xf32>, tensor<128x80x32x4x1xf32>)
+  // CHECK-SAME: outs(%{{.+}} : tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32>
+  %0 = linalg.batch_mmt4d ins(%arg0, %arg1 : tensor<128x10x32x8x1xf32>, tensor<128x80x32x4x1xf32>) outs(%arg2 : tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32>
+  return %0: tensor<128x10x80x8x4xf32>
 }
 
 // -----
@@ -1353,4 +1396,235 @@ func.func @div_unsigned_tensor(%arg0: tensor<4x8x16xi32>, %arg1: tensor<4x8x16xi
   // CHECK-SAME: outs(%{{.+}} : tensor<4x8x16xi32>)
   %1 = linalg.div_unsigned ins(%arg0, %arg1 : tensor<4x8x16xi32>, tensor<4x8x16xi32>) outs(%0: tensor<4x8x16xi32>) -> tensor<4x8x16xi32>
   return %1 : tensor<4x8x16xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @exp_dynamic
+func.func @exp_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.exp
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.exp ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @exp_static
+func.func @exp_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.exp
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.exp ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @exp_tensor
+func.func @exp_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.exp
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.exp ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @log_dynamic
+func.func @log_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.log
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.log ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @log_static
+func.func @log_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.log
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.log ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @log_tensor
+func.func @log_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.log
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.log ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @abs_dynamic
+func.func @abs_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.abs
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.abs ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @abs_static
+func.func @abs_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.abs
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.abs ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @abs_tensor
+func.func @abs_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.abs
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.abs ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @ceil_dynamic
+func.func @ceil_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.ceil
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.ceil ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @ceil_static
+func.func @ceil_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.ceil
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.ceil ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @ceil_tensor
+func.func @ceil_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.ceil
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.ceil ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @floor_dynamic
+func.func @floor_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.floor
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.floor ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @floor_static
+func.func @floor_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.floor
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.floor ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @floor_tensor
+func.func @floor_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.floor
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.floor ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negf_dynamic
+func.func @negf_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
+  // CHECK: linalg.negf
+  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.negf ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @negf_static
+func.func @negf_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
+  // CHECK: linalg.negf
+  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.negf ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @negf_tensor
+func.func @negf_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.negf
+  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.negf ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @max_dynamic
+func.func @max_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
+  // CHECK: linalg.max
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?xf32>, memref<?x?x?xf32>)
+  // CHECK-SAME: outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.max ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @max_static
+func.func @max_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
+  // CHECK: linalg.max
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<4x8x16xf32>, memref<4x8x16xf32>)
+  // CHECK-SAME: outs(%{{.+}} : memref<4x8x16xf32>)
+  linalg.max ins(%arg0, %arg1 : memref<4x8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @max_tensor
+func.func @max_tensor(%arg0: tensor<4x8x16xf32>, %arg1: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  %0 = tensor.empty() : tensor<4x8x16xf32>
+  // CHECK: linalg.max
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<4x8x16xf32>, tensor<4x8x16xf32>)
+  // CHECK-SAME: outs(%{{.+}} : tensor<4x8x16xf32>)
+  %1 = linalg.max ins(%arg0, %arg1 : tensor<4x8x16xf32>, tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+  return %1 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fill_tensor
+func.func @fill_tensor(%f: f32, %v: vector<2x4xf32>) -> (tensor<f32>, tensor<vector<2x4xf32>>) {
+  %e0 = tensor.empty() : tensor<f32>
+  %0 = linalg.fill ins(%f : f32) outs(%e0 : tensor<f32>) -> tensor<f32>
+  %e1 = tensor.empty() : tensor<vector<2x4xf32>>
+  %1 = linalg.fill ins(%v : vector<2x4xf32>) outs(%e1 : tensor<vector<2x4xf32>>) -> tensor<vector<2x4xf32>>
+  return %0, %1: tensor<f32>, tensor<vector<2x4xf32>>
 }

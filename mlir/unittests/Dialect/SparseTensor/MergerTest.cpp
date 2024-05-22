@@ -1,20 +1,20 @@
+//===- MergerTest.cpp - Tests for the sparsifier's merger -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "llvm/Support/Compiler.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
 #include <memory>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
-
-// Silence 'warning C4002: 'too many arguments for function-liked macro
-//                          invocation'
-// as MSVC handles ##__VA_ARGS__ differently as gcc/clang
-
-#if defined(_MSC_VER) && !defined(__clang__)
-#pragma warning(push)
-#pragma warning(disable : 4002)
-#endif
 
 namespace {
 
@@ -38,110 +38,92 @@ namespace {
   DO(cmpf, TensorExp::Kind::kCmpF)                                             \
   DO(cmpi, TensorExp::Kind::kCmpI)
 
-// TODO: Disjunctive binary operations that need special handling are not
-// included, e.g., Division are not tested (for now) as it need a constant
-// non-zero dividend.
-// ##__VA_ARGS__ handles cases when __VA_ARGS__ is empty.
-#define FOREVERY_COMMON_DISJ_BINOP(TEST, ...)                                  \
-  TEST(addf, ##__VA_ARGS__)                                                    \
-  TEST(addc, ##__VA_ARGS__)                                                    \
-  TEST(addi, ##__VA_ARGS__)                                                    \
-  TEST(xori, ##__VA_ARGS__)                                                    \
-  TEST(ori, ##__VA_ARGS__)
+#define FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, EXTRA)                          \
+  TEST(addf, EXTRA)                                                            \
+  TEST(addc, EXTRA)                                                            \
+  TEST(addi, EXTRA)                                                            \
+  TEST(xori, EXTRA)                                                            \
+  TEST(ori, EXTRA)
 
-// TODO: Conjunctive binary operations that need special handling are not
-// included, e.g., substraction yields a different pattern as it is mapped to
-// negate operation.
-#define FOREVERY_COMMON_CONJ_BINOP(TEST, ...)                                  \
-  TEST(mulf, ##__VA_ARGS__)                                                    \
-  TEST(mulc, ##__VA_ARGS__)                                                    \
-  TEST(muli, ##__VA_ARGS__)                                                    \
-  TEST(andi, ##__VA_ARGS__)
+#define FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, EXTRA)                          \
+  TEST(mulf, EXTRA)                                                            \
+  TEST(mulc, EXTRA)                                                            \
+  TEST(muli, EXTRA)                                                            \
+  TEST(andi, EXTRA)
+
+#define FOREVERY_COMMON_DISJ_BINOP(TEST)                                       \
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, "")
+
+#define FOREVERY_COMMON_CONJ_BINOP(TEST)                                       \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, "")
 
 #define FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(TEST)                          \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, addf)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, addc)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, addi)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, xori)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, ori)
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, addf)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, addc)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, addi)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, xori)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, ori)
 
 #define FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(TEST)                          \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, mulf)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, mulc)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, muli)                                       \
-  FOREVERY_COMMON_CONJ_BINOP(TEST, andi)
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, mulf)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, mulc)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, muli)                                 \
+  FOREVERY_COMMON_CONJ_BINOP_EXTRA(TEST, andi)
 
 #define FOREVERY_PAIR_OF_COMMON_DISJ_DISJ_BINOP(TEST)                          \
-  FOREVERY_COMMON_DISJ_BINOP(TEST, addf)                                       \
-  FOREVERY_COMMON_DISJ_BINOP(TEST, addc)                                       \
-  FOREVERY_COMMON_DISJ_BINOP(TEST, addi)                                       \
-  FOREVERY_COMMON_DISJ_BINOP(TEST, ori)                                        \
-  FOREVERY_COMMON_DISJ_BINOP(TEST, xori)
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, addf)                                 \
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, addc)                                 \
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, addi)                                 \
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, ori)                                  \
+  FOREVERY_COMMON_DISJ_BINOP_EXTRA(TEST, xori)
 
 ///
 /// Helper classes/functions for testing Merger.
 ///
 
-/// Simple recursive data structure used to match expressions in `Merger`.
-struct Pattern;
-/// Since the patterns we need are rather small and short-lived, we use
-/// `Pattern const&` for "pointers" to patterns, rather than using
-/// something more elaborate like `std::shared_ptr<Pattern> const&`.
-/// (But since we use a typedef rather than spelling it out everywhere,
-/// that's easy enough to swap out if we need something more elaborate
-/// in the future.)
-using PatternRef = const Pattern &;
-struct Pattern {
+/// Simple recursive data structure used to match expressions in `Merger`,
+/// which uses const references into the short-lived data strucutures.
+struct Match {
   struct Children {
-    Children(PatternRef e0, PatternRef e1) : e0(e0), e1(e1) {}
-    PatternRef e0;
-    PatternRef e1;
+    Children(const Match &e0, const Match &e1) : e0(e0), e1(e1) {}
+    const Match &e0;
+    const Match &e1;
   };
 
-  TensorExp::Kind kind;
-
-  union {
-    /// Expressions representing tensors simply have a tensor number.
-    TensorId tid;
-
-    /// Tensor operations point to their children.
-    Children children;
-  };
-
-  /// Constructors.
-  /// Rather than using these, please use the readable helper constructor
-  /// functions below to make tests more readable.
-  Pattern() : kind(TensorExp::Kind::kSynZero) {}
-  Pattern(TensorId tid) : kind(TensorExp::Kind::kTensor), tid(tid) {}
-  Pattern(TensorExp::Kind kind, PatternRef e0, PatternRef e1)
+  Match() : kind(TensorExp::Kind::kSynZero) {}
+  Match(TensorId tid) : kind(TensorExp::Kind::kTensor), tid(tid) {}
+  Match(TensorExp::Kind kind, const Match &e0, const Match &e1)
       : kind(kind), children(e0, e1) {
     assert(kind >= TensorExp::Kind::kMulF);
   }
+
+  TensorExp::Kind kind;
+  union {
+    TensorId tid;
+    Children children;
+  };
 };
 
 ///
-/// Readable Pattern builder functions.
+/// Readable Match builder functions.
 /// These should be preferred over the actual constructors.
 ///
 
-static Pattern tensorPattern(TensorId tid) { return Pattern(tid); }
-static Pattern synZeroPattern() { return Pattern(); }
+static Match tensorMatch(TensorId tid) { return Match(tid); }
+static Match synZeroMatch() { return Match(); }
 
 #define IMPL_BINOP_PATTERN(OP, KIND)                                           \
-  LLVM_ATTRIBUTE_UNUSED static Pattern OP##Pattern(PatternRef e0,              \
-                                                   PatternRef e1) {            \
-    return Pattern(KIND, e0, e1);                                              \
+  LLVM_ATTRIBUTE_UNUSED static Match OP##Match(const Match &e0,                \
+                                               const Match &e1) {              \
+    return Match(KIND, e0, e1);                                                \
   }
-
 FOREVERY_BINOP(IMPL_BINOP_PATTERN)
-
 #undef IMPL_BINOP_PATTERN
 
 class MergerTestBase : public ::testing::Test {
 protected:
   MergerTestBase(unsigned numTensors, unsigned numLoops)
-      : merger(numTensors, numLoops, /*numFilterLoops=*/0,
-               /*maxRank=*/numLoops) {
+      : merger(numTensors, numLoops, /*maxRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
       tensors.push_back(merger.addTensorExp(tid(t)));
@@ -162,9 +144,7 @@ protected:
   LLVM_ATTRIBUTE_UNUSED ExprId OP##Expr(ExprId e0, ExprId e1) {                \
     return merger.addExp(KIND, e0, e1);                                        \
   }
-
   FOREVERY_BINOP(IMPL_BINOP_EXPR)
-
 #undef IMPL_BINOP_EXPR
 
   ///
@@ -180,7 +160,7 @@ protected:
   /// ordering within groups.  If `simple` is true, then compare the
   /// `lat.simple` field instead to test the result after optimization.
   bool latPointWithinRange(LatSetId s, unsigned lo, unsigned n,
-                           PatternRef pattern, const BitVector &bits,
+                           const Match &pattern, const BitVector &bits,
                            bool simple) {
     for (unsigned k = lo, hi = lo + n; k < hi; ++k) {
       if (compareExpression(merger.lat(merger.set(s)[k]).exp, pattern) &&
@@ -192,13 +172,13 @@ protected:
 
   /// Wrapper over latPointWithinRange for readability of tests.
   void expectLatPointWithinRange(LatSetId s, unsigned lo, unsigned n,
-                                 PatternRef pattern, const BitVector &bits,
+                                 const Match &pattern, const BitVector &bits,
                                  bool simple = false) {
     EXPECT_TRUE(latPointWithinRange(s, lo, n, pattern, bits, simple));
   }
 
   /// Wrapper over expectLatPointWithinRange for a single lat point.
-  void expectLatPoint(LatSetId s, unsigned lo, PatternRef pattern,
+  void expectLatPoint(LatSetId s, unsigned lo, const Match &pattern,
                       const BitVector &bits, bool simple = false) {
     EXPECT_TRUE(latPointWithinRange(s, lo, 1, pattern, bits, simple));
   }
@@ -228,7 +208,7 @@ protected:
   /// Compares expressions for equality. Equality is defined recursively as:
   /// - Operations are equal if they have the same kind and children.
   /// - Leaf tensors are equal if they refer to the same tensor.
-  bool compareExpression(ExprId e, PatternRef pattern) {
+  bool compareExpression(ExprId e, const Match &pattern) {
     const auto &tensorExp = merger.exp(e);
     if (tensorExp.kind != pattern.kind)
       return false;
@@ -333,11 +313,11 @@ protected:
   MergerTest3T1L() : MergerTestBase(3, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(2));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: sparse input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Compressed);
     // Tensor 2: dense output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -347,13 +327,13 @@ protected:
   MergerTest4T1L() : MergerTestBase(4, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(3));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: sparse input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Compressed);
     // Tensor 2: sparse input vector
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Compressed);
     // Tensor 3: dense output vector
-    merger.setLevelAndType(tid(3), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(3), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -367,11 +347,11 @@ protected:
   MergerTest3T1LD() : MergerTestBase(3, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(2));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: dense input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Dense);
     // Tensor 2: dense output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -385,13 +365,13 @@ protected:
   MergerTest4T1LU() : MergerTestBase(4, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(3));
     // Tensor 0: undef input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Undef);
     // Tensor 1: dense input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Dense);
     // Tensor 2: undef input vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Undef);
     // Tensor 3: dense output vector.
-    merger.setLevelAndType(tid(3), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(3), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -407,11 +387,11 @@ protected:
     EXPECT_TRUE(merger.getSynTensorID() == tid(3));
     merger.setHasSparseOut(true);
     // Tensor 0: undef input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Undef);
     // Tensor 1: undef input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Undef);
     // Tensor 2: sparse output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Compressed);
   }
 };
 
@@ -436,21 +416,19 @@ protected:
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
-    PatternRef p2 = tensorPattern(t2);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
+    const Match &p2 = tensorMatch(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t1}}), true);                             \
   }
-
 FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_UNDEF)
-
 #undef IMPL_MERGER_TEST_CONJ_CONJ_UNDEF
 
 /// Vector multiplication (conjunction) of 2 vectors, i.e.;
@@ -473,21 +451,19 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_UNDEF)
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
     const auto t3 = tid(3);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
-    PatternRef p2 = tensorPattern(t2);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
+    const Match &p2 = tensorMatch(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t3}}));               \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t3}}), true);                             \
   }
-
 FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT)
-
 #undef IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT
 
 /// Vector addition (disjunction) of 2 vectors. i.e.;
@@ -505,32 +481,30 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT)
 ///   lat( i_00 / tensor_0 )
 ///   lat( i_01 / tensor_1 )
 /// }
-#define IMPL_MERGER_TEST_DISJ(OP)                                              \
+#define IMPL_MERGER_TEST_DISJ(OP, UNUSED)                                      \
   TEST_F(MergerTest3T1L, vector_##OP) {                                        \
     const auto e = OP##Expr(tensor(0), tensor(1));                             \
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
+    expectLatPoint(s, 0, OP##Match(p0, p1),                                    \
                    loopsToBits({{l0, t0}, {l0, t1}}));                         \
     expectLatPointWithinRange(s, 1, 2, p0, loopsToBits({{l0, t0}}));           \
     expectLatPointWithinRange(s, 1, 2, p1, loopsToBits({{l0, t1}}));           \
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 3);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
-                   loopsToBits({{l0, t0}, {l0, t1}}), true);                   \
+    expectLatPoint(s, 0, OP##Match(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}), \
+                   true);                                                      \
     expectLatPointWithinRange(s, 1, 2, p0, loopsToBits({{l0, t0}}), true);     \
     expectLatPointWithinRange(s, 1, 2, p1, loopsToBits({{l0, t1}}), true);     \
   }
-
 FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_DISJ)
-
 #undef IMPL_MERGER_TEST_DISJ
 
 /// Vector multiplication (conjunction) of 2 vectors, i.e.;
@@ -539,28 +513,26 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_DISJ)
 /// {
 ///   lat( i_00 i_01 / (tensor_0 * tensor_1) )
 /// }
-#define IMPL_MERGER_TEST_CONJ(OP)                                              \
+#define IMPL_MERGER_TEST_CONJ(OP, UNUSED)                                      \
   TEST_F(MergerTest3T1L, vector_##OP) {                                        \
     const auto e = OP##Expr(tensor(0), tensor(1));                             \
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
+    expectLatPoint(s, 0, OP##Match(p0, p1),                                    \
                    loopsToBits({{l0, t0}, {l0, t1}}));                         \
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
-                   loopsToBits({{l0, t0}, {l0, t1}}), true);                   \
+    expectLatPoint(s, 0, OP##Match(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}), \
+                   true);                                                      \
   }
-
 FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_CONJ)
-
 #undef IMPL_MERGER_TEST_CONJ
 
 /// Vector multiplication (conjunction) then addition (disjunction), i.e.;
@@ -579,29 +551,27 @@ FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_CONJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
-    PatternRef p2 = tensorPattern(t2);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
+    const Match &p2 = tensorMatch(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
-    expectLatPoint(s, 0, DISJ##Pattern(CONJ##Pattern(p0, p1), p2),             \
+    expectLatPoint(s, 0, DISJ##Match(CONJ##Match(p0, p1), p2),                 \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
-    expectLatPointWithinRange(s, 1, 2, CONJ##Pattern(p0, p1),                  \
+    expectLatPointWithinRange(s, 1, 2, CONJ##Match(p0, p1),                    \
                               loopsToBits({{l0, t0}, {l0, t1}}));              \
     expectLatPointWithinRange(s, 1, 2, p2, loopsToBits({{l0, t2}}));           \
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 3);                                                  \
-    expectLatPoint(s, 0, DISJ##Pattern(CONJ##Pattern(p0, p1), p2),             \
+    expectLatPoint(s, 0, DISJ##Match(CONJ##Match(p0, p1), p2),                 \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
-    expectLatPointWithinRange(s, 1, 2, CONJ##Pattern(p0, p1),                  \
+    expectLatPointWithinRange(s, 1, 2, CONJ##Match(p0, p1),                    \
                               loopsToBits({{l0, t0}, {l0, t1}}));              \
     expectLatPointWithinRange(s, 1, 2, p2, loopsToBits({{l0, t2}}));           \
   }
-
 FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(IMPL_MERGER_TEST_CONJ_DISJ)
-
 #undef IMPL_MERGER_TEST_CONJ_DISJ
 
 /// Vector addition (disjunction) then addition (disjunction), i.e.;
@@ -624,19 +594,19 @@ FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(IMPL_MERGER_TEST_CONJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
-    PatternRef p2 = tensorPattern(t2);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
+    const Match &p2 = tensorMatch(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 7);                                                  \
-    expectLatPoint(s, 0, DISJ2##Pattern(DISJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, DISJ2##Match(DISJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
-    expectLatPointWithinRange(s, 1, 6, DISJ2##Pattern(p1, p2),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ2##Match(p1, p2),                   \
                               loopsToBits({{l0, t1}, {l0, t2}}));              \
-    expectLatPointWithinRange(s, 1, 6, DISJ2##Pattern(p0, p2),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ2##Match(p0, p2),                   \
                               loopsToBits({{l0, t0}, {l0, t2}}));              \
-    expectLatPointWithinRange(s, 1, 6, DISJ1##Pattern(p0, p1),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ1##Match(p0, p1),                   \
                               loopsToBits({{l0, t0}, {l0, t1}}));              \
     expectLatPointWithinRange(s, 1, 6, p2, loopsToBits({{l0, t2}}));           \
     expectLatPointWithinRange(s, 1, 6, p1, loopsToBits({{l0, t1}}));           \
@@ -644,21 +614,19 @@ FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(IMPL_MERGER_TEST_CONJ_DISJ)
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 7);                                                  \
-    expectLatPoint(s, 0, DISJ2##Pattern(DISJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, DISJ2##Match(DISJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
-    expectLatPointWithinRange(s, 1, 6, DISJ2##Pattern(p1, p2),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ2##Match(p1, p2),                   \
                               loopsToBits({{l0, t1}, {l0, t2}}));              \
-    expectLatPointWithinRange(s, 1, 6, DISJ2##Pattern(p0, p2),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ2##Match(p0, p2),                   \
                               loopsToBits({{l0, t0}, {l0, t2}}));              \
-    expectLatPointWithinRange(s, 1, 6, DISJ1##Pattern(p0, p1),                 \
+    expectLatPointWithinRange(s, 1, 6, DISJ1##Match(p0, p1),                   \
                               loopsToBits({{l0, t0}, {l0, t1}}));              \
     expectLatPointWithinRange(s, 1, 6, p2, loopsToBits({{l0, t2}}));           \
     expectLatPointWithinRange(s, 1, 6, p1, loopsToBits({{l0, t1}}));           \
     expectLatPointWithinRange(s, 1, 6, p0, loopsToBits({{l0, t0}}));           \
   }
-
 FOREVERY_PAIR_OF_COMMON_DISJ_DISJ_BINOP(IMPL_MERGER_TEST_DISJ_DISJ)
-
 #undef IMPL_MERGER_TEST_DISJ_DISJ
 
 /// Vector multiplication (conjunction) then multiplication (conjunction), i.e.;
@@ -675,21 +643,19 @@ FOREVERY_PAIR_OF_COMMON_DISJ_DISJ_BINOP(IMPL_MERGER_TEST_DISJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
-    PatternRef p2 = tensorPattern(t2);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
+    const Match &p2 = tensorMatch(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}));               \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
+    expectLatPoint(s, 0, CONJ2##Match(CONJ1##Match(p0, p1), p2),               \
                    loopsToBits({{l0, t0}, {l0, t1}, {l0, t2}}), true);         \
   }
-
 FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ)
-
 #undef IMPL_MERGER_TEST_CONJ_CONJ
 
 /// Vector addition (disjunction) of 2 vectors, i.e.;
@@ -708,31 +674,29 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ)
 ///
 /// lat( i_00 / sparse_tensor_0 ) should be opted out as it only has dense diff
 /// with lat( i_00 i_01 / (sparse_tensor_0 + dense_tensor_1) ).
-#define IMPL_MERGER_TEST_OPTIMIZED_DISJ(OP)                                    \
+#define IMPL_MERGER_TEST_OPTIMIZED_DISJ(OP, UNUSED)                            \
   TEST_F(MergerTest3T1LD, vector_opted_##OP) {                                 \
     const auto e = OP##Expr(tensor(0), tensor(1));                             \
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
+    expectLatPoint(s, 0, OP##Match(p0, p1),                                    \
                    loopsToBits({{l0, t0}, {l0, t1}}));                         \
     expectLatPointWithinRange(s, 1, 2, p0, loopsToBits({{l0, t0}}));           \
     expectLatPointWithinRange(s, 1, 2, p1, loopsToBits({{l0, t1}}));           \
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 2);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
-                   loopsToBits({{l0, t0}, {l0, t1}}), true);                   \
+    expectLatPoint(s, 0, OP##Match(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}), \
+                   true);                                                      \
     expectLatPoint(s, 1, p1, loopsToBits({{l0, t1}}), true);                   \
   }
-
 FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_DISJ)
-
 #undef IMPL_MERGER_TEST_OPTIMIZED_CONJ
 
 /// Vector multiplication (conjunction) of 2 vectors, i.e.:
@@ -746,26 +710,26 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_DISJ)
 ///   lat( i_00 / (sparse_tensor_0 * dense_tensor_1) )
 /// }
 /// since i_01 is a dense dimension.
-#define IMPL_MERGER_TEST_OPTIMIZED_CONJ(OP)                                    \
+#define IMPL_MERGER_TEST_OPTIMIZED_CONJ(OP, UNUSED)                            \
   TEST_F(MergerTest3T1LD, vector_opted_##OP) {                                 \
     const auto e = OP##Expr(tensor(0), tensor(1));                             \
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    PatternRef p0 = tensorPattern(t0);                                         \
-    PatternRef p1 = tensorPattern(t1);                                         \
+    const Match &p0 = tensorMatch(t0);                                         \
+    const Match &p1 = tensorMatch(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1),                                  \
+    expectLatPoint(s, 0, OP##Match(p0, p1),                                    \
                    loopsToBits({{l0, t0}, {l0, t1}}));                         \
                                                                                \
     s = merger.optimizeSet(s);                                                 \
     expectNumLatPoints(s, 1);                                                  \
-    expectLatPoint(s, 0, OP##Pattern(p0, p1), loopsToBits({{l0, t0}}), true);  \
+    expectLatPoint(s, 0, OP##Match(p0, p1), loopsToBits({{l0, t0}}), true);    \
   }
-
 FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_CONJ)
+#undef IMPL_MERGER_TEST_OPTIMIZED_CONJ
 
 /// Vector element-wise comparison (disjunction) of 2 vectors. i.e.;
 ///   a(i) = b(i) + c(i)
@@ -787,20 +751,20 @@ TEST_F(MergerTest3T1L, vector_cmp) {
   const auto l0 = lid(0);
   const auto t0 = tid(0);
   const auto t1 = tid(1);
-  PatternRef zero = synZeroPattern();
-  PatternRef p0 = tensorPattern(t0);
-  PatternRef p1 = tensorPattern(t1);
+  const Match &zero = synZeroMatch();
+  const Match &p0 = tensorMatch(t0);
+  const Match &p1 = tensorMatch(t1);
   auto s = merger.buildLattices(e, l0);
-  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+  expectLatPoint(s, 0, cmpiMatch(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(p0, zero),
                             loopsToBits({{l0, t0}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(zero, p1),
                             loopsToBits({{l0, t1}}));
   s = merger.optimizeSet(s);
-  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+  expectLatPoint(s, 0, cmpiMatch(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(p0, zero),
                             loopsToBits({{l0, t0}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(zero, p1),
                             loopsToBits({{l0, t1}}));
 }
 
@@ -825,26 +789,17 @@ TEST_F(MergerTest3T1LD, vector_cmp) {
   const auto l0 = lid(0);
   const auto t0 = tid(0);
   const auto t1 = tid(1);
-  PatternRef zero = synZeroPattern();
-  PatternRef p0 = tensorPattern(t0);
-  PatternRef p1 = tensorPattern(t1);
+  const Match &zero = synZeroMatch();
+  const Match &p0 = tensorMatch(t0);
+  const Match &p1 = tensorMatch(t1);
   auto s = merger.buildLattices(e, l0);
-  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+  expectLatPoint(s, 0, cmpiMatch(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(p0, zero),
                             loopsToBits({{l0, t0}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(zero, p1),
                             loopsToBits({{l0, t1}}));
   s = merger.optimizeSet(s);
-  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
-  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+  expectLatPoint(s, 0, cmpiMatch(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiMatch(zero, p1),
                             loopsToBits({{l0, t1}}));
 }
-
-#undef IMPL_MERGER_TEST_OPTIMIZED_CONJ
-
-// TODO: mult-dim tests
-
-// restore warning status
-#if defined(_MSC_VER) && !defined(__clang__)
-#pragma warning(pop)
-#endif

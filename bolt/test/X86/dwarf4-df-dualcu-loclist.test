@@ -8,9 +8,9 @@
 ; RUN: %clang %cflags -gdwarf-5 -O2 -gsplit-dwarf=split main.o helper.o -o main.exe
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
-; RUN: not llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-HELPER %s
-; RUN: not llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-HELPER %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-HELPER %s
 
 ; Testing dwarf4 split dwarf for two CUs. Making sure DW_AT_location [DW_FORM_sec_offset] is updated correctly.
 
@@ -27,12 +27,12 @@
 ; BOLT-DWO-MAIN: version = 0x0004
 ; BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
 ; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_sec_offset] (0x00000010:
-; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000002, 0x0000000000000014)
-; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000003, 0x0000000000000005)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000003, 0x0000000000000014)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000004, 0x0000000000000005)
 ; BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
 ; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_sec_offset] (0x00000026:
-; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000002, 0x000000000000000c)
-; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000004, 0x000000000000000d)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000003, 0x000000000000000c)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_startx_length   (0x0000000000000005, 0x000000000000000d)
 
 
 ; PRE-BOLT-DWO-HELPER: version = 0x0004

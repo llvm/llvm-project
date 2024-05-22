@@ -7,5 +7,5 @@
 
 static __thread int y __attribute((tls_model("global-dynamic"))); // no-warning
 static __thread int y __attribute((tls_model("local-dynamic"))); // expected-error {{TLS model 'local-dynamic' is not yet supported on AIX}}
-static __thread int y __attribute((tls_model("initial-exec"))); // expected-error {{TLS model 'initial-exec' is not yet supported on AIX}}
+static __thread int y __attribute((tls_model("initial-exec"))); // no-warning
 static __thread int y __attribute((tls_model("local-exec"))); // no-warning

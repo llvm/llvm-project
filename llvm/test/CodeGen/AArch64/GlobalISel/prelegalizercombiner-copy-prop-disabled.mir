@@ -2,14 +2,14 @@
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
 # RUN:                                                                | FileCheck --check-prefix=ENABLED %s
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
-# RUN:     --aarch64prelegalizercombinerhelper-disable-rule=copy_prop | FileCheck --check-prefix=DISABLED %s
+# RUN:     --aarch64prelegalizercombiner-disable-rule=copy_prop | FileCheck --check-prefix=DISABLED %s
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
-# RUN:     --aarch64prelegalizercombinerhelper-disable-rule="*" | FileCheck --check-prefix=DISABLED %s
+# RUN:     --aarch64prelegalizercombiner-disable-rule="*" | FileCheck --check-prefix=DISABLED %s
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
-# RUN:     --aarch64prelegalizercombinerhelper-disable-rule="*,!copy_prop" \
+# RUN:     --aarch64prelegalizercombiner-disable-rule="*,!copy_prop" \
 # RUN:    | FileCheck --check-prefix=ENABLED %s
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
-# RUN:     --aarch64prelegalizercombinerhelper-only-enable-rule="copy_prop" \
+# RUN:     --aarch64prelegalizercombiner-only-enable-rule="copy_prop" \
 # RUN:    | FileCheck --check-prefix=ENABLED %s
 
 # REQUIRES: asserts
@@ -29,13 +29,18 @@ body: |
   bb.0.entry:
     liveins: $x0
     ; ENABLED-LABEL: name: test_copy
-    ; ENABLED: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; ENABLED: $x0 = COPY [[COPY]](p0)
+    ; ENABLED: liveins: $x0
+    ; ENABLED-NEXT: {{  $}}
+    ; ENABLED-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; ENABLED-NEXT: $x0 = COPY [[COPY]](p0)
+    ;
     ; DISABLED-LABEL: name: test_copy
-    ; DISABLED: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; DISABLED: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-    ; DISABLED: [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
-    ; DISABLED: $x0 = COPY [[COPY2]](p0)
+    ; DISABLED: liveins: $x0
+    ; DISABLED-NEXT: {{  $}}
+    ; DISABLED-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; DISABLED-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+    ; DISABLED-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
+    ; DISABLED-NEXT: $x0 = COPY [[COPY2]](p0)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY %0
     %2:_(p0) = COPY %1

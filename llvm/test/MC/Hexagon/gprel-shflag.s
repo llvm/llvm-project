@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=asm %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=asm %s | FileCheck %s
 
 # Make sure the assembler can parse and print the "s" flag for Hexaon's
 # small-data section.

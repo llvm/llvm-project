@@ -17,7 +17,7 @@ using namespace mlir;
 // asserted to be an llvm vector type).
 LLVM::detail::NDVectorTypeInfo
 LLVM::detail::extractNDVectorTypeInfo(VectorType vectorType,
-                                      LLVMTypeConverter &converter) {
+                                      const LLVMTypeConverter &converter) {
   assert(vectorType.getRank() > 1 && "expected >1D vector type");
   NDVectorTypeInfo info;
   info.llvmNDVectorTy = converter.convertType(vectorType);
@@ -78,7 +78,7 @@ void LLVM::detail::nDVectorIterate(const LLVM::detail::NDVectorTypeInfo &info,
 }
 
 LogicalResult LLVM::detail::handleMultidimensionalVectors(
-    Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
+    Operation *op, ValueRange operands, const LLVMTypeConverter &typeConverter,
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter) {
   auto resultNDVectorType = cast<VectorType>(op->getResult(0).getType());
@@ -103,10 +103,12 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   return success();
 }
 
-LogicalResult LLVM::detail::vectorOneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs, LLVMTypeConverter &typeConverter,
-    ConversionPatternRewriter &rewriter) {
+LogicalResult
+LLVM::detail::vectorOneToOneRewrite(Operation *op, StringRef targetOp,
+                                    ValueRange operands,
+                                    ArrayRef<NamedAttribute> targetAttrs,
+                                    const LLVMTypeConverter &typeConverter,
+                                    ConversionPatternRewriter &rewriter) {
   assert(!operands.empty());
 
   // Cannot convert ops if their operands are not of LLVM type.

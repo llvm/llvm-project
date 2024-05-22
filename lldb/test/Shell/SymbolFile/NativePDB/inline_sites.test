@@ -23,7 +23,7 @@
 # CHECK-NEXT: 0x000000014000103d: /tmp/a.cpp:4
 # CHECK-NEXT: 0x000000014000103f: /tmp/a.h:20
 # CHECK-NEXT: 0x0000000140001044: /tmp/a.h:8
-# CHECK-NEXT: 0x0000000140001046: /tmp/a.cpp:4, is_terminal_entry = TRUE
+# CHECK-NEXT: 0x0000000140001046: /tmp/a.cpp:3, is_terminal_entry = TRUE
 
 #CHECK: (lldb) b a.h:5
 #CHECK: Breakpoint 1: where = {{.*}}`main + 4 [inlined] Namespace1::foo at a.h:5, address = 0x0000000140001004

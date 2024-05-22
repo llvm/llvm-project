@@ -38,7 +38,7 @@ operator==(
     const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
 template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(
     const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
@@ -83,45 +83,40 @@ public:
     static _LIBCPP_CONSTEXPR const size_t word_size = __w;
     static _LIBCPP_CONSTEXPR const size_t short_lag = __s;
     static _LIBCPP_CONSTEXPR const size_t long_lag = __r;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
     static _LIBCPP_CONSTEXPR const result_type default_seed = 19780503u;
 
     // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     subtract_with_carry_engine() : subtract_with_carry_engine(default_seed) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit subtract_with_carry_engine(result_type __sd = default_seed) {
       seed(__sd);
     }
 #endif
-    template<class _Sseq>
-        _LIBCPP_INLINE_VISIBILITY
-        explicit subtract_with_carry_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value>::type* = 0)
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
+        explicit subtract_with_carry_engine(_Sseq& __q)
         {seed(__q);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void seed(result_type __sd = default_seed)
         {seed(__sd, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
-    template<class _Sseq>
-        _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, subtract_with_carry_engine>::value,
-            void
-        >::type
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
+        _LIBCPP_HIDE_FROM_ABI
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
 
     // generating functions
     _LIBCPP_HIDE_FROM_ABI result_type operator()();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
     template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
@@ -258,42 +253,42 @@ operator==(
     if (__x.__c_ != __y.__c_)
         return false;
     if (__x.__i_ == __y.__i_)
-        return _VSTD::equal(__x.__x_, __x.__x_ + _Rp, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + _Rp, __y.__x_);
     if (__x.__i_ == 0 || __y.__i_ == 0)
     {
-        size_t __j = _VSTD::min(_Rp - __x.__i_, _Rp - __y.__i_);
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
+        size_t __j = std::min(_Rp - __x.__i_, _Rp - __y.__i_);
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
                          __y.__x_ + __y.__i_))
             return false;
         if (__x.__i_ == 0)
-            return _VSTD::equal(__x.__x_ + __j, __x.__x_ + _Rp, __y.__x_);
-        return _VSTD::equal(__x.__x_, __x.__x_ + (_Rp - __j), __y.__x_ + __j);
+            return std::equal(__x.__x_ + __j, __x.__x_ + _Rp, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + (_Rp - __j), __y.__x_ + __j);
     }
     if (__x.__i_ < __y.__i_)
     {
         size_t __j = _Rp - __y.__i_;
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
                          __y.__x_ + __y.__i_))
             return false;
-        if (!_VSTD::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Rp,
+        if (!std::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Rp,
                          __y.__x_))
             return false;
-        return _VSTD::equal(__x.__x_, __x.__x_ + __x.__i_,
+        return std::equal(__x.__x_, __x.__x_ + __x.__i_,
                            __y.__x_ + (_Rp - (__x.__i_ + __j)));
     }
     size_t __j = _Rp - __x.__i_;
-    if (!_VSTD::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
+    if (!std::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
                      __x.__x_ + __x.__i_))
         return false;
-    if (!_VSTD::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Rp,
+    if (!std::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Rp,
                      __x.__x_))
         return false;
-    return _VSTD::equal(__y.__x_, __y.__x_ + __y.__i_,
+    return std::equal(__y.__x_, __y.__x_ + __y.__i_,
                        __x.__x_ + (_Rp - (__y.__i_ + __j)));
 }
 
 template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(
     const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,

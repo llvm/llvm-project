@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI
 
 # VI:   tbuffer_load_format_x v1, off, s[4:7], s1 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] ; encoding: [0x00,0x00,0x78,0xe9,0x00,0x01,0x01,0x01]
 0x00 0x00 0x78 0xe9 0x00 0x01 0x01 0x01

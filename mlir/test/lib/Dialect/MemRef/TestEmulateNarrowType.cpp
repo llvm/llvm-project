@@ -15,6 +15,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -88,13 +89,13 @@ struct TestEmulateNarrowTypePass
     target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
     target.addDynamicallyLegalDialect<
         arith::ArithDialect, vector::VectorDialect, memref::MemRefDialect,
-        affine::AffineDialect>(
-        [&typeConverter](Operation *op) { return typeConverter.isLegal(op); });
+        affine::AffineDialect>(opLegalCallback);
 
     RewritePatternSet patterns(ctx);
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
+    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();

@@ -36,10 +36,9 @@ define <2 x i32> @select_icmp_eq_and_1_0_or_2_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @select_icmp_eq_and_1_0_xor_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_eq_and_1_0_xor_2(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 1
@@ -94,10 +93,9 @@ define <2 x i32> @select_icmp_eq_and_32_0_or_8_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @select_icmp_eq_and_32_0_xor_8(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_eq_and_32_0_xor_8(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 8
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 8
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 32
@@ -153,9 +151,8 @@ define <2 x i32> @select_icmp_ne_0_and_4096_or_4096_vec(<2 x i32> %x, <2 x i32> 
 define i32 @select_icmp_ne_0_and_4096_xor_4096(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_ne_0_and_4096_xor_4096(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], 4096
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 4096
@@ -209,9 +206,7 @@ define <2 x i32> @select_icmp_eq_and_4096_0_or_4096_vec(<2 x i32> %x, <2 x i32> 
 define i32 @select_icmp_eq_and_4096_0_xor_4096(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_eq_and_4096_0_xor_4096(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[AND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 4096
@@ -267,8 +262,8 @@ define <2 x i32> @select_icmp_eq_0_and_1_or_1_vec(<2 x i64> %x, <2 x i32> %y) {
 define i32 @select_icmp_eq_0_and_1_xor_1(i64 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_eq_0_and_1_xor_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], 1
-; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i64 %x, 1
@@ -310,10 +305,10 @@ define i32 @select_icmp_ne_0_and_4096_or_32(i32 %x, i32 %y) {
 
 define i32 @select_icmp_ne_0_and_4096_xor_32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_ne_0_and_4096_xor_32(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 32
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP2]], 32
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 4096
@@ -370,10 +365,10 @@ define <2 x i32> @select_icmp_ne_0_and_32_or_4096_vec(<2 x i32> %x, <2 x i32> %y
 
 define i32 @select_icmp_ne_0_and_32_xor_4096(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_ne_0_and_32_xor_4096(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 32
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 4096
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP2]], 4096
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 32
@@ -532,9 +527,8 @@ define i32 @select_icmp_and_8_eq_0_xor_8(i32 %x) {
 define i64 @select_icmp_x_and_8_eq_0_y_xor_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_eq_0_y_xor_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y:%.*]], 8
-; CHECK-NEXT:    [[Y_XOR:%.*]] = select i1 [[CMP]], i64 [[Y]], i64 [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[AND]] to i64
+; CHECK-NEXT:    [[Y_XOR:%.*]] = xor i64 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[Y_XOR]]
 ;
   %and = and i32 %x, 8
@@ -547,9 +541,9 @@ define i64 @select_icmp_x_and_8_eq_0_y_xor_8(i32 %x, i64 %y) {
 define i64 @select_icmp_x_and_8_ne_0_y_xor_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_xor_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y:%.*]], 8
-; CHECK-NEXT:    [[XOR_Y:%.*]] = select i1 [[CMP]], i64 [[XOR]], i64 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[XOR_Y:%.*]] = xor i64 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[XOR_Y]]
 ;
   %and = and i32 %x, 8
@@ -563,7 +557,7 @@ define i64 @select_icmp_x_and_8_ne_0_y_or_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[OR_Y:%.*]] = or i64 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[OR_Y]]
 ;
@@ -578,7 +572,7 @@ define <2 x i64> @select_icmp_x_and_8_ne_0_y_or_8_vec(<2 x i32> %x, <2 x i64> %y
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[AND]], <i32 8, i32 8>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[OR_Y:%.*]] = or <2 x i64> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i64> [[OR_Y]]
 ;
@@ -670,10 +664,9 @@ define <2 x i32> @test68vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test68_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test68_xor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 128
@@ -730,10 +723,10 @@ define <2 x i32> @test69vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test69_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test69_xor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 128
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP2]], 2
 ; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i32 %x, 128
@@ -760,13 +753,28 @@ define i32 @test69_and(i32 %x, i32 %y) {
 
 define i8 @test70(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test70(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp slt i8 %x, 0
+  %or = or i8 %y, 2
+  %select = select i1 %cmp, i8 %or, i8 %y
+  ret i8 %select
+}
+
+define i8 @test70_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @test70_multiuse(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[OR]])
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 [[Y]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %cmp = icmp slt i8 %x, 0
   %or = or i8 %y, 2
+  call void @use(i8 %or)
   %select = select i1 %cmp, i8 %or, i8 %y
   ret i8 %select
 }
@@ -790,10 +798,10 @@ define i32 @shift_no_xor_multiuse_or(i32 %x, i32 %y) {
 
 define i32 @shift_no_xor_multiuse_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shift_no_xor_multiuse_xor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[XOR]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -841,9 +849,8 @@ define i32 @no_shift_no_xor_multiuse_or(i32 %x, i32 %y) {
 define i32 @no_shift_no_xor_multiuse_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @no_shift_no_xor_multiuse_xor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[AND]], [[Y]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[XOR]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -892,9 +899,9 @@ define i32 @no_shift_xor_multiuse_or(i32 %x, i32 %y) {
 define i32 @no_shift_xor_multiuse_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @no_shift_xor_multiuse_xor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], [[Y]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], 4096
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[XOR]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -997,8 +1004,8 @@ define i32 @shift_no_xor_multiuse_cmp_with_xor(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @shift_no_xor_multiuse_cmp_with_xor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[AND]], 1
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -1053,8 +1060,7 @@ define i32 @no_shift_no_xor_multiuse_cmp_with_xor(i32 %x, i32 %y, i32 %z, i32 %w
 ; CHECK-LABEL: @no_shift_no_xor_multiuse_cmp_with_xor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[AND]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -1110,8 +1116,8 @@ define i32 @no_shift_xor_multiuse_cmp_with_xor(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @no_shift_xor_multiuse_cmp_with_xor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[TMP1]], 4096
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP_NOT]], i32 [[W:%.*]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -1290,7 +1296,7 @@ define i32 @no_shift_no_xor_multiuse_cmp_xor(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = xor i32 [[AND]], [[Y]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[XOR]]
@@ -1457,7 +1463,7 @@ define i8 @set_bits(i8 %x, i1 %b)  {
 ; CHECK-LABEL: @set_bits(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], i8 5, i8 0
-; CHECK-NEXT:    [[COND:%.*]] = or i8 [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint i8 [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %and = and i8 %x, 250
@@ -1486,7 +1492,7 @@ define i8 @set_bits_extra_use1(i8 %x, i1 %b)  {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], i8 5, i8 0
-; CHECK-NEXT:    [[COND:%.*]] = or i8 [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint i8 [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %and = and i8 %x, 250
@@ -1517,7 +1523,7 @@ define <2 x i8> @clear_bits(<2 x i8> %x, <2 x i1> %b)  {
 ; CHECK-LABEL: @clear_bits(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> <i8 -38, i8 -38>
-; CHECK-NEXT:    [[COND:%.*]] = or <2 x i8> [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint <2 x i8> [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %and = and <2 x i8> %x, <i8 37, i8 37>
@@ -1546,7 +1552,7 @@ define <2 x i8> @clear_bits_extra_use1(<2 x i8> %x, i1 %b)  {
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[AND]])
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> <i8 -38, i8 -38>
-; CHECK-NEXT:    [[COND:%.*]] = or <2 x i8> [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint <2 x i8> [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %and = and <2 x i8> %x, <i8 37, i8 37>
@@ -1571,4 +1577,93 @@ define i8 @clear_bits_extra_use2(i8 %x, i1 %b)  {
   call void @use(i8 %or)
   %cond = select i1 %b, i8 %and, i8 %or
   ret i8 %cond
+}
+
+; Tests factoring in cost of saving the `and`
+define i64 @xor_i8_to_i64_shl_save_and_eq(i8 %x, i64 %y) {
+; CHECK-LABEL: @xor_i8_to_i64_shl_save_and_eq(
+; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XX]], 0
+; CHECK-NEXT:    [[Z:%.*]] = xor i64 [[Y:%.*]], -9223372036854775808
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i64 [[Z]], i64 [[Y]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %xx = and i8 %x, 1
+  %cmp = icmp eq i8 %xx, 0
+  %z = xor i64 %y, -9223372036854775808
+  %r = select i1 %cmp, i64 %z, i64 %y
+  ret i64 %r
+}
+
+define i64 @xor_i8_to_i64_shl_save_and_ne(i8 %x, i64 %y) {
+; CHECK-LABEL: @xor_i8_to_i64_shl_save_and_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 63
+; CHECK-NEXT:    [[R:%.*]] = xor i64 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %xx = and i8 %x, 1
+  %cmp = icmp ne i8 %xx, 0
+  %z = xor i64 %y, -9223372036854775808
+  %r = select i1 %cmp, i64 %z, i64 %y
+  ret i64 %r
+}
+
+define i32 @select_icmp_eq_and_1_0_srem_2_fail_null_identity(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_srem_2_fail_null_identity(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[XOR:%.*]] = srem i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %xor = srem i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %xor
+  ret i32 %select
+}
+
+
+define i32 @select_icmp_eq_and_1_0_sdiv_2_fail_null_1_identity(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_sdiv_2_fail_null_1_identity(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[XOR:%.*]] = sdiv i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %xor = sdiv i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %xor
+  ret i32 %select
+}
+
+define i8 @select_icmp_eq_and_1_0_lshr_fv(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_lshr_fv(
+; CHECK-NEXT:    [[AND:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = lshr i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %and = and i8 %x, 1
+  %cmp = icmp eq i8 %and, 0
+  %blshr = lshr i8 %y, 2
+  %select = select i1 %cmp, i8 %y, i8 %blshr
+  ret i8 %select
+}
+
+define i8 @select_icmp_eq_and_1_0_lshr_tv(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_lshr_tv(
+; CHECK-NEXT:    [[AND:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = lshr i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %and = and i8 %x, 1
+  %cmp = icmp ne i8 %and, 0
+  %blshr = lshr i8 %y, 2
+  %select = select i1 %cmp, i8 %blshr, i8 %y
+  ret i8 %select
 }

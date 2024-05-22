@@ -1,0 +1,12 @@
+add_lldb_unittest(MCDisasmInstanceRISCVTests
+	TestMCDisasmInstanceRISCV.cpp
+    LINK_LIBS
+      lldbCore
+      lldbSymbol
+      lldbTarget
+      lldbPluginDisassemblerLLVMC
+      lldbPluginProcessUtility
+    LINK_COMPONENTS
+      Support
+      ${LLVM_TARGETS_TO_BUILD}
+  )

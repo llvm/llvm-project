@@ -935,6 +935,16 @@ lldb_private::Address ObjectFileELF::GetEntryPointAddress() {
 }
 
 Address ObjectFileELF::GetBaseAddress() {
+  if (GetType() == ObjectFile::eTypeObjectFile) {
+    for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
+         I != m_section_headers.end(); ++I) {
+      const ELFSectionHeaderInfo &header = *I;
+      if (header.sh_flags & SHF_ALLOC)
+        return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
+    }
+    return LLDB_INVALID_ADDRESS;
+  }
+
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &H = EnumPHdr.value();
     if (H.p_type != PT_LOAD)
@@ -1673,11 +1683,13 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Cases(".bss", ".tbss", eSectionTypeZeroFill)
+      .Case(".ctf", eSectionTypeDebug)
       .Cases(".data", ".tdata", eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
+      .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }
 
@@ -1762,7 +1774,12 @@ class VMAddressProvider {
   VMRange GetVMRange(const ELFSectionHeader &H) {
     addr_t Address = H.sh_addr;
     addr_t Size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
-    if (ObjectType == ObjectFile::Type::eTypeObjectFile && Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
+
+    // When this is a debug file for relocatable file, the address is all zero
+    // and thus needs to use accumulate method
+    if ((ObjectType == ObjectFile::Type::eTypeObjectFile ||
+         (ObjectType == ObjectFile::Type::eTypeDebugInfo && H.sh_addr == 0)) &&
+        Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
       NextVMAddress =
           llvm::alignTo(NextVMAddress, std::max<addr_t>(H.sh_addralign, 1));
       Address = NextVMAddress;
@@ -3452,10 +3469,28 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
 
   case llvm::ELF::ET_EXEC:
     // 2 - Executable file
-    // TODO: is there any way to detect that an executable is a kernel
-    // related executable by inspecting the program headers, section headers,
-    // symbols, or any other flag bits???
-    return eStrataUser;
+    {
+      SectionList *section_list = GetSectionList();
+      if (section_list) {
+        static ConstString loader_section_name(".interp");
+        SectionSP loader_section =
+            section_list->FindSectionByName(loader_section_name);
+        if (loader_section) {
+          char buffer[256];
+          size_t read_size =
+              ReadSectionData(loader_section.get(), 0, buffer, sizeof(buffer));
+
+          // We compare the content of .interp section
+          // It will contains \0 when counting read_size, so the size needs to
+          // decrease by one
+          llvm::StringRef loader_name(buffer, read_size - 1);
+          llvm::StringRef freebsd_kernel_loader_name("/red/herring");
+          if (loader_name.equals(freebsd_kernel_loader_name))
+            return eStrataKernel;
+        }
+      }
+      return eStrataUser;
+    }
 
   case llvm::ELF::ET_DYN:
     // 3 - Shared object file

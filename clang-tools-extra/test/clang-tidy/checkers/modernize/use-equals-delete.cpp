@@ -191,3 +191,31 @@ class C {
 private:
   MACRO(C);
 };
+
+namespace PR33759 {
+
+  class Number {
+    private:
+      Number();
+      ~Number();
+
+    public:
+      static Number& getNumber() {
+        static Number number;
+        return number;
+      }
+
+      int getIntValue() { return (int)someFloat; }
+      float getFloatValue() { return someFloat; }
+    private:
+      float someFloat;
+  };
+
+  class Number2 {
+    private:
+      Number2();
+      ~Number2();
+    public:
+      static Number& getNumber();
+  };
+}

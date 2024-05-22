@@ -162,14 +162,14 @@ define void @reduce_smax() {
 
 define void @reduce_fmin16() {
 ; CHECK-NOF16-LABEL: 'reduce_fmin16'
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2f16 = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V4f16 = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 237 for instruction: %V8f16 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 350 for instruction: %V16f16 = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2f16m = call half @llvm.vector.reduce.fminimum.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V4f16m = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 237 for instruction: %V8f16m = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 350 for instruction: %V16f16m = call half @llvm.vector.reduce.fminimum.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2f16 = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V4f16 = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 174 for instruction: %V8f16 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %V16f16 = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2f16m = call half @llvm.vector.reduce.fminimum.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V4f16m = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 174 for instruction: %V8f16m = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %V16f16m = call half @llvm.vector.reduce.fminimum.v16f16(<16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-F16-LABEL: 'reduce_fmin16'
@@ -196,14 +196,14 @@ define void @reduce_fmin16() {
 
 define void @reduce_fmax16() {
 ; CHECK-NOF16-LABEL: 'reduce_fmax16'
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2f16 = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V4f16 = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 237 for instruction: %V8f16 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 350 for instruction: %V16f16 = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2f16m = call half @llvm.vector.reduce.fmaximum.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V4f16m = call half @llvm.vector.reduce.fmaximum.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 237 for instruction: %V8f16m = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 350 for instruction: %V16f16m = call half @llvm.vector.reduce.fmaximum.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2f16 = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V4f16 = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 174 for instruction: %V8f16 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %V16f16 = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2f16m = call half @llvm.vector.reduce.fmaximum.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V4f16m = call half @llvm.vector.reduce.fmaximum.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 174 for instruction: %V8f16m = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %V16f16m = call half @llvm.vector.reduce.fmaximum.v16f16(<16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-F16-LABEL: 'reduce_fmax16'

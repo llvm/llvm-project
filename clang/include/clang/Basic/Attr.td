@@ -107,6 +107,10 @@ def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
 
+def BitField : SubsetSubject<Field,
+                             [{S->isBitField()}],
+                             "bit-field data members">;
+
 def NonStaticCXXMethod : SubsetSubject<CXXMethod,
                                        [{!S->isStatic()}],
                                        "non-static member functions">;
@@ -273,23 +277,28 @@ class DefaultIntArgument<string name, int default> : IntArgument<name, 1> {
   int Default = default;
 }
 
-// This argument is more complex, it includes the enumerator type name,
-// a list of strings to accept, and a list of enumerators to map them to.
+// This argument is more complex, it includes the enumerator type
+// name, whether the enum type is externally defined, a list of
+// strings to accept, and a list of enumerators to map them to.
 class EnumArgument<string name, string type, list<string> values,
-                   list<string> enums, bit opt = 0, bit fake = 0>
+                   list<string> enums, bit opt = 0, bit fake = 0,
+                   bit isExternalType = 0>
     : Argument<name, opt, fake> {
   string Type = type;
   list<string> Values = values;
   list<string> Enums = enums;
+  bit IsExternalType = isExternalType;
 }
 
 // FIXME: There should be a VariadicArgument type that takes any other type
 //        of argument and generates the appropriate type.
 class VariadicEnumArgument<string name, string type, list<string> values,
-                           list<string> enums> : Argument<name, 1>  {
+                           list<string> enums, bit isExternalType = 0>
+    : Argument<name, 1>  {
   string Type = type;
   list<string> Values = values;
   list<string> Enums = enums;
+  bit IsExternalType = isExternalType;
 }
 
 // This handles one spelling of an attribute.
@@ -300,14 +309,17 @@ class Spelling<string name, string variety, int version = 1> {
 }
 
 class GNU<string name> : Spelling<name, "GNU">;
-class Declspec<string name> : Spelling<name, "Declspec">;
+class Declspec<string name> : Spelling<name, "Declspec"> {
+  bit PrintOnLeft = 1;
+}
 class Microsoft<string name> : Spelling<name, "Microsoft">;
 class CXX11<string namespace, string name, int version = 1>
     : Spelling<name, "CXX11", version> {
+  bit CanPrintOnLeft = 0;
   string Namespace = namespace;
 }
-class C2x<string namespace, string name, int version = 1>
-    : Spelling<name, "C2x", version> {
+class C23<string namespace, string name, int version = 1>
+    : Spelling<name, "C23", version> {
   string Namespace = namespace;
 }
 
@@ -330,14 +342,14 @@ class Pragma<string namespace, string name> : Spelling<name, "Pragma"> {
 }
 
 // The GCC spelling implies GNU<name>, CXX11<"gnu", name>, and optionally,
-// C2x<"gnu", name>. This spelling should be used for any GCC-compatible
+// C23<"gnu", name>. This spelling should be used for any GCC-compatible
 // attributes.
 class GCC<string name, bit allowInC = 1> : Spelling<name, "GCC"> {
   bit AllowInC = allowInC;
 }
 
 // The Clang spelling implies GNU<name>, CXX11<"clang", name>, and optionally,
-// C2x<"clang", name>. This spelling should be used for any Clang-specific
+// C23<"clang", name>. This spelling should be used for any Clang-specific
 // attributes.
 class Clang<string name, bit allowInC = 1, int version = 1>
     : Spelling<name, "Clang", version> {
@@ -415,7 +427,7 @@ class TargetArch<list<string> arches> : TargetSpec {
   let Arches = arches;
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
-def TargetAArch64 : TargetArch<["aarch64"]>;
+def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -443,10 +455,19 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
+def TargetELFOrMachO : TargetSpec {
+  let ObjectFormats = ["ELF", "MachO"];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
 }
+
+class TargetSpecificSpelling<TargetSpec target, list<Spelling> spellings> {
+  TargetSpec Target = target;
+  list<Spelling> Spellings = spellings;
+}
+
 // Attribute subject match rules that are used for #pragma clang attribute.
 //
 // A instance of AttrSubjectMatcherRule represents an individual match rule.
@@ -559,6 +580,12 @@ class AttrSubjectMatcherAggregateRule<AttrSubject subject> {
 def SubjectMatcherForNamed : AttrSubjectMatcherAggregateRule<Named>;
 
 class Attr {
+  // Specifies that when printed, this attribute is meaningful on the
+  // 'left side' of the declaration.
+  bit CanPrintOnLeft = 1;
+  // Specifies that when printed, this attribute is required to be printed on
+  // the 'left side' of the declaration.
+  bit PrintOnLeft = 0;
   // The various ways in which an attribute can be spelled in source
   list<Spelling> Spellings;
   // The things to which an attribute can appertain
@@ -567,6 +594,8 @@ class Attr {
   list<Argument> Args = [];
   // Accessors which should be generated for the attribute.
   list<Accessor> Accessors = [];
+  // Specify targets for spellings.
+  list<TargetSpecificSpelling> TargetSpecificSpellings = [];
   // Set to true for attributes with arguments which require delayed parsing.
   bit LateParsed = 0;
   // Set to false to prevent an attribute from being propagated from a template
@@ -707,7 +736,7 @@ def Alias : Attr {
 
 def BuiltinAlias : Attr {
   let Spellings = [CXX11<"clang", "builtin_alias">,
-                   C2x<"clang", "builtin_alias">,
+                   C23<"clang", "builtin_alias">,
                    GNU<"clang_builtin_alias">];
   let Args = [IdentifierArgument<"BuiltinName">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
@@ -769,9 +798,9 @@ def AlignNatural : InheritableAttr {
 
 def AlwaysInline : DeclOrStmtAttr {
   let Spellings = [GCC<"always_inline">, CXX11<"clang", "always_inline">,
-                   C2x<"clang", "always_inline">, CustomKeyword<"__forceinline">];
+                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">];
   let Accessors = [Accessor<"isClangAlwaysInline", [CXX11<"clang", "always_inline">,
-                                                    C2x<"clang", "always_inline">]>];
+                                                    C23<"clang", "always_inline">]>];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let Documentation = [AlwaysInlineDocs];
@@ -857,7 +886,7 @@ def Annotate : InheritableParamAttr {
 }
 
 def AnnotateType : TypeAttr {
-  let Spellings = [CXX11<"clang", "annotate_type">, C2x<"clang", "annotate_type">];
+  let Spellings = [CXX11<"clang", "annotate_type">, C23<"clang", "annotate_type">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
   let HasCustomParsing = 1;
   let AcceptsExprPack = 1;
@@ -892,6 +921,7 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 }
 
 def AsmLabel : InheritableAttr {
+  let CanPrintOnLeft = 0;
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
     // Label specifies the mangled name for the decl.
@@ -1055,6 +1085,42 @@ def CFConsumed : InheritableParamAttr {
   let Documentation = [RetainBehaviorDocs];
 }
 
+
+// coro_only_destroy_when_complete indicates the coroutines whose return type
+// is marked by coro_only_destroy_when_complete can only be destroyed when the
+// coroutine completes. Then the space for the destroy functions can be saved.
+def CoroOnlyDestroyWhenComplete : InheritableAttr {
+  let Spellings = [Clang<"coro_only_destroy_when_complete">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroOnlyDestroyWhenCompleteDocs];
+  let SimpleHandler = 1;
+}
+
+def CoroReturnType : InheritableAttr {
+  let Spellings = [Clang<"coro_return_type">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroReturnTypeAndWrapperDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroWrapper : InheritableAttr {
+  let Spellings = [Clang<"coro_wrapper">];
+  let Subjects = SubjectList<[Function]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroReturnTypeAndWrapperDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroLifetimeBound : InheritableAttr {
+  let Spellings = [Clang<"coro_lifetimebound">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroLifetimeBoundDoc];
+  let SimpleHandler = 1;
+}
+
 // OSObject-based attributes.
 def OSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"os_consumed">];
@@ -1148,7 +1214,7 @@ def Constructor : InheritableAttr {
   let Spellings = [GCC<"constructor">];
   let Args = [DefaultIntArgument<"Priority", 65535>];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [CtorDtorDocs];
 }
 
 def CPUSpecific : InheritableAttr {
@@ -1257,7 +1323,8 @@ def CUDAInvalidTarget : InheritableAttr {
 
 def CUDALaunchBounds : InheritableAttr {
   let Spellings = [GNU<"launch_bounds">, Declspec<"__launch_bounds__">];
-  let Args = [ExprArgument<"MaxThreads">, ExprArgument<"MinBlocks", 1>];
+  let Args = [ExprArgument<"MaxThreads">, ExprArgument<"MinBlocks", 1>,
+              ExprArgument<"MaxBlocks", 1>];
   let LangOpts = [CUDA];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   // An AST node is created for this attribute, but is not used by other parts
@@ -1297,7 +1364,7 @@ def C11NoReturn : InheritableAttr {
 
 def CXX11NoReturn : InheritableAttr {
   let Spellings = [CXX11<"", "noreturn", 200809>,
-                   C2x<"", "noreturn", 202202>, C2x<"", "_Noreturn", 202202>];
+                   C23<"", "noreturn", 202202>, C23<"", "_Noreturn", 202202>];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CXX11NoReturnDocs];
 }
@@ -1401,7 +1468,7 @@ def RenderScriptKernel : Attr {
 def Deprecated : InheritableAttr {
   let Spellings = [GCC<"deprecated">, Declspec<"deprecated">,
                    CXX11<"","deprecated", 201309>,
-                   C2x<"", "deprecated", 201904>];
+                   C23<"", "deprecated", 201904>];
   let Args = [StringArgument<"Message", 1>,
               // An optional string argument that enables us to provide a
               // Fix-It.
@@ -1414,7 +1481,7 @@ def Destructor : InheritableAttr {
   let Spellings = [GCC<"destructor">];
   let Args = [DefaultIntArgument<"Priority", 65535>];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [CtorDtorDocs];
 }
 
 def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
@@ -1434,6 +1501,7 @@ def AllocSize : InheritableAttr {
 }
 
 def EnableIf : InheritableAttr {
+  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
@@ -1459,7 +1527,7 @@ def ExtVectorType : Attr {
 
 def FallThrough : StmtAttr {
   let Spellings = [CXX11<"", "fallthrough", 201603>,
-                   C2x<"", "fallthrough", 201910>,
+                   C23<"", "fallthrough", 201910>,
                    CXX11<"clang", "fallthrough">, GCC<"fallthrough">];
   // The attribute only applies to a NullStmt, but we have special fix-it
   // behavior if applied to a case label.
@@ -1469,12 +1537,12 @@ def FallThrough : StmtAttr {
 }
 
 def Likely : StmtAttr {
-  let Spellings = [CXX11<"", "likely", 201803>, C2x<"clang", "likely">];
+  let Spellings = [CXX11<"", "likely", 201803>, C23<"clang", "likely">];
   let Documentation = [LikelihoodDocs];
 }
 
 def Unlikely : StmtAttr {
-  let Spellings = [CXX11<"", "unlikely", 201803>, C2x<"clang", "unlikely">];
+  let Spellings = [CXX11<"", "unlikely", 201803>, C23<"clang", "unlikely">];
   let Documentation = [LikelihoodDocs];
 }
 def : MutualExclusions<[Likely, Unlikely]>;
@@ -1600,7 +1668,7 @@ def IBOutletCollection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def IFunc : Attr, TargetSpecificAttr<TargetELF> {
+def IFunc : Attr, TargetSpecificAttr<TargetELFOrMachO> {
   let Spellings = [GCC<"ifunc">];
   let Args = [StringArgument<"Resolver">];
   let Subjects = SubjectList<[Function]>;
@@ -1787,11 +1855,14 @@ def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
   let Documentation = [ArmMveStrictPolymorphismDocs];
 }
 
-def NoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetItaniumCXXABI> {
-  let Spellings = [CXX11<"", "no_unique_address", 201803>];
+def NoUniqueAddress : InheritableAttr {
   let Subjects = SubjectList<[NonBitField], ErrorDiag>;
+  let Spellings = [CXX11<"", "no_unique_address", 201803>, CXX11<"msvc", "no_unique_address", 201803>];
+  let TargetSpecificSpellings = [
+    TargetSpecificSpelling<TargetItaniumCXXABI, [CXX11<"", "no_unique_address", 201803>]>,
+    TargetSpecificSpelling<TargetMicrosoftCXXABI, [CXX11<"msvc", "no_unique_address", 201803>]>,
+  ];
   let Documentation = [NoUniqueAddressDocs];
-  let SimpleHandler = 1;
 }
 
 def ReturnsTwice : InheritableAttr {
@@ -1853,10 +1924,10 @@ def Convergent : InheritableAttr {
 
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
-                   CXX11<"clang", "noinline">, C2x<"clang", "noinline">,
+                   CXX11<"clang", "noinline">, C23<"clang", "noinline">,
                    Declspec<"noinline">];
   let Accessors = [Accessor<"isClangNoInline", [CXX11<"clang", "noinline">,
-                                                C2x<"clang", "noinline">]>];
+                                                C23<"clang", "noinline">]>];
   let Documentation = [NoInlineDocs];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
@@ -1953,6 +2024,14 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let Spellings = [Clang<"preserve_access_index">];
   let Subjects = SubjectList<[Record], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
+  let LangOpts = [COnly];
+}
+
+def BPFPreserveStaticOffset : InheritableAttr,
+                              TargetSpecificAttr<TargetBPF>  {
+  let Spellings = [Clang<"preserve_static_offset">];
+  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Documentation = [BPFPreserveStaticOffsetDocs];
   let LangOpts = [COnly];
 }
 
@@ -2136,7 +2215,8 @@ def NotTailCalled : InheritableAttr {
 def : MutualExclusions<[AlwaysInline, NotTailCalled]>;
 
 def NoStackProtector : InheritableAttr {
-  let Spellings = [Clang<"no_stack_protector">, Declspec<"safebuffers">];
+  let Spellings = [Clang<"no_stack_protector">, CXX11<"gnu", "no_stack_protector">,
+                   C23<"gnu", "no_stack_protector">, Declspec<"safebuffers">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoStackProtectorDocs];
   let SimpleHandler = 1;
@@ -2435,8 +2515,42 @@ def AArch64SVEPcs: DeclOrTypeAttr {
 
 def ArmStreaming : TypeAttr, TargetSpecificAttr<TargetAArch64> {
   let Spellings = [RegularKeyword<"__arm_streaming">];
-  let Documentation = [ArmStreamingDocs];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmSmeStreamingDocs];
 }
+
+def ArmStreamingCompatible : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_streaming_compatible">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmSmeStreamingCompatibleDocs];
+}
+
+def ArmSharedZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_shared_za">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmSmeSharedZADocs];
+}
+
+def ArmPreservesZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_preserves_za">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmSmePreservesZADocs];
+}
+
+def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_locally_streaming">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ArmSmeLocallyStreamingDocs];
+}
+
+def ArmNewZA : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_new_za">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ArmSmeNewZADocs];
+}
+def : MutualExclusions<[ArmNewZA, ArmSharedZA]>;
+def : MutualExclusions<[ArmNewZA, ArmPreservesZA]>;
+
 
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
@@ -2682,9 +2796,10 @@ def SwiftAsyncError : InheritableAttr {
   let Documentation = [SwiftAsyncErrorDocs];
 }
 
-def Suppress : StmtAttr {
-  let Spellings = [CXX11<"gsl", "suppress">];
+def Suppress : DeclOrStmtAttr {
+  let Spellings = [CXX11<"gsl", "suppress">, Clang<"suppress">];
   let Args = [VariadicStringArgument<"DiagnosticIdentifiers">];
+  let Accessors = [Accessor<"isGSL", [CXX11<"gsl", "suppress">]>];
   let Documentation = [SuppressDocs];
 }
 
@@ -2748,6 +2863,11 @@ def PreserveAll : DeclOrTypeAttr {
   let Documentation = [PreserveAllDocs];
 }
 
+def M68kRTD: DeclOrTypeAttr {
+  let Spellings = [Clang<"m68k_rtd">];
+  let Documentation = [M68kRTDDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -2763,7 +2883,7 @@ def Target : InheritableAttr {
 
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
-        if (Feature.startswith("arch="))
+        if (Feature.starts_with("arch="))
           return Feature.drop_front(sizeof("arch=") - 1);
       }
       return "";
@@ -2781,8 +2901,8 @@ def Target : InheritableAttr {
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
 
-        if (!Feature.startswith("no-") && !Feature.startswith("arch=") &&
-            !Feature.startswith("fpmath=") && !Feature.startswith("tune="))
+        if (!Feature.starts_with("no-") && !Feature.starts_with("arch=") &&
+            !Feature.starts_with("fpmath=") && !Feature.starts_with("tune="))
           Out.push_back(Feature);
       }
     }
@@ -2886,6 +3006,7 @@ def Unavailable : InheritableAttr {
 }
 
 def DiagnoseIf : InheritableAttr {
+  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
@@ -2936,7 +3057,7 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
 
 def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
-                   C2x<"", "maybe_unused", 202106>];
+                   C23<"", "maybe_unused", 202106>];
   let Subjects = SubjectList<[Var, ObjCIvar, Type, Enum, EnumConstant, Label,
                               Field, ObjCMethod, FunctionLike]>;
   let Documentation = [WarnMaybeUnusedDocs];
@@ -3030,7 +3151,7 @@ def WarnUnused : InheritableAttr {
 
 def WarnUnusedResult : InheritableAttr {
   let Spellings = [CXX11<"", "nodiscard", 201907>,
-                   C2x<"", "nodiscard", 202003>,
+                   C23<"", "nodiscard", 202003>,
                    CXX11<"clang", "warn_unused_result">,
                    GCC<"warn_unused_result">];
   let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike, TypedefName]>;
@@ -3079,7 +3200,7 @@ def AnyX86Interrupt : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
   let Subjects = SubjectList<[HasFunctionProto]>;
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
-  let Documentation = [Undocumented];
+  let Documentation = [AnyX86InterruptDocs];
 }
 
 def AnyX86NoCallerSavedRegisters : InheritableAttr,
@@ -3529,6 +3650,14 @@ def Pointer : InheritableAttr {
 def : MutualExclusions<[Owner, Pointer]>;
 
 // Microsoft-related attributes
+
+def MSConstexpr : InheritableAttr {
+  let LangOpts = [MicrosoftExt];
+  let Spellings = [CXX11<"msvc", "constexpr">];
+  let Subjects = SubjectList<[Function, ReturnStmt], ErrorDiag,
+                             "functions and return statements">;
+  let Documentation = [MSConstexprDocs];
+}
 
 def MSNoVTable : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Spellings = [Declspec<"novtable">];
@@ -4099,24 +4228,14 @@ def HLSLShader : InheritableAttr {
   let Spellings = [Microsoft<"shader">];
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
-  // NOTE:
-  // order for the enum should match order in llvm::Triple::EnvironmentType.
-  // ShaderType will be converted to llvm::Triple::EnvironmentType like
-  //   (llvm::Triple::EnvironmentType)((uint32_t)ShaderType +
-  //      (uint32_t)llvm::Triple::EnvironmentType::Pixel).
-  // This will avoid update code for convert when new shader type is added.
   let Args = [
     EnumArgument<"Type", "ShaderType",
-                 [
-                   "pixel", "vertex", "geometry", "hull", "domain", "compute",
-                   "library", "raygeneration", "intersection", "anyHit",
-                   "closestHit", "miss", "callable", "mesh", "amplification"
-                 ],
-                 [
-                   "Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
-                   "Library", "RayGeneration", "Intersection", "AnyHit",
-                   "ClosestHit", "Miss", "Callable", "Mesh", "Amplification"
-                 ]>
+                 ["pixel", "vertex", "geometry", "hull", "domain", "compute",
+                  "raygeneration", "intersection", "anyhit", "closesthit",
+                  "miss", "callable", "mesh", "amplification"],
+                 ["Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
+                  "RayGeneration", "Intersection", "AnyHit", "ClosestHit",
+                  "Miss", "Callable", "Mesh", "Amplification"]>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
 }
@@ -4125,26 +4244,27 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"ResourceType", "ResourceClass",
+  let Args = [EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
                            ["SRV", "UAV", "CBuffer", "Sampler"],
-                           ["SRV", "UAV", "CBuffer", "Sampler"]
-                           >,
-              EnumArgument<"ResourceShape", "ResourceKind",
+                           ["SRV", "UAV", "CBuffer", "Sampler"],
+                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+              EnumArgument<"ResourceKind", "llvm::hlsl::ResourceKind",
                            ["Texture1D", "Texture2D", "Texture2DMS",
                             "Texture3D", "TextureCube", "Texture1DArray",
                             "Texture2DArray", "Texture2DMSArray",
                             "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBufferKind", "SamplerKind",
-                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
-                            "FeedbackTexture2DArray"],
+                            "StructuredBuffer", "CBuffer", "Sampler",
+                            "TBuffer", "RTAccelerationStructure",
+                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
                            ["Texture1D", "Texture2D", "Texture2DMS",
                             "Texture3D", "TextureCube", "Texture1DArray",
                             "Texture2DArray", "Texture2DMSArray",
                             "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBufferKind", "SamplerKind",
-                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
-                            "FeedbackTexture2DArray"]
-                            >
+                            "StructuredBuffer", "CBuffer", "Sampler",
+                            "TBuffer", "RTAccelerationStructure",
+                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
+                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+              DefaultBoolArgument<"isROV", /*default=*/0>
               ];
   let Documentation = [InternalOnly];
 }
@@ -4153,6 +4273,18 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
+}
+
+def HLSLParamModifier : TypeAttr {
+  let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
+  let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,
+                   Accessor<"isInOut", [CustomKeyword<"inout">]>,
+                   Accessor<"isOut", [CustomKeyword<"out">]>,
+                   Accessor<"isAnyOut", [CustomKeyword<"out">, CustomKeyword<"inout">]>,
+                   Accessor<"isAnyIn", [CustomKeyword<"in">, CustomKeyword<"inout">]>];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [HLSLParamQualifierDocs];
+  let Args = [DefaultBoolArgument<"MergedSpelling", /*default*/0, /*fake*/1>];
 }
 
 def RandomizeLayout : InheritableAttr {
@@ -4199,3 +4331,39 @@ def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def CountedBy : InheritableAttr {
+  let Spellings = [Clang<"counted_by">];
+  let Subjects = SubjectList<[Field]>;
+  let Args = [IdentifierArgument<"CountedByField">];
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
+  // isn't yet available due to the fact that we're still parsing the
+  // structure. Maybe that code could be changed sometime in the future.
+  code AdditionalMembers = [{
+    private:
+      SourceRange CountedByFieldLoc;
+    public:
+      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
+      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
+  }];
+}
+
+def PreferredType: InheritableAttr {
+  let Spellings = [Clang<"preferred_type">];
+  let Subjects = SubjectList<[BitField], ErrorDiag>;
+  let Args = [TypeArgument<"Type", 1>];
+  let Documentation = [PreferredTypeDocumentation];
+}
+
+def CodeAlign: StmtAttr {
+  let Spellings = [Clang<"code_align">];
+  let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
+                              ErrorDiag, "'for', 'while', and 'do' statements">;
+  let Args = [ExprArgument<"Alignment">];
+  let Documentation = [CodeAlignAttrDocs];
+  let AdditionalMembers = [{
+    static constexpr int MinimumAlignment = 1;
+    static constexpr int MaximumAlignment = 4096;
+  }];
+}

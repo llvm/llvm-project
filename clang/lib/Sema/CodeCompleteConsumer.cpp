@@ -51,6 +51,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ParenthesizedExpression:
   case CCC_Symbol:
   case CCC_SymbolOrNewName:
+  case CCC_TopLevelOrExpression:
     return true;
 
   case CCC_TopLevel:
@@ -169,6 +170,8 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "Recovery";
   case CCKind::CCC_ObjCClassForwardDecl:
     return "ObjCClassForwardDecl";
+  case CCKind::CCC_TopLevelOrExpression:
+    return "ReplTopLevel";
   }
   llvm_unreachable("Invalid CodeCompletionContext::Kind!");
 }
@@ -627,15 +630,16 @@ bool PrintingCodeCompleteConsumer::isResultFilteredOut(
     StringRef Filter, CodeCompletionResult Result) {
   switch (Result.Kind) {
   case CodeCompletionResult::RK_Declaration:
-    return !(Result.Declaration->getIdentifier() &&
-             Result.Declaration->getIdentifier()->getName().startswith(Filter));
+    return !(
+        Result.Declaration->getIdentifier() &&
+        Result.Declaration->getIdentifier()->getName().starts_with(Filter));
   case CodeCompletionResult::RK_Keyword:
-    return !StringRef(Result.Keyword).startswith(Filter);
+    return !StringRef(Result.Keyword).starts_with(Filter);
   case CodeCompletionResult::RK_Macro:
-    return !Result.Macro->getName().startswith(Filter);
+    return !Result.Macro->getName().starts_with(Filter);
   case CodeCompletionResult::RK_Pattern:
     return !(Result.Pattern->getTypedText() &&
-             StringRef(Result.Pattern->getTypedText()).startswith(Filter));
+             StringRef(Result.Pattern->getTypedText()).starts_with(Filter));
   }
   llvm_unreachable("Unknown code completion result Kind.");
 }

@@ -10,8 +10,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import print_function
-
 import sys, os, re, shutil
 from datetime import date
 
@@ -44,14 +42,26 @@ automodapi_toctreedirnm = "python_api"
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
 
-autodoc_default_options = {
-    "special-members": "__int__, __len__, __hex__, __oct__, __iter__",
-}
+autodoc_default_options = {"special-members": True}
 
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
 if not building_man_page:
+    try:
+        import sphinx_automodapi.automodapi
+    except ModuleNotFoundError:
+        print(
+            f"install sphinx_automodapi with {sys.executable} -m pip install sphinx_automodapi"
+        )
     extensions.append("sphinx_automodapi.automodapi")
+
+    try:
+        import furo
+    except ModuleNotFoundError:
+        print(f"install sphinx furo theme with {sys.executable} -m pip install furo")
+    # The theme to use for HTML and HTML Help pages.  See the documentation for
+    # a list of builtin themes.
+    html_theme = "furo"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -127,23 +137,19 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "alabaster"
+html_theme = "furo"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "font_size": "11pt",
-    # Don't generate any links to GitHub.
-    "github_button": "false",
-}
+html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "The LLDB Debugger"
+html_title = "🐛 LLDB"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
@@ -160,11 +166,7 @@ html_title = "The LLDB Debugger"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-
-html_context = {
-    "css_files": ["_static/lldb.css"],
-}
+# html_static_path = ["_static"]
 
 html_extra_path = [".htaccess"]
 

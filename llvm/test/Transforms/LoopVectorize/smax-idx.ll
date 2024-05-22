@@ -55,11 +55,13 @@ exit:
   ret i64 %spec.select7
 }
 
-; Check if it is a MMI when smax is not used outside the loop.
+; Check if it is a min/max with index (MMI) pattern when the
+; min/max value is not used outside the loop.
 ;
-; Currently at the end, it will check if smax has exitInstruction.
-; But in fact MMI should be possible to use the exitInstruction of
-; SelectICmp be the exitInstruction.
+; Currently, the vectorizer checks if smax value is used outside
+; the loop. However, even if only the index part has external users,
+; and smax itself does not have external users, it can still form a
+; MMI pattern.
 ;
 define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %ii, i64 %n) {
 ; CHECK-LABEL: @smax_idx_max_no_exit_user(
@@ -86,11 +88,11 @@ exit:
   ret i64 %spec.select7
 }
 
-; Check smax implemented in terms of select(cmp()).
+; Check smax implemented by select(cmp()).
 ;
-; Currently SelectICmp does not support icmp with multiple users.
-; It may be possible to reuse some of the methods in Combination pass to check
-; whether icmp can be copied.
+; Currently, MMI pattern does not support icmp with multiple users.
+; TODO: It may be possible to reuse some of the methods in instcombine pass to
+; check whether icmp can be duplicated.
 ;
 define i64 @smax_idx_select_cmp(ptr nocapture readonly %a, i64 %mm, i64 %ii, ptr nocapture writeonly %res_max, i64 %n) {
 ; CHECK-LABEL: @smax_idx_select_cmp(

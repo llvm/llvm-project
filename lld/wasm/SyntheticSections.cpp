@@ -484,16 +484,31 @@ void GlobalSection::writeBody() {
     WasmGlobalType type{itype, mutable_};
     writeGlobalType(os, type);
 
-    if (config->extendedConst && config->isPic && !sym->isTLS() &&
-        isa<DefinedData>(sym)) {
+    bool useExtendedConst = false;
+    uint32_t globalIdx;
+    int64_t offset;
+    if (config->extendedConst && config->isPic) {
+      if (auto *d = dyn_cast<DefinedData>(sym)) {
+        if (!sym->isTLS()) {
+          globalIdx = WasmSym::memoryBase->getGlobalIndex();
+          offset = d->getVA();
+          useExtendedConst = true;
+        }
+      } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+        if (!sym->isStub) {
+          globalIdx = WasmSym::tableBase->getGlobalIndex();
+          offset = f->getTableIndex();
+          useExtendedConst = true;
+        }
+      }
+    }
+    if (useExtendedConst) {
       // We can use an extended init expression to add a constant
-      // offset of __memory_base.
-      auto *d = cast<DefinedData>(sym);
+      // offset of __memory_base/__table_base.
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
-      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
-                   "literal (global index)");
-      if (d->getVA()) {
-        writePtrConst(os, d->getVA(), is64, "offset");
+      writeUleb128(os, globalIdx, "literal (global index)");
+      if (offset) {
+        writePtrConst(os, offset, is64, "offset");
         writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
       }
       writeU8(os, WASM_OPCODE_END, "opcode:end");
@@ -650,9 +665,14 @@ void LinkingSection::writeBody() {
       } else if (isa<DataSymbol>(sym)) {
         writeStr(sub.os, sym->getName(), "sym name");
         if (auto *dataSym = dyn_cast<DefinedData>(sym)) {
-          writeUleb128(sub.os, dataSym->getOutputSegmentIndex(), "index");
-          writeUleb128(sub.os, dataSym->getOutputSegmentOffset(),
-                       "data offset");
+          if (dataSym->segment) {
+            writeUleb128(sub.os, dataSym->getOutputSegmentIndex(), "index");
+            writeUleb128(sub.os, dataSym->getOutputSegmentOffset(),
+                         "data offset");
+          } else {
+            writeUleb128(sub.os, 0, "index");
+            writeUleb128(sub.os, dataSym->getVA(), "data offset");
+          }
           writeUleb128(sub.os, dataSym->getSize(), "data size");
         }
       } else {
@@ -764,6 +784,15 @@ unsigned NameSection::numNamedDataSegments() const {
 
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
+  {
+    SubSection sub(WASM_NAMES_MODULE);
+    StringRef moduleName = config->soName;
+    if (config->soName.empty())
+      moduleName = llvm::sys::path::filename(config->outputFile);
+    writeStr(sub.os, moduleName, "module name");
+    sub.writeTo(bodyOutputStream);
+  }
+
   unsigned count = numNamedFunctions();
   if (count) {
     SubSection sub(WASM_NAMES_FUNCTION);

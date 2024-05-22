@@ -166,8 +166,8 @@ public:
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by isIEEE(), and does not have unnormal
-  /// values
+  /// compatible layout as defined by APFloat::isIEEE(), and does not have
+  /// non-IEEE values, such as x86_fp80's unnormal values.
   bool isIEEELikeFPTy() const {
     switch (getTypeID()) {
     case DoubleTyID:
@@ -209,8 +209,7 @@ public:
   /// Return true if this is a target extension type with a scalable layout.
   bool isScalableTargetExtTy() const;
 
-  /// Return true if this is a scalable vector type or a target extension type
-  /// with a scalable layout.
+  /// Return true if this is a type whose size is a known multiple of vscale.
   bool isScalableTy() const;
 
   /// Return true if this is a FP type or a vector of FP.
@@ -256,7 +255,8 @@ public:
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
 
   /// True if this is an instance of an opaque PointerType.
-  bool isOpaquePointerTy() const;
+  LLVM_DEPRECATED("Use isPointerTy() instead", "isPointerTy")
+  bool isOpaquePointerTy() const { return isPointerTy(); };
 
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
@@ -408,23 +408,12 @@ public:
 
   inline StringRef getTargetExtName() const;
 
-  /// This method is deprecated without replacement. Pointer element types are
-  /// not available with opaque pointers.
-  [[deprecated("Deprecated without replacement, see "
-               "https://llvm.org/docs/OpaquePointers.html for context and "
-               "migration instructions")]]
-  Type *getPointerElementType() const {
-    return getNonOpaquePointerElementType();
-  }
-
   /// Only use this method in code that is not reachable with opaque pointers,
   /// or part of deprecated methods that will be removed as part of the opaque
   /// pointers transition.
+  [[deprecated("Pointers no longer have element types")]]
   Type *getNonOpaquePointerElementType() const {
-    assert(getTypeID() == PointerTyID);
-    assert(NumContainedTys &&
-           "Attempting to get element type of opaque pointer");
-    return ContainedTys[0];
+    llvm_unreachable("Pointers no longer have element types");
   }
 
   /// Given vector type, change the element type,
@@ -491,24 +480,8 @@ public:
   static Type *getFloatingPointTy(LLVMContext &C, const fltSemantics &S);
 
   //===--------------------------------------------------------------------===//
-  // Convenience methods for getting pointer types with one of the above builtin
-  // types as pointee.
+  // Convenience methods for getting pointer types.
   //
-  static PointerType *getHalfPtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getBFloatPtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getFloatPtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getDoublePtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getX86_FP80PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getFP128PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getPPC_FP128PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getX86_MMXPtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getX86_AMXPtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS = 0);
-  static PointerType *getInt1PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getInt8PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getInt16PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getInt32PtrTy(LLVMContext &C, unsigned AS = 0);
-  static PointerType *getInt64PtrTy(LLVMContext &C, unsigned AS = 0);
   static Type *getWasm_ExternrefTy(LLVMContext &C);
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 

@@ -5,7 +5,6 @@ define i1 @test_conds_single_use_in_different_blocks(i8 %x) {
 ; CHECK-LABEL: @test_conds_single_use_in_different_blocks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -31,8 +30,7 @@ define i1 @test_conds_single_use_in_different_blocks_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_conds_single_use_in_different_blocks_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[Y]], 5
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
@@ -70,7 +68,6 @@ define i1 @test_conds_multiple_uses_in_different_blocks_2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[Y:%.*]], 5
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[T_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[Y]], 5
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    br i1 [[C_2]], label [[THEN_2:%.*]], label [[ELSE]]

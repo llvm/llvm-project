@@ -1,41 +1,50 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
 //
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+
+// RUN: %{compile} | %{run} | FileCheck %s
 
 // TODO: support slices on lib path
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
+  map = (d0 : #sparse_tensor<slice(1, 4, 1)>, d1 : #sparse_tensor<slice(1, 4, 2)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE_DYN = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (?, ?, ?), (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>, d1 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #COO_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
-  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
+  map = (d0 : #sparse_tensor<slice(1, 4, 1)>, d1 : #sparse_tensor<slice(1, 4, 2)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #COO_SLICE_DYN = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
-  dimSlices = [ (?, ?, ?), (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>, d1 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 

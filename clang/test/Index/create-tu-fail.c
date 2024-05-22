@@ -4,7 +4,6 @@
 // RUN: cp %s %t.c
 // RUN: not c-index-test -test-load-tu %t.pch local 2>&1 | FileCheck %s
 
-// rdar://11558355
 // Unfortunately this would crash reliably only via valgrind.
 
 // CHECK: Unable to load translation unit

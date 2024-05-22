@@ -24,6 +24,7 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <iterator>
 #include <ranges>
 #include <vector>
 
@@ -203,6 +204,7 @@ constexpr bool test() {
   test_proxy_in_iterators<ProxyIterator>();
 
   { // check that a move-only type works
+    // When non-trivial
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
@@ -214,6 +216,24 @@ constexpr bool test() {
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
+      std::ranges::move(std::begin(a), std::end(a), std::begin(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+
+    // When trivial
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
+      std::ranges::move(a, std::begin(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
       std::ranges::move(std::begin(a), std::end(a), std::begin(b));
       assert(b[0].get() == 1);
       assert(b[1].get() == 2);
@@ -255,9 +275,9 @@ constexpr bool test() {
   { // check that an iterator is returned with a borrowing range
     std::array in {1, 2, 3, 4};
     std::array<int, 4> out;
-    std::same_as<std::ranges::in_out_result<int*, int*>> decltype(auto) ret =
+    std::same_as<std::ranges::in_out_result<std::array<int, 4>::iterator, int*>> decltype(auto) ret =
         std::ranges::move(std::views::all(in), out.data());
-    assert(ret.in == in.data() + 4);
+    assert(ret.in == in.end());
     assert(ret.out == out.data() + 4);
     assert(in == out);
   }

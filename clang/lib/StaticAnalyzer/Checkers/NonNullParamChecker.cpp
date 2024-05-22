@@ -303,7 +303,7 @@ std::unique_ptr<PathSensitiveBugReport>
 NonNullParamChecker::genReportReferenceToNullPointer(
     const ExplodedNode *ErrorNode, const Expr *ArgE) const {
   if (!BTNullRefArg)
-    BTNullRefArg.reset(new BuiltinBug(this, "Dereference of null pointer"));
+    BTNullRefArg.reset(new BugType(this, "Dereference of null pointer"));
 
   auto R = std::make_unique<PathSensitiveBugReport>(
       *BTNullRefArg, "Forming reference to null pointer", ErrorNode);

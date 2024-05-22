@@ -22,6 +22,7 @@
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -474,7 +475,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "LLVM_READONLY\n";
   OS << "static int getMemOperandSize(int OpType) {\n";
   OS << "  switch (OpType) {\n";
-  std::map<int, std::vector<StringRef>> SizeToOperandName;
+  std::map<int, SmallVector<StringRef, 0>> SizeToOperandName;
   for (const Record *Op : Operands) {
     if (!Op->isSubClassOf("X86MemOperand"))
       continue;
@@ -482,7 +483,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
       SizeToOperandName[Size].push_back(Op->getName());
   }
   OS << "  default: return 0;\n";
-  for (auto KV : SizeToOperandName) {
+  for (const auto &KV : SizeToOperandName) {
     for (const StringRef &OperandName : KV.second)
       OS << "  case OpTypes::" << OperandName << ":\n";
     OS << "    return " << KV.first << ";\n\n";
@@ -733,7 +734,9 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
   SubtargetFeatures.insert(All.begin(), All.end());
 
-  OS << "#if defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)\n"
+  OS << "#if (defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)) "
+     << "||\\\n"
+     << "    defined(GET_AVAILABLE_OPCODE_CHECKER)\n"
      << "#define GET_COMPUTE_FEATURES\n"
      << "#endif\n";
   OS << "#ifdef GET_COMPUTE_FEATURES\n"
@@ -799,7 +802,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     OS << "},\n";
   }
   OS << "  };\n"
-     << "  static " << getMinimalTypeForRange(FeatureBitsets.size())
+     << "  static constexpr " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
   unsigned InstIdx = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
@@ -825,6 +828,25 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   OS << "} // end namespace " << Target.getName() << "_MC\n"
      << "} // end namespace llvm\n"
      << "#endif // GET_COMPUTE_FEATURES\n\n";
+
+  OS << "#ifdef GET_AVAILABLE_OPCODE_CHECKER\n"
+     << "#undef GET_AVAILABLE_OPCODE_CHECKER\n"
+     << "namespace llvm {\n"
+     << "namespace " << Target.getName() << "_MC {\n";
+  OS << "bool isOpcodeAvailable("
+     << "unsigned Opcode, const FeatureBitset &Features) {\n"
+     << "  FeatureBitset AvailableFeatures = "
+     << "computeAvailableFeatures(Features);\n"
+     << "  FeatureBitset RequiredFeatures = "
+     << "computeRequiredFeatures(Opcode);\n"
+     << "  FeatureBitset MissingFeatures =\n"
+     << "      (AvailableFeatures & RequiredFeatures) ^\n"
+     << "      RequiredFeatures;\n"
+     << "  return !MissingFeatures.any();\n"
+     << "}\n";
+  OS << "} // end namespace " << Target.getName() << "_MC\n"
+     << "} // end namespace llvm\n"
+     << "#endif // GET_AVAILABLE_OPCODE_CHECKER\n\n";
 
   OS << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
      << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"

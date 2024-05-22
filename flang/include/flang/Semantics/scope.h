@@ -61,7 +61,7 @@ class Scope {
 public:
   ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
       BlockData, DerivedType, BlockConstruct, Forall, OtherConstruct,
-      ImpliedDos)
+      OpenACCConstruct, ImpliedDos)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
@@ -249,9 +249,6 @@ public:
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
-  // Find the smallest scope under this one that contains source
-  const Scope *FindScope(parser::CharBlock) const;
-  Scope *FindScope(parser::CharBlock);
 
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,

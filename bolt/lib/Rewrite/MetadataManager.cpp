@@ -32,6 +32,18 @@ void MetadataManager::runInitializersPreCFG() {
   }
 }
 
+void MetadataManager::runInitializersPostCFG() {
+  for (auto &Rewriter : Rewriters) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()
+                      << " after CFG construction\n");
+    if (Error E = Rewriter->postCFGInitializer()) {
+      errs() << "BOLT-ERROR: while running " << Rewriter->getName()
+             << " in CFG state: " << toString(std::move(E)) << '\n';
+      exit(1);
+    }
+  }
+}
+
 void MetadataManager::runFinalizersAfterEmit() {
   for (auto &Rewriter : Rewriters) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()

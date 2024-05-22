@@ -89,7 +89,6 @@ namespace test2 {
   // CHECK: call void @_ZN5test21BD1Ev(
 }
 
-// rdar://problem/9334739
 // Make sure we mark destructors for parameters captured in blocks.
 namespace test3 {
   struct A {
@@ -106,7 +105,6 @@ namespace test3 {
   }
 }
 
-// rdar://problem/9971485
 namespace test4 {
   struct A {
     A();
@@ -215,8 +213,7 @@ namespace test7 {
 }
 
 namespace test8 {
-  // <rdar://problem/10832617>: failure to capture this after skipping rebuild
-  // of the 'this' pointer.
+  // failure to capture this after skipping rebuild of the 'this' pointer.
   struct X {
     int x;
 
@@ -229,7 +226,6 @@ namespace test8 {
   template int X::foo<int>();
 }
 
-// rdar://13459289
 namespace test9 {
   struct B {
     void *p;

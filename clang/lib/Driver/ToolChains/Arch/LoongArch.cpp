@@ -12,6 +12,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang::driver;
@@ -126,25 +127,11 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const llvm::Triple &Triple,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
-  StringRef ArchName;
-  llvm::LoongArch::ArchKind ArchKind = llvm::LoongArch::ArchKind::AK_INVALID;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    ArchKind = llvm::LoongArch::parseArch(A->getValue());
-    if (ArchKind == llvm::LoongArch::ArchKind::AK_INVALID) {
-      D.Diag(clang::diag::err_drv_invalid_arch_name) << A->getAsString(Args);
-      return;
-    }
+  std::string ArchName;
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     ArchName = A->getValue();
-  }
-
-  // TODO: handle -march=native and -mtune=xx.
-
-  // Select a default arch name.
-  if (ArchName.empty() && Triple.getArch() == llvm::Triple::loongarch64)
-    ArchName = "loongarch64";
-
-  if (!ArchName.empty())
-    llvm::LoongArch::getArchFeatures(ArchName, Features);
+  ArchName = postProcessTargetCPUString(ArchName, Triple);
+  llvm::LoongArch::getArchFeatures(ArchName, Features);
 
   // Select floating-point features determined by -mdouble-float,
   // -msingle-float, -msoft-float and -mfpu.
@@ -188,4 +175,58 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     A->ignoreTargetSpecific();
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mfpu_EQ))
     A->ignoreTargetSpecific();
+
+  // Select lsx feature determined by -m[no-]lsx.
+  if (const Arg *A = Args.getLastArg(options::OPT_mlsx, options::OPT_mno_lsx)) {
+    // LSX depends on 64-bit FPU.
+    // -m*-float and -mfpu=none/0/32 conflict with -mlsx.
+    if (A->getOption().matches(options::OPT_mlsx)) {
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lsx);
+      else /*-mlsx*/
+        Features.push_back("+lsx");
+    } else /*-mno-lsx*/ {
+      Features.push_back("-lsx");
+    }
+  }
+
+  // Select lasx feature determined by -m[no-]lasx.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlasx, options::OPT_mno_lasx)) {
+    // LASX depends on 64-bit FPU and LSX.
+    // -mno-lsx conflicts with -mlasx.
+    if (A->getOption().matches(options::OPT_mlasx)) {
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lasx);
+      else if (llvm::find(Features, "-lsx") != Features.end())
+        D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
+      else { /*-mlasx*/
+        Features.push_back("+lsx");
+        Features.push_back("+lasx");
+      }
+    } else /*-mno-lasx*/
+      Features.push_back("-lasx");
+  }
+}
+
+std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
+                                                  const llvm::Triple &Triple) {
+  std::string CPUString = CPU;
+  if (CPUString == "native") {
+    CPUString = llvm::sys::getHostCPUName();
+    if (CPUString == "generic")
+      CPUString = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
+  }
+  if (CPUString.empty())
+    CPUString = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
+  return CPUString;
+}
+
+std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
+                                             const llvm::Triple &Triple) {
+  std::string CPU;
+  // If we have -march, use that.
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+    CPU = A->getValue();
+  return postProcessTargetCPUString(CPU, Triple);
 }

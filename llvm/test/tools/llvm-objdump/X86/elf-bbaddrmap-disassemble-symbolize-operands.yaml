@@ -20,15 +20,15 @@
 
 ## Expect to find the branch and basic block labels and global variable name.
 # ATT:      <foo>:
-# ATT-NEXT: <BB0>:
+# ATT-NEXT: <BB3>:
 # ATT-NEXT:   pushq %rax
 # ATT-NEXT: <BB1>:
 # ATT-NEXT:   cmpl  , %eax <[[SYM]]>
 # ATT-NEXT:   nop
 # ATT-NEXT: <BB2>:
-# ATT-NEXT:   jge    <BB3>
+# ATT-NEXT:   jge    <BB5>
 # ATT-NEXT:   jmp    <BB1>
-# ATT-NEXT: <BB3>:
+# ATT-NEXT: <BB5>:
 # ATT-NEXT:   retq
 # ATT:      <bar>:
 # ATT-NEXT: <BB0>:
@@ -42,15 +42,15 @@
 # ATT-NEXT:   retq
 
 # INTEL:      <foo>:
-# INTEL-NEXT: <BB0>:
+# INTEL-NEXT: <BB3>:
 # INTEL-NEXT:   push rax
 # INTEL-NEXT: <BB1>:
 # INTEL-NEXT:   cmp  eax, dword ptr <[[SYM]]>
 # INTEL-NEXT:   nop
 # INTEL-NEXT: <BB2>:
-# INTEL-NEXT:   jge   <BB3>
+# INTEL-NEXT:   jge   <BB5>
 # INTEL-NEXT:   jmp   <BB1>
-# INTEL-NEXT: <BB3>:
+# INTEL-NEXT: <BB5>:
 # INTEL-NEXT:   ret
 # INTEL:      <bar>:
 # INTEL-NEXT: <BB0>:
@@ -92,19 +92,23 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.foo
     Entries:
-      - Version: 1
+      - Version: 2
         Address: [[FOO_ADDR]]
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            3
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x1
+          - ID:            2
+            AddressOffset: 0x1
             Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0x0
+          - ID:            5
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
   - Name:   .llvm_bb_addr_map.bar
@@ -162,19 +166,23 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.foo
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x4000
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            3
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x1
+          - ID:            2
+            AddressOffset: 0x1
             Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0x0
+          - ID:            5
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
       - Version: 1

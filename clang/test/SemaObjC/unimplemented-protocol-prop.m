@@ -20,7 +20,6 @@
                        // expected-warning {{property 'MyProperty' requires method 'MyProperty' to be defined}} \
                        // expected-warning {{property 'MyProperty' requires method 'setMyProperty:' to be defined}}
 
-// rdar://10120691
 // property is implemented in super class. No warning
 
 @protocol PROTOCOL1

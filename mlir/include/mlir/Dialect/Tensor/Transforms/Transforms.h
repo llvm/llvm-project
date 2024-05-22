@@ -34,9 +34,14 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 // Populate functions.
 //===----------------------------------------------------------------------===//
 
-/// Appends patterns for folding tensor aliasing ops into consumer load/store
-/// ops into `patterns`.
+/// Appends patterns for folding tensor subset ops into consumer load/store
+/// ops into `patterns`. (This includes patterns for folding tensor subset ops
+/// into vector transfer ops.)
 void populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns);
+
+/// Appends patterns for folding tensor subset ops into vector transfer ops.
+void populateFoldTensorSubsetIntoVectorTransferPatterns(
+    RewritePatternSet &patterns);
 
 /// Collects patterns to merge consecutive tensor.insert_slice/extract_slice
 /// into one. These patterns are in this separate entry point because the
@@ -61,6 +66,13 @@ void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 /// use are folded.
 void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                                      bool foldSingleUseOnly = false);
+
+/// Populates `patterns` with patterns that decompose `tensor.concat` into
+/// `tensor.empty` of a tensor of the concatenated size, followed by a chain
+/// of `tensor.insert_slice` operations on the inputs. This is intended to be
+/// used as a fallback tensor -> tensor lowering that decomposes concat such
+/// that it can be bufferized into a sequence of copies.
+void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations

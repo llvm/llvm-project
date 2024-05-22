@@ -13,22 +13,13 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
-#include "clang/AST/Availability.h"
-#include "clang/Basic/BitmaskEnum.h"
-#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
-#include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <memory>
 #include <optional>
 #include <stack>
 
@@ -62,6 +53,7 @@ namespace clang {
 class Parser : public CodeCompletionHandler {
   friend class ColonProtectionRAIIObject;
   friend class ParsingOpenMPDirectiveRAII;
+  friend class ParsingOpenACCDirectiveRAII;
   friend class InMessageExpressionRAIIObject;
   friend class OffsetOfStateRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
@@ -184,6 +176,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> FPContractHandler;
   std::unique_ptr<PragmaHandler> OpenCLExtensionHandler;
   std::unique_ptr<PragmaHandler> OpenMPHandler;
+  std::unique_ptr<PragmaHandler> OpenACCHandler;
   std::unique_ptr<PragmaHandler> PCSectionHandler;
   std::unique_ptr<PragmaHandler> MSCommentHandler;
   std::unique_ptr<PragmaHandler> MSDetectMismatchHandler;
@@ -237,6 +230,9 @@ class Parser : public CodeCompletionHandler {
 
   /// Parsing OpenMP directive mode.
   bool OpenMPDirectiveParsing = false;
+
+  /// Parsing OpenACC directive mode.
+  bool OpenACCDirectiveParsing = false;
 
   /// When true, we are directly inside an Objective-C message
   /// send expression.
@@ -419,18 +415,15 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
-    /// This context permits declarations in language modes where declarations
-    /// are not statements.
-    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x2,
+    AllowStandaloneOpenMPDirectives = 0x1,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x4,
+    InStmtExpr = 0x2,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
+    Compound = AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
@@ -672,9 +665,9 @@ private:
     return PrevTokLocation;
   }
 
-  ///\ brief When we are consuming a code-completion token without having
-  /// matched specific position in the grammar, provide code-completion results
-  /// based on context.
+  /// When we are consuming a code-completion token without having matched
+  /// specific position in the grammar, provide code-completion results based
+  /// on context.
   ///
   /// \returns the source location of the code-completion token.
   SourceLocation handleUnexpectedCodeCompletionToken();
@@ -775,6 +768,10 @@ private:
   /// Handle the annotation token produced for
   /// #pragma STDC FENV_ROUND...
   void HandlePragmaFEnvRound();
+
+  /// Handle the annotation token produced for
+  /// #pragma STDC CX_LIMITED_RANGE...
+  void HandlePragmaCXLimitedRange();
 
   /// Handle the annotation token produced for
   /// #pragma float_control
@@ -1091,9 +1088,9 @@ private:
     StmtExprBegin,
     /// A '}' ')' ending a statement-expression.
     StmtExprEnd,
-    /// A '[' '[' beginning a C++11 or C2x attribute.
+    /// A '[' '[' beginning a C++11 or C23 attribute.
     AttrBegin,
-    /// A ']' ']' ending a C++11 or C2x attribute.
+    /// A ']' ']' ending a C++11 or C23 attribute.
     AttrEnd,
     /// A '::' '*' forming a C++ pointer-to-member declaration.
     MemberPtr,
@@ -1775,6 +1772,7 @@ public:
   ExprResult ParseConstantExpressionInExprEvalContext(
       TypeCastState isTypeCast = NotTypeCast);
   ExprResult ParseConstantExpression();
+  ExprResult ParseArrayBoundExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
   ExprResult ParseConstraintExpression();
   ExprResult
@@ -1788,8 +1786,12 @@ public:
                                   bool IsUnevaluated);
 
   ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral = false);
+  ExprResult ParseUnevaluatedStringLiteralExpression();
 
 private:
+  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
+                                          bool Unevaluated);
+
   ExprResult ParseExpressionWithLeadingAt(SourceLocation AtLoc);
 
   ExprResult ParseExpressionWithLeadingExtension(SourceLocation ExtLoc);
@@ -2708,12 +2710,6 @@ public:
 private:
   void ParseBlockId(SourceLocation CaretLoc);
 
-  /// Are [[]] attributes enabled?
-  bool standardAttributesAllowed() const {
-    const LangOptions &LO = getLangOpts();
-    return LO.DoubleSquareBracketAttributes;
-  }
-
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
   /// [[]] attributes are enabled, whereas the latter is true whenever
@@ -2722,15 +2718,14 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            (standardAttributesAllowed() &&
-             isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend)));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
   // attribute is not allowed.
   bool CheckProhibitedCXX11Attribute() {
     assert(Tok.is(tok::l_square));
-    if (!standardAttributesAllowed() || NextToken().isNot(tok::l_square))
+    if (NextToken().isNot(tok::l_square))
       return false;
     return DiagnoseProhibitedCXX11Attribute();
   }
@@ -2738,13 +2733,10 @@ private:
   bool DiagnoseProhibitedCXX11Attribute();
   void CheckMisplacedCXX11Attribute(ParsedAttributes &Attrs,
                                     SourceLocation CorrectLocation) {
-    if (!Tok.isRegularKeywordAttribute()) {
-      if (!standardAttributesAllowed())
-        return;
-      if ((Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
-          Tok.isNot(tok::kw_alignas))
-        return;
-    }
+    if (!Tok.isRegularKeywordAttribute() &&
+        (Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
+        Tok.isNot(tok::kw_alignas))
+      return;
     DiagnoseMisplacedCXX11Attribute(Attrs, CorrectLocation);
   }
   void DiagnoseMisplacedCXX11Attribute(ParsedAttributes &Attrs,
@@ -2772,7 +2764,7 @@ private:
   void DiagnoseProhibitedAttributes(const ParsedAttributesView &Attrs,
                                     SourceLocation FixItLoc);
 
-  // Forbid C++11 and C2x attributes that appear on certain syntactic locations
+  // Forbid C++11 and C23 attributes that appear on certain syntactic locations
   // which standard permits but we don't supported yet, for example, attributes
   // appertain to decl specifiers.
   // For the most cases we don't want to warn on unknown type attributes, but
@@ -2783,18 +2775,25 @@ private:
                                bool DiagnoseEmptyAttrs = false,
                                bool WarnOnUnknownAttrs = false);
 
-  /// Skip C++11 and C2x attributes and return the end location of the
+  /// Skip C++11 and C23 attributes and return the end location of the
   /// last one.
   /// \returns SourceLocation() if there are no attributes.
   SourceLocation SkipCXX11Attributes();
 
-  /// Diagnose and skip C++11 and C2x attributes that appear in syntactic
+  /// Diagnose and skip C++11 and C23 attributes that appear in syntactic
   /// locations where attributes are not allowed.
   void DiagnoseAndSkipCXX11Attributes();
 
-  /// Emit warnings for C++11 and C2x attributes that are in a position that
+  /// Emit warnings for C++11 and C23 attributes that are in a position that
   /// clang accepts as an extension.
   void DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs);
+
+  ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
+
+  bool
+  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
+                             SmallVectorImpl<Expr *> &Exprs,
+                             ParsedAttributeArgumentsProperties ArgsProperties);
 
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
@@ -2901,7 +2900,7 @@ private:
     return false;
   }
 
-  void ParseOpenMPAttributeArgs(IdentifierInfo *AttrName,
+  void ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
                                 CachedTokens &OpenMPTokens);
 
   void ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
@@ -2914,7 +2913,7 @@ private:
     ReplayOpenMPAttributeTokens(OpenMPTokens);
   }
   void ParseCXX11Attributes(ParsedAttributes &attrs);
-  /// Parses a C++11 (or C2x)-style attribute argument list. Returns true
+  /// Parses a C++11 (or C23)-style attribute argument list. Returns true
   /// if this results in adding an attribute to the ParsedAttributes list.
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
                                SourceLocation AttrNameLoc,
@@ -3496,6 +3495,13 @@ private:
   //
   OMPClause *ParseOpenMPInteropClause(OpenMPClauseKind Kind, bool ParseOnly);
 
+  /// Parses a ompx_attribute clause
+  ///
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
+  //
+  OMPClause *ParseOpenMPOMPXAttributesClause(bool ParseOnly);
+
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP
   /// constructs.
@@ -3523,6 +3529,26 @@ public:
   /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
   /// where, map-type-modifier ::= always | close | mapper(mapper-identifier)
   bool parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data);
+
+  //===--------------------------------------------------------------------===//
+  // OpenACC Parsing.
+
+  /// Placeholder for now, should just ignore the directives after emitting a
+  /// diagnostic. Eventually will be split into a few functions to parse
+  /// different situations.
+public:
+  DeclGroupPtrTy ParseOpenACCDirectiveDecl();
+  StmtResult ParseOpenACCDirectiveStmt();
+
+private:
+  void ParseOpenACCDirective();
+  /// Helper that parses an ID Expression based on the language options.
+  ExprResult ParseOpenACCIDExpression();
+  /// Parses the variable list for the `cache` construct.
+  void ParseOpenACCCacheVarList();
+  /// Parses a single variable in a variable list for the 'cache' construct.
+  bool ParseOpenACCCacheVar();
+  bool ParseOpenACCWaitArgument();
 
 private:
   //===--------------------------------------------------------------------===//

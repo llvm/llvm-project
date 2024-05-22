@@ -3,6 +3,11 @@ STRING_EXTENSION_OUTSIDE(SBFunction)
 %extend lldb::SBFunction {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
         def get_instructions_from_current_target (self):
             return self.GetInstructions (target)
 

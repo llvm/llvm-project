@@ -11,6 +11,8 @@
 
 #include "common_constants.h"
 #include "math_utils.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -20,7 +22,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct ExpBase {
   // Base = e
@@ -160,7 +162,7 @@ template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   // hi = floor(kd * 2^(-MID_BITS))
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi = static_cast<int64_t>((k >> Base::MID_BITS))
-                   << fputil::FloatProperties<double>::MANTISSA_WIDTH;
+                   << fputil::FloatProperties<double>::FRACTION_LEN;
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
   int64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
@@ -233,9 +235,9 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   // hi = floor(kf * 2^(-5))
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi_p = static_cast<int64_t>((k_p >> ExpBase::MID_BITS))
-                     << fputil::FloatProperties<double>::MANTISSA_WIDTH;
+                     << fputil::FloatProperties<double>::FRACTION_LEN;
   int64_t exp_hi_m = static_cast<int64_t>((k_m >> ExpBase::MID_BITS))
-                     << fputil::FloatProperties<double>::MANTISSA_WIDTH;
+                     << fputil::FloatProperties<double>::FRACTION_LEN;
   // mh_p = 2^(hi + mid)
   // mh_m = 2^(-(hi + mid))
   // mh_bits_* = bit field of mh_*
@@ -278,12 +280,11 @@ LIBC_INLINE static double log2_eval(double x) {
   double result = 0;
   result += bs.get_exponent();
 
-  int p1 =
-      (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - LOG_P1_BITS)) &
-      (LOG_P1_SIZE - 1);
+  int p1 = (bs.get_mantissa() >> (FPB::FRACTION_LEN - LOG_P1_BITS)) &
+           (LOG_P1_SIZE - 1);
 
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> LOG_P1_BITS;
-  bs.set_unbiased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPB::FRACTION_MASK >> LOG_P1_BITS;
+  bs.set_biased_exponent(FPB::EXP_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
   // Taylor series for log(2,1+x)
@@ -294,7 +295,7 @@ LIBC_INLINE static double log2_eval(double x) {
 
   // c0 = dx * (1.0 / ln(2)) + LOG_P1_LOG2[p1]
   double c0 = fputil::multiply_add(dx, 0x1.71547652b82fep+0, LOG_P1_LOG2[p1]);
-  result += __llvm_libc::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
+  result += LIBC_NAMESPACE::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
   return result;
 }
 
@@ -309,11 +310,11 @@ LIBC_INLINE static double log_eval(double x) {
 
   // p1 is the leading 7 bits of mx, i.e.
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
-  int p1 = (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - 7));
+  int p1 = static_cast<int>(bs.get_mantissa() >> (FPB::FRACTION_LEN - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
-  bs.set_unbiased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPB::FRACTION_MASK >> 7;
+  bs.set_biased_exponent(FPB::EXP_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
 
@@ -333,6 +334,52 @@ LIBC_INLINE static double log_eval(double x) {
   return result;
 }
 
-} // namespace __llvm_libc
+// Rounding tests for 2^hi * (mid + lo) when the output might be denormal. We
+// assume further that 1 <= mid < 2, mid + lo < 2, and |lo| << mid.
+// Notice that, if 0 < x < 2^-1022,
+//   double(2^-1022 + x) - 2^-1022 = double(x).
+// So if we scale x up by 2^1022, we can use
+//   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
+LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
+                                                  double err) {
+  using FloatProp = typename fputil::FloatProperties<double>;
+
+  // Scaling factor = 1/(min normal number) = 2^1022
+  int64_t exp_hi = static_cast<int64_t>(hi + 1022) << FloatProp::FRACTION_LEN;
+  double mid_hi = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(mid));
+  double lo_scaled =
+      (lo != 0.0) ? cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(lo))
+                  : 0.0;
+
+  double extra_factor = 0.0;
+  uint64_t scale_down = 0x3FE0'0000'0000'0000; // 1022 in the exponent field.
+
+  // Result is denormal if (mid_hi + lo_scale < 1.0).
+  if ((1.0 - mid_hi) > lo_scaled) {
+    // Extra rounding step is needed, which adds more rounding errors.
+    err += 0x1.0p-52;
+    extra_factor = 1.0;
+    scale_down = 0x3FF0'0000'0000'0000; // 1023 in the exponent field.
+  }
+
+  double err_scaled =
+      cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(err));
+
+  double lo_u = lo_scaled + err_scaled;
+  double lo_l = lo_scaled - err_scaled;
+
+  // By adding 1.0, the results will have similar rounding points as denormal
+  // outputs.
+  double upper = extra_factor + (mid_hi + lo_u);
+  double lower = extra_factor + (mid_hi + lo_l);
+
+  if (LIBC_LIKELY(upper == lower)) {
+    return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(upper) - scale_down);
+  }
+
+  return cpp::nullopt;
+}
+
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

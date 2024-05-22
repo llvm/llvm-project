@@ -197,7 +197,7 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0,0,0>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} :
     (index, index, i32) -> ()
 
   return
@@ -225,7 +225,7 @@ func.func @omp_simdloop_aligned_mismatch(%arg0 : index, %arg1 : index,
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [128],
-      operand_segment_sizes = array<i32: 1, 1, 1, 2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+      operandSegmentSizes = array<i32: 1, 1, 1, 2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -238,7 +238,7 @@ func.func @omp_simdloop_aligned_negative(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [-1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [-1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -251,7 +251,7 @@ func.func @omp_simdloop_unexpected_alignment(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0>} : (index, index, index) -> ()
+  }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0>} : (index, index, index) -> ()
   return
 }
 
@@ -264,7 +264,7 @@ func.func @omp_simdloop_aligned_float(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1.5, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [1.5, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -277,7 +277,7 @@ func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg3) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -291,7 +291,7 @@ func.func @omp_simdloop_nontemporal_the_same_var(%arg0 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg3) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 2>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 2>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -450,14 +450,14 @@ combiner {
 
 func.func @foo(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
-  %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
 
-  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>)
+  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
     // expected-error @below {{accumulator is not used by the parent}}
-    omp.reduction %2, %1 : f32, !llvm.ptr<f32>
+    omp.reduction %2, %1 : f32, !llvm.ptr
     omp.yield
   }
   return
@@ -467,14 +467,14 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
 
 func.func @foo(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
-  %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
 
   // expected-error @below {{expected symbol reference @foo to point to a reduction declaration}}
-  omp.wsloop reduction(@foo -> %0 : !llvm.ptr<f32>)
+  omp.wsloop reduction(@foo -> %0 : !llvm.ptr)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
-    omp.reduction %2, %1 : f32, !llvm.ptr<f32>
+    omp.reduction %2, %1 : f32, !llvm.ptr
     omp.yield
   }
   return
@@ -496,13 +496,13 @@ combiner {
 
 func.func @foo(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
 
   // expected-error @below {{accumulator variable used more than once}}
-  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %0 : !llvm.ptr<f32>)
+  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %0 : !llvm.ptr)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
-    omp.reduction %2, %0 : f32, !llvm.ptr<f32>
+    omp.reduction %2, %0 : f32, !llvm.ptr
     omp.yield
   }
   return
@@ -522,16 +522,16 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
 func.func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
   %c1 = arith.constant 1 : i32
 
-  // expected-error @below {{expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr<f32>')}}
+  // expected-error @below {{expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
   omp.wsloop reduction(@add_f32 -> %mem : memref<1xf32>)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
@@ -874,7 +874,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 // -----
 
 func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  // expected-error @below {{expected three operations in omp.atomic.capture region}}
+  // expected-error @below {{expected three operations in atomic.capture region}}
   omp.atomic.capture {
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.terminator
@@ -974,7 +974,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{updated variable in omp.atomic.update must be captured in second operation}}
+    // expected-error @below {{updated variable in atomic.update must be captured in second operation}}
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -989,7 +989,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %y : memref<i32>, i32
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
@@ -1004,7 +1004,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.atomic.write %y = %expr : memref<i32>, i32
     omp.terminator
@@ -1103,11 +1103,63 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
+func.func @omp_teams_parent() {
+  omp.parallel {
+    // expected-error @below {{expected to be nested inside of omp.target or not nested in any OpenMP dialect operations}}
+    omp.teams {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_allocate(%data_var : memref<i32>) {
+  omp.target {
+    // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+    "omp.teams" (%data_var) ({
+      omp.terminator
+    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0>} : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams1(%lb : i32) {
+  omp.target {
+    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+    "omp.teams" (%lb) ({
+      omp.terminator
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0>} : (i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
+  omp.target {
+    // expected-error @below {{expected num_teams upper bound and lower bound to be the same type}}
+    omp.teams num_teams(%lb : i32 to %ub : i16) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = array<i32: 0,1,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,1,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1117,7 +1169,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = array<i32: 1,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1232,7 +1284,7 @@ func.func @omp_single(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.single" (%data_var) ({
     omp.barrier
-  }) {operand_segment_sizes = array<i32: 1,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1242,15 +1294,15 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depends = [], operand_segment_sizes = array<i32: 0, 0, 0, 0, 1, 0, 0>} : (memref<i32>) -> ()
+    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
 // -----
 
-func.func @omp_task(%ptr: !llvm.ptr<f32>) {
+func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
-  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr<f32>) {
+  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1272,9 +1324,9 @@ combiner {
   omp.yield (%1 : f32)
 }
 
-func.func @omp_task(%ptr: !llvm.ptr<f32>) {
+func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op accumulator variable used more than once}}
-  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr<f32>, @add_f32 -> %ptr : !llvm.ptr<f32>) {
+  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr, @add_f32 -> %ptr : !llvm.ptr) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1296,14 +1348,14 @@ combiner {
   omp.yield (%1 : i32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<i32>, %arg3: !llvm.ptr<i32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<i32>
-  llvm.atomicrmw add %arg2, %2 monotonic : !llvm.ptr<i32>, i32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> i32
+  llvm.atomicrmw add %arg2, %2 monotonic : !llvm.ptr, i32
   omp.yield
 }
 
 func.func @omp_task(%mem: memref<1xf32>) {
-  // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr<i32>')}}
+  // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
   omp.task in_reduction(@add_i32 -> %mem : memref<1xf32>) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
@@ -1434,59 +1486,59 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testmemref) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, memref<i32>) -> ()
   return
 }
 
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0>, reductions = [@add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0>, reductions = [@add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0>, reductions = [@add_f32, @add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0>, reductions = [@add_f32, @add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr) -> ()
   return
 }
 
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {in_reductions = [@add_f32], operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
+  }) {in_reductions = [@add_f32], operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {in_reductions = [@add_f32, @add_f32], operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
+  }) {in_reductions = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr) -> ()
   return
 }
 
@@ -1505,10 +1557,10 @@ combiner {
 }
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{if a reduction clause is present on the taskloop directive, the nogroup clause must not be specified}}
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>, @add_f32 -> %testf32_2 : !llvm.ptr<f32>) nogroup
+  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) nogroup
   for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
     omp.terminator
   }
@@ -1530,9 +1582,9 @@ combiner {
 }
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{the same list item cannot appear in both a reduction and an in_reduction clause}}
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>) in_reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>)
+  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr) in_reduction(@add_f32 -> %testf32 : !llvm.ptr)
   for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
     omp.terminator
   }
@@ -1554,42 +1606,126 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 // -----
 
 func.func @omp_threadprivate() {
-  %1 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  %1 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr
   // expected-error @below {{op failed to verify that all of {sym_addr, tls_addr} have same type}}
-  %2 = omp.threadprivate %1 : !llvm.ptr<i32> -> memref<i32>
+  %2 = omp.threadprivate %1 : !llvm.ptr -> memref<i32>
   return
 }
 
 // -----
 
 func.func @omp_target(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target map((delete -> %map1 : memref<?xi32>)){}
+  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
+    ^bb0(%arg0: memref<?xi32>):
+  }
   return
 }
 
 // -----
 
 func.func @omp_target_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target_data map((delete -> %map1 : memref<?xi32>)){}
+  omp.target_data map_entries(%mapv : memref<?xi32>){}
+  return
+}
+
+// -----
+
+func.func @omp_target_data() {
+  // expected-error @below {{At least one of map, useDevicePtr, or useDeviceAddr operand must be present}}
+  omp.target_data {}
   return
 }
 
 // -----
 
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to and alloc map types are permitted}}
-  omp.target_enter_data map((from -> %map1 : memref<?xi32>)){}
+  omp.target_enter_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{from, release and delete map types are permitted}}
-  omp.target_exit_data map((to -> %map1 : memref<?xi32>)){}
+  omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
+// -----
+
+func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv2 = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update_data motion_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
+  return
+}
 llvm.mlir.global internal @_QFsubEx() : i32

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test is hitting Clang bugs with LSV in older versions of Clang.
-// UNSUPPORTED: modules-build && (clang-15 || apple-clang-14)
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr iterator_t<V> operator->() const
@@ -62,7 +59,7 @@ struct WithNonCopyableIterator : std::ranges::view_base {
     iterator(iterator&&);
     iterator& operator=(iterator&&);
     XYPoint& operator*() const;
-    iterator operator->() const;
+    XYPoint* operator->() const;
     iterator& operator++();
     iterator operator++(int);
 
@@ -89,10 +86,10 @@ constexpr void test() {
   };
 
   for (std::ptrdiff_t n = 0; n != 5; ++n) {
-    FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
-    FilterIterator const iter(view, Iterator(array.begin() + n));
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
+    FilterIterator const iter(view, Iterator(array.data() + n));
     std::same_as<Iterator> decltype(auto) result = iter.operator->();
-    assert(base(result) == array.begin() + n);
+    assert(base(result) == array.data() + n);
     assert(iter->x == n);
     assert(iter->y == n);
   }

@@ -4,15 +4,9 @@
 define i64 @test_pointer_array(i64 %v) {
 ; OPT-LABEL: @test_pointer_array(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[A:%.*]] = alloca [3 x ptr], align 16, addrspace(5)
-; OPT-NEXT:    [[TMP0:%.*]] = load <3 x ptr>, ptr addrspace(5) [[A]], align 16
-; OPT-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[V:%.*]] to ptr
-; OPT-NEXT:    [[TMP2:%.*]] = insertelement <3 x ptr> [[TMP0]], ptr [[TMP1]], i32 0
-; OPT-NEXT:    store <3 x ptr> [[TMP2]], ptr addrspace(5) [[A]], align 16
-; OPT-NEXT:    [[TMP3:%.*]] = load <3 x ptr>, ptr addrspace(5) [[A]], align 16
-; OPT-NEXT:    [[TMP4:%.*]] = extractelement <3 x ptr> [[TMP3]], i32 0
-; OPT-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; OPT-NEXT:    ret i64 [[TMP5]]
+; OPT-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[V:%.*]] to ptr
+; OPT-NEXT:    [[TMP1:%.*]] = insertelement <3 x ptr> undef, ptr [[TMP0]], i32 0
+; OPT-NEXT:    ret i64 [[V]]
 ;
 entry:
   %a = alloca [3 x ptr], align 16, addrspace(5)

@@ -2,10 +2,9 @@
 Clang Code Owners
 =================
 
-This file is a list of the people responsible for ensuring that patches for a
-particular part of Clang are reviewed, either by themself or by someone else.
-They are also the gatekeepers for their part of Clang, with the final word on
-what goes in or not.
+This file is a list of the
+`code owners <https://llvm.org/docs/DeveloperPolicy.html#code-owners>`_ for
+Clang.
 
 .. contents::
    :depth: 2
@@ -20,7 +19,7 @@ assistance.
 All parts of Clang not covered by someone else
 ----------------------------------------------
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 Contained Components
@@ -76,11 +75,17 @@ Modules & serialization
 Templates
 ~~~~~~~~~
 | Erich Keane
-| erich.keane\@intel.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
 Debug information
 ~~~~~~~~~~~~~~~~~
+| Adrian Prantl
+| aprantl\@apple.com (email), aprantl (Phabricator), adrian-prantl (GitHub)
+
+| David Blaikie
+| dblaikie\@gmail.com (email), dblaikie (Phabricator), dwblaikie (GitHub)
+
 | Eric Christopher
 | echristo\@gmail.com (email), echristo (Phabricator), echristo (GitHub)
 
@@ -169,7 +174,7 @@ compiler.
 Attributes
 ~~~~~~~~~~
 | Erich Keane
-| erich.keane\@intel.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
 Inline assembly
@@ -217,7 +222,7 @@ standard, when fixing standards bugs, or when implementing a new standard featur
 C conformance
 ~~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 C++ conformance

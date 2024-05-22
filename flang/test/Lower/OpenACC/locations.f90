@@ -1,8 +1,8 @@
 ! This test checks correct propagation of location information in OpenACC
 ! operations.
 
-! RUN: bbc -fopenacc -emit-fir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
 
+! RUN: bbc -fopenacc -emit-hlfir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
 module acc_locations
   implicit none
 
@@ -111,4 +111,56 @@ module acc_locations
     !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
   end subroutine
 
+  subroutine atomic_read_loc()
+    integer(4) :: x
+    integer(8) :: y
+  
+    !$acc atomic read
+    y = x
+  end
+  !CHECK: acc.atomic.read {{.*}} loc("{{.*}}locations.f90":118:11)
+
+  subroutine atomic_capture_loc()
+    implicit none
+    integer :: k, v, i
+  
+    k = 1
+    v = 0
+  
+    !$acc atomic capture
+    v = k
+    k = (i + 1) * 3.14
+    !$acc end atomic
+
+! CHECK: acc.atomic.capture {
+! CHECK:   acc.atomic.read {{.*}} loc("{{.*}}locations.f90":130:11)
+! CHECK:   acc.atomic.write {{.*}} loc("{{.*}}locations.f90":130:11)
+! CHECK: } loc("{{.*}}locations.f90":130:11)
+
+  end subroutine
+
+  subroutine atomic_update_loc()
+    implicit none
+    integer :: x, y, z
+    
+    !$acc atomic 
+    y = y + 1
+! CHECK: acc.atomic.update %{{.*}} : !fir.ref<i32> {
+! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":142:3)):
+! CHECK: } loc("{{.*}}locations.f90":142:3)
+    
+    !$acc atomic update
+    z = x * z 
+
+    ! %3 = fir.load %0 : !fir.ref<i32> loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
+    ! acc.atomic.update %2 : !fir.ref<i32> {
+    ! ^bb0(%arg0: i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)):
+    !   %4 = arith.muli %3, %arg0 : i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
+    !   acc.yield %4 : i32 loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
+    ! } loc("/local/home/vclement/llvm-project/flang/test/Lower/OpenACC/locations.f90":142:3)
+  end subroutine
+
+
 end module
+
+

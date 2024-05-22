@@ -95,11 +95,11 @@ define void @test_whole32_from64(ptr %existing, ptr %new) {
 define void @test_32bit_masked(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_masked:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #135 // =0x87
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    bfi w8, w9, #3, #4
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    ldr w10, [x1]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    bfi w8, w10, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %oldval = load volatile i32, ptr %existing
@@ -141,11 +141,11 @@ define void @test_64bit_masked(ptr %existing, ptr %new) {
 define void @test_32bit_complexmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_complexmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #647 // =0x287
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    bfi w8, w9, #3, #4
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w8, #647 // =0x287
+; CHECK-NEXT:    ldr w10, [x1]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    bfi w8, w10, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %oldval = load volatile i32, ptr %existing
@@ -166,11 +166,11 @@ define void @test_32bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_badmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov w10, #135 // =0x87
 ; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    mov w11, #632 // =0x278
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    and w9, w11, w9, lsl #3
+; CHECK-NEXT:    mov w10, #632 // =0x278
+; CHECK-NEXT:    mov w11, #135 // =0x87
+; CHECK-NEXT:    and w9, w10, w9, lsl #3
+; CHECK-NEXT:    and w8, w8, w11
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -191,13 +191,13 @@ define void @test_32bit_badmask(ptr %existing, ptr %new) {
 define void @test_64bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_64bit_badmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #135 // =0x87
-; CHECK-NEXT:    ldr x10, [x1]
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    mov w10, #135 // =0x87
 ; CHECK-NEXT:    mov w11, #664 // =0x298
-; CHECK-NEXT:    and x8, x9, x8
-; CHECK-NEXT:    lsl w10, w10, #3
-; CHECK-NEXT:    and x9, x10, x11
+; CHECK-NEXT:    lsl w9, w9, #3
+; CHECK-NEXT:    and x8, x8, x10
+; CHECK-NEXT:    and x9, x9, x11
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -544,8 +544,8 @@ define i64 @test8(i64 %a) {
 define i32 @test9(i64 %b, i32 %e) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w1, #23
 ; CHECK-NEXT:    lsr x0, x0, #12
+; CHECK-NEXT:    lsr w8, w1, #23
 ; CHECK-NEXT:    bfi w0, w8, #23, #9
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret

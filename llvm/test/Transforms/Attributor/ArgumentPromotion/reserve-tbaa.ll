@@ -22,7 +22,7 @@
 ; CHECK: @[[D:[a-zA-Z0-9_$"\\.-]+]] = global i8 0, align 1
 ;.
 define internal fastcc void @fn(ptr nocapture readonly %p1, ptr nocapture readonly %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@fn
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -43,13 +43,13 @@ entry:
 define i32 @main() {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@main
-; TUNIT-SAME: () #[[ATTR0]] {
+; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr @e, align 8, !tbaa [[TBAA5:![0-9]+]]
 ; TUNIT-NEXT:    store ptr @g, ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8, !tbaa [[TBAA5]]
 ; TUNIT-NEXT:    store i32 1, ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
-; TUNIT-NEXT:    call fastcc void @fn() #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    call fastcc void @fn() #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
@@ -84,10 +84,11 @@ entry:
 !9 = !{!"any pointer", !3, i64 0}
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nounwind willreturn }
 ;.

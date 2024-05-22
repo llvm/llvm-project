@@ -49,8 +49,8 @@ define <vscale x 6 x i64> @stepvector_nxv6i64() {
 ; CHECK-LABEL: stepvector_nxv6i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    incd z1.d
 ; CHECK-NEXT:    incd z2.d, all, mul #2
 ; CHECK-NEXT:    ret
@@ -209,10 +209,10 @@ define <vscale x 4 x i32> @multiple_use_stepvector_nxv4i32_1(i32 %data) {
 ; CHECK-LABEL: multiple_use_stepvector_nxv4i32_1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z0.s, w0
-; CHECK-NEXT:    index z1.s, w0, #1
-; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    sub z0.s, z0.s, z1.s
+; CHECK-NEXT:    index z0.s, w0, #1
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 4 x i32> poison, i32 %data, i32 0
@@ -242,8 +242,8 @@ define <vscale x 2 x i64> @multiple_use_stepvector_nxv2i64_1(i64 %data) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    add z1.d, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add z1.d, z0.d, z1.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
@@ -271,7 +271,7 @@ entry:
 define <vscale x 2 x i64> @mul_stepvector_nxv2i64() {
 ; CHECK-LABEL: mul_stepvector_nxv2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2222
+; CHECK-NEXT:    mov w8, #2222 // =0x8ae
 ; CHECK-NEXT:    index z0.d, #0, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -285,7 +285,7 @@ entry:
 define <vscale x 2 x i64> @mul_stepvector_bigconst_nxv2i64() {
 ; CHECK-LABEL: mul_stepvector_bigconst_nxv2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #146028888064
+; CHECK-NEXT:    mov x8, #146028888064 // =0x2200000000
 ; CHECK-NEXT:    index z0.d, #0, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -299,7 +299,7 @@ entry:
 define <vscale x 2 x i64> @mul_add_stepvector_nxv2i64(i64 %x) {
 ; CHECK-LABEL: mul_add_stepvector_nxv2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2222
+; CHECK-NEXT:    mov w8, #2222 // =0x8ae
 ; CHECK-NEXT:    index z0.d, x0, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -332,7 +332,7 @@ entry:
 define <vscale x 2 x i64> @mul_add_stepvector_bigconst_nxv2i64(i64 %x) {
 ; CHECK-LABEL: mul_add_stepvector_bigconst_nxv2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #146028888064
+; CHECK-NEXT:    mov x8, #146028888064 // =0x2200000000
 ; CHECK-NEXT:    index z0.d, x0, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -425,12 +425,12 @@ define <vscale x 16 x i32> @split_sub_stepvector_nxv16i32() {
 ; CHECK-LABEL: split_sub_stepvector_nxv16i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    neg x9, x9
 ; CHECK-NEXT:    index z0.s, #0, #-1
+; CHECK-NEXT:    neg x8, x8
 ; CHECK-NEXT:    mov z1.s, w8
-; CHECK-NEXT:    mov z3.s, w9
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    neg x8, x8
+; CHECK-NEXT:    mov z3.s, w8
 ; CHECK-NEXT:    add z1.s, z0.s, z1.s
 ; CHECK-NEXT:    add z2.s, z0.s, z3.s
 ; CHECK-NEXT:    add z3.s, z1.s, z3.s

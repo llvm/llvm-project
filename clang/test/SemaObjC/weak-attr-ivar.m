@@ -72,7 +72,6 @@ typedef enum { Foo_HUH_NONE } FooHUHCode;
 }
 @end
 
-// rdar://problem/9123040
 @interface Test1 {
 @public
   id ivar __attribute__((objc_gc(weak)));

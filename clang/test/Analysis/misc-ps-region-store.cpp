@@ -144,7 +144,7 @@ void pr7675_test() {
   clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}
 }
 
-// <rdar://problem/8375510> - CFGBuilder should handle temporaries.
+// CFGBuilder should handle temporaries.
 struct R8375510 {
   R8375510();
   ~R8375510();
@@ -629,7 +629,7 @@ void test_alloca_in_a_recursive_function(int p1) {
 // variable whose sub-field is also a struct.  This currently
 // results in a CXXTempObjectRegion being created, but not
 // properly handled.  For now, we just ignore that value
-// to avoid a crash (<rdar://problem/12753384>).
+// to avoid a crash.
 struct RDar12753384_ClassA {
   unsigned z;
 };
@@ -648,7 +648,6 @@ unsigned RDar12753384() {
 // warning because the anonymous union resulting in a temporary object
 // getting put into the initializer.  We still aren't handling this correctly,
 // but now if a temporary object appears in an initializer we just ignore it.
-// Fixes <rdar://problem/12755044>.
 
 struct Rdar12755044_foo
 {

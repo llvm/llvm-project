@@ -16,7 +16,7 @@ define i32 @foo(ptr nocapture %A) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 4, ptr [[TMP3]], align 4
@@ -61,7 +61,7 @@ define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[PTRPTR:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[PTRPTR]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP1]], align 8

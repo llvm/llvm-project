@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -242,7 +243,6 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   return loopDepth;
 }
 
-// TODO: Prevent fusion of loop nests with side-effecting operations.
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.
@@ -361,16 +361,22 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
-  auto iterOperands = forOp.getIterOperands();
   auto *parentOp = forOp->getParentOp();
   if (!isa<AffineForOp>(parentOp))
     return failure();
-  auto newOperands = forOp.getBody()->getTerminator()->getOperands();
-  OpBuilder b(parentOp);
+  SmallVector<Value> newOperands;
+  llvm::append_range(newOperands,
+                     forOp.getBody()->getTerminator()->getOperands());
+  IRRewriter rewriter(parentOp->getContext());
+  int64_t parentOpNumResults = parentOp->getNumResults();
   // Replace the parent loop and add iteroperands and results from the `forOp`.
   AffineForOp parentForOp = forOp->getParentOfType<AffineForOp>();
-  AffineForOp newLoop = replaceForOpWithNewYields(
-      b, parentForOp, iterOperands, newOperands, forOp.getRegionIterArgs());
+  AffineForOp newLoop =
+      cast<AffineForOp>(*parentForOp.replaceWithAdditionalYields(
+          rewriter, forOp.getInits(), /*replaceInitOperandUsesInLoop=*/false,
+          [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
+            return newOperands;
+          }));
 
   // For sibling-fusion users, collect operations that use the results of the
   // `forOp` outside the new parent loop that has absorbed all its iter args
@@ -387,7 +393,7 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   // Update the results of the `forOp` in the new loop.
   for (unsigned i = 0, e = forOp.getNumResults(); i != e; ++i) {
     forOp.getResult(i).replaceAllUsesWith(
-        newLoop.getResult(i + parentOp->getNumResults()));
+        newLoop.getResult(i + parentOpNumResults));
   }
   // For sibling-fusion users, move operations that use the results of the
   // `forOp` outside the new parent loop
@@ -412,7 +418,6 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   parentBlock->getOperations().splice(Block::iterator(forOp),
                                       forOp.getBody()->getOperations());
   forOp.erase();
-  parentForOp.erase();
   return success();
 }
 
@@ -605,7 +610,7 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
     // 'insertPointParent'.
     for (Value memref : storeMemrefs) {
       for (auto *user : memref.getUsers()) {
-        if (auto loadOp = dyn_cast<AffineReadOpInterface>(user)) {
+        if (dyn_cast<AffineReadOpInterface>(user)) {
           SmallVector<AffineForOp, 4> loops;
           // Check if any loop in loop nest surrounding 'user' is
           // 'insertPointParent'.

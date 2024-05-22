@@ -236,8 +236,7 @@ namespace PR7402 {
   }
 }
 
-// <rdar://problem/8308215>: don't crash.
-// Lots of questionable recovery here;  errors can change.
+// Don't crash. Lots of questionable recovery here;  errors can change.
 namespace test3 {
   class A : public std::exception {}; // expected-error {{undeclared identifier}} expected-error {{expected class name}}
   // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable}}

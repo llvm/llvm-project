@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-unknown -fms-extensions | FileCheck %s --check-prefixes=CHECK,CHECK-V12
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-unknown -fms-extensions -fclang-abi-compat=11 | FileCheck %s --check-prefixes=CHECK,CHECK-V11
-// rdar://17784718
 
 typedef struct _GUID
 {

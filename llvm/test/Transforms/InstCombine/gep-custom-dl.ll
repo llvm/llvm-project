@@ -62,7 +62,7 @@ define void @test_evaluate_gep_nested_as_ptrs(ptr addrspace(2) %B) {
 
 define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
 ; CHECK-LABEL: @test_evaluate_gep_as_ptrs_array(
-; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds ([4 x ptr addrspace(2)], ptr addrspace(1) @arst, i32 0, i32 2), align 16
+; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds ([4 x ptr addrspace(2)], ptr addrspace(1) @arst, i32 0, i32 2), align 8
 ; CHECK-NEXT:    ret void
 ;
 
@@ -168,7 +168,7 @@ define i32 @test10() {
 define i16 @constant_fold_custom_dl() {
 ; CHECK-LABEL: @constant_fold_custom_dl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds ([1000 x i8], ptr addrspace(1) @X_as1, i32 1, i32 0), i32 sext (i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16)) to i32)) to i16)
+; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds ([1000 x i8], ptr addrspace(1) @X_as1, i32 1, i32 0), i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16))) to i16)
 ;
 
 entry:

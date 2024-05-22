@@ -240,11 +240,11 @@ define <vscale x 16 x i64> @sext_b_to_d(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sext_b_to_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
-; CHECK-NEXT:    sunpkhi z6.h, z0.b
+; CHECK-NEXT:    sunpkhi z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
-; CHECK-NEXT:    sunpklo z5.s, z6.h
-; CHECK-NEXT:    sunpkhi z7.s, z6.h
+; CHECK-NEXT:    sunpklo z5.s, z0.h
+; CHECK-NEXT:    sunpkhi z7.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z2.s
 ; CHECK-NEXT:    sunpkhi z1.d, z2.s
 ; CHECK-NEXT:    sunpklo z2.d, z3.s
@@ -309,11 +309,11 @@ define <vscale x 16 x i64> @zext_b_to_d(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: zext_b_to_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
-; CHECK-NEXT:    uunpkhi z6.h, z0.b
+; CHECK-NEXT:    uunpkhi z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z5.s, z6.h
-; CHECK-NEXT:    uunpkhi z7.s, z6.h
+; CHECK-NEXT:    uunpklo z5.s, z0.h
+; CHECK-NEXT:    uunpkhi z7.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z2.s
 ; CHECK-NEXT:    uunpkhi z1.d, z2.s
 ; CHECK-NEXT:    uunpklo z2.d, z3.s
@@ -326,6 +326,115 @@ define <vscale x 16 x i64> @zext_b_to_d(<vscale x 16 x i8> %a) {
   %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   ret <vscale x 16 x i64> %ext
 }
+
+; Extending unpacked data to wide, illegal types
+
+define <vscale x 4 x i64> @zext_4i8_4i64(<vscale x 4 x i8> %aval) {
+; CHECK-LABEL: zext_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpkhi z1.d, z0.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %aext = zext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 4 x i64> @zext_4i16_4i64(<vscale x 4 x i16> %aval) {
+; CHECK-LABEL: zext_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpkhi z1.d, z0.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %aext = zext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 8 x i32> @zext_8i8_8i32(<vscale x 8 x i8> %aval) {
+; CHECK-LABEL: zext_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    uunpklo z2.s, z0.h
+; CHECK-NEXT:    uunpkhi z1.s, z0.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %aext
+}
+
+define <vscale x 8 x i64> @zext_8i8_8i64(<vscale x 8 x i8> %aval) {
+; CHECK-LABEL: zext_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    ret
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  ret <vscale x 8 x i64> %aext
+}
+
+define <vscale x 4 x i64> @sext_4i8_4i64(<vscale x 4 x i8> %aval) {
+; CHECK-LABEL: sext_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    sxtb z1.s, p0/m, z0.s
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %aext = sext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 4 x i64> @sext_4i16_4i64(<vscale x 4 x i16> %aval) {
+; CHECK-LABEL: sext_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    sxth z1.s, p0/m, z0.s
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %aext = sext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 8 x i32> @sext_8i8_8i32(<vscale x 8 x i8> %aval) {
+; CHECK-LABEL: sext_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    sxtb z1.h, p0/m, z0.h
+; CHECK-NEXT:    sunpklo z0.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    ret
+  %aext = sext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %aext
+}
+
+define <vscale x 8 x i64> @sext_8i8_8i64(<vscale x 8 x i8> %aval) {
+; CHECK-LABEL: sext_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    sunpklo z1.s, z0.h
+; CHECK-NEXT:    sunpkhi z3.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    sunpklo z2.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEXT:    ret
+  %aext = sext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  ret <vscale x 8 x i64> %aext
+}
+
 
 ; Extending non power-of-two types
 

@@ -4,6 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
@@ -37,6 +38,7 @@ class PyMlirContext;
 class DefaultingPyMlirContext;
 class PyModule;
 class PyOperation;
+class PyOperationBase;
 class PyType;
 class PySymbolTable;
 class PyValue;
@@ -52,7 +54,7 @@ public:
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
   }
-  PyObjectRef(PyObjectRef &&other)
+  PyObjectRef(PyObjectRef &&other) noexcept
       : referrent(other.referrent), object(std::move(other.object)) {
     other.referrent = nullptr;
     assert(!other.object);
@@ -208,6 +210,16 @@ public:
   /// corrupt by holding references they shouldn't have accessed in the first
   /// place.
   size_t clearLiveOperations();
+
+  /// Removes an operation from the live operations map and sets it invalid.
+  /// This is useful for when some non-bindings code destroys the operation and
+  /// the bindings need to made aware. For example, in the case when pass
+  /// manager is run.
+  void clearOperation(MlirOperation op);
+
+  /// Clears all operations nested inside the given op using
+  /// `clearOperation(MlirOperation)`.
+  void clearOperationsInside(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
@@ -473,7 +485,8 @@ public:
       mlirDialectRegistryDestroy(registry);
   }
   PyDialectRegistry(PyDialectRegistry &) = delete;
-  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+  PyDialectRegistry(PyDialectRegistry &&other) noexcept
+      : registry(other.registry) {
     other.registry = {nullptr};
   }
 
@@ -539,16 +552,19 @@ private:
   pybind11::handle handle;
 };
 
+class PyAsmState;
+
 /// Base class for PyOperation and PyOpView which exposes the primary, user
 /// visible methods for manipulating it.
 class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(pybind11::object fileObject, bool binary,
-             std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified);
+             bool assumeVerified, py::object fileObject, bool binary);
+  void print(PyAsmState &state, py::object fileObject, bool binary);
+
   pybind11::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
@@ -655,7 +671,8 @@ public:
          std::optional<std::vector<PyValue *>> operands,
          std::optional<pybind11::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, const pybind11::object &ip);
+         DefaultingPyLocation location, const pybind11::object &ip,
+         bool inferType);
 
   /// Creates an OpView suitable for this operation.
   pybind11::object createOpView();
@@ -704,13 +721,12 @@ public:
 
   pybind11::object getOperationObject() { return operationObject; }
 
-  static pybind11::object
-  buildGeneric(const pybind11::object &cls, pybind11::list resultTypeList,
-               pybind11::list operandList,
-               std::optional<pybind11::dict> attributes,
-               std::optional<std::vector<PyBlock *>> successors,
-               std::optional<int> regions, DefaultingPyLocation location,
-               const pybind11::object &maybeIp);
+  static pybind11::object buildGeneric(
+      const pybind11::object &cls, std::optional<pybind11::list> resultTypeList,
+      pybind11::list operandList, std::optional<pybind11::dict> attributes,
+      std::optional<std::vector<PyBlock *>> successors,
+      std::optional<int> regions, DefaultingPyLocation location,
+      const pybind11::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
   /// `__init__` method. The derived class will typically define a constructor
@@ -748,6 +764,39 @@ private:
   MlirRegion region;
 };
 
+/// Wrapper around an MlirAsmState.
+class PyAsmState {
+public:
+  PyAsmState(MlirValue value, bool useLocalScope) {
+    flags = mlirOpPrintingFlagsCreate();
+    // The OpPrintingFlags are not exposed Python side, create locally and
+    // associate lifetime with the state.
+    if (useLocalScope)
+      mlirOpPrintingFlagsUseLocalScope(flags);
+    state = mlirAsmStateCreateForValue(value, flags);
+  }
+
+  PyAsmState(PyOperationBase &operation, bool useLocalScope) {
+    flags = mlirOpPrintingFlagsCreate();
+    // The OpPrintingFlags are not exposed Python side, create locally and
+    // associate lifetime with the state.
+    if (useLocalScope)
+      mlirOpPrintingFlagsUseLocalScope(flags);
+    state =
+        mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
+  }
+  ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
+  // Delete copy constructors.
+  PyAsmState(PyAsmState &other) = delete;
+  PyAsmState(const PyAsmState &other) = delete;
+
+  MlirAsmState get() { return state; }
+
+private:
+  MlirAsmState state;
+  MlirOpPrintingFlags flags;
+};
+
 /// Wrapper around an MlirBlock.
 /// Blocks are managed completely by their containing operation. Unlike the
 /// C++ API, the python API does not support detached blocks.
@@ -762,6 +811,9 @@ public:
   PyOperationRef &getParentOperation() { return parentOperation; }
 
   void checkValid() { return parentOperation->checkValid(); }
+
+  /// Gets a capsule wrapping the void* within the MlirBlock.
+  pybind11::object getCapsule();
 
 private:
   PyOperationRef parentOperation;
@@ -795,6 +847,7 @@ public:
                    const pybind11::object &excTb);
 
   PyBlock &getBlock() { return block; }
+  std::optional<PyOperationRef> &getRefOperation() { return refOperation; }
 
 private:
   // Trampoline constructor that avoids null initializing members while
@@ -1062,6 +1115,10 @@ public:
 /// bindings so such operation always exists).
 class PyValue {
 public:
+  // The virtual here is "load bearing" in that it enables RTTI
+  // for PyConcreteValue CRTP classes that support maybeDownCast.
+  // See PyValue::maybeDownCast.
+  virtual ~PyValue() = default;
   PyValue(PyOperationRef parentOperation, MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
   operator MlirValue() const { return value; }
@@ -1073,6 +1130,8 @@ public:
 
   /// Gets a capsule wrapping the void* within the MlirValue.
   pybind11::object getCapsule();
+
+  pybind11::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1174,14 +1233,14 @@ public:
 
   /// Inserts the given operation into the symbol table. The operation must have
   /// the symbol trait.
-  PyAttribute insert(PyOperationBase &symbol);
+  MlirAttribute insert(PyOperationBase &symbol);
 
   /// Gets and sets the name of a symbol op.
-  static PyAttribute getSymbolName(PyOperationBase &symbol);
+  static MlirAttribute getSymbolName(PyOperationBase &symbol);
   static void setSymbolName(PyOperationBase &symbol, const std::string &name);
 
   /// Gets and sets the visibility of a symbol op.
-  static PyAttribute getVisibility(PyOperationBase &symbol);
+  static MlirAttribute getVisibility(PyOperationBase &symbol);
   static void setVisibility(PyOperationBase &symbol,
                             const std::string &visibility);
 

@@ -9,21 +9,29 @@
 #ifndef __LLVM_LIBC_TYPES_RPC_OPCODE_H__
 #define __LLVM_LIBC_TYPES_RPC_OPCODE_H__
 
-typedef enum : unsigned short {
+typedef enum {
   RPC_NOOP = 0,
-  RPC_EXIT = 1,
-  RPC_WRITE_TO_STDOUT = 2,
-  RPC_WRITE_TO_STDERR = 3,
-  RPC_WRITE_TO_STREAM = 4,
-  RPC_OPEN_FILE = 5,
-  RPC_CLOSE_FILE = 6,
-  RPC_MALLOC = 7,
-  RPC_FREE = 8,
-  // TODO: Move these out of here and handle then with custom handlers in the
-  // loader.
-  RPC_TEST_INCREMENT = 1000,
-  RPC_TEST_INTERFACE = 1001,
-  RPC_TEST_STREAM = 1002,
+  RPC_EXIT,
+  RPC_WRITE_TO_STDOUT,
+  RPC_WRITE_TO_STDERR,
+  RPC_WRITE_TO_STREAM,
+  RPC_WRITE_TO_STDOUT_NEWLINE,
+  RPC_READ_FROM_STREAM,
+  RPC_READ_FGETS,
+  RPC_OPEN_FILE,
+  RPC_CLOSE_FILE,
+  RPC_MALLOC,
+  RPC_FREE,
+  RPC_HOST_CALL,
+  RPC_ABORT,
+  RPC_FEOF,
+  RPC_FERROR,
+  RPC_CLEARERR,
+  RPC_FSEEK,
+  RPC_FTELL,
+  RPC_FFLUSH,
+  RPC_UNGETC,
+  RPC_LAST = 0xFFFF,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__

@@ -40,8 +40,6 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 0, 0 :: (dereferenceable invariant load (s256), align 16, addrspace 4)
   ; CHECK-NEXT:   dead renamable $sgpr4 = S_LOAD_DWORD_IMM renamable $sgpr38_sgpr39, 48, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
-  ; CHECK-NEXT:   SI_SPILL_S256_SAVE killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   dead renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM renamable $sgpr44_sgpr45, 0, 0 :: (invariant load (s64), align 16, addrspace 4)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   $vgpr1 = COPY renamable $sgpr51
@@ -54,14 +52,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FC00
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = SI_SPILL_S256_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FC00
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = SI_SPILL_S256_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
   ; CHECK-NEXT:   S_CMP_LG_U64 renamable $sgpr4_sgpr5, 0, implicit-def $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:

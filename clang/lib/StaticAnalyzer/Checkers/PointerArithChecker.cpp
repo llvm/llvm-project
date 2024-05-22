@@ -11,13 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 using namespace ento;
@@ -55,8 +56,8 @@ class PointerArithChecker
                                 bool PointedNeeded = false) const;
   void initAllocIdentifiers(ASTContext &C) const;
 
-  mutable std::unique_ptr<BuiltinBug> BT_pointerArith;
-  mutable std::unique_ptr<BuiltinBug> BT_polyArray;
+  mutable std::unique_ptr<BugType> BT_pointerArith;
+  mutable std::unique_ptr<BugType> BT_polyArray;
   mutable llvm::SmallSet<IdentifierInfo *, 8> AllocFunctions;
 
 public:
@@ -168,12 +169,11 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
       return;
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
       if (!BT_polyArray)
-        BT_polyArray.reset(new BuiltinBug(
-            this, "Dangerous pointer arithmetic",
-            "Pointer arithmetic on a pointer to base class is dangerous "
-            "because derived and base class may have different size."));
-      auto R = std::make_unique<PathSensitiveBugReport>(
-          *BT_polyArray, BT_polyArray->getDescription(), N);
+        BT_polyArray.reset(new BugType(this, "Dangerous pointer arithmetic"));
+      constexpr llvm::StringLiteral Msg =
+          "Pointer arithmetic on a pointer to base class is dangerous "
+          "because derived and base class may have different size.";
+      auto R = std::make_unique<PathSensitiveBugReport>(*BT_polyArray, Msg, N);
       R->addRange(E->getSourceRange());
       R->markInteresting(ArrayRegion);
       C.emitReport(std::move(R));
@@ -191,12 +191,11 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT_pointerArith)
-      BT_pointerArith.reset(new BuiltinBug(this, "Dangerous pointer arithmetic",
-                                           "Pointer arithmetic on non-array "
-                                           "variables relies on memory layout, "
-                                           "which is dangerous."));
-    auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT_pointerArith, BT_pointerArith->getDescription(), N);
+      BT_pointerArith.reset(new BugType(this, "Dangerous pointer arithmetic"));
+    constexpr llvm::StringLiteral Msg =
+        "Pointer arithmetic on non-array variables relies on memory layout, "
+        "which is dangerous.";
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_pointerArith, Msg, N);
     R->addRange(SR);
     R->markInteresting(Region);
     C.emitReport(std::move(R));

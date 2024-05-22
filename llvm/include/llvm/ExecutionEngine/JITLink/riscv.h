@@ -110,25 +110,25 @@ enum EdgeKind_riscv : Edge::Kind {
   /// 8 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{1}Fixup + Addend)
+  ///   Fixup <- (Target + *{1}Fixup + Addend)
   R_RISCV_ADD8,
 
   /// 16 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{2}Fixup + Addend)
+  ///   Fixup <- (Target + *{2}Fixup + Addend)
   R_RISCV_ADD16,
 
   /// 32 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{4}Fixup + Addend)
+  ///   Fixup <- (Target + *{4}Fixup + Addend)
   R_RISCV_ADD32,
 
   /// 64 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{8}Fixup + Addend)
+  ///   Fixup <- (Target + *{8}Fixup + Addend)
   R_RISCV_ADD64,
 
   /// 8 bits label subtraction
@@ -214,6 +214,12 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Linker relaxation will use this to ensure all code sequences are properly
   /// aligned and then remove these edges from the graph.
   AlignRelaxable,
+
+  /// 32-bit negative delta.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Fixup - Target + Addend
+  NegDelta32,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

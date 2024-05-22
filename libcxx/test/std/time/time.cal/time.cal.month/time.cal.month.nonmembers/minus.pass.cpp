@@ -25,46 +25,35 @@
 
 #include "test_macros.h"
 
-template <typename M, typename Ms>
-constexpr bool testConstexpr()
-{
-    {
-    M m{5};
-    Ms offset{3};
-    assert(m - offset == M{2});
-    assert(m - M{2} == offset);
-    }
+using month  = std::chrono::month;
+using months = std::chrono::months;
 
-    //  Check the example
-    assert(M{1} - M{2} == Ms{11});
+constexpr bool test() {
+  month m{6};
+  for (unsigned i = 1; i <= 12; ++i) {
+    month m1 = m - months{i};
+    assert(m1.ok());
+    int exp = 6 - i;
+    if (exp < 1)
+      exp += 12;
+    assert(static_cast<unsigned>(m1) == static_cast<unsigned>(exp));
+  }
 
-    return true;
+  //  Check the example
+  assert(month{1} - month{2} == months{11});
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using month  = std::chrono::month;
-    using months = std::chrono::months;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<month>() - std::declval<months>());
+  ASSERT_NOEXCEPT(std::declval<month>() - std::declval<month>());
 
-    ASSERT_NOEXCEPT(std::declval<month>() - std::declval<months>());
-    ASSERT_NOEXCEPT(std::declval<month>() - std::declval<month>());
+  ASSERT_SAME_TYPE(month, decltype(std::declval<month>() - std::declval<months>()));
+  ASSERT_SAME_TYPE(months, decltype(std::declval<month>() - std::declval<month>()));
 
-    ASSERT_SAME_TYPE(month , decltype(std::declval<month>() - std::declval<months>()));
-    ASSERT_SAME_TYPE(months, decltype(std::declval<month>() - std::declval<month> ()));
-
-    static_assert(testConstexpr<month, months>(), "");
-
-    month m{6};
-    for (unsigned i = 1; i <= 12; ++i)
-    {
-        month m1   = m - months{i};
-        // months off = m - month {i};
-        int exp = 6 - i;
-        if (exp < 1)
-            exp += 12;
-        assert(static_cast<unsigned>(m1) == static_cast<unsigned>(exp));
-        // assert(off.count()            == static_cast<unsigned>(exp));
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

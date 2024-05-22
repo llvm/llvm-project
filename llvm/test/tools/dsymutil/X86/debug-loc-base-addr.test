@@ -1,5 +1,7 @@
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/baseaddr/loc1.x86_64 -f -o - | llvm-dwarfdump --debug-info - | FileCheck %s
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/baseaddr/loc1.x86_64 -f -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+
 The test was compiled from a single source:
 $ cat loc1.cpp
 int f1(int i, int j) {

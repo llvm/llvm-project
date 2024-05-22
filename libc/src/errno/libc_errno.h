@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
-#define LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
+#ifndef LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
+#define LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -17,18 +17,18 @@
 // If we are targeting the GPU we currently don't support 'errno'. We simply
 // consume it.
 #ifdef LIBC_TARGET_ARCH_IS_GPU
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 struct ErrnoConsumer {
   void operator=(int) {}
 };
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 #endif
 
 // All of the libc runtime and test code should use the "libc_errno" macro. They
 // should not refer to the "errno" macro directly.
 #ifdef LIBC_COPT_PUBLIC_PACKAGING
 #ifdef LIBC_TARGET_ARCH_IS_GPU
-extern "C" __llvm_libc::ErrnoConsumer __llvmlibc_errno;
+extern "C" LIBC_NAMESPACE::ErrnoConsumer __llvmlibc_errno;
 #define libc_errno __llvmlibc_errno
 #else
 // This macro will resolve to errno from the errno.h file included above. Under
@@ -37,7 +37,7 @@ extern "C" __llvm_libc::ErrnoConsumer __llvmlibc_errno;
 #define libc_errno errno
 #endif
 #else
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: On the GPU build this will be mapped to a single global value. We need
 // to ensure that tests are not run with multiple threads that depend on errno
@@ -48,9 +48,9 @@ extern "C" LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
 // libc_errno, this header file will be "shipped" via an add_entrypoint_object
 // target. At which point libc_errno, should point to __llvmlibc_internal_errno
 // if LIBC_COPT_PUBLIC_PACKAGING is not defined.
-#define libc_errno __llvm_libc::__llvmlibc_internal_errno
+#define libc_errno LIBC_NAMESPACE::__llvmlibc_internal_errno
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 #endif
 
-#endif // LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
+#endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

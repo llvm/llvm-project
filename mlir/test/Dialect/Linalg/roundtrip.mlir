@@ -4,7 +4,7 @@
 // TODO: Re-enable LLVM lowering test.
 //
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
-// DISABLED: mlir-opt %s --convert-linalg-to-llvm='use-opaque-pointers=1' -o=/dev/null 2>&1
+// DISABLED: mlir-opt %s -o=/dev/null 2>&1
 
 func.func @views(%arg0: index) {
   %c0 = arith.constant 0 : index

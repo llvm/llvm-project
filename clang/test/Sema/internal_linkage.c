@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fdouble-square-bracket-attributes %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 int var __attribute__((internal_linkage));
 int var2 __attribute__((internal_linkage,common)); // expected-error{{'common' and 'internal_linkage' attributes are not compatible}} \

@@ -41,7 +41,7 @@ public:
     return m_backend.GetIndexOfChildWithName(name);
   }
 
-  bool MightHaveChildren() override { return true; }
+  bool MightHaveChildren() override { return m_backend.MightHaveChildren(); }
 
   bool Update() override { return false; }
 };
@@ -163,8 +163,8 @@ bool ValueObjectSynthetic::UpdateValue() {
     return false;
   }
 
-  // regenerate the synthetic filter if our typename changes
-  // <rdar://problem/12424824>
+  // Regenerate the synthetic filter if our typename changes. When the (dynamic)
+  // type of an object changes, so does their synthetic filter of choice.
   ConstString new_parent_type_name = m_parent->GetTypeName();
   if (new_parent_type_name != m_parent_type_name) {
     LLDB_LOGF(log,
@@ -311,7 +311,7 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) {
   UpdateValueIfNeeded();
 
-  uint32_t index = GetIndexOfChildWithName(ConstString(name));
+  uint32_t index = GetIndexOfChildWithName(name);
 
   if (index == UINT32_MAX)
     return lldb::ValueObjectSP();

@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, __llvm_libc::ceilf, ::ceilf,
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::ceilf, ::ceilf,
                                 "ceilf_perf.log")

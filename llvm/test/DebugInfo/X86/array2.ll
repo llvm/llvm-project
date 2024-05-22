@@ -13,6 +13,7 @@
 ; }
 ;
 ; RUN: opt %s -O2 -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -O2 -S -o - | FileCheck %s
 ; Test that we correctly lower dbg.declares for arrays.
 ;
 ; CHECK: define i32 @main

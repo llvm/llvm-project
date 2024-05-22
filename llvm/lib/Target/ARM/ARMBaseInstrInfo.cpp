@@ -1953,46 +1953,32 @@ bool ARMBaseInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   if (!Load1->isMachineOpcode() || !Load2->isMachineOpcode())
     return false;
 
-  switch (Load1->getMachineOpcode()) {
-  default:
-    return false;
-  case ARM::LDRi12:
-  case ARM::LDRBi12:
-  case ARM::LDRD:
-  case ARM::LDRH:
-  case ARM::LDRSB:
-  case ARM::LDRSH:
-  case ARM::VLDRD:
-  case ARM::VLDRS:
-  case ARM::t2LDRi8:
-  case ARM::t2LDRBi8:
-  case ARM::t2LDRDi8:
-  case ARM::t2LDRSHi8:
-  case ARM::t2LDRi12:
-  case ARM::t2LDRBi12:
-  case ARM::t2LDRSHi12:
-    break;
-  }
+  auto IsLoadOpcode = [&](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return false;
+    case ARM::LDRi12:
+    case ARM::LDRBi12:
+    case ARM::LDRD:
+    case ARM::LDRH:
+    case ARM::LDRSB:
+    case ARM::LDRSH:
+    case ARM::VLDRD:
+    case ARM::VLDRS:
+    case ARM::t2LDRi8:
+    case ARM::t2LDRBi8:
+    case ARM::t2LDRDi8:
+    case ARM::t2LDRSHi8:
+    case ARM::t2LDRi12:
+    case ARM::t2LDRBi12:
+    case ARM::t2LDRSHi12:
+      return true;
+    }
+  };
 
-  switch (Load2->getMachineOpcode()) {
-  default:
+  if (!IsLoadOpcode(Load1->getMachineOpcode()) ||
+      !IsLoadOpcode(Load2->getMachineOpcode()))
     return false;
-  case ARM::LDRi12:
-  case ARM::LDRBi12:
-  case ARM::LDRD:
-  case ARM::LDRH:
-  case ARM::LDRSB:
-  case ARM::LDRSH:
-  case ARM::VLDRD:
-  case ARM::VLDRS:
-  case ARM::t2LDRi8:
-  case ARM::t2LDRBi8:
-  case ARM::t2LDRSHi8:
-  case ARM::t2LDRi12:
-  case ARM::t2LDRBi12:
-  case ARM::t2LDRSHi12:
-    break;
-  }
 
   // Check if base addresses and chain operands match.
   if (Load1->getOperand(0) != Load2->getOperand(0) ||
@@ -3886,17 +3872,16 @@ unsigned ARMBaseInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
   llvm_unreachable("Didn't find the number of microops");
 }
 
-int
+std::optional<unsigned>
 ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
-                                  const MCInstrDesc &DefMCID,
-                                  unsigned DefClass,
+                                  const MCInstrDesc &DefMCID, unsigned DefClass,
                                   unsigned DefIdx, unsigned DefAlign) const {
   int RegNo = (int)(DefIdx+1) - DefMCID.getNumOperands() + 1;
   if (RegNo <= 0)
     // Def is the address writeback.
     return ItinData->getOperandCycle(DefClass, DefIdx);
 
-  int DefCycle;
+  unsigned DefCycle;
   if (Subtarget.isCortexA8() || Subtarget.isCortexA7()) {
     // (regno / 2) + (regno % 2) + 1
     DefCycle = RegNo / 2 + 1;
@@ -3927,17 +3912,16 @@ ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
   return DefCycle;
 }
 
-int
+std::optional<unsigned>
 ARMBaseInstrInfo::getLDMDefCycle(const InstrItineraryData *ItinData,
-                                 const MCInstrDesc &DefMCID,
-                                 unsigned DefClass,
+                                 const MCInstrDesc &DefMCID, unsigned DefClass,
                                  unsigned DefIdx, unsigned DefAlign) const {
   int RegNo = (int)(DefIdx+1) - DefMCID.getNumOperands() + 1;
   if (RegNo <= 0)
     // Def is the address writeback.
     return ItinData->getOperandCycle(DefClass, DefIdx);
 
-  int DefCycle;
+  unsigned DefCycle;
   if (Subtarget.isCortexA8() || Subtarget.isCortexA7()) {
     // 4 registers would be issued: 1, 2, 1.
     // 5 registers would be issued: 1, 2, 2.
@@ -3962,16 +3946,15 @@ ARMBaseInstrInfo::getLDMDefCycle(const InstrItineraryData *ItinData,
   return DefCycle;
 }
 
-int
+std::optional<unsigned>
 ARMBaseInstrInfo::getVSTMUseCycle(const InstrItineraryData *ItinData,
-                                  const MCInstrDesc &UseMCID,
-                                  unsigned UseClass,
+                                  const MCInstrDesc &UseMCID, unsigned UseClass,
                                   unsigned UseIdx, unsigned UseAlign) const {
   int RegNo = (int)(UseIdx+1) - UseMCID.getNumOperands() + 1;
   if (RegNo <= 0)
     return ItinData->getOperandCycle(UseClass, UseIdx);
 
-  int UseCycle;
+  unsigned UseCycle;
   if (Subtarget.isCortexA8() || Subtarget.isCortexA7()) {
     // (regno / 2) + (regno % 2) + 1
     UseCycle = RegNo / 2 + 1;
@@ -4002,16 +3985,15 @@ ARMBaseInstrInfo::getVSTMUseCycle(const InstrItineraryData *ItinData,
   return UseCycle;
 }
 
-int
+std::optional<unsigned>
 ARMBaseInstrInfo::getSTMUseCycle(const InstrItineraryData *ItinData,
-                                 const MCInstrDesc &UseMCID,
-                                 unsigned UseClass,
+                                 const MCInstrDesc &UseMCID, unsigned UseClass,
                                  unsigned UseIdx, unsigned UseAlign) const {
   int RegNo = (int)(UseIdx+1) - UseMCID.getNumOperands() + 1;
   if (RegNo <= 0)
     return ItinData->getOperandCycle(UseClass, UseIdx);
 
-  int UseCycle;
+  unsigned UseCycle;
   if (Subtarget.isCortexA8() || Subtarget.isCortexA7()) {
     UseCycle = RegNo / 2;
     if (UseCycle < 2)
@@ -4031,12 +4013,10 @@ ARMBaseInstrInfo::getSTMUseCycle(const InstrItineraryData *ItinData,
   return UseCycle;
 }
 
-int
-ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                    const MCInstrDesc &DefMCID,
-                                    unsigned DefIdx, unsigned DefAlign,
-                                    const MCInstrDesc &UseMCID,
-                                    unsigned UseIdx, unsigned UseAlign) const {
+std::optional<unsigned> ARMBaseInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MCInstrDesc &DefMCID,
+    unsigned DefIdx, unsigned DefAlign, const MCInstrDesc &UseMCID,
+    unsigned UseIdx, unsigned UseAlign) const {
   unsigned DefClass = DefMCID.getSchedClass();
   unsigned UseClass = UseMCID.getSchedClass();
 
@@ -4046,7 +4026,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   // This may be a def / use of a variable_ops instruction, the operand
   // latency might be determinable dynamically. Let the target try to
   // figure it out.
-  int DefCycle = -1;
+  std::optional<unsigned> DefCycle;
   bool LdmBypass = false;
   switch (DefMCID.getOpcode()) {
   default:
@@ -4084,11 +4064,11 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     break;
   }
 
-  if (DefCycle == -1)
+  if (!DefCycle)
     // We can't seem to determine the result latency of the def, assume it's 2.
     DefCycle = 2;
 
-  int UseCycle = -1;
+  std::optional<unsigned> UseCycle;
   switch (UseMCID.getOpcode()) {
   default:
     UseCycle = ItinData->getOperandCycle(UseClass, UseIdx);
@@ -4122,21 +4102,24 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     break;
   }
 
-  if (UseCycle == -1)
+  if (!UseCycle)
     // Assume it's read in the first stage.
     UseCycle = 1;
 
-  UseCycle = DefCycle - UseCycle + 1;
-  if (UseCycle > 0) {
+  if (UseCycle > *DefCycle + 1)
+    return std::nullopt;
+
+  UseCycle = *DefCycle - *UseCycle + 1;
+  if (UseCycle > 0u) {
     if (LdmBypass) {
       // It's a variable_ops instruction so we can't use DefIdx here. Just use
       // first def operand.
       if (ItinData->hasPipelineForwarding(DefClass, DefMCID.getNumOperands()-1,
                                           UseClass, UseIdx))
-        --UseCycle;
+        UseCycle = *UseCycle - 1;
     } else if (ItinData->hasPipelineForwarding(DefClass, DefIdx,
                                                UseClass, UseIdx)) {
-      --UseCycle;
+      UseCycle = *UseCycle - 1;
     }
   }
 
@@ -4376,14 +4359,12 @@ static int adjustDefLatency(const ARMSubtarget &Subtarget,
   return Adjust;
 }
 
-int ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                        const MachineInstr &DefMI,
-                                        unsigned DefIdx,
-                                        const MachineInstr &UseMI,
-                                        unsigned UseIdx) const {
+std::optional<unsigned> ARMBaseInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   // No operand latency. The caller may fall back to getInstrLatency.
   if (!ItinData || ItinData->isEmpty())
-    return -1;
+    return std::nullopt;
 
   const MachineOperand &DefMO = DefMI.getOperand(DefIdx);
   Register Reg = DefMO.getReg();
@@ -4404,7 +4385,7 @@ int ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     ResolvedUseMI =
         getBundledUseMI(&getRegisterInfo(), UseMI, Reg, UseIdx, UseAdj);
     if (!ResolvedUseMI)
-      return -1;
+      return std::nullopt;
   }
 
   return getOperandLatencyImpl(
@@ -4412,7 +4393,7 @@ int ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       Reg, *ResolvedUseMI, UseIdx, ResolvedUseMI->getDesc(), UseAdj);
 }
 
-int ARMBaseInstrInfo::getOperandLatencyImpl(
+std::optional<unsigned> ARMBaseInstrInfo::getOperandLatencyImpl(
     const InstrItineraryData *ItinData, const MachineInstr &DefMI,
     unsigned DefIdx, const MCInstrDesc &DefMCID, unsigned DefAdj,
     const MachineOperand &DefMO, unsigned Reg, const MachineInstr &UseMI,
@@ -4444,7 +4425,7 @@ int ARMBaseInstrInfo::getOperandLatencyImpl(
   }
 
   if (DefMO.isImplicit() || UseMI.getOperand(UseIdx).isImplicit())
-    return -1;
+    return std::nullopt;
 
   unsigned DefAlign = DefMI.hasOneMemOperand()
                           ? (*DefMI.memoperands_begin())->getAlign().value()
@@ -4454,25 +4435,25 @@ int ARMBaseInstrInfo::getOperandLatencyImpl(
                           : 0;
 
   // Get the itinerary's latency if possible, and handle variable_ops.
-  int Latency = getOperandLatency(ItinData, DefMCID, DefIdx, DefAlign, UseMCID,
-                                  UseIdx, UseAlign);
+  std::optional<unsigned> Latency = getOperandLatency(
+      ItinData, DefMCID, DefIdx, DefAlign, UseMCID, UseIdx, UseAlign);
   // Unable to find operand latency. The caller may resort to getInstrLatency.
-  if (Latency < 0)
-    return Latency;
+  if (!Latency)
+    return std::nullopt;
 
   // Adjust for IT block position.
   int Adj = DefAdj + UseAdj;
 
   // Adjust for dynamic def-side opcode variants not captured by the itinerary.
   Adj += adjustDefLatency(Subtarget, DefMI, DefMCID, DefAlign);
-  if (Adj >= 0 || (int)Latency > -Adj) {
-    return Latency + Adj;
+  if (Adj >= 0 || (int)*Latency > -Adj) {
+    return *Latency + Adj;
   }
   // Return the itinerary latency, which may be zero but not less than zero.
   return Latency;
 }
 
-int
+std::optional<unsigned>
 ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
                                     SDNode *DefNode, unsigned DefIdx,
                                     SDNode *UseNode, unsigned UseIdx) const {
@@ -4488,10 +4469,11 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     return DefMCID.mayLoad() ? 3 : 1;
 
   if (!UseNode->isMachineOpcode()) {
-    int Latency = ItinData->getOperandCycle(DefMCID.getSchedClass(), DefIdx);
+    std::optional<unsigned> Latency =
+        ItinData->getOperandCycle(DefMCID.getSchedClass(), DefIdx);
     int Adj = Subtarget.getPreISelOperandLatencyAdjustment();
     int Threshold = 1 + Adj;
-    return Latency <= Threshold ? 1 : Latency - Adj;
+    return !Latency || Latency <= (unsigned)Threshold ? 1 : *Latency - Adj;
   }
 
   const MCInstrDesc &UseMCID = get(UseNode->getMachineOpcode());
@@ -4503,10 +4485,12 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   unsigned UseAlign = !UseMN->memoperands_empty()
                           ? (*UseMN->memoperands_begin())->getAlign().value()
                           : 0;
-  int Latency = getOperandLatency(ItinData, DefMCID, DefIdx, DefAlign,
-                                  UseMCID, UseIdx, UseAlign);
+  std::optional<unsigned> Latency = getOperandLatency(
+      ItinData, DefMCID, DefIdx, DefAlign, UseMCID, UseIdx, UseAlign);
+  if (!Latency)
+    return std::nullopt;
 
-  if (Latency > 1 &&
+  if (Latency > 1U &&
       (Subtarget.isCortexA8() || Subtarget.isLikeA9() ||
        Subtarget.isCortexA7())) {
     // FIXME: Shifter op hack: no shift (i.e. [r +/- r]) or [r + r << 2]
@@ -4520,7 +4504,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       unsigned ShImm = ARM_AM::getAM2Offset(ShOpVal);
       if (ShImm == 0 ||
           (ShImm == 2 && ARM_AM::getAM2ShiftOpc(ShOpVal) == ARM_AM::lsl))
-        --Latency;
+        Latency = *Latency - 1;
       break;
     }
     case ARM::t2LDRs:
@@ -4531,11 +4515,11 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       unsigned ShAmt =
         cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
       if (ShAmt == 0 || ShAmt == 2)
-        --Latency;
+        Latency = *Latency - 1;
       break;
     }
     }
-  } else if (DefIdx == 0 && Latency > 2 && Subtarget.isSwift()) {
+  } else if (DefIdx == 0 && Latency > 2U && Subtarget.isSwift()) {
     // FIXME: Properly handle all of the latency adjustments for address
     // writeback.
     switch (DefMCID.getOpcode()) {
@@ -4548,9 +4532,9 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       if (ShImm == 0 ||
           ((ShImm == 1 || ShImm == 2 || ShImm == 3) &&
            ARM_AM::getAM2ShiftOpc(ShOpVal) == ARM_AM::lsl))
-        Latency -= 2;
+        Latency = *Latency - 2;
       else if (ShImm == 1 && ARM_AM::getAM2ShiftOpc(ShOpVal) == ARM_AM::lsr)
-        --Latency;
+        Latency = *Latency - 1;
       break;
     }
     case ARM::t2LDRs:
@@ -4558,7 +4542,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::t2LDRHs:
     case ARM::t2LDRSHs:
       // Thumb2 mode: lsl 0-3 only.
-      Latency -= 2;
+      Latency = *Latency - 2;
       break;
     }
   }
@@ -4724,7 +4708,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD4LNq32Pseudo_UPD:
       // If the address is not 64-bit aligned, the latencies of these
       // instructions increases by one.
-      ++Latency;
+      Latency = *Latency + 1;
       break;
     }
 
@@ -4801,8 +4785,8 @@ unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return Latency;
 }
 
-int ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                      SDNode *Node) const {
+unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
+                                           SDNode *Node) const {
   if (!Node->isMachineOpcode())
     return 1;
 
@@ -4850,8 +4834,9 @@ bool ARMBaseInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   unsigned DDomain = DefMI.getDesc().TSFlags & ARMII::DomainMask;
   if (DDomain == ARMII::DomainGeneral) {
     unsigned DefClass = DefMI.getDesc().getSchedClass();
-    int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
-    return (DefCycle != -1 && DefCycle <= 2);
+    std::optional<unsigned> DefCycle =
+        ItinData->getOperandCycle(DefClass, DefIdx);
+    return DefCycle && DefCycle <= 2U;
   }
   return false;
 }
@@ -4978,12 +4963,27 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
         TargetFlags |= ARMII::MO_DLLIMPORT;
       else if (IsIndirect)
         TargetFlags |= ARMII::MO_COFFSTUB;
-    } else if (Subtarget.isGVInGOT(GV)) {
+    } else if (IsIndirect) {
       TargetFlags |= ARMII::MO_GOT;
     }
 
-    BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
-        .addGlobalAddress(GV, 0, TargetFlags);
+    if (LoadImmOpc == ARM::tMOVi32imm) { // Thumb-1 execute-only
+      Register CPSRSaveReg = ARM::R12; // Use R12 as scratch register
+      auto APSREncoding =
+          ARMSysReg::lookupMClassSysRegByName("apsr_nzcvq")->Encoding;
+      BuildMI(MBB, MI, DL, get(ARM::t2MRS_M), CPSRSaveReg)
+          .addImm(APSREncoding)
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+          .addGlobalAddress(GV, 0, TargetFlags);
+      BuildMI(MBB, MI, DL, get(ARM::t2MSR_M))
+          .addImm(APSREncoding)
+          .addReg(CPSRSaveReg, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+    } else {
+      BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+          .addGlobalAddress(GV, 0, TargetFlags);
+    }
 
     if (IsIndirect) {
       MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
@@ -6435,20 +6435,20 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator It, bool CFI,
                                      bool Auth) const {
   int Align = std::max(Subtarget.getStackAlignment().value(), uint64_t(8));
+  unsigned MIFlags = CFI ? MachineInstr::FrameSetup : 0;
   assert(Align >= 8 && Align <= 256);
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Compute PAC in R12. Outlining ensures R12 is dead across the outlined
     // sequence.
-    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC))
-        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC)).setMIFlags(MIFlags);
     BuildMI(MBB, It, DebugLoc(), get(ARM::t2STRD_PRE), ARM::SP)
         .addReg(ARM::R12, RegState::Kill)
         .addReg(ARM::LR, RegState::Kill)
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2STR_PRE : ARM::STR_PRE_IMM;
     BuildMI(MBB, It, DebugLoc(), get(Opc), ARM::SP)
@@ -6456,7 +6456,7 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   }
 
   if (!CFI)
@@ -6511,6 +6511,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator It,
                                           bool CFI, bool Auth) const {
   int Align = Subtarget.getStackAlignment().value();
+  unsigned MIFlags = CFI ? MachineInstr::FrameDestroy : 0;
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Restore return address PAC and LR.
@@ -6521,7 +6522,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
     // LR authentication is after the CFI instructions, below.
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
@@ -6532,7 +6533,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
       MIB.addReg(0);
     MIB.addImm(Subtarget.getStackAlignment().value())
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
   }
 
   if (CFI) {
@@ -6731,7 +6732,8 @@ bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than
   // spill/restore and VPT predication.
-  return isVCTP(&MI) && !isPredicated(MI);
+  return (isVCTP(&MI) && !isPredicated(MI)) ||
+         TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 unsigned llvm::getBLXOpcode(const MachineFunction &MF) {

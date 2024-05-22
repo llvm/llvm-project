@@ -773,6 +773,7 @@ void Generator::generate(pdl_interp::ApplyConstraintOp op,
          "expected index for constraint function");
   writer.append(OpCode::ApplyConstraint, constraintToMemIndex[op.getName()]);
   writer.appendPDLValueList(op.getArgs());
+  writer.append(ByteCodeField(op.getIsNegated()));
   writer.append(op.getSuccessors());
 }
 void Generator::generate(pdl_interp::ApplyRewriteOp op,
@@ -1413,10 +1414,16 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   LLVM_DEBUG({
     llvm::dbgs() << "  * Arguments: ";
     llvm::interleaveComma(args, llvm::dbgs());
+    llvm::dbgs() << "\n";
   });
 
+  ByteCodeField isNegated = read();
+  LLVM_DEBUG({
+    llvm::dbgs() << "  * isNegated: " << isNegated << "\n";
+    llvm::interleaveComma(args, llvm::dbgs());
+  });
   // Invoke the constraint and jump to the proper destination.
-  selectJump(succeeded(constraintFn(rewriter, args)));
+  selectJump(isNegated != succeeded(constraintFn(rewriter, args)));
 }
 
 LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
@@ -1846,7 +1853,7 @@ void ByteCodeExecutor::executeGetOperands() {
   ByteCodeField rangeIndex = read();
 
   void *result = executeGetOperandsResults<OpTrait::AttrSizedOperandSegments>(
-      op->getOperands(), op, index, rangeIndex, "operand_segment_sizes",
+      op->getOperands(), op, index, rangeIndex, "operandSegmentSizes",
       valueRangeMemory);
   if (!result)
     LLVM_DEBUG(llvm::dbgs() << "  * Invalid operand range\n");
@@ -1872,7 +1879,7 @@ void ByteCodeExecutor::executeGetResults() {
   ByteCodeField rangeIndex = read();
 
   void *result = executeGetOperandsResults<OpTrait::AttrSizedResultSegments>(
-      op->getResults(), op, index, rangeIndex, "result_segment_sizes",
+      op->getResults(), op, index, rangeIndex, "resultSegmentSizes",
       valueRangeMemory);
   if (!result)
     LLVM_DEBUG(llvm::dbgs() << "  * Invalid result range\n");

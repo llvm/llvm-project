@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy %s readability-magic-numbers %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: readability-magic-numbers.IgnoredIntegerValues, value: "0;1;2;10;100;"}, \
-// RUN:   {key: readability-magic-numbers.IgnoredFloatingPointValues, value: "3.14;2.71828;9.81;10000.0;101.0;0x1.2p3"}, \
-// RUN:   {key: readability-magic-numbers.IgnoreBitFieldsWidths, value: false}, \
-// RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: true}, \
-// RUN:   {key: readability-magic-numbers.IgnoreTypeAliases, value: false}]}' \
+// RUN:  {readability-magic-numbers.IgnoredIntegerValues: "0;1;2;10;100;", \
+// RUN:   readability-magic-numbers.IgnoredFloatingPointValues: "3.14;2.71828;9.81;10000.0;101.0;0x1.2p3", \
+// RUN:   readability-magic-numbers.IgnoreBitFieldsWidths: false, \
+// RUN:   readability-magic-numbers.IgnorePowersOf2IntegerValues: true, \
+// RUN:   readability-magic-numbers.IgnoreTypeAliases: false}}' \
 // RUN: --
 
 template <typename T, int V>

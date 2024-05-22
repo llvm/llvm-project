@@ -11,6 +11,7 @@
 # FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
@@ -48,6 +49,7 @@
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
+# FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -114,6 +116,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -149,6 +152,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -186,6 +190,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -221,6 +226,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -259,6 +265,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -294,6 +301,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -536,6 +544,31 @@ body:             |
 name: vgpr_for_agpr_copy_noreg
 machineFunctionInfo:
   vgprForAGPRCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy
+# ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
+name: sgpr_for_exec_copy
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr2_sgpr3'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy_noreg
+# FULL: sgprForEXECCopy: ''
+# SIMPLE-NOT: sgprForEXECCopy
+name: sgpr_for_exec_copy_noreg
+machineFunctionInfo:
+  sgprForEXECCopy: '$noreg'
 body:             |
   bb.0:
     SI_RETURN

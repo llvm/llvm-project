@@ -1,65 +1,69 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
 //
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 
 // TODO: support lib path.
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #DCSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(0, 8, 1)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(0, 8, 1)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(0, 4, 1)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #DCSR_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(1, 4, 1)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 #COO_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
-  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(0, 4, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #COO_SLICE_2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
-  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(1, 4, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR_SLICE_dyn = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, 4, ?)>, d1 : #sparse_tensor<slice(?, 4, ?)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #DCSR_SLICE_dyn = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, 4, ?)>, d1 : #sparse_tensor<slice(?, 4, ?)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 module {
@@ -71,7 +75,7 @@ module {
   //
   func.func @matmul_dyn(%A: tensor<4x4xf64, #CSR_SLICE_dyn>,
                         %B: tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_dyn>, tensor<4x4xf64, #DCSR_SLICE_dyn>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -83,7 +87,7 @@ module {
   //
   func.func @matmul1(%A: tensor<4x4xf64, #CSR_SLICE_1>,
                      %B: tensor<4x4xf64, #DCSR_SLICE_1>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_1>, tensor<4x4xf64, #DCSR_SLICE_1>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -95,7 +99,7 @@ module {
   //
   func.func @matmul2(%A: tensor<4x8xf64, #CSR_SLICE>,
                      %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #CSR_SLICE>, tensor<8x4xf64, #CSR>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -107,7 +111,7 @@ module {
   //
   func.func @matmul3(%A: tensor<4x8xf64, #DCSR_SLICE>,
                      %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #DCSR_SLICE>, tensor<8x4xf64, #DCSR>)
          outs(%C: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
@@ -119,7 +123,7 @@ module {
   //
   func.func @matmul5(%A: tensor<4x4xf64, #COO_SLICE_1>,
                      %B: tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #COO>
+    %C = tensor.empty() : tensor<4x4xf64, #COO>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>)
          outs(%C: tensor<4x4xf64, #COO>) -> tensor<4x4xf64, #COO>
@@ -154,7 +158,6 @@ module {
         [ 0.0, 0.0, 6.0, 0.0 ],
         [ 0.0, 0.0, 7.0, 8.0 ]
     ]> : tensor<8x4xf64>
-    %zero = arith.constant dense<0.0> : tensor<4x4xf64>
 
     // Convert all these matrices to sparse format.
     %tmp = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #DCSR>
@@ -253,9 +256,11 @@ module {
     %ds1 = tensor.extract_slice %sa[0, 1][4, 4][2, 1] : tensor<8x8xf64> to tensor<4x4xf64>
     %ds2 = tensor.extract_slice %sb[0, 0][4, 4][2, 1] : tensor<8x4xf64> to tensor<4x4xf64>
 
-    %d = bufferization.alloc_tensor() copy(%zero) : tensor<4x4xf64>
+    %d = tensor.empty() : tensor<4x4xf64>
+    %zeroed = linalg.fill ins(%f0 : f64) outs(%d : tensor<4x4xf64>)
+        -> tensor<4x4xf64>
     %r = linalg.matmul ins(%ds2, %ds1: tensor<4x4xf64>, tensor<4x4xf64>)
-                       outs(%d: tensor<4x4xf64>) -> tensor<4x4xf64>
+                       outs(%zeroed: tensor<4x4xf64>) -> tensor<4x4xf64>
     %du = tensor.cast %r : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%du) : (tensor<*xf64>) -> ()
 

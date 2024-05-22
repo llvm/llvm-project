@@ -9,8 +9,8 @@ define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    mov v1.h[0], v0.h[1]
 ; CHECK-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
   %retval = call {<2 x half>, <2 x half>} @llvm.experimental.vector.deinterleave2.v4f16(<4 x half> %vec)
   ret {<2 x half>, <2 x half>}   %retval

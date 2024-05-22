@@ -1,5 +1,16 @@
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=memory -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple arm64-apple-macosx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
 
 int foo(int) __attribute__ ((ifunc("foo_ifunc")));
 
@@ -39,3 +50,15 @@ void* goo_ifunc(void) {
 
 // CHECK: call i32 @foo(i32
 // CHECK: call void @goo()
+
+// SAN: define internal nonnull ptr @foo_ifunc() #[[#FOO_IFUNC:]] {
+// MACSAN: define internal nonnull ptr @foo_ifunc() #[[#FOO_IFUNC:]] {
+
+// SAN: define dso_local noalias ptr @goo_ifunc() #[[#GOO_IFUNC:]] {
+// MACSAN: define noalias ptr @goo_ifunc() #[[#GOO_IFUNC:]] {
+
+// SAN-DAG: attributes #[[#FOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
+// MACSAN-DAG: attributes #[[#FOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
+
+// SAN-DAG: attributes #[[#GOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
+// MACSAN-DAG: attributes #[[#GOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}

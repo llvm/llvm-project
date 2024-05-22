@@ -18,10 +18,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <memory>
 
-#include "test_macros.h"
+#include "MoveOnly.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 class PaddedBase {
 public:
@@ -92,7 +94,7 @@ struct Test1OutIters {
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestOutIters());
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::cpp17_input_iterator_list<std::unique_ptr<int>*>(), Test1OutIters());
 
   { // Make sure that padding bits aren't copied
@@ -111,11 +113,32 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(std::equal(a, a + 10, expected));
   }
 
+  // Make sure that the algorithm works with move-only types
+  {
+    // When non-trivial
+    {
+      MoveOnly from[3] = {1, 2, 3};
+      MoveOnly to[3] = {};
+      std::move(std::begin(from), std::end(from), std::begin(to));
+      assert(to[0] == MoveOnly(1));
+      assert(to[1] == MoveOnly(2));
+      assert(to[2] == MoveOnly(3));
+    }
+    // When trivial
+    {
+      TrivialMoveOnly from[3] = {1, 2, 3};
+      TrivialMoveOnly to[3] = {};
+      std::move(std::begin(from), std::end(from), std::begin(to));
+      assert(to[0] == TrivialMoveOnly(1));
+      assert(to[1] == TrivialMoveOnly(2));
+      assert(to[2] == TrivialMoveOnly(3));
+    }
+  }
+
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());

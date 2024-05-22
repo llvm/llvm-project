@@ -9,7 +9,6 @@
 #ifndef LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 #define LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DWARFLinkerParallel/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -100,9 +99,6 @@ public:
   /// Emit section named SecName with data SecData.
   virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
 
-  /// Emit temporarily symbol named \p SymName inside section \p SecName.
-  virtual MCSymbol *emitTempSym(StringRef SecName, StringRef SymName) = 0;
-
   /// Emit the swift_ast section stored in \p Buffer.
   virtual void emitSwiftAST(StringRef Buffer) = 0;
 
@@ -134,7 +130,7 @@ public:
       const Twine &Warning, StringRef Context, const DWARFDie *DIE)>;
   using ObjFileLoaderTy = std::function<ErrorOr<DWARFFile &>(
       StringRef ContainerName, StringRef Path)>;
-  using InputVerificationHandlerTy = std::function<void(const DWARFFile &File)>;
+  using InputVerificationHandlerTy = std::function<void(const DWARFFile &File, llvm::StringRef Output)>;
   using ObjectPrefixMapTy = std::map<std::string, std::string>;
   using CompileUnitHandlerTy = function_ref<void(const DWARFUnit &Unit)>;
   using TranslatorFuncTy = std::function<StringRef(StringRef)>;

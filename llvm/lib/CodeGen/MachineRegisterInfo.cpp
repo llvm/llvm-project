@@ -96,9 +96,9 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   if (RegTy.isValid() && ConstrainingRegTy.isValid() &&
       RegTy != ConstrainingRegTy)
     return false;
-  const auto ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
+  const auto &ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
   if (!ConstrainingRegCB.isNull()) {
-    const auto RegCB = getRegClassOrRegBank(Reg);
+    const auto &RegCB = getRegClassOrRegBank(Reg);
     if (RegCB.isNull())
       setRegClassOrRegBank(Reg, ConstrainingRegCB);
     else if (isa<const TargetRegisterClass *>(RegCB) !=
@@ -619,7 +619,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 
   // Remove the register (and its aliases from the list).
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-    llvm::erase_value(UpdatedCSRs, *AI);
+    llvm::erase(UpdatedCSRs, *AI);
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {

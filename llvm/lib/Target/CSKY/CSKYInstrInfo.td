@@ -158,6 +158,30 @@ def uimm_shift : Operand<i32>, ImmLeaf<i32, "return isUInt<2>(Imm);"> {
   let DecoderMethod = "decodeImmShiftOpValue";
 }
 
+// Optimize (or x, imm) to (BSETI x, log2(imm)). We should exclude the
+// case can be opimized to (ORI32/ORI16 x, imm).
+def imm32_1_pop_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_pop_bit : PatLeaf<(imm), [{
+  uint32_t I = N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xfff;
+}]>;
+
+// Optimize (and x, imm) to (BCLRI x, log2(~imm)). We should exclude the
+// case can be opimized to (ANDNI x, ~imm).
+def imm32_1_zero_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = ~N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_zero_bit : PatLeaf<(imm), [{
+  uint32_t I = ~N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xfff;
+}]>;
+
 def CSKYSymbol : AsmOperandClass {
   let Name = "CSKYSymbol";
   let RenderMethod = "addImmOperands";
@@ -1178,6 +1202,13 @@ multiclass BTF32Pat0<PatFrag cond0, PatFrag cond1, ImmLeaf imm_ty, Instruction i
 defm : BTF32Pat0<setne, seteq, uimm16, CMPNEI32>;
 defm : BTF32Pat0<setuge, setult, oimm16, CMPHSI32>;
 defm : BTF32Pat0<setlt, setge, oimm16, CMPLTI32>;
+
+def : Pat<(brcond (i32 (setne (and GPR:$rs, imm32_1_pop_bit:$im), 0)), bb:$imm16),
+          (BT32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                bb:$imm16)>;
+def : Pat<(brcond (i32 (seteq (and GPR:$rs, imm32_1_pop_bit:$im), 0)), bb:$imm16),
+          (BF32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                bb:$imm16)>;
 }
 
 let Predicates = [iHas2E3] in {
@@ -1226,6 +1257,8 @@ def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 -1))), bb:$imm16),
 let Predicates = [iHas2E3] in {
   def : Pat<(setne GPR:$rs1, GPR:$rs2),
             (CMPNE32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setne (and GPR:$rs, imm32_1_pop_bit:$im), 0),
+            (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im))>;
   def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
             (MVCV32 (CMPNE32 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(setuge GPR:$rs1, GPR:$rs2),
@@ -1342,8 +1375,16 @@ def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
           (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
 def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
           (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
-}
 
+def : Pat<(select (i32 (setne (and GPR:$rs, imm32_1_pop_bit:$im), 0)),
+                  GPR:$true, GPR:$false),
+          (MOVT32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                  GPR:$true, GPR:$false)>;
+def : Pat<(select (i32 (seteq (and GPR:$rs, imm32_1_pop_bit:$im), 0)),
+                  GPR:$true, GPR:$false),
+          (MOVF32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                  GPR:$true, GPR:$false)>;
+}
 
 let Predicates = [iHas2E3] in {
 def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$false),
@@ -1422,6 +1463,14 @@ let Predicates = [iHasE2] in
   def : Pat<(i32 imm:$imm),
             (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
 
+// Bit operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(or GPR:$rs, imm32_1_pop_bit:$imm),
+            (BSETI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$imm))>;
+  def : Pat<(and GPR:$rs, imm32_1_zero_bit:$imm),
+            (BCLRI32 GPR:$rs, (imm32_1_zero_bit_XFORM imm32_1_zero_bit:$imm))>;
+}
+
 // Other operations.
 let Predicates = [iHasE2] in {
   def : Pat<(rotl GPR:$rs1, GPR:$rs2),
@@ -1429,6 +1478,7 @@ let Predicates = [iHasE2] in {
   let Predicates = [iHas2E3] in {
     def : Pat<(bitreverse GPR:$rx), (BREV32 GPR:$rx)>;
     def : Pat<(bswap GPR:$rx), (REVB32 GPR:$rx)>;
+    def : Pat<(i32 (cttz GPR:$rx)), (FF1 (BREV32 GPR:$rx))>;
   }
   def : Pat<(i32 (ctlz GPR:$rx)), (FF1 GPR:$rx)>;
 }

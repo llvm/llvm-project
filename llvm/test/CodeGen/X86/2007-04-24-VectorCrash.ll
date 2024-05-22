@@ -6,7 +6,8 @@ declare <4 x float> @llvm.x86.sse.add.ss(<4 x float>, <4 x float>)
 
 define void @test(ptr %P) {
 entry:
-	or <4 x i32> zeroinitializer, and (<4 x i32> bitcast (<4 x float> shufflevector (<4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer) to <4 x i32>), <4 x i32> < i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648 >)		; <<4 x i32>>:0 [#uses=1]
+	%and = and <4 x i32> bitcast (<4 x float> shufflevector (<4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer) to <4 x i32>), < i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648 >
+	or <4 x i32> zeroinitializer, %and
 	bitcast <4 x i32> %0 to <4 x float>		; <<4 x float>>:1 [#uses=1]
 	fsub <4 x float> %1, zeroinitializer		; <<4 x float>>:2 [#uses=1]
 	fsub <4 x float> shufflevector (<4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer), %2		; <<4 x float>>:3 [#uses=1]

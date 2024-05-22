@@ -518,6 +518,8 @@ kmp_set_warnings_off                        780
         omp_target_memcpy_rect              887
         omp_target_associate_ptr            888
         omp_target_disassociate_ptr         889
+        omp_target_memset                   3000
+        omp_target_memset_async             3001
     %endif
 
 kmp_set_disp_num_buffers                    890
@@ -1267,5 +1269,7 @@ kmp_set_disp_num_buffers                    890
     %endif
 
 %endif
+
+__kmpc_set_thread_limit
 
 # end of file #

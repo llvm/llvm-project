@@ -75,7 +75,7 @@ unset(Z3_VERSION_STRING)
 
 # First, try to check it dynamically, by compiling a small program that
 # prints Z3's version
-if(Z3_INCLUDE_DIR AND Z3_LIBRARIES)
+if(Z3_INCLUDE_DIR AND Z3_LIBRARIES AND NOT CMAKE_CROSSCOMPILING)
   # We do not have the Z3 binary to query for a version. Try to use
   # a small C++ program to detect it via the Z3_get_version() API call.
   check_z3_version(${Z3_INCLUDE_DIR} ${Z3_LIBRARIES})

@@ -31,6 +31,12 @@ template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
   }
 }
 
+template <> inline Floating ReadArg<Floating>(Program &P, CodePtr &OpPC) {
+  Floating F = Floating::deserialize(*OpPC);
+  OpPC += align(F.bytesToSerialize());
+  return F;
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {

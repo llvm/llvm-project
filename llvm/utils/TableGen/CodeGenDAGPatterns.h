@@ -272,11 +272,11 @@ struct TypeInfer {
   /// expand*) is to return "true" if a change has been made, "false"
   /// otherwise.
 
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In);
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
 
@@ -330,15 +330,16 @@ struct TypeInfer {
 
   /// For each overloaded type (i.e. of form *Any), replace it with the
   /// corresponding subset of legal, specific types.
-  void expandOverloads(TypeSetByHwMode &VTS);
+  void expandOverloads(TypeSetByHwMode &VTS) const;
   void expandOverloads(TypeSetByHwMode::SetType &Out,
-                       const TypeSetByHwMode::SetType &Legal);
+                       const TypeSetByHwMode::SetType &Legal) const;
 
   struct ValidateOnExit {
-    ValidateOnExit(TypeSetByHwMode &T, TypeInfer &TI) : Infer(TI), VTS(T) {}
+    ValidateOnExit(const TypeSetByHwMode &T, const TypeInfer &TI)
+        : Infer(TI), VTS(T) {}
     ~ValidateOnExit();
-    TypeInfer &Infer;
-    TypeSetByHwMode &VTS;
+    const TypeInfer &Infer;
+    const TypeSetByHwMode &VTS;
   };
 
   struct SuppressValidation {
@@ -356,11 +357,11 @@ struct TypeInfer {
   bool Validate = true;   // Indicate whether to validate types.
 
 private:
-  const TypeSetByHwMode &getLegalTypes();
+  const TypeSetByHwMode &getLegalTypes() const;
 
   /// Cached legal types (in default mode).
-  bool LegalTypesCached = false;
-  TypeSetByHwMode LegalCache;
+  mutable bool LegalTypesCached = false;
+  mutable TypeSetByHwMode LegalCache;
 };
 
 /// Set type used to track multiply used variables in patterns
@@ -625,16 +626,13 @@ struct TreePredicateCall {
 };
 
 class TreePatternNode : public RefCountedBase<TreePatternNode> {
-  /// Number of results for this node.
-  unsigned NumResults;
-
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.
-  std::unique_ptr<TypeSetByHwMode[]> Types;
+  std::vector<TypeSetByHwMode> Types;
 
   /// The index of each result in results of the pattern.
-  std::unique_ptr<unsigned[]> ResultPerm;
+  std::vector<unsigned> ResultPerm;
 
   /// OperatorOrVal - The Record for the operator if this is an interior node
   /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
@@ -653,7 +651,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
   /// TransformFn - The transformation function to execute on this node before
   /// it can be substituted into the resulting instruction on a pattern match.
-  Record *TransformFn = nullptr;
+  Record *TransformFn;
 
   std::vector<TreePatternNodePtr> Children;
 
@@ -663,16 +661,17 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
 public:
   TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
-                  unsigned numResults)
-      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
-        ResultPerm(new unsigned[numResults]), OperatorOrVal(Op),
-        Children(std::move(Ch)) {
-    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
+                  unsigned NumResults)
+      : OperatorOrVal(Op), TransformFn(nullptr), Children(std::move(Ch)) {
+    Types.resize(NumResults);
+    ResultPerm.resize(NumResults);
+    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
   }
-  TreePatternNode(Init *val, unsigned numResults) // leaf ctor
-      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
-        ResultPerm(new unsigned[numResults]), OperatorOrVal(val) {
-    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
+  TreePatternNode(Init *val, unsigned NumResults) // leaf ctor
+      : OperatorOrVal(val), TransformFn(nullptr) {
+    Types.resize(NumResults);
+    ResultPerm.resize(NumResults);
+    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
   }
 
   bool hasName() const { return !Name.empty(); }
@@ -692,16 +691,11 @@ public:
   bool isLeaf() const { return isa<Init *>(OperatorOrVal); }
 
   // Type accessors.
-  unsigned getNumTypes() const { return NumResults; }
+  unsigned getNumTypes() const { return Types.size(); }
   ValueTypeByHwMode getType(unsigned ResNo) const {
     return Types[ResNo].getValueTypeByHwMode();
   }
-  ArrayRef<TypeSetByHwMode> getExtTypes() const {
-    return ArrayRef(Types.get(), NumResults);
-  }
-  MutableArrayRef<TypeSetByHwMode> getExtTypes() {
-    return MutableArrayRef(Types.get(), NumResults);
-  }
+  const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
   }
@@ -718,6 +712,7 @@ public:
     return Types[ResNo].empty();
   }
 
+  unsigned getNumResults() const { return ResultPerm.size(); }
   unsigned getResultIndex(unsigned ResNo) const { return ResultPerm[ResNo]; }
   void setResultIndex(unsigned ResNo, unsigned RI) { ResultPerm[ResNo] = RI; }
 

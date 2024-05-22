@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://9106929
 
 typedef struct objc_class *Class;
 

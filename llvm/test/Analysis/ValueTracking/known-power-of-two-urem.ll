@@ -15,12 +15,11 @@ define i64 @known_power_of_two_urem_phi(i64 %size, i1 %cmp, i1 %cmp1) {
 ; CHECK:       cond.true.false:
 ; CHECK-NEXT:    br label [[COND_TRUE_END]]
 ; CHECK:       cond.true.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 2, [[COND_TRUE_TRUE]] ], [ 4, [[COND_TRUE_FALSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 1, [[COND_TRUE_TRUE]] ], [ 3, [[COND_TRUE_FALSE]] ]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 4096, [[ENTRY:%.*]] ], [ [[PHI]], [[COND_TRUE_END]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[PHI1]], -1
-; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[TMP0]], [[SIZE:%.*]]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 4095, [[ENTRY:%.*]] ], [ [[PHI]], [[COND_TRUE_END]] ]
+; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[PHI1]], [[SIZE:%.*]]
 ; CHECK-NEXT:    ret i64 [[UREM]]
 ;
 entry:

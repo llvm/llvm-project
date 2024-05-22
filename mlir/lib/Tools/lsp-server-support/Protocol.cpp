@@ -157,7 +157,7 @@ static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
 
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
-  if (!authority.empty() || StringRef(body).startswith("/")) {
+  if (!authority.empty() || StringRef(body).starts_with("/")) {
     uri.append("//");
     percentEncode(authority, uri);
   }
@@ -167,7 +167,7 @@ static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
 
 static llvm::Expected<std::string> getAbsolutePath(StringRef authority,
                                                    StringRef body) {
-  if (!body.startswith("/"))
+  if (!body.starts_with("/"))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "File scheme: expect body to be an absolute path starting "
@@ -295,6 +295,21 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 }
 
 //===----------------------------------------------------------------------===//
+// ClientInfo
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  if (!o || !o.map("name", result.name))
+    return false;
+
+  // Don't fail if we can't parse version.
+  o.map("version", result.version);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -325,6 +340,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   // We deliberately don't fail if we can't parse individual fields.
   o.map("capabilities", result.capabilities);
   o.map("trace", result.trace);
+  mapOptOrNull(value, "clientInfo", result.clientInfo, path);
+
   return true;
 }
 

@@ -1,14 +1,20 @@
-; RUN: opt < %s -passes=pgo-instr-gen -pgo-function-entry-coverage -S | FileCheck %s --implicit-check-not="instrprof.cover" --check-prefixes=CHECK,ENTRY
-; RUN: opt < %s -passes=pgo-instr-gen -pgo-block-coverage -S | FileCheck %s --implicit-check-not="instrprof.cover" --check-prefixes=CHECK,BLOCK
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-function-entry-coverage -S | FileCheck %s --implicit-check-not="instrprof.cover" --check-prefixes=CHECK,GEN,ENTRY
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-block-coverage -S | FileCheck %s --implicit-check-not="instrprof.cover" --check-prefixes=CHECK,GEN,BLOCK
+
+; RUN: llvm-profdata merge %S/Inputs/coverage.proftext -o %t.profdata
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefixes=CHECK,USE
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+; CHECK-LABEL: @foo()
+; USE-SAME: !prof ![[HOT:[0-9]+]]
 define void @foo() {
 ; CHECK-LABEL: entry:
 entry:
   ; ENTRY: call void @llvm.instrprof.cover({{.*}})
   %c = call i1 @choice()
   br i1 %c, label %if.then, label %if.else
+  ; USE: br i1 %c, label %if.then, label %if.else, !prof ![[WEIGHTS0:[0-9]+]]
 
 ; CHECK-LABEL: if.then:
 if.then:
@@ -25,12 +31,15 @@ if.end:
   ret void
 }
 
+; CHECK-LABEL: @bar()
+; USE-SAME: !prof ![[HOT:[0-9]+]]
 define void @bar() {
 ; CHECK-LABEL: entry:
 entry:
   ; ENTRY: call void @llvm.instrprof.cover({{.*}})
   %c = call i1 @choice()
   br i1 %c, label %if.then, label %if.end
+  ; USE: br i1 %c, label %if.then, label %if.end, !prof ![[WEIGHTS1:[0-9]+]]
 
 ; CHECK-LABEL: if.then:
 if.then:
@@ -43,24 +52,29 @@ if.end:
   ret void
 }
 
+; CHECK-LABEL: @goo()
+; USE-SAME: !prof ![[HOT:[0-9]+]]
 define void @goo() {
 ; CHECK-LABEL: entry:
 entry:
-  ; CHECK: call void @llvm.instrprof.cover({{.*}})
+  ; GEN: call void @llvm.instrprof.cover({{.*}})
   ret void
 }
 
+; CHECK-LABEL: @loop()
+; USE-SAME: !prof ![[HOT:[0-9]+]]
 define void @loop() {
 ; CHECK-LABEL: entry:
 entry:
-  ; CHECK: call void @llvm.instrprof.cover({{.*}})
+  ; GEN: call void @llvm.instrprof.cover({{.*}})
   br label %while
 while:
   ; BLOCK: call void @llvm.instrprof.cover({{.*}})
   br label %while
 }
 
-; Function Attrs: noinline nounwind ssp uwtable
+; CHECK-LABEL: @hoo(
+; USE-SAME: !prof ![[HOT:[0-9]+]]
 define void @hoo(i32 %a) #0 {
 ; CHECK-LABEL: entry:
 entry:
@@ -72,6 +86,7 @@ entry:
   %rem = srem i32 %0, 2
   %cmp = icmp eq i32 %rem, 0
   br i1 %cmp, label %if.then, label %if.else
+  ; USE: br i1 %cmp, label %if.then, label %if.else, !prof ![[WEIGHTS1]]
 
 ; CHECK-LABEL: if.then:
 if.then:                                          ; preds = %entry
@@ -94,6 +109,7 @@ for.cond:                                         ; preds = %for.inc, %if.end
   %2 = load i32, i32* %a.addr, align 4
   %cmp1 = icmp slt i32 %1, %2
   br i1 %cmp1, label %for.body, label %for.end
+  ; USE: br i1 %cmp1, label %for.body, label %for.end, !prof ![[WEIGHTS1]]
 
 ; CHECK-LABEL: for.body:
 for.body:                                         ; preds = %for.cond
@@ -101,6 +117,7 @@ for.body:                                         ; preds = %for.cond
   %rem2 = srem i32 %3, 3
   %cmp3 = icmp eq i32 %rem2, 0
   br i1 %cmp3, label %if.then4, label %if.else5
+  ; USE: br i1 %cmp3, label %if.then4, label %if.else5, !prof ![[WEIGHTS0]]
 
 ; CHECK-LABEL: if.then4:
 if.then4:                                         ; preds = %for.body
@@ -113,6 +130,7 @@ if.else5:                                         ; preds = %for.body
   %rem6 = srem i32 %4, 1001
   %cmp7 = icmp eq i32 %rem6, 0
   br i1 %cmp7, label %if.then8, label %if.end9
+  ; USE: br i1 %cmp7, label %if.then8, label %if.end9, !prof ![[WEIGHTS1]]
 
 ; CHECK-LABEL: if.then8:
 if.then8:                                         ; preds = %if.else5
@@ -147,4 +165,8 @@ return:                                           ; preds = %for.end, %if.then8
 
 declare i1 @choice()
 
-; CHECK: declare void @llvm.instrprof.cover({{.*}})
+; GEN: declare void @llvm.instrprof.cover({{.*}})
+
+; USE-DAG: ![[HOT]] = !{!"function_entry_count", i64 10000}
+; USE-DAG: ![[WEIGHTS0]] = !{!"branch_weights", i32 1, i32 1}
+; USE-DAG: ![[WEIGHTS1]] = !{!"branch_weights", i32 1, i32 0}

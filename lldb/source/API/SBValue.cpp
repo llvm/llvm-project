@@ -20,7 +20,6 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -115,7 +114,7 @@ public:
 
     Target *target = value_sp->GetTargetSP().get();
     // If this ValueObject holds an error, then it is valuable for that.
-    if (value_sp->GetError().Fail()) 
+    if (value_sp->GetError().Fail())
       return value_sp;
 
     if (!target)
@@ -1039,8 +1038,8 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid() 
-      && (m_opaque_sp->GetRootSP() 
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
+      && (m_opaque_sp->GetRootSP()
           && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError().SetErrorString("No value");
     return ValueObjectSP();
@@ -1434,10 +1433,17 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
       return sb_watchpoint;
 
     uint32_t watch_type = 0;
-    if (read)
+    if (read) {
       watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
+      // read + write, the most likely intention
+      // is to catch all writes to this, not just
+      // value modifications.
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_WRITE;
+    } else {
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_MODIFY;
+    }
 
     Status rc;
     CompilerType type(value_sp->GetCompilerType());
@@ -1498,4 +1504,15 @@ lldb::SBValue SBValue::Persist() {
     persisted_sb.SetSP(value_sp->Persist());
   }
   return persisted_sb;
+}
+
+lldb::SBValue SBValue::GetVTable() {
+  SBValue vtable_sb;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return vtable_sb;
+
+  vtable_sb.SetSP(value_sp->GetVTable());
+  return vtable_sb;
 }

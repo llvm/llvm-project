@@ -1,0 +1,29 @@
+name: PR Subscriber
+
+on:
+  pull_request_target:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+jobs:
+  auto-subscribe:
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Setup Automation Script
+        run: |
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
+          chmod a+x github-automation.py
+          pip install -r requirements.txt
+
+      - name: Update watchers
+        run: |
+          ./github-automation.py \
+            --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
+            pr-subscriber \
+            --issue-number "${{ github.event.number }}" \
+            --label-name "${{ github.event.label.name }}"

@@ -25,16 +25,14 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <vector>
-
 namespace llvm {
-
-struct Session;
 
 struct Session {
 
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
+  orc::JITDylib *ProcessSymsJD = nullptr;
+  orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
@@ -78,8 +76,6 @@ struct Session {
 
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
-  uint64_t SizeBeforePruning = 0;
-  uint64_t SizeAfterFixups = 0;
 
   StringSet<> HarnessFiles;
   StringSet<> HarnessExternals;
@@ -100,6 +96,9 @@ Error registerMachOGraphInfo(Session &S, jitlink::LinkGraph &G);
 
 /// Record symbols, GOT entries, stubs, and sections for COFF file.
 Error registerCOFFGraphInfo(Session &S, jitlink::LinkGraph &G);
+
+/// Adds a statistics gathering plugin if any stats options are used.
+void enableStatistics(Session &S, bool UsingOrcRuntime);
 
 } // end namespace llvm
 

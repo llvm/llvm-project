@@ -382,3 +382,16 @@ void test_templates() {
   template_function(IntOwner1);  // Ok, but not actually ok, since type deduction removes owner
   template_function(stack_ptr1); // Bad, but type deduction gets it wrong
 }
+
+namespace PR63994 {
+  struct A {
+    virtual ~A() {}
+  };
+
+  struct B : public A {};
+
+  A* foo(int x) {
+    return new B;
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'A *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  }
+}

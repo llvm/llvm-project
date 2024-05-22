@@ -1,4 +1,4 @@
-//===-- RISCVFixupKinds.h - RISCV Specific Fixup Entries --------*- C++ -*-===//
+//===-- RISCVFixupKinds.h - RISC-V Specific Fixup Entries -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVFIXUPKINDS_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVFIXUPKINDS_H
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCFixup.h"
 #include <utility>
 
@@ -70,42 +71,6 @@ enum Fixups {
   // Used to generate an R_RISCV_ALIGN relocation, which indicates the linker
   // should fixup the alignment after linker relaxation.
   fixup_riscv_align,
-  // 8-bit fixup corresponding to R_RISCV_SET8 for local label assignment.
-  fixup_riscv_set_8,
-  // 8-bit fixup corresponding to R_RISCV_ADD8 for 8-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_add_8,
-  // 8-bit fixup corresponding to R_RISCV_SUB8 for 8-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_sub_8,
-  // 16-bit fixup corresponding to R_RISCV_SET16 for local label assignment.
-  fixup_riscv_set_16,
-  // 16-bit fixup corresponding to R_RISCV_ADD16 for 16-bit symbolic difference
-  // paired reloctions.
-  fixup_riscv_add_16,
-  // 16-bit fixup corresponding to R_RISCV_SUB16 for 16-bit symbolic difference
-  // paired reloctions.
-  fixup_riscv_sub_16,
-  // 32-bit fixup corresponding to R_RISCV_SET32 for local label assignment.
-  fixup_riscv_set_32,
-  // 32-bit fixup corresponding to R_RISCV_ADD32 for 32-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_add_32,
-  // 32-bit fixup corresponding to R_RISCV_SUB32 for 32-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_sub_32,
-  // 64-bit fixup corresponding to R_RISCV_ADD64 for 64-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_add_64,
-  // 64-bit fixup corresponding to R_RISCV_SUB64 for 64-bit symbolic difference
-  // paired relocations.
-  fixup_riscv_sub_64,
-  // 6-bit fixup corresponding to R_RISCV_SET6 for local label assignment in
-  // DWARF CFA.
-  fixup_riscv_set_6b,
-  // 6-bit fixup corresponding to R_RISCV_SUB6 for local label assignment in
-  // DWARF CFA.
-  fixup_riscv_sub_6b,
 
   // Used as a sentinel, must be the last
   fixup_riscv_invalid,
@@ -118,17 +83,21 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 1:
-    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_8),
-                          MCFixupKind(RISCV::fixup_riscv_sub_8));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD8),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB8));
   case 2:
-    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_16),
-                          MCFixupKind(RISCV::fixup_riscv_sub_16));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD16),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB16));
   case 4:
-    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_32),
-                          MCFixupKind(RISCV::fixup_riscv_sub_32));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD32),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB32));
   case 8:
-    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_64),
-                          MCFixupKind(RISCV::fixup_riscv_sub_64));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD64),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB64));
   }
 }
 

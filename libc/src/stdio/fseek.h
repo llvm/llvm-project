@@ -11,10 +11,10 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int fseek(::FILE *stream, long offset, int whence);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FSEEK_H

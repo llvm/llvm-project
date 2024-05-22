@@ -42,6 +42,11 @@ def main():
         action="store_true",
         help="Checkout back to the starting revision",
     )
+    parser.add_argument(
+        "--cmp-rev",
+        default="HEAD^",
+        help="Revision to checkout to compare vs HEAD",
+    )
     args, wrapper_args = parser.parse_known_args()
     bolt_path = f"{args.build_dir}/bin/llvm-bolt"
 
@@ -77,8 +82,8 @@ def main():
     if stash:
         # save local changes before checkout
         subprocess.run(shlex.split("git stash push -u"), cwd=source_dir)
-    # check out the previous commit
-    subprocess.run(shlex.split("git checkout -f HEAD^"), cwd=source_dir)
+    # check out the previous/cmp commit
+    subprocess.run(shlex.split(f"git checkout -f {args.cmp_rev}"), cwd=source_dir)
     # get the parent commit hash for logging
     new_ref = get_git_ref_or_rev(source_dir)
     # build the previous commit

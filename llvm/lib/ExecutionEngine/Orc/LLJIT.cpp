@@ -10,8 +10,6 @@
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
@@ -28,8 +26,6 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
-
-#include <map>
 
 #define DEBUG_TYPE "orc"
 
@@ -87,65 +83,6 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
 
   return WrapperFn;
 }
-
-class ORCPlatformSupport : public LLJIT::PlatformSupport {
-public:
-  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
-
-  Error initialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using llvm::orc::shared::SPSString;
-    using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-    enum dlopen_mode : int32_t {
-      ORC_RT_RTLD_LAZY = 0x1,
-      ORC_RT_RTLD_NOW = 0x2,
-      ORC_RT_RTLD_LOCAL = 0x4,
-      ORC_RT_RTLD_GLOBAL = 0x8
-    };
-
-    auto &ES = J.getExecutionSession();
-    auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
-        [](const JITDylibSearchOrder &SO) { return SO; });
-
-    if (auto WrapperAddr =
-            ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
-      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                             DSOHandles[&JD], JD.getName(),
-                                             int32_t(ORC_RT_RTLD_LAZY));
-    } else
-      return WrapperAddr.takeError();
-  }
-
-  Error deinitialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
-    auto &ES = J.getExecutionSession();
-    auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
-        [](const JITDylibSearchOrder &SO) { return SO; });
-
-    if (auto WrapperAddr =
-            ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
-      int32_t result;
-      auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-          WrapperAddr->getAddress(), result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
-        return make_error<StringError>("dlclose failed",
-                                       inconvertibleErrorCode());
-      DSOHandles.erase(&JD);
-    } else
-      return WrapperAddr.takeError();
-    return Error::success();
-  }
-
-private:
-  orc::LLJIT &J;
-  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
-};
 
 class GenericLLVMIRPlatformSupport;
 
@@ -276,11 +213,11 @@ public:
       // will trigger a lookup to materialize the module) and the InitFunctions
       // map (which holds the names of the symbols to execute).
       for (auto &KV : MU.getSymbols())
-        if ((*KV.first).startswith(InitFunctionPrefix)) {
+        if ((*KV.first).starts_with(InitFunctionPrefix)) {
           InitSymbols[&JD].add(KV.first,
                                SymbolLookupFlags::WeaklyReferencedSymbol);
           InitFunctions[&JD].add(KV.first);
-        } else if ((*KV.first).startswith(DeInitFunctionPrefix)) {
+        } else if ((*KV.first).starts_with(DeInitFunctionPrefix)) {
           DeInitFunctions[&JD].add(KV.first);
         }
     }
@@ -660,6 +597,54 @@ public:
 namespace llvm {
 namespace orc {
 
+Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
+  using llvm::orc::shared::SPSExecutorAddr;
+  using llvm::orc::shared::SPSString;
+  using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+  enum dlopen_mode : int32_t {
+    ORC_RT_RTLD_LAZY = 0x1,
+    ORC_RT_RTLD_NOW = 0x2,
+    ORC_RT_RTLD_LOCAL = 0x4,
+    ORC_RT_RTLD_GLOBAL = 0x8
+  };
+
+  auto &ES = J.getExecutionSession();
+  auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
+      [](const JITDylibSearchOrder &SO) { return SO; });
+
+  if (auto WrapperAddr = ES.lookup(
+          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
+                                           DSOHandles[&JD], JD.getName(),
+                                           int32_t(ORC_RT_RTLD_LAZY));
+  } else
+    return WrapperAddr.takeError();
+}
+
+Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
+  using llvm::orc::shared::SPSExecutorAddr;
+  using SPSDLCloseSig = int32_t(SPSExecutorAddr);
+
+  auto &ES = J.getExecutionSession();
+  auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
+      [](const JITDylibSearchOrder &SO) { return SO; });
+
+  if (auto WrapperAddr = ES.lookup(
+          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
+    int32_t result;
+    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
+        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
+    if (E)
+      return E;
+    else if (result)
+      return make_error<StringError>("dlclose failed",
+                                     inconvertibleErrorCode());
+    DSOHandles.erase(&JD);
+  } else
+    return WrapperAddr.takeError();
+  return Error::success();
+}
+
 void LLJIT::PlatformSupport::setInitTransform(
     LLJIT &J, IRTransformLayer::TransformFunction T) {
   J.InitHelperTransformLayer->setTransform(std::move(T));
@@ -752,6 +737,12 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::x86_64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
+    case Triple::ppc64:
+      UseJITLink = TT.isPPC64ELFv2ABI();
+      break;
+    case Triple::ppc64le:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -775,25 +766,17 @@ Error LLJITBuilderState::prepareForConstruction() {
 
   // If we need a process JITDylib but no setup function has been given then
   // create a default one.
-  if (!SetupProcessSymbolsJITDylib &&
-      (LinkProcessSymbolsByDefault || EnableDebuggerSupport)) {
-
-    LLVM_DEBUG({
-      dbgs() << "Creating default Process JD setup function (neeeded for";
-      if (LinkProcessSymbolsByDefault)
-        dbgs() << " <link-process-syms-by-default>";
-      if (EnableDebuggerSupport)
-        dbgs() << " <debugger-support>";
-      dbgs() << ")\n";
-    });
-
-    SetupProcessSymbolsJITDylib = [this](JITDylib &JD) -> Error {
+  if (!SetupProcessSymbolsJITDylib && LinkProcessSymbolsByDefault) {
+    LLVM_DEBUG(dbgs() << "Creating default Process JD setup function\n");
+    SetupProcessSymbolsJITDylib = [this](LLJIT &J) -> Expected<JITDylibSP> {
+      auto &JD =
+          J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           DL->getGlobalPrefix());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
-      return Error::success();
+      return &JD;
     };
   }
 
@@ -998,50 +981,18 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
   }
 
   if (S.SetupProcessSymbolsJITDylib) {
-    ProcessSymbols = &ES->createBareJITDylib("<Process Symbols>");
-    if (auto Err2 = S.SetupProcessSymbolsJITDylib(*ProcessSymbols)) {
-      Err = std::move(Err2);
+    if (auto ProcSymsJD = S.SetupProcessSymbolsJITDylib(*this)) {
+      ProcessSymbols = ProcSymsJD->get();
+    } else {
+      Err = ProcSymsJD.takeError();
       return;
     }
   }
 
-  if (S.EnableDebuggerSupport) {
-    if (auto *OLL = dyn_cast<ObjectLinkingLayer>(ObjLinkingLayer.get())) {
-      switch (TT.getObjectFormat()) {
-      case Triple::ELF: {
-        auto Registrar = createJITLoaderGDBRegistrar(*ES);
-        if (!Registrar) {
-          Err = Registrar.takeError();
-          return;
-        }
-        OLL->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-            *ES, std::move(*Registrar), true, true));
-        break;
-      }
-      case Triple::MachO: {
-        assert(ProcessSymbols && "ProcessSymbols JD should be available when "
-                                 "EnableDebuggerSupport is set");
-        auto DS =
-            GDBJITDebugInfoRegistrationPlugin::Create(*ES, *ProcessSymbols, TT);
-        if (!DS) {
-          Err = DS.takeError();
-          return;
-        }
-        OLL->addPlugin(std::move(*DS));
-        break;
-      }
-      default:
-        LLVM_DEBUG({
-          dbgs() << "Cannot enable LLJIT debugger support: "
-                 << Triple::getObjectFormatTypeName(TT.getObjectFormat())
-                 << " not supported.\n";
-        });
-      }
-    } else {
-      LLVM_DEBUG({
-        dbgs() << "Cannot enable LLJIT debugger support: "
-                  " debugger support is only available when using JITLink.\n";
-      });
+  if (S.PrePlatformSetup) {
+    if (auto Err2 = S.PrePlatformSetup(*this)) {
+      Err = std::move(Err2);
+      return;
     }
   }
 
@@ -1131,7 +1082,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
 
   if (!ObjLinkingLayer)
     return make_error<StringError>(
-        "SetUpTargetPlatform requires ObjectLinkingLayer",
+        "ExecutorNativePlatform requires ObjectLinkingLayer",
         inconvertibleErrorCode());
 
   std::unique_ptr<MemoryBuffer> RuntimeArchiveBuffer;

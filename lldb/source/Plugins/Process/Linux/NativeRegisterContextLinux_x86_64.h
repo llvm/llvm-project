@@ -51,6 +51,8 @@ public:
 
   std::optional<MmapData> GetMmapData() override;
 
+  const RegisterInfo *GetDR(int num) const override;
+
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }
 
@@ -104,7 +106,7 @@ private:
   YMM m_ymm_set;
   MPX m_mpx_set;
   RegInfo m_reg_info;
-  uint64_t m_gpr_x86_64[k_num_gpr_registers_x86_64];
+  uint64_t m_gpr_x86_64[x86_64_with_base::k_num_gpr_registers];
   uint32_t m_fctrl_offset_in_userarea;
 
   // Private member methods.

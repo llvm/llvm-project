@@ -187,6 +187,8 @@ void __llvm_profile_register_names_function(void *NamesStart,
 // define these zero length variables in each of the above 4 sections.
 static int dummy_cnts[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_CNTS_SECT_NAME);
+static int dummy_bits[0] COMPILER_RT_SECTION(
+    COMPILER_RT_SEG INSTR_PROF_BITS_SECT_NAME);
 static int dummy_data[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_DATA_SECT_NAME);
 static const int dummy_name[0] COMPILER_RT_SECTION(
@@ -197,8 +199,15 @@ static int dummy_vnds[0] COMPILER_RT_SECTION(
 // To avoid GC'ing of the dummy variables by the linker, reference them in an
 // array and reference the array in the runtime registration code
 // (InstrProfilingRuntime.cpp)
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
 COMPILER_RT_VISIBILITY
-void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_data,
-                               (void *)&dummy_name, (void *)&dummy_vnds};
-
+void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_bits,
+                               (void *)&dummy_data, (void *)&dummy_name,
+                               (void *)&dummy_vnds};
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #endif

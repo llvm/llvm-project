@@ -320,8 +320,7 @@ define i8 @ptrmask_cast_local_to_flat_const_mask_fffffffffffffffe(ptr addrspace(
 
 define i8 @ptrmask_cast_local_to_flat_const_mask_ffffffffffffffff(ptr addrspace(3) %src.ptr) {
 ; CHECK-LABEL: @ptrmask_cast_local_to_flat_const_mask_ffffffffffffffff(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[SRC_PTR:%.*]], i32 -1)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[SRC_PTR:%.*]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %cast = addrspacecast ptr addrspace(3) %src.ptr to ptr
@@ -333,7 +332,7 @@ define i8 @ptrmask_cast_local_to_flat_const_mask_ffffffffffffffff(ptr addrspace(
 ; Make sure non-constant masks can also be handled.
 define i8 @ptrmask_cast_local_to_flat_load_range_mask(ptr addrspace(3) %src.ptr, ptr addrspace(1) %mask.ptr) {
 ; CHECK-LABEL: @ptrmask_cast_local_to_flat_load_range_mask(
-; CHECK-NEXT:    [[LOAD_MASK:%.*]] = load i64, ptr addrspace(1) [[MASK_PTR:%.*]], align 8, !range !0
+; CHECK-NEXT:    [[LOAD_MASK:%.*]] = load i64, ptr addrspace(1) [[MASK_PTR:%.*]], align 8, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[LOAD_MASK]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[SRC_PTR:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1
@@ -346,23 +345,7 @@ define i8 @ptrmask_cast_local_to_flat_load_range_mask(ptr addrspace(3) %src.ptr,
   ret i8 %load
 }
 
-; This should not be folded, as the mask is implicitly zero extended,
-; so it would clear the high bits.
-define i8 @ptrmask_cast_local_to_flat_const_mask_32bit_neg4(ptr addrspace(3) %src.ptr) {
-; CHECK-LABEL: @ptrmask_cast_local_to_flat_const_mask_32bit_neg4(
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(3) [[SRC_PTR:%.*]] to ptr
-; CHECK-NEXT:    [[MASKED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[CAST]], i32 -4)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[MASKED]], align 1
-; CHECK-NEXT:    ret i8 [[LOAD]]
-;
-  %cast = addrspacecast ptr addrspace(3) %src.ptr to ptr
-  %masked = call ptr @llvm.ptrmask.p0.i32(ptr %cast, i32 -4)
-  %load = load i8, ptr %masked
-  ret i8 %load
-}
-
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64) #0
-declare ptr @llvm.ptrmask.p0.i32(ptr, i32) #0
 declare ptr addrspace(5) @llvm.ptrmask.p5.i32(ptr addrspace(5), i32) #0
 declare ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3), i32) #0
 declare ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1), i64) #0

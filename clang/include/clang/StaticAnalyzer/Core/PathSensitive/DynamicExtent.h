@@ -53,6 +53,11 @@ ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,
 ///   (bufptr) // extent is unknown
 SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV);
 
+/// \returns The stored element count of the region represented by a symbolic
+/// value \p BufV.
+DefinedOrUnknownSVal getDynamicElementCountWithOffset(ProgramStateRef State,
+                                                      SVal BufV, QualType Ty);
+
 } // namespace ento
 } // namespace clang
 

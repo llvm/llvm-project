@@ -76,10 +76,10 @@ def : WriteRes<WriteIM64, [CortexA55UnitMAC]> { let Latency = 4; }   // 64-bit M
 
 // Div
 def : WriteRes<WriteID32, [CortexA55UnitDiv]> {
-  let Latency = 8; let ResourceCycles = [8];
+  let Latency = 8; let ReleaseAtCycles = [8];
 }
 def : WriteRes<WriteID64, [CortexA55UnitDiv]> {
-  let Latency = 8; let ResourceCycles = [8];
+  let Latency = 8; let ReleaseAtCycles = [8];
 }
 
 // Load
@@ -91,23 +91,23 @@ def : WriteRes<WriteLDHi, [CortexA55UnitLd]> { let Latency = 5; }
 //               below, choosing the median of 3 which makes the latency 6.
 // An extra cycle is needed to get the swizzling right.
 def : WriteRes<WriteVLD, [CortexA55UnitLd]> { let Latency = 6;
-                                           let ResourceCycles = [3]; }
+                                           let ReleaseAtCycles = [3]; }
 def CortexA55WriteVLD1 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; }
 def CortexA55WriteVLD1SI : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; let SingleIssue = 1; }
 def CortexA55WriteVLD2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5;
-                                                  let ResourceCycles = [2]; }
+                                                  let ReleaseAtCycles = [2]; }
 def CortexA55WriteVLD3 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 6;
-                                                  let ResourceCycles = [3]; }
+                                                  let ReleaseAtCycles = [3]; }
 def CortexA55WriteVLD4 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 7;
-                                                  let ResourceCycles = [4]; }
+                                                  let ReleaseAtCycles = [4]; }
 def CortexA55WriteVLD5 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 8;
-                                                  let ResourceCycles = [5]; }
+                                                  let ReleaseAtCycles = [5]; }
 def CortexA55WriteVLD6 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 9;
-                                                  let ResourceCycles = [6]; }
+                                                  let ReleaseAtCycles = [6]; }
 def CortexA55WriteVLD7 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 10;
-                                                  let ResourceCycles = [7]; }
+                                                  let ReleaseAtCycles = [7]; }
 def CortexA55WriteVLD8 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 11;
-                                                  let ResourceCycles = [8]; }
+                                                  let ReleaseAtCycles = [8]; }
 
 def CortexA55WriteLDP1 : SchedWriteRes<[]> { let Latency = 4; }
 def CortexA55WriteLDP2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5; }
@@ -126,14 +126,14 @@ def : WriteRes<WriteSTX, [CortexA55UnitSt]> { let Latency = 4; }
 
 // Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
 def : WriteRes<WriteVST, [CortexA55UnitSt]> { let Latency = 5;
-                                          let ResourceCycles = [2];}
+                                          let ReleaseAtCycles = [2];}
 def CortexA55WriteVST1 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 4; }
 def CortexA55WriteVST2 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 5;
-                                                  let ResourceCycles = [2]; }
+                                                  let ReleaseAtCycles = [2]; }
 def CortexA55WriteVST3 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 6;
-                                                  let ResourceCycles = [3]; }
+                                                  let ReleaseAtCycles = [3]; }
 def CortexA55WriteVST4 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 5;
-                                                  let ResourceCycles = [4]; }
+                                                  let ReleaseAtCycles = [4]; }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
@@ -189,20 +189,20 @@ def : WriteRes<WriteFMul, [CortexA55UnitFPMAC]> { let Latency = 4; }
 
 let RetireOOO = 1 in {
 def : WriteRes<WriteFDiv, [CortexA55UnitFPDIV]> { let Latency = 22;
-                                            let ResourceCycles = [29]; }
+                                            let ReleaseAtCycles = [29]; }
 def CortexA55WriteFMAC : SchedWriteRes<[CortexA55UnitFPMAC]> { let Latency = 4; }
 def CortexA55WriteFDivHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
-                                                     let ResourceCycles = [5]; }
+                                                     let ReleaseAtCycles = [5]; }
 def CortexA55WriteFDivSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 13;
-                                                     let ResourceCycles = [10]; }
+                                                     let ReleaseAtCycles = [10]; }
 def CortexA55WriteFDivDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
-                                                     let ResourceCycles = [19]; }
+                                                     let ReleaseAtCycles = [19]; }
 def CortexA55WriteFSqrtHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
-                                                      let ResourceCycles = [5]; }
+                                                      let ReleaseAtCycles = [5]; }
 def CortexA55WriteFSqrtSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 12;
-                                                      let ResourceCycles = [9]; }
+                                                      let ReleaseAtCycles = [9]; }
 def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
-                                                      let ResourceCycles = [19]; }
+                                                      let ReleaseAtCycles = [19]; }
 }
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -285,16 +285,16 @@ def : InstRW<[CortexA55WriteVLD6], (instregex "LD1Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA55WriteVLD4], (instregex "LD1Fourv(8b|4h|2s|1d)$")>;
 def : InstRW<[CortexA55WriteVLD8], (instregex "LD1Fourv(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA55WriteVLD1, WriteAdr], (instregex "LD1i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVLD1, WriteAdr], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD1, WriteAdr], (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD4, WriteAdr], (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD3, WriteAdr], (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD6, WriteAdr], (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD4, WriteAdr], (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD8, WriteAdr], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1], (instregex "LD1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1], (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD4], (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD3], (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD6], (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD4], (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD8], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
 
 //    2-element structures
 def : InstRW<[CortexA55WriteVLD2], (instregex "LD2i(8|16|32|64)$")>;
@@ -302,10 +302,10 @@ def : InstRW<[CortexA55WriteVLD2], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$"
 def : InstRW<[CortexA55WriteVLD2], (instregex "LD2Twov(8b|4h|2s)$")>;
 def : InstRW<[CortexA55WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
-def : InstRW<[CortexA55WriteVLD4, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
 
 //    3-element structures
 def : InstRW<[CortexA55WriteVLD2], (instregex "LD3i(8|16|32|64)$")>;
@@ -313,10 +313,10 @@ def : InstRW<[CortexA55WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$"
 def : InstRW<[CortexA55WriteVLD3], (instregex "LD3Threev(8b|4h|2s|1d)$")>;
 def : InstRW<[CortexA55WriteVLD6], (instregex "LD3Threev(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD3i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD3, WriteAdr], (instregex "LD3Threev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD6, WriteAdr], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD3], (instregex "LD3Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD6], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
 
 //    4-element structures
 def : InstRW<[CortexA55WriteVLD2], (instregex "LD4i(8|16|32|64)$")>;                // load single 4-el structure to one lane of 4 regs.
@@ -324,10 +324,10 @@ def : InstRW<[CortexA55WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)$"
 def : InstRW<[CortexA55WriteVLD4], (instregex "LD4Fourv(8b|4h|2s|1d)$")>;           // load multiple 4-el structures to 4 regs.
 def : InstRW<[CortexA55WriteVLD8], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVLD2, WriteAdr], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD4, WriteAdr], (instregex "LD4Fourv(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA55WriteVLD8, WriteAdr], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD4i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD4], (instregex "LD4Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD8], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
 
 //---
 // Vector Stores
@@ -337,28 +337,28 @@ def : InstRW<[CortexA55WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)
 def : InstRW<[CortexA55WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA55WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA55WriteVST4], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA55WriteVST1, WriteAdr], (instregex "ST1i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVST1, WriteAdr], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVST1, WriteAdr], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVST2, WriteAdr], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA55WriteVST4, WriteAdr], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST1], (instregex "ST1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST4], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[CortexA55WriteVST2], (instregex "ST2i(8|16|32|64)$")>;
 def : InstRW<[CortexA55WriteVST2], (instregex "ST2Twov(8b|4h|2s)$")>;
 def : InstRW<[CortexA55WriteVST4], (instregex "ST2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA55WriteVST2, WriteAdr], (instregex "ST2i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVST2, WriteAdr], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
-def : InstRW<[CortexA55WriteVST4, WriteAdr], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST2], (instregex "ST2i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST2], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST4], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[CortexA55WriteVST2], (instregex "ST3i(8|16|32|64)$")>;
 def : InstRW<[CortexA55WriteVST4], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA55WriteVST2, WriteAdr], (instregex "ST3i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVST4, WriteAdr], (instregex "ST3Threev(8b|4h|2s|1d|2d|16b|8h|4s|4d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST2], (instregex "ST3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST4], (instregex "ST3Threev(8b|4h|2s|1d|2d|16b|8h|4s|4d)_POST$")>;
 
 def : InstRW<[CortexA55WriteVST2], (instregex "ST4i(8|16|32|64)$")>;
 def : InstRW<[CortexA55WriteVST4], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA55WriteVST2, WriteAdr], (instregex "ST4i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA55WriteVST4, WriteAdr], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST2], (instregex "ST4i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA55WriteVST4], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 //---
 // Floating Point Conversions, MAC, DIV, SQRT

@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -include-pch %t.pch -arcmt-action=check -verify -triple x86_64-apple-darwin10 -fblocks -Werror %s
 // REQUIRES: x86-registered-target
 
-// rdar://9601437
 @interface I9601437 {
   __unsafe_unretained id x;
 }

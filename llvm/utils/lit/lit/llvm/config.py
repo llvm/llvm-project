@@ -97,6 +97,7 @@ class LLVMConfig(object):
         # part of the standard header.  But currently they aren't)
         host_triple = getattr(config, "host_triple", None)
         target_triple = getattr(config, "target_triple", None)
+        features.add("host=%s" % host_triple)
         features.add("target=%s" % target_triple)
         if host_triple and host_triple == target_triple:
             features.add("native")
@@ -119,6 +120,9 @@ class LLVMConfig(object):
         have_zstd = getattr(config, "have_zstd", None)
         if have_zstd:
             features.add("zstd")
+
+        if getattr(config, "reverse_iteration", None):
+            features.add("reverse_iteration")
 
         # Check if we should run long running tests.
         long_tests = lit_config.params.get("run_long_tests", None)

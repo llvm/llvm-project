@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
-#ifndef _LIBCPP_HAS_NO_THREADS
-
 #include <__thread/timed_backoff_policy.h>
 #include <atomic>
 #include <climits>
 #include <functional>
 #include <thread>
+
+#include "include/apple_availability.h"
 
 #ifdef __linux__
 
@@ -145,7 +144,7 @@ static void __libcpp_contention_notify(__cxx_atomic_contention_t volatile* __con
         // We only call 'wake' if we consumed a contention bit here.
         __libcpp_platform_wake_by_address(__platform_state, __notify_one);
 }
-static __cxx_contention_t __libcpp_contention_monitor_for_wait(__cxx_atomic_contention_t volatile* __contention_state,
+static __cxx_contention_t __libcpp_contention_monitor_for_wait(__cxx_atomic_contention_t volatile* /*__contention_state*/,
                                                                __cxx_atomic_contention_t const volatile* __platform_state)
 {
     // We will monitor this value.
@@ -217,5 +216,3 @@ void __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, 
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif //_LIBCPP_HAS_NO_THREADS

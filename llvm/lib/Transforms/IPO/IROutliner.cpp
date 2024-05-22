@@ -155,7 +155,7 @@ struct OutlinableGroup {
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
   for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBefore(TargetBB, TargetBB.end());
+    I.moveBeforePreserving(TargetBB, TargetBB.end());
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -198,7 +198,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -557,7 +557,7 @@ collectRegionsConstants(OutlinableRegion &Region,
 
     // Iterate over the operands in an instruction. If the global value number,
     // assigned by the IRSimilarityCandidate, has been seen before, we check if
-    // the the number has been found to be not the same value in each instance.
+    // the number has been found to be not the same value in each instance.
     for (Value *V : ID.OperVals) {
       std::optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
@@ -766,7 +766,7 @@ static void moveFunctionData(Function &Old, Function &New,
   }
 }
 
-/// Find the the constants that will need to be lifted into arguments
+/// Find the constants that will need to be lifted into arguments
 /// as they are not the same in each instance of the region.
 ///
 /// \param [in] C - The IRSimilarityCandidate containing the region we are
@@ -1346,7 +1346,7 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
     // the output, so we add a pointer type to the argument types of the overall
     // function to handle this output and create a mapping to it.
     if (!TypeFound) {
-      Group.ArgumentTypes.push_back(Output->getType()->getPointerTo(
+      Group.ArgumentTypes.push_back(PointerType::get(Output->getContext(),
           M.getDataLayout().getAllocaAddrSpace()));
       // Mark the new pointer type as the last value in the aggregate argument
       // list.

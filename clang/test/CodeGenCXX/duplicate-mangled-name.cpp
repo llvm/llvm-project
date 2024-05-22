@@ -5,7 +5,6 @@
 
 #ifdef TEST1
 
-// rdar://15522601
 class MyClass {
  static void meth();
 };

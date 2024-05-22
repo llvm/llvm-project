@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 #include <__utility/is_pointer_in_range.h>
 #include <cassert>
 

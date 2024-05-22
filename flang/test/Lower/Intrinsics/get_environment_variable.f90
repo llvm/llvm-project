@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-32 -DDEFAULT_INTEGER_SIZE=32 %s
-! RUN: flang-new -fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64 -DDEFAULT_INTEGER_SIZE=64 %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck --check-prefixes=CHECK,CHECK-32 -DDEFAULT_INTEGER_SIZE=32 %s
+! RUN: %flang_fc1 -fdefault-integer-8 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64 -DDEFAULT_INTEGER_SIZE=64 %s
 
 ! CHECK-LABEL: func @_QPname_only(
 ! CHECK-SAME: %[[nameArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "name"}) {
@@ -48,7 +48,7 @@ subroutine name_and_length_only(name, length)
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
-! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
+! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 9]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.convert %[[lengthBox]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>
@@ -70,7 +70,7 @@ subroutine name_and_status_only(name, status)
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
-! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
+! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 9]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
@@ -82,7 +82,8 @@ end subroutine name_and_status_only
 
 ! CHECK-LABEL: func @_QPname_and_trim_name_only(
 ! CHECK-SAME: %[[nameArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "name"},
-! CHECK-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "trim_name"}) {
+! CHECK-32-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "trim_name"}) {
+! CHECK-64-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<8>> {fir.bindc_name = "trim_name"}) {
 subroutine name_and_trim_name_only(name, trim_name)
     character(len=32) :: name
     logical :: trim_name
@@ -106,7 +107,7 @@ subroutine name_and_errmsg_only(name, errmsg)
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.absent !fir.box<none>
-! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
+! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 11]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
@@ -120,7 +121,8 @@ end subroutine name_and_errmsg_only
 ! CHECK-SAME: %[[valueArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "value"},
 ! CHECK-SAME: %[[lengthArg:[^:]*]]: !fir.ref<i[[DEFAULT_INTEGER_SIZE]]> {fir.bindc_name = "length"},
 ! CHECK-SAME: %[[statusArg:.*]]: !fir.ref<i[[DEFAULT_INTEGER_SIZE]]> {fir.bindc_name = "status"},
-! CHECK-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "trim_name"},
+! CHECK-32-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "trim_name"},
+! CHECK-64-SAME: %[[trimNameArg:.*]]: !fir.ref<!fir.logical<8>> {fir.bindc_name = "trim_name"},
 ! CHECK-SAME: %[[errmsgArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "errmsg"}) {
 subroutine all_arguments(name, value, length, status, trim_name, errmsg)
     character(len=32) :: name, value, errmsg
@@ -138,15 +140,17 @@ subroutine all_arguments(name, value, length, status, trim_name, errmsg)
 ! CHECK-NEXT: %[[lengthBoxed:.*]] = fir.embox %[[lengthArg]] : (!fir.ref<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<i[[DEFAULT_INTEGER_SIZE]]>
 ! CHECK-NEXT: %[[errmsgBoxed:.*]] = fir.embox %[[errmsgCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK:      %[[trimName:.*]] = fir.if %{{.*}} -> (i1) {
-! CHECK-NEXT:   %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<4>>
-! CHECK-NEXT:   %[[trimCast:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
+! CHECK-32-NEXT:   %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<4>>
+! CHECK-64-NEXT:   %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<8>>
+! CHECK-32-NEXT:   %[[trimCast:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
+! CHECK-64-NEXT:   %[[trimCast:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<8>) -> i1
 ! CHECK-NEXT:   fir.result %[[trimCast]] : i1
 ! CHECK-NEXT: } else {
 ! CHECK-NEXT:   %[[trueVal:.*]] = arith.constant true
 ! CHECK-NEXT:   fir.result %[[trueVal]] : i1
 ! CHECK-NEXT: }
-! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.[[fileString:.*]]) : !fir.ref<!fir.char<1,[[fileStringLength:.*]]>>
-! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 20]] : i32
+! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQclX[[fileString:.*]]) : !fir.ref<!fir.char<1,[[fileStringLength:.*]]>>
+! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 22]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.convert %[[lengthBoxed]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>

@@ -29,6 +29,7 @@ public:
     const FieldDecl *Decl;
     unsigned Offset;
     Descriptor *Desc;
+    bool isBitField() const { return Decl->isBitField(); }
   };
 
   /// Describes a base class.
@@ -87,7 +88,10 @@ public:
   }
 
   unsigned getNumBases() const { return Bases.size(); }
-  const Base *getBase(unsigned I) const { return &Bases[I]; }
+  const Base *getBase(unsigned I) const {
+    assert(I < getNumBases());
+    return &Bases[I];
+  }
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {

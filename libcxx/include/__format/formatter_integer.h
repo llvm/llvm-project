@@ -37,7 +37,7 @@ public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_integral);
-    __format_spec::__process_parsed_integer(__parser_);
+    __format_spec::__process_parsed_integer(__parser_, "an integer");
     return __result;
   }
 

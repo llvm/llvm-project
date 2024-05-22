@@ -72,6 +72,19 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
 InterpFrame::~InterpFrame() {
   for (auto &Param : Params)
     S.deallocate(reinterpret_cast<Block *>(Param.second.get()));
+
+  // When destroying the InterpFrame, call the Dtor for all block
+  // that haven't been destroyed via a destroy() op yet.
+  // This happens when the execution is interruped midway-through.
+  if (Func) {
+    for (auto &Scope : Func->scopes()) {
+      for (auto &Local : Scope.locals()) {
+        Block *B = localBlock(Local.Offset);
+        if (B->isInitialized())
+          B->invokeDtor();
+      }
+    }
+  }
 }
 
 void InterpFrame::destroy(unsigned Idx) {
@@ -144,7 +157,7 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   }
 }
 
-void InterpFrame::describe(llvm::raw_ostream &OS) {
+void InterpFrame::describe(llvm::raw_ostream &OS) const {
   const FunctionDecl *F = getCallee();
   if (const auto *M = dyn_cast<CXXMethodDecl>(F);
       M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
@@ -176,10 +189,10 @@ Frame *InterpFrame::getCaller() const {
   return S.getSplitFrame();
 }
 
-SourceLocation InterpFrame::getCallLocation() const {
+SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func)
-    return S.getLocation(nullptr, {});
-  return S.getLocation(Caller->Func, RetPC - sizeof(uintptr_t));
+    return S.getRange(nullptr, {});
+  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
@@ -213,6 +226,11 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
 }
 
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
+  // Implicitly created functions don't have any code we could point at,
+  // so return the call site.
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getSource(RetPC);
+
   return S.getSource(Func, PC);
 }
 
@@ -224,3 +242,9 @@ SourceLocation InterpFrame::getLocation(CodePtr PC) const {
   return S.getLocation(Func, PC);
 }
 
+SourceRange InterpFrame::getRange(CodePtr PC) const {
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getRange(RetPC);
+
+  return S.getRange(Func, PC);
+}

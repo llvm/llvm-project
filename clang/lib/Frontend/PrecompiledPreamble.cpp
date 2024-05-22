@@ -550,19 +550,19 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   SourceManager &SourceMgr = Clang->getSourceManager();
   for (auto &Filename : PreambleDepCollector->getDependencies()) {
-    auto FileOrErr = Clang->getFileManager().getFile(Filename);
-    if (!FileOrErr ||
-        *FileOrErr == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
+    auto MaybeFile = Clang->getFileManager().getOptionalFileRef(Filename);
+    if (!MaybeFile ||
+        MaybeFile == SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID()))
       continue;
-    auto File = *FileOrErr;
-    if (time_t ModTime = File->getModificationTime()) {
-      FilesInPreamble[File->getName()] =
-          PrecompiledPreamble::PreambleFileHash::createForFile(File->getSize(),
+    auto File = *MaybeFile;
+    if (time_t ModTime = File.getModificationTime()) {
+      FilesInPreamble[File.getName()] =
+          PrecompiledPreamble::PreambleFileHash::createForFile(File.getSize(),
                                                                ModTime);
     } else {
       llvm::MemoryBufferRef Buffer =
           SourceMgr.getMemoryBufferForFileOrFake(File);
-      FilesInPreamble[File->getName()] =
+      FilesInPreamble[File.getName()] =
           PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(Buffer);
     }
   }
@@ -719,7 +719,7 @@ void PrecompiledPreamble::AddImplicitPreamble(
 void PrecompiledPreamble::OverridePreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *MainFileBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *MainFileBuffer, 0);
   configurePreamble(Bounds, CI, VFS, MainFileBuffer);
 }
 

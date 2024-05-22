@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -x c++ -debug-info-kind=limited -S -emit-llvm < %s | FileCheck %s
-// rdar://10336845
 // Preserve type qualifiers in -flimit-debug-info mode.
 
 // CHECK:  DW_TAG_const_type

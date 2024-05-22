@@ -18,7 +18,7 @@ struct Board {
     Failed(Failed) {}
   constexpr Board addQueen(int Row, int Col) const {
     return Board(State | ((uint64_t)Row << (Col * 4))); // ref-note {{read of uninitialized object}} \
-                                                        // expected-note {{read of object outside its lifetime}}
+                                                        // expected-note {{read of uninitialized object}}
   }
   constexpr int getQueenRow(int Col) const {
     return (State >> (Col * 4)) & 0xf;

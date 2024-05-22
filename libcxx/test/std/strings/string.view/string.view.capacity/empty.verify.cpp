@@ -17,6 +17,6 @@
 #include <string_view>
 
 void f() {
-    std::string_view c;
-    c.empty();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::string_view c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

@@ -28,6 +28,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 void ManualDWARFIndex::Index() {
   if (m_indexed)
@@ -654,7 +655,7 @@ void ManualDWARFIndex::IndexSet::Encode(DataEncoder &encoder) const {
 
   // Now that all strings have been gathered, we will emit the string table.
   strtab.Encode(encoder);
-  // Followed the the symbol table data.
+  // Followed by the symbol table data.
   encoder.AppendData(index_encoder.GetData());
 }
 

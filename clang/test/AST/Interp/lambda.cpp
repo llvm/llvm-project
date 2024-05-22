@@ -103,7 +103,100 @@ namespace LambdaParams {
 
     return a;
   }
-  /// FIXME: This should work in the new interpreter.
-  static_assert(foo() == 1); // expected-error {{not an integral constant expression}}
+  static_assert(foo() == 1);
 }
 
+namespace StaticInvoker {
+  constexpr int sv1(int i) {
+    auto l = []() { return 12; };
+    int (*fp)() = l;
+    return fp();
+  }
+  static_assert(sv1(12) == 12);
+
+  constexpr int sv2(int i) {
+    auto l = [](int m, float f, void *A) { return m; };
+    int (*fp)(int, float, void*) = l;
+    return fp(i, 4.0f, nullptr);
+  }
+  static_assert(sv2(12) == 12);
+
+  constexpr int sv3(int i) {
+    auto l = [](int m, const int &n) { return m; };
+    int (*fp)(int, const int &) = l;
+    return fp(i, 3);
+  }
+  static_assert(sv3(12) == 12);
+
+  constexpr int sv4(int i) {
+    auto l = [](int &m) { return m; };
+    int (*fp)(int&) = l;
+    return fp(i);
+  }
+  static_assert(sv4(12) == 12);
+
+  constexpr int sv5(int i) {
+    struct F { int a; float f; };
+    auto l = [](int m, F f) { return m; };
+    int (*fp)(int, F) = l;
+    return fp(i, F{12, 14.0});
+  }
+  static_assert(sv5(12) == 12);
+
+  constexpr int sv6(int i) {
+    struct F { int a;
+      constexpr F(int a) : a(a) {}
+    };
+
+    auto l = [](int m) { return F(12); };
+    F (*fp)(int) = l;
+    F f = fp(i);
+
+    return fp(i).a;
+  }
+  static_assert(sv6(12) == 12);
+}
+
+namespace LambdasAsParams {
+  template<typename F>
+  constexpr auto call(F f) {
+    return f();
+  }
+  static_assert(call([](){ return 1;}) == 1);
+  static_assert(call([](){ return 2;}) == 2);
+
+
+  constexpr unsigned L = call([](){ return 12;});
+  static_assert(L == 12);
+
+
+  constexpr float heh() {
+    auto a = []() {
+      return 1.0;
+    };
+
+    return static_cast<float>(a());
+  }
+  static_assert(heh() == 1.0);
+}
+
+namespace ThisCapture {
+  class Foo {
+  public:
+    int b = 32;
+    int a;
+
+    constexpr Foo() : a([this](){ return b + 1;}()) {}
+
+    constexpr int Aplus2() const {
+      auto F = [this]() {
+        return a + 2;
+      };
+
+      return F();
+    }
+  };
+  constexpr Foo F;
+  static_assert(F.a == 33, "");
+  static_assert(F.Aplus2() == (33 + 2), "");
+}

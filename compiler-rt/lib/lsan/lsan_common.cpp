@@ -34,8 +34,6 @@
 #    else
 #      define OBJC_DATA_MASK 0x00007ffffffffff8UL
 #    endif
-// https://github.com/apple-oss-distributions/objc4/blob/8701d5672d3fd3cd817aeb84db1077aafe1a1604/runtime/objc-runtime-new.h#L139
-#    define OBJC_FAST_IS_RW 0x8000000000000000UL
 #  endif
 
 namespace __lsan {
@@ -43,6 +41,9 @@ namespace __lsan {
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
 // also to protect the global list of root regions.
 static Mutex global_mutex;
+
+void LockGlobal() SANITIZER_ACQUIRE(global_mutex) { global_mutex.Lock(); }
+void UnlockGlobal() SANITIZER_RELEASE(global_mutex) { global_mutex.Unlock(); }
 
 Flags lsan_flags;
 
@@ -173,13 +174,11 @@ static uptr GetCallerPC(const StackTrace &stack) {
 }
 
 #  if SANITIZER_APPLE
-// Objective-C class data pointers are stored with flags in the low bits, so
-// they need to be transformed back into something that looks like a pointer.
-static inline void *MaybeTransformPointer(void *p) {
+// Several pointers in the Objective-C runtime (method cache and class_rw_t,
+// for example) are tagged with additional bits we need to strip.
+static inline void *TransformPointer(void *p) {
   uptr ptr = reinterpret_cast<uptr>(p);
-  if ((ptr & OBJC_FAST_IS_RW) == OBJC_FAST_IS_RW)
-    ptr &= OBJC_DATA_MASK;
-  return reinterpret_cast<void *>(ptr);
+  return reinterpret_cast<void *>(ptr & OBJC_DATA_MASK);
 }
 #  endif
 
@@ -264,9 +263,14 @@ static inline bool MaybeUserPointer(uptr p) {
   if (p < kMinAddress)
     return false;
 #  if defined(__x86_64__)
-  // TODO: add logic similar to ARM when Intel LAM is available.
-  // Accept only canonical form user-space addresses.
-  return ((p >> 47) == 0);
+  // TODO: support LAM48 and 5 level page tables.
+  // LAM_U57 mask format
+  //  * top byte: 0x81 because the format is: [0] [6-bit tag] [0]
+  //  * top-1 byte: 0xff because it should be 0
+  //  * top-2 byte: 0x80 because Linux uses 128 TB VMA ending at 0x7fffffffffff
+  constexpr uptr kLAM_U57Mask = 0x81ff80;
+  constexpr uptr kPointerMask = kLAM_U57Mask << 40;
+  return ((p & kPointerMask) == 0);
 #  elif defined(__mips64)
   return ((p >> 40) == 0);
 #  elif defined(__aarch64__)
@@ -301,7 +305,7 @@ void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
   for (; pp + sizeof(void *) <= end; pp += alignment) {
     void *p = *reinterpret_cast<void **>(pp);
 #  if SANITIZER_APPLE
-    p = MaybeTransformPointer(p);
+    p = TransformPointer(p);
 #  endif
     if (!MaybeUserPointer(reinterpret_cast<uptr>(p)))
       continue;
@@ -949,8 +953,8 @@ void LeakReport::PrintSummary() {
     allocations += leaks_[i].hit_count;
   }
   InternalScopedString summary;
-  summary.append("%zu byte(s) leaked in %zu allocation(s).", bytes,
-                 allocations);
+  summary.AppendF("%zu byte(s) leaked in %zu allocation(s).", bytes,
+                  allocations);
   ReportErrorSummary(summary.data());
 }
 

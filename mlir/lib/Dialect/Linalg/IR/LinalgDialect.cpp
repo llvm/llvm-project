@@ -20,7 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -53,8 +53,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
   }
   // Handle the given inlined terminator by replacing it with a new operation
   // as necessary. Required when the region has only one block.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {}
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {}
 };
 
 } // namespace
@@ -63,7 +62,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
-/// Attribute name used to to memoize indexing maps for named ops.
+/// Attribute name used to memoize indexing maps for named ops.
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 

@@ -8,7 +8,8 @@
 // in the same manner as LLDB.
 // XFAIL: system-windows
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: expect_watch_type.cpp:
 
 template<class T>

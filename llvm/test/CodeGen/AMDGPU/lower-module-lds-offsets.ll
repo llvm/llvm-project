@@ -17,6 +17,7 @@
 ; GCN:     ds_write_b8 [[NULL]], [[TWO]] offset:16
 define amdgpu_kernel void @k0() {
 ; OPT-LABEL: @k0(
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds) ]
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    store i8 1, ptr addrspace(3) @llvm.amdgcn.module.lds, align 1
 ; OPT-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 16
@@ -41,6 +42,3 @@ define void @f0() {
   store i8 3, ptr addrspace(3) @lds.size.1.align.1, align 1
   ret void
 }
-
-attributes #0 = { "amdgpu-elide-module-lds" }
-; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }

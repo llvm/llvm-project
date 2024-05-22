@@ -40,9 +40,8 @@ typedef std::vector<std::string> TUReplacementFiles;
 typedef std::vector<clang::tooling::TranslationUnitDiagnostics> TUDiagnostics;
 
 /// Map mapping file name to a set of AtomicChange targeting that file.
-typedef llvm::DenseMap<const clang::FileEntry *,
-                       std::vector<tooling::AtomicChange>>
-    FileToChangesMap;
+using FileToChangesMap =
+    llvm::DenseMap<clang::FileEntryRef, std::vector<tooling::AtomicChange>>;
 
 /// Recursively descends through a directory structure rooted at \p
 /// Directory and attempts to deserialize *.yaml files as

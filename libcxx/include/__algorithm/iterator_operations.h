@@ -110,27 +110,23 @@ struct _IterOps<_ClassicAlgPolicy> {
   }
 
   // iter_move
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<is_reference<__deref_t<_Iter> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static
   // If the result of dereferencing `_Iter` is a reference type, deduce the result of calling `std::move` on it. Note
   // that the C++03 mode doesn't support `decltype(auto)` as the return type.
-  __enable_if_t<
-      is_reference<__deref_t<_Iter> >::value,
-      __move_t<_Iter> >
+  __move_t<_Iter>
   __iter_move(_Iter&& __i) {
     __validate_iter_reference<_Iter>();
 
     return std::move(*std::forward<_Iter>(__i));
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<!is_reference<__deref_t<_Iter> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static
   // If the result of dereferencing `_Iter` is a value type, deduce the return value of this function to also be a
   // value -- otherwise, after `operator*` returns a temporary, this function would return a dangling reference to that
   // temporary. Note that the C++03 mode doesn't support `auto` as the return type.
-  __enable_if_t<
-      !is_reference<__deref_t<_Iter> >::value,
-      __deref_t<_Iter> >
+  __deref_t<_Iter>
   __iter_move(_Iter&& __i) {
     __validate_iter_reference<_Iter>();
 

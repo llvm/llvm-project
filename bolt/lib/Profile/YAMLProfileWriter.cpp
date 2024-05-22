@@ -12,11 +12,16 @@
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
+
+namespace opts {
+extern llvm::cl::opt<bool> ProfileUseDFS;
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
@@ -29,7 +34,7 @@ void convert(const BinaryFunction &BF,
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
   // Prepare function and block hashes
-  BF.computeHash(/*UseDFS=*/true);
+  BF.computeHash(opts::ProfileUseDFS);
   BF.computeBlockHashes();
 
   YamlBF.Name = BF.getPrintName();
@@ -38,7 +43,11 @@ void convert(const BinaryFunction &BF,
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
 
-  for (const BinaryBasicBlock *BB : BF.dfs()) {
+  BinaryFunction::BasicBlockOrderType Order;
+  llvm::copy(opts::ProfileUseDFS ? BF.dfs() : BF.getLayout().blocks(),
+             std::back_inserter(Order));
+
+  for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
     YamlBB.Index = BB->getLayoutIndex();
     YamlBB.NumInstructions = BB->getNumNonPseudos();
@@ -179,6 +188,8 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   std::optional<StringRef> BuildID = BC.getFileBuildID();
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
+  BP.Header.IsDFSOrder = opts::ProfileUseDFS;
+  BP.Header.HashFunction = HashFunction::Default;
 
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {

@@ -5,10 +5,10 @@
 define i32 @src(i1 %x2) {
 ; CHECK-LABEL: @src(
 ; CHECK-NEXT:    [[X13:%.*]] = zext i1 [[X2:%.*]] to i32
-; CHECK-NEXT:    [[_7:%.*]] = shl i32 -1, [[X13]]
+; CHECK-NEXT:    [[_7:%.*]] = shl nsw i32 -1, [[X13]]
 ; CHECK-NEXT:    [[MASK:%.*]] = xor i32 [[_7]], -1
 ; CHECK-NEXT:    [[_8:%.*]] = and i32 [[MASK]], [[X13]]
-; CHECK-NEXT:    [[_9:%.*]] = shl i32 [[_8]], [[X13]]
+; CHECK-NEXT:    [[_9:%.*]] = shl nuw nsw i32 [[_8]], [[X13]]
 ; CHECK-NEXT:    ret i32 [[_9]]
 ;
   %x13 = zext i1 %x2 to i32

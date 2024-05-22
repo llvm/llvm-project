@@ -422,10 +422,8 @@ define i64 @ldp_sext_int_post(i32* %p) nounwind {
 ; CHECK-LABEL: ldp_sext_int_post:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldpsw x19, x20, [x0]
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ldpsw x19, x20, [x0], #8
 ; CHECK-NEXT:    bl "use-ptr"
 ; CHECK-NEXT:    add x0, x20, x19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload

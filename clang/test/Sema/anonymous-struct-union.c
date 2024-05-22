@@ -75,10 +75,8 @@ void g(void) {
   f2 = 0.0; // expected-error{{use of undeclared identifier}}
 }
 
-// <rdar://problem/6483159>
 struct s0 { union { int f0; }; };
 
-// <rdar://problem/6481130>
 typedef struct { }; // expected-warning{{typedef requires a name}}
 
 // PR3675

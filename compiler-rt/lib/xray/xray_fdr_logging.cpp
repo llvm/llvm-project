@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
 #include <cassert>
+#include <cstddef>
 #include <errno.h>
 #include <limits>
 #include <memory>
@@ -140,7 +141,7 @@ static ThreadLocalData &getThreadLocalData() {
 }
 
 static XRayFileHeader &fdrCommonHeaderInfo() {
-  static std::aligned_storage<sizeof(XRayFileHeader)>::type HStorage;
+  alignas(XRayFileHeader) static std::byte HStorage[sizeof(XRayFileHeader)];
   static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
   static bool TSCSupported = true;
   static uint64_t CycleFrequency = NanosecondsPerSecond;
@@ -204,7 +205,8 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // initialized the first time this function is called. We'll update one part
   // of this information with some relevant data (in particular the number of
   // buffers to expect).
-  static std::aligned_storage<sizeof(XRayFileHeader)>::type HeaderStorage;
+  alignas(
+      XRayFileHeader) static std::byte HeaderStorage[sizeof(XRayFileHeader)];
   static pthread_once_t HeaderOnce = PTHREAD_ONCE_INIT;
   pthread_once(
       &HeaderOnce, +[] {

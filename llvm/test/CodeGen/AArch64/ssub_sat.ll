@@ -36,11 +36,11 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    mov w9, #32767
+; CHECK-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-NEXT:    sub w8, w8, w1, sxth
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-32768
+; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
 ; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
@@ -51,12 +51,12 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    mov w9, #127
-; CHECK-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-NEXT:    cmp w8, #127
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-128
+; CHECK-NEXT:    sxtb w9, w0
+; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    sub w9, w9, w1, sxtb
+; CHECK-NEXT:    cmp w9, #127
+; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
@@ -67,13 +67,13 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-LABEL: func3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w1, #28
-; CHECK-NEXT:    sbfx w9, w0, #0, #4
-; CHECK-NEXT:    sub w8, w9, w8, asr #28
-; CHECK-NEXT:    mov w9, #7
-; CHECK-NEXT:    cmp w8, #7
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-8
+; CHECK-NEXT:    lsl w9, w1, #28
+; CHECK-NEXT:    sbfx w10, w0, #0, #4
+; CHECK-NEXT:    mov w8, #7 // =0x7
+; CHECK-NEXT:    sub w9, w10, w9, asr #28
+; CHECK-NEXT:    cmp w9, #7
+; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    mov w9, #-8 // =0xfffffff8
 ; CHECK-NEXT:    cmn w8, #8
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret

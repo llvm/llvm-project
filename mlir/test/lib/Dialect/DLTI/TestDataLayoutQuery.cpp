@@ -32,7 +32,7 @@ struct TestDataLayoutQuery
 
     func.walk([&](test::DataLayoutQueryOp op) {
       // Skip the ops with already processed in a deeper call.
-      if (op->getAttr("size"))
+      if (op->getDiscardableAttr("size"))
         return;
 
       const DataLayout &layout = layouts.getAbove(op);

@@ -135,7 +135,7 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
 
     bool HasClear = !Candidates.empty();
     if (HasClear) {
-      const CXXMethodDecl *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
+      const auto *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
       QualType RangeType = MemberCall->getImplicitObjectArgument()->getType();
       bool QualifierIncompatible =
           (!Clear->isVolatile() && RangeType.isVolatileQualified()) ||
@@ -185,7 +185,7 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     bool HasClear = !Candidates.empty();
 
     if (HasClear) {
-      const CXXMethodDecl *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
+      const auto *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
       bool QualifierIncompatible =
           (!Clear->isVolatile() && Arg->getType().isVolatileQualified()) ||
           Arg->getType().isConstQualified();

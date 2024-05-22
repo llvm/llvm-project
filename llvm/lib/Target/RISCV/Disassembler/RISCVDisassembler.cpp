@@ -196,10 +196,7 @@ static DecodeStatus DecodeVRRegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus DecodeVRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  if (RegNo % 2)
+  if (RegNo >= 32 || RegNo % 2)
     return MCDisassembler::Fail;
 
   const RISCVDisassembler *Dis =
@@ -216,10 +213,7 @@ static DecodeStatus DecodeVRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus DecodeVRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  if (RegNo % 4)
+  if (RegNo >= 32 || RegNo % 4)
     return MCDisassembler::Fail;
 
   const RISCVDisassembler *Dis =
@@ -236,10 +230,7 @@ static DecodeStatus DecodeVRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus DecodeVRM8RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  if (RegNo >= 32)
-    return MCDisassembler::Fail;
-
-  if (RegNo % 8)
+  if (RegNo >= 32 || RegNo % 8)
     return MCDisassembler::Fail;
 
   const RISCVDisassembler *Dis =
@@ -256,16 +247,11 @@ static DecodeStatus DecodeVRM8RegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint64_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
-  MCRegister Reg = RISCV::NoRegister;
-  switch (RegNo) {
-  default:
+  if (RegNo > 2) {
     return MCDisassembler::Fail;
-  case 0:
-    Reg = RISCV::V0;
-    break;
-  case 1:
-    break;
   }
+  MCRegister Reg = (RegNo == 0) ? RISCV::V0 : RISCV::NoRegister;
+
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -367,6 +353,9 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
+                                 const MCDisassembler *Decoder);
+
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder);
 
@@ -464,6 +453,15 @@ static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
+                                 const MCDisassembler *Decoder) {
+  uint32_t Rs1 = fieldFromInstruction(Insn, 0, 5);
+  uint32_t Rs2 = fieldFromInstruction(Insn, 5, 5);
+  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
+  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
+  return MCDisassembler::Success;
+}
+
 // spimm is based on rlist now.
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder) {
@@ -528,43 +526,65 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZfinx, DecoderTableRVZfinx32,
                           "RVZfinx table (Float in Integer)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,
-                          DecoderTableVentana32, "Ventana custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableTHeadBa32,
+                          DecoderTableXVentana32, "Ventana custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableXTHeadBa32,
                           "XTHeadBa custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableTHeadBb32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableXTHeadBb32,
                           "XTHeadBb custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableTHeadBs32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableXTHeadBs32,
                           "XTHeadBs custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCondMov,
-                          DecoderTableTHeadCondMov32,
+                          DecoderTableXTHeadCondMov32,
                           "XTHeadCondMov custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableTHeadCmo32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableXTHeadCmo32,
                           "XTHeadCmo custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadFMemIdx,
-                          DecoderTableTHeadFMemIdx32,
+                          DecoderTableXTHeadFMemIdx32,
                           "XTHeadFMemIdx custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableTHeadMac32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableXTHeadMac32,
                           "XTHeadMac custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemIdx,
-                          DecoderTableTHeadMemIdx32,
+                          DecoderTableXTHeadMemIdx32,
                           "XTHeadMemIdx custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemPair,
-                          DecoderTableTHeadMemPair32,
+                          DecoderTableXTHeadMemPair32,
                           "XTHeadMemPair custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadSync,
-                          DecoderTableTHeadSync32,
+                          DecoderTableXTHeadSync32,
                           "XTHeadSync custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot, DecoderTableTHeadV32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot, DecoderTableXTHeadVdot32,
                           "XTHeadVdot custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvcp, DecoderTableXSfvcp32,
                           "SiFive VCIX custom opcode table");
+    TRY_TO_DECODE_FEATURE(
+        RISCV::FeatureVendorXSfvqmaccdod, DecoderTableXSfvqmaccdod32,
+        "SiFive Matrix Multiplication (2x8 and 8x2) Instruction opcode table");
+    TRY_TO_DECODE_FEATURE(
+        RISCV::FeatureVendorXSfvqmaccqoq, DecoderTableXSfvqmaccqoq32,
+        "SiFive Matrix Multiplication (4x8 and 8x4) Instruction opcode table");
+    TRY_TO_DECODE_FEATURE(
+        RISCV::FeatureVendorXSfvfwmaccqqq, DecoderTableXSfvfwmaccqqq32,
+        "SiFive Matrix Multiplication Instruction opcode table");
+    TRY_TO_DECODE_FEATURE(
+        RISCV::FeatureVendorXSfvfnrclipxfqf, DecoderTableXSfvfnrclipxfqf32,
+        "SiFive FP32-to-int8 Ranged Clip Instructions opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcie, DecoderTableXSfcie32,
                           "Sifive CIE custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                           DecoderTableXCVbitmanip32,
                           "CORE-V Bit Manipulation custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVelw, DecoderTableXCVelw32,
+                          "CORE-V Event load custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmac, DecoderTableXCVmac32,
                           "CORE-V MAC custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmem, DecoderTableXCVmem32,
+                          "CORE-V MEM custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCValu, DecoderTableXCValu32,
+                          "CORE-V ALU custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableXCVsimd32,
+                          "CORE-V SIMD extensions custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
+                          "CORE-V Immediate Branching custom opcode table");
     TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
     return MCDisassembler::Fail;

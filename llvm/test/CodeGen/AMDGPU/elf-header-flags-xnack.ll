@@ -1,7 +1,7 @@
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=XNACK-GFX801 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx801 -mattr=+xnack < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=XNACK-GFX801 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx802 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-XNACK-GFX802 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx802 -mattr=-xnack < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-XNACK-GFX802 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=XNACK-GFX801 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx801 -mattr=+xnack < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=XNACK-GFX801 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx802 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-XNACK-GFX802 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx802 -mattr=-xnack < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-XNACK-GFX802 %s
 
 ; XNACK-GFX801:      Flags [
 ; XNACK-GFX801-NEXT:   EF_AMDGPU_FEATURE_XNACK_V3   (0x100)

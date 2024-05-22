@@ -62,7 +62,7 @@ entry:
 define internal i1 @g(ptr %a, ptr inalloca(%struct.ss) %b) nounwind  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@g
-; CGSCC-SAME: (ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    ret i1 undef
 ;

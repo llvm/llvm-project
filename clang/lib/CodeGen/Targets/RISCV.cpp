@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -152,6 +151,13 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
     uint64_t ArraySize = ATy->getSize().getZExtValue();
     QualType EltTy = ATy->getElementType();
+    // Non-zero-length arrays of empty records make the struct ineligible for
+    // the FP calling convention in C++.
+    if (const auto *RTy = EltTy->getAs<RecordType>()) {
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
+          isEmptyRecord(getContext(), EltTy, true, true))
+        return false;
+    }
     CharUnits EltSize = getContext().getTypeSizeInChars(EltTy);
     for (uint64_t i = 0; i < ArraySize; ++i) {
       bool Ret = detectFPCCEligibleStructHelper(EltTy, CurOff, Field1Ty,
@@ -168,7 +174,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    if (isEmptyRecord(getContext(), Ty, true))
+    if (isEmptyRecord(getContext(), Ty, true, true))
       return true;
     const RecordDecl *RD = RTy->getDecl();
     // Unions aren't eligible unless they're empty (which is caught above).
@@ -238,6 +244,8 @@ bool RISCVABIInfo::detectFPCCEligibleStruct(QualType Ty, llvm::Type *&Field1Ty,
   NeededArgFPRs = 0;
   bool IsCandidate = detectFPCCEligibleStructHelper(
       Ty, CharUnits::Zero(), Field1Ty, Field1Off, Field2Ty, Field2Off);
+  if (!Field1Ty)
+    return false;
   // Not really a candidate if we have a single int but no float.
   if (Field1Ty && !Field2Ty && !Field1Ty->isFloatingPointTy())
     return false;
@@ -310,16 +318,20 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
-  assert(VT->getVectorKind() == VectorType::RVVFixedLengthDataVector &&
+  assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
          "Unexpected vector kind");
 
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
-  const auto *BT = VT->getElementType()->castAs<BuiltinType>();
-  unsigned EltSize = getContext().getTypeSize(BT);
+  auto VScale =
+      getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+  // The MinNumElts is simplified from equation:
+  // NumElts / VScale =
+  //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
+  //    * (RVVBitsPerBlock / EltSize)
   llvm::ScalableVectorType *ResType =
-        llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
-                                      llvm::RISCV::RVVBitsPerBlock / EltSize);
+      llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
+                                    VT->getNumElements() / VScale->first);
   return ABIArgInfo::getDirect(ResType);
 }
 
@@ -419,7 +431,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())
-    if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
+    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData)
       return coerceVLSVector(Ty);
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,

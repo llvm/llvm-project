@@ -267,6 +267,9 @@ public:
 
   ~ToolInvocation();
 
+  ToolInvocation(const ToolInvocation &) = delete;
+  ToolInvocation &operator=(const ToolInvocation &) = delete;
+
   /// Set a \c DiagnosticConsumer to use during driver command-line parsing and
   /// the action invocation itself.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {

@@ -122,13 +122,12 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   assert(llvm::all_of(outputTypes,
                       [](Type t) { return llvm::isa<ShapedType>(t); }));
 
-  // TODO: atm all operands go through getElementTypeOrSelf,
-  // reconsider when we have evidence we need to.
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
   for (auto containers : {inputTypes, outputTypes}) {
     for (auto t : containers) {
-      argTypes.push_back(getElementTypeOrSelf(t));
+      argTypes.push_back(
+          isa<MemRefType, RankedTensorType>(t) ? getElementTypeOrSelf(t) : t);
 
       // TODO: Pass in a proper location here.
       argLocs.push_back(opBuilder.getUnknownLoc());
@@ -170,7 +169,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   state.addTypes(derivedResultTypes);
   state.addAttributes(attributes);
   state.addAttribute(
-      "operand_segment_sizes",
+      "operandSegmentSizes",
       b.getDenseI32ArrayAttr({static_cast<int32_t>(inputs.size()),
                               static_cast<int32_t>(outputs.size())}));
 
@@ -224,20 +223,20 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
 
   if (addOperandSegmentSizes) {
     // This is a bit complex because we're trying to be backward compatible with
-    // operation syntax that mix the inherent attributes and the discardable ones
-    // in the same dictionary.
-    // If the properties are used, we append the operand_segment_sizes there directly.
-    // Otherwise we append it to the discardable attributes dictionary where it is
-    // handled by the generic Operation::create(...) method.
+    // operation syntax that mix the inherent attributes and the discardable
+    // ones in the same dictionary. If the properties are used, we append the
+    // operandSegmentSizes there directly. Otherwise we append it to the
+    // discardable attributes dictionary where it is handled by the generic
+    // Operation::create(...) method.
     if (result.propertiesAttr) {
       NamedAttrList attrs = llvm::cast<DictionaryAttr>(result.propertiesAttr);
-      attrs.append("operand_segment_sizes",
+      attrs.append("operandSegmentSizes",
                    parser.getBuilder().getDenseI32ArrayAttr(
                        {static_cast<int32_t>(inputsOperands.size()),
                         static_cast<int32_t>(outputsOperands.size())}));
       result.propertiesAttr = attrs.getDictionary(parser.getContext());
     } else {
-      result.addAttribute("operand_segment_sizes",
+      result.addAttribute("operandSegmentSizes",
                           parser.getBuilder().getDenseI32ArrayAttr(
                               {static_cast<int32_t>(inputsOperands.size()),
                                static_cast<int32_t>(outputsOperands.size())}));
@@ -332,7 +331,7 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
                                    ValueRange inputs, ValueRange outputs) {
   p.printOptionalAttrDict(
       op->getAttrs(),
-      /*elidedAttrs=*/{"operand_segment_sizes",
+      /*elidedAttrs=*/{"operandSegmentSizes",
                        // See generated code in
                        // LinalgNamedStructuredOps.yamlgen.cpp.inc
                        "linalg.memoized_indexing_maps"});
@@ -449,22 +448,22 @@ public:
     case BinaryFn::max_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
     }
     llvm_unreachable("unsupported binary function");
@@ -538,6 +537,34 @@ private:
 };
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+struct EraseSelfCopy : OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (copyOp.getInputs() != copyOp.getOutputs())
+      return rewriter.notifyMatchFailure(copyOp, "not a self copy");
+    if (copyOp.hasBufferSemantics())
+      rewriter.eraseOp(copyOp);
+    else
+      rewriter.replaceOp(copyOp, copyOp.getInputs());
+
+    return success();
+  }
+};
+
+} // namespace
+
+void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<EraseSelfCopy>(context);
+}
 
 //===----------------------------------------------------------------------===//
 // FillOp
@@ -703,12 +730,93 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
   }
 };
 
+/// Fold tensor.extract(linalg.fill(<input>)) into <input>
+struct FoldFillWithTensorExtract : public OpRewritePattern<tensor::ExtractOp> {
+public:
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // See if tensor input of tensor.extract op is the result of a linalg.fill
+    // op.
+    auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
+    if (!fillOp)
+      return failure();
+
+    // Get scalar input operand of linalg.fill op.
+    Value extractedScalar = fillOp.getInputs()[0];
+
+    // Replace tensor.extract op with scalar value used to fill the tensor.
+    rewriter.replaceOp(extractOp, extractedScalar);
+    return success();
+  }
+};
+
+/// Folds pack(fill) into a single fill op if
+///   1. The pack op does not have padding value, or
+///   2. The filled value and padding value are the same.
+static FailureOr<FillOp> foldFillPackIntoFillOp(RewriterBase &rewriter,
+                                                tensor::PackOp packOp) {
+  auto fillOp = packOp.getSource().getDefiningOp<FillOp>();
+  if (!fillOp)
+    return failure();
+
+  if (auto paddingValue = packOp.getPaddingValue())
+    if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
+      return failure();
+
+  Value packOpDest = packOp.getDest();
+  if (!packOpDest.hasOneUse())
+    return failure();
+
+  return rewriter.create<linalg::FillOp>(packOp.getLoc(), fillOp.getInputs(),
+                                         packOp.getDest());
+}
+
+/// Wrapper pattern that applies foldFillPackIntoFillOp method.
+struct FoldFillWithPack : public OpRewritePattern<tensor::PackOp> {
+public:
+  FoldFillWithPack(MLIRContext *context)
+      : OpRewritePattern<tensor::PackOp>(context) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    auto fillOp = foldFillPackIntoFillOp(rewriter, packOp);
+    if (failed(fillOp))
+      return failure();
+    rewriter.replaceOp(packOp, fillOp.value().result());
+    return success();
+  }
+};
+
+/// Fold fill with copy.
+struct FoldFillWithCopy : OpRewritePattern<linalg::CopyOp> {
+  using OpRewritePattern<linalg::CopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = copyOp.getInputs().front().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(copyOp, copyOp.getResultTypes(),
+                                          fillOp.getInputs(),
+                                          copyOp.getOutputs());
+      return success();
+    }
+    if (auto fillOp = copyOp.getOutputs().front().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<linalg::CopyOp>(copyOp, copyOp.getInputs(),
+                                                  fillOp.getOutputs());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results
-      .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+      .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
+           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
            FoldInsertPadIntoFill>(context);
 }
@@ -725,7 +833,9 @@ static void buildGenericRegion(
   SmallVector<Location, 4> blockArgLocs;
   for (ValueRange container : {inputs, outputs}) {
     for (Value v : container) {
-      blockArgTypes.push_back(getElementTypeOrSelf(v));
+      Type t = v.getType();
+      blockArgTypes.push_back(
+          isa<MemRefType, RankedTensorType>(t) ? getElementTypeOrSelf(t) : t);
       blockArgLocs.push_back(v.getLoc());
     }
   }
@@ -848,10 +958,9 @@ void GenericOp::print(OpAsmPrinter &p) {
   }
 
   // Printing is shared with named ops, except for the region and attributes
-  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
-                               SmallVector<Value>(getDpsInitOperands()));
+  printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
 
-  genericAttrNames.push_back("operand_segment_sizes");
+  genericAttrNames.push_back("operandSegmentSizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
@@ -944,20 +1053,20 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
 static void getGenericEffectsImpl(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects,
-    ValueRange results, const OpOperandVector &inputOperands,
-    const OpOperandVector &outputOperands) {
-  for (auto *operand : inputOperands) {
-    if (!llvm::isa<MemRefType>(operand->get().getType()))
+    ValueRange results, const ValueRange inputOperands,
+    ValueRange outputOperands) {
+  for (auto operand : inputOperands) {
+    if (!llvm::isa<MemRefType>(operand.getType()))
       continue;
-    effects.emplace_back(MemoryEffects::Read::get(), operand->get(),
+    effects.emplace_back(MemoryEffects::Read::get(), operand,
                          SideEffects::DefaultResource::get());
   }
-  for (auto *operand : outputOperands) {
-    if (!llvm::isa<MemRefType>(operand->get().getType()))
+  for (auto operand : outputOperands) {
+    if (!llvm::isa<MemRefType>(operand.getType()))
       continue;
-    effects.emplace_back(MemoryEffects::Read::get(), operand->get(),
+    effects.emplace_back(MemoryEffects::Read::get(), operand,
                          SideEffects::DefaultResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), operand->get(),
+    effects.emplace_back(MemoryEffects::Write::get(), operand,
                          SideEffects::DefaultResource::get());
   }
 }
@@ -965,8 +1074,8 @@ static void getGenericEffectsImpl(
 void GenericOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getDpsInputOperands(), getDpsInitOperands());
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
 }
 
 LogicalResult GenericOp::verify() { return success(); }
@@ -1245,8 +1354,7 @@ void MapOp::print(OpAsmPrinter &p) {
     printShortForm(p, payloadOp);
   }
 
-  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
-                               SmallVector<Value>(getDpsInitOperands()));
+  printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   p.printOptionalAttrDict((*this)->getAttrs());
 
   if (!payloadOp) {
@@ -1314,8 +1422,8 @@ ArrayAttr MapOp::getIndexingMaps() {
 void MapOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getDpsInputOperands(), getDpsInitOperands());
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1383,8 +1491,8 @@ ArrayAttr ReduceOp::getIndexingMaps() {
 void ReduceOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getDpsInputOperands(), getDpsInitOperands());
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
 }
 
 static ParseResult parseDenseI64ArrayAttr(OpAsmParser &parser,
@@ -1447,8 +1555,7 @@ void ReduceOp::print(OpAsmPrinter &p) {
     printShortForm(p, payloadOp);
   }
 
-  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
-                               SmallVector<Value>(getDpsInitOperands()));
+  printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
   if (!payloadOp) {
@@ -1538,11 +1645,10 @@ LogicalResult ReduceOp::verify() {
   }
 
   // Check that the last block arguments match the element type of the outputs.
-  for (auto [output, bbArg] :
-       llvm::zip(getDpsInitOperands(),
-                 block->getArguments().take_back(getNumDpsInits()))) {
+  for (auto [output, bbArg] : llvm::zip(
+           getDpsInits(), block->getArguments().take_back(getNumDpsInits()))) {
     auto outputElementType =
-        llvm::cast<ShapedType>(output->get().getType()).getElementType();
+        llvm::cast<ShapedType>(output.getType()).getElementType();
     if (outputElementType != bbArg.getType())
       return emitOpError()
              << "output element type " << outputElementType
@@ -1612,8 +1718,7 @@ void TransposeOp::getAsmResultNames(
 }
 
 void TransposeOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
-                               SmallVector<Value>(getDpsInitOperands()));
+  printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
   p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
 }
@@ -1671,8 +1776,8 @@ ArrayAttr TransposeOp::getIndexingMaps() {
 void TransposeOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getDpsInputOperands(), getDpsInitOperands());
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1726,8 +1831,7 @@ void BroadcastOp::getAsmResultNames(
 }
 
 void BroadcastOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
-                               SmallVector<Value>(getDpsInitOperands()));
+  printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
 }
@@ -1794,8 +1898,8 @@ ArrayAttr BroadcastOp::getIndexingMaps() {
 void BroadcastOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getDpsInputOperands(), getDpsInitOperands());
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1825,14 +1929,16 @@ ParseResult YieldOp::parse(OpAsmParser &parser, OperationState &result) {
 static LogicalResult verifyYield(linalg::YieldOp op, LinalgOp linalgOp) {
   if (op.getNumOperands() != linalgOp.getNumDpsInits())
     return op.emitOpError("expected number of yield values (")
-           << linalgOp.getNumDpsInits()
-           << ") to match the number of operands of the enclosing "
-           << "LinalgOp (" << op.getNumOperands() << ")";
+           << op.getNumOperands()
+           << ") to match the number of inits / outs operands of the enclosing "
+           << "LinalgOp (" << linalgOp.getNumDpsInits() << ")";
 
   for (OpOperand &opOperand : op->getOpOperands()) {
     OpOperand *outputOperand =
         linalgOp.getDpsInitOperand(opOperand.getOperandNumber());
-    Type elementType = getElementTypeOrSelf(outputOperand->get().getType());
+    Type elementType = outputOperand->get().getType();
+    if (isa<MemRefType, RankedTensorType>(elementType))
+      elementType = getElementTypeOrSelf(outputOperand->get().getType());
     if (opOperand.get().getType() != elementType)
       return op.emitOpError("type of yield operand ")
              << (opOperand.getOperandNumber() + 1) << " ("
@@ -2026,8 +2132,9 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     Value newOperand =
         rewriter.create<tensor::CastOp>(loc, resultType, outOperand->get());
-    SmallVector<Value> newOperands{linalgOp.getDpsInputOperands()};
-    SmallVector<Value> outputOperands{linalgOp.getDpsInitOperands()};
+    SmallVector<Value> newOperands = linalgOp.getDpsInputs();
+    SmallVector<Value> outputOperands(linalgOp.getDpsInits().begin(),
+                                      linalgOp.getDpsInits().end());
     outputOperands[resultNumber] = newOperand;
     newOperands.append(outputOperands.begin(), outputOperands.end());
 
@@ -2079,7 +2186,7 @@ static void populateMap(LinalgOp linalgOp, MutableArrayRef<OpOperand> operands,
     for (unsigned i = 0; i < sourceShape.size(); i++) {
       if (sourceType.isDynamicDim(i))
         continue;
-      if (auto affineDimExpr = sourceMap.getResult(i).dyn_cast<AffineDimExpr>())
+      if (auto affineDimExpr = dyn_cast<AffineDimExpr>(sourceMap.getResult(i)))
         affineExprToSize.try_emplace(affineDimExpr, sourceShape[i]);
     }
   }
@@ -2114,8 +2221,7 @@ static void createNewOperandWithStaticSizes(
   for (unsigned i = 0; i < sourceShape.size(); i++) {
     int64_t dimShape = sourceShape[i];
     AffineExpr dimExpr = sourceMap.getResult(i);
-    if (!affineExprToSize.contains(dimExpr) ||
-        !sourceType.isDynamicDim(i)) {
+    if (!affineExprToSize.contains(dimExpr) || !sourceType.isDynamicDim(i)) {
       newShape.push_back(dimShape);
       continue;
     }
@@ -2293,8 +2399,202 @@ LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
 LogicalResult
 SoftmaxOp::reifyResultShapes(OpBuilder &b,
                              ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  return cast<LinalgOp>(getOperation())
-      .reifyResultShapes(b, reifiedReturnShapes);
+  SmallVector<OpFoldResult> shapes;
+  Location loc = getOperation()->getLoc();
+  IRRewriter rewriter(b);
+  auto inputShapedType = llvm::cast<ShapedType>(getInputOperandType());
+  auto outputShapedType = llvm::cast<ShapedType>(getOutputOperandType());
+  for (int64_t dim : llvm::seq<int64_t>(0, getOutputOperandRank())) {
+    if (!outputShapedType.isDynamicDim(dim)) {
+      // Static dim: Return IntegerAttr.
+      shapes.push_back(b.getIndexAttr(inputShapedType.getDimSize(dim)));
+    } else {
+      // Dynamic dim: Return Value.
+      OpFoldResult ofr = createOrFoldDimOp(b, loc, getInput(), dim);
+      shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
+    }
+  }
+  reifiedReturnShapes.emplace_back(std::move(shapes));
+  return success();
+}
+
+void SoftmaxOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
+}
+
+// Helper functions for softmax decomposition.
+// @{
+
+// Helper function to produce the iterator types (reduction or parallel) and
+// affine maps for the iterators used in the decomposition of softmax.
+// This method creates:
+// If allParallel == true:
+// - iterator type: {parallel, ..., parallel}
+// - affine maps:
+// -- identity with inputRank dimensions.
+// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
+//    where N == inputRank.
+//
+// If allParallel == false:
+// - iterator type at dim(i) == parallel for i != \p dim and
+//   dim(dim) == reduction.
+// - affine map:
+// -- identity with inputRank dimensions.
+// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
+//    where N == inputRank.
+static std::tuple<SmallVector<utils::IteratorType>, SmallVector<AffineMap>>
+computeIteratorTypesAndIndexingMaps(OpBuilder &builder, int64_t inputRank,
+                                    int64_t dim, bool allParallel = false) {
+  SmallVector<utils::IteratorType> iteratorTypes(inputRank,
+                                                 utils::IteratorType::parallel);
+  if (!allParallel)
+    iteratorTypes[dim] = utils::IteratorType::reduction;
+  MLIRContext *ctxt = builder.getContext();
+  auto identityMap = AffineMap::getMultiDimIdentityMap(inputRank, ctxt);
+  SmallVector<AffineExpr, 2> affineExprs;
+  for (int i = 0; i < inputRank; i++) {
+    if (i != dim)
+      affineExprs.push_back(mlir::getAffineDimExpr(i, ctxt));
+  }
+  auto reductionMap =
+      AffineMap::get(inputRank, /*symbols=*/0, affineExprs, ctxt);
+  SmallVector<AffineMap> indexingMaps{identityMap, reductionMap};
+  return std::make_tuple(iteratorTypes, indexingMaps);
+}
+
+// Helper function to produce a linalg.generic that computes a reduction on
+// dimension \p dim with the operation type \p T.
+template <typename T>
+static Value reduce(OpBuilder &builder, Location loc, Value input, Value output,
+                    int64_t dim) {
+  auto inputType = cast<ShapedType>(input.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] =
+      computeIteratorTypesAndIndexingMaps(builder, inputRank, dim);
+  assert(indexingMaps.size() == 2 &&
+         "We should have two maps: 1 for the input, 1 for the output");
+  assert(indexingMaps[0].isIdentity() && "input map should be identity");
+
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, output.getType(), input, output, indexingMaps, iteratorTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value result = b.create<T>(loc, args[0], args[1]);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+
+/// Produce a linalg generic that computes the second step of the softmax
+/// decomposition: res = exp(input - max), where \p max is the max of \p input
+/// on dimension \p dim.
+static Value buildSubAndExpOp(OpBuilder &builder, Location loc, Value input,
+                              Value max, Value output, int64_t dim) {
+  auto inputType = cast<ShapedType>(input.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
+      builder, inputRank, dim, /*allParallel=*/true);
+  assert(indexingMaps.size() == 2 && "We should have one map for each input");
+  assert(indexingMaps[0].isIdentity() && "input map should be identity");
+  // Add the affine map for the output argument.
+  indexingMaps.push_back(indexingMaps[0]);
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, input.getType(), ValueRange{input, max}, output, indexingMaps,
+      iteratorTypes, [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value diff = b.create<arith::SubFOp>(loc, args[0], args[1]);
+        Value result = b.create<math::ExpOp>(loc, diff);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+
+/// Produce a linalg generic that computes the final step of the softmax
+/// decomposition.
+/// \returns  linalg.generic ins(\p numerator, \p denominator) outs(\p output) {
+///   yield  n / d
+/// }
+static Value buildDivOp(OpBuilder &builder, Location loc, Value numerator,
+                        Value denominator, Value output, int64_t dim) {
+  auto inputType = cast<ShapedType>(numerator.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
+      builder, inputRank, dim, /*allParallel=*/true);
+  assert(indexingMaps.size() == 2 &&
+         "We should have one map for each input (2)");
+  assert(indexingMaps[0].isIdentity() && "Numerator map should be identity");
+  // Add the affine map for the output tensor.
+  indexingMaps.push_back(indexingMaps[0]);
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, numerator.getType(), ValueRange{numerator, denominator}, output,
+      indexingMaps, iteratorTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value result = b.create<arith::DivFOp>(loc, args[0], args[1]);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+// @} End helper functions for softmax decomposition.
+
+/// Given an N-dimensional tensor x, this method converts
+/// softmax(x) to the following sequence of operations:
+///
+/// 1. Compute the max of x along dimension d. This results
+///    in a N-1 dimensional tensor m.
+///    m = max(x, dim = d)
+///
+/// 2. Subtract a broadcasted m from x and exponentiate. This results in
+///    a N dimensional tensor z.
+///    z = exp(x - m)
+///
+/// 3. Compute the sum of z along dimension d. This results in
+///    a N-1 dimensional tensor l.
+///    l = sum(z, dim = d)
+///
+/// 4. Divide z and l. This gives the N-dimensional softmax.
+///    softmax = z / l
+///
+FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPoint(*this);
+  Location loc = getLoc();
+  Value input = getInput();
+  ShapedType inputType = getInputOperandType();
+  Type elementType = inputType.getElementType();
+  int64_t reductionDim = getDimension();
+  SmallVector<OpFoldResult> dims = tensor::getMixedSizes(b, loc, input);
+  Value output = getOutput();
+  dims.erase(dims.begin() + reductionDim);
+  // Step 1: Compute max along dim.
+  Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
+  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
+                                                 elementType, b, loc,
+                                                 /*useOnlyFiniteValue=*/true);
+  Value neutralForMaxFInit =
+      b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
+          .result();
+  Value max = reduce<arith::MaximumFOp>(b, loc, input, neutralForMaxFInit,
+                                        reductionDim);
+
+  // Step 2: Subtract max from input and exponentiate.
+  Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
+
+  // Step 3: Compute sum along dim.
+  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
+                                       b, loc, /*useOnlyFiniteValue=*/true);
+  Value zeroInit =
+      b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
+  Value denominator =
+      reduce<arith::AddFOp>(b, loc, numerator, zeroInit, reductionDim);
+
+  // Step 4: Compute softmax.
+  Value result =
+      buildDivOp(b, loc, numerator, denominator, output, reductionDim);
+  return SmallVector<Value>{result};
 }
 
 //===----------------------------------------------------------------------===//

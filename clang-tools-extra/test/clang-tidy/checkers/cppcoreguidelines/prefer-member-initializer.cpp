@@ -563,3 +563,26 @@ struct MacroCantFix {
     // CHECK-FIXES: ASSIGN_IN_MACRO(n, 0)
   }
 };
+
+struct PR52818  {
+    PR52818() : bar(5) {}
+    PR52818(int) : PR52818() { bar = 3; }
+
+    int bar;
+};
+
+struct RefReassignment {
+  RefReassignment(int &i) : m_i{i} {
+    m_i = 1;
+  }
+  int & m_i;
+};
+
+struct ReassignmentAfterUnsafetyAssignment {
+  ReassignmentAfterUnsafetyAssignment() {
+    int a = 10;
+    m_i = a;
+    m_i = 1;
+  }
+  int m_i;
+};

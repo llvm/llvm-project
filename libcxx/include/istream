@@ -185,6 +185,11 @@ class _LIBCPP_TEMPLATE_VIS basic_istream
     : virtual public basic_ios<_CharT, _Traits>
 {
     streamsize __gc_;
+
+    _LIBCPP_HIDE_FROM_ABI void __inc_gcount() {
+      if (__gc_ < numeric_limits<streamsize>::max())
+        ++__gc_;
+    }
 public:
     // types (inherited from basic_ios (27.5.4)):
     typedef _CharT                         char_type;
@@ -199,16 +204,16 @@ public:
     { this->init(__sb); }
     ~basic_istream() override;
 protected:
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     basic_istream(basic_istream&& __rhs);
 
     // 27.7.1.1.2 Assign/swap:
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     basic_istream& operator=(basic_istream&& __rhs);
 
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_istream& __rhs) {
-      _VSTD::swap(__gc_, __rhs.__gc_);
+      std::swap(__gc_, __rhs.__gc_);
       basic_ios<char_type, traits_type>::swap(__rhs);
     }
 
@@ -249,7 +254,7 @@ public:
     basic_istream& operator>>(void*& __p);
 
     // 27.7.1.3 Unformatted input:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     streamsize gcount() const {return __gc_;}
     int_type get();
 
@@ -302,7 +307,7 @@ public:
     explicit sentry(basic_istream<_CharT, _Traits>& __is, bool __noskipws = false);
 //    ~sentry() = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit operator bool() const {return __ok_;}
 
     sentry(const sentry&) = delete;
@@ -358,7 +363,7 @@ basic_istream<_CharT, _Traits>::~basic_istream()
 }
 
 template <class _Tp, class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 __input_arithmetic(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
     ios_base::iostate __state = ios_base::goodbit;
@@ -393,81 +398,81 @@ template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned short& __n)
 {
-    return _VSTD::__input_arithmetic<unsigned short>(*this, __n);
+    return std::__input_arithmetic<unsigned short>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned int& __n)
 {
-    return _VSTD::__input_arithmetic<unsigned int>(*this, __n);
+    return std::__input_arithmetic<unsigned int>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long& __n)
 {
-    return _VSTD::__input_arithmetic<long>(*this, __n);
+    return std::__input_arithmetic<long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned long& __n)
 {
-    return _VSTD::__input_arithmetic<unsigned long>(*this, __n);
+    return std::__input_arithmetic<unsigned long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long long& __n)
 {
-    return _VSTD::__input_arithmetic<long long>(*this, __n);
+    return std::__input_arithmetic<long long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned long long& __n)
 {
-    return _VSTD::__input_arithmetic<unsigned long long>(*this, __n);
+    return std::__input_arithmetic<unsigned long long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(float& __n)
 {
-    return _VSTD::__input_arithmetic<float>(*this, __n);
+    return std::__input_arithmetic<float>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(double& __n)
 {
-    return _VSTD::__input_arithmetic<double>(*this, __n);
+    return std::__input_arithmetic<double>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long double& __n)
 {
-    return _VSTD::__input_arithmetic<long double>(*this, __n);
+    return std::__input_arithmetic<long double>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(bool& __n)
 {
-    return _VSTD::__input_arithmetic<bool>(*this, __n);
+    return std::__input_arithmetic<bool>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(void*& __n)
 {
-    return _VSTD::__input_arithmetic<void*>(*this, __n);
+    return std::__input_arithmetic<void*>(*this, __n);
 }
 
 template <class _Tp, class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 __input_arithmetic_with_numeric_limits(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
     ios_base::iostate __state = ios_base::goodbit;
@@ -517,18 +522,18 @@ template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(short& __n)
 {
-    return _VSTD::__input_arithmetic_with_numeric_limits<short>(*this, __n);
+    return std::__input_arithmetic_with_numeric_limits<short>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(int& __n)
 {
-    return _VSTD::__input_arithmetic_with_numeric_limits<int>(*this, __n);
+    return std::__input_arithmetic_with_numeric_limits<int>(*this, __n);
 }
 
 template<class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n)
 {
@@ -580,18 +585,18 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n)
 #if _LIBCPP_STD_VER >= 20
 
 template<class _CharT, class _Traits, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, _CharT (&__buf)[_Np])
 {
     size_t __n = _Np;
     if (__is.width() > 0)
-        __n = _VSTD::min(size_t(__is.width()), _Np);
-    return _VSTD::__input_c_string(__is, __buf, __n);
+        __n = std::min(size_t(__is.width()), _Np);
+    return std::__input_c_string(__is, __buf, __n);
 }
 
 template<class _Traits, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, unsigned char (&__buf)[_Np])
 {
@@ -599,7 +604,7 @@ operator>>(basic_istream<char, _Traits>& __is, unsigned char (&__buf)[_Np])
 }
 
 template<class _Traits, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char (&__buf)[_Np])
 {
@@ -609,18 +614,18 @@ operator>>(basic_istream<char, _Traits>& __is, signed char (&__buf)[_Np])
 #else
 
 template<class _CharT, class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, _CharT* __s)
 {
     streamsize __n = __is.width();
     if (__n <= 0)
         __n = numeric_limits<streamsize>::max() / sizeof(_CharT) - 1;
-    return _VSTD::__input_c_string(__is, __s, size_t(__n));
+    return std::__input_c_string(__is, __s, size_t(__n));
 }
 
 template<class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, unsigned char* __s)
 {
@@ -628,7 +633,7 @@ operator>>(basic_istream<char, _Traits>& __is, unsigned char* __s)
 }
 
 template<class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char* __s)
 {
@@ -672,7 +677,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, _CharT& __c)
 }
 
 template<class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, unsigned char& __c)
 {
@@ -680,7 +685,7 @@ operator>>(basic_istream<char, _Traits>& __is, unsigned char& __c)
 }
 
 template<class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char& __c)
 {
@@ -714,7 +719,7 @@ basic_istream<_CharT, _Traits>::operator>>(basic_streambuf<char_type, traits_typ
                             __sb->sputc(traits_type::to_char_type(__i)),
                             traits_type::eof()))
                         break;
-                    ++__gc_;
+                    __inc_gcount();
                     this->rdbuf()->sbumpc();
                 }
                 if (__gc_ == 0)
@@ -806,7 +811,7 @@ basic_istream<_CharT, _Traits>::get(char_type* __s, streamsize __n, char_type __
                     if (traits_type::eq(__ch, __dlm))
                         break;
                     *__s++ = __ch;
-                    ++__gc_;
+                    __inc_gcount();
                      this->rdbuf()->sbumpc();
                 }
                 if (__gc_ == 0)
@@ -867,7 +872,7 @@ basic_istream<_CharT, _Traits>::get(basic_streambuf<char_type, traits_type>& __s
                     break;
                 if (traits_type::eq_int_type(__sb.sputc(__ch), traits_type::eof()))
                     break;
-                ++__gc_;
+                __inc_gcount();
                 this->rdbuf()->sbumpc();
             }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -910,7 +915,7 @@ basic_istream<_CharT, _Traits>::getline(char_type* __s, streamsize __n, char_typ
                 if (traits_type::eq(__ch, __dlm))
                 {
                     this->rdbuf()->sbumpc();
-                    ++__gc_;
+                    __inc_gcount();
                     break;
                 }
                 if (__gc_ >= __n-1)
@@ -920,7 +925,7 @@ basic_istream<_CharT, _Traits>::getline(char_type* __s, streamsize __n, char_typ
                 }
                 *__s++ = __ch;
                 this->rdbuf()->sbumpc();
-                ++__gc_;
+                __inc_gcount();
             }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
@@ -970,7 +975,7 @@ basic_istream<_CharT, _Traits>::ignore(streamsize __n, int_type __dlm)
                        __state |= ios_base::eofbit;
                        break;
                     }
-                    ++__gc_;
+                    __inc_gcount();
                     if (traits_type::eq_int_type(__i, __dlm))
                         break;
                 }
@@ -985,7 +990,7 @@ basic_istream<_CharT, _Traits>::ignore(streamsize __n, int_type __dlm)
                        __state |= ios_base::eofbit;
                        break;
                     }
-                    ++__gc_;
+                    __inc_gcount();
                     if (traits_type::eq_int_type(__i, __dlm))
                         break;
                 }
@@ -1100,7 +1105,7 @@ basic_istream<_CharT, _Traits>::readsome(char_type* __s, streamsize __n)
             case 0:
                 break;
             default:
-                __n = _VSTD::min(__c, __n);
+                __n = std::min(__c, __n);
                 __gc_ = this->rdbuf()->sgetn(__s, __n);
                 if (__gc_ != __n)
                     __state |= ios_base::failbit | ios_base::eofbit;
@@ -1383,15 +1388,13 @@ struct __is_istreamable<_Stream, _Tp, decltype(
     std::declval<_Stream>() >> std::declval<_Tp>(), void()
 )> : true_type { };
 
-template <class _Stream, class _Tp, class = typename enable_if<
-    _And<is_base_of<ios_base, _Stream>,
-         __is_istreamable<_Stream&, _Tp&&> >::value
->::type>
-_LIBCPP_INLINE_VISIBILITY
+template <class _Stream, class _Tp, __enable_if_t<
+    _And<is_base_of<ios_base, _Stream>, __is_istreamable<_Stream&, _Tp&&> >::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
 _Stream&& operator>>(_Stream&& __is, _Tp&& __x)
 {
-    __is >> _VSTD::forward<_Tp>(__x);
-    return _VSTD::move(__is);
+    __is >> std::forward<_Tp>(__x);
+    return std::move(__is);
 }
 
 template <class _CharT, class _Traits>
@@ -1415,11 +1418,11 @@ public:
 
     ~basic_iostream() override;
 protected:
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     basic_iostream(basic_iostream&& __rhs);
 
     // assign/swap
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     basic_iostream& operator=(basic_iostream&& __rhs);
 
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
@@ -1429,7 +1432,7 @@ protected:
 
 template <class _CharT, class _Traits>
 basic_iostream<_CharT, _Traits>::basic_iostream(basic_iostream&& __rhs)
-    : basic_istream<_CharT, _Traits>(_VSTD::move(__rhs))
+    : basic_istream<_CharT, _Traits>(std::move(__rhs))
 {
 }
 
@@ -1556,7 +1559,7 @@ getline(basic_istream<_CharT, _Traits>& __is,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str)
@@ -1565,7 +1568,7 @@ getline(basic_istream<_CharT, _Traits>& __is,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm)
@@ -1574,7 +1577,7 @@ getline(basic_istream<_CharT, _Traits>&& __is,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str)
@@ -1644,6 +1647,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
+#  include <iosfwd>
 #  include <type_traits>
 #endif
 

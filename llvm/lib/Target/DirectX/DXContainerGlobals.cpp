@@ -12,6 +12,7 @@
 
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/CodeGen/Passes.h"

@@ -62,7 +62,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     return false;
 
   // Short circuit the lookup if we have analyzed this record before.
-  bool PreviousIsInterfaceResult;
+  bool PreviousIsInterfaceResult = false;
   if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
     return PreviousIsInterfaceResult;
 
@@ -93,7 +93,7 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *D = Result.Nodes.getNodeAs<CXXRecordDecl>("decl")) {
-    // Check against map to see if if the class inherits from multiple
+    // Check against map to see if the class inherits from multiple
     // concrete classes
     unsigned NumConcrete = 0;
     for (const auto &I : D->bases()) {

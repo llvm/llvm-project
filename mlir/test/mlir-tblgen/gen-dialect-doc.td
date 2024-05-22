@@ -81,11 +81,11 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: Other group
 // CHECK: test.b
 // CHECK: test.c
-// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
+// CHECK: Traits: SingleBlock, SingleBlockImplicitTerminator<YieldOp>
 // CHECK: Interfaces: NoMemoryEffect (MemoryEffectOpInterface)
 // CHECK: Effects: MemoryEffects::Effect{}
 
-// CHECK: ## Attribute constraint definition
+// CHECK: ## Attribute constraints
 // CHECK: ### attribute summary
 // CHECK: attribute description
 
@@ -97,7 +97,7 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: Syntax:
 // CHECK: #test.test_attr_def_params
 
-// CHECK: ## Type constraint definition
+// CHECK: ## Type constraints
 // CHECK: ### type summary
 // CHECK: type description
 

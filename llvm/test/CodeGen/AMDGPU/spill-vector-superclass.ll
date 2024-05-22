@@ -12,12 +12,12 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
   ; GCN-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1769482 /* regdef:VGPR_32 */, def undef %24.sub0
+  ; GCN-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2490378 /* regdef:VGPR_32 */, def undef %24.sub0
   ; GCN-NEXT:   SI_SPILL_V64_SAVE %24, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_e64_]]
   ; GCN-NEXT:   GLOBAL_STORE_DWORDX4 undef %16:vreg_64, [[COPY1]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
   ; GCN-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-  ; GCN-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3080201 /* reguse:VReg_64 */, [[SI_SPILL_V64_RESTORE]]
+  ; GCN-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3801097 /* reguse:VReg_64 */, [[SI_SPILL_V64_RESTORE]]
   ; GCN-NEXT:   S_ENDPGM 0
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
   %tmp = insertelement <2 x i32> undef, i32 %v0, i32 0

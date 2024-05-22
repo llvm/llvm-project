@@ -96,7 +96,7 @@ decltype(auto) __make_projected_comp(_Comp& __comp, _Proj1& __proj1, _Proj2& __p
     return __comp;
 
   } else {
-    return [&](auto&& __lhs, auto&& __rhs) {
+    return [&](auto&& __lhs, auto&& __rhs) -> bool {
       return std::invoke(__comp,
                         std::invoke(__proj1, std::forward<decltype(__lhs)>(__lhs)),
                         std::invoke(__proj2, std::forward<decltype(__rhs)>(__rhs)));

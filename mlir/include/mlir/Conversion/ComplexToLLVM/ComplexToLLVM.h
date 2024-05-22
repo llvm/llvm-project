@@ -11,6 +11,7 @@
 #include "mlir/Conversion/LLVMCommon/StructBuilder.h"
 
 namespace mlir {
+class DialectRegistry;
 class LLVMTypeConverter;
 class Pass;
 class RewritePatternSet;
@@ -40,6 +41,9 @@ public:
 /// Populate the given list with patterns that convert from Complex to LLVM.
 void populateComplexToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns);
+
+void registerConvertComplexToLLVMInterface(DialectRegistry &registry);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_COMPLEXTOLLVM_COMPLEXTOLLVM_H_

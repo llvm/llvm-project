@@ -104,6 +104,7 @@ set(sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -150,28 +151,48 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ISO_Fortran_binding.cpp
+  assign.cpp
+  derived.cpp
+  descriptor.cpp
+  stat.cpp
+  terminator.cpp
+  tools.cpp
   transformational.cpp
+  type-code.cpp
+  type-info.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
-  enable_language(CUDA)
+  if (BUILD_SHARED_LIBS)
+    message(FATAL_ERROR
+      "BUILD_SHARED_LIBS is not supported for CUDA build of Fortran runtime"
+      )
+  endif()
 
-  # Add the unsupported files to LLVM_OPTIONAL_SOURCES.
-  set(todo_files ${sources})
-  list(REMOVE_ITEM todo_files ${supported_files})
-  list(APPEND LLVM_OPTIONAL_SOURCES ${todo_files})
+  enable_language(CUDA)
 
   # TODO: figure out how to make target property CUDA_SEPARABLE_COMPILATION
   # work, and avoid setting CMAKE_CUDA_SEPARABLE_COMPILATION.
   set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
-  # Treat all sources as CUDA files.
-  set(sources ${supported_files})
-  set_source_files_properties(${sources} PROPERTIES LANGUAGE CUDA)
+  # Treat all supported sources as CUDA files.
+  set_source_files_properties(${supported_files} PROPERTIES LANGUAGE CUDA)
+  set(CUDA_COMPILE_OPTIONS)
   if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "Clang")
     # Allow varargs.
-    add_compile_options(-Xclang -fcuda-allow-variadic-functions)
+    set(CUDA_COMPILE_OPTIONS
+      -Xclang -fcuda-allow-variadic-functions
+      )
   endif()
+  if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
+    set(CUDA_COMPILE_OPTIONS
+      --expt-relaxed-constexpr
+      )
+  endif()
+  set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
+    "${CUDA_COMPILE_OPTIONS}"
+    )
 endif()
 
 set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
@@ -198,12 +219,11 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
   if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "host_device")
     message(FATAL_ERROR "Unsupported OpenMP offload build of Flang runtime")
   endif()
-
-  # Add the unsupported files to LLVM_OPTIONAL_SOURCES.
-  set(todo_files ${sources})
-  list(REMOVE_ITEM todo_files ${supported_files})
-  list(APPEND LLVM_OPTIONAL_SOURCES ${todo_files})
-  set(sources ${supported_files})
+  if (BUILD_SHARED_LIBS)
+    message(FATAL_ERROR
+      "BUILD_SHARED_LIBS is not supported for OpenMP offload build of Fortran runtime"
+      )
+  endif()
 
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
       "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
@@ -212,7 +232,7 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
       "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
       "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
       "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-      "gfx1100;gfx1101;gfx1102;gfx1103"
+      "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
       )
     set(all_nvptx_architectures
       "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
@@ -231,25 +251,64 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
       "${FLANG_OMP_DEVICE_ARCHITECTURES}"
       )
 
-    add_compile_options(-fopenmp -fvisibility=hidden -fopenmp-cuda-mode)
-    add_compile_options(--offload-arch=${compile_for_architectures})
-    # Force LTO for the device part.
-    add_compile_options(-foffload-lto)
+    set(OMP_COMPILE_OPTIONS
+      -fopenmp
+      -fvisibility=hidden
+      -fopenmp-cuda-mode
+      --offload-arch=${compile_for_architectures}
+      # Force LTO for the device part.
+      -foffload-lto
+      )
+    set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
+      "${OMP_COMPILE_OPTIONS}"
+      )
+
+    # Enable "declare target" in the source code.
+    set_source_files_properties(${supported_files}
+      PROPERTIES COMPILE_DEFINITIONS OMP_OFFLOAD_BUILD
+      )
   else()
     message(FATAL_ERROR
       "Flang runtime build is not supported for these compilers:\n"
       "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}\n"
       "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
   endif()
-
-  # Enable "declare target" in the source code.
-  add_compile_definitions(OMP_OFFLOAD_BUILD)
 endif()
 
-add_flang_library(FortranRuntime
-  ${sources}
-  LINK_LIBS
-  FortranDecimal
+if (NOT DEFINED MSVC)
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
 
-  INSTALL_WITH_TOOLCHAIN
-)
+    INSTALL_WITH_TOOLCHAIN
+  )
+else()
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
+  )
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  add_flang_library(FortranRuntime.static ${sources}
+    LINK_LIBS
+    FortranDecimal.static
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  add_flang_library(FortranRuntime.dynamic ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+  add_flang_library(FortranRuntime.static_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.static_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
+  add_flang_library(FortranRuntime.dynamic_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
+    FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
+endif()

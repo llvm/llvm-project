@@ -43,7 +43,7 @@ static Type isElementTypeInconsistent(Value addr, Type expectedType) {
 }
 
 /// Checks that two types are the same or can be bitcast into one another.
-static bool areCastCompatible(DataLayout &layout, Type lhs, Type rhs) {
+static bool areBitcastCompatible(DataLayout &layout, Type lhs, Type rhs) {
   return lhs == rhs || (!isa<LLVMStructType, LLVMArrayType>(lhs) &&
                         !isa<LLVMStructType, LLVMArrayType>(rhs) &&
                         layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
@@ -92,10 +92,6 @@ LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
     LoadOp load, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
 
-  // Load from typed pointers are not supported.
-  if (!load.getAddr().getType().isOpaque())
-    return failure();
-
   Type inconsistentElementType =
       isElementTypeInconsistent(load.getAddr(), load.getType());
   if (!inconsistentElementType)
@@ -104,7 +100,7 @@ LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
   if (!firstType)
     return failure();
   DataLayout layout = DataLayout::closest(load);
-  if (!areCastCompatible(layout, firstType, load.getResult().getType()))
+  if (!areBitcastCompatible(layout, firstType, load.getResult().getType()))
     return failure();
 
   insertFieldIndirection<LoadOp>(load, rewriter, inconsistentElementType);
@@ -129,10 +125,6 @@ LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
     StoreOp store, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
 
-  // Store to typed pointers are not supported.
-  if (!store.getAddr().getType().isOpaque())
-    return failure();
-
   Type inconsistentElementType =
       isElementTypeInconsistent(store.getAddr(), store.getValue().getType());
   if (!inconsistentElementType)
@@ -144,20 +136,13 @@ LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
   DataLayout layout = DataLayout::closest(store);
   // Check that the first field has the right type or can at least be bitcast
   // to the right type.
-  if (!areCastCompatible(layout, firstType, store.getValue().getType()))
+  if (!areBitcastCompatible(layout, firstType, store.getValue().getType()))
     return failure();
 
   insertFieldIndirection<StoreOp>(store, rewriter, inconsistentElementType);
 
-  Value replaceValue = store.getValue();
-  if (firstType != store.getValue().getType()) {
-    rewriter.setInsertionPointAfterValue(store.getValue());
-    replaceValue = rewriter.create<BitcastOp>(store->getLoc(), firstType,
-                                              store.getValue());
-  }
-
   rewriter.updateRootInPlace(
-      store, [&]() { store.getValueMutable().assign(replaceValue); });
+      store, [&]() { store.getValueMutable().assign(store.getValue()); });
 
   return success();
 }
@@ -176,12 +161,15 @@ static std::optional<uint64_t> gepToByteOffset(DataLayout &layout, GEPOp gep) {
     IntegerAttr indexInt = llvm::dyn_cast_if_present<IntegerAttr>(index);
     if (!indexInt)
       return std::nullopt;
-    indices.push_back(indexInt.getInt());
+    int32_t gepIndex = indexInt.getInt();
+    if (gepIndex < 0)
+      return std::nullopt;
+    indices.push_back(static_cast<uint32_t>(gepIndex));
   }
 
-  uint64_t offset = indices[0] * layout.getTypeSize(gep.getSourceElementType());
+  uint64_t offset = indices[0] * layout.getTypeSize(gep.getElemType());
 
-  Type currentType = gep.getSourceElementType();
+  Type currentType = gep.getElemType();
   for (uint32_t index : llvm::drop_begin(indices)) {
     bool shouldCancel =
         TypeSwitch<Type, bool>(currentType)
@@ -355,20 +343,74 @@ CanonicalizeAlignedGep::matchAndRewrite(GEPOp gep,
   return success();
 }
 
-/// Returns the list of fields of `structType` that are written to by a store
-/// operation writing `storeSize` bytes at `storeOffset` within the struct.
-/// `storeOffset` is required to cleanly point to an immediate field within
-/// the struct.
-/// If the write operation were to write to any padding, write beyond the
-/// struct, partially write to a field, or contains currently unsupported
-/// types, failure is returned.
-static FailureOr<ArrayRef<Type>>
-getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
-                   int storeSize, unsigned storeOffset) {
-  ArrayRef<Type> body = structType.getBody();
+namespace {
+/// Class abstracting over both array and struct types, turning each into ranges
+/// of their sub-types.
+class DestructurableTypeRange
+    : public llvm::indexed_accessor_range<DestructurableTypeRange,
+                                          DestructurableTypeInterface, Type,
+                                          Type *, Type> {
+
+  using Base = llvm::indexed_accessor_range<
+      DestructurableTypeRange, DestructurableTypeInterface, Type, Type *, Type>;
+
+public:
+  using Base::Base;
+
+  /// Constructs a DestructurableTypeRange from either a LLVMStructType or
+  /// LLVMArrayType.
+  explicit DestructurableTypeRange(DestructurableTypeInterface base)
+      : Base(base, 0, [&]() -> ptrdiff_t {
+          return TypeSwitch<DestructurableTypeInterface, ptrdiff_t>(base)
+              .Case([](LLVMStructType structType) {
+                return structType.getBody().size();
+              })
+              .Case([](LLVMArrayType arrayType) {
+                return arrayType.getNumElements();
+              })
+              .Default([](auto) -> ptrdiff_t {
+                llvm_unreachable(
+                    "Only LLVMStructType or LLVMArrayType supported");
+              });
+        }()) {}
+
+  /// Returns true if this is a range over a packed struct.
+  bool isPacked() const {
+    if (auto structType = dyn_cast<LLVMStructType>(getBase()))
+      return structType.isPacked();
+    return false;
+  }
+
+private:
+  static Type dereference(DestructurableTypeInterface base, ptrdiff_t index) {
+    // i32 chosen because the implementations of ArrayType and StructType
+    // specifically expect it to be 32 bit. They will fail otherwise.
+    Type result = base.getTypeAtIndex(
+        IntegerAttr::get(IntegerType::get(base.getContext(), 32), index));
+    assert(result && "Should always succeed");
+    return result;
+  }
+
+  friend Base;
+};
+} // namespace
+
+/// Returns the list of elements of `destructurableType` that are written to by
+/// a store operation writing `storeSize` bytes at `storeOffset`.
+/// `storeOffset` is required to cleanly point to an immediate element within
+/// the type. If the write operation were to write to any padding, write beyond
+/// the aggregate or partially write to a non-aggregate, failure is returned.
+static FailureOr<DestructurableTypeRange>
+getWrittenToFields(const DataLayout &dataLayout,
+                   DestructurableTypeInterface destructurableType,
+                   unsigned storeSize, unsigned storeOffset) {
+  DestructurableTypeRange destructurableTypeRange(destructurableType);
+
   unsigned currentOffset = 0;
-  body = body.drop_until([&](Type type) {
-    if (!structType.isPacked()) {
+  for (; !destructurableTypeRange.empty();
+       destructurableTypeRange = destructurableTypeRange.drop_front()) {
+    Type type = destructurableTypeRange.front();
+    if (!destructurableTypeRange.isPacked()) {
       unsigned alignment = dataLayout.getTypeABIAlignment(type);
       currentOffset = llvm::alignTo(currentOffset, alignment);
     }
@@ -377,38 +419,53 @@ getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
     // 0 or stems from a type-consistent GEP indexing into just a single
     // aggregate.
     if (currentOffset == storeOffset)
-      return true;
+      break;
 
     assert(currentOffset < storeOffset &&
            "storeOffset should cleanly point into an immediate field");
 
     currentOffset += dataLayout.getTypeSize(type);
-    return false;
-  });
+  }
 
   size_t exclusiveEnd = 0;
-  for (; exclusiveEnd < body.size() && storeSize > 0; exclusiveEnd++) {
-    // Not yet recursively handling aggregates, only primitives.
-    if (!isa<IntegerType, FloatType>(body[exclusiveEnd]))
-      return failure();
-
-    if (!structType.isPacked()) {
-      unsigned alignment = dataLayout.getTypeABIAlignment(body[exclusiveEnd]);
+  for (; exclusiveEnd < destructurableTypeRange.size() && storeSize > 0;
+       exclusiveEnd++) {
+    if (!destructurableTypeRange.isPacked()) {
+      unsigned alignment =
+          dataLayout.getTypeABIAlignment(destructurableTypeRange[exclusiveEnd]);
       // No padding allowed inbetween fields at this point in time.
       if (!llvm::isAligned(llvm::Align(alignment), currentOffset))
         return failure();
     }
 
-    unsigned fieldSize = dataLayout.getTypeSize(body[exclusiveEnd]);
+    unsigned fieldSize =
+        dataLayout.getTypeSize(destructurableTypeRange[exclusiveEnd]);
+    if (fieldSize > storeSize) {
+      // Partial writes into an aggregate are okay since subsequent pattern
+      // applications can further split these up into writes into the
+      // sub-elements.
+      auto subAggregate = dyn_cast<DestructurableTypeInterface>(
+          destructurableTypeRange[exclusiveEnd]);
+      if (!subAggregate)
+        return failure();
+
+      // Avoid splitting redundantly by making sure the store into the
+      // aggregate can actually be split.
+      if (failed(getWrittenToFields(dataLayout, subAggregate, storeSize,
+                                    /*storeOffset=*/0)))
+        return failure();
+
+      return destructurableTypeRange.take_front(exclusiveEnd + 1);
+    }
     currentOffset += fieldSize;
     storeSize -= fieldSize;
   }
 
-  // If the storeSize is not 0 at this point we are either partially writing
-  // into a field or writing past the aggregate as a whole. Abort.
-  if (storeSize != 0)
+  // If the storeSize is not 0 at this point we are  writing past the aggregate
+  // as a whole. Abort.
+  if (storeSize > 0)
     return failure();
-  return body.take_front(exclusiveEnd);
+  return destructurableTypeRange.take_front(exclusiveEnd);
 }
 
 /// Splits a store of the vector `value` into `address` at `storeOffset` into
@@ -438,12 +495,13 @@ static void splitVectorStore(const DataLayout &dataLayout, Location loc,
 }
 
 /// Splits a store of the integer `value` into `address` at `storeOffset` into
-/// multiple stores to each 'writtenFields', making each store operation
+/// multiple stores to each 'writtenToFields', making each store operation
 /// type-consistent.
 static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
                               RewriterBase &rewriter, Value address,
-                              Value value, unsigned storeOffset,
-                              ArrayRef<Type> writtenToFields) {
+                              Value value, unsigned storeSize,
+                              unsigned storeOffset,
+                              DestructurableTypeRange writtenToFields) {
   unsigned currentOffset = storeOffset;
   for (Type type : writtenToFields) {
     unsigned fieldSize = dataLayout.getTypeSize(type);
@@ -456,14 +514,13 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
 
     auto shrOp = rewriter.create<LShrOp>(loc, value, pos);
 
-    IntegerType fieldIntType = rewriter.getIntegerType(fieldSize * 8);
+    // If we are doing a partial write into a direct field the remaining
+    // `storeSize` will be less than the size of the field. We have to truncate
+    // to the `storeSize` to avoid creating a store that wasn't in the original
+    // code.
+    IntegerType fieldIntType =
+        rewriter.getIntegerType(std::min(fieldSize, storeSize) * 8);
     Value valueToStore = rewriter.create<TruncOp>(loc, fieldIntType, shrOp);
-    if (fieldIntType != type) {
-      // Bitcast to the right type. `fieldIntType` was explicitly created
-      // to be of the same size as `type` and must currently be a primitive as
-      // well.
-      valueToStore = rewriter.create<BitcastOp>(loc, type, valueToStore);
-    }
 
     // We create an `i8` indexed GEP here as that is the easiest (offset is
     // already known). Other patterns turn this into a type-consistent GEP.
@@ -475,6 +532,7 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
     // No need to care about padding here since we already checked previously
     // that no padding exists in this range.
     currentOffset += fieldSize;
+    storeSize -= fieldSize;
   }
 }
 
@@ -494,52 +552,51 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
 
   auto dataLayout = DataLayout::closest(store);
 
+  unsigned storeSize = dataLayout.getTypeSize(sourceType);
   unsigned offset = 0;
   Value address = store.getAddr();
   if (auto gepOp = address.getDefiningOp<GEPOp>()) {
     // Currently only handle canonical GEPs with exactly two indices,
     // indexing a single aggregate deep.
-    // Recursing into sub-structs is left as a future exercise.
     // If the GEP is not canonical we have to fail, otherwise we would not
     // create type-consistent IR.
     if (gepOp.getIndices().size() != 2 ||
         succeeded(getRequiredConsistentGEPType(gepOp)))
       return failure();
 
-    // A GEP might point somewhere into the middle of an aggregate with the
-    // store storing into multiple adjacent elements. Destructure into
-    // the base address with an offset.
-    std::optional<uint64_t> byteOffset = gepToByteOffset(dataLayout, gepOp);
-    if (!byteOffset)
-      return failure();
+    // If the size of the element indexed by the  GEP is smaller than the store
+    // size, it is pointing into the middle of an aggregate with the store
+    // storing into multiple adjacent elements. Destructure into the base
+    // address of the aggregate with a store offset.
+    if (storeSize > dataLayout.getTypeSize(gepOp.getResultPtrElementType())) {
+      std::optional<uint64_t> byteOffset = gepToByteOffset(dataLayout, gepOp);
+      if (!byteOffset)
+        return failure();
 
-    offset = *byteOffset;
-    typeHint = gepOp.getSourceElementType();
-    address = gepOp.getBase();
+      offset = *byteOffset;
+      typeHint = gepOp.getElemType();
+      address = gepOp.getBase();
+    }
   }
 
-  auto structType = typeHint.dyn_cast<LLVMStructType>();
-  if (!structType) {
-    // TODO: Handle array types in the future.
-    return failure();
-  }
-
-  FailureOr<ArrayRef<Type>> writtenToFields =
-      getWrittenToFields(dataLayout, structType,
-                         /*storeSize=*/dataLayout.getTypeSize(sourceType),
-                         /*storeOffset=*/offset);
-  if (failed(writtenToFields))
+  auto destructurableType = typeHint.dyn_cast<DestructurableTypeInterface>();
+  if (!destructurableType)
     return failure();
 
-  if (writtenToFields->size() <= 1) {
+  FailureOr<DestructurableTypeRange> writtenToElements =
+      getWrittenToFields(dataLayout, destructurableType, storeSize, offset);
+  if (failed(writtenToElements))
+    return failure();
+
+  if (writtenToElements->size() <= 1) {
     // Other patterns should take care of this case, we are only interested in
-    // splitting field stores.
+    // splitting element stores.
     return failure();
   }
 
   if (isa<IntegerType>(sourceType)) {
     splitIntegerStore(dataLayout, store.getLoc(), rewriter, address,
-                      store.getValue(), offset, *writtenToFields);
+                      store.getValue(), storeSize, offset, *writtenToElements);
     rewriter.eraseOp(store);
     return success();
   }
@@ -558,6 +615,65 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
   return success();
 }
 
+LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
+                                             PatternRewriter &rewriter) const {
+  Type sourceType = store.getValue().getType();
+  Type typeHint = isElementTypeInconsistent(store.getAddr(), sourceType);
+  if (!typeHint) {
+    // Nothing to do, since it is already consistent.
+    return failure();
+  }
+
+  auto dataLayout = DataLayout::closest(store);
+  if (!areBitcastCompatible(dataLayout, typeHint, sourceType))
+    return failure();
+
+  auto bitcastOp =
+      rewriter.create<BitcastOp>(store.getLoc(), typeHint, store.getValue());
+  rewriter.updateRootInPlace(
+      store, [&] { store.getValueMutable().assign(bitcastOp); });
+  return success();
+}
+
+LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
+                                        PatternRewriter &rewriter) const {
+  FailureOr<Type> typeHint = getRequiredConsistentGEPType(gepOp);
+  if (succeeded(typeHint) || gepOp.getIndices().size() <= 2) {
+    // GEP is not canonical or a single aggregate deep, nothing to do here.
+    return failure();
+  }
+
+  auto indexToGEPArg =
+      [](GEPIndicesAdaptor<ValueRange>::value_type index) -> GEPArg {
+    if (auto integerAttr = dyn_cast<IntegerAttr>(index))
+      return integerAttr.getValue().getSExtValue();
+    return cast<Value>(index);
+  };
+
+  GEPIndicesAdaptor<ValueRange> indices = gepOp.getIndices();
+
+  auto splitIter = std::next(indices.begin(), 2);
+
+  // Split of the first GEP using the first two indices.
+  auto subGepOp = rewriter.create<GEPOp>(
+      gepOp.getLoc(), gepOp.getType(), gepOp.getElemType(), gepOp.getBase(),
+      llvm::map_to_vector(llvm::make_range(indices.begin(), splitIter),
+                          indexToGEPArg),
+      gepOp.getInbounds());
+
+  // The second GEP indexes on the result pointer element type of the previous
+  // with all the remaining indices and a zero upfront. If this GEP has more
+  // than two indices remaining it'll be further split in subsequent pattern
+  // applications.
+  SmallVector<GEPArg> newIndices = {0};
+  llvm::transform(llvm::make_range(splitIter, indices.end()),
+                  std::back_inserter(newIndices), indexToGEPArg);
+  rewriter.replaceOpWithNewOp<GEPOp>(gepOp, gepOp.getType(),
+                                     subGepOp.getResultPtrElementType(),
+                                     subGepOp, newIndices, gepOp.getInbounds());
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Type consistency pass
 //===----------------------------------------------------------------------===//
@@ -572,6 +688,8 @@ struct LLVMTypeConsistencyPass
         &getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
+    rewritePatterns.add<BitcastStores>(&getContext());
+    rewritePatterns.add<SplitGEP>(&getContext());
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 
     if (failed(applyPatternsAndFoldGreedily(getOperation(), frozen)))

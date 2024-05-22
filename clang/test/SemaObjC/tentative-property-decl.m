@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Weverything -verify %s
 // expected-no-diagnostics
-// rdar://11656982
 /** A property may not be both 'readonly' and having a memory management attribute
     (copy/retain/etc.). But, property declaration in primary class and protcols
     are tentative as they may be overridden into a 'readwrite' property in class 

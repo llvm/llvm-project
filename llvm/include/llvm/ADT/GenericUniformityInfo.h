@@ -40,8 +40,7 @@ public:
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
-  GenericUniformityInfo(FunctionT &F, const DominatorTreeT &DT,
-                        const CycleInfoT &CI,
+  GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
   GenericUniformityInfo() = default;
   GenericUniformityInfo(GenericUniformityInfo &&) = default;
@@ -56,7 +55,7 @@ public:
   bool hasDivergence() const;
 
   /// The GPU kernel this analysis result is for
-  const FunctionT &getFunction() const { return *F; }
+  const FunctionT &getFunction() const;
 
   /// Whether \p V is divergent at its definition.
   bool isDivergent(ConstValueRefT V) const;
@@ -82,7 +81,6 @@ public:
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;
 
-  FunctionT *F;
   std::unique_ptr<ImplT, GenericUniformityAnalysisImplDeleter<ImplT>> DA;
 
   GenericUniformityInfo(const GenericUniformityInfo &) = delete;

@@ -5,8 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -96,7 +94,7 @@ static void test_valid_values() {
 #endif
 
   // Use supplied locale (ja_JP). This locale has a different alternate on some platforms.
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
 #  if defined(_WIN32)
   check(loc, SV("%d=''\t%Od=''\t%e=''\t%Oe=''\n"), lfmt, 0d);
 #  else
@@ -111,12 +109,12 @@ static void test_valid_values() {
 #  else
   check(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), fmt, 255d);
 #  endif
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
   check(loc, SV("%d='00'\t%Od='〇'\t%e=' 0'\t%Oe='〇'\n"), lfmt, 0d);
   check(loc, SV("%d='01'\t%Od='一'\t%e=' 1'\t%Oe='一'\n"), lfmt, 1d);
   check(loc, SV("%d='31'\t%Od='三十一'\t%e='31'\t%Oe='三十一'\n"), lfmt, 31d);
   check(loc, SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), lfmt, 255d);
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
 }
@@ -129,14 +127,14 @@ static void test() {
   test_valid_values<CharT>();
   check_invalid_types<CharT>({SV("d"), SV("e"), SV("Od"), SV("Oe")}, 0d);
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), 0d);
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), 0d);
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), 0d);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), 0d);
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), 0d);
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), 0d);
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0d);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0d);
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), 0d);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), 0d);
 }
 
 int main(int, char**) {

@@ -9,7 +9,7 @@
 /// \file
 /// This file contains the code related to the GlobalISel Match Table emitted by
 /// GlobalISelEmitter.cpp. The generated match table is interpreted at runtime
-/// by `InstructionSelectorImpl.h` to match & apply ISel patterns.
+/// by `GIMatchTableExecutorImpl.h` to match & apply ISel patterns.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +59,11 @@ using GISelFlags = std::uint16_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset);
+void emitEncodingMacrosDef(raw_ostream &OS);
+void emitEncodingMacrosUndef(raw_ostream &OS);
+
+std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+                                    int HwModeIdx);
 
 /// Takes a sequence of \p Rules and group them based on the predicates
 /// they share. \p MatcherStorage is used as a memory container
@@ -118,6 +122,9 @@ struct MatchTableRecord {
     /// Causes the formatter to remove a level of indentation after emitting the
     /// record.
     MTRF_Outdent = 0x40,
+    /// Causes the formatter to not use encoding macros to emit this multi-byte
+    /// value.
+    MTRF_PreEncoded = 0x80,
   };
 
   /// When MTRF_Label or MTRF_JumpTarget is used, indicates a label id to
@@ -186,26 +193,34 @@ class MatchTable {
   unsigned CurrentLabelID = 0;
   /// Determines if the table should be instrumented for rule coverage tracking.
   bool IsWithCoverage;
+  /// Whether this table is for the GISel combiner.
+  bool IsCombinerTable;
 
 public:
   static MatchTableRecord LineBreak;
   static MatchTableRecord Comment(StringRef Comment);
   static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0);
-  static MatchTableRecord NamedValue(StringRef NamedValue);
-  static MatchTableRecord NamedValue(StringRef NamedValue, int64_t RawValue);
-  static MatchTableRecord NamedValue(StringRef Namespace, StringRef NamedValue);
-  static MatchTableRecord NamedValue(StringRef Namespace, StringRef NamedValue,
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue,
                                      int64_t RawValue);
-  static MatchTableRecord IntValue(int64_t IntValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
+                                     StringRef NamedValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
+                                     StringRef NamedValue, int64_t RawValue);
+  static MatchTableRecord IntValue(unsigned NumBytes, int64_t IntValue);
+  static MatchTableRecord ULEB128Value(uint64_t IntValue);
   static MatchTableRecord Label(unsigned LabelID);
   static MatchTableRecord JumpTarget(unsigned LabelID);
 
-  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage);
+  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
+                               bool IsCombiner = false);
 
-  MatchTable(bool WithCoverage, unsigned ID = 0)
-      : ID(ID), IsWithCoverage(WithCoverage) {}
+  MatchTable(bool WithCoverage, bool IsCombinerTable, unsigned ID = 0)
+      : ID(ID), IsWithCoverage(WithCoverage), IsCombinerTable(IsCombinerTable) {
+  }
 
   bool isWithCoverage() const { return IsWithCoverage; }
+  bool isCombiner() const { return IsCombinerTable; }
 
   void push_back(const MatchTableRecord &Value) {
     if (Value.Flags & MatchTableRecord::MTRF_Label)
@@ -266,6 +281,40 @@ extern std::set<LLTCodeGen> KnownTypes;
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
 std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT);
+
+using TempTypeIdx = int64_t;
+class LLTCodeGenOrTempType {
+public:
+  LLTCodeGenOrTempType(const LLTCodeGen &LLT) : Data(LLT) {}
+  LLTCodeGenOrTempType(TempTypeIdx TempTy) : Data(TempTy) {}
+
+  bool isLLTCodeGen() const { return std::holds_alternative<LLTCodeGen>(Data); }
+  bool isTempTypeIdx() const {
+    return std::holds_alternative<TempTypeIdx>(Data);
+  }
+
+  const LLTCodeGen &getLLTCodeGen() const {
+    assert(isLLTCodeGen());
+    return std::get<LLTCodeGen>(Data);
+  }
+
+  TempTypeIdx getTempTypeIdx() const {
+    assert(isTempTypeIdx());
+    return std::get<TempTypeIdx>(Data);
+  }
+
+private:
+  std::variant<LLTCodeGen, TempTypeIdx> Data;
+};
+
+inline MatchTable &operator<<(MatchTable &Table,
+                              const LLTCodeGenOrTempType &Ty) {
+  if (Ty.isLLTCodeGen())
+    Table << MatchTable::NamedValue(1, Ty.getLLTCodeGen().getCxxEnumValue());
+  else
+    Table << MatchTable::IntValue(1, Ty.getTempTypeIdx());
+  return Table;
+}
 
 //===- Matchers -----------------------------------------------------------===//
 class Matcher {
@@ -453,11 +502,20 @@ protected:
   /// ID for the next temporary register ID allocated with allocateTempRegID()
   unsigned NextTempRegID;
 
+  /// ID for the next recorded type. Starts at -1 and counts down.
+  TempTypeIdx NextTempTypeIdx = -1;
+
+  // HwMode predicate index for this rule. -1 if no HwMode.
+  int HwModeIdx = -1;
+
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
+  std::vector<std::string> RequiredSimplePredicates;
   std::vector<Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
+
+  DenseSet<unsigned> ErasedInsnIDs;
 
   ArrayRef<SMLoc> SrcLoc;
 
@@ -486,11 +544,24 @@ public:
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
+  TempTypeIdx getNextTempTypeIdx() { return NextTempTypeIdx--; }
+
   uint64_t getRuleID() const { return RuleID; }
 
   InstructionMatcher &addInstructionMatcher(StringRef SymbolicName);
   void addRequiredFeature(Record *Feature);
   const std::vector<Record *> &getRequiredFeatures() const;
+
+  void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
+  int getHwModeIdx() const { return HwModeIdx; }
+
+  void addRequiredSimplePredicate(StringRef PredName);
+  const std::vector<std::string> &getRequiredSimplePredicates();
+
+  /// Attempts to mark \p ID as erased (GIR_EraseFromParent called on it).
+  /// If \p ID has already been erased, returns false and GIR_EraseFromParent
+  /// should NOT be emitted.
+  bool tryEraseInsnID(unsigned ID) { return ErasedInsnIDs.insert(ID).second; }
 
   // Emplaces an action of the specified Kind at the end of the action list.
   //
@@ -516,6 +587,8 @@ public:
     return Actions.emplace(InsertPt,
                            std::make_unique<Kind>(std::forward<Args>(args)...));
   }
+
+  void setPermanentGISelFlags(GISelFlags V) { Flags = V; }
 
   // Update the active GISelFlags based on the GISelFlags Record R.
   // A SaveAndRestore object is returned so the old GISelFlags are restored
@@ -577,6 +650,7 @@ public:
   }
 
   InstructionMatcher &getInstructionMatcher(StringRef SymbolicName) const;
+  OperandMatcher &getOperandMatcher(StringRef Name);
   const OperandMatcher &getOperandMatcher(StringRef Name) const;
   const OperandMatcher &getPhysRegOperandMatcher(Record *) const;
 
@@ -638,6 +712,10 @@ public:
     return Predicates.size();
   }
   bool predicates_empty() const { return Predicates.empty(); }
+
+  template <typename Ty> bool contains() const {
+    return any_of(Predicates, [&](auto &P) { return isa<Ty>(P.get()); });
+  }
 
   std::unique_ptr<PredicateTy> predicates_pop_front() {
     std::unique_ptr<PredicateTy> Front = std::move(Predicates.front());
@@ -721,6 +799,7 @@ public:
     IPM_VectorSplatImm,
     IPM_NoUse,
     IPM_GenericPredicate,
+    IPM_MIFlags,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -733,6 +812,7 @@ public:
     OPM_RegBank,
     OPM_MBB,
     OPM_RecordNamedOperand,
+    OPM_RecordRegType,
   };
 
 protected:
@@ -928,6 +1008,30 @@ public:
     return OperandPredicateMatcher::isIdentical(B) &&
            StoreIdx == cast<RecordNamedOperandMatcher>(&B)->StoreIdx &&
            Name == cast<RecordNamedOperandMatcher>(&B)->Name;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
+/// Generates code to store a register operand's type into the set of temporary
+/// LLTs.
+class RecordRegisterType : public OperandPredicateMatcher {
+protected:
+  TempTypeIdx Idx;
+
+public:
+  RecordRegisterType(unsigned InsnVarID, unsigned OpIdx, TempTypeIdx Idx)
+      : OperandPredicateMatcher(OPM_RecordRegType, InsnVarID, OpIdx), Idx(Idx) {
+  }
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_RecordRegType;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return OperandPredicateMatcher::isIdentical(B) &&
+           Idx == cast<RecordRegisterType>(&B)->Idx;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1140,6 +1244,8 @@ protected:
   /// countRendererFns().
   unsigned AllocatedTemporariesBaseID;
 
+  TempTypeIdx TTIdx = 0;
+
 public:
   OperandMatcher(InstructionMatcher &Insn, unsigned OpIdx,
                  const std::string &SymbolicName,
@@ -1166,6 +1272,11 @@ public:
 
   unsigned getOpIdx() const { return OpIdx; }
   unsigned getInsnVarID() const;
+
+  /// If this OperandMatcher has not been assigned a TempTypeIdx yet, assigns it
+  /// one and adds a `RecordRegisterType` predicate to this matcher. If one has
+  /// already been assigned, simply returns it.
+  TempTypeIdx getTempTypeIdx(RuleMatcher &Rule);
 
   std::string getOperandExpr(unsigned InsnVarID) const;
 
@@ -1508,17 +1619,42 @@ public:
 /// Generates code to check an arbitrary C++ instruction predicate.
 class GenericInstructionPredicateMatcher : public InstructionPredicateMatcher {
 protected:
-  TreePredicateFn Predicate;
+  std::string EnumVal;
 
 public:
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
-                                     TreePredicateFn Predicate)
+                                     TreePredicateFn Predicate);
+
+  GenericInstructionPredicateMatcher(unsigned InsnVarID,
+                                     const std::string &EnumVal)
       : InstructionPredicateMatcher(IPM_GenericPredicate, InsnVarID),
-        Predicate(Predicate) {}
+        EnumVal(EnumVal) {}
 
   static bool classof(const InstructionPredicateMatcher *P) {
     return P->getKind() == IPM_GenericPredicate;
   }
+  bool isIdentical(const PredicateMatcher &B) const override;
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
+class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {
+  SmallVector<StringRef, 2> Flags;
+  bool CheckNot; // false = GIM_MIFlags, true = GIM_MIFlagsNot
+
+public:
+  MIFlagsInstructionPredicateMatcher(unsigned InsnVarID,
+                                     ArrayRef<StringRef> FlagsToCheck,
+                                     bool CheckNot = false)
+      : InstructionPredicateMatcher(IPM_MIFlags, InsnVarID),
+        Flags(FlagsToCheck), CheckNot(CheckNot) {
+    sort(Flags);
+  }
+
+  static bool classof(const InstructionPredicateMatcher *P) {
+    return P->getKind() == IPM_MIFlags;
+  }
+
   bool isIdentical(const PredicateMatcher &B) const override;
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
@@ -1542,7 +1678,7 @@ public:
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIM_CheckHasNoUse")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
           << MatchTable::LineBreak;
   }
 };
@@ -1918,24 +2054,31 @@ public:
 };
 
 /// Adds a specific immediate to the instruction being built.
+/// If a LLT is passed, a ConstantInt immediate is created instead.
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
   int64_t Imm;
+  std::optional<LLTCodeGenOrTempType> CImmLLT;
 
 public:
   ImmRenderer(unsigned InsnID, int64_t Imm)
       : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
 
+  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGenOrTempType &CImmLLT)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT) {
+    if (CImmLLT.isLLTCodeGen())
+      KnownTypes.insert(CImmLLT.getLLTCodeGen());
+  }
+
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Imm;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
-          << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
-  }
+  static void emitAddImm(MatchTable &Table, RuleMatcher &RM, unsigned InsnID,
+                         int64_t Imm, StringRef ImmName = "Imm");
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Adds an enum value for a subreg index to the instruction being built.
@@ -2039,11 +2182,34 @@ public:
 /// * Adding an operand to an instruction.
 class MatchAction {
 public:
+  enum ActionKind {
+    AK_DebugComment,
+    AK_CustomCXX,
+    AK_BuildMI,
+    AK_BuildConstantMI,
+    AK_EraseInst,
+    AK_ReplaceReg,
+    AK_ConstraintOpsToDef,
+    AK_ConstraintOpsToRC,
+    AK_MakeTempReg,
+  };
+
+  MatchAction(ActionKind K) : Kind(K) {}
+
+  ActionKind getKind() const { return Kind; }
+
   virtual ~MatchAction() {}
+
+  // Some actions may need to add extra predicates to ensure they can run.
+  virtual void emitAdditionalPredicates(MatchTable &Table,
+                                        RuleMatcher &Rule) const {}
 
   /// Emit the MatchTable opcodes to implement the action.
   virtual void emitActionOpcodes(MatchTable &Table,
                                  RuleMatcher &Rule) const = 0;
+
+private:
+  ActionKind Kind;
 };
 
 /// Generates a comment describing the matched rule being acted upon.
@@ -2052,11 +2218,30 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S) : S(std::string(S)) {}
+  DebugCommentAction(StringRef S)
+      : MatchAction(AK_DebugComment), S(std::string(S)) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_DebugComment;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
+};
+
+class CustomCXXAction : public MatchAction {
+  std::string FnEnumName;
+
+public:
+  CustomCXXAction(StringRef FnEnumName)
+      : MatchAction(AK_CustomCXX), FnEnumName(FnEnumName.str()) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_CustomCXX;
+  }
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Generates code to build an instruction or mutate an existing instruction
@@ -2067,18 +2252,35 @@ private:
   const CodeGenInstruction *I;
   InstructionMatcher *Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
+  SmallPtrSet<Record *, 4> DeadImplicitDefs;
+
+  std::vector<const InstructionMatcher *> CopiedFlags;
+  std::vector<StringRef> SetFlags;
+  std::vector<StringRef> UnsetFlags;
 
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule, const InstructionMatcher *Insn) const;
 
 public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
-      : InsnID(InsnID), I(I), Matched(nullptr) {}
+      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I), Matched(nullptr) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildMI;
+  }
 
   unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
 
+  void addSetMIFlags(StringRef Flag) { SetFlags.push_back(Flag); }
+  void addUnsetMIFlags(StringRef Flag) { UnsetFlags.push_back(Flag); }
+  void addCopiedMIFlags(const InstructionMatcher &IM) {
+    CopiedFlags.push_back(&IM);
+  }
+
   void chooseInsnToMutate(RuleMatcher &Rule);
+
+  void setDeadImplicitDef(Record *R) { DeadImplicitDefs.insert(R); }
 
   template <class Kind, class... Args> Kind &addRenderer(Args &&...args) {
     OperandRenderers.emplace_back(
@@ -2089,17 +2291,80 @@ public:
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
+/// Generates code to create a constant that defines a TempReg.
+/// The instruction created is usually a G_CONSTANT but it could also be a
+/// G_BUILD_VECTOR for vector types.
+class BuildConstantAction : public MatchAction {
+  unsigned TempRegID;
+  int64_t Val;
+
+public:
+  BuildConstantAction(unsigned TempRegID, int64_t Val)
+      : MatchAction(AK_BuildConstantMI), TempRegID(TempRegID), Val(Val) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildConstantMI;
+  }
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+};
+
+class EraseInstAction : public MatchAction {
+  unsigned InsnID;
+
+public:
+  EraseInstAction(unsigned InsnID)
+      : MatchAction(AK_EraseInst), InsnID(InsnID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_EraseInst;
+  }
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  static void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                unsigned InsnID);
+};
+
+class ReplaceRegAction : public MatchAction {
+  unsigned OldInsnID, OldOpIdx;
+  unsigned NewInsnId = -1, NewOpIdx;
+  unsigned TempRegID = -1;
+
+public:
+  ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
+                   unsigned NewOpIdx)
+      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+        NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
+
+  ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
+      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+        TempRegID(TempRegID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ReplaceReg;
+  }
+
+  void emitAdditionalPredicates(MatchTable &Table,
+                                RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+};
+
 /// Generates code to constrain the operands of an output instruction to the
 /// register classes specified by the definition of that instruction.
 class ConstrainOperandsToDefinitionAction : public MatchAction {
   unsigned InsnID;
 
 public:
-  ConstrainOperandsToDefinitionAction(unsigned InsnID) : InsnID(InsnID) {}
+  ConstrainOperandsToDefinitionAction(unsigned InsnID)
+      : MatchAction(AK_ConstraintOpsToDef), InsnID(InsnID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ConstraintOpsToDef;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
           << MatchTable::LineBreak;
   }
 };
@@ -2114,7 +2379,12 @@ class ConstrainOperandToRegClassAction : public MatchAction {
 public:
   ConstrainOperandToRegClassAction(unsigned InsnID, unsigned OpIdx,
                                    const CodeGenRegisterClass &RC)
-      : InsnID(InsnID), OpIdx(OpIdx), RC(RC) {}
+      : MatchAction(AK_ConstraintOpsToRC), InsnID(InsnID), OpIdx(OpIdx),
+        RC(RC) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ConstraintOpsToRC;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -2123,13 +2393,18 @@ public:
 /// instructions together.
 class MakeTempRegisterAction : public MatchAction {
 private:
-  LLTCodeGen Ty;
+  LLTCodeGenOrTempType Ty;
   unsigned TempRegID;
 
 public:
-  MakeTempRegisterAction(const LLTCodeGen &Ty, unsigned TempRegID)
-      : Ty(Ty), TempRegID(TempRegID) {
-    KnownTypes.insert(Ty);
+  MakeTempRegisterAction(const LLTCodeGenOrTempType &Ty, unsigned TempRegID)
+      : MatchAction(AK_MakeTempReg), Ty(Ty), TempRegID(TempRegID) {
+    if (Ty.isLLTCodeGen())
+      KnownTypes.insert(Ty.getLLTCodeGen());
+  }
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_MakeTempReg;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;

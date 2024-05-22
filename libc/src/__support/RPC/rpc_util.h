@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
-
-/// Maximum amount of data a single lane can use.
-constexpr uint64_t MAX_LANE_SIZE = 64;
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
@@ -26,19 +25,11 @@ LIBC_INLINE void sleep_briefly() {
   LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   __builtin_amdgcn_s_sleep(2);
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
+  __builtin_ia32_pause();
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
-}
-
-/// Get the first active thread inside the lane.
-LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
-  return __builtin_ffsl(lane_mask) - 1;
-}
-
-/// Conditional that is only true for a single thread in a lane.
-LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
-  return gpu::get_lane_id() == get_first_lane_id(lane_mask);
 }
 
 /// Conditional to indicate if this process is running on the GPU.
@@ -66,11 +57,6 @@ template <typename V> LIBC_INLINE V &lane_value(V *val, uint32_t id) {
   return val[id];
 }
 
-/// Helper to get the maximum value.
-template <typename T> LIBC_INLINE const T &max(const T &x, const T &y) {
-  return x < y ? y : x;
-}
-
 /// Advance the \p p by \p bytes.
 template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
   if constexpr (cpp::is_const_v<T>)
@@ -80,7 +66,19 @@ template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
     return reinterpret_cast<T *>(reinterpret_cast<uint8_t *>(ptr) + bytes);
 }
 
+/// Wrapper around the optimal memory copy implementation for the target.
+LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
+  // The built-in memcpy prefers to fully unroll loops. We want to minimize
+  // resource usage so we use a single nounroll loop implementation.
+#if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+  inline_memcpy_byte_per_byte(reinterpret_cast<Ptr>(dst),
+                              reinterpret_cast<CPtr>(src), count);
+#else
+  inline_memcpy(dst, src, count);
+#endif
+}
+
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

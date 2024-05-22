@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: true}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}, {key: bugprone-assert-side-effect.IgnoredFunctions, value: 'MyClass::badButIgnoredFunc'}]}" -- -fexceptions -I %S/Inputs/assert-side-effect
+// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: {bugprone-assert-side-effect.CheckFunctionCalls: true, bugprone-assert-side-effect.AssertMacros: 'assert,assert2,my_assert,convoluted_assert,msvc_assert', bugprone-assert-side-effect.IgnoredFunctions: 'MyClass::badButIgnoredFunc'}}" -- -fexceptions -I %S/Inputs/assert-side-effect
 #include <assert.h>
 
 bool badButIgnoredFunc(int a, int b) { return a * b > 0; }
@@ -83,6 +83,28 @@ int main() {
 
   msvc_assert(mc2 = mc);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in msvc_assert() condition discarded in release builds
+
+  struct OperatorTest {
+    int operator<<(int i) const { return i; }
+    int operator<<(int i) { return i; }
+    int operator+=(int i) const { return i; }
+    int operator+=(int i) { return i; }
+  };
+
+  const OperatorTest const_instance;
+  assert(const_instance << 1);
+  assert(const_instance += 1);
+
+  OperatorTest non_const_instance;
+  assert(static_cast<const OperatorTest>(non_const_instance) << 1);
+  assert(static_cast<const OperatorTest>(non_const_instance) += 1);
+  assert(non_const_instance << 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+  assert(non_const_instance += 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+
+  assert(5<<1);
+  assert(5>>1);
 
   return 0;
 }

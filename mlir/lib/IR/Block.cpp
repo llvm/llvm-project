@@ -42,6 +42,12 @@ void Block::insertBefore(Block *block) {
   block->getParent()->getBlocks().insert(block->getIterator(), this);
 }
 
+void Block::insertAfter(Block *block) {
+  assert(!getParent() && "already inserted into a block!");
+  assert(block->getParent() && "cannot insert before a block without a parent");
+  block->getParent()->getBlocks().insertAfter(block->getIterator(), this);
+}
+
 /// Unlink this block from its current region and insert it right before the
 /// specific block.
 void Block::moveBefore(Block *block) {
@@ -228,10 +234,15 @@ void Block::eraseArguments(function_ref<bool(BlockArgument)> shouldEraseFn) {
 //===----------------------------------------------------------------------===//
 
 /// Get the terminator operation of this block. This function asserts that
-/// the block has a valid terminator operation.
+/// the block might have a valid terminator operation.
 Operation *Block::getTerminator() {
-  assert(!empty() && back().mightHaveTrait<OpTrait::IsTerminator>());
+  assert(mightHaveTerminator());
   return &back();
+}
+
+/// Check whether this block might have a terminator.
+bool Block::mightHaveTerminator() {
+  return !empty() && back().mightHaveTrait<OpTrait::IsTerminator>();
 }
 
 // Indexed successor access.

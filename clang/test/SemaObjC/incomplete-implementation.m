@@ -13,7 +13,6 @@
 - Meth {return 0;} // expected-warning {{category is implementing a method which will also be implemented by its primary class}}
 @end
 
-// rdar://40634455
 @interface MyClass
 -(void)mymeth __attribute__((availability(macos, introduced=100))); // expected-note{{here}}
 @end
@@ -35,7 +34,6 @@
 @interface Q
 @end
 
-// rdar://10336158
 @implementation Q
 
 __attribute__((visibility("default")))
@@ -46,7 +44,6 @@ __attribute__((visibility("default")))
 
 @end
 
-// rdar://15580969
 typedef char BOOL;
 
 @protocol NSObject

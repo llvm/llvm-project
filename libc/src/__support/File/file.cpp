@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
@@ -25,7 +25,7 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
 
   prev_op = FileOp::WRITE;
 
-  if (!ENABLE_BUFFER || bufmode == _IONBF) { // unbuffered.
+  if (bufmode == _IONBF) { // unbuffered.
     size_t ret_val =
         write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
@@ -38,7 +38,7 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
 }
 
 FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
-  if (ENABLE_BUFFER && pos > 0) { // If the buffer is not empty
+  if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
     auto write_result = platform_write(this, buf, write_size);
@@ -325,9 +325,6 @@ ErrorOr<long> File::tell() {
 }
 
 int File::flush_unlocked() {
-  if constexpr (!ENABLE_BUFFER)
-    return 0;
-
   if (prev_op == FileOp::WRITE && pos > 0) {
     auto buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
@@ -341,9 +338,6 @@ int File::flush_unlocked() {
 }
 
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
-  if constexpr (!ENABLE_BUFFER)
-    return EINVAL;
-
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
   if (buffer != nullptr && size == 0)
@@ -439,4 +433,4 @@ File::ModeFlags File::mode_flags(const char *mode) {
   return flags;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

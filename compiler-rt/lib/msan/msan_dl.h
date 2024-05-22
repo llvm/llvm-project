@@ -20,8 +20,10 @@
 namespace __msan {
 
 void UnpoisonDllAddrInfo(void *info);
-// void UnpoisonDllAddrInfo(Dl_info *info);
+
+#if SANITIZER_GLIBC
 void UnpoisonDllAddr1ExtraInfo(void **extra_info, int flags);
+#endif
 
 }  // namespace __msan
 

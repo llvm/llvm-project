@@ -3,6 +3,7 @@
 ; operand.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -early-live-intervals | FileCheck %s
 
 ; Test that AND is not removed when some lower 5 bits are not set.
 define i32 @f1(i32 %val, i32 %amt) {

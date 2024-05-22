@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -152,19 +153,19 @@ private:
     if (!HTMLReportPath.empty())
       writeHTML();
 
-    auto &HS = getCompilerInstance().getPreprocessor().getHeaderSearchInfo();
     llvm::StringRef Path =
         SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
-    auto Results = analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI, SM,
-                           HS, HeaderFilter);
+    auto Results =
+        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
+                getCompilerInstance().getPreprocessor(), HeaderFilter);
     if (!Insert)
       Results.Missing.clear();
     if (!Remove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, Code, getStyle(Path));
+    std::string Final = fixIncludes(Results, Path, Code, getStyle(Path));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {
@@ -270,10 +271,24 @@ int main(int argc, const char **argv) {
       }
     }
   }
+
+  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
+                                 OptionsParser->getSourcePathList());
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
+  for (const auto &File : OptionsParser->getSourcePathList()) {
+    auto Content = llvm::MemoryBuffer::getFile(File);
+    if (!Content) {
+      llvm::errs() << "Error: can't read file '" << File
+                   << "': " << Content.getError().message() << "\n";
+      return 1;
+    }
+    Buffers.push_back(std::move(Content.get()));
+    Tool.mapVirtualFile(File, Buffers.back()->getBuffer());
+  }
+
   auto HeaderFilter = headerFilter();
+  if (!HeaderFilter)
+    return 1; // error already reported.
   ActionFactory Factory(HeaderFilter);
-  return clang::tooling::ClangTool(OptionsParser->getCompilations(),
-                                   OptionsParser->getSourcePathList())
-             .run(&Factory) ||
-         Errors != 0;
+  return Tool.run(&Factory) || Errors != 0;
 }

@@ -23,6 +23,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -593,7 +594,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
       //     postfix-expression and does not name a class template, the name
       //     found in the class of the object expression is used, otherwise
       FoundOuter.clear();
-    } else if (!Found.isSuppressingDiagnostics()) {
+    } else if (!Found.isSuppressingAmbiguousDiagnostics()) {
       //   - if the name found is a class template, it must refer to the same
       //     entity as the one found in the class of the object expression,
       //     otherwise the program is ill-formed.
@@ -752,16 +753,18 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
     IsEnum = isa_and_nonnull<EnumType>(NNS->getAsType());
 
   if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
-      isa<CXXMethodDecl>(DC) && cast<CXXMethodDecl>(DC)->isInstance()) {
-    QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType();
+      isa<CXXMethodDecl>(DC) &&
+      cast<CXXMethodDecl>(DC)->isImplicitObjectMemberFunction()) {
+    QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType().getNonReferenceType();
 
     // Since the 'this' expression is synthesized, we don't need to
     // perform the double-lookup check.
     NamedDecl *FirstQualifierInScope = nullptr;
 
     return CXXDependentScopeMemberExpr::Create(
-        Context, /*This*/ nullptr, ThisType, /*IsArrow*/ true,
-        /*Op*/ SourceLocation(), SS.getWithLocInContext(Context), TemplateKWLoc,
+        Context, /*This=*/nullptr, ThisType,
+        /*IsArrow=*/!Context.getLangOpts().HLSL,
+        /*Op=*/SourceLocation(), SS.getWithLocInContext(Context), TemplateKWLoc,
         FirstQualifierInScope, NameInfo, TemplateArgs);
   }
 
@@ -817,7 +820,6 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
   if (!Complain || (PatternDef && PatternDef->isInvalidDecl()))
     return true;
 
-  std::optional<unsigned> Note;
   QualType InstantiationTy;
   if (TagDecl *TD = dyn_cast<TagDecl>(Instantiation))
     InstantiationTy = Context.getTypeDeclType(TD);
@@ -835,25 +837,25 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
            diag::err_explicit_instantiation_undefined_member)
         << /*member function*/ 1 << Instantiation->getDeclName()
         << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
+      Diag(Pattern->getLocation(), diag::note_explicit_instantiation_here);
     } else {
       assert(isa<TagDecl>(Instantiation) && "Must be a TagDecl!");
       Diag(PointOfInstantiation,
            diag::err_implicit_instantiate_member_undefined)
         << InstantiationTy;
-      Note = diag::note_member_declared_at;
+      Diag(Pattern->getLocation(), diag::note_member_declared_at);
     }
   } else {
     if (isa<FunctionDecl>(Instantiation)) {
       Diag(PointOfInstantiation,
            diag::err_explicit_instantiation_undefined_func_template)
         << Pattern;
-      Note = diag::note_explicit_instantiation_here;
+      Diag(Pattern->getLocation(), diag::note_explicit_instantiation_here);
     } else if (isa<TagDecl>(Instantiation)) {
       Diag(PointOfInstantiation, diag::err_template_instantiate_undefined)
         << (TSK != TSK_ImplicitInstantiation)
         << InstantiationTy;
-      Note = diag::note_template_decl_here;
+      NoteTemplateLocation(*Pattern);
     } else {
       assert(isa<VarDecl>(Instantiation) && "Must be a VarDecl!");
       if (isa<VarTemplateSpecializationDecl>(Instantiation)) {
@@ -866,11 +868,9 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
              diag::err_explicit_instantiation_undefined_member)
           << /*static data member*/ 2 << Instantiation->getDeclName()
           << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
+      Diag(Pattern->getLocation(), diag::note_explicit_instantiation_here);
     }
   }
-  if (Note) // Diagnostics were emitted.
-    Diag(Pattern->getLocation(), *Note);
 
   // In general, Instantiation isn't marked invalid to get more than one
   // error for multiple undefined instantiations. But the code that does
@@ -895,8 +895,9 @@ void Sema::DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl) {
   // Make this a warning when MSVC compatibility is requested.
   unsigned DiagId = getLangOpts().MSVCCompat ? diag::ext_template_param_shadow
                                              : diag::err_template_param_shadow;
-  Diag(Loc, DiagId) << cast<NamedDecl>(PrevDecl)->getDeclName();
-  Diag(PrevDecl->getLocation(), diag::note_template_param_here);
+  const auto *ND = cast<NamedDecl>(PrevDecl);
+  Diag(Loc, DiagId) << ND->getDeclName();
+  NoteTemplateParameterLocation(*ND);
 }
 
 /// AdjustDeclIfTemplate - If the given decl happens to be a template, reset
@@ -1256,9 +1257,13 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
   if (ImmediatelyDeclaredConstraint.isInvalid())
     return true;
 
-  ConstrainedParameter->setTypeConstraint(NS, NameInfo,
-                                          /*FoundDecl=*/NamedConcept,
-                                          NamedConcept, ArgsAsWritten,
+  auto *CL = ConceptReference::Create(Context, /*NNS=*/NS,
+                                      /*TemplateKWLoc=*/SourceLocation{},
+                                      /*ConceptNameInfo=*/NameInfo,
+                                      /*FoundDecl=*/NamedConcept,
+                                      /*NamedConcept=*/NamedConcept,
+                                      /*ArgsWritten=*/ArgsAsWritten);
+  ConstrainedParameter->setTypeConstraint(CL,
                                           ImmediatelyDeclaredConstraint.get());
   return false;
 }
@@ -1707,6 +1712,8 @@ class ConstraintRefersToContainingTemplateChecker
   // Friend, likely because it was referred to without its template arguments.
   void CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
     CheckingRD = CheckingRD->getMostRecentDecl();
+    if (!CheckingRD->isTemplated())
+      return;
 
     for (const DeclContext *DC = Friend->getLexicalDeclContext();
          DC && !DC->isFileContext(); DC = DC->getParent())
@@ -1817,6 +1824,15 @@ static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
     T->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
+// Returns the template parameter list with all default template argument
+// information.
+static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
+  // Make sure we get the template parameter list from the most
+  // recent declaration, since that is the only one that is guaranteed to
+  // have all the default template argument information.
+  return cast<TemplateDecl>(TD->getMostRecentDecl())->getTemplateParameters();
+}
+
 DeclResult Sema::CheckClassTemplate(
     Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -1834,7 +1850,8 @@ DeclResult Sema::CheckClassTemplate(
     return true;
 
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum && "can't build template of enumerated type");
+  assert(Kind != TagTypeKind::Enum &&
+         "can't build template of enumerated type");
 
   // There is no such thing as an unnamed class template.
   if (!Name) {
@@ -1988,10 +2005,13 @@ DeclResult Sema::CheckClassTemplate(
     // for a friend in a dependent context: the template parameter list itself
     // could be dependent.
     if (!(TUK == TUK_Friend && CurContext->isDependentContext()) &&
-        !TemplateParameterListsAreEqual(TemplateParams,
-                                   PrevClassTemplate->getTemplateParameters(),
-                                        /*Complain=*/true,
-                                        TPL_TemplateMatch))
+        !TemplateParameterListsAreEqual(
+            TemplateCompareNewDeclInfo(SemanticContext ? SemanticContext
+                                                       : CurContext,
+                                       CurContext, KWLoc),
+            TemplateParams, PrevClassTemplate,
+            PrevClassTemplate->getTemplateParameters(), /*Complain=*/true,
+            TPL_TemplateMatch))
       return true;
 
     // C++ [temp.class]p4:
@@ -2050,13 +2070,13 @@ DeclResult Sema::CheckClassTemplate(
   if (!(TUK == TUK_Friend && CurContext->isDependentContext()) &&
       CheckTemplateParameterList(
           TemplateParams,
-          PrevClassTemplate
-              ? PrevClassTemplate->getMostRecentDecl()->getTemplateParameters()
-              : nullptr,
+          PrevClassTemplate ? GetTemplateParameterList(PrevClassTemplate)
+                            : nullptr,
           (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
            SemanticContext->isDependentContext())
               ? TPC_ClassTemplateMember
-              : TUK == TUK_Friend ? TPC_FriendClassTemplate : TPC_ClassTemplate,
+          : TUK == TUK_Friend ? TPC_FriendClassTemplate
+                              : TPC_ClassTemplate,
           SkipBody))
     Invalid = true;
 
@@ -2239,10 +2259,24 @@ public:
 struct ConvertConstructorToDeductionGuideTransform {
   ConvertConstructorToDeductionGuideTransform(Sema &S,
                                               ClassTemplateDecl *Template)
-      : SemaRef(S), Template(Template) {}
+      : SemaRef(S), Template(Template) {
+    // If the template is nested, then we need to use the original
+    // pattern to iterate over the constructors.
+    ClassTemplateDecl *Pattern = Template;
+    while (Pattern->getInstantiatedFromMemberTemplate()) {
+      if (Pattern->isMemberSpecialization())
+        break;
+      Pattern = Pattern->getInstantiatedFromMemberTemplate();
+      NestedPattern = Pattern;
+    }
+
+    if (NestedPattern)
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
+  }
 
   Sema &SemaRef;
   ClassTemplateDecl *Template;
+  ClassTemplateDecl *NestedPattern = nullptr;
 
   DeclContext *DC = Template->getDeclContext();
   CXXRecordDecl *Primary = Template->getTemplatedDecl();
@@ -2254,6 +2288,10 @@ struct ConvertConstructorToDeductionGuideTransform {
   // Index adjustment to apply to convert depth-1 template parameters into
   // depth-0 template parameters.
   unsigned Depth1IndexAdjustment = Template->getTemplateParameters()->size();
+
+  // Instantiation arguments for the outermost depth-1 templates
+  // when the template is nested
+  MultiLevelTemplateArgumentList OuterInstantiationArgs;
 
   /// Transform a constructor declaration into a deduction guide.
   NamedDecl *transformConstructor(FunctionTemplateDecl *FTD,
@@ -2269,25 +2307,47 @@ struct ConvertConstructorToDeductionGuideTransform {
     //    -- The template parameters are the template parameters of the class
     //       template followed by the template parameters (including default
     //       template arguments) of the constructor, if any.
-    TemplateParameterList *TemplateParams = Template->getTemplateParameters();
+    TemplateParameterList *TemplateParams = GetTemplateParameterList(Template);
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
+      SmallVector<TemplateArgument, 16> Depth1Args;
       AllParams.reserve(TemplateParams->size() + InnerParams->size());
       AllParams.insert(AllParams.begin(),
                        TemplateParams->begin(), TemplateParams->end());
       SubstArgs.reserve(InnerParams->size());
+      Depth1Args.reserve(InnerParams->size());
 
       // Later template parameters could refer to earlier ones, so build up
       // a list of substituted template arguments as we go.
       for (NamedDecl *Param : *InnerParams) {
         MultiLevelTemplateArgumentList Args;
         Args.setKind(TemplateSubstitutionKind::Rewrite);
-        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterTemplateArguments(Depth1Args);
         Args.addOuterRetainedLevel();
+        if (NestedPattern)
+          Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         NamedDecl *NewParam = transformTemplateParameter(Param, Args);
         if (!NewParam)
           return nullptr;
+
+        // Constraints require that we substitute depth-1 arguments
+        // to match depths when substituted for evaluation later
+        Depth1Args.push_back(SemaRef.Context.getCanonicalTemplateArgument(
+            SemaRef.Context.getInjectedTemplateArg(NewParam)));
+
+        if (NestedPattern) {
+          TemplateDeclInstantiator Instantiator(SemaRef, DC,
+                                                OuterInstantiationArgs);
+          Instantiator.setEvaluateConstraints(false);
+          SemaRef.runWithSufficientStackSpace(NewParam->getLocation(), [&] {
+            NewParam = cast<NamedDecl>(Instantiator.Visit(NewParam));
+          });
+        }
+
+        assert(NewParam->getTemplateDepth() == 0 &&
+               "Unexpected template parameter depth");
+
         AllParams.push_back(NewParam);
         SubstArgs.push_back(SemaRef.Context.getCanonicalTemplateArgument(
             SemaRef.Context.getInjectedTemplateArg(NewParam)));
@@ -2298,8 +2358,10 @@ struct ConvertConstructorToDeductionGuideTransform {
       if (Expr *InnerRC = InnerParams->getRequiresClause()) {
         MultiLevelTemplateArgumentList Args;
         Args.setKind(TemplateSubstitutionKind::Rewrite);
-        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterTemplateArguments(Depth1Args);
         Args.addOuterRetainedLevel();
+        if (NestedPattern)
+          Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
         if (E.isInvalid())
           return nullptr;
@@ -2321,6 +2383,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       Args.addOuterTemplateArguments(SubstArgs);
       Args.addOuterRetainedLevel();
     }
+
+    if (NestedPattern)
+      Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
 
     FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
                                    .getAsAdjusted<FunctionProtoTypeLoc>();
@@ -2368,7 +2433,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       Params.push_back(NewParam);
     }
 
-    return buildDeductionGuide(Template->getTemplateParameters(), nullptr,
+    return buildDeductionGuide(GetTemplateParameterList(Template), nullptr,
                                ExplicitSpecifier(), TSI, Loc, Loc, Loc);
   }
 
@@ -2383,7 +2448,7 @@ private:
       // substitute it directly.
       auto *NewTTP = TemplateTypeParmDecl::Create(
           SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(),
-          /*Depth*/ 0, Depth1IndexAdjustment + TTP->getIndex(),
+          TTP->getDepth() - 1, Depth1IndexAdjustment + TTP->getIndex(),
           TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
           TTP->isExpandedParameterPack()
@@ -2418,7 +2483,8 @@ private:
     // the index of the parameter once it's done.
     auto *NewParam =
         cast<TemplateParmDecl>(SemaRef.SubstDecl(OldParam, DC, Args));
-    assert(NewParam->getDepth() == 0 && "unexpected template param depth");
+    assert(NewParam->getDepth() == OldParam->getDepth() - 1 &&
+           "unexpected template param depth");
     NewParam->setPosition(NewParam->getPosition() + Depth1IndexAdjustment);
     return NewParam;
   }
@@ -2435,6 +2501,9 @@ private:
     for (auto *OldParam : TL.getParams()) {
       ParmVarDecl *NewParam =
           transformFunctionTypeParam(OldParam, Args, MaterializedTypedefs);
+      if (NestedPattern && NewParam)
+        NewParam = transformFunctionTypeParam(NewParam, OuterInstantiationArgs,
+                                              MaterializedTypedefs);
       if (!NewParam)
         return QualType();
       ParamTypes.push_back(NewParam->getType());
@@ -2644,9 +2713,12 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   // FIXME: Skip constructors for which deduction must necessarily fail (those
   // for which some class template parameter without a default argument never
   // appears in a deduced context).
+  ClassTemplateDecl *Pattern =
+      Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
+  ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
   llvm::SmallPtrSet<NamedDecl *, 8> ProcessedCtors;
   bool AddedAny = false;
-  for (NamedDecl *D : LookupConstructors(Transform.Primary)) {
+  for (NamedDecl *D : LookupConstructors(Pattern->getTemplatedDecl())) {
     D = D->getUnderlyingDecl();
     if (D->isInvalidDecl() || D->isImplicit())
       continue;
@@ -2692,6 +2764,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
           Transform.buildSimpleDeductionGuide(Transform.DeducedType))
           ->getTemplatedDecl())
       ->setDeductionCandidateKind(DeductionCandidate::Copy);
+
+  SavedContext.pop();
 }
 
 /// Diagnose the presence of a default template argument on a
@@ -3873,7 +3947,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     // correct, or the code is ill-formed and will be diagnosed when the
     // dependent name is substituted.
     return Context.getDependentTemplateSpecializationType(
-        ETK_None, DTN->getQualifier(), DTN->getIdentifier(),
+        ElaboratedTypeKeyword::None, DTN->getQualifier(), DTN->getIdentifier(),
         TemplateArgs.arguments());
 
   if (Name.getAsAssumedTemplateName() &&
@@ -4187,7 +4261,7 @@ TypeResult Sema::ActOnTemplateIdType(
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
     assert(SS.getScopeRep() == DTN->getQualifier());
     QualType T = Context.getDependentTemplateSpecializationType(
-        ETK_None, DTN->getQualifier(), DTN->getIdentifier(),
+        ElaboratedTypeKeyword::None, DTN->getQualifier(), DTN->getIdentifier(),
         TemplateArgs.arguments());
     // Build type-source information.
     TypeLocBuilder TLB;
@@ -4220,8 +4294,9 @@ TypeResult Sema::ActOnTemplateIdType(
     SpecTL.setArgLocInfo(i, TemplateArgs[i].getLocInfo());
 
   // Create an elaborated-type-specifier containing the nested-name-specifier.
-  QualType ElTy = getElaboratedType(
-      ETK_None, !IsCtorOrDtorName ? SS : CXXScopeSpec(), SpecTy);
+  QualType ElTy =
+      getElaboratedType(ElaboratedTypeKeyword::None,
+                        !IsCtorOrDtorName ? SS : CXXScopeSpec(), SpecTy);
   ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(ElTy);
   ElabTL.setElaboratedKeywordLoc(SourceLocation());
   if (!ElabTL.isEmpty())
@@ -4281,7 +4356,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
     Diag(TemplateLoc, diag::err_tag_reference_non_tag)
-        << TAT << NTK_TypeAliasTemplate << TagKind;
+        << TAT << NTK_TypeAliasTemplate << llvm::to_underlying(TagKind);
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
@@ -4422,7 +4497,7 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
       << SFINAEArgString;
   }
 
-  S.Diag(Template->getLocation(), diag::note_template_decl_here);
+  S.NoteTemplateLocation(*Template);
   SmallVector<const Expr *, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
@@ -4547,7 +4622,9 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
-                                        UPPC_PartialSpecialization))
+                                        IsPartialSpecialization
+                                            ? UPPC_PartialSpecialization
+                                            : UPPC_ExplicitSpecialization))
       return true;
 
   // Check that the template argument list is well-formed for this
@@ -4898,8 +4975,7 @@ void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
   Diag(Loc, diag::err_template_missing_args)
     << (int)getTemplateNameKindForDiagnostics(Name) << Name;
   if (TemplateDecl *TD = Name.getAsTemplateDecl()) {
-    Diag(TD->getLocation(), diag::note_template_decl_here)
-      << TD->getTemplateParameters()->getSourceRange();
+    NoteTemplateLocation(*TD, TD->getTemplateParameters()->getSourceRange());
   }
 }
 
@@ -4941,13 +5017,13 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
                       TemplateArgs->getRAngleLoc()),
           Satisfaction))
     return ExprError();
-
-  return ConceptSpecializationExpr::Create(
+  auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
-      ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs), CSD,
-      AreArgsDependent ? nullptr : &Satisfaction);
+      ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
+  return ConceptSpecializationExpr::Create(
+      Context, CL, CSD, AreArgsDependent ? nullptr : &Satisfaction);
 }
 
 ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
@@ -4975,7 +5051,7 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
       return ExprError();
     }
   }
-
+  bool KnownDependent = false;
   // In C++1y, check variable template ids.
   if (R.getAsSingle<VarTemplateDecl>()) {
     ExprResult Res = CheckVarTemplateId(SS, R.getLookupNameInfo(),
@@ -4984,6 +5060,7 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
     if (Res.isInvalid() || Res.isUsable())
       return Res;
     // Result is dependent. Carry on to build an UnresolvedLookupEpxr.
+    KnownDependent = true;
   }
 
   if (R.getAsSingle<ConceptDecl>()) {
@@ -4995,13 +5072,10 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   // We don't want lookup warnings at this point.
   R.suppressDiagnostics();
 
-  UnresolvedLookupExpr *ULE
-    = UnresolvedLookupExpr::Create(Context, R.getNamingClass(),
-                                   SS.getWithLocInContext(Context),
-                                   TemplateKWLoc,
-                                   R.getLookupNameInfo(),
-                                   RequiresADL, TemplateArgs,
-                                   R.begin(), R.end());
+  UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
+      Context, R.getNamingClass(), SS.getWithLocInContext(Context),
+      TemplateKWLoc, R.getLookupNameInfo(), RequiresADL, TemplateArgs,
+      R.begin(), R.end(), KnownDependent);
 
   return ULE;
 }
@@ -5253,12 +5327,12 @@ bool Sema::CheckTemplateTypeArgument(
                       ? diag::ext_ms_template_type_arg_missing_typename
                       : diag::err_template_arg_must_be_type_suggest)
             << FixItHint::CreateInsertion(Loc, "typename ");
-        Diag(Param->getLocation(), diag::note_template_param_here);
+        NoteTemplateParameterLocation(*Param);
 
         // Recover by synthesizing a type using the location information that we
         // already have.
-        ArgType =
-            Context.getDependentNameType(ETK_Typename, SS.getScopeRep(), II);
+        ArgType = Context.getDependentNameType(ElaboratedTypeKeyword::Typename,
+                                               SS.getScopeRep(), II);
         TypeLocBuilder TLB;
         DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(ArgType);
         TL.setElaboratedKeywordLoc(SourceLocation(/*synthesized*/));
@@ -5282,7 +5356,7 @@ bool Sema::CheckTemplateTypeArgument(
     // is not a type.
     SourceRange SR = AL.getSourceRange();
     Diag(SR.getBegin(), diag::err_template_arg_must_be_type) << SR;
-    Diag(Param->getLocation(), diag::note_template_param_here);
+    NoteTemplateParameterLocation(*Param);
 
     return true;
   }
@@ -5536,7 +5610,7 @@ convertTypeTemplateArgumentToTemplate(ASTContext &Context, TypeLoc TLoc) {
   // Extract and step over any surrounding nested-name-specifier.
   NestedNameSpecifierLoc QualLoc;
   if (auto ETLoc = TLoc.getAs<ElaboratedTypeLoc>()) {
-    if (ETLoc.getTypePtr()->getKeyword() != ETK_None)
+    if (ETLoc.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None)
       return TemplateArgumentLoc();
 
     QualLoc = ETLoc.getQualifierLoc();
@@ -5728,8 +5802,8 @@ bool Sema::CheckTemplateArgument(
       // therefore cannot be a non-type template argument.
       Diag(Arg.getLocation(), diag::err_template_arg_must_be_expr)
         << Arg.getSourceRange();
+      NoteTemplateParameterLocation(*Param);
 
-      Diag(Param->getLocation(), diag::note_template_param_here);
       return true;
 
     case TemplateArgument::Type: {
@@ -5749,7 +5823,7 @@ bool Sema::CheckTemplateArgument(
         Diag(SR.getBegin(), diag::err_template_arg_nontype_ambig) << SR << T;
       else
         Diag(SR.getBegin(), diag::err_template_arg_must_be_expr) << SR;
-      Diag(Param->getLocation(), diag::note_template_param_here);
+      NoteTemplateParameterLocation(*Param);
       return true;
     }
 
@@ -5870,8 +5944,7 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
     << /*not enough args*/0
     << (int)S.getTemplateNameKindForDiagnostics(TemplateName(TD))
     << TD;
-  S.Diag(TD->getLocation(), diag::note_template_decl_here)
-    << Params->getSourceRange();
+  S.NoteTemplateLocation(*TD, Params->getSourceRange());
   return true;
 }
 
@@ -5892,12 +5965,7 @@ bool Sema::CheckTemplateArgumentList(
   // template.
   TemplateArgumentListInfo NewArgs = TemplateArgs;
 
-  // Make sure we get the template parameter list from the most
-  // recent declaration, since that is the only one that is guaranteed to
-  // have all the default template argument information.
-  TemplateParameterList *Params =
-      cast<TemplateDecl>(Template->getMostRecentDecl())
-          ->getTemplateParameters();
+  TemplateParameterList *Params = GetTemplateParameterList(Template);
 
   SourceLocation RAngleLoc = NewArgs.getRAngleLoc();
 
@@ -5937,8 +6005,7 @@ bool Sema::CheckTemplateArgumentList(
           << /*not enough args*/0
           << (int)getTemplateNameKindForDiagnostics(TemplateName(Template))
           << Template;
-        Diag(Template->getLocation(), diag::note_template_decl_here)
-          << Params->getSourceRange();
+        NoteTemplateLocation(*Template, Params->getSourceRange());
         return true;
       }
     }
@@ -5970,7 +6037,7 @@ bool Sema::CheckTemplateArgumentList(
              diag::err_template_expansion_into_fixed_list)
           << (isa<ConceptDecl>(Template) ? 1 : 0)
           << NewArgs[ArgIdx].getSourceRange();
-        Diag((*Param)->getLocation(), diag::note_template_param_here);
+        NoteTemplateParameterLocation(**Param);
         return true;
       }
 
@@ -6166,8 +6233,7 @@ bool Sema::CheckTemplateArgumentList(
         << (int)getTemplateNameKindForDiagnostics(TemplateName(Template))
         << Template
         << SourceRange(NewArgs[ArgIdx].getLocation(), NewArgs.getRAngleLoc());
-    Diag(Template->getLocation(), diag::note_template_decl_here)
-        << Params->getSourceRange();
+    NoteTemplateLocation(*Template, Params->getSourceRange());
     return true;
   }
 
@@ -6198,7 +6264,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, /*Final=*/false, &StackTemplateArgs,
+        Template, NewContext, /*Final=*/false, &StackTemplateArgs,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
@@ -6579,7 +6645,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
     for (unsigned I = 0, N = Notes.size(); I != N; ++I)
       S.Diag(Notes[I].first, Notes[I].second);
 
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return NPV_Error;
   }
 
@@ -6605,7 +6671,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
     // then recover as if the types were correct.
     S.Diag(Arg->getExprLoc(), diag::err_template_arg_wrongtype_null_constant)
       << Arg->getType() << ParamType << Arg->getSourceRange();
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return NPV_NullPointer;
   }
 
@@ -6615,7 +6681,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
     // message with the information we have here.
     S.Diag(Arg->getExprLoc(), diag::err_template_arg_invalid)
       << EvalResult.Val.getAsString(S.Context, ParamType);
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return NPV_Error;
   }
 
@@ -6627,7 +6693,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
         << ParamType << FixItHint::CreateInsertion(Arg->getBeginLoc(), Code)
         << FixItHint::CreateInsertion(S.getLocForEndOfToken(Arg->getEndLoc()),
                                       ")");
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return NPV_NullPointer;
   }
 
@@ -6668,7 +6734,7 @@ static bool CheckTemplateArgumentIsCompatibleWithParameter(
           S.Diag(Arg->getBeginLoc(),
                  diag::err_template_arg_ref_bind_ignores_quals)
               << ParamType << Arg->getType() << Arg->getSourceRange();
-          S.Diag(Param->getLocation(), diag::note_template_param_here);
+          S.NoteTemplateParameterLocation(*Param);
           return true;
         }
       }
@@ -6686,7 +6752,7 @@ static bool CheckTemplateArgumentIsCompatibleWithParameter(
       else
         S.Diag(Arg->getBeginLoc(), diag::err_template_arg_not_convertible)
             << ArgIn->getType() << ParamType << Arg->getSourceRange();
-      S.Diag(Param->getLocation(), diag::note_template_param_here);
+      S.NoteTemplateParameterLocation(*Param);
       return true;
     }
   }
@@ -6829,7 +6895,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   if (!Entity) {
     S.Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
         << Arg->getSourceRange();
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return true;
   }
 
@@ -6837,7 +6903,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   if (isa<FieldDecl>(Entity) || isa<IndirectFieldDecl>(Entity)) {
     S.Diag(Arg->getBeginLoc(), diag::err_template_arg_field)
         << Entity << Arg->getSourceRange();
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return true;
   }
 
@@ -6846,7 +6912,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     if (!Method->isStatic()) {
       S.Diag(Arg->getBeginLoc(), diag::err_template_arg_method)
           << Method << Arg->getSourceRange();
-      S.Diag(Param->getLocation(), diag::note_template_param_here);
+      S.NoteTemplateParameterLocation(*Param);
       return true;
     }
   }
@@ -6865,7 +6931,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   }
 
   // Address / reference template args must have external linkage in C++98.
-  if (Entity->getFormalLinkage() == InternalLinkage) {
+  if (Entity->getFormalLinkage() == Linkage::Internal) {
     S.Diag(Arg->getBeginLoc(),
            S.getLangOpts().CPlusPlus11
                ? diag::warn_cxx98_compat_template_arg_object_internal
@@ -6886,7 +6952,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     if (Var->getType()->isReferenceType()) {
       S.Diag(Arg->getBeginLoc(), diag::err_template_arg_reference_var)
           << Var->getType() << Arg->getSourceRange();
-      S.Diag(Param->getLocation(), diag::note_template_param_here);
+      S.NoteTemplateParameterLocation(*Param);
       return true;
     }
 
@@ -6907,14 +6973,14 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
                                           ParamType.getNonReferenceType())) {
       S.Diag(AddrOpLoc, diag::err_template_arg_address_of_non_pointer)
         << ParamType;
-      S.Diag(Param->getLocation(), diag::note_template_param_here);
+      S.NoteTemplateParameterLocation(*Param);
       return true;
     }
 
     S.Diag(AddrOpLoc, diag::err_template_arg_address_of_non_pointer)
       << ParamType
       << FixItHint::CreateRemoval(AddrOpLoc);
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
 
     ArgType = Entity->getType();
   }
@@ -6936,14 +7002,14 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
       if (!S.Context.hasSameUnqualifiedType(ArgType, ParamType)) {
         S.Diag(Arg->getBeginLoc(), diag::err_template_arg_not_address_of)
           << ParamType;
-        S.Diag(Param->getLocation(), diag::note_template_param_here);
+        S.NoteTemplateParameterLocation(*Param);
         return true;
       }
 
       S.Diag(Arg->getBeginLoc(), diag::err_template_arg_not_address_of)
         << ParamType << FixItHint::CreateInsertion(Arg->getBeginLoc(), "&");
 
-      S.Diag(Param->getLocation(), diag::note_template_param_here);
+      S.NoteTemplateParameterLocation(*Param);
     }
   }
 
@@ -7059,7 +7125,7 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
     // We can't perform this conversion.
     S.Diag(ResultArg->getBeginLoc(), diag::err_template_arg_not_convertible)
         << ResultArg->getType() << ParamType << ResultArg->getSourceRange();
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    S.NoteTemplateParameterLocation(*Param);
     return true;
   }
 
@@ -7073,7 +7139,8 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
       isa<CXXMethodDecl>(DRE->getDecl())) {
     assert((isa<FieldDecl>(DRE->getDecl()) ||
             isa<IndirectFieldDecl>(DRE->getDecl()) ||
-            !cast<CXXMethodDecl>(DRE->getDecl())->isStatic()) &&
+            cast<CXXMethodDecl>(DRE->getDecl())
+                ->isImplicitObjectMemberFunction()) &&
            "Only non-static member pointers can make it here");
 
     // Okay: this is the address of a non-static member, and therefore
@@ -7170,7 +7237,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
              diag::err_non_type_template_parm_type_deduction_failure)
             << Param->getDeclName() << Param->getType() << Arg->getType()
             << Arg->getSourceRange();
-        Diag(Param->getLocation(), diag::note_template_param_here);
+        NoteTemplateParameterLocation(*Param);
         return ExprError();
       }
     }
@@ -7180,7 +7247,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // where the parameter type is deduced.
     ParamType = CheckNonTypeTemplateParameterType(ParamType, Arg->getExprLoc());
     if (ParamType.isNull()) {
-      Diag(Param->getLocation(), diag::note_template_param_here);
+      NoteTemplateParameterLocation(*Param);
       return ExprError();
     }
   }
@@ -7216,7 +7283,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     Diag(StartLoc, diag::err_deduced_non_type_template_arg_type_mismatch)
       << Arg->getType()
       << ParamType.getUnqualifiedType();
-    Diag(Param->getLocation(), diag::note_template_param_here);
+    NoteTemplateParameterLocation(*Param);
     return ExprError();
   }
 
@@ -7246,49 +7313,74 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     return E;
   }
 
+  QualType CanonParamType = Context.getCanonicalType(ParamType);
+  // Avoid making a copy when initializing a template parameter of class type
+  // from a template parameter object of the same type. This is going beyond
+  // the standard, but is required for soundness: in
+  //   template<A a> struct X { X *p; X<a> *q; };
+  // ... we need p and q to have the same type.
+  //
+  // Similarly, don't inject a call to a copy constructor when initializing
+  // from a template parameter of the same type.
+  Expr *InnerArg = Arg->IgnoreParenImpCasts();
+  if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
+      Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
+    NamedDecl *ND = cast<DeclRefExpr>(InnerArg)->getDecl();
+    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+
+      SugaredConverted = TemplateArgument(TPO, ParamType);
+      CanonicalConverted =
+          TemplateArgument(TPO->getCanonicalDecl(), CanonParamType);
+      return Arg;
+    }
+    if (isa<NonTypeTemplateParmDecl>(ND)) {
+      SugaredConverted = TemplateArgument(Arg);
+      CanonicalConverted =
+          Context.getCanonicalTemplateArgument(SugaredConverted);
+      return Arg;
+    }
+  }
+
   // The initialization of the parameter from the argument is
   // a constant-evaluated context.
   EnterExpressionEvaluationContext ConstantEvaluated(
       *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
+  bool IsConvertedConstantExpression = true;
+  if (isa<InitListExpr>(Arg) || ParamType->isRecordType()) {
+    InitializationKind Kind = InitializationKind::CreateForInit(
+        Arg->getBeginLoc(), /*DirectInit=*/false, Arg);
+    Expr *Inits[1] = {Arg};
+    InitializedEntity Entity =
+        InitializedEntity::InitializeTemplateParameter(ParamType, Param);
+    InitializationSequence InitSeq(*this, Entity, Kind, Inits);
+    ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Inits);
+    if (Result.isInvalid() || !Result.get())
+      return ExprError();
+    Result = ActOnConstantExpression(Result.get());
+    if (Result.isInvalid() || !Result.get())
+      return ExprError();
+    Arg = ActOnFinishFullExpr(Result.get(), Arg->getBeginLoc(),
+                              /*DiscardedValue=*/false,
+                              /*IsConstexpr=*/true, /*IsTemplateArgument=*/true)
+              .get();
+    IsConvertedConstantExpression = false;
+  }
+
   if (getLangOpts().CPlusPlus17) {
-    QualType CanonParamType = Context.getCanonicalType(ParamType);
-
-    // Avoid making a copy when initializing a template parameter of class type
-    // from a template parameter object of the same type. This is going beyond
-    // the standard, but is required for soundness: in
-    //   template<A a> struct X { X *p; X<a> *q; };
-    // ... we need p and q to have the same type.
-    //
-    // Similarly, don't inject a call to a copy constructor when initializing
-    // from a template parameter of the same type.
-    Expr *InnerArg = Arg->IgnoreParenImpCasts();
-    if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
-        Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
-      NamedDecl *ND = cast<DeclRefExpr>(InnerArg)->getDecl();
-      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
-
-        SugaredConverted = TemplateArgument(TPO, ParamType);
-        CanonicalConverted =
-            TemplateArgument(TPO->getCanonicalDecl(), CanonParamType);
-        return Arg;
-      }
-      if (isa<NonTypeTemplateParmDecl>(ND)) {
-        SugaredConverted = TemplateArgument(Arg);
-        CanonicalConverted =
-            Context.getCanonicalTemplateArgument(SugaredConverted);
-        return Arg;
-      }
-    }
-
     // C++17 [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
-    ExprResult ArgResult = CheckConvertedConstantExpression(
-        Arg, ParamType, Value, CCEK_TemplateArg, Param);
-    if (ArgResult.isInvalid())
-      return ExprError();
+    ExprResult ArgResult;
+    if (IsConvertedConstantExpression) {
+      ArgResult = BuildConvertedConstantExpression(Arg, ParamType,
+                                                   CCEK_TemplateArg, Param);
+      if (ArgResult.isInvalid())
+        return ExprError();
+    } else {
+      ArgResult = Arg;
+    }
 
     // For a value-dependent argument, CheckConvertedConstantExpression is
     // permitted (and expected) to be unable to determine a value.
@@ -7298,6 +7390,13 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return ArgResult;
     }
+
+    APValue PreNarrowingValue;
+    ArgResult = EvaluateConvertedConstantExpression(
+        ArgResult.get(), ParamType, Value, CCEK_TemplateArg, /*RequireInt=*/
+        false, PreNarrowingValue);
+    if (ArgResult.isInvalid())
+      return ExprError();
 
     // Convert the APValue to a TemplateArgument.
     switch (Value.getKind()) {
@@ -7481,7 +7580,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (!ArgType->isIntegralOrEnumerationType()) {
       Diag(Arg->getBeginLoc(), diag::err_template_arg_not_integral_or_enumeral)
           << ArgType << Arg->getSourceRange();
-      Diag(Param->getLocation(), diag::note_template_param_here);
+      NoteTemplateParameterLocation(*Param);
       return ExprError();
     } else if (!Arg->isValueDependent()) {
       class TmplArgICEDiagnoser : public VerifyICEDiagnoser {
@@ -7519,7 +7618,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // We can't perform this conversion.
       Diag(Arg->getBeginLoc(), diag::err_template_arg_not_convertible)
           << Arg->getType() << ParamType << Arg->getSourceRange();
-      Diag(Param->getLocation(), diag::note_template_param_here);
+      NoteTemplateParameterLocation(*Param);
       return ExprError();
     }
 
@@ -7565,7 +7664,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
         Diag(Arg->getBeginLoc(), diag::warn_template_arg_negative)
             << toString(OldValue, 10) << toString(Value, 10) << Param->getType()
             << Arg->getSourceRange();
-        Diag(Param->getLocation(), diag::note_template_param_here);
+        NoteTemplateParameterLocation(*Param);
       }
 
       // Complain if we overflowed the template parameter's type.
@@ -7580,7 +7679,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
         Diag(Arg->getBeginLoc(), diag::warn_template_arg_too_large)
             << toString(OldValue, 10) << toString(Value, 10) << Param->getType()
             << Arg->getSourceRange();
-        Diag(Param->getLocation(), diag::note_template_param_here);
+        NoteTemplateParameterLocation(*Param);
       }
     }
 
@@ -7625,7 +7724,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
         if (DiagnoseUseOfDecl(Fn, Arg->getBeginLoc()))
           return ExprError();
 
-        Arg = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        ExprResult Res = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        if (Res.isInvalid())
+          return ExprError();
+        Arg = Res.get();
         ArgType = Arg->getType();
       } else
         return ExprError();
@@ -7676,8 +7778,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                                                 FoundResult)) {
         if (DiagnoseUseOfDecl(Fn, Arg->getBeginLoc()))
           return ExprError();
-
-        Arg = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        ExprResult Res = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        if (Res.isInvalid())
+          return ExprError();
+        Arg = Res.get();
         ArgType = Arg->getType();
       } else
         return ExprError();
@@ -7702,7 +7806,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     case NPV_NotNullPointer:
       Diag(Arg->getExprLoc(), diag::err_template_arg_not_convertible)
         << Arg->getType() << ParamType;
-      Diag(Param->getLocation(), diag::note_template_param_here);
+      NoteTemplateParameterLocation(*Param);
       return ExprError();
 
     case NPV_Error:
@@ -7837,6 +7941,37 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
                                          Arg.getLocation());
 }
 
+static Sema::SemaDiagnosticBuilder noteLocation(Sema &S, const NamedDecl &Decl,
+                                                unsigned HereDiagID,
+                                                unsigned ExternalDiagID) {
+  if (Decl.getLocation().isValid())
+    return S.Diag(Decl.getLocation(), HereDiagID);
+
+  SmallString<128> Str;
+  llvm::raw_svector_ostream Out(Str);
+  PrintingPolicy PP = S.getPrintingPolicy();
+  PP.TerseOutput = 1;
+  Decl.print(Out, PP);
+  return S.Diag(Decl.getLocation(), ExternalDiagID) << Out.str();
+}
+
+void Sema::NoteTemplateLocation(const NamedDecl &Decl,
+                                std::optional<SourceRange> ParamRange) {
+  SemaDiagnosticBuilder DB =
+      noteLocation(*this, Decl, diag::note_template_decl_here,
+                   diag::note_template_decl_external);
+  if (ParamRange && ParamRange->isValid()) {
+    assert(Decl.getLocation().isValid() &&
+           "Parameter range has location when Decl does not");
+    DB << *ParamRange;
+  }
+}
+
+void Sema::NoteTemplateParameterLocation(const NamedDecl &Decl) {
+  noteLocation(*this, Decl, diag::note_template_param_here,
+               diag::note_template_param_external);
+}
+
 /// Given a non-type template argument that refers to a
 /// declaration and the type of its corresponding non-type template
 /// parameter, produce an expression that properly refers to that
@@ -7969,17 +8104,17 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
 
   Expr *E;
   if (T->isAnyCharacterType()) {
-    CharacterLiteral::CharacterKind Kind;
+    CharacterLiteralKind Kind;
     if (T->isWideCharType())
-      Kind = CharacterLiteral::Wide;
+      Kind = CharacterLiteralKind::Wide;
     else if (T->isChar8Type() && getLangOpts().Char8)
-      Kind = CharacterLiteral::UTF8;
+      Kind = CharacterLiteralKind::UTF8;
     else if (T->isChar16Type())
-      Kind = CharacterLiteral::UTF16;
+      Kind = CharacterLiteralKind::UTF16;
     else if (T->isChar32Type())
-      Kind = CharacterLiteral::UTF32;
+      Kind = CharacterLiteralKind::UTF32;
     else
-      Kind = CharacterLiteral::Ascii;
+      Kind = CharacterLiteralKind::Ascii;
 
     E = new (Context) CharacterLiteral(Arg.getAsIntegral().getZExtValue(),
                                        Kind, T, Loc);
@@ -8006,7 +8141,8 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
 
 /// Match two template parameters within template parameter lists.
 static bool MatchTemplateParameterKind(
-    Sema &S, NamedDecl *New, const NamedDecl *NewInstFrom, NamedDecl *Old,
+    Sema &S, NamedDecl *New,
+    const Sema::TemplateCompareNewDeclInfo &NewInstFrom, NamedDecl *Old,
     const NamedDecl *OldInstFrom, bool Complain,
     Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   // Check the actual kind (type, non-type, template).
@@ -8094,8 +8230,8 @@ static bool MatchTemplateParameterKind(
   // For template template parameters, check the template parameter types.
   // The template parameter lists of template template
   // parameters must agree.
-  else if (TemplateTemplateParmDecl *OldTTP
-                                    = dyn_cast<TemplateTemplateParmDecl>(Old)) {
+  else if (TemplateTemplateParmDecl *OldTTP =
+               dyn_cast<TemplateTemplateParmDecl>(Old)) {
     TemplateTemplateParmDecl *NewTTP = cast<TemplateTemplateParmDecl>(New);
     if (!S.TemplateParameterListsAreEqual(
             NewInstFrom, NewTTP->getTemplateParameters(), OldInstFrom,
@@ -8199,7 +8335,7 @@ void DiagnoseTemplateParameterListArityMismatch(Sema &S,
 /// \returns True if the template parameter lists are equal, false
 /// otherwise.
 bool Sema::TemplateParameterListsAreEqual(
-    const NamedDecl *NewInstFrom, TemplateParameterList *New,
+    const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
     const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
     TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   if (Old->size() != New->size() && Kind != TPL_TemplateTemplateArgumentMatch) {
@@ -8561,9 +8697,7 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
       S.Diag(IsDefaultArgument ? TemplateNameLoc : ArgExpr->getBeginLoc(),
              diag::err_dependent_typed_non_type_arg_in_partial_spec)
           << Param->getType();
-      S.Diag(Param->getLocation(), diag::note_template_param_here)
-        << (IsDefaultArgument ? ParamUseRange : SourceRange())
-        << ParamUseRange;
+      S.NoteTemplateParameterLocation(*Param);
       return true;
     }
   }
@@ -8706,7 +8840,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Check that the specialization uses the same tag kind as the
   // original template.
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum && "Invalid enum tag in class template spec!");
+  assert(Kind != TagTypeKind::Enum &&
+         "Invalid enum tag in class template spec!");
   if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(),
                                     Kind, TUK == TUK_Definition, KWLoc,
                                     ClassTemplate->getIdentifier())) {
@@ -8726,7 +8861,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
-                                        UPPC_PartialSpecialization))
+                                        isPartialSpecialization
+                                            ? UPPC_PartialSpecialization
+                                            : UPPC_ExplicitSpecialization))
       return true;
 
   // Check that the template argument list is well-formed for this
@@ -9321,10 +9458,9 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
 ///
 /// There really isn't any useful analysis we can do here, so we
 /// just store the information.
-bool
-Sema::CheckDependentFunctionTemplateSpecialization(FunctionDecl *FD,
-                   const TemplateArgumentListInfo &ExplicitTemplateArgs,
-                                                   LookupResult &Previous) {
+bool Sema::CheckDependentFunctionTemplateSpecialization(
+    FunctionDecl *FD, const TemplateArgumentListInfo *ExplicitTemplateArgs,
+    LookupResult &Previous) {
   // Remove anything from Previous that isn't a function template in
   // the correct context.
   DeclContext *FDLookupContext = FD->getDeclContext()->getRedeclContext();
@@ -9348,13 +9484,14 @@ Sema::CheckDependentFunctionTemplateSpecialization(FunctionDecl *FD,
   }
   F.done();
 
+  bool IsFriend = FD->getFriendObjectKind() != Decl::FOK_None;
   if (Previous.empty()) {
-    Diag(FD->getLocation(),
-         diag::err_dependent_function_template_spec_no_match);
+    Diag(FD->getLocation(), diag::err_dependent_function_template_spec_no_match)
+        << IsFriend;
     for (auto &P : DiscardedCandidates)
       Diag(P.second->getLocation(),
            diag::note_dependent_function_template_spec_discard_reason)
-          << P.first;
+          << P.first << IsFriend;
     return true;
   }
 
@@ -9880,7 +10017,7 @@ static bool CheckExplicitInstantiation(Sema &S, NamedDecl *D,
   //   An explicit instantiation declaration shall not name a specialization of
   //   a template with internal linkage.
   if (TSK == TSK_ExplicitInstantiationDeclaration &&
-      D->getFormalLinkage() == InternalLinkage) {
+      D->getFormalLinkage() == Linkage::Internal) {
     S.Diag(InstLoc, diag::err_explicit_instantiation_internal_linkage) << D;
     return true;
   }
@@ -9952,14 +10089,15 @@ DeclResult Sema::ActOnExplicitInstantiation(
   // Check that the specialization uses the same tag kind as the
   // original template.
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum &&
+  assert(Kind != TagTypeKind::Enum &&
          "Invalid enum tag in class template explicit instantiation!");
 
   ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
 
   if (!ClassTemplate) {
     NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag)
+        << TD << NTK << llvm::to_underlying(Kind);
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
@@ -10105,6 +10243,17 @@ DeclResult Sema::ActOnExplicitInstantiation(
         ClassTemplate, CanonicalConverted, PrevDecl);
     SetNestedNameSpecifier(*this, Specialization, SS);
 
+    // A MSInheritanceAttr attached to the previous declaration must be
+    // propagated to the new node prior to instantiation.
+    if (PrevDecl) {
+      if (const auto *A = PrevDecl->getAttr<MSInheritanceAttr>()) {
+        auto *Clone = A->clone(getASTContext());
+        Clone->setInherited(true);
+        Specialization->addAttr(Clone);
+        Consumer.AssignInheritanceModel(Specialization);
+      }
+    }
+
     if (!HasNoEffect && !PrevDecl) {
       // Insert the new specialization.
       ClassTemplate->AddSpecialization(Specialization, InsertPos);
@@ -10219,11 +10368,6 @@ DeclResult Sema::ActOnExplicitInstantiation(
         Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
         PrevDecl->hasAttr<DLLExportAttr>()) {
       dllExportImportClassTemplateSpecialization(*this, Def);
-    }
-
-    if (Def->hasAttr<MSInheritanceAttr>()) {
-      Specialization->addAttr(Def->getAttr<MSInheritanceAttr>());
-      Consumer.AssignInheritanceModel(Specialization);
     }
 
     // Set the template specialization kind. Make sure it is set before
@@ -10778,7 +10922,8 @@ Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   if (TUK == TUK_Declaration || TUK == TUK_Definition) {
     Diag(NameLoc, diag::err_dependent_tag_decl)
-      << (TUK == TUK_Definition) << Kind << SS.getRange();
+        << (TUK == TUK_Definition) << llvm::to_underlying(Kind)
+        << SS.getRange();
     return true;
   }
 
@@ -10815,8 +10960,8 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
   QualType T =
       CheckTypenameType((TypenameLoc.isValid() ||
                          IsImplicitTypename == ImplicitTypenameContext::Yes)
-                            ? ETK_Typename
-                            : ETK_None,
+                            ? ElaboratedTypeKeyword::Typename
+                            : ElaboratedTypeKeyword::None,
                         TypenameLoc, QualifierLoc, II, IdLoc, &TSI,
                         /*DeducedTSTContext=*/true);
   if (T.isNull())
@@ -10865,8 +11010,8 @@ Sema::ActOnTypenameType(Scope *S,
     assert(DTN && "dependent template has non-dependent name?");
     assert(DTN->getQualifier() == SS.getScopeRep());
     QualType T = Context.getDependentTemplateSpecializationType(
-        ETK_Typename, DTN->getQualifier(), DTN->getIdentifier(),
-        TemplateArgs.arguments());
+        ElaboratedTypeKeyword::Typename, DTN->getQualifier(),
+        DTN->getIdentifier(), TemplateArgs.arguments());
 
     // Create source-location information for this type.
     TypeLocBuilder Builder;
@@ -10898,7 +11043,8 @@ Sema::ActOnTypenameType(Scope *S,
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     SpecTL.setArgLocInfo(I, TemplateArgs[I].getLocInfo());
 
-  T = Context.getElaboratedType(ETK_Typename, SS.getScopeRep(), T);
+  T = Context.getElaboratedType(ElaboratedTypeKeyword::Typename,
+                                SS.getScopeRep(), T);
   ElaboratedTypeLoc TL = Builder.push<ElaboratedTypeLoc>(T);
   TL.setElaboratedKeywordLoc(TypenameLoc);
   TL.setQualifierLoc(SS.getWithLocInContext(Context));
@@ -11101,7 +11247,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
       // ignore functions, but that appears to be an oversight.
       auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(Ctx);
       auto *FoundRD = dyn_cast<CXXRecordDecl>(Type);
-      if (Keyword == ETK_Typename && LookupRD && FoundRD &&
+      if (Keyword == ElaboratedTypeKeyword::Typename && LookupRD && FoundRD &&
           FoundRD->isInjectedClassName() &&
           declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
         Diag(IILoc, diag::ext_out_of_line_qualified_id_type_names_constructor)
@@ -11131,7 +11277,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
           else
             Diag(IILoc, diag::err_deduced_tst)
               << (int)getTemplateNameKindForDiagnostics(TemplateName(TD));
-          Diag(TD->getLocation(), diag::note_template_decl_here);
+          NoteTemplateLocation(*TD);
           return QualType();
         }
         return Context.getElaboratedType(
@@ -11569,4 +11715,26 @@ void Sema::checkSpecializationReachability(SourceLocation Loc,
   ExplicitSpecializationVisibilityChecker(*this, Loc,
                                           Sema::AcceptableKind::Reachable)
       .check(Spec);
+}
+
+/// Returns the top most location responsible for the definition of \p N.
+/// If \p N is a a template specialization, this is the location
+/// of the top of the instantiation stack.
+/// Otherwise, the location of \p N is returned.
+SourceLocation Sema::getTopMostPointOfInstantiation(const NamedDecl *N) const {
+  if (!getLangOpts().CPlusPlus || CodeSynthesisContexts.empty())
+    return N->getLocation();
+  if (const auto *FD = dyn_cast<FunctionDecl>(N)) {
+    if (!FD->isFunctionTemplateSpecialization())
+      return FD->getLocation();
+  } else if (!isa<ClassTemplateSpecializationDecl,
+                  VarTemplateSpecializationDecl>(N)) {
+    return N->getLocation();
+  }
+  for (const CodeSynthesisContext &CSC : CodeSynthesisContexts) {
+    if (!CSC.isInstantiationRecord() || CSC.PointOfInstantiation.isInvalid())
+      continue;
+    return CSC.PointOfInstantiation;
+  }
+  return N->getLocation();
 }

@@ -8,7 +8,7 @@
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/* | \
 // RUN:   FileCheck %s --check-prefix TRACE
 
-// REQUIRES: target={{(aarch64|x86_64)-.*}}
+// REQUIRES: target={{(aarch64|loongarch64|x86_64)-.*}}
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"

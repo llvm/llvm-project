@@ -8,7 +8,7 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x double>,
-  i64)
+  i64, i64)
 declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>*,
@@ -27,7 +27,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %0)
+    i64 7, i64 %0)
   ret <vscale x 1 x double> %1
 }
 
@@ -43,7 +43,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %avl)
+    i64 7, i64 %avl)
   ret <vscale x 1 x double> %1
 }
 
@@ -102,23 +102,23 @@ declare <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1>, <vscal
 define void @test6(i32* nocapture readonly %A, i32* nocapture %B, i64 %n) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, a2, e32, m1, ta, ma
-; CHECK-NEXT:    beqz a3, .LBB5_3
+; CHECK-NEXT:    vsetvli a6, a2, e32, m1, ta, ma
+; CHECK-NEXT:    beqz a6, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a6, a4, 2
-; CHECK-NEXT:    add a5, a0, a6
+; CHECK-NEXT:    slli a3, a4, 2
+; CHECK-NEXT:    add a5, a0, a3
 ; CHECK-NEXT:    vle32.v v8, (a5)
 ; CHECK-NEXT:    vmsle.vi v9, v8, -3
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 2
 ; CHECK-NEXT:    vmor.mm v0, v9, v10
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    vse32.v v8, (a6), v0.t
-; CHECK-NEXT:    add a4, a4, a3
-; CHECK-NEXT:    vsetvli a3, a2, e32, m1, ta, ma
-; CHECK-NEXT:    bnez a3, .LBB5_2
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    vse32.v v8, (a3), v0.t
+; CHECK-NEXT:    add a4, a4, a6
+; CHECK-NEXT:    vsetvli a6, a2, e32, m1, ta, ma
+; CHECK-NEXT:    bnez a6, .LBB5_2
 ; CHECK-NEXT:  .LBB5_3: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -232,6 +232,7 @@ entry:
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %a,
     <vscale x 1 x i1> %mask,
+    i64 7,
     i64 9,
     i64 0)
   %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
@@ -250,7 +251,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 -1)
+    i64 7, i64 -1)
   ret <vscale x 1 x double> %0
 }
 
@@ -269,12 +270,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 1)
+    i64 7, i64 1)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
@@ -291,12 +292,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %avl)
+    i64 7, i64 %avl)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
@@ -321,16 +322,15 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %splat,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
 define double @test17(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fadd.d fa0, fa5, fa4
@@ -342,7 +342,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   %c2 = extractelement <vscale x 1 x double> %f2, i32 0
   %c3 = fadd double %c1, %c2
   ret double %c3
@@ -370,7 +370,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %a,
-    i64 %x)
+    i64 7, i64 %x)
   %y2 = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
     <vscale x 1 x double> %f2, double %b, i64 1)
   %res = fadd <vscale x 1 x double> %y, %y2
@@ -553,7 +553,7 @@ define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
   ret <vscale x 2 x i32> %ret
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64)
+declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64, i64)
 
 define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x double> %c) nounwind {
 ; CHECK-LABEL: test20:
@@ -569,12 +569,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %b,
-    i64 %0)
+    i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %c,
-    i64 %0)
+    i64 7, i64 %0)
   ret <vscale x 1 x double> %2
 }
 
@@ -583,9 +583,8 @@ entry:
 define i64 @bad_removal(<2 x i64> %arg) {
 ; CHECK-LABEL: bad_removal:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetivli a1, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli a0, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
 bb:
@@ -594,6 +593,74 @@ bb:
   %tmp2 = add i64 %tmp, %tmp1
   ret i64 %tmp2
 }
+
+
+define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
+; CHECK-LABEL: add_v128i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8r.v v8, (a0)
+; CHECK-NEXT:    vl8r.v v16, (a1)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <128 x i8>, ptr %x
+  %b = load <128 x i8>, ptr %y
+  %c = add <128 x i8> %a, %b
+  store <128 x i8> %c, ptr %x
+  ret void
+}
+
+define void @add_v16i64(ptr %x, ptr %y) vscale_range(2,2) {
+; CHECK-LABEL: add_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    vl8re64.v v16, (a1)
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <16 x i64>, ptr %x
+  %b = load <16 x i64>, ptr %y
+  %c = add <16 x i64> %a, %b
+  store <16 x i64> %c, ptr %x
+  ret void
+}
+
+define <vscale x 2 x float> @fp_reduction_vfmv_s_f(float %0, <vscale x 8 x float> %1, i64  %2) {
+; CHECK-LABEL: fp_reduction_vfmv_s_f:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfredusum.vs v8, v8, v12
+; CHECK-NEXT:    ret
+  %4 = tail call <vscale x 8 x float> @llvm.riscv.vfmv.s.f.nxv8f32.i64(<vscale x 8 x float> poison, float %0, i64 %2)
+  %5 = tail call <vscale x 2 x float> @llvm.vector.extract.nxv2f32.nxv8f32(<vscale x 8 x float> %4, i64 0)
+  %6 = tail call <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv8f32.i64(<vscale x 2 x float> poison, <vscale x 8 x float> %1, <vscale x 2 x float> %5, i64 7, i64 %2)
+  ret <vscale x 2 x float> %6
+}
+
+define dso_local <vscale x 2 x i32> @int_reduction_vmv_s_x(i32 signext %0, <vscale x 8 x i32> %1, i64 %2) {
+; CHECK-LABEL: int_reduction_vmv_s_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v12, a0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vredsum.vs v8, v8, v12
+; CHECK-NEXT:    ret
+  %4 = tail call <vscale x 8 x i32> @llvm.riscv.vmv.s.x.nxv8i32.i64(<vscale x 8 x i32> poison, i32 %0, i64 %2)
+  %5 = tail call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32> %4, i64 0)
+  %6 = tail call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv8i32.i64(<vscale x 2 x i32> poison, <vscale x 8 x i32> %1, <vscale x 2 x i32> %5, i64 %2)
+  ret <vscale x 2 x i32> %6
+}
+
+declare <vscale x 8 x float> @llvm.riscv.vfmv.s.f.nxv8f32.i64(<vscale x 8 x float>, float, i64)
+declare <vscale x 2 x float> @llvm.vector.extract.nxv2f32.nxv8f32(<vscale x 8 x float>, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv8f32.i64(<vscale x 2 x float>, <vscale x 8 x float>, <vscale x 2 x float>, i64, i64)
+
+declare <vscale x 8 x i32> @llvm.riscv.vmv.s.x.nxv8i32.i64(<vscale x 8 x i32>, i32, i64) #1
+declare <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32>, i64 immarg) #2
+declare <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv8i32.i64(<vscale x 2 x i32>, <vscale x 8 x i32>, <vscale x 2 x i32>, i64) #1
 
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
@@ -614,6 +681,7 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.mask.nxv1f64.f64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x i1>,
+  i64,
   i64,
   i64);
 

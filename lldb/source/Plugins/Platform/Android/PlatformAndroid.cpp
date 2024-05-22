@@ -43,7 +43,7 @@ class PluginProperties : public Properties {
 public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(
-        ConstString(PlatformAndroid::GetPluginNameStatic(false)));
+        PlatformAndroid::GetPluginNameStatic(false));
     m_collection_sp->Initialize(g_android_properties);
   }
 };
@@ -155,8 +155,8 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 }
 
 void PlatformAndroid::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, ConstString(GetPluginNameStatic(false)))) {
+  if (!PluginManager::GetSettingForPlatformPlugin(debugger,
+                                                  GetPluginNameStatic(false))) {
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
         "Properties for the Android platform plugin.",

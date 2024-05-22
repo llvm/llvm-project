@@ -34,9 +34,7 @@ add_llvm_library(omptarget.rtl.cuda SHARED
   Object
 
   LINK_LIBS PRIVATE
-  elf_common
-  MemoryManager
-  PluginInterface
+  PluginCommon
   ${OPENMP_PTHREAD_LIB}
 
   NO_INSTALL_RPATH
@@ -74,9 +72,7 @@ option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   libomptarget_say("Enable tests using CUDA plugin")
   set(LIBOMPTARGET_SYSTEM_TARGETS 
-      "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
-  set(LIBOMPTARGET_SYSTEM_TARGETS 
-      "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
+      "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.cuda")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()

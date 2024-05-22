@@ -10,6 +10,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm;
@@ -204,7 +205,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     std::unique_ptr<WasmYAML::Section> S;
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM: {
-      if (WasmSec.Name.startswith("reloc.")) {
+      if (WasmSec.Name.starts_with("reloc.")) {
         // Relocations are attached the sections they apply to rather than
         // being represented as a custom section in the YAML output.
         continue;
@@ -392,6 +393,17 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       llvm_unreachable("Unknown section type");
       break;
     }
+
+    // Only propagate the section size encoding length if it's not the minimal
+    // size or 5 (the default "padded" value). This is to avoid having every
+    // YAML output polluted with this value when we usually don't care about it
+    // (and avoid rewriting all the test expectations).
+    if (WasmSec.HeaderSecSizeEncodingLen &&
+        WasmSec.HeaderSecSizeEncodingLen !=
+            getULEB128Size(WasmSec.Content.size()) &&
+        WasmSec.HeaderSecSizeEncodingLen != 5)
+      S->HeaderSecSizeEncodingLen = WasmSec.HeaderSecSizeEncodingLen;
+
     for (const wasm::WasmRelocation &Reloc : WasmSec.Relocations) {
       WasmYAML::Relocation R;
       R.Type = Reloc.Type;

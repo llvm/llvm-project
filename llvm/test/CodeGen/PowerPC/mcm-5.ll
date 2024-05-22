@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -code-model=medium <%s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -code-model=large <%s | FileCheck -check-prefix=LARGE  %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-min-jump-table-entries=4 -code-model=medium <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-min-jump-table-entries=4 -code-model=large <%s | FileCheck -check-prefix=LARGE  %s
 
 ; Test correct code generation for medium and large code model
 ; for loading the address of a jump table from the TOC.

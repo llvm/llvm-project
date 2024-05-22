@@ -17,7 +17,7 @@ id foo(int x) {
   return title;
 }
 
-// <rdar://problem/8808566> Static analyzer is wrong: NSWidth(imgRect) not understood as unconditional assignment
+// Static analyzer is wrong: NSWidth(imgRect) not understood as unconditional assignment
 //
 // Note: this requires inlining support.  This previously issued a false positive use of
 // uninitialized value when calling NSWidth.

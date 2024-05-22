@@ -6,20 +6,21 @@
 #include <arm_sme_draft_spec_subject_to_change.h>
 
 __attribute__((target("sme")))
-void test_sme(svbool_t pg, void *ptr) {
-  svld1_hor_za8(0, 0, 0, pg, ptr);
+void test_sme(svbool_t pg, void *ptr) __arm_streaming __arm_shared_za {
+  svld1_hor_za8(0, 0, pg, ptr);
 }
 
 __attribute__((target("arch=armv8-a+sme")))
-void test_arch_sme(svbool_t pg, void *ptr) {
-  svld1_hor_vnum_za32(0, 0, 0, pg, ptr, 0);
+void test_arch_sme(svbool_t pg, void *ptr) __arm_streaming __arm_shared_za {
+  svld1_hor_vnum_za32(0, 0, pg, ptr, 0);
 }
 
 __attribute__((target("+sme")))
-void test_plus_sme(svbool_t pg, void *ptr) {
-  svst1_ver_za16(0, 0, 0, pg, ptr);
+void test_plus_sme(svbool_t pg, void *ptr) __arm_streaming __arm_shared_za {
+  svst1_ver_za16(0, 0, pg, ptr);
 }
 
-void undefined(svbool_t pg, void *ptr) {
-  svst1_ver_vnum_za64(0, 0, 0, pg, ptr, 0); // expected-error {{'svst1_ver_vnum_za64' needs target feature sme}}
+__attribute__((target("+sme")))
+void undefined(svbool_t pg, void *ptr) __arm_shared_za {
+  svst1_ver_vnum_za64(0, 0, pg, ptr, 0); // expected-warning {{builtin call has undefined behaviour when called from a non-streaming function}}
 }

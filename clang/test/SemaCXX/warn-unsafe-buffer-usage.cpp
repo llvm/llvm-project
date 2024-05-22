@@ -36,7 +36,7 @@ void testIncrement(char *p) { // expected-warning{{'p' is an unsafe pointer used
 void * voidPtrCall(void);
 char * charPtrCall(void);
 
-void testArraySubscripts(int *p, int **pp) { // expected-note{{change type of 'pp' to 'std::span' to preserve bounds information}}
+void testArraySubscripts(int *p, int **pp) {
 // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
 // expected-warning@-2{{'pp' is an unsafe pointer used for buffer access}}
   foo(p[1],             // expected-note{{used in buffer access here}}
@@ -80,28 +80,16 @@ void testArraySubscripts(int *p, int **pp) { // expected-note{{change type of 'p
       );
 }
 
-void testArraySubscriptsWithAuto(int *p, int **pp) {
+void testArraySubscriptsWithAuto() {
   int a[10];
-  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
-		     expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}
-
+  // We do not fix a declaration if the type is `auto`. Because the actual type may change later.
+  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}}
   foo(ap1[1]);    // expected-note{{used in buffer access here}}
 
-  auto ap2 = p;   // expected-warning{{'ap2' is an unsafe pointer used for buffer access}} \
-  		     expected-note{{change type of 'ap2' to 'std::span' to preserve bounds information}}
-
+  // In case the type is `auto *`, we know it must be a pointer. We can fix it.
+  auto * ap2 = a; // expected-warning{{'ap2' is an unsafe pointer used for buffer access}} \
+                     expected-note{{change type of 'ap2' to 'std::span' to preserve bounds information}}
   foo(ap2[1]);    // expected-note{{used in buffer access here}}
-
-  auto ap3 = pp;  // expected-warning{{'ap3' is an unsafe pointer used for buffer access}} \
-		     expected-note{{change type of 'ap3' to 'std::span' to preserve bounds information}}
-
-  foo(ap3[1][1]); // expected-note{{used in buffer access here}}
-                  // expected-warning@-1{{unsafe buffer access}}
-
-  auto ap4 = *pp; // expected-warning{{'ap4' is an unsafe pointer used for buffer access}} \
-  		     expected-note{{change type of 'ap4' to 'std::span' to preserve bounds information}}
-
-  foo(ap4[1]);    // expected-note{{used in buffer access here}}
 }
 
 void testUnevaluatedContext(int * p) {// no-warning
@@ -109,7 +97,6 @@ void testUnevaluatedContext(int * p) {// no-warning
       sizeof(decltype(p[1])));  // no-warning
 }
 
-// expected-note@+1{{change type of 'a' to 'std::span' to preserve bounds information}}
 void testQualifiedParameters(const int * p, const int * const q, const int a[10], const int b[10][10]) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   // expected-warning@-2{{'q' is an unsafe pointer used for buffer access}}
@@ -166,7 +153,6 @@ int garray[10];     // expected-warning{{'garray' is an unsafe buffer that does 
 int * gp = garray;  // expected-warning{{'gp' is an unsafe pointer used for buffer access}}
 int gvar = gp[1];   // FIXME: file scope unsafe buffer access is not warned
 
-// FIXME: Add test for lambda capture with initializer. E. g. auto Lam = [new_p = p]() {...
 void testLambdaCaptureAndGlobal(int * p) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
@@ -175,6 +161,44 @@ void testLambdaCaptureAndGlobal(int * p) {
     return p[1]           // expected-note{{used in buffer access here}}
       + a[1] + garray[1]  // expected-note2{{used in buffer access here}}
       + gp[1];            // expected-note{{used in buffer access here}}
+
+  };
+}
+
+auto file_scope_lambda = [](int *ptr) {
+  // expected-warning@-1{{'ptr' is an unsafe pointer used for buffer access}}
+  
+  ptr[5] = 10;  // expected-note{{used in buffer access here}}
+};
+
+void testLambdaCapture() {
+  int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+  int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+  int c[10];
+
+  auto Lam1 = [a]() {
+    return a[1];           // expected-note{{used in buffer access here}}
+  };
+
+  auto Lam2 = [x = b[3]]() { // expected-note{{used in buffer access here}}
+    return x;
+  };
+
+  auto Lam = [x = c]() { // expected-warning{{'x' is an unsafe pointer used for buffer access}}
+    return x[3]; // expected-note{{used in buffer access here}}
+  };
+}
+
+void testLambdaImplicitCapture() {
+  int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+  int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+  
+  auto Lam1 = [=]() {
+    return a[1];           // expected-note{{used in buffer access here}}
+  };
+  
+  auto Lam2 = [&]() {
+    return b[1];           // expected-note{{used in buffer access here}}
   };
 }
 
@@ -358,8 +382,9 @@ void testArrayPtrArithmetic(int x[]) { // expected-warning{{'x' is an unsafe poi
 }
 
 void testMultiLineDeclStmt(int * p) {
-  auto
+  int
 
+  *
 
   ap1 = p;      // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
          	   expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}

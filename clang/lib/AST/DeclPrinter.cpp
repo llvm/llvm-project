@@ -49,6 +49,18 @@ namespace {
 
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
 
+    enum class AttrPrintLoc {
+      None = 0,
+      Left = 1,
+      Right = 2,
+      Any = Left | Right,
+
+      LLVM_MARK_AS_BITMASK_ENUM(/*DefaultValue=*/Any)
+    };
+
+    void prettyPrintAttributes(Decl *D, raw_ostream &out,
+                               AttrPrintLoc loc = AttrPrintLoc::Any);
+
   public:
     DeclPrinter(raw_ostream &Out, const PrintingPolicy &Policy,
                 const ASTContext &Context, unsigned Indentation = 0,
@@ -117,7 +129,11 @@ namespace {
                                 const TemplateParameterList *Params);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
                                 const TemplateParameterList *Params);
-    void prettyPrintAttributes(Decl *D);
+
+    inline void prettyPrintAttributes(Decl *D) {
+      prettyPrintAttributes(D, Out);
+    }
+
     void prettyPrintPragmas(Decl *D);
     void printDeclType(QualType T, StringRef DeclName, bool Pack = false);
   };
@@ -234,7 +250,54 @@ raw_ostream& DeclPrinter::Indent(unsigned Indentation) {
   return Out;
 }
 
-void DeclPrinter::prettyPrintAttributes(Decl *D) {
+// For CLANG_ATTR_LIST_CanPrintOnLeft macro.
+#include "clang/Basic/AttrLeftSideCanPrintList.inc"
+
+// For CLANG_ATTR_LIST_PrintOnLeft macro.
+#include "clang/Basic/AttrLeftSideMustPrintList.inc"
+
+static bool canPrintOnLeftSide(attr::Kind kind) {
+#ifdef CLANG_ATTR_LIST_CanPrintOnLeft
+  switch (kind) {
+  CLANG_ATTR_LIST_CanPrintOnLeft
+    return true;
+  default:
+    return false;
+  }
+#else
+  return false;
+#endif
+}
+
+static bool canPrintOnLeftSide(const Attr *A) {
+  if (A->isStandardAttributeSyntax())
+    return false;
+
+  return canPrintOnLeftSide(A->getKind());
+}
+
+static bool mustPrintOnLeftSide(attr::Kind kind) {
+#ifdef CLANG_ATTR_LIST_PrintOnLeft
+  switch (kind) {
+  CLANG_ATTR_LIST_PrintOnLeft
+    return true;
+  default:
+    return false;
+  }
+#else
+  return false;
+#endif
+}
+
+static bool mustPrintOnLeftSide(const Attr *A) {
+  if (A->isDeclspecAttribute())
+    return true;
+
+  return mustPrintOnLeftSide(A->getKind());
+}
+
+void DeclPrinter::prettyPrintAttributes(Decl *D, llvm::raw_ostream &Out,
+                                        AttrPrintLoc Loc) {
   if (Policy.PolishForDeclaration)
     return;
 
@@ -243,15 +306,31 @@ void DeclPrinter::prettyPrintAttributes(Decl *D) {
     for (auto *A : Attrs) {
       if (A->isInherited() || A->isImplicit())
         continue;
-      switch (A->getKind()) {
-#define ATTR(X)
-#define PRAGMA_SPELLING_ATTR(X) case attr::X:
-#include "clang/Basic/AttrList.inc"
-        break;
-      default:
-        A->printPretty(Out, Policy);
-        break;
+
+      AttrPrintLoc AttrLoc = AttrPrintLoc::Right;
+      if (mustPrintOnLeftSide(A)) {
+        // If we must always print on left side (e.g. declspec), then mark as
+        // so.
+        AttrLoc = AttrPrintLoc::Left;
+      } else if (canPrintOnLeftSide(A)) {
+        // For functions with body defined we print the attributes on the left
+        // side so that GCC accept our dumps as well.
+        if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+            FD && FD->isThisDeclarationADefinition())
+          // In case Decl is a function with a body, then attrs should be print
+          // on the left side.
+          AttrLoc = AttrPrintLoc::Left;
+
+          // In case it is a variable declaration with a ctor, then allow
+          // printing on the left side for readbility.
+        else if (const VarDecl *VD = dyn_cast<VarDecl>(D);
+                   VD && VD->getInit() &&
+                   VD->getInitStyle() == VarDecl::CallInit)
+          AttrLoc = AttrPrintLoc::Left;
       }
+      // Only print the side matches the user requested.
+      if ((Loc & AttrLoc) != AttrPrintLoc::None)
+        A->printPretty(Out, Policy);
     }
   }
 }
@@ -309,6 +388,8 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
   for (const auto *BMInitializer : CDecl->inits()) {
     if (BMInitializer->isInClassMemberInitializer())
       continue;
+    if (!BMInitializer->isWritten())
+      continue;
 
     if (!HasInitializerList) {
       Proto += " : ";
@@ -321,15 +402,18 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
     if (BMInitializer->isAnyMemberInitializer()) {
       FieldDecl *FD = BMInitializer->getAnyMember();
       Out << *FD;
+    } else if (BMInitializer->isDelegatingInitializer()) {
+      Out << CDecl->getNameAsString();
     } else {
       Out << QualType(BMInitializer->getBaseClass(), 0).getAsString(Policy);
     }
 
-    Out << "(";
-    if (!BMInitializer->getInit()) {
-      // Nothing to print
-    } else {
-      Expr *Init = BMInitializer->getInit();
+    if (Expr *Init = BMInitializer->getInit()) {
+      bool OutParens = !isa<InitListExpr>(Init);
+
+      if (OutParens)
+        Out << "(";
+
       if (ExprWithCleanups *Tmp = dyn_cast<ExprWithCleanups>(Init))
         Init = Tmp->getSubExpr();
 
@@ -363,8 +447,13 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
                                &Context);
         }
       }
+
+      if (OutParens)
+        Out << ")";
+    } else {
+      Out << "()";
     }
-    Out << ")";
+
     if (BMInitializer->isPackExpansion())
       Out << "...";
   }
@@ -455,12 +544,12 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (auto FD = dyn_cast<FunctionDecl>(*D)) {
-      if (FD->isThisDeclarationADefinition())
+      if (FD->doesThisDeclarationHaveABody() && !FD->isDefaulted())
         Terminator = nullptr;
       else
         Terminator = ";";
     } else if (auto TD = dyn_cast<FunctionTemplateDecl>(*D)) {
-      if (TD->getTemplatedDecl()->isThisDeclarationADefinition())
+      if (TD->getTemplatedDecl()->doesThisDeclarationHaveABody())
         Terminator = nullptr;
       else
         Terminator = ";";
@@ -602,6 +691,22 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
          I < NumTemplateParams; ++I)
       printTemplateParameters(D->getTemplateParameterList(I));
   }
+
+  std::string LeftsideAttrs;
+  llvm::raw_string_ostream LSAS(LeftsideAttrs);
+
+  prettyPrintAttributes(D, LSAS, AttrPrintLoc::Left);
+
+  // prettyPrintAttributes print a space on left side of the attribute.
+  if (LeftsideAttrs[0] == ' ') {
+    // Skip the space prettyPrintAttributes generated.
+    LeftsideAttrs.erase(0, LeftsideAttrs.find_first_not_of(' '));
+
+    // Add a single space between the attribute and the Decl name.
+    LSAS << ' ';
+  }
+
+  Out << LeftsideAttrs;
 
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
@@ -764,7 +869,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Ty.print(Out, Policy, Proto);
   }
 
-  prettyPrintAttributes(D);
+  prettyPrintAttributes(D, Out, AttrPrintLoc::Right);
 
   if (D->isPure())
     Out << " = 0";
@@ -857,6 +962,27 @@ void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
 void DeclPrinter::VisitVarDecl(VarDecl *D) {
   prettyPrintPragmas(D);
 
+  if (const auto *Param = dyn_cast<ParmVarDecl>(D);
+      Param && Param->isExplicitObjectParameter())
+    Out << "this ";
+
+  std::string LeftSide;
+  llvm::raw_string_ostream LeftSideStream(LeftSide);
+
+  // Print attributes that should be placed on the left, such as __declspec.
+  prettyPrintAttributes(D, LeftSideStream, AttrPrintLoc::Left);
+
+  // prettyPrintAttributes print a space on left side of the attribute.
+  if (LeftSide[0] == ' ') {
+    // Skip the space prettyPrintAttributes generated.
+    LeftSide.erase(0, LeftSide.find_first_not_of(' '));
+
+    // Add a single space between the attribute and the Decl name.
+    LeftSideStream << ' ';
+  }
+
+  Out << LeftSide;
+
   QualType T = D->getTypeSourceInfo()
     ? D->getTypeSourceInfo()->getType()
     : D->getASTContext().getUnqualifiedObjCPointerType(D->getType());
@@ -889,10 +1015,19 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
     }
   }
 
-  printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
-                    D->getIdentifier())
-                       ? D->getIdentifier()->deuglifiedName()
-                       : D->getName());
+  StringRef Name;
+
+  Name = (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
+          D->getIdentifier())
+             ? D->getIdentifier()->deuglifiedName()
+             : D->getName();
+
+  printDeclType(T, Name);
+
+  // Print the attributes that should be placed right before the end of the
+  // decl.
+  prettyPrintAttributes(D, Out, AttrPrintLoc::Right);
+
   Expr *Init = D->getInit();
   if (!Policy.SuppressInitializers && Init) {
     bool ImplicitInit = false;
@@ -921,7 +1056,6 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
         Out << ")";
     }
   }
-  prettyPrintAttributes(D);
 }
 
 void DeclPrinter::VisitParmVarDecl(ParmVarDecl *D) {
@@ -949,9 +1083,9 @@ void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Out << "static_assert(";
   D->getAssertExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
                                   &Context);
-  if (StringLiteral *SL = D->getMessage()) {
+  if (Expr *E = D->getMessage()) {
     Out << ", ";
-    SL->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
+    E->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
   Out << ")";
 }
@@ -1060,10 +1194,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
 void DeclPrinter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   const char *l;
-  if (D->getLanguage() == LinkageSpecDecl::lang_c)
+  if (D->getLanguage() == LinkageSpecLanguageIDs::C)
     l = "C";
   else {
-    assert(D->getLanguage() == LinkageSpecDecl::lang_cxx &&
+    assert(D->getLanguage() == LinkageSpecLanguageIDs::CXX &&
            "unknown language in linkage specification");
     l = "C++";
   }
@@ -1594,7 +1728,7 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
   std::string TypeStr = PDecl->getASTContext().getUnqualifiedObjCPointerType(T).
       getAsString(Policy);
   Out << ' ' << TypeStr;
-  if (!StringRef(TypeStr).endswith("*"))
+  if (!StringRef(TypeStr).ends_with("*"))
     Out << ' ';
   Out << *PDecl;
   if (Policy.PolishForDeclaration)
@@ -1732,17 +1866,17 @@ void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
     if (auto *Init = D->getInitializer()) {
       Out << " initializer(";
       switch (D->getInitializerKind()) {
-      case OMPDeclareReductionDecl::DirectInit:
+      case OMPDeclareReductionInitKind::Direct:
         Out << "omp_priv(";
         break;
-      case OMPDeclareReductionDecl::CopyInit:
+      case OMPDeclareReductionInitKind::Copy:
         Out << "omp_priv = ";
         break;
-      case OMPDeclareReductionDecl::CallInit:
+      case OMPDeclareReductionInitKind::Call:
         break;
       }
       Init->printPretty(Out, nullptr, Policy, 0, "\n", &Context);
-      if (D->getInitializerKind() == OMPDeclareReductionDecl::DirectInit)
+      if (D->getInitializerKind() == OMPDeclareReductionInitKind::Direct)
         Out << ")";
       Out << ")";
     }

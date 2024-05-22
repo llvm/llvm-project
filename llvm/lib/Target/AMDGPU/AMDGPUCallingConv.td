@@ -176,6 +176,10 @@ def CSR_AMDGPU_SI_Gfx_GFX90AInsts : CalleeSavedRegs<
   (add CSR_AMDGPU_SI_Gfx, CSR_AMDGPU_AGPRs)
 >;
 
+def CSR_AMDGPU_CS_ChainPreserve : CalleeSavedRegs<
+  (sequence "VGPR%u", 8, 255)
+>;
+
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
 
 // Calling convention for leaf functions
@@ -183,6 +187,11 @@ def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
+
+  CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<
+    !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
+  >>>,
+
   CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1], CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
@@ -211,6 +220,16 @@ def CC_AMDGPU : CallingConv<[
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
            "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
         CCDelegateTo<CC_AMDGPU_Func>>
+]>;
+
+def CC_AMDGPU_CS_CHAIN : CallingConv<[
+  CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<
+    !foreach(i, !range(105), !cast<Register>("SGPR"#i))
+  >>>,
+
+  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<
+    !foreach(i, !range(8, 255), !cast<Register>("VGPR"#i))
+  >>>
 ]>;
 
 // Trivial class to denote when a def is used only to get a RegMask, i.e.

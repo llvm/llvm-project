@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_LANAI_LANAIALUCODE_H
 
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -113,33 +112,6 @@ inline static AluCode stringToLanaiAluCode(StringRef S) {
       .Case("srl", SRL)
       .Case("sha", SRA)
       .Default(UNKNOWN);
-}
-
-inline static AluCode isdToLanaiAluCode(ISD::NodeType Node_type) {
-  switch (Node_type) {
-  case ISD::ADD:
-    return AluCode::ADD;
-  case ISD::ADDE:
-    return AluCode::ADDC;
-  case ISD::SUB:
-    return AluCode::SUB;
-  case ISD::SUBE:
-    return AluCode::SUBB;
-  case ISD::AND:
-    return AluCode::AND;
-  case ISD::OR:
-    return AluCode::OR;
-  case ISD::XOR:
-    return AluCode::XOR;
-  case ISD::SHL:
-    return AluCode::SHL;
-  case ISD::SRL:
-    return AluCode::SRL;
-  case ISD::SRA:
-    return AluCode::SRA;
-  default:
-    return AluCode::UNKNOWN;
-  }
 }
 } // namespace LPAC
 } // namespace llvm

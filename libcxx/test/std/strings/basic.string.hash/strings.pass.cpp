@@ -23,34 +23,31 @@
 #include "test_macros.h"
 
 template <class T>
-void
-test()
-{
-    typedef std::hash<T> H;
+void test() {
+  typedef std::hash<T> H;
 #if TEST_STD_VER <= 14
-    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+  static_assert((std::is_same<typename H::argument_type, T>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
-    ASSERT_NOEXCEPT(H()(T()));
+  ASSERT_NOEXCEPT(H()(T()));
 
-    H h;
-    std::string g1 = "1234567890";
-    std::string g2 = "1234567891";
-    T s1(g1.begin(), g1.end());
-    T s2(g2.begin(), g2.end());
-    assert(h(s1) != h(s2));
+  H h;
+  std::string g1 = "1234567890";
+  std::string g2 = "1234567891";
+  T s1(g1.begin(), g1.end());
+  T s2(g2.begin(), g2.end());
+  assert(h(s1) != h(s2));
 }
 
-int main(int, char**)
-{
-    test<std::string>();
+int main(int, char**) {
+  test<std::string>();
 #ifndef TEST_HAS_NO_CHAR8_T
-    test<std::u8string>();
+  test<std::u8string>();
 #endif
-    test<std::u16string>();
-    test<std::u32string>();
+  test<std::u16string>();
+  test<std::u32string>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<std::wstring>();
+  test<std::wstring>();
 #endif
 
   return 0;

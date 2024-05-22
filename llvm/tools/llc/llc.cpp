@@ -107,10 +107,6 @@ static cl::opt<std::string>
                              "regardless of binutils support"));
 
 static cl::opt<bool>
-NoIntegratedAssembler("no-integrated-as", cl::Hidden,
-                      cl::desc("Disable integrated assembler"));
-
-static cl::opt<bool>
     PreserveComments("preserve-as-comments", cl::Hidden,
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::init(true));
@@ -190,6 +186,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -207,7 +210,7 @@ struct RunPassOption {
       getRunPassNames().push_back(std::string(PassName));
   }
 };
-}
+} // namespace
 
 static RunPassOption RunPassOpt;
 
@@ -246,15 +249,15 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     else {
       // If InputFilename ends in .bc or .ll, remove it.
       StringRef IFN = InputFilename;
-      if (IFN.endswith(".bc") || IFN.endswith(".ll"))
+      if (IFN.ends_with(".bc") || IFN.ends_with(".ll"))
         OutputFilename = std::string(IFN.drop_back(3));
-      else if (IFN.endswith(".mir"))
+      else if (IFN.ends_with(".mir"))
         OutputFilename = std::string(IFN.drop_back(4));
       else
         OutputFilename = std::string(IFN);
 
       switch (codegen::getFileType()) {
-      case CGFT_AssemblyFile:
+      case CodeGenFileType::AssemblyFile:
         if (TargetName[0] == 'c') {
           if (TargetName[1] == 0)
             OutputFilename += ".cbe.c";
@@ -265,13 +268,13 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
         } else
           OutputFilename += ".s";
         break;
-      case CGFT_ObjectFile:
+      case CodeGenFileType::ObjectFile:
         if (OS == Triple::Win32)
           OutputFilename += ".obj";
         else
           OutputFilename += ".o";
         break;
-      case CGFT_Null:
+      case CodeGenFileType::Null:
         OutputFilename = "-";
         break;
       }
@@ -281,10 +284,10 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   // Decide if we need "binary" output.
   bool Binary = false;
   switch (codegen::getFileType()) {
-  case CGFT_AssemblyFile:
+  case CodeGenFileType::AssemblyFile:
     break;
-  case CGFT_ObjectFile:
-  case CGFT_Null:
+  case CodeGenFileType::ObjectFile:
+  case CodeGenFileType::Null:
     Binary = true;
     break;
   }
@@ -381,6 +384,17 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
+
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   auto TimeTraceScopeExit = make_scope_exit([]() {
@@ -472,7 +486,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   bool SkipModule =
       CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
 
-  CodeGenOpt::Level OLvl;
+  CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
     OLvl = *Level;
   } else {
@@ -517,7 +531,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
-    Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
@@ -563,12 +576,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         exit(1);
       }
 
-      // On AIX, setting the relocation model to anything other than PIC is
-      // considered a user error.
-      if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_)
-        reportError("invalid relocation model, AIX only supports PIC",
-                    InputFilename);
-
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
@@ -577,7 +584,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
-        (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
+        (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context,
                                     setMIRFunctionAttributes);
       if (MIR)
@@ -596,6 +603,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
       Target->setCodeModel(*CM_IR);
+    if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
+      Target->setLargeDataThreshold(*LDT);
   } else {
     TheTriple = Triple(Triple::normalize(TargetTriple));
     if (TheTriple.getTriple().empty())
@@ -607,14 +616,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
     if (!TheTarget) {
       WithColor::error(errs(), argv[0]) << Error;
-      return 1;
-    }
-
-    // On AIX, setting the relocation model to anything other than PIC is
-    // considered a user error.
-    if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_) {
-      WithColor::error(errs(), argv[0])
-          << "invalid relocation model, AIX only supports PIC.\n";
       return 1;
     }
 
@@ -631,7 +632,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =
@@ -670,7 +671,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
 
-  if (mc::getExplicitRelaxAll() && codegen::getFileType() != CGFT_ObjectFile)
+  if (mc::getExplicitRelaxAll() &&
+      codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
 
@@ -681,7 +683,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // so we can memcmp the contents in CompileTwice mode
     SmallVector<char, 0> Buffer;
     std::unique_ptr<raw_svector_ostream> BOS;
-    if ((codegen::getFileType() != CGFT_AssemblyFile &&
+    if ((codegen::getFileType() != CodeGenFileType::AssemblyFile &&
          !Out->os().supportsSeeking()) ||
         CompileTwice) {
       BOS = std::make_unique<raw_svector_ostream>(Buffer);

@@ -132,11 +132,11 @@
 // RUN: --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIE -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform \
+// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIC -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform \
+// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 //
@@ -166,11 +166,11 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target armv7-linux-musleabihf -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
-// RUN: %clang %s -target x86_64-linux-musl -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -pie -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -pie -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -nopie -pie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
 // Darwin is a beautiful and unique snowflake when it comes to these flags.
@@ -209,7 +209,7 @@
 // Darwin gets even more special with '-mdynamic-no-pic'. This flag is only
 // valid on Darwin, and it's behavior is very strange but needs to remain
 // consistent for compatibility.
-// RUN: %clang -c %s -target i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
+// RUN: not %clang -c %s --target=i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NON-DARWIN-DYNAMIC-NO-PIC
 // RUN: %clang -c %s -target i386-apple-darwin -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-DYNAMIC-NO-PIC-32
@@ -320,7 +320,13 @@
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL
 // RUN: %clang -fpic -c --target=s390x-linux-gnu -mpic-data-is-text-relative %s -### \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL
-// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ
-// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
+// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ
+
+// On Haiku, PIC is enabled by default, and PIE is disabled by default.
+// RUN: %clang -c %s --target=x86_64-unknown-haiku -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s --target=i586-pc-haiku -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2

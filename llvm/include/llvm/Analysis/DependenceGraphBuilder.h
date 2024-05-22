@@ -163,8 +163,7 @@ protected:
 
   /// Given a node \p N return its associated ordinal number.
   size_t getOrdinal(NodeType &N) {
-    assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() &&
-           "No ordinal computed for this node.");
+    assert(NodeOrdinalMap.contains(&N) && "No ordinal computed for this node.");
     return NodeOrdinalMap[&N];
   }
 

@@ -18,14 +18,6 @@ def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
                                 CheckShiftBy0]>>;
 
-// Check if the fourth operand of an instruction is WZR or XZR
-def NeoverseReg3IsZero : MCSchedPredicate<
-                           CheckAll<
-                             [CheckIsRegOperand<3>,
-                              CheckAny<
-                                [CheckRegOperand<3, WZR>,
-                                 CheckRegOperand<3, XZR>]>]>>;
-
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<
                        CheckAll<[
@@ -53,3 +45,39 @@ def NeoverseCheapIncDec : MCSchedPredicate<
                                         CheckImmOperand<3, 1>,
                                         CheckImmOperand<3, 2>,
                                         CheckImmOperand<3, 4>]>]>>;
+
+// Identify "[SU]?(MADD|MSUB)L?" as the alias for "[SU]?(MUL|MNEG)L?".
+def NeoverseMULIdiomPred : MCSchedPredicate< // <op> Rd, Rs, Rv, ZR
+                             CheckAll<[CheckOpcode<
+                                         [MADDWrrr, MADDXrrr,
+                                          MSUBWrrr, MSUBXrrr,
+                                          SMADDLrrr, UMADDLrrr,
+                                          SMSUBLrrr, UMSUBLrrr]>,
+                                       CheckIsReg3Zero]>>;
+
+def NeoverseZeroMove : MCSchedPredicate<
+                         CheckAny<[
+                           // MOV Wd, #0
+                           // MOV Xd, #0
+                           CheckAll<[CheckOpcode<[MOVZWi, MOVZXi]>,
+                                     CheckAll<[CheckImmOperand<1, 0>,
+                                               CheckImmOperand<2, 0>]>]>,
+                           // MOV Wd, WZR
+                           // MOV Xd, XZR
+                           // MOV Wd, Wn
+                           // MOV Xd, Xn
+                           CheckAll<[CheckOpcode<[ORRWrs, ORRXrs]>,
+                                     CheckAll<[CheckIsReg1Zero,
+                                               CheckImmOperand<3, 0>]>]>,
+                           // FMOV Hd, WZR
+                           // FMOV Hd, XZR
+                           // FMOV Sd, WZR
+                           // FMOV Dd, XZR
+                           CheckAll<[CheckOpcode<[FMOVWHr, FMOVXHr,
+                                                  FMOVWSr, FMOVXDr]>,
+                                     CheckIsReg1Zero]>,
+                           // MOVI Dd, #0
+                           // MOVI Vd.2D, #0
+                           CheckAll<[CheckOpcode<[MOVID, MOVIv2d_ns]>,
+                                     CheckImmOperand<1, 0>]>
+                         ]>>;

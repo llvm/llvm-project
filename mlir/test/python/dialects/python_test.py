@@ -6,6 +6,8 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
+test.register_python_test_dialect(get_dialect_registry())
+
 
 def run(f):
     print("\nTEST:", f.__name__)
@@ -17,8 +19,6 @@ def run(f):
 @run
 def testAttributes():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
-
         #
         # Check op construction with attributes.
         #
@@ -28,7 +28,7 @@ def testAttributes():
         two = IntegerAttr.get(i32, 2)
         unit = UnitAttr.get()
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: mandatory_i32 = 1 : i32
         # CHECK-DAG: optional_i32 = 2 : i32
         # CHECK-DAG: unit
@@ -36,7 +36,7 @@ def testAttributes():
         op = test.AttributedOp(one, optional_i32=two, unit=unit)
         print(f"{op}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK: mandatory_i32 = 2 : i32
         # CHECK: }
         op2 = test.AttributedOp(two)
@@ -48,21 +48,21 @@ def testAttributes():
 
         assert "additional" not in op.attributes
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 1 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = one
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 2 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = two
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-NOT: additional = 2 : i32
         # CHECK:     mandatory_i32 = 2 : i32
         # CHECK: }
@@ -139,31 +139,82 @@ def testAttributes():
 @run
 def attrBuilder():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
+        # CHECK: python_test.attributes_op
         op = test.AttributesOp(
-            x_bool=True,
-            x_i16=1,
-            x_i32=2,
-            x_i64=3,
-            x_si16=-1,
-            x_si32=-2,
-            x_f32=1.5,
-            x_f64=2.5,
-            x_str="x_str",
-            x_i32_array=[1, 2, 3],
-            x_i64_array=[4, 5, 6],
-            x_f32_array=[1.5, -2.5, 3.5],
-            x_f64_array=[4.5, 5.5, -6.5],
-            x_i64_dense=[1, 2, 3, 4, 5, 6],
+            # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
+            x_affinemap=AffineMap.get_constant(2),
+            # CHECK-DAG: x_affinemaparr = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+            x_affinemaparr=[AffineMap.get_identity(3)],
+            # CHECK-DAG: x_arr = [true, "x"]
+            x_arr=[BoolAttr.get(True), StringAttr.get("x")],
+            x_boolarr=[False, True],  # CHECK-DAG: x_boolarr = [false, true]
+            x_bool=True,  # CHECK-DAG: x_bool = true
+            x_dboolarr=[True, False],  # CHECK-DAG: x_dboolarr = array<i1: true, false>
+            x_df16arr=[21, 22],  # CHECK-DAG: x_df16arr = array<i16: 21, 22>
+            # CHECK-DAG: x_df32arr = array<f32: 2.300000e+01, 2.400000e+01>
+            x_df32arr=[23, 24],
+            # CHECK-DAG: x_df64arr = array<f64: 2.500000e+01, 2.600000e+01>
+            x_df64arr=[25, 26],
+            x_di32arr=[0, 1],  # CHECK-DAG: x_di32arr = array<i32: 0, 1>
+            # CHECK-DAG: x_di64arr = array<i64: 1, 2>
+            x_di64arr=[1, 2],
+            x_di8arr=[2, 3],  # CHECK-DAG: x_di8arr = array<i8: 2, 3>
+            # CHECK-DAG: x_dictarr = [{a = false}]
+            x_dictarr=[{"a": BoolAttr.get(False)}],
+            x_dict={"b": BoolAttr.get(True)},  # CHECK-DAG: x_dict = {b = true}
+            x_f32=-2.25,  # CHECK-DAG: x_f32 = -2.250000e+00 : f32
+            # CHECK-DAG: x_f32arr = [2.000000e+00 : f32, 3.000000e+00 : f32]
+            x_f32arr=[2.0, 3.0],
+            x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
+            x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
+            # CHECK-DAG: x_f64elems = dense<[3.952530e-323, 7.905050e-323]> : tensor<2xf64>
+            x_f64elems=[8.0, 16.0],
+            # CHECK-DAG: x_flatsymrefarr = [@symbol1, @symbol2]
+            x_flatsymrefarr=["symbol1", "symbol2"],
+            x_flatsymref="symbol3",  # CHECK-DAG: x_flatsymref = @symbol3
+            x_i1=0,  # CHECK-DAG: x_i1 = false
+            x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
+            x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
+            x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
+            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xi32>
+            x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
+            x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
+            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xi64>
+            x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
+            x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
+            x_idx=10,  # CHECK-DAG: x_idx = 10 : index
+            # CHECK-DAG: x_idxelems = dense<[11, 12]> : tensor<2xindex>
+            x_idxelems=[11, 12],
+            # CHECK-DAG: x_idxlistarr = [{{\[}}13], [14, 15]]
+            x_idxlistarr=[[13], [14, 15]],
+            x_si1=-1,  # CHECK-DAG: x_si1 = -1 : si1
+            x_si16=-2,  # CHECK-DAG: x_si16 = -2 : si16
+            x_si32=-3,  # CHECK-DAG: x_si32 = -3 : si32
+            x_si64=-123,  # CHECK-DAG: x_si64 = -123 : si64
+            x_si8=-4,  # CHECK-DAG: x_si8 = -4 : si8
+            x_strarr=["hello", "world"],  # CHECK-DAG: x_strarr = ["hello", "world"]
+            x_str="hello world!",  # CHECK-DAG: x_str = "hello world!"
+            # CHECK-DAG: x_symrefarr = [@flatsym, @deep::@sym]
+            x_symrefarr=["flatsym", ["deep", "sym"]],
+            x_symref=["deep", "sym2"],  # CHECK-DAG: x_symref = @deep::@sym2
+            x_sym="symbol",  # CHECK-DAG: x_sym = "symbol"
+            x_typearr=[F32Type.get()],  # CHECK-DAG: x_typearr = [f32]
+            x_type=F64Type.get(),  # CHECK-DAG: x_type = f64
+            x_ui1=1,  # CHECK-DAG: x_ui1 = 1 : ui1
+            x_ui16=2,  # CHECK-DAG: x_ui16 = 2 : ui16
+            x_ui32=3,  # CHECK-DAG: x_ui32 = 3 : ui32
+            x_ui64=4,  # CHECK-DAG: x_ui64 = 4 : ui64
+            x_ui8=5,  # CHECK-DAG: x_ui8 = 5 : ui8
+            x_unit=True,  # CHECK-DAG: x_unit
         )
-        print(op)
+        op.verify()
+        op.print(use_local_scope=True)
 
 
 # CHECK-LABEL: TEST: inferReturnTypes
 @run
 def inferReturnTypes():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             op = test.InferResultsOp()
@@ -208,7 +259,6 @@ def inferReturnTypes():
 @run
 def resultTypesDefinedByTraits():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
@@ -243,11 +293,8 @@ def resultTypesDefinedByTraits():
 @run
 def testOptionalOperandOp():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         module = Module.create()
         with InsertionPoint(module.body):
-
             op1 = test.OptionalOperandOp()
             # CHECK: op1.input is None: True
             print(f"op1.input is None: {op1.input is None}")
@@ -261,7 +308,6 @@ def testOptionalOperandOp():
 @run
 def testCustomAttribute():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
@@ -299,7 +345,6 @@ def testCustomAttribute():
 @run
 def testCustomType():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestType.get()
         # CHECK: !python_test.test_type
         print(a)
@@ -346,8 +391,6 @@ def testCustomType():
 # CHECK-LABEL: TEST: testTensorValue
 def testTensorValue():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         i8 = IntegerType.get_signless(8)
 
         class Tensor(test.TestTensorValue):
@@ -374,12 +417,17 @@ def testTensorValue():
             # And it should be equal to the in-tree concrete type
             assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
 
+            d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
+            # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
+            print(d)
+            # CHECK: TestTensorValue
+            print(repr(d))
+
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
 @run
 def inferReturnTypeComponents():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
@@ -431,8 +479,6 @@ def inferReturnTypeComponents():
 @run
 def testCustomTypeTypeCaster():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         a = test.TestType.get()
         assert a.typeid is not None
 
@@ -451,17 +497,28 @@ def testCustomTypeTypeCaster():
         # CHECK: Type caster is already registered
         try:
 
+            @register_type_caster(c.typeid)
             def type_caster(pytype):
                 return test.TestIntegerRankedTensorType(pytype)
 
-            register_type_caster(c.typeid, type_caster)
         except RuntimeError as e:
             print(e)
 
+        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        @register_type_caster(c.typeid, replace=True)
+        def type_caster(pytype):
+            return RankedTensorType(pytype)
+
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: ranked tensor type RankedTensorType(tensor<10x10xi5>)
+        print("ranked tensor type", repr(d.type))
+
+        @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):
             return test.TestIntegerRankedTensorType(pytype)
-
-        register_type_caster(c.typeid, type_caster, replace=True)
 
         d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
         # CHECK: tensor<10x10xi5>
@@ -474,7 +531,6 @@ def testCustomTypeTypeCaster():
 @run
 def testInferTypeOpInterface():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             i64 = IntegerType.get_signless(64)

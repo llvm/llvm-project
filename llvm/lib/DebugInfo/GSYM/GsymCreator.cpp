@@ -61,9 +61,7 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
   return insertFileEntry(DstFE);
 }
 
-
-llvm::Error GsymCreator::save(StringRef Path,
-                              llvm::support::endianness ByteOrder,
+llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
                               std::optional<uint64_t> SegmentSize) const {
   if (SegmentSize)
     return saveSegments(Path, ByteOrder, *SegmentSize);
@@ -187,34 +185,11 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
-// Similar to std::remove_if, but the predicate is binary and it is passed both
-// the previous and the current element.
-template <class ForwardIt, class BinaryPredicate>
-static ForwardIt removeIfBinary(ForwardIt FirstIt, ForwardIt LastIt,
-                                BinaryPredicate Pred) {
-  if (FirstIt != LastIt) {
-    auto PrevIt = FirstIt++;
-    FirstIt = std::find_if(FirstIt, LastIt, [&](const auto &Curr) {
-      return Pred(*PrevIt++, Curr);
-    });
-    if (FirstIt != LastIt)
-      for (ForwardIt CurrIt = FirstIt; ++CurrIt != LastIt;)
-        if (!Pred(*PrevIt, *CurrIt)) {
-          PrevIt = FirstIt;
-          *FirstIt++ = std::move(*CurrIt);
-        }
-  }
-  return FirstIt;
-}
-
 llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
   Finalized = true;
-
-  // Sort function infos so we can emit sorted functions.
-  llvm::sort(Funcs);
 
   // Don't let the string table indexes change by finalizing in order.
   StrTab.finalizeInOrder();
@@ -239,83 +214,85 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // Note that in case of (b), we cannot include Y in the result because then
   // we wouldn't find any function for range (end of Y, end of X)
   // with binary search
-  auto NumBefore = Funcs.size();
-  Funcs.erase(
-      removeIfBinary(Funcs.begin(), Funcs.end(),
-                     [&](const auto &Prev, const auto &Curr) {
-                       // Empty ranges won't intersect, but we still need to
-                       // catch the case where we have multiple symbols at the
-                       // same address and coalesce them.
-                       const bool ranges_equal = Prev.Range == Curr.Range;
-                       if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
-                         // Overlapping ranges or empty identical ranges.
-                         if (ranges_equal) {
-                           // Same address range. Check if one is from debug
-                           // info and the other is from a symbol table. If
-                           // so, then keep the one with debug info. Our
-                           // sorting guarantees that entries with matching
-                           // address ranges that have debug info are last in
-                           // the sort.
-                           if (Prev == Curr) {
-                             // FunctionInfo entries match exactly (range,
-                             // lines, inlines)
 
-                             // We used to output a warning here, but this was
-                             // so frequent on some binaries, in particular
-                             // when those were built with GCC, that it slowed
-                             // down processing extremely.
-                             return true;
-                           } else {
-                             if (!Prev.hasRichInfo() && Curr.hasRichInfo()) {
-                               // Same address range, one with no debug info
-                               // (symbol) and the next with debug info. Keep
-                               // the latter.
-                               return true;
-                             } else {
-                               if (!Quiet) {
-                                 OS << "warning: same address range contains "
-                                       "different debug "
-                                    << "info. Removing:\n"
-                                    << Prev << "\nIn favor of this one:\n"
-                                    << Curr << "\n";
-                               }
-                               return true;
-                             }
-                           }
-                         } else {
-                           if (!Quiet) { // print warnings about overlaps
-                             OS << "warning: function ranges overlap:\n"
-                                << Prev << "\n"
-                                << Curr << "\n";
-                           }
-                         }
-                       } else if (Prev.Range.size() == 0 &&
-                                  Curr.Range.contains(Prev.Range.start())) {
-                         if (!Quiet) {
-                           OS << "warning: removing symbol:\n"
-                              << Prev << "\nKeeping:\n"
-                              << Curr << "\n";
-                         }
-                         return true;
-                       }
-
-                       return false;
-                     }),
-      Funcs.end());
-
-  // If our last function info entry doesn't have a size and if we have valid
-  // text ranges, we should set the size of the last entry since any search for
-  // a high address might match our last entry. By fixing up this size, we can
-  // help ensure we don't cause lookups to always return the last symbol that
-  // has no size when doing lookups.
-  if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
-    if (auto Range =
-            ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
-      Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
+  const auto NumBefore = Funcs.size();
+  // Only sort and unique if this isn't a segment. If this is a segment we
+  // already finalized the main GsymCreator with all of the function infos
+  // and then the already sorted and uniqued function infos were added to this
+  // object.
+  if (!IsSegment) {
+    if (NumBefore > 1) {
+      // Sort function infos so we can emit sorted functions.
+      llvm::sort(Funcs);
+      std::vector<FunctionInfo> FinalizedFuncs;
+      FinalizedFuncs.reserve(Funcs.size());
+      FinalizedFuncs.emplace_back(std::move(Funcs.front()));
+      for (size_t Idx=1; Idx < NumBefore; ++Idx) {
+        FunctionInfo &Prev = FinalizedFuncs.back();
+        FunctionInfo &Curr = Funcs[Idx];
+        // Empty ranges won't intersect, but we still need to
+        // catch the case where we have multiple symbols at the
+        // same address and coalesce them.
+        const bool ranges_equal = Prev.Range == Curr.Range;
+        if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
+          // Overlapping ranges or empty identical ranges.
+          if (ranges_equal) {
+            // Same address range. Check if one is from debug
+            // info and the other is from a symbol table. If
+            // so, then keep the one with debug info. Our
+            // sorting guarantees that entries with matching
+            // address ranges that have debug info are last in
+            // the sort.
+            if (!(Prev == Curr)) {
+              if (Prev.hasRichInfo() && Curr.hasRichInfo()) {
+                if (!Quiet) {
+                  OS << "warning: same address range contains "
+                        "different debug "
+                    << "info. Removing:\n"
+                    << Prev << "\nIn favor of this one:\n"
+                    << Curr << "\n";
+                }
+              }
+              // We want to swap the current entry with the previous since
+              // later entries with the same range always have more debug info
+              // or different debug info.
+              std::swap(Prev, Curr);
+            }
+          } else {
+            if (!Quiet) { // print warnings about overlaps
+              OS << "warning: function ranges overlap:\n"
+                << Prev << "\n"
+                << Curr << "\n";
+            }
+            FinalizedFuncs.emplace_back(std::move(Curr));
+          }
+        } else {
+          if (Prev.Range.size() == 0 && Curr.Range.contains(Prev.Range.start())) {
+            // Symbols on macOS don't have address ranges, so if the range
+            // doesn't match and the size is zero, then we replace the empty
+            // symbol function info with the current one.
+            std::swap(Prev, Curr);
+          } else {
+            FinalizedFuncs.emplace_back(std::move(Curr));
+          }
+        }
+      }
+      std::swap(Funcs, FinalizedFuncs);
     }
+    // If our last function info entry doesn't have a size and if we have valid
+    // text ranges, we should set the size of the last entry since any search for
+    // a high address might match our last entry. By fixing up this size, we can
+    // help ensure we don't cause lookups to always return the last symbol that
+    // has no size when doing lookups.
+    if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
+      if (auto Range =
+              ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
+        Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
+      }
+    }
+    OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
+      << Funcs.size() << " total\n";
   }
-  OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
-     << Funcs.size() << " total\n";
   return Error::success();
 }
 
@@ -355,7 +332,6 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
   std::lock_guard<std::mutex> Guard(Mutex);
-  Ranges.insert(FI.Range);
   Funcs.emplace_back(std::move(FI));
 }
 
@@ -388,31 +364,24 @@ bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
   return true; // No valid text ranges has been set, so accept all ranges.
 }
 
-bool GsymCreator::hasFunctionInfoForAddress(uint64_t Addr) const {
-  std::lock_guard<std::mutex> Guard(Mutex);
-  return Ranges.contains(Addr);
-}
-
 std::optional<uint64_t> GsymCreator::getFirstFunctionAddress() const {
-  if (Finalized && !Funcs.empty())
+  // If we have finalized then Funcs are sorted. If we are a segment then
+  // Funcs will be sorted as well since function infos get added from an
+  // already finalized GsymCreator object where its functions were sorted and
+  // uniqued.
+  if ((Finalized || IsSegment) && !Funcs.empty())
     return std::optional<uint64_t>(Funcs.front().startAddress());
-  // This code gets used by the segmentation of GSYM files to help determine the
-  // size of the GSYM header while continually adding new FunctionInfo objects
-  // to this object, so we haven't finalized this object yet.
-  if (Ranges.empty())
-    return std::nullopt;
-  return std::optional<uint64_t>(Ranges.begin()->start());
+  return std::nullopt;
 }
 
 std::optional<uint64_t> GsymCreator::getLastFunctionAddress() const {
-  if (Finalized && !Funcs.empty())
+  // If we have finalized then Funcs are sorted. If we are a segment then
+  // Funcs will be sorted as well since function infos get added from an
+  // already finalized GsymCreator object where its functions were sorted and
+  // uniqued.
+  if ((Finalized || IsSegment) && !Funcs.empty())
     return std::optional<uint64_t>(Funcs.back().startAddress());
-  // This code gets used by the segmentation of GSYM files to help determine the
-  // size of the GSYM header while continually adding new FunctionInfo objects
-  // to this object, so we haven't finalized this object yet.
-  if (Ranges.empty())
-    return std::nullopt;
-  return std::optional<uint64_t>((Ranges.end() - 1)->end());
+  return std::nullopt;
 }
 
 std::optional<uint64_t> GsymCreator::getBaseAddress() const {
@@ -477,7 +446,6 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   // this GsymCreator and then copy the function info and update the string
   // table offsets to match the new offsets.
   const FunctionInfo &SrcFI = SrcGC.Funcs[FuncIdx];
-  Ranges.insert(SrcFI.Range);
 
   FunctionInfo DstFI;
   DstFI.Range = SrcFI.Range;
@@ -503,12 +471,12 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
     fixupInlineInfo(SrcGC, *DstFI.Inline);
   }
   std::lock_guard<std::mutex> Guard(Mutex);
-  Funcs.push_back(DstFI);
+  Funcs.emplace_back(DstFI);
   return Funcs.back().cacheEncoding();
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
-                                      llvm::support::endianness ByteOrder,
+                                      llvm::endianness ByteOrder,
                                       uint64_t SegmentSize) const {
   if (SegmentSize == 0)
     return createStringError(std::errc::invalid_argument,
@@ -551,6 +519,10 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
     return std::unique_ptr<GsymCreator>();
 
   std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+
+  // Tell the creator that this is a segment.
+  GC->setIsSegment();
+
   // Set the base address if there is one.
   if (BaseAddress)
     GC->setBaseAddress(*BaseAddress);

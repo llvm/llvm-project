@@ -17,6 +17,10 @@
 
 class GenericInstruction : StandardPseudoInstruction {
   let isPreISelOpcode = true;
+
+  // When all variadic ops share a type with another operand,
+  // this is the type they share. Used by MIR patterns type inference.
+  TypedOperand variadicOpsType = ?;
 }
 
 // Provide a variant of an instruction with the same operands, but
@@ -222,6 +226,18 @@ def G_JUMP_TABLE : GenericInstruction {
 def G_DYN_STACKALLOC : GenericInstruction {
   let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins type1:$size, i32imm:$align);
+  let hasSideEffects = true;
+}
+
+def G_STACKSAVE : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_STACKRESTORE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$src);
   let hasSideEffects = true;
 }
 
@@ -902,6 +918,13 @@ def G_FEXP2 : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point base-10 exponential of a value.
+def G_FEXP10 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point base-e logarithm of a value.
 def G_FLOG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -987,6 +1010,35 @@ def G_FNEARBYINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;
+}
+
+//------------------------------------------------------------------------------
+// Access to floating-point environment.
+//------------------------------------------------------------------------------
+
+// These operations read/write floating-point environment. The interaction with
+// it is modeled as a side effect, because constrained intrinsics use the same
+// method.
+
+// Reading floating-point control modes.
+def G_GET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point control modes.
+def G_SET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point control modes to default state.
+def G_RESET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1157,6 +1209,15 @@ def G_FENCE : GenericInstruction {
   let hasSideEffects = true;
 }
 
+// Generic opcode equivalent to the llvm.prefetch intrinsic.
+def G_PREFETCH : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$address, i32imm:$rw, i32imm:$locality, i32imm:$cachetype);
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
+}
+
 //------------------------------------------------------------------------------
 // Variadic ops
 //------------------------------------------------------------------------------
@@ -1180,6 +1241,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst0, variable_ops);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
+  let variadicOpsType = type0;
 }
 
 // Insert a smaller register into a larger one at the specified bit-index.
@@ -1197,6 +1259,7 @@ def G_MERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
+  let variadicOpsType = type1;
 }
 
 /// Create a vector from multiple scalar registers. No implicit
@@ -1206,6 +1269,7 @@ def G_BUILD_VECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
+  let variadicOpsType = type1;
 }
 
 /// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the
@@ -1228,10 +1292,6 @@ def G_INTRINSIC : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = false;
-
-  // Conservatively assume this is convergent. If there turnes out to
-  // be a need, there should be separate convergent intrinsic opcodes.
-  let isConvergent = 1;
 }
 
 // Intrinsic with side effects.
@@ -1241,9 +1301,23 @@ def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
   let hasSideEffects = true;
   let mayLoad = true;
   let mayStore = true;
+}
 
-  // Conservatively assume this is convergent. If there turnes out to
-  // be a need, there should be separate convergent intrinsic opcodes.
+// Convergent intrinsic without side effects.
+def G_INTRINSIC_CONVERGENT : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = false;
+  let isConvergent = true;
+}
+
+// Convergent intrinsic with side effects.
+def G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
   let isConvergent = true;
 }
 
@@ -1376,6 +1450,8 @@ def G_VECREDUCE_FMUL : VectorReduction;
 
 def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;
+def G_VECREDUCE_FMAXIMUM : VectorReduction;
+def G_VECREDUCE_FMINIMUM : VectorReduction;
 
 def G_VECREDUCE_ADD : VectorReduction;
 def G_VECREDUCE_MUL : VectorReduction;

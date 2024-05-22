@@ -2,7 +2,7 @@
 ; Verify that calls to known string library functions declared with
 ; incompatible signatures are handled gracefully and without aborting.
 ;
-; RUN: opt < %s -passes=instcombine -opaque-pointers -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 @a = constant [2 x i8] c"1\00"
 

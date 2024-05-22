@@ -5,19 +5,19 @@
 define void @getSetCCResultType(ptr %p) {
 ; CHECK-LABEL: getSetCCResultType:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld.wu $a1, $a0, 12
+; CHECK-NEXT:    ld.w $a1, $a0, 12
 ; CHECK-NEXT:    sltui $a1, $a1, 1
 ; CHECK-NEXT:    sub.d $a1, $zero, $a1
 ; CHECK-NEXT:    st.w $a1, $a0, 12
-; CHECK-NEXT:    ld.wu $a1, $a0, 8
+; CHECK-NEXT:    ld.w $a1, $a0, 8
 ; CHECK-NEXT:    sltui $a1, $a1, 1
 ; CHECK-NEXT:    sub.d $a1, $zero, $a1
 ; CHECK-NEXT:    st.w $a1, $a0, 8
-; CHECK-NEXT:    ld.wu $a1, $a0, 4
+; CHECK-NEXT:    ld.w $a1, $a0, 4
 ; CHECK-NEXT:    sltui $a1, $a1, 1
 ; CHECK-NEXT:    sub.d $a1, $zero, $a1
 ; CHECK-NEXT:    st.w $a1, $a0, 4
-; CHECK-NEXT:    ld.wu $a1, $a0, 0
+; CHECK-NEXT:    ld.w $a1, $a0, 0
 ; CHECK-NEXT:    sltui $a1, $a1, 1
 ; CHECK-NEXT:    sub.d $a1, $zero, $a1
 ; CHECK-NEXT:    st.w $a1, $a0, 0

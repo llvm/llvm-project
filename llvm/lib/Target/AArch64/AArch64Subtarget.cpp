@@ -64,9 +64,22 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool>
-    ForceStreamingCompatibleSVE("force-streaming-compatible-sve",
-                                cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceStreamingCompatibleSVE(
+    "force-streaming-compatible-sve",
+    cl::desc(
+        "Force the use of streaming-compatible SVE code for all functions"),
+    cl::Hidden);
+
+static cl::opt<AArch64PAuth::AuthCheckMethod>
+    AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
+                               cl::Hidden,
+                               cl::desc("Override the variant of check applied "
+                                        "to authenticated LR during tail call"),
+                               cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
+
+static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
+    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -75,7 +88,8 @@ unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
 }
 
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
-    StringRef FS, StringRef CPUString, StringRef TuneCPUString) {
+    StringRef FS, StringRef CPUString, StringRef TuneCPUString,
+    bool HasMinSize) {
   // Determine default and user-specified characteristics
 
   if (CPUString.empty())
@@ -85,12 +99,12 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
     TuneCPUString = CPUString;
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
-  initializeProperties();
+  initializeProperties(HasMinSize);
 
   return *this;
 }
 
-void AArch64Subtarget::initializeProperties() {
+void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // Initialize CPU specific properties. We should add a tablegen feature for
   // this in the future so we can specify it together with the subtarget
   // features.
@@ -135,6 +149,7 @@ void AArch64Subtarget::initializeProperties() {
     MaxBytesForLoopAlignment = 16;
     break;
   case CortexA510:
+  case CortexA520:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(16);
@@ -142,8 +157,10 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case CortexA710:
   case CortexA715:
+  case CortexA720:
   case CortexX2:
   case CortexX3:
+  case CortexX4:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -167,6 +184,7 @@ void AArch64Subtarget::initializeProperties() {
   case AppleA14:
   case AppleA15:
   case AppleA16:
+  case AppleA17:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -175,6 +193,7 @@ void AArch64Subtarget::initializeProperties() {
     case AppleA14:
     case AppleA15:
     case AppleA16:
+    case AppleA17:
       MaxInterleaveFactor = 4;
       break;
     default:
@@ -283,6 +302,9 @@ void AArch64Subtarget::initializeProperties() {
     MaxInterleaveFactor = 4;
     break;
   }
+
+  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
+    MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -290,16 +312,18 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEModeDisabled)
+                                   bool StreamingSVEMode,
+                                   bool StreamingCompatibleSVEMode,
+                                   bool HasMinSize)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian),
-      StreamingSVEModeDisabled(StreamingSVEModeDisabled),
+      IsLittle(LittleEndian), StreamingSVEMode(StreamingSVEMode),
+      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
-      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
@@ -331,6 +355,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
+
+  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -473,10 +499,39 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
-  if (ForceStreamingCompatibleSVE) {
-    assert(hasSVEorSME() && "Expected SVE to be available");
-    return hasSVEorSME();
-  }
-  return false;
+bool AArch64Subtarget::isStreamingCompatible() const {
+  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
+}
+
+bool AArch64Subtarget::isNeonAvailable() const {
+  return hasNEON() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+}
+
+bool AArch64Subtarget::isSVEAvailable() const {
+  return hasSVE() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+}
+
+// If return address signing is enabled, tail calls are emitted as follows:
+//
+// ```
+//   <authenticate LR>
+//   <check LR>
+//   TCRETURN          ; the callee may sign and spill the LR in its prologue
+// ```
+//
+// LR may require explicit checking because if FEAT_FPAC is not implemented
+// and LR was tampered with, then `<authenticate LR>` will not generate an
+// exception on its own. Later, if the callee spills the signed LR value and
+// neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
+// the higher bits of LR thus hiding the authentication failure.
+AArch64PAuth::AuthCheckMethod
+AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+  if (AuthenticatedLRCheckMethod.getNumOccurrences())
+    return AuthenticatedLRCheckMethod;
+
+  // At now, use None by default because checks may introduce an unexpected
+  // performance regression or incompatibility with execute-only mappings.
+  return AArch64PAuth::AuthCheckMethod::None;
 }

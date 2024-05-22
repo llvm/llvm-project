@@ -157,6 +157,25 @@
 #define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
+// clang-format off
+#if defined(__clang__) || defined(__GNUC__)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("warning(push)")                                                     \
+  _Pragma("warning(disable : 4996)")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("warning(pop)")
+#else
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+#endif
+// clang-format on
+
 // Indicate that a non-static, non-const C++ member function reinitializes
 // the entire object to a known state, independent of the previous state of
 // the object.
@@ -305,6 +324,12 @@
 #define LLVM_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LLVM_GSL_POINTER
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L
+#define LLVM_CTOR_NODISCARD [[nodiscard]]
+#else
+#define LLVM_CTOR_NODISCARD
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
@@ -561,6 +586,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
   __attribute__((no_profile_instrument_function))
 #else
 #define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
+#endif
+
+/// \macro LLVM_PREFERRED_TYPE
+/// Adjust type of bit-field in debug info.
+#if __has_attribute(preferred_type)
+#define LLVM_PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
+#else
+#define LLVM_PREFERRED_TYPE(T)
 #endif
 
 #endif

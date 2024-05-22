@@ -112,8 +112,8 @@ entry:
 ; A subregister use operand should not be tied.
 ; CHECK-LABEL: {{^}}no_fold_tied_subregister:
 ; CHECK: buffer_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
-; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
-; CHECK: buffer_store_dword v[[LO]]
+; CHECK: v_madmk_f32 v[[RES:[0-9]+]], v[[HI]], 0x41200000, v[[LO]]
+; CHECK: buffer_store_dword v[[RES]]
 define amdgpu_kernel void @no_fold_tied_subregister() #1 {
   %tmp1 = load volatile <2 x float>, ptr addrspace(1) undef
   %tmp2 = extractelement <2 x float> %tmp1, i32 0

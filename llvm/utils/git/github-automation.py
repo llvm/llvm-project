@@ -10,6 +10,7 @@
 
 import argparse
 from git import Repo  # type: ignore
+import html
 import github
 import os
 import re
@@ -23,20 +24,37 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-  1) Assign the issue to you.
-  2) Fix the issue locally.
-  3) [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally.
-    3.1) Remember that the subdirectories under `test/` create fine-grained testing targets, so you can
-         e.g. use `make check-clang-ast` to only run Clang's AST tests.
-  4) Create a `git` commit
-  5) Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-  6) Submit the patch to [Phabricator](https://reviews.llvm.org/).
-    6.1) Detailed instructions can be found [here](https://llvm.org/docs/Phabricator.html#requesting-a-review-via-the-web-interface)
+1. In the comments of the issue, request for it to be assigned to you.
+2. Fix the issue locally.
+3. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
+4. Create a Git commit.
+5. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+6. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
 
-For more instructions on how to submit a patch to LLVM, see our [documentation](https://llvm.org/docs/Contributing.html).
-
-If you have any further questions about this issue, don't hesitate to ask via a comment on this Github issue.
+If you have any further questions about this issue, don't hesitate to ask via a comment in the thread below.
 """
+
+
+def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+    for team in teams:
+        if team_name == team.name.lower():
+            return team
+    return None
+
+
+def escape_description(str):
+    # If the description of an issue/pull request is empty, the Github API
+    # library returns None instead of an empty string. Handle this here to
+    # avoid failures from trying to manipulate None.
+    if str is None:
+        return ""
+    # https://github.com/github/markup/issues/1168#issuecomment-494946168
+    str = html.escape(str, False)
+    # '@' followed by alphanum is a user name
+    str = re.sub("@(?=\w)", "@<!-- -->", str)
+    # '#' followed by digits is considered an issue number
+    str = re.sub("#(?=\d)", "#<!-- -->", str)
+    return str
 
 
 class IssueSubscriber:
@@ -51,18 +69,175 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        for team in self.org.get_teams():
-            if self.team_name != team.name.lower():
-                continue
+        team = _get_curent_team(self.team_name, self.org.get_teams())
+        if not team:
+            print(f"couldn't find team named {self.team_name}")
+            return False
 
-            comment = ""
-            if team.slug == "issue-subscribers-good-first-issue":
-                comment = "{}\n".format(beginner_comment)
-
-            comment += "@llvm/{}".format(team.slug)
+        comment = ""
+        if team.slug == "issue-subscribers-good-first-issue":
+            comment = "{}\n".format(beginner_comment)
             self.issue.create_comment(comment)
-            return True
-        return False
+
+        body = escape_description(self.issue.body)
+        comment = f"""
+@llvm/{team.slug}
+
+Author: {self.issue.user.name} ({self.issue.user.login})
+
+<details>
+{body}
+</details>
+"""
+
+        self.issue.create_comment(comment)
+        return True
+
+
+def human_readable_size(size, decimal_places=2):
+    for unit in ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]:
+        if size < 1024.0 or unit == "PiB":
+            break
+        size /= 1024.0
+    return f"{size:.{decimal_places}f} {unit}"
+
+
+class PRSubscriber:
+    @property
+    def team_name(self) -> str:
+        return self._team_name
+
+    def __init__(self, token: str, repo: str, pr_number: int, label_name: str):
+        self.repo = github.Github(token).get_repo(repo)
+        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self._team_name = "pr-subscribers-{}".format(
+            label_name.replace("+", "x")
+        ).lower()
+        self.COMMENT_TAG = "<!--LLVM PR SUMMARY COMMENT-->\n"
+
+    def get_summary_comment(self) -> github.IssueComment.IssueComment:
+        for comment in self.pr.as_issue().get_comments():
+            if self.COMMENT_TAG in comment.body:
+                return comment
+        return None
+
+    def run(self) -> bool:
+        patch = None
+        team = _get_curent_team(self.team_name, self.org.get_teams())
+        if not team:
+            print(f"couldn't find team named {self.team_name}")
+            return False
+
+        # GitHub limits comments to 65,536 characters, let's limit the diff
+        # and the file list to 20kB each.
+        STAT_LIMIT = 20 * 1024
+        DIFF_LIMIT = 20 * 1024
+
+        # Get statistics for each file
+        diff_stats = f"{self.pr.changed_files} Files Affected:\n\n"
+        for file in self.pr.get_files():
+            diff_stats += f"- ({file.status}) {file.filename} ("
+            if file.additions:
+                diff_stats += f"+{file.additions}"
+            if file.deletions:
+                diff_stats += f"-{file.deletions}"
+            diff_stats += ") "
+            if file.status == "renamed":
+                print(f"(from {file.previous_filename})")
+            diff_stats += "\n"
+            if len(diff_stats) > STAT_LIMIT:
+                break
+
+        # Get the diff
+        try:
+            patch = requests.get(self.pr.diff_url).text
+        except:
+            patch = ""
+
+        patch_link = f"Full diff: {self.pr.diff_url}\n"
+        if len(patch) > DIFF_LIMIT:
+            patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
+            patch = patch[0:DIFF_LIMIT] + "...\n[truncated]\n"
+        team_mention = "@llvm/{}".format(team.slug)
+
+        body = escape_description(self.pr.body)
+        # Note: the comment is in markdown and the code below
+        # is sensible to line break
+        comment = f"""
+{self.COMMENT_TAG}
+{team_mention}
+
+Author: {self.pr.user.name} ({self.pr.user.login})
+
+<details>
+<summary>Changes</summary>
+
+{body}
+
+---
+{patch_link}
+
+{diff_stats}
+
+``````````diff
+{patch}
+``````````
+
+</details>
+"""
+
+        summary_comment = self.get_summary_comment()
+        if not summary_comment:
+            self.pr.as_issue().create_comment(comment)
+        elif team_mention + "\n" in summary_comment.body:
+            print("Team {} already mentioned.".format(team.slug))
+        else:
+            summary_comment.edit(
+                summary_comment.body.replace(
+                    self.COMMENT_TAG, self.COMMENT_TAG + team_mention + "\n"
+                )
+            )
+        return True
+
+    def _get_curent_team(self) -> Optional[github.Team.Team]:
+        for team in self.org.get_teams():
+            if self.team_name == team.name.lower():
+                return team
+        return None
+
+
+class PRGreeter:
+    def __init__(self, token: str, repo: str, pr_number: int):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+
+    def run(self) -> bool:
+        # We assume that this is only called for a PR that has just been opened
+        # by a user new to LLVM and/or GitHub itself.
+
+        # This text is using Markdown formatting.
+        comment = f"""\
+Thank you for submitting a Pull Request (PR) to the LLVM Project!
+
+This PR will be automatically labeled and the relevant teams will be
+notified.
+
+If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+
+If this is not working for you, it is probably because you do not have write
+permissions for the repository. In which case you can instead tag reviewers by
+name in a comment by using `@` followed by their GitHub username.
+
+If you have received no comments on your PR for a week, you can request a review
+by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate
+is once a week. Please remember that you are asking for valuable time from other developers.
+
+If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
+
+You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+        self.pr.as_issue().create_comment(comment)
+        return True
 
 
 def setup_llvmbot_git(git_dir="."):
@@ -169,7 +344,6 @@ def extract_commit_hash(arg: str):
 
 
 class ReleaseWorkflow:
-
     CHERRY_PICK_FAILED_LABEL = "release:cherry-pick-failed"
 
     """
@@ -506,6 +680,13 @@ issue_subscriber_parser = subparsers.add_parser("issue-subscriber")
 issue_subscriber_parser.add_argument("--label-name", type=str, required=True)
 issue_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
+pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
+pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
+
+pr_greeter_parser = subparsers.add_parser("pr-greeter")
+pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -551,6 +732,14 @@ if args.command == "issue-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     issue_subscriber.run()
+elif args.command == "pr-subscriber":
+    pr_subscriber = PRSubscriber(
+        args.token, args.repo, args.issue_number, args.label_name
+    )
+    pr_subscriber.run()
+elif args.command == "pr-greeter":
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,

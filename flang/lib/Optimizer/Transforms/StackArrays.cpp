@@ -42,6 +42,13 @@ namespace fir {
 
 #define DEBUG_TYPE "stack-arrays"
 
+static llvm::cl::opt<std::size_t> maxAllocsPerFunc(
+    "stack-arrays-max-allocs",
+    llvm::cl::desc("The maximum number of heap allocations to consider in one "
+                   "function before skipping (to save compilation time). Set "
+                   "to 0 for no limit."),
+    llvm::cl::init(1000), llvm::cl::Hidden);
+
 namespace {
 
 /// The state of an SSA value at each program point
@@ -139,9 +146,9 @@ public:
 };
 
 class AllocationAnalysis
-    : public mlir::dataflow::DenseDataFlowAnalysis<LatticePoint> {
+    : public mlir::dataflow::DenseForwardDataFlowAnalysis<LatticePoint> {
 public:
-  using DenseDataFlowAnalysis::DenseDataFlowAnalysis;
+  using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   void visitOperation(mlir::Operation *op, const LatticePoint &before,
                       LatticePoint *after) override;
@@ -411,6 +418,17 @@ void AllocationAnalysis::processOperation(mlir::Operation *op) {
 mlir::LogicalResult
 StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   assert(mlir::isa<mlir::func::FuncOp>(func));
+  size_t nAllocs = 0;
+  func->walk([&nAllocs](fir::AllocMemOp) { nAllocs++; });
+  // don't bother with the analysis if there are no heap allocations
+  if (nAllocs == 0)
+    return mlir::success();
+  if ((maxAllocsPerFunc != 0) && (nAllocs > maxAllocsPerFunc)) {
+    LLVM_DEBUG(llvm::dbgs() << "Skipping stack arrays for function with "
+                            << nAllocs << " heap allocations");
+    return mlir::success();
+  }
+
   mlir::DataFlowSolver solver;
   // constant propagation is required for dead code analysis, dead code analysis
   // is required to mark blocks live (required for mlir dense dfa)

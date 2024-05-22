@@ -402,6 +402,7 @@ int k;
   for (int i = 0; i < 10; ++i) { // expected-error {{expected 2 for loops after '#pragma omp for', but found only 1}}
 #if _OPENMP >= 202111
 #pragma omp ordered doacross(sink : i)
+#pragma omp ordered depend(source) // expected-warning {{'depend' clause for 'ordered' is deprecated; use 'doacross' instead}}
     int j;
 #pragma omp ordered doacross(sink : i, j) // omp52-error {{expected loop iteration variable}}
 #else

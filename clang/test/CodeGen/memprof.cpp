@@ -16,8 +16,8 @@
 
 // Profile use:
 // Ensure Pass PGOInstrumentationUse is invoked with the memprof-only profile.
-// RUN: %clang_cc1 -O2 -fprofile-instrument-use-path=%t.memprofdata %s -fdebug-pass-manager  -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=USE
-// USE: Running pass: PGOInstrumentationUse on [module]
+// RUN: %clang_cc1 -O2 -fmemory-profile-use=%t.memprofdata %s -fdebug-pass-manager  -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=USE
+// USE: Running pass: MemProfUsePass on [module]
 
 char *foo() {
   return new char[10];

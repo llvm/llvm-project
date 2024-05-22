@@ -7,25 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
-using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
   llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
@@ -36,6 +36,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
+    ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -44,9 +45,10 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
+      ParamOffsets.push_back(ParamOffset);
       ParamOffset += align(primSize(PT_Ptr));
     }
 
@@ -59,61 +61,84 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
       MD->getParent()->getCaptureFields(LC, LTC);
 
       for (auto Cap : LC) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        if (MD->isStatic())
+          return nullptr;
+
         unsigned Offset = R->getField(Cap.second)->Offset;
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      // FIXME: LambdaThisCapture
-      (void)LTC;
+      if (LTC)
+        this->LambdaThisCapture = R->getField(LTC)->Offset;
     }
   }
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-    PrimType Ty = Ctx.classify(PD->getType()).value_or(PT_Ptr);
-    Descriptor *Desc = P.createDescriptor(PD, Ty);
-    ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
-    Params.insert({PD, ParamOffset});
-    ParamOffset += align(primSize(Ty));
-    ParamTypes.push_back(Ty);
+    std::optional<PrimType> T = Ctx.classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P.createDescriptor(PD, PT);
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    Params.insert({PD, {ParamOffset, T != std::nullopt}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
   }
 
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
-  if (!Func)
+  if (!Func) {
+    bool IsUnevaluatedBuiltin = false;
+    if (unsigned BI = FuncDecl->getBuiltinID())
+      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), HasThisPointer, HasRVO);
+                         std::move(ParamDescriptors), std::move(ParamOffsets),
+                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+  }
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined())
+  if (!FuncDecl->isDefined()) {
+    Func->setDefined(false);
     return Func;
+  }
+
+  Func->setDefined(true);
+
+  // Lambda static invokers are a special case that we emit custom code for.
+  bool IsEligibleForCompilation = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
+    IsEligibleForCompilation = MD->isLambdaStaticInvoker();
+  if (!IsEligibleForCompilation)
+    IsEligibleForCompilation = FuncDecl->isConstexpr();
 
   // Compile the function body.
-  if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
+  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else {
-      Func->setIsFullyCompiled(true);
-      return Func;
-    }
-  } else {
-    // Create scopes from descriptors.
-    llvm::SmallVector<Scope, 2> Scopes;
-    for (auto &DS : Descriptors) {
-      Scopes.emplace_back(std::move(DS));
-    }
 
-    // Set the function's code.
-    Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                  std::move(Scopes), FuncDecl->hasBody());
     Func->setIsFullyCompiled(true);
     return Func;
   }
+
+  // Create scopes from descriptors.
+  llvm::SmallVector<Scope, 2> Scopes;
+  for (auto &DS : Descriptors) {
+    Scopes.emplace_back(std::move(DS));
+  }
+
+  // Set the function's code.
+  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
+                std::move(Scopes), FuncDecl->hasBody());
+  Func->setIsFullyCompiled(true);
+  return Func;
 }
 
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
@@ -136,7 +161,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
-      endian::write<int32_t, endianness::native, 1>(Location, Offset);
+      endian::write<int32_t, llvm::endianness::native>(Location, Offset);
     }
     LabelRelocs.erase(It);
   }
@@ -167,7 +192,7 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, std::vector<char> &Code, const T &Val,
+static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
                  bool &Success) {
   size_t Size;
 
@@ -193,6 +218,25 @@ static void emit(Program &P, std::vector<char> &Code, const T &Val,
     uint32_t ID = P.getOrCreateNativePointer(Val);
     new (Code.data() + ValPos) uint32_t(ID);
   }
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  size_t Size = Val.bytesToSerialize();
+
+  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+    Success = false;
+    return;
+  }
+
+  // Access must be aligned!
+  size_t ValPos = align(Code.size());
+  Size = align(Size);
+  assert(aligned(ValPos + Size));
+  Code.resize(ValPos + Size);
+
+  Val.serialize(Code.data() + ValPos);
 }
 
 template <typename... Tys>

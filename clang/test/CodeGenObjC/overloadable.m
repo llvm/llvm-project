@@ -1,4 +1,3 @@
-// rdar://6657613
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
 
 @class C;

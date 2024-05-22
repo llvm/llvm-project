@@ -9,20 +9,20 @@ target triple = "aarch64"
 ;       this is implemented, this test will be fleshed out.
 ;
 
-define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %right_ptr) #0 {
+define void @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %right_ptr, ptr %result_ptr) #0 {
 ; CHECK-LABEL: fixed_bitselect_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    mov z3.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x2]
-; CHECK-NEXT:    add z3.s, z0.s, z3.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x2]
+; CHECK-NEXT:    add z1.s, z0.s, z1.s
 ; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    and z1.d, z3.d, z2.d
+; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
-; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x3]
 ; CHECK-NEXT:    ret
   %pre_cond = load <8 x i32>, ptr %pre_cond_ptr
   %left = load <8 x i32>, ptr %left_ptr
@@ -33,7 +33,8 @@ define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %r
   %left_bits_0 = and <8 x i32> %neg_cond, %left
   %right_bits_0 = and <8 x i32> %min_cond, %right
   %bsl0000 = or <8 x i32> %right_bits_0, %left_bits_0
-  ret <8 x i32> %bsl0000
+  store <8 x i32> %bsl0000, ptr %result_ptr
+  ret void
 }
 
 attributes #0 = { "target-features"="+sve" }

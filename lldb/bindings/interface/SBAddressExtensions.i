@@ -2,9 +2,9 @@ STRING_EXTENSION_OUTSIDE(SBAddress)
 
 %extend lldb::SBAddress {
 #ifdef SWIGPYTHON
-    // operator== is a free function, which swig does not handle, so we inject
-    // our own equality operator here
     %pythoncode%{
+    # operator== is a free function, which swig does not handle, so we inject
+    # our own equality operator here
     def __eq__(self, other):
       return not self.__ne__(other)
     %}

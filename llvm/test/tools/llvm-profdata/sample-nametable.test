@@ -8,5 +8,5 @@ RUN: not llvm-profdata show --sample %p/Inputs/sample-nametable-empty-string.pro
 
 3- The data of the name table is placed after the data of the profiles. The reader should handle it correctly.
 RUN: llvm-profdata merge --sample --text %p/Inputs/sample-nametable-after-samples.profdata | FileCheck %s
-CHECK: 18446744073709551615:2:9
+CHECK: 18446744073709551613:2:9
 

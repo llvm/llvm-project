@@ -7,6 +7,10 @@
 // XFAIL: hwasan && target=aarch64{{.*}}
 // LSan tests fail on Darwin
 // UNSUPPORTED: darwin && lsan
+// tsan and ubsan are supported on darwin, but they currently fail
+// on some platforms likely because the test platform is too old
+// UNSUPPORTED: darwin && tsan
+// UNSUPPORTED: darwin && ubsan
 
 #include <stdio.h>
 #include <sanitizer/common_interface_defs.h>

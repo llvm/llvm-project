@@ -85,6 +85,18 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
   return KnownOut;
 }
 
+KnownBits KnownBits::computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
+                                         const KnownBits &Borrow) {
+  assert(Borrow.getBitWidth() == 1 && "Borrow must be 1-bit");
+
+  // LHS - RHS = LHS + ~RHS + 1
+  // Carry 1 - Borrow in ::computeForAddCarry
+  std::swap(RHS.Zero, RHS.One);
+  return ::computeForAddCarry(LHS, RHS,
+                              /*CarryZero=*/Borrow.One.getBoolValue(),
+                              /*CarryOne=*/Borrow.Zero.getBoolValue());
+}
+
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
   unsigned BitWidth = getBitWidth();
   assert(0 < SrcBitWidth && SrcBitWidth <= BitWidth &&

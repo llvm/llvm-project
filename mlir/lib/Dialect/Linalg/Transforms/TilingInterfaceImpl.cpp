@@ -192,7 +192,7 @@ struct LinalgOpTilingInterface
     }
     for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
       unsigned dimPosition =
-          resultExpr.value().template cast<AffineDimExpr>().getPosition();
+          cast<AffineDimExpr>(resultExpr.value()).getPosition();
       iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
       iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
     }
@@ -255,15 +255,11 @@ struct LinalgOpPartialReductionInterface
       ArrayRef<int> reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
     OpBuilder::InsertionGuard guard(b);
-    assert(reductionDims.size() == 1 &&
-           "only support single reduction right now.");
+
     if (linalgOp.hasBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
     // Insert the new parallel dimension based on the index of the reduction
-    // loop. This could be controlled by user for more flexibility.
-    int64_t insertSplitDimension = reductionDims[0];
-    assert(sizes.size() >= static_cast<size_t>(insertSplitDimension) &&
-           "reduction dimension must be tiled");
+    // loops. This could be controlled by user for more flexibility.
 
     SmallVector<Operation *, 4> combinerOps;
     if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps) ||
@@ -276,18 +272,31 @@ struct LinalgOpPartialReductionInterface
       return op->emitOpError(
           "Failed to get an identity value for the reduction operation.");
 
-    // Calculate the new shape, we insert the new dimension based on the index
-    // of the reduction dimension.
-    SmallVector<int64_t> newOutputShape;
     ArrayRef<int64_t> oldShape =
         linalgOp.getShape(linalgOp.getDpsInitOperand(0));
+
+    // Extend tile size vector to the rank of the output tensor.
+    SmallVector<Value> tileSizeVector =
+        getValueOrCreateConstantIndexOp(b, loc, sizes);
+    if (tileSizeVector.size() < oldShape.size()) {
+      auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
+      tileSizeVector.append(oldShape.size() - tileSizeVector.size(), zero);
+    }
+
+    // Calculate the new shape, we insert the new dimensions based on the index
+    // of the reduction dimensions.
+    SmallVector<int64_t> newOutputShape;
     SmallVector<Value> dynamicDims;
-    for (int64_t idx : llvm::seq<int64_t>(0, oldShape.size() + 1)) {
-      if (idx == insertSplitDimension) {
+    int64_t currReductionDims = 0;
+    DenseSet<int> reductionDimsSet(reductionDims.begin(), reductionDims.end());
+    for (int64_t idx :
+         llvm::seq<int64_t>(0, oldShape.size() + reductionDims.size())) {
+      if (reductionDimsSet.contains(idx)) {
         dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape);
+        currReductionDims++;
         continue;
       }
-      int64_t oldIdx = idx < insertSplitDimension ? idx : idx - 1;
+      int64_t oldIdx = idx - currReductionDims;
       int64_t dim = oldShape[oldIdx];
       newOutputShape.push_back(dim);
       if (ShapedType::isDynamic(dim))
@@ -310,24 +319,23 @@ struct LinalgOpPartialReductionInterface
                                     ArrayRef<int> reductionDims) const {
     OpBuilder::InsertionGuard guard(b);
     auto linalgOp = cast<LinalgOp>(op);
-    assert(reductionDims.size() == 1 &&
-           "only support single reduction right now.");
-    int64_t insertSplitDimension = reductionDims[0];
 
     AffineMap oldOutputMap =
         linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(0));
-    SmallVector<AffineExpr> outputExpr;
-    for (auto [idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
-      if (static_cast<int64_t>(idx) == insertSplitDimension) {
-        outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
-      }
-      outputExpr.push_back(expr);
+    SmallVector<AffineExpr> outputExpr(oldOutputMap.getNumResults() +
+                                       reductionDims.size());
+
+    for (int idx : reductionDims)
+      outputExpr[idx] = b.getAffineDimExpr(idx);
+    int currExpr = 0;
+    for (int idx : llvm::seq<int>(0, outputExpr.size())) {
+      if (outputExpr[idx])
+        continue;
+      outputExpr[idx] = oldOutputMap.getResult(currExpr++);
     }
-    if (insertSplitDimension == oldOutputMap.getNumResults())
-      outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
 
     // Step 1: Extract a slice of the input operands.
-    SmallVector<Value> valuesToTile = linalgOp.getDpsInputOperands();
+    SmallVector<Value> valuesToTile = linalgOp.getDpsInputs();
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
@@ -338,11 +346,12 @@ struct LinalgOpPartialReductionInterface
     Value out = b.create<tensor::ExtractSliceOp>(loc, init[0], outOffsets,
                                                  sizes, strides);
 
-    // Step3. create a generic op where the reduction dimension is replaced by a
-    // parallel dimension of the size of reduction.
+    // Step3. Create a generic op where the reduction dimensions are replaced
+    // by a parallel dimension of the size of reduction.
     SmallVector<utils::IteratorType> newIteratorTypes =
         linalgOp.getIteratorTypesArray();
-    newIteratorTypes[reductionDims[0]] = utils::IteratorType::parallel;
+    for (int dim : reductionDims)
+      newIteratorTypes[dim] = utils::IteratorType::parallel;
     SmallVector<AffineMap> newMaps = linalgOp.getIndexingMapsArray();
     newMaps.back() = AffineMap::get(newMaps.back().getNumDims(), 0, outputExpr,
                                     linalgOp.getContext());
@@ -359,24 +368,25 @@ struct LinalgOpPartialReductionInterface
                              ValueRange partialReduce,
                              ArrayRef<int> reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
-    assert(reductionDims.size() == 1 &&
-           "only support single reduction right now.");
-    int64_t dimToMerge = reductionDims[0];
 
-    // Then create a new reduction that only reduce the newly added dimension
+    DenseSet<int> reductionDimsSet(reductionDims.begin(), reductionDims.end());
+
+    // Then create a new reduction that only reduce the newly added dimensions
     // from the previous op.
     int64_t intermRank = cast<ShapedType>(partialReduce[0].getType()).getRank();
     AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
     SmallVector<utils::IteratorType> reductionIteratorTypes;
     SmallVector<AffineExpr> exprs;
+
     for (int64_t i : llvm::seq<int64_t>(0, intermRank)) {
-      if (dimToMerge == i) {
+      if (reductionDimsSet.contains(i)) {
         reductionIteratorTypes.push_back(utils::IteratorType::reduction);
       } else {
         exprs.push_back(b.getAffineDimExpr(i));
         reductionIteratorTypes.push_back(utils::IteratorType::parallel);
       }
     }
+
     AffineMap outputMap =
         AffineMap::get(intermRank, 0, exprs, op->getContext());
     SmallVector<AffineMap> reductionMaps = {inputMap, outputMap};
@@ -387,8 +397,7 @@ struct LinalgOpPartialReductionInterface
 
     auto reduction = b.create<GenericOp>(
         loc, op->getResultTypes(), ValueRange({partialReduce[0]}),
-        SmallVector<Value>{linalgOp.getDpsInitOperands()}, reductionMaps,
-        reductionIteratorTypes,
+        linalgOp.getDpsInits(), reductionMaps, reductionIteratorTypes,
         [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
           Operation *clonedReductionOp = b.clone(*reductionOp);
           clonedReductionOp->setOperand(0, inputs[0]);

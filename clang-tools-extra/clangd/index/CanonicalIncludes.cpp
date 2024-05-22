@@ -7,20 +7,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "CanonicalIncludes.h"
-#include "Headers.h"
 #include "clang/Basic/FileEntry.h"
-#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
 
 namespace clang {
 namespace clangd {
 namespace {
 const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
+    {"include/__stdarg___gnuc_va_list.h", "<cstdarg>"},
+    {"include/__stdarg___va_copy.h", "<cstdarg>"},
+    {"include/__stdarg_va_arg.h", "<cstdarg>"},
+    {"include/__stdarg_va_copy.h", "<cstdarg>"},
+    {"include/__stdarg_va_list.h", "<cstdarg>"},
     {"include/__stddef_max_align_t.h", "<cstddef>"},
+    {"include/__stddef_null.h", "<cstddef>"},
+    {"include/__stddef_nullptr_t.h", "<cstddef>"},
+    {"include/__stddef_offsetof.h", "<cstddef>"},
+    {"include/__stddef_ptrdiff_t.h", "<cstddef>"},
+    {"include/__stddef_rsize_t.h", "<cstddef>"},
+    {"include/__stddef_size_t.h", "<cstddef>"},
+    {"include/__stddef_unreachable.h", "<cstddef>"},
+    {"include/__stddef_wchar_t.h", "<cstddef>"},
+    {"include/__stddef_wint_t.h", "<cstddef>"},
     {"include/__wmmintrin_aes.h", "<wmmintrin.h>"},
     {"include/__wmmintrin_pclmul.h", "<wmmintrin.h>"},
     {"include/adxintrin.h", "<immintrin.h>"},
@@ -658,6 +668,9 @@ const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
     {"bits/syslog-path.h", "<sys/syslog.h>"},
     {"bits/termios.h", "<termios.h>"},
     {"bits/types.h", "<sys/types.h>"},
+    {"bits/types/siginfo_t.h", "<sys/siginfo.h>"},
+    {"bits/types/struct_itimerspec.h", "<sys/time.h>"},
+    {"bits/types/struct_rusage.h", "<sys/resource.h>"},
     {"bits/uio.h", "<sys/uio.h>"},
     {"bits/ustat.h", "<sys/ustat.h>"},
     {"bits/utmp.h", "<utmp.h>"},
@@ -669,84 +682,26 @@ const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
 
 } // namespace
 
-void CanonicalIncludes::addMapping(FileEntryRef Header,
-                                   llvm::StringRef CanonicalPath) {
-  FullPathMapping[Header.getUniqueID()] = std::string(CanonicalPath);
-}
-
 /// The maximum number of path components in a key from StdSuffixHeaderMapping.
 /// Used to minimize the number of lookups in suffix path mappings.
 constexpr int MaxSuffixComponents = 3;
 
-llvm::StringRef CanonicalIncludes::mapHeader(FileEntryRef Header) const {
-  auto MapIt = FullPathMapping.find(Header.getUniqueID());
-  if (MapIt != FullPathMapping.end())
-    return MapIt->second;
-
+llvm::StringRef CanonicalIncludes::mapHeader(llvm::StringRef HeaderPath) const {
   if (!StdSuffixHeaderMapping)
     return "";
 
   int Components = 1;
 
   // FIXME: check that this works on Windows and add tests.
-  auto Filename = Header.getName();
-  for (auto It = llvm::sys::path::rbegin(Filename),
-            End = llvm::sys::path::rend(Filename);
+  for (auto It = llvm::sys::path::rbegin(HeaderPath),
+            End = llvm::sys::path::rend(HeaderPath);
        It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
-    auto SubPath = Filename.substr(It->data() - Filename.begin());
+    auto SubPath = HeaderPath.substr(It->data() - HeaderPath.begin());
     auto MappingIt = StdSuffixHeaderMapping->find(SubPath);
     if (MappingIt != StdSuffixHeaderMapping->end())
       return MappingIt->second;
   }
   return "";
-}
-
-llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef Scope,
-                                             llvm::StringRef Name,
-                                             const LangOptions &L) const {
-  tooling::stdlib::Lang Lang;
-  if (L.CPlusPlus)
-    Lang = tooling::stdlib::Lang::CXX;
-  else if (L.C11)
-    Lang = tooling::stdlib::Lang::C;
-  else
-    return "";
-  // FIXME: remove the following special cases when the tooling stdlib supports
-  // them.
-  // There are two std::move()s, this is by far the most common.
-  if (Scope == "std::" && Name == "move")
-    return "<utility>";
-  if (auto StdSym = tooling::stdlib::Symbol::named(Scope, Name, Lang))
-    if (auto Header = StdSym->header())
-      return Header->name();
-  return "";
-}
-
-std::unique_ptr<CommentHandler>
-collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
-  class PragmaCommentHandler : public clang::CommentHandler {
-  public:
-    PragmaCommentHandler(CanonicalIncludes *Includes) : Includes(Includes) {}
-
-    bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-      auto Pragma = tooling::parseIWYUPragma(
-          PP.getSourceManager().getCharacterData(Range.getBegin()));
-      if (!Pragma || !Pragma->consume_front("private, include "))
-        return false;
-      auto &SM = PP.getSourceManager();
-      // We always insert using the spelling from the pragma.
-      if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
-        Includes->addMapping(FE->getLastRef(),
-                             isLiteralInclude(*Pragma)
-                                 ? Pragma->str()
-                                 : ("\"" + *Pragma + "\"").str());
-      return false;
-    }
-
-  private:
-    CanonicalIncludes *const Includes;
-  };
-  return std::make_unique<PragmaCommentHandler>(Includes);
 }
 
 void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {

@@ -12,8 +12,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -83,19 +81,20 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
     const MCWriteProcResEntry *WPR = Entry.second;
     const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR->ProcResourceIdx);
-    // TODO: Handle StartAtCycle in llvm-exegesis and llvm-mca. See
+    // TODO: Handle AcquireAtAtCycle in llvm-exegesis and llvm-mca. See
     // https://github.com/llvm/llvm-project/issues/62680 and
     // https://github.com/llvm/llvm-project/issues/62681
-    assert(WPR->StartAtCycle == 0 &&
-           "`llvm-exegesis` does not handle StartAtCycle > 0");
+    assert(WPR->AcquireAtCycle == 0 &&
+           "`llvm-exegesis` does not handle AcquireAtCycle > 0");
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      Result.push_back({WPR->ProcResourceIdx, WPR->Cycles, WPR->StartAtCycle});
-      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->Cycles;
+      Result.push_back(
+          {WPR->ProcResourceIdx, WPR->ReleaseAtCycle, WPR->AcquireAtCycle});
+      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->ReleaseAtCycle;
     } else {
       // This is a ProcResGroup. First see if it contributes any cycles or if
       // it has cycles just from subunits.
-      float RemainingCycles = WPR->Cycles;
+      float RemainingCycles = WPR->ReleaseAtCycle;
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
            ++SubResIdx) {
@@ -108,7 +107,7 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       // The ProcResGroup contributes `RemainingCycles` cycles of its own.
       Result.push_back({WPR->ProcResourceIdx,
                         static_cast<uint16_t>(std::round(RemainingCycles)),
-                        WPR->StartAtCycle});
+                        WPR->AcquireAtCycle});
       // Spread the remaining cycles over all subunits.
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
@@ -213,13 +212,13 @@ computeIdealizedProcResPressure(const MCSchedModel &SM,
         SM.getProcResource(WPR.ProcResourceIdx);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      DensePressure[WPR.ProcResourceIdx] += WPR.Cycles;
+      DensePressure[WPR.ProcResourceIdx] += WPR.ReleaseAtCycle;
     } else {
       // This is a ProcResGroup.
       SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
                                          ProcResDesc->SubUnitsIdxBegin +
                                              ProcResDesc->NumUnits);
-      distributePressure(WPR.Cycles, Subunits, DensePressure);
+      distributePressure(WPR.ReleaseAtCycle, Subunits, DensePressure);
     }
   }
   // Turn dense pressure into sparse pressure by removing zero entries.

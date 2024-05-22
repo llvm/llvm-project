@@ -52,22 +52,9 @@ bb:
 
 define i32 @using_malloc() {
 ; CHECK-LABEL: define i32 @using_malloc
-; CHECK-SAME: () local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ALLOC:%.*]] = tail call dereferenceable_or_null(64) ptr @malloc(i64 64)
-; CHECK-NEXT:    store i32 1, ptr [[ALLOC]], align 4
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 1
-; CHECK-NEXT:    store i32 2, ptr [[GETELEMENTPTR]], align 4
-; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 2
-; CHECK-NEXT:    store i32 3, ptr [[GETELEMENTPTR1]], align 4
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 1
-; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ALLOC]], align 4
-; CHECK-NEXT:    [[SPEC_SELECT_I_1:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 2
-; CHECK-NEXT:    [[LOAD_I_1:%.*]] = load i32, ptr [[SPEC_SELECT_I]], align 4
-; CHECK-NEXT:    [[ADD_I_1:%.*]] = add i32 [[LOAD_I_1]], [[LOAD_I]]
-; CHECK-NEXT:    [[LOAD_I_2:%.*]] = load i32, ptr [[SPEC_SELECT_I_1]], align 4
-; CHECK-NEXT:    [[ADD_I_2:%.*]] = add i32 [[LOAD_I_2]], [[ADD_I_1]]
-; CHECK-NEXT:    ret i32 [[ADD_I_2]]
+; CHECK-NEXT:    ret i32 6
 ;
 bb:
   %alloc = call dereferenceable_or_null(64) ptr @malloc(i64 64)

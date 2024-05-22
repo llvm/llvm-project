@@ -118,10 +118,8 @@ struct BadMembers {
   };
 };
 
-// <rdar://problem/6481130>
 typedef union { }; // expected-warning{{typedef requires a name}}
 
-// <rdar://problem/7562438>
 typedef struct objc_module *Foo ;
 
 typedef struct _s {
@@ -131,7 +129,6 @@ typedef struct _s {
     };
 } s, *ps;
 
-// <rdar://problem/7987650>
 namespace test4 {
   class A {
     struct { // expected-warning{{anonymous structs are a GNU extension}}

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer,modernize-use-default-member-init %t
 // RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer,modernize-use-default-member-init %t -- \
-// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: true}, \
-// RUN:                          {key: cppcoreguidelines-prefer-member-initializer.UseAssignment, value: false}]}"
+// RUN: -config="{CheckOptions: {modernize-use-default-member-init.UseAssignment: true, \
+// RUN:                          cppcoreguidelines-prefer-member-initializer.UseAssignment: false}}"
 
 class Simple1 {
   int n;

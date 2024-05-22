@@ -37,6 +37,10 @@ static bool shouldReduceThreadLocal(GlobalValue &GV) {
   return GV.isThreadLocal();
 }
 
+static bool shouldReduceLinkage(GlobalValue &GV) {
+  return !GV.hasExternalLinkage();
+}
+
 static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
   for (auto &GV : Program.getModule().global_values()) {
     if (shouldReduceDSOLocal(GV) && !O.shouldKeep())
@@ -54,6 +58,12 @@ static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
           GlobalValue::DLLStorageClassTypes::DefaultStorageClass);
     if (shouldReduceThreadLocal(GV) && !O.shouldKeep())
       GV.setThreadLocal(false);
+    if (shouldReduceLinkage(GV) && !O.shouldKeep()) {
+      bool IsImplicitDSOLocal = GV.isImplicitDSOLocal();
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      if (IsImplicitDSOLocal)
+        GV.setDSOLocal(false);
+    }
   }
 }
 

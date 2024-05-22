@@ -28,7 +28,9 @@ enum TBDFlags : unsigned {
   FlatNamespace                = 1U << 0,
   NotApplicationExtensionSafe  = 1U << 1,
   InstallAPI                   = 1U << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/InstallAPI),
+  SimulatorSupport             = 1U << 3,
+  OSLibNotForSharedCache       = 1U << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OSLibNotForSharedCache),
 };
 // clang-format on
 
@@ -47,7 +49,7 @@ Expected<std::unique_ptr<InterfaceFile>>
 getInterfaceFileFromJSON(StringRef JSON);
 
 Error serializeInterfaceFileToJSON(raw_ostream &OS, const InterfaceFile &File,
-                                   bool Compact);
+                                   const FileType FileKind, bool Compact);
 } // namespace MachO
 
 namespace yaml {
@@ -90,6 +92,8 @@ template <> struct ScalarTraits<SwiftVersion> {
   static QuotingType mustQuote(StringRef);
 };
 
+// UUIDs are no longer respected but kept in the YAML parser
+// to keep reading in older TBDs.
 template <> struct ScalarTraits<UUID> {
   static void output(const UUID &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, UUID &);

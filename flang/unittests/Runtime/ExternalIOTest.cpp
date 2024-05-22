@@ -43,11 +43,15 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for OpenNewUnit";
 
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_int8_t}, recl, &buffer, 0);
+  desc.Check();
+
   // INQUIRE(IOLENGTH=) j
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
-  ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-      io, reinterpret_cast<const char *>(&buffer), recl, 1))
-      << "OutputUnformattedBlock() for InquireIoLength";
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+      << "OutputDescriptor() for InquireIoLength";
   ASSERT_EQ(IONAME(GetIoLength)(io), recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for InquireIoLength";
@@ -59,24 +63,23 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
     ASSERT_TRUE(IONAME(SetRec)(io, j)) << "SetRec(" << j << ')';
 
     buffer = j;
-    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), 1, recl))
-        << "OutputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for Write";
 
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for OutputUnformattedBlock";
+        << "EndIoStatement() for Write";
   }
 
   for (int j{records}; j >= 1; --j) {
+    buffer = -1;
     // READ(UNIT=unit,REC=j) n
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     ASSERT_TRUE(IONAME(SetRec)(io, j)) << "SetRec(" << j << ')';
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(
-        io, reinterpret_cast<char *>(&buffer), 1, recl))
-        << "InputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() for Read";
 
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for InputUnformattedBlock";
+        << "EndIoStatement() for Read";
 
     ASSERT_EQ(buffer, j) << "Read back " << buffer
                          << " from direct unformatted record " << j
@@ -108,17 +111,21 @@ TEST(ExternalIOTests, TestDirectUnformattedSwapped) {
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for OpenNewUnit";
 
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
+  desc.Check();
+
   static constexpr int records{10};
   for (int j{1}; j <= records; ++j) {
     // WRITE(UNIT=unit,REC=j) j
     io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
     ASSERT_TRUE(IONAME(SetRec)(io, j)) << "SetRec(" << j << ')';
     buffer = j;
-    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), recl, recl))
-        << "OutputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for Write";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for OutputUnformattedBlock";
+        << "EndIoStatement() for Write";
   }
 
   // OPEN(UNIT=unit,STATUS='OLD',CONVERT='SWAP')
@@ -132,11 +139,10 @@ TEST(ExternalIOTests, TestDirectUnformattedSwapped) {
     // READ(UNIT=unit,REC=j) n
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     ASSERT_TRUE(IONAME(SetRec)(io, j)) << "SetRec(" << j << ')';
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(
-        io, reinterpret_cast<char *>(&buffer), recl, recl))
-        << "InputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() for Read";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for InputUnformattedBlock";
+        << "EndIoStatement() for Read";
     ASSERT_EQ(buffer >> 56, j)
         << "Read back " << (buffer >> 56) << " from direct unformatted record "
         << j << ", expected " << j << '\n';
@@ -170,17 +176,6 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
       << "EndIoStatement() for OpenNewUnit";
 
   // INQUIRE(IOLENGTH=) j, ...
-  io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
-  for (int j{1}; j <= 3; ++j) {
-    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), recl, 1))
-        << "OutputUnformattedBlock() for InquireIoLength";
-  }
-  ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
-  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-      << "EndIoStatement() for InquireIoLength";
-
-  // INQUIRE(IOLENGTH=) j, ...
   StaticDescriptor<0> staticDescriptor;
   Descriptor &desc{staticDescriptor.descriptor()};
   desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
@@ -200,11 +195,10 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
     // DO J=1,RECORDS; WRITE(UNIT=unit) j; END DO
     io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
     buffer = j;
-    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), recl, recl))
-        << "OutputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for Write";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for OutputUnformattedBlock";
+        << "EndIoStatement() for WRITE";
   }
 
   // REWIND(UNIT=unit)
@@ -215,11 +209,10 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   for (int j{1}; j <= records; ++j) {
     // DO J=1,RECORDS; READ(UNIT=unit) n; check n; END DO
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(
-        io, reinterpret_cast<char *>(&buffer), recl, recl))
-        << "InputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() for Read";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for InputUnformattedBlock";
+        << "EndIoStatement() for Read";
     ASSERT_EQ(buffer, j) << "Read back " << buffer
                          << " from sequential fixed unformatted record " << j
                          << ", expected " << j << '\n';
@@ -232,11 +225,10 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
         << "EndIoStatement() for Backspace (before read)";
     // READ(UNIT=unit) n
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(
-        io, reinterpret_cast<char *>(&buffer), recl, recl))
-        << "InputUnformattedBlock()";
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() for Read";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for InputUnformattedBlock";
+        << "EndIoStatement() for Read";
     ASSERT_EQ(buffer, j) << "Read back " << buffer
                          << " from sequential fixed unformatted record " << j
                          << " after backspacing, expected " << j << '\n';
@@ -275,15 +267,18 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
     buffer[j] = j;
   }
 
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+
   for (int j{1}; j <= records; ++j) {
     // DO J=1,RECORDS; WRITE(UNIT=unit) BUFFER(0:j); END DO
     io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
-    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(io,
-        reinterpret_cast<const char *>(&buffer), j * sizeof *buffer,
-        sizeof *buffer))
-        << "OutputUnformattedBlock()";
+    desc.Establish(TypeCode{sizeof *buffer}, j * sizeof *buffer, buffer, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for Write";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for OutputUnformattedBlock";
+        << "EndIoStatement() for Write";
   }
 
   // REWIND(UNIT=unit)
@@ -293,11 +288,12 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
   for (int j{1}; j <= records; ++j) {
     // DO J=1,RECORDS; READ(UNIT=unit) n; check n; END DO
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(io,
-        reinterpret_cast<char *>(&buffer), j * sizeof *buffer, sizeof *buffer))
-        << "InputUnformattedBlock()";
+    desc.Establish(TypeCode{sizeof *buffer}, j * sizeof *buffer, buffer, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() for Read";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
-        << "EndIoStatement() for InputUnformattedBlock";
+        << "EndIoStatement() for Read";
     for (int k{0}; k < j; ++k) {
       ASSERT_EQ(buffer[k], k) << "Read back [" << k << "]=" << buffer[k]
                               << " from direct unformatted record " << j
@@ -312,9 +308,9 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
         << "EndIoStatement() for Backspace (before read)";
     // READ(unit=unit) n; check
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
-    ASSERT_TRUE(IONAME(InputUnformattedBlock)(io,
-        reinterpret_cast<char *>(&buffer), j * sizeof *buffer, sizeof *buffer))
-        << "InputUnformattedBlock()";
+    desc.Establish(TypeCode{sizeof *buffer}, j * sizeof *buffer, buffer, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc)) << "InputDescriptor()";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
         << "EndIoStatement() for InputUnformattedBlock";
     for (int k{0}; k < j; ++k) {
@@ -525,35 +521,64 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
   struct TestItems {
     std::string item;
     int expectedIoStat;
-    std::string expectedItemValue;
+    std::string expectedItemValue[2];
   };
   // Actual non advancing input IO test
   TestItems inputItems[]{
-      {std::string(4, '+'), IostatOk, "ABCD"},
-      {std::string(4, '+'), IostatOk, "EFGH"},
-      {std::string(4, '+'), IostatEor, "    "},
-      {std::string(2, '+'), IostatOk, "IJ"},
-      {std::string(8, '+'), IostatEor, "KLMNOP  "},
-      {std::string(10, '+'), IostatEor, "QRSTUVWX  "},
+      {std::string(4, '+'), IostatOk, {"ABCD", "ABCD"}},
+      {std::string(4, '+'), IostatOk, {"EFGH", "EFGH"}},
+      {std::string(4, '+'), IostatEor, {"++++", "    "}},
+      {std::string(2, '+'), IostatOk, {"IJ", "IJ"}},
+      {std::string(8, '+'), IostatEor, {"++++++++", "KLMNOP  "}},
+      {std::string(10, '+'), IostatEor, {"++++++++++", "QRSTUVWX  "}},
   };
 
+  // Test with PAD='NO'
   int j{0};
   for (auto &inputItem : inputItems) {
-    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', IOSTAT=iostat) inputItem
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', PAD='NO', IOSTAT=iostat) inputItem
     io = IONAME(BeginExternalFormattedInput)(
         fmt.data(), fmt.length(), nullptr, unit, __FILE__, __LINE__);
     IONAME(EnableHandlers)(io, true, false, false, false, false);
     ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(IONAME(SetPad)(io, "NO", 2)) << "SetPad(NO)" << j;
     bool result{
         IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length())};
     ASSERT_EQ(result, inputItem.expectedIoStat == IostatOk)
         << "InputAscii() " << j;
     ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
         << "EndIoStatement() for Read " << j;
-    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue)
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue[0])
         << "Input-item value after non advancing read " << j;
     j++;
   }
+
+  // REWIND(UNIT=unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+
+  // Test again with PAD='YES'
+  j = 0;
+  for (auto &inputItem : inputItems) {
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', PAD='YES', IOSTAT=iostat)
+    // inputItem
+    io = IONAME(BeginExternalFormattedInput)(
+        fmt.data(), fmt.length(), nullptr, unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true, false, false, false, false);
+    ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(IONAME(SetPad)(io, "YES", 3)) << "SetPad(YES)" << j;
+    bool result{
+        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length())};
+    ASSERT_EQ(result, inputItem.expectedIoStat == IostatOk)
+        << "InputAscii() " << j;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
+        << "EndIoStatement() for Read " << j;
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue[1])
+        << "Input-item value after non advancing read " << j;
+    j++;
+  }
+
   // CLOSE(UNIT=unit)
   io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)

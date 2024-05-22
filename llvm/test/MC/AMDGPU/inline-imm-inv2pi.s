@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
 
 // The value inv2pi should not assert on any targets, but is
 // printed differently depending on whether it's a legal inline

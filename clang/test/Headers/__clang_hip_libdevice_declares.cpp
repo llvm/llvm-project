@@ -10,7 +10,7 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/openmp_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown -verify \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm -fopenmp-is-device \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm -fopenmp-is-target-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK,OPENMP,OPENMP-CPP %s
 
 // RUN: %clang_cc1 -x c -fopenmp -fvisibility=default -ffp-contract=off -no-enable-noundef-analysis \
@@ -19,7 +19,7 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/openmp_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown -verify \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm -fopenmp-is-device \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm -fopenmp-is-target-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK,OPENMP,OPENMP-C %s
 
 // RUN: %clang_cc1 -x hip -fvisibility=default -ffp-contract=off -no-enable-noundef-analysis \

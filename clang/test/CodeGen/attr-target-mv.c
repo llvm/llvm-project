@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=ITANIUM,LINUX
+// RUN: %clang_cc1 -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefixes=ITANIUM,DARWIN
 // RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
 
 int __attribute__((target("sse4.2"))) foo(void) { return 0; }
@@ -21,10 +22,24 @@ int __attribute__((target("arch=sierraforest"))) foo(void) {return 16;}
 int __attribute__((target("arch=grandridge"))) foo(void) {return 17;}
 int __attribute__((target("arch=graniterapids"))) foo(void) {return 18;}
 int __attribute__((target("arch=emeraldrapids"))) foo(void) {return 19;}
+int __attribute__((target("arch=graniterapids-d"))) foo(void) {return 20;}
+int __attribute__((target("arch=arrowlake"))) foo(void) {return 21;}
+int __attribute__((target("arch=arrowlake-s"))) foo(void) {return 22;}
+int __attribute__((target("arch=lunarlake"))) foo(void) {return 23;}
+int __attribute__((target("arch=gracemont"))) foo(void) {return 24;}
+int __attribute__((target("arch=pantherlake"))) foo(void) {return 25;}
+int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
   return foo();
+}
+
+static int __attribute__((target("arch=meteorlake"))) foo_internal(void) {return 15;}
+static int __attribute__((target("default"))) foo_internal(void) { return 2; }
+
+int bar1(void) {
+  return foo_internal();
 }
 
 inline int __attribute__((target("sse4.2"))) foo_inline(void) { return 0; }
@@ -93,6 +108,8 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: $pr50025c.resolver = comdat any
 // LINUX: $pr50025b.resolver = comdat any
 
+// DARWIN-NOT: comdat
+
 // WINDOWS: $foo.resolver = comdat any
 // WINDOWS: $foo_inline.resolver = comdat any
 // WINDOWS: $foo_decls.resolver = comdat any
@@ -119,58 +136,74 @@ void calls_pr50025c(void) { pr50025c(); }
 
 
 // LINUX: @llvm.compiler.used = appending global [2 x ptr] [ptr @foo_used, ptr @foo_used2.avx_sse4.2], section "llvm.metadata"
+// DARWIN: @llvm.used = appending global [2 x ptr] [ptr @foo_used, ptr @foo_used2.avx_sse4.2], section "llvm.metadata"
 // WINDOWS: @llvm.used = appending global [2 x ptr] [ptr @foo_used, ptr @foo_used2.avx_sse4.2], section "llvm.metadata"
 
 
-// LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
-// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
-// LINUX: @foo_decls.ifunc = weak_odr ifunc void (), ptr @foo_decls.resolver
-// LINUX: @foo_multi.ifunc = weak_odr ifunc void (i32, double), ptr @foo_multi.resolver
-// LINUX: @fwd_decl_default.ifunc = weak_odr ifunc i32 (), ptr @fwd_decl_default.resolver
-// LINUX: @fwd_decl_avx.ifunc = weak_odr ifunc i32 (), ptr @fwd_decl_avx.resolver
+// ITANIUM: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
+// ITANIUM: @foo_internal.ifunc = internal ifunc i32 (), ptr @foo_internal.resolver
+// ITANIUM: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
+// ITANIUM: @foo_decls.ifunc = weak_odr ifunc void (), ptr @foo_decls.resolver
+// ITANIUM: @foo_multi.ifunc = weak_odr ifunc void (i32, double), ptr @foo_multi.resolver
+// ITANIUM: @fwd_decl_default.ifunc = weak_odr ifunc i32 (), ptr @fwd_decl_default.resolver
+// ITANIUM: @fwd_decl_avx.ifunc = weak_odr ifunc i32 (), ptr @fwd_decl_avx.resolver
 
-// LINUX: define{{.*}} i32 @foo.sse4.2()
-// LINUX: ret i32 0
-// LINUX: define{{.*}} i32 @foo.arch_ivybridge()
-// LINUX: ret i32 1
-// LINUX: define{{.*}} i32 @foo.arch_goldmont()
-// LINUX: ret i32 3
-// LINUX: define{{.*}} i32 @foo.arch_goldmont-plus()
-// LINUX: ret i32 4
-// LINUX: define{{.*}} i32 @foo.arch_tremont()
-// LINUX: ret i32 5
-// LINUX: define{{.*}} i32 @foo.arch_icelake-client()
-// LINUX: ret i32 6
-// LINUX: define{{.*}} i32 @foo.arch_icelake-server()
-// LINUX: ret i32 7
-// LINUX: define{{.*}} i32 @foo.arch_cooperlake()
-// LINUX: ret i32 8
-// LINUX: define{{.*}} i32 @foo.arch_tigerlake()
-// LINUX: ret i32 9
-// LINUX: define{{.*}} i32 @foo.arch_sapphirerapids()
-// LINUX: ret i32 10
-// LINUX: define{{.*}} i32 @foo.arch_alderlake()
-// LINUX: ret i32 11
-// LINUX: define{{.*}} i32 @foo.arch_rocketlake()
-// LINUX: ret i32 12
-// LINUX: define{{.*}} i32 @foo.arch_core2()
-// LINUX: ret i32 13
-// LINUX: define{{.*}} i32 @foo.arch_raptorlake()
-// LINUX: ret i32 14
-// LINUX: define{{.*}} i32 @foo.arch_meteorlake()
-// LINUX: ret i32 15
-// LINUX: define{{.*}} i32 @foo.arch_sierraforest()
-// LINUX: ret i32 16
-// LINUX: define{{.*}} i32 @foo.arch_grandridge()
-// LINUX: ret i32 17
-// LINUX: define{{.*}} i32 @foo.arch_graniterapids()
-// LINUX: ret i32 18
-// LINUX: define{{.*}} i32 @foo.arch_emeraldrapids()
-// LINUX: ret i32 19
-// LINUX: define{{.*}} i32 @foo()
-// LINUX: ret i32 2
-// LINUX: define{{.*}} i32 @bar()
-// LINUX: call i32 @foo.ifunc()
+// ITANIUM: define{{.*}} i32 @foo.sse4.2()
+// ITANIUM: ret i32 0
+// ITANIUM: define{{.*}} i32 @foo.arch_ivybridge()
+// ITANIUM: ret i32 1
+// ITANIUM: define{{.*}} i32 @foo.arch_goldmont()
+// ITANIUM: ret i32 3
+// ITANIUM: define{{.*}} i32 @foo.arch_goldmont-plus()
+// ITANIUM: ret i32 4
+// ITANIUM: define{{.*}} i32 @foo.arch_tremont()
+// ITANIUM: ret i32 5
+// ITANIUM: define{{.*}} i32 @foo.arch_icelake-client()
+// ITANIUM: ret i32 6
+// ITANIUM: define{{.*}} i32 @foo.arch_icelake-server()
+// ITANIUM: ret i32 7
+// ITANIUM: define{{.*}} i32 @foo.arch_cooperlake()
+// ITANIUM: ret i32 8
+// ITANIUM: define{{.*}} i32 @foo.arch_tigerlake()
+// ITANIUM: ret i32 9
+// ITANIUM: define{{.*}} i32 @foo.arch_sapphirerapids()
+// ITANIUM: ret i32 10
+// ITANIUM: define{{.*}} i32 @foo.arch_alderlake()
+// ITANIUM: ret i32 11
+// ITANIUM: define{{.*}} i32 @foo.arch_rocketlake()
+// ITANIUM: ret i32 12
+// ITANIUM: define{{.*}} i32 @foo.arch_core2()
+// ITANIUM: ret i32 13
+// ITANIUM: define{{.*}} i32 @foo.arch_raptorlake()
+// ITANIUM: ret i32 14
+// ITANIUM: define{{.*}} i32 @foo.arch_meteorlake()
+// ITANIUM: ret i32 15
+// ITANIUM: define{{.*}} i32 @foo.arch_sierraforest()
+// ITANIUM: ret i32 16
+// ITANIUM: define{{.*}} i32 @foo.arch_grandridge()
+// ITANIUM: ret i32 17
+// ITANIUM: define{{.*}} i32 @foo.arch_graniterapids()
+// ITANIUM: ret i32 18
+// ITANIUM: define{{.*}} i32 @foo.arch_emeraldrapids()
+// ITANIUM: ret i32 19
+// ITANIUM: define{{.*}} i32 @foo.arch_graniterapids-d()
+// ITANIUM: ret i32 20
+// ITANIUM: define{{.*}} i32 @foo.arch_arrowlake()
+// ITANIUM: ret i32 21
+// ITANIUM: define{{.*}} i32 @foo.arch_arrowlake-s()
+// ITANIUM: ret i32 22
+// ITANIUM: define{{.*}} i32 @foo.arch_lunarlake()
+// ITANIUM: ret i32 23
+// ITANIUM: define{{.*}} i32 @foo.arch_gracemont()
+// ITANIUM: ret i32 24
+// ITANIUM: define{{.*}} i32 @foo.arch_pantherlake()
+// ITANIUM: ret i32 25
+// ITANIUM: define{{.*}} i32 @foo.arch_clearwaterforest()
+// ITANIUM: ret i32 26
+// ITANIUM: define{{.*}} i32 @foo()
+// ITANIUM: ret i32 2
+// ITANIUM: define{{.*}} i32 @bar()
+// ITANIUM: call i32 @foo.ifunc()
 
 // WINDOWS: define dso_local i32 @foo.sse4.2()
 // WINDOWS: ret i32 0
@@ -210,17 +243,32 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 18
 // WINDOWS: define dso_local i32 @foo.arch_emeraldrapids()
 // WINDOWS: ret i32 19
+// WINDOWS: define dso_local i32 @foo.arch_graniterapids-d()
+// WINDOWS: ret i32 20
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake()
+// WINDOWS: ret i32 21
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake-s()
+// WINDOWS: ret i32 22
+// WINDOWS: define dso_local i32 @foo.arch_lunarlake()
+// WINDOWS: ret i32 23
+// WINDOWS: define dso_local i32 @foo.arch_gracemont()
+// WINDOWS: ret i32 24
+// WINDOWS: define dso_local i32 @foo.arch_pantherlake()
+// WINDOWS: ret i32 25
+// WINDOWS: define dso_local i32 @foo.arch_clearwaterforest()
+// WINDOWS: ret i32 26
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
 // WINDOWS: call i32 @foo.resolver()
 
-// LINUX: define weak_odr ptr @foo.resolver() comdat
-// LINUX: call void @__cpu_indicator_init()
-// LINUX: ret ptr @foo.arch_sandybridge
-// LINUX: ret ptr @foo.arch_ivybridge
-// LINUX: ret ptr @foo.sse4.2
-// LINUX: ret ptr @foo
+// ITANIUM: define weak_odr ptr @foo.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: call void @__cpu_indicator_init()
+// ITANIUM: ret ptr @foo.arch_sandybridge
+// ITANIUM: ret ptr @foo.arch_ivybridge
+// ITANIUM: ret ptr @foo.sse4.2
+// ITANIUM: ret ptr @foo
 
 // WINDOWS: define weak_odr dso_local i32 @foo.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
@@ -229,18 +277,24 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo.sse4.2
 // WINDOWS: call i32 @foo
 
-// LINUX: define{{.*}} i32 @bar2()
-// LINUX: call i32 @foo_inline.ifunc()
+/// Internal linkage resolvers do not use comdat.
+// ITANIUM: define internal ptr @foo_internal.resolver() {
+
+// WINDOWS: define internal i32 @foo_internal.resolver() {
+
+// ITANIUM: define{{.*}} i32 @bar2()
+// ITANIUM: call i32 @foo_inline.ifunc()
 
 // WINDOWS: define dso_local i32 @bar2()
 // WINDOWS: call i32 @foo_inline.resolver()
 
-// LINUX: define weak_odr ptr @foo_inline.resolver() comdat
-// LINUX: call void @__cpu_indicator_init()
-// LINUX: ret ptr @foo_inline.arch_sandybridge
-// LINUX: ret ptr @foo_inline.arch_ivybridge
-// LINUX: ret ptr @foo_inline.sse4.2
-// LINUX: ret ptr @foo_inline
+// ITANIUM: define weak_odr ptr @foo_inline.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: call void @__cpu_indicator_init()
+// ITANIUM: ret ptr @foo_inline.arch_sandybridge
+// ITANIUM: ret ptr @foo_inline.arch_ivybridge
+// ITANIUM: ret ptr @foo_inline.sse4.2
+// ITANIUM: ret ptr @foo_inline
 
 // WINDOWS: define weak_odr dso_local i32 @foo_inline.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
@@ -249,38 +303,40 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo_inline.sse4.2
 // WINDOWS: call i32 @foo_inline
 
-// LINUX: define{{.*}} void @bar3()
-// LINUX: call void @foo_decls.ifunc()
+// ITANIUM: define{{.*}} void @bar3()
+// ITANIUM: call void @foo_decls.ifunc()
 
 // WINDOWS: define dso_local void @bar3()
 // WINDOWS: call void @foo_decls.resolver()
 
-// LINUX: define weak_odr ptr @foo_decls.resolver() comdat
-// LINUX: ret ptr @foo_decls.sse4.2
-// LINUX: ret ptr @foo_decls
+// ITANIUM: define weak_odr ptr @foo_decls.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: ret ptr @foo_decls.sse4.2
+// ITANIUM: ret ptr @foo_decls
 
 // WINDOWS: define weak_odr dso_local void @foo_decls.resolver() comdat
 // WINDOWS: call void @foo_decls.sse4.2
 // WINDOWS: call void @foo_decls
 
-// LINUX: define{{.*}} void @bar4()
-// LINUX: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// ITANIUM: define{{.*}} void @bar4()
+// ITANIUM: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
 // WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.{{[0+e]*}})
 
-// LINUX: define weak_odr ptr @foo_multi.resolver() comdat
-// LINUX: and i32 %{{.*}}, 4352
-// LINUX: icmp eq i32 %{{.*}}, 4352
-// LINUX: ret ptr @foo_multi.fma4_sse4.2
-// LINUX: icmp eq i32 %{{.*}}, 12
-// LINUX: and i32 %{{.*}}, 4352
-// LINUX: icmp eq i32 %{{.*}}, 4352
-// LINUX: ret ptr @foo_multi.arch_ivybridge_fma4_sse4.2
-// LINUX: and i32 %{{.*}}, 768
-// LINUX: icmp eq i32 %{{.*}}, 768
-// LINUX: ret ptr @foo_multi.avx_sse4.2
-// LINUX: ret ptr @foo_multi
+// ITANIUM: define weak_odr ptr @foo_multi.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: and i32 %{{.*}}, 4352
+// ITANIUM: icmp eq i32 %{{.*}}, 4352
+// ITANIUM: ret ptr @foo_multi.fma4_sse4.2
+// ITANIUM: icmp eq i32 %{{.*}}, 12
+// ITANIUM: and i32 %{{.*}}, 4352
+// ITANIUM: icmp eq i32 %{{.*}}, 4352
+// ITANIUM: ret ptr @foo_multi.arch_ivybridge_fma4_sse4.2
+// ITANIUM: and i32 %{{.*}}, 768
+// ITANIUM: icmp eq i32 %{{.*}}, 768
+// ITANIUM: ret ptr @foo_multi.avx_sse4.2
+// ITANIUM: ret ptr @foo_multi
 
 // WINDOWS: define weak_odr dso_local void @foo_multi.resolver(i32 %0, double %1) comdat
 // WINDOWS: and i32 %{{.*}}, 4352
@@ -299,12 +355,12 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call void @foo_multi(i32 %0, double %1)
 // WINDOWS-NEXT: ret void
 
-// LINUX: define{{.*}} i32 @fwd_decl_default()
-// LINUX: ret i32 2
-// LINUX: define{{.*}} i32 @fwd_decl_avx.avx()
-// LINUX: ret i32 2
-// LINUX: define{{.*}} i32 @fwd_decl_avx()
-// LINUX: ret i32 2
+// ITANIUM: define{{.*}} i32 @fwd_decl_default()
+// ITANIUM: ret i32 2
+// ITANIUM: define{{.*}} i32 @fwd_decl_avx.avx()
+// ITANIUM: ret i32 2
+// ITANIUM: define{{.*}} i32 @fwd_decl_avx()
+// ITANIUM: ret i32 2
 
 // WINDOWS: define dso_local i32 @fwd_decl_default()
 // WINDOWS: ret i32 2
@@ -313,21 +369,23 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define dso_local i32 @fwd_decl_avx()
 // WINDOWS: ret i32 2
 
-// LINUX: define{{.*}} void @bar5()
-// LINUX: call i32 @fwd_decl_default.ifunc()
-// LINUX: call i32 @fwd_decl_avx.ifunc()
+// ITANIUM: define{{.*}} void @bar5()
+// ITANIUM: call i32 @fwd_decl_default.ifunc()
+// ITANIUM: call i32 @fwd_decl_avx.ifunc()
 
 // WINDOWS: define dso_local void @bar5()
 // WINDOWS: call i32 @fwd_decl_default.resolver()
 // WINDOWS: call i32 @fwd_decl_avx.resolver()
 
-// LINUX: define weak_odr ptr @fwd_decl_default.resolver() comdat
-// LINUX: call void @__cpu_indicator_init()
-// LINUX: ret ptr @fwd_decl_default
-// LINUX: define weak_odr ptr @fwd_decl_avx.resolver() comdat
-// LINUX: call void @__cpu_indicator_init()
-// LINUX: ret ptr @fwd_decl_avx.avx
-// LINUX: ret ptr @fwd_decl_avx
+// ITANIUM: define weak_odr ptr @fwd_decl_default.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: call void @__cpu_indicator_init()
+// ITANIUM: ret ptr @fwd_decl_default
+// ITANIUM: define weak_odr ptr @fwd_decl_avx.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: call void @__cpu_indicator_init()
+// ITANIUM: ret ptr @fwd_decl_avx.avx
+// ITANIUM: ret ptr @fwd_decl_avx
 
 // WINDOWS: define weak_odr dso_local i32 @fwd_decl_default.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
@@ -337,55 +395,55 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
 
-// LINUX: define{{.*}} i32 @changed_to_mv.avx()
-// LINUX: define{{.*}} i32 @changed_to_mv.fma4()
+// ITANIUM: define{{.*}} i32 @changed_to_mv.avx()
+// ITANIUM: define{{.*}} i32 @changed_to_mv.fma4()
 
 // WINDOWS: define dso_local i32 @changed_to_mv.avx()
 // WINDOWS: define dso_local i32 @changed_to_mv.fma4()
 
-// LINUX: define linkonce void @foo_used(i32 noundef %{{.*}}, double noundef %{{.*}})
-// LINUX-NOT: @foo_used.avx_sse4.2(
-// LINUX-NOT: @foo_used2(
-// LINUX: define linkonce void @foo_used2.avx_sse4.2(i32 noundef %{{.*}}, double noundef %{{.*}})
+// ITANIUM: define linkonce void @foo_used(i32 noundef %{{.*}}, double noundef %{{.*}})
+// ITANIUM-NOT: @foo_used.avx_sse4.2(
+// ITANIUM-NOT: @foo_used2(
+// ITANIUM: define linkonce void @foo_used2.avx_sse4.2(i32 noundef %{{.*}}, double noundef %{{.*}})
 
 // WINDOWS: define linkonce_odr dso_local void @foo_used(i32 noundef %{{.*}}, double noundef %{{.*}})
 // WINDOWS-NOT: @foo_used.avx_sse4.2(
 // WINDOWS-NOT: @foo_used2(
 // WINDOWS: define linkonce_odr dso_local void @foo_used2.avx_sse4.2(i32 noundef %{{.*}}, double noundef %{{.*}})
 
-// LINUX: declare i32 @foo.arch_sandybridge()
+// ITANIUM: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()
 
-// LINUX: define linkonce i32 @foo_inline.sse4.2()
-// LINUX: ret i32 0
+// ITANIUM: define linkonce i32 @foo_inline.sse4.2()
+// ITANIUM: ret i32 0
 
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.sse4.2()
 // WINDOWS: ret i32 0
 
-// LINUX: declare i32 @foo_inline.arch_sandybridge()
+// ITANIUM: declare i32 @foo_inline.arch_sandybridge()
 
 // WINDOWS: declare dso_local i32 @foo_inline.arch_sandybridge()
 
-// LINUX: define linkonce i32 @foo_inline.arch_ivybridge()
-// LINUX: ret i32 1
-// LINUX: define linkonce i32 @foo_inline()
-// LINUX: ret i32 2
+// ITANIUM: define linkonce i32 @foo_inline.arch_ivybridge()
+// ITANIUM: ret i32 1
+// ITANIUM: define linkonce i32 @foo_inline()
+// ITANIUM: ret i32 2
 
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_ivybridge()
 // WINDOWS: ret i32 1
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline()
 // WINDOWS: ret i32 2
 
-// LINUX: define linkonce void @foo_decls()
-// LINUX: define linkonce void @foo_decls.sse4.2()
+// ITANIUM: define linkonce void @foo_decls()
+// ITANIUM: define linkonce void @foo_decls.sse4.2()
 
 // WINDOWS: define linkonce_odr dso_local void @foo_decls()
 // WINDOWS: define linkonce_odr dso_local void @foo_decls.sse4.2()
 
-// LINUX: define linkonce void @foo_multi(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.avx_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// ITANIUM: define linkonce void @foo_multi(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// ITANIUM: define linkonce void @foo_multi.avx_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// ITANIUM: define linkonce void @foo_multi.fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// ITANIUM: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
 
 // WINDOWS: define linkonce_odr dso_local void @foo_multi(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
@@ -393,22 +451,23 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
 
 // Ensure that we emit the 'static' function here.
-// LINUX: define linkonce void @pr50025()
-// LINUX: call void @must_be_emitted
-// LINUX: define internal void @must_be_emitted()
+// ITANIUM: define linkonce void @pr50025()
+// ITANIUM: call void @must_be_emitted
+// ITANIUM: define internal void @must_be_emitted()
 // WINDOWS: define linkonce_odr dso_local void @pr50025() #{{[0-9]*}} comdat
 // WINDOWS: call void @must_be_emitted
 // WINDOWS: define internal void @must_be_emitted()
 
-// LINUX: define linkonce void @pr50025c()
-// LINUX: call void @pr50025b.ifunc()
+// ITANIUM: define linkonce void @pr50025c()
+// ITANIUM: call void @pr50025b.ifunc()
 // WINDOWS: define linkonce_odr dso_local void @pr50025c() #{{[0-9]*}} comdat
 // WINDOWS: call void @pr50025b.resolver()
 
-// LINUX: define weak_odr ptr @pr50025b.resolver() comdat
-// LINUX: ret ptr @pr50025b
-// LINUX: define linkonce void @pr50025b()
-// LINUX: call void @must_be_emitted()
+// ITANIUM: define weak_odr ptr @pr50025b.resolver()
+// LINUX-SAME: comdat
+// ITANIUM: ret ptr @pr50025b
+// ITANIUM: define linkonce void @pr50025b()
+// ITANIUM: call void @must_be_emitted()
 // WINDOWS: define weak_odr dso_local void @pr50025b.resolver() comdat
 // WINDOWS: musttail call void @pr50025b()
 // WINDOWS: define linkonce_odr dso_local void @pr50025b() #{{[0-9]*}} comdat

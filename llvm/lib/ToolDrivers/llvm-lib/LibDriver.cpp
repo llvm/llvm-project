@@ -23,6 +23,7 @@
 #include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
@@ -38,7 +39,7 @@ namespace {
 
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -50,10 +51,9 @@ enum {
 #include "Options.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -482,12 +482,10 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   std::reverse(Members.begin(), Members.end());
 
   bool Thin = Args.hasArg(OPT_llvmlibthin);
-  if (Error E =
-          writeArchive(OutputPath, Members,
-                       /*WriteSymtab=*/true,
-                       Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
-                       /*Deterministic*/ true, Thin, nullptr,
-                       COFF::isArm64EC(LibMachine))) {
+  if (Error E = writeArchive(
+          OutputPath, Members, SymtabWritingMode::NormalSymtab,
+          Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
+          /*Deterministic=*/true, Thin, nullptr, COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
       llvm::errs() << OutputPath << ": " << EI.message() << "\n";
     });

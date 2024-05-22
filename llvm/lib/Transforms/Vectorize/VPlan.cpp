@@ -19,7 +19,6 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -234,6 +233,99 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   // set(Def, Extract, Instance);
   return Extract;
 }
+
+Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+  // If Values have been set for this Def return the one relevant for \p Part.
+  if (hasVectorValue(Def, Part))
+    return Data.PerPartOutput[Def][Part];
+
+  auto GetBroadcastInstrs = [this, Def](Value *V) {
+    bool SafeToHoist = Def->isDefinedOutsideVectorRegions();
+    if (VF.isScalar())
+      return V;
+    // Place the code for broadcasting invariant variables in the new preheader.
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    if (SafeToHoist) {
+      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
+          Plan->getVectorLoopRegion()->getSinglePredecessor())];
+      if (LoopVectorPreHeader)
+        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
+    }
+
+    // Place the code for broadcasting invariant variables in the new preheader.
+    // Broadcast the scalar into all locations in the vector.
+    Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
+
+    return Shuf;
+  };
+
+  if (!hasScalarValue(Def, {Part, 0})) {
+    assert(Def->isLiveIn() && "expected a live-in");
+    if (Part != 0)
+      return get(Def, 0);
+    Value *IRV = Def->getLiveInIRValue();
+    Value *B = GetBroadcastInstrs(IRV);
+    set(Def, B, Part);
+    return B;
+  }
+
+  Value *ScalarValue = get(Def, {Part, 0});
+  // If we aren't vectorizing, we can just copy the scalar map values over
+  // to the vector map.
+  if (VF.isScalar()) {
+    set(Def, ScalarValue, Part);
+    return ScalarValue;
+  }
+
+  bool IsUniform = vputils::isUniformAfterVectorization(Def);
+
+  unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
+  // Check if there is a scalar value for the selected lane.
+  if (!hasScalarValue(Def, {Part, LastLane})) {
+    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
+    // VPExpandSCEVRecipes can also be uniform.
+    assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
+            isa<VPScalarIVStepsRecipe>(Def->getDefiningRecipe()) ||
+            isa<VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
+           "unexpected recipe found to be invariant");
+    IsUniform = true;
+    LastLane = 0;
+  }
+
+  auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
+  // Set the insert point after the last scalarized instruction or after the
+  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+  // will directly follow the scalar definitions.
+  auto OldIP = Builder.saveIP();
+  auto NewIP =
+      isa<PHINode>(LastInst)
+          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+          : std::next(BasicBlock::iterator(LastInst));
+  Builder.SetInsertPoint(&*NewIP);
+
+  // However, if we are vectorizing, we need to construct the vector values.
+  // If the value is known to be uniform after vectorization, we can just
+  // broadcast the scalar value corresponding to lane zero for each unroll
+  // iteration. Otherwise, we construct the vector values using
+  // insertelement instructions. Since the resulting vectors are stored in
+  // State, we will only generate the insertelements once.
+  Value *VectorValue = nullptr;
+  if (IsUniform) {
+    VectorValue = GetBroadcastInstrs(ScalarValue);
+    set(Def, VectorValue, Part);
+  } else {
+    // Initialize packing with insertelements to start from undef.
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
+    set(Def, Undef, Part);
+    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
+      packScalarIntoVectorValue(Def, {Part, Lane});
+    VectorValue = get(Def, Part);
+  }
+  Builder.restoreIP(OldIP);
+  return VectorValue;
+}
+
 BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
   VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
   return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
@@ -267,18 +359,15 @@ void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
   }
 }
 
-void VPTransformState::setDebugLocFromInst(const Value *V) {
-  const Instruction *Inst = dyn_cast<Instruction>(V);
-  if (!Inst) {
-    Builder.SetCurrentDebugLocation(DebugLoc());
-    return;
-  }
-
-  const DILocation *DIL = Inst->getDebugLoc();
+void VPTransformState::setDebugLocFrom(DebugLoc DL) {
+  const DILocation *DIL = DL;
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
-  if (DIL && Inst->getFunction()->shouldEmitDebugInfoForProfiling() &&
-      !Inst->isDebugOrPseudoInst() && !EnableFSDiscriminator) {
+  if (DIL &&
+      Builder.GetInsertBlock()
+          ->getParent()
+          ->shouldEmitDebugInfoForProfiling() &&
+      !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
@@ -289,6 +378,15 @@ void VPTransformState::setDebugLocFromInst(const Value *V) {
                         << DIL->getFilename() << " Line: " << DIL->getLine());
   } else
     Builder.SetCurrentDebugLocation(DIL);
+}
+
+void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
+                                                 const VPIteration &Instance) {
+  Value *ScalarInst = get(Def, Instance);
+  Value *VectorValue = get(Def, Instance.Part);
+  VectorValue = Builder.CreateInsertElement(
+      VectorValue, ScalarInst, Instance.Lane.getAsRuntimeExpr(Builder, VF));
+  set(Def, VectorValue, Instance.Part);
 }
 
 BasicBlock *
@@ -616,22 +714,17 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+  // Create empty VPRegionBlock, to be filled during processing later.
+  auto *TopRegion = new VPRegionBlock("vector loop", false /*isReplicator*/);
+  VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
+  VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
+  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
   return Plan;
-}
-
-VPActiveLaneMaskPHIRecipe *VPlan::getActiveLaneMaskPhi() {
-  VPBasicBlock *Header = getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &R : Header->phis()) {
-    if (isa<VPActiveLaneMaskPHIRecipe>(&R))
-      return cast<VPActiveLaneMaskPHIRecipe>(&R);
-  }
-  return nullptr;
 }
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
-                             VPTransformState &State,
-                             bool IsEpilogueVectorization) {
+                             VPTransformState &State) {
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
@@ -648,6 +741,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  // FIXME: Model VF * UF computation completely in VPlan.
+  State.set(&VFxUF,
+            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
+            0);
+
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -656,16 +755,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
-                    if (isa<VPScalarIVStepsRecipe>(U) ||
-                        isa<VPDerivedIVRecipe>(U))
-                      return true;
-                    auto *VPI = cast<VPInstruction>(U);
-                    return VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement ||
-                           VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrementNUW;
+                    return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPDerivedIVRecipe>(U) ||
+                           cast<VPInstruction>(U)->getOpcode() ==
+                               Instruction::Add;
                   }) &&
-           "the canonical IV should only be used by its increments or "
+           "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
     IV->setOperand(0, VPV);
   }
@@ -754,11 +849,14 @@ void VPlan::execute(VPTransformState *State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD
-void VPlan::print(raw_ostream &O) const {
+void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << getName() << "' {";
+  if (VFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VFxUF.printAsOperand(O, SlotTracker);
+    O << " = VF * UF";
+  }
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -778,6 +876,15 @@ void VPlan::print(raw_ostream &O) const {
   TripCount->printAsOperand(O, SlotTracker);
   O << " = original trip-count";
   O << "\n";
+}
+
+LLVM_DUMP_METHOD
+void VPlan::print(raw_ostream &O) const {
+  VPSlotTracker SlotTracker(this);
+
+  O << "VPlan '" << getName() << "' {";
+
+  printLiveIns(O);
 
   if (!getPreheader()->empty()) {
     O << "\n";
@@ -895,11 +1002,18 @@ void VPlanPrinter::dump() {
   OS << "graph [labelloc=t, fontsize=30; label=\"Vectorization Plan";
   if (!Plan.getName().empty())
     OS << "\\n" << DOT::EscapeString(Plan.getName());
-  if (Plan.BackedgeTakenCount) {
-    OS << ", where:\\n";
-    Plan.BackedgeTakenCount->print(OS, SlotTracker);
-    OS << " := BackedgeTakenCount";
+
+  {
+    // Print live-ins.
+  std::string Str;
+  raw_string_ostream SS(Str);
+  Plan.printLiveIns(SS);
+  SmallVector<StringRef, 0> Lines;
+  StringRef(Str).rtrim('\n').split(Lines, "\n");
+  for (auto Line : Lines)
+    OS << DOT::EscapeString(Line.str()) << "\\n";
   }
+
   OS << "\"]\n";
   OS << "node [shape=rect, fontname=Courier, fontsize=30]\n";
   OS << "edge [fontname=Courier, fontsize=30]\n";
@@ -1021,16 +1135,43 @@ void VPlanIngredient::print(raw_ostream &O) const {
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
+  if (this == New)
+    return;
   for (unsigned J = 0; J < getNumUsers();) {
     VPUser *User = Users[J];
-    unsigned NumUsers = getNumUsers();
+    bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
-      if (User->getOperand(I) == this)
+      if (User->getOperand(I) == this) {
         User->setOperand(I, New);
+        RemovedUser = true;
+      }
     // If a user got removed after updating the current user, the next user to
     // update will be moved to the current position, so we only need to
     // increment the index if the number of users did not change.
-    if (NumUsers == getNumUsers())
+    if (!RemovedUser)
+      J++;
+  }
+}
+
+void VPValue::replaceUsesWithIf(
+    VPValue *New,
+    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  if (this == New)
+    return;
+  for (unsigned J = 0; J < getNumUsers();) {
+    VPUser *User = Users[J];
+    bool RemovedUser = false;
+    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
+      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+        continue;
+
+      RemovedUser = true;
+      User->setOperand(I, New);
+    }
+    // If a user got removed after updating the current user, the next user to
+    // update will be moved to the current position, so we only need to
+    // increment the index if the number of users did not change.
+    if (!RemovedUser)
       J++;
   }
 }
@@ -1116,6 +1257,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
+  if (Plan.VFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.VFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
@@ -1137,6 +1280,11 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
   return all_of(Def->users(),
                 [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+}
+
+bool vputils::onlyFirstPartUsed(VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

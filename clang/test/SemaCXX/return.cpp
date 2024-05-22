@@ -106,7 +106,6 @@ namespace return_has_expr {
   };
 }
 
-// rdar://15366494
 // pr17759
 namespace ctor_returns_void {
   void f() {}

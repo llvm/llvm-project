@@ -8,10 +8,13 @@
 
 #include "stat.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
-const char *StatErrorString(int stat) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS const char *StatErrorString(int stat) {
   switch (stat) {
   case StatOk:
     return "No error";
@@ -68,14 +71,14 @@ const char *StatErrorString(int stat) {
   }
 }
 
-int ToErrmsg(const Descriptor *errmsg, int stat) {
+RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat) {
   if (stat != StatOk && errmsg && errmsg->raw().base_addr &&
       errmsg->type() == TypeCode(TypeCategory::Character, 1) &&
       errmsg->rank() == 0) {
     if (const char *msg{StatErrorString(stat)}) {
       char *buffer{errmsg->OffsetElement()};
       std::size_t bufferLength{errmsg->ElementBytes()};
-      std::size_t msgLength{std::strlen(msg)};
+      std::size_t msgLength{Fortran::runtime::strlen(msg)};
       if (msgLength >= bufferLength) {
         std::memcpy(buffer, msg, bufferLength);
       } else {
@@ -87,7 +90,7 @@ int ToErrmsg(const Descriptor *errmsg, int stat) {
   return stat;
 }
 
-int ReturnError(
+RT_API_ATTRS int ReturnError(
     Terminator &terminator, int stat, const Descriptor *errmsg, bool hasStat) {
   if (stat == StatOk || hasStat) {
     return ToErrmsg(errmsg, stat);
@@ -98,4 +101,6 @@ int ReturnError(
   }
   return stat;
 }
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

@@ -1,6 +1,6 @@
-# RUN: llvm-mc -arch=mips -show-encoding -mcpu=mips1 < %s \
+# RUN: llvm-mc -triple=mips -show-encoding -mcpu=mips1 < %s \
 # RUN:   | FileCheck --check-prefixes=ALL,MIPS32 %s
-# RUN: llvm-mc -arch=mips -show-encoding -mcpu=mips64 < %s \
+# RUN: llvm-mc -triple=mips -show-encoding -mcpu=mips64 < %s \
 # RUN:   | FileCheck --check-prefixes=ALL,MIPS64 %s
 
 sne $4, $5, $6

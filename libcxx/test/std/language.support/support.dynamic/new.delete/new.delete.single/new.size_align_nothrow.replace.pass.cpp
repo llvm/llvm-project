@@ -13,9 +13,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}

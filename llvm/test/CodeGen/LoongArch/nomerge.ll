@@ -6,7 +6,7 @@ define void @foo(i32 %i) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ori $a1, $zero, 7
 ; CHECK-NEXT:    beq $a0, $a1, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry

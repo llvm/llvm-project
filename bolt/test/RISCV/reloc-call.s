@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -o %t %s
-// RUN: llvm-bolt --print-fix-riscv-calls --print-only=_start -o /dev/null %t \
+// RUN: llvm-bolt --print-fix-riscv-calls --print-only=_start -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .text
@@ -14,8 +14,7 @@ f:
   .globl _start
   .p2align 1
 _start:
-// CHECK: auipc ra, f
-// CHECK-NEXT: jalr ra
+// CHECK: call f
   call f
   ret
   .size _start, .-_start

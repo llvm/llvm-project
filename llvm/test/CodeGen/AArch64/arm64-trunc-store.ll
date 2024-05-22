@@ -20,10 +20,10 @@ define void @fct32(i32 %arg, i64 %var) {
 ; CHECK-LABEL: fct32:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    adrp x8, :got:zptr32
-; CHECK-NEXT:    sub w9, w0, #1
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:zptr32]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    str w1, [x8, w9, sxtw #2]
+; CHECK-NEXT:    add x8, x8, w0, sxtw #2
+; CHECK-NEXT:    stur w1, [x8, #-4]
 ; CHECK-NEXT:    ret
 bb:
   %.pre37 = load ptr, ptr @zptr32, align 8
@@ -39,10 +39,10 @@ define void @fct16(i32 %arg, i64 %var) {
 ; CHECK-LABEL: fct16:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    adrp x8, :got:zptr16
-; CHECK-NEXT:    sub w9, w0, #1
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:zptr16]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    strh w1, [x8, w9, sxtw #1]
+; CHECK-NEXT:    add x8, x8, w0, sxtw #1
+; CHECK-NEXT:    sturh w1, [x8, #-2]
 ; CHECK-NEXT:    ret
 bb:
   %.pre37 = load ptr, ptr @zptr16, align 8

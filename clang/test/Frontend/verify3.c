@@ -7,7 +7,7 @@
 // expected-no-diagnostics
 // expected-note {{}}
 
-//      CHECK1: error: 'error' diagnostics seen but not expected:
+//      CHECK1: error: 'expected-error' diagnostics seen but not expected:
 // CHECK1-NEXT:   Line 8: expected directive cannot follow 'expected-no-diagnostics' directive
 // CHECK1-NEXT: 1 error generated.
 #endif
@@ -18,7 +18,7 @@
 // expected-warning@-1 {{X}}
 // expected-no-diagnostics
 
-//      CHECK2: error: 'error' diagnostics seen but not expected:
+//      CHECK2: error: 'expected-error' diagnostics seen but not expected:
 // CHECK2-NEXT:   Line 19: 'expected-no-diagnostics' directive cannot follow other expected directives
 // CHECK2-NEXT: 1 error generated.
 #endif

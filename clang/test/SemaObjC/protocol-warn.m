@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// radar 7638810
 
 @protocol NSObject @end
 

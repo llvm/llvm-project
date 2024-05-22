@@ -61,12 +61,12 @@ entry:
 define void @test4i8w(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-LABEL: test4i8w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
 ; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    addi r5, r5, .LCPI2_0@toc@l
-; CHECK-NEXT:    lxvd2x vs1, 0, r5
+; CHECK-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
+; CHECK-NEXT:    addi r4, r4, .LCPI2_0@toc@l
 ; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    xxswapd v3, vs1
+; CHECK-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-NEXT:    xxsldwi vs0, v2, v2, 2
 ; CHECK-NEXT:    stfiwx f0, 0, r3
@@ -174,12 +174,12 @@ entry:
 define void @test2i16d(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-LABEL: test2i16d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LCPI6_0@toc@ha
 ; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    addi r5, r5, .LCPI6_0@toc@l
-; CHECK-NEXT:    lxvd2x vs1, 0, r5
+; CHECK-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
+; CHECK-NEXT:    addi r4, r4, .LCPI6_0@toc@l
 ; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    xxswapd v3, vs1
+; CHECK-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-NEXT:    xxsldwi vs0, v2, v2, 2
 ; CHECK-NEXT:    stfiwx f0, 0, r3

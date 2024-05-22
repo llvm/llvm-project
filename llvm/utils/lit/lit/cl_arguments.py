@@ -72,22 +72,23 @@ def parse_args():
         "-v",
         "--verbose",
         dest="showOutput",
-        help="Show test output for failures",
+        help="For failed tests, show all output. For example, each command is"
+        " printed before it is executed, so the last printed command is the one"
+        " that failed.",
         action="store_true",
     )
     format_group.add_argument(
         "-vv",
         "--echo-all-commands",
-        dest="echoAllCommands",
+        dest="showOutput",
+        help="Deprecated alias for -v.",
         action="store_true",
-        help="Echo all commands as they are executed to stdout. In case of "
-        "failure, last command shown will be the failing one.",
     )
     format_group.add_argument(
         "-a",
         "--show-all",
         dest="showAllOutput",
-        help="Display all commandlines and output",
+        help="Enable -v, but for all tests not just failed tests.",
         action="store_true",
     )
     format_group.add_argument(
@@ -117,6 +118,18 @@ def parse_args():
         )
 
     execution_group = parser.add_argument_group("Test Execution")
+    execution_group.add_argument(
+        "--gtest-sharding",
+        help="Enable sharding for GoogleTest format",
+        action="store_true",
+        default=True,
+    )
+    execution_group.add_argument(
+        "--no-gtest-sharding",
+        dest="gtest_sharding",
+        help="Disable sharding for GoogleTest format",
+        action="store_false",
+    )
     execution_group.add_argument(
         "--path",
         help="Additional paths to add to testing environment",
@@ -185,18 +198,16 @@ def parse_args():
         action="store_true",
     )
     execution_group.add_argument(
+        "--per-test-coverage",
+        dest="per_test_coverage",
+        action="store_true",
+        help="Enable individual test case coverage",
+    )
+    execution_group.add_argument(
         "--ignore-fail",
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
-    )
-    execution_group.add_argument(
-        "--no-indirectly-run-check",
-        dest="indirectlyRunCheck",
-        help="Do not error if a test would not be run if the user had "
-        "specified the containing directory instead of naming the "
-        "test directly.",
-        action="store_false",
     )
 
     selection_group = parser.add_argument_group("Test Selection")
@@ -301,9 +312,6 @@ def parse_args():
     opts = parser.parse_args(args)
 
     # Validate command line options
-    if opts.echoAllCommands:
-        opts.showOutput = True
-
     if opts.incremental:
         print(
             "WARNING: --incremental is deprecated. Failing tests now always run first."

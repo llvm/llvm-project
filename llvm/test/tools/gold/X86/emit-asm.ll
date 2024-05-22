@@ -23,3 +23,6 @@ define void @f1() {
 define void @f2() {
   ret void
 }
+
+; Check if comments are emitted into assembly.
+; CHECK: -- End function

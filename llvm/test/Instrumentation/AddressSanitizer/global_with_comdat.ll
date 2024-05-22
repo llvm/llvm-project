@@ -4,10 +4,14 @@
 ; We keep using comdats for garbage collection if odr indicators are
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
-;
-; RUN: opt < %s -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < %s -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+
+; RUN: opt < no_module_id.ll -passes=asan -S | FileCheck %s --check-prefix=NOMODULEID
+
+;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -87,3 +91,43 @@ attributes #1 = { nounwind sanitize_address "less-precise-fpmad"="false" "frame-
 !7 = !{!"/tmp/asan-globals.cpp", i32 7, i32 5}
 !8 = !{!"/tmp/asan-globals.cpp", i32 12, i32 14}
 !9 = !{!"/tmp/asan-globals.cpp", i32 14, i32 25}
+
+;--- no_module_id.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; NOMODULEID:      $asan.module_ctor = comdat any
+; NOMODULEID:      $asan.module_dtor = comdat any
+
+;; Don't place the instrumented globals in a comdat when the unique module ID is empty.
+; NOMODULEID:      @.str = internal constant { [4 x i8], [28 x i8] } { [4 x i8] c"str\00", [28 x i8] zeroinitializer }, align 32
+; NOMODULEID:      @_ZL3buf = internal global { [4 x i8], [28 x i8] } zeroinitializer, align 32
+; NOMODULEID:      @__asan_global_.str = private global {{.*}}, section "asan_globals"{{.*}}, !associated !0
+; NOMODULEID:      @__asan_global__ZL3buf = private global {{.*}}, section "asan_globals"{{.*}}, !associated !1
+; NOMODULEID:      @llvm.compiler.used = appending global [4 x ptr] [ptr @.str, ptr @_ZL3buf, ptr @__asan_global_.str, ptr @__asan_global__ZL3buf]
+
+; NOMODULEID:      define internal void @asan.module_ctor() #[[#]] comdat {
+; NOMODULEID-NEXT:   call void @__asan_init()
+; NOMODULEID-NEXT:   call void @__asan_version_mismatch_check_v8()
+; NOMODULEID-NEXT:   call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
+; NOMODULEID-NEXT:   ret void
+; NOMODULEID-NEXT: }
+
+; NOMODULEID:      !0 = !{ptr @.str}
+; NOMODULEID:      !1 = !{ptr @_ZL3buf}
+
+@.str = private unnamed_addr constant [4 x i8] c"str\00", align 1
+@_ZL3buf = internal unnamed_addr global [4 x i8] zeroinitializer, align 1
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_a.cc, ptr null }]
+
+declare void @ext(ptr noundef)
+
+; Function Attrs: uwtable
+define internal void @_GLOBAL__sub_I_a.cc() #2 section ".text.startup" {
+entry:
+  %0 = load i8, ptr @_ZL3buf, align 1
+  %inc = add i8 %0, 1
+  store i8 %inc, ptr @_ZL3buf, align 1
+  tail call void @ext(ptr noundef nonnull @.str)
+  ret void
+}

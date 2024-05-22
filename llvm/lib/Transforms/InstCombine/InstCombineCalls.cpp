@@ -89,12 +89,6 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
 
-namespace llvm {
-/// enable preservation of attributes in assume like:
-/// call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-extern cl::opt<bool> EnableKnowledgeRetention;
-} // namespace llvm
-
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
 static Type *getPromotedType(Type *Ty) {
@@ -174,14 +168,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
       return nullptr;
 
   // Use an integer load+store unless we can find something better.
-  unsigned SrcAddrSp =
-    cast<PointerType>(MI->getArgOperand(1)->getType())->getAddressSpace();
-  unsigned DstAddrSp =
-    cast<PointerType>(MI->getArgOperand(0)->getType())->getAddressSpace();
-
   IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
-  Type *NewSrcPtrTy = PointerType::get(IntType, SrcAddrSp);
-  Type *NewDstPtrTy = PointerType::get(IntType, DstAddrSp);
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA tag describing our copy.
@@ -200,8 +187,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
       CopyMD = cast<MDNode>(M->getOperand(2));
   }
 
-  Value *Src = Builder.CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
-  Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
+  Value *Src = MI->getArgOperand(1);
+  Value *Dest = MI->getArgOperand(0);
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
@@ -291,9 +278,6 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     Type *ITy = IntegerType::get(MI->getContext(), Len*8);  // n=1 -> i8.
 
     Value *Dest = MI->getDest();
-    unsigned DstAddrSp = cast<PointerType>(Dest->getType())->getAddressSpace();
-    Type *NewDstPtrTy = PointerType::get(ITy, DstAddrSp);
-    Dest = Builder.CreateBitCast(Dest, NewDstPtrTy);
 
     // Extract the fill value and store.
     const uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;
@@ -301,7 +285,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (auto *DAI : at::getAssignmentMarkers(S)) {
-      if (any_of(DAI->location_ops(), [&](Value *V) { return V == FillC; }))
+      if (llvm::is_contained(DAI->location_ops(), FillC))
         DAI->replaceVariableLocationOp(FillC, FillVal);
     }
 
@@ -373,9 +357,9 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
 
   return nullptr;
@@ -455,12 +439,12 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts, UndefElts))
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 1, V);
 
   return nullptr;
@@ -500,8 +484,6 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   if (Result->getType()->getPointerAddressSpace() !=
       II.getType()->getPointerAddressSpace())
     Result = IC.Builder.CreateAddrSpaceCast(Result, II.getType());
-  if (Result->getType() != II.getType())
-    Result = IC.Builder.CreateBitCast(Result, II.getType());
 
   return cast<Instruction>(Result);
 }
@@ -532,9 +514,15 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
 
+  Constant *C;
+
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
+      return IC.replaceOperand(II, 0, X);
+
+    // cttz(-x & x) -> cttz(x)
+    if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
       return IC.replaceOperand(II, 0, X);
 
     // cttz(sext(x)) -> cttz(zext(x))
@@ -563,6 +551,38 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
       return IC.replaceOperand(II, 0, X);
+
+    // cttz(shl(%const, %val), 1) --> add(cttz(%const, 1), %val)
+    if (match(Op0, m_Shl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCttz, X);
+    }
+
+    // cttz(lshr exact (%const, %val), 1) --> sub(cttz(%const, 1), %val)
+    if (match(Op0, m_Exact(m_LShr(m_ImmConstant(C), m_Value(X)))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCttz, X);
+    }
+  } else {
+    // ctlz(lshr(%const, %val), 1) --> add(ctlz(%const, 1), %val)
+    if (match(Op0, m_LShr(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCtlz, X);
+    }
+
+    // ctlz(shl nuw (%const, %val), 1) --> sub(ctlz(%const, 1), %val)
+    if (match(Op0, m_NUWShl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCtlz, X);
+    }
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
@@ -907,11 +927,27 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 
   Value *FAbsSrc;
   if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fabs(Mask)));
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), inverse_fabs(Mask)));
     return replaceOperand(II, 0, FAbsSrc);
   }
 
-  // TODO: is.fpclass(x, fcInf) -> fabs(x) == inf
+  if ((OrderedMask == fcInf || OrderedInvertedMask == fcInf) &&
+      (IsOrdered || IsUnordered) && !IsStrict) {
+    // is.fpclass(x, fcInf) -> fcmp oeq fabs(x), +inf
+    // is.fpclass(x, ~fcInf) -> fcmp one fabs(x), +inf
+    // is.fpclass(x, fcInf|fcNan) -> fcmp ueq fabs(x), +inf
+    // is.fpclass(x, ~(fcInf|fcNan)) -> fcmp une fabs(x), +inf
+    Constant *Inf = ConstantFP::getInfinity(Src0->getType());
+    FCmpInst::Predicate Pred =
+        IsUnordered ? FCmpInst::FCMP_UEQ : FCmpInst::FCMP_OEQ;
+    if (OrderedInvertedMask == fcInf)
+      Pred = IsUnordered ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_ONE;
+
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Src0);
+    Value *CmpInf = Builder.CreateFCmp(Pred, Fabs, Inf);
+    CmpInf->takeName(&II);
+    return replaceInstUsesWith(II, CmpInf);
+  }
 
   if ((OrderedMask == fcPosInf || OrderedMask == fcNegInf) &&
       (IsOrdered || IsUnordered) && !IsStrict) {
@@ -988,8 +1024,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
-  KnownFPClass Known = computeKnownFPClass(
-      Src0, DL, Mask, 0, &getTargetLibraryInfo(), &AC, &II, &DT);
+  KnownFPClass Known = computeKnownFPClass(Src0, Mask, &II);
 
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
@@ -1024,6 +1059,33 @@ static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
 
   return isImpliedByDomCondition(
       ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
+}
+
+static std::optional<bool> getKnownSignOrZero(Value *Op, Instruction *CxtI,
+                                              const DataLayout &DL,
+                                              AssumptionCache *AC,
+                                              DominatorTree *DT) {
+  if (std::optional<bool> Sign = getKnownSign(Op, CxtI, DL, AC, DT))
+    return Sign;
+
+  Value *X, *Y;
+  if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, CxtI, DL);
+
+  return std::nullopt;
+}
+
+/// Return true if two values \p Op0 and \p Op1 are known to have the same sign.
+static bool signBitMustBeTheSame(Value *Op0, Value *Op1, Instruction *CxtI,
+                                 const DataLayout &DL, AssumptionCache *AC,
+                                 DominatorTree *DT) {
+  std::optional<bool> Known1 = getKnownSign(Op1, CxtI, DL, AC, DT);
+  if (!Known1)
+    return false;
+  std::optional<bool> Known0 = getKnownSign(Op0, CxtI, DL, AC, DT);
+  if (!Known0)
+    return false;
+  return *Known0 == *Known1;
 }
 
 /// Try to canonicalize min/max(X + C0, C1) as min/max(X, C1 - C0) + C0. This
@@ -1464,9 +1526,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // support.
   if (auto *IIFVTy = dyn_cast<FixedVectorType>(II->getType())) {
     auto VWidth = IIFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
+    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, PoisonElts)) {
       if (V != II)
         return replaceInstUsesWith(*II, V);
       return II;
@@ -1474,6 +1536,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (II->isCommutative()) {
+    if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
+      return I;
+
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
   }
@@ -1513,12 +1578,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
-    if (std::optional<bool> Sign = getKnownSign(IIOperand, II, DL, &AC, &DT)) {
-      // abs(x) -> x if x >= 0
-      if (!*Sign)
+    if (std::optional<bool> Known =
+            getKnownSignOrZero(IIOperand, II, DL, &AC, &DT)) {
+      // abs(x) -> x if x >= 0 (include abs(x-y) --> x - y where x >= y)
+      // abs(x) -> x if x > 0 (include abs(x-y) --> x - y where x > y)
+      if (!*Known)
         return replaceInstUsesWith(*II, IIOperand);
 
       // abs(x) -> -x if x < 0
+      // abs(x) -> -x if x < = 0 (include abs(x-y) --> y - x where x <= y)
       if (IntMinIsPoison)
         return BinaryOperator::CreateNSWNeg(IIOperand);
       return BinaryOperator::CreateNeg(IIOperand);
@@ -1563,8 +1631,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      Constant *NarrowC = ConstantExpr::getTrunc(C, X->getType());
-      if (ConstantExpr::getZExt(NarrowC, II->getType()) == C) {
+      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType())) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
@@ -1586,11 +1653,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_SExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      Constant *NarrowC = ConstantExpr::getTrunc(C, X->getType());
-      if (ConstantExpr::getSExt(NarrowC, II->getType()) == C) {
+      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType())) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
+    }
+
+    // umin(i1 X, i1 Y) -> and i1 X, Y
+    // smax(i1 X, i1 Y) -> and i1 X, Y
+    if ((IID == Intrinsic::umin || IID == Intrinsic::smax) &&
+        II->getType()->isIntOrIntVectorTy(1)) {
+      return BinaryOperator::CreateAnd(I0, I1);
+    }
+
+    // umax(i1 X, i1 Y) -> or i1 X, Y
+    // smin(i1 X, i1 Y) -> or i1 X, Y
+    if ((IID == Intrinsic::umax || IID == Intrinsic::smin) &&
+        II->getType()->isIntOrIntVectorTy(1)) {
+      return BinaryOperator::CreateOr(I0, I1);
     }
 
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
@@ -1655,12 +1735,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
       Value *A;
       if (match(X, m_OneUse(m_Not(m_Value(A)))) &&
-          !isFreeToInvert(A, A->hasOneUse()) &&
-          isFreeToInvert(Y, Y->hasOneUse())) {
-        Value *NotY = Builder.CreateNot(Y);
-        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
-        return BinaryOperator::CreateNot(InvMaxMin);
+          !isFreeToInvert(A, A->hasOneUse())) {
+        if (Value *NotY = getFreelyInverted(Y, Y->hasOneUse(), &Builder)) {
+          Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+          Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
+          return BinaryOperator::CreateNot(InvMaxMin);
+        }
       }
       return nullptr;
     };
@@ -1909,6 +1989,52 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     APInt Op2Demanded = APInt::getLowBitsSet(BitWidth, Log2_32_Ceil(BitWidth));
     KnownBits Op2Known(BitWidth);
     if (SimplifyDemandedBits(II, 2, Op2Demanded, Op2Known))
+      return &CI;
+    break;
+  }
+  case Intrinsic::ptrmask: {
+    unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
+    KnownBits Known(BitWidth);
+    if (SimplifyDemandedInstructionBits(*II, Known))
+      return II;
+
+    Value *InnerPtr, *InnerMask;
+    bool Changed = false;
+    // Combine:
+    // (ptrmask (ptrmask p, A), B)
+    //    -> (ptrmask p, (and A, B))
+    if (match(II->getArgOperand(0),
+              m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(InnerPtr),
+                                                       m_Value(InnerMask))))) {
+      assert(II->getArgOperand(1)->getType() == InnerMask->getType() &&
+             "Mask types must match");
+      // TODO: If InnerMask == Op1, we could copy attributes from inner
+      // callsite -> outer callsite.
+      Value *NewMask = Builder.CreateAnd(II->getArgOperand(1), InnerMask);
+      replaceOperand(CI, 0, InnerPtr);
+      replaceOperand(CI, 1, NewMask);
+      Changed = true;
+    }
+
+    // See if we can deduce non-null.
+    if (!CI.hasRetAttr(Attribute::NonNull) &&
+        (Known.isNonZero() ||
+         isKnownNonZero(II, DL, /*Depth*/ 0, &AC, II, &DT))) {
+      CI.addRetAttr(Attribute::NonNull);
+      Changed = true;
+    }
+
+    unsigned NewAlignmentLog =
+        std::min(Value::MaxAlignmentExponent,
+                 std::min(BitWidth - 1, Known.countMinTrailingZeros()));
+    // Known bits will capture if we had alignment information associated with
+    // the pointer argument.
+    if (NewAlignmentLog > Log2(CI.getRetAlign().valueOrOne())) {
+      CI.addRetAttr(Attribute::getWithAlignment(
+          CI.getContext(), Align(uint64_t(1) << NewAlignmentLog)));
+      Changed = true;
+    }
+    if (Changed)
       return &CI;
     break;
   }
@@ -2358,6 +2484,42 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::ldexp: {
+    // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
+    //
+    // The danger is if the first ldexp would overflow to infinity or underflow
+    // to zero, but the combined exponent avoids it. We ignore this with
+    // reassoc.
+    //
+    // It's also safe to fold if we know both exponents are >= 0 or <= 0 since
+    // it would just double down on the overflow/underflow which would occur
+    // anyway.
+    //
+    // TODO: Could do better if we had range tracking for the input value
+    // exponent. Also could broaden sign check to cover == 0 case.
+    Value *Src = II->getArgOperand(0);
+    Value *Exp = II->getArgOperand(1);
+    Value *InnerSrc;
+    Value *InnerExp;
+    if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
+                       m_Value(InnerSrc), m_Value(InnerExp)))) &&
+        Exp->getType() == InnerExp->getType()) {
+      FastMathFlags FMF = II->getFastMathFlags();
+      FastMathFlags InnerFlags = cast<FPMathOperator>(Src)->getFastMathFlags();
+
+      if ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
+          signBitMustBeTheSame(Exp, InnerExp, II, DL, &AC, &DT)) {
+        // TODO: Add nsw/nuw probably safe if integer type exceeds exponent
+        // width.
+        Value *NewExp = Builder.CreateAdd(InnerExp, Exp);
+        II->setArgOperand(1, NewExp);
+        II->setFastMathFlags(InnerFlags); // Or the inner flags.
+        return replaceOperand(*II, 0, InnerSrc);
+      }
+    }
+
+    break;
+  }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
@@ -2440,10 +2602,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     VectorType *NewVT = cast<VectorType>(II->getType());
     if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
       if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
-        CV0 = ConstantExpr::getIntegerCast(CV0, NewVT, /*isSigned=*/!Zext);
-        CV1 = ConstantExpr::getIntegerCast(CV1, NewVT, /*isSigned=*/!Zext);
-
-        return replaceInstUsesWith(CI, ConstantExpr::getMul(CV0, CV1));
+        Value *V0 = Builder.CreateIntCast(CV0, NewVT, /*isSigned=*/!Zext);
+        Value *V1 = Builder.CreateIntCast(CV1, NewVT, /*isSigned=*/!Zext);
+        return replaceInstUsesWith(CI, Builder.CreateMul(V0, V1));
       }
 
       // Couldn't simplify - canonicalize constant to the RHS.
@@ -2897,24 +3058,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceOperand(CI, 0, InsertTuple);
     }
 
-    auto *DstTy = dyn_cast<FixedVectorType>(ReturnType);
-    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    auto *DstTy = dyn_cast<VectorType>(ReturnType);
+    auto *VecTy = dyn_cast<VectorType>(Vec->getType());
 
-    // Only canonicalize if the the destination vector and Vec are fixed
-    // vectors.
     if (DstTy && VecTy) {
-      unsigned DstNumElts = DstTy->getNumElements();
-      unsigned VecNumElts = VecTy->getNumElements();
+      auto DstEltCnt = DstTy->getElementCount();
+      auto VecEltCnt = VecTy->getElementCount();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
       // Extracting the entirety of Vec is a nop.
-      if (VecNumElts == DstNumElts) {
+      if (DstEltCnt == VecTy->getElementCount()) {
         replaceInstUsesWith(CI, Vec);
         return eraseInstFromFunction(CI);
       }
 
+      // Only canonicalize to shufflevector if the destination vector and
+      // Vec are fixed vectors.
+      if (VecEltCnt.isScalable() || DstEltCnt.isScalable())
+        break;
+
       SmallVector<int, 8> Mask;
-      for (unsigned i = 0; i != DstNumElts; ++i)
+      for (unsigned i = 0; i != DstEltCnt.getKnownMinValue(); ++i)
         Mask.push_back(IdxN + i);
 
       Value *Shuffle = Builder.CreateShuffleVector(Vec, Mask);
@@ -3890,9 +4054,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
       NC->setDebugLoc(Caller->getDebugLoc());
 
-      Instruction *InsertPt = NewCall->getInsertionPointAfterDef();
-      assert(InsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, *InsertPt);
+      auto OptInsertPt = NewCall->getInsertionPointAfterDef();
+      assert(OptInsertPt && "No place to insert cast");
+      InsertNewInstBefore(NC, *OptInsertPt);
       Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = PoisonValue::get(Caller->getType());
@@ -3919,8 +4083,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 Instruction *
 InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
                                                  IntrinsicInst &Tramp) {
-  Value *Callee = Call.getCalledOperand();
-  Type *CalleeTy = Callee->getType();
   FunctionType *FTy = Call.getFunctionType();
   AttributeList Attrs = Call.getAttributes();
 
@@ -4017,12 +4179,8 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       // Replace the trampoline call with a direct call.  Let the generic
       // code sort out any function type mismatches.
-      FunctionType *NewFTy = FunctionType::get(FTy->getReturnType(), NewTypes,
-                                                FTy->isVarArg());
-      Constant *NewCallee =
-        NestF->getType() == PointerType::getUnqual(NewFTy) ?
-        NestF : ConstantExpr::getBitCast(NestF,
-                                         PointerType::getUnqual(NewFTy));
+      FunctionType *NewFTy =
+          FunctionType::get(FTy->getReturnType(), NewTypes, FTy->isVarArg());
       AttributeList NewPAL =
           AttributeList::get(FTy->getContext(), Attrs.getFnAttrs(),
                              Attrs.getRetAttrs(), NewArgAttrs);
@@ -4032,19 +4190,18 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
-        NewCaller = InvokeInst::Create(NewFTy, NewCallee,
-                                       II->getNormalDest(), II->getUnwindDest(),
-                                       NewArgs, OpBundles);
+        NewCaller = InvokeInst::Create(NewFTy, NestF, II->getNormalDest(),
+                                       II->getUnwindDest(), NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&Call)) {
         NewCaller =
-            CallBrInst::Create(NewFTy, NewCallee, CBI->getDefaultDest(),
+            CallBrInst::Create(NewFTy, NestF, CBI->getDefaultDest(),
                                CBI->getIndirectDests(), NewArgs, OpBundles);
         cast<CallBrInst>(NewCaller)->setCallingConv(CBI->getCallingConv());
         cast<CallBrInst>(NewCaller)->setAttributes(NewPAL);
       } else {
-        NewCaller = CallInst::Create(NewFTy, NewCallee, NewArgs, OpBundles);
+        NewCaller = CallInst::Create(NewFTy, NestF, NewArgs, OpBundles);
         cast<CallInst>(NewCaller)->setTailCallKind(
             cast<CallInst>(Call).getTailCallKind());
         cast<CallInst>(NewCaller)->setCallingConv(
@@ -4060,7 +4217,23 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // Replace the trampoline call with a direct call.  Since there is no 'nest'
   // parameter, there is no need to adjust the argument list.  Let the generic
   // code sort out any function type mismatches.
-  Constant *NewCallee = ConstantExpr::getBitCast(NestF, CalleeTy);
-  Call.setCalledFunction(FTy, NewCallee);
+  Call.setCalledFunction(FTy, NestF);
   return &Call;
+}
+
+// op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
+  assert(II.isCommutative());
+
+  Value *A, *B, *C;
+  if (match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
+      match(II.getOperand(1),
+            m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
+    replaceOperand(II, 0, B);
+    replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
 }

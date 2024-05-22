@@ -15,7 +15,6 @@
 #ifndef LLVM_OBJECTYAML_OFFLOADYAML_H
 #define LLVM_OBJECTYAML_OFFLOADYAML_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"

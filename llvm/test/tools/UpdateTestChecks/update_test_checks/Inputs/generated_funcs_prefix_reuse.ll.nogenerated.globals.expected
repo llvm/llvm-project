@@ -57,10 +57,10 @@ exit:
   ret void
 }
 
-declare void @llvm.trap() noreturn cold
+declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()
 ;.
-; REUSE: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind }
+; REUSE: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; REUSE: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; REUSE: attributes #[[ATTR2]] = { noinline }
 ;.

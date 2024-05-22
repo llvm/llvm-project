@@ -44,6 +44,21 @@ void AMDGPUDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// 8-bit float ops
+//===----------------------------------------------------------------------===//
+LogicalResult PackedTrunc2xFp8Op::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+LogicalResult PackedStochRoundFp8Op::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
@@ -203,6 +218,34 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicCmpswapOp>>(
       context);
+}
+
+//===----------------------------------------------------------------------===//
+// WMMAOp
+//===----------------------------------------------------------------------===//
+LogicalResult WMMAOp::verify() {
+  Type sourceAType = getSourceA().getType();
+  Type destType = getDestC().getType();
+
+  VectorType sourceVectorAType = sourceAType.dyn_cast<VectorType>();
+  VectorType destVectorType = destType.dyn_cast<VectorType>();
+
+  Type sourceAElemType = sourceVectorAType.getElementType();
+  Type destElemType = destVectorType.getElementType();
+
+  bool isDestFloat =
+      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
+  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+
+  if (isDestFloat && !isSrcFloat) {
+    return emitOpError("Expected float sources with float destination");
+  }
+
+  if (!isDestFloat && isSrcFloat) {
+    return emitOpError("Expected int sources with int destination");
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

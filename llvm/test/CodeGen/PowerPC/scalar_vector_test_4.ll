@@ -40,11 +40,11 @@ define <4 x i32> @s2v_test1(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8LE-LABEL: s2v_test1:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r4, r2, .LCPI0_0@toc@ha
-; P8LE-NEXT:    lxsiwzx v3, 0, r3
+; P8LE-NEXT:    lxsiwzx v4, 0, r3
 ; P8LE-NEXT:    addi r4, r4, .LCPI0_0@toc@l
 ; P8LE-NEXT:    lxvd2x vs0, 0, r4
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test1:
@@ -66,18 +66,18 @@ define <4 x i32> @s2v_test1(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-64-LABEL: s2v_test1:
 ; P8-AIX-64:       # %bb.0: # %entry
 ; P8-AIX-64-NEXT:    ld r4, L..C0(r2) # %const.0
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-64-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-64-NEXT:    blr
 ;
 ; P8-AIX-32-LABEL: s2v_test1:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    lwz r3, 0(r3)
-; P8-AIX-32-NEXT:    lwz r4, L..C0(r2) # %const.0
 ; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    lwz r3, L..C0(r2) # %const.0
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
@@ -108,10 +108,10 @@ define <4 x i32> @s2v_test2(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8LE-NEXT:    addis r4, r2, .LCPI1_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, 4
 ; P8LE-NEXT:    addi r4, r4, .LCPI1_0@toc@l
-; P8LE-NEXT:    lxsiwzx v3, 0, r3
+; P8LE-NEXT:    lxsiwzx v4, 0, r3
 ; P8LE-NEXT:    lxvd2x vs0, 0, r4
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test2:
@@ -135,18 +135,18 @@ define <4 x i32> @s2v_test2(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-64:       # %bb.0: # %entry
 ; P8-AIX-64-NEXT:    ld r4, L..C1(r2) # %const.0
 ; P8-AIX-64-NEXT:    addi r3, r3, 4
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-64-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-64-NEXT:    blr
 ;
 ; P8-AIX-32-LABEL: s2v_test2:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    lwz r3, 4(r3)
-; P8-AIX-32-NEXT:    lwz r4, L..C1(r2) # %const.0
 ; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    lwz r3, L..C1(r2) # %const.0
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
@@ -181,18 +181,18 @@ define <4 x i32> @s2v_test3(ptr nocapture readonly %int32, <4 x i32> %vec, i32 s
 ; P8LE-NEXT:    addi r4, r4, .LCPI2_0@toc@l
 ; P8LE-NEXT:    lxvd2x vs0, 0, r4
 ; P8LE-NEXT:    sldi r4, r7, 2
-; P8LE-NEXT:    lxsiwzx v3, r3, r4
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    lxsiwzx v4, r3, r4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test3:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
-; P8BE-NEXT:    sldi r5, r7, 2
-; P8BE-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; P8BE-NEXT:    lxsiwzx v3, r3, r5
-; P8BE-NEXT:    lxvw4x v4, 0, r4
+; P8BE-NEXT:    sldi r4, r7, 2
+; P8BE-NEXT:    lxsiwzx v3, r3, r4
+; P8BE-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
+; P8BE-NEXT:    addi r3, r3, .LCPI2_0@toc@l
+; P8BE-NEXT:    lxvw4x v4, 0, r3
 ; P8BE-NEXT:    vperm v2, v3, v2, v4
 ; P8BE-NEXT:    blr
 ;
@@ -214,10 +214,10 @@ define <4 x i32> @s2v_test3(ptr nocapture readonly %int32, <4 x i32> %vec, i32 s
 ;
 ; P8-AIX-64-LABEL: s2v_test3:
 ; P8-AIX-64:       # %bb.0: # %entry
-; P8-AIX-64-NEXT:    ld r5, L..C2(r2) # %const.0
 ; P8-AIX-64-NEXT:    sldi r4, r4, 2
 ; P8-AIX-64-NEXT:    lxsiwzx v3, r3, r4
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r5
+; P8-AIX-64-NEXT:    ld r3, L..C2(r2) # %const.0
+; P8-AIX-64-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
 ; P8-AIX-64-NEXT:    blr
 ;
@@ -225,10 +225,10 @@ define <4 x i32> @s2v_test3(ptr nocapture readonly %int32, <4 x i32> %vec, i32 s
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    slwi r4, r4, 2
 ; P8-AIX-32-NEXT:    lwzx r3, r3, r4
-; P8-AIX-32-NEXT:    lwz r4, L..C2(r2) # %const.0
 ; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    lwz r3, L..C2(r2) # %const.0
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
@@ -261,10 +261,10 @@ define <4 x i32> @s2v_test4(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8LE-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, 4
 ; P8LE-NEXT:    addi r4, r4, .LCPI3_0@toc@l
-; P8LE-NEXT:    lxsiwzx v3, 0, r3
+; P8LE-NEXT:    lxsiwzx v4, 0, r3
 ; P8LE-NEXT:    lxvd2x vs0, 0, r4
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test4:
@@ -288,18 +288,18 @@ define <4 x i32> @s2v_test4(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-64:       # %bb.0: # %entry
 ; P8-AIX-64-NEXT:    ld r4, L..C3(r2) # %const.0
 ; P8-AIX-64-NEXT:    addi r3, r3, 4
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-64-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-64-NEXT:    blr
 ;
 ; P8-AIX-32-LABEL: s2v_test4:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    lwz r3, 4(r3)
-; P8-AIX-32-NEXT:    lwz r4, L..C3(r2) # %const.0
 ; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    lwz r3, L..C3(r2) # %const.0
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
@@ -329,11 +329,11 @@ define <4 x i32> @s2v_test5(<4 x i32> %vec, ptr nocapture readonly %ptr1)  {
 ; P8LE-LABEL: s2v_test5:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
-; P8LE-NEXT:    lxsiwzx v3, 0, r5
+; P8LE-NEXT:    lxsiwzx v4, 0, r5
 ; P8LE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
 ; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test5:
@@ -355,18 +355,18 @@ define <4 x i32> @s2v_test5(<4 x i32> %vec, ptr nocapture readonly %ptr1)  {
 ; P8-AIX-64-LABEL: s2v_test5:
 ; P8-AIX-64:       # %bb.0: # %entry
 ; P8-AIX-64-NEXT:    ld r4, L..C4(r2) # %const.0
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-64-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-64-NEXT:    blr
 ;
 ; P8-AIX-32-LABEL: s2v_test5:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    lwz r3, 0(r3)
-; P8-AIX-32-NEXT:    lwz r4, L..C4(r2) # %const.0
 ; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    lwz r3, L..C4(r2) # %const.0
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
@@ -395,11 +395,11 @@ define <4 x float> @s2v_test_f1(ptr nocapture readonly %f64, <4 x float> %vec)  
 ; P8LE-LABEL: s2v_test_f1:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
-; P8LE-NEXT:    lxsiwzx v3, 0, r3
+; P8LE-NEXT:    lxsiwzx v4, 0, r3
 ; P8LE-NEXT:    addi r4, r4, .LCPI5_0@toc@l
 ; P8LE-NEXT:    lxvd2x vs0, 0, r4
-; P8LE-NEXT:    xxswapd v4, vs0
-; P8LE-NEXT:    vperm v2, v2, v3, v4
+; P8LE-NEXT:    xxswapd v3, vs0
+; P8LE-NEXT:    vperm v2, v2, v4, v3
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test_f1:
@@ -421,17 +421,17 @@ define <4 x float> @s2v_test_f1(ptr nocapture readonly %f64, <4 x float> %vec)  
 ; P8-AIX-64-LABEL: s2v_test_f1:
 ; P8-AIX-64:       # %bb.0: # %entry
 ; P8-AIX-64-NEXT:    ld r4, L..C5(r2) # %const.0
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-64-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-64-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-64-NEXT:    blr
 ;
 ; P8-AIX-32-LABEL: s2v_test_f1:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    lwz r4, L..C5(r2) # %const.0
-; P8-AIX-32-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
-; P8-AIX-32-NEXT:    vperm v2, v3, v2, v4
+; P8-AIX-32-NEXT:    lxsiwzx v4, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load float, ptr %f64, align 4
@@ -459,9 +459,9 @@ define <2 x float> @s2v_test_f2(ptr nocapture readonly %f64, <2 x float> %vec)  
 ; P8LE-LABEL: s2v_test_f2:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addi r3, r3, 4
-; P8LE-NEXT:    xxmrglw vs1, v2, v2
-; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxmrghw v2, vs1, vs0
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    lfiwzx f1, 0, r3
+; P8LE-NEXT:    xxmrghw v2, vs0, vs1
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test_f2:
@@ -504,9 +504,9 @@ define <2 x float> @s2v_test_f3(ptr nocapture readonly %f64, <2 x float> %vec, i
 ; P8LE-LABEL: s2v_test_f3:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    sldi r4, r7, 2
-; P8LE-NEXT:    xxmrglw vs1, v2, v2
-; P8LE-NEXT:    lfiwzx f0, r3, r4
-; P8LE-NEXT:    xxmrghw v2, vs1, vs0
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    lfiwzx f1, r3, r4
+; P8LE-NEXT:    xxmrghw v2, vs0, vs1
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test_f3:
@@ -571,9 +571,9 @@ define <2 x float> @s2v_test_f4(ptr nocapture readonly %f64, <2 x float> %vec)  
 ; P8LE-LABEL: s2v_test_f4:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addi r3, r3, 4
-; P8LE-NEXT:    xxmrglw vs1, v2, v2
-; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxmrghw v2, vs1, vs0
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    lfiwzx f1, 0, r3
+; P8LE-NEXT:    xxmrghw v2, vs0, vs1
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test_f4:
@@ -613,9 +613,9 @@ define <2 x float> @s2v_test_f5(<2 x float> %vec, ptr nocapture readonly %ptr1) 
 ;
 ; P8LE-LABEL: s2v_test_f5:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lfiwzx f0, 0, r5
-; P8LE-NEXT:    xxmrglw vs1, v2, v2
-; P8LE-NEXT:    xxmrghw v2, vs1, vs0
+; P8LE-NEXT:    lfiwzx f1, 0, r5
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    xxmrghw v2, vs0, vs1
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test_f5:

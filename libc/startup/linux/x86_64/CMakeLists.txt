@@ -10,10 +10,12 @@ add_startup_object(
     libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
+    libc.src.stdlib.abort
     libc.src.stdlib.atexit
-    libc.src.string.memory_utils.memcpy_implementation
+    libc.src.string.memory_utils.inline_memcpy
     libc.src.unistd.environ
   COMPILE_OPTIONS
+    -fno-stack-protector
     -fno-omit-frame-pointer
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin

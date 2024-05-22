@@ -57,7 +57,7 @@ public:
 
   bool EvaluateInstruction(uint32_t evaluate_options) override;
 
-  bool TestEmulation(Stream *out_stream, ArchSpec &arch,
+  bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override {
     return false;
   }

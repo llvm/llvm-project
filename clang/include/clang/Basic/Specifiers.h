@@ -82,10 +82,10 @@ namespace clang {
     TST_class,     // C++ class type
     TST_interface, // C++ (Microsoft-specific) __interface type
     TST_typename,  // Typedef, C++ class-name or enum name, etc.
-    TST_typeofType,        // C2x (and GNU extension) typeof(type-name)
-    TST_typeofExpr,        // C2x (and GNU extension) typeof(expression)
-    TST_typeof_unqualType, // C2x typeof_unqual(type-name)
-    TST_typeof_unqualExpr, // C2x typeof_unqual(expression)
+    TST_typeofType,        // C23 (and GNU extension) typeof(type-name)
+    TST_typeofExpr,        // C23 (and GNU extension) typeof(expression)
+    TST_typeof_unqualType, // C23 typeof_unqual(type-name)
+    TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype, // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
@@ -103,9 +103,13 @@ namespace clang {
   /// were written in a particular type specifier sequence.
   struct WrittenBuiltinSpecs {
     static_assert(TST_error < 1 << 7, "Type bitfield not wide enough for TST");
-    /*DeclSpec::TST*/ unsigned Type : 7;
-    /*DeclSpec::TSS*/ unsigned Sign  : 2;
-    /*TypeSpecifierWidth*/ unsigned Width : 2;
+    LLVM_PREFERRED_TYPE(TypeSpecifierType)
+    unsigned Type : 7;
+    LLVM_PREFERRED_TYPE(TypeSpecifierSign)
+    unsigned Sign : 2;
+    LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
+    unsigned Width : 2;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ModeAttr : 1;
   };
 
@@ -288,6 +292,7 @@ namespace clang {
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
     CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
     CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
+    CC_M68kRTD,       // __attribute__((m68k_rtd))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -304,6 +309,7 @@ namespace clang {
     case CC_OpenCLKernel:
     case CC_Swift:
     case CC_SwiftAsync:
+    case CC_M68kRTD:
       return false;
     default:
       return true;

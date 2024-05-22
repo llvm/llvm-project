@@ -17,6 +17,7 @@
 #include "MemorySizeDistributions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/MathExtras.h"
 #include <cstdint>
 #include <optional>
 #include <random>
@@ -31,7 +32,7 @@ namespace libc_benchmarks {
 struct StudyConfiguration {
   // One of 'memcpy', 'memset', 'memcmp'.
   // The underlying implementation is always the llvm libc one.
-  // e.g. 'memcpy' will test '__llvm_libc::memcpy'
+  // e.g. 'memcpy' will test 'LIBC_NAMESPACE::memcpy'
   std::string Function;
 
   // The number of trials to run for this benchmark.
@@ -107,11 +108,11 @@ class AlignedBuffer {
   size_t Size = 0;
 
 public:
-  // Note: msan / asan can't handle Alignment > 512.
   static constexpr size_t Alignment = 512;
 
   explicit AlignedBuffer(size_t Size)
-      : Buffer(static_cast<char *>(aligned_alloc(Alignment, Size))),
+      : Buffer(static_cast<char *>(
+            aligned_alloc(Alignment, alignTo(Size, Alignment)))),
         Size(Size) {}
   ~AlignedBuffer() { free(Buffer); }
 

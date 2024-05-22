@@ -12,9 +12,9 @@ define internal void @internal(ptr %fp) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
-; TUNIT-NEXT:    call void [[FP]](ptr @foo)
+; TUNIT-NEXT:    call void [[FP]](ptr nonnull @foo)
 ; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
-; TUNIT-NEXT:    call void @callback2(ptr noundef @foo)
+; TUNIT-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; TUNIT-NEXT:    call void @callback2(ptr nonnull [[FP]])
 ; TUNIT-NEXT:    call void [[FP]](ptr [[A]])
 ; TUNIT-NEXT:    ret void
@@ -24,9 +24,9 @@ define internal void @internal(ptr %fp) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
-; CGSCC-NEXT:    call void [[FP]](ptr @foo)
+; CGSCC-NEXT:    call void [[FP]](ptr nonnull @foo)
 ; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
-; CGSCC-NEXT:    call void @callback2(ptr noundef @foo)
+; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull [[FP]])
 ; CGSCC-NEXT:    call void [[FP]](ptr [[A]])
 ; CGSCC-NEXT:    ret void
@@ -51,7 +51,7 @@ define void @external(ptr %fp) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
 ; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
-; TUNIT-NEXT:    call void @callback2(ptr noundef @foo)
+; TUNIT-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; TUNIT-NEXT:    call void @callback2(ptr [[FP]])
 ; TUNIT-NEXT:    call void [[FP]](ptr @foo)
 ; TUNIT-NEXT:    call void [[FP]](ptr [[A]])
@@ -64,7 +64,7 @@ define void @external(ptr %fp) {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
 ; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
-; CGSCC-NEXT:    call void @callback2(ptr noundef @foo)
+; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr [[FP]])
 ; CGSCC-NEXT:    call void [[FP]](ptr @foo)
 ; CGSCC-NEXT:    call void [[FP]](ptr [[A]])

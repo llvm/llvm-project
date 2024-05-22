@@ -459,7 +459,7 @@ define <4 x float> @PR45794(<2 x i64> %x, <2 x i64> %y) {
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpsraq $48, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpsraq $48, %zmm1, %zmm1
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX512F-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq

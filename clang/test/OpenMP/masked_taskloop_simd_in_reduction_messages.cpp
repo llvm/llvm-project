@@ -1,16 +1,22 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp -fopenmp-version=60 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp -fopenmp-version=60 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp -fopenmp-version=60 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp-simd -fopenmp-version=60 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp-simd -fopenmp-version=60 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -39,7 +45,7 @@ void foobar(int &ref) {
 
 void foobar1(int &ref) {
 #pragma omp taskgroup task_reduction(+:ref)
-#pragma omp masked taskloop simd in_reduction(-:ref) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
+#pragma omp masked taskloop simd in_reduction(-:ref) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   for (int i = 0; i < 10; ++i)
   foo();
 }
@@ -177,7 +183,7 @@ T tmain(T argc) {
 #pragma omp masked taskloop simd in_reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp masked taskloop simd in_reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+#pragma omp masked taskloop simd in_reduction(foo : argc) //omp51-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} omp51-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp52-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} omp52-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(&&:argc)
@@ -251,7 +257,7 @@ T tmain(T argc) {
 }
 }
 #pragma omp parallel
-#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
+#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}}
   for (int i = 0; i < 10; ++i)
 #pragma omp taskgroup task_reduction(+:fl)
 #pragma omp masked taskloop simd in_reduction(+ : fl)
@@ -303,7 +309,7 @@ int main(int argc, char **argv) {
 #pragma omp masked taskloop simd in_reduction(\) // expected-error {{expected unqualified-id}} expected-warning {{missing ':' after reduction identifier - ignoring}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp masked taskloop simd in_reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
+#pragma omp masked taskloop simd in_reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}} omp52-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}  omp60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(|:argc)

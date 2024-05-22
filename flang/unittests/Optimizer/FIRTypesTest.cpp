@@ -304,4 +304,15 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   components.emplace_back("p1", mlir::IntegerType::get(&context, 64));
   derivedTy.finalize({}, components);
   EXPECT_EQ("rec_derived", fir::getTypeAsString(derivedTy, *kindMap));
+  mlir::Type dynArrTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent(),
+                                 fir::SequenceType::getUnknownExtent()},
+          ty);
+  EXPECT_EQ("UxUxi64", fir::getTypeAsString(dynArrTy, *kindMap));
+  EXPECT_EQ("llvmptr_i32",
+      fir::getTypeAsString(
+          fir::LLVMPointerType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
+  EXPECT_EQ("boxchar_c8xU",
+      fir::getTypeAsString(fir::BoxCharType::get(&context, 1), *kindMap));
 }

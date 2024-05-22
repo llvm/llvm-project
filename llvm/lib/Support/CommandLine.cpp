@@ -324,6 +324,13 @@ public:
     return false;
   }
 
+  bool hasNamedSubCommands() const {
+    for (const auto *S : RegisteredSubCommands)
+      if (!S->getName().empty())
+        return true;
+    return false;
+  }
+
   SubCommand *getActiveSubCommand() { return ActiveSubCommand; }
 
   void updateArgStr(Option *O, StringRef NewName, SubCommand *SC) {
@@ -425,7 +432,7 @@ private:
       return nullptr;
     return Opt;
   }
-  SubCommand *LookupSubCommand(StringRef Name);
+  SubCommand *LookupSubCommand(StringRef Name, std::string &NearestString);
 };
 
 } // namespace
@@ -550,9 +557,12 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   return I->second;
 }
 
-SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
+SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
+                                                std::string &NearestString) {
   if (Name.empty())
     return &SubCommand::getTopLevel();
+  // Find a subcommand with the edit distance == 1.
+  SubCommand *NearestMatch = nullptr;
   for (auto *S : RegisteredSubCommands) {
     if (S == &SubCommand::getAll())
       continue;
@@ -561,7 +571,14 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
 
     if (StringRef(S->getName()) == StringRef(Name))
       return S;
+
+    if (!NearestMatch && S->getName().edit_distance(Name) < 2)
+      NearestMatch = S;
   }
+
+  if (NearestMatch)
+    NearestString = NearestMatch->getName();
+
   return &SubCommand::getTopLevel();
 }
 
@@ -1527,10 +1544,14 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
   int FirstArg = 1;
   SubCommand *ChosenSubCommand = &SubCommand::getTopLevel();
-  if (argc >= 2 && argv[FirstArg][0] != '-') {
+  std::string NearestSubCommandString;
+  bool MaybeNamedSubCommand =
+      argc >= 2 && argv[FirstArg][0] != '-' && hasNamedSubCommands();
+  if (MaybeNamedSubCommand) {
     // If the first argument specifies a valid subcommand, start processing
     // options from the second argument.
-    ChosenSubCommand = LookupSubCommand(StringRef(argv[FirstArg]));
+    ChosenSubCommand =
+        LookupSubCommand(StringRef(argv[FirstArg]), NearestSubCommandString);
     if (ChosenSubCommand != &SubCommand::getTopLevel())
       FirstArg = 2;
   }
@@ -1602,7 +1623,6 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   bool DashDashFound = false; // Have we read '--'?
   for (int i = FirstArg; i < argc; ++i) {
     Option *Handler = nullptr;
-    Option *NearestHandler = nullptr;
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
@@ -1667,6 +1687,13 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
 
+      // If Handler is not found in a specialized subcommand, look up handler
+      // in the top-level subcommand.
+      // cl::opt without cl::sub belongs to top-level subcommand.
+      if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
+        Handler = LookupLongOption(SubCommand::getTopLevel(), ArgName, Value,
+                                   LongOptionsUseDoubleDash, HaveDoubleDash);
+
       // Check to see if this "option" is really a prefixed or grouped argument.
       if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
         Handler = HandlePrefixedOrGroupedOption(ArgName, Value, ErrorParsing,
@@ -1675,26 +1702,39 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
       if (!Handler && SinkOpts.empty())
-        NearestHandler =
-            LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
+        LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
     }
 
     if (!Handler) {
-      if (SinkOpts.empty()) {
-        *Errs << ProgramName << ": Unknown command line argument '" << argv[i]
-              << "'.  Try: '" << argv[0] << " --help'\n";
-
-        if (NearestHandler) {
-          // If we know a near match, report it as well.
-          *Errs << ProgramName << ": Did you mean '"
-                << PrintArg(NearestHandlerString, 0) << "'?\n";
-        }
-
-        ErrorParsing = true;
-      } else {
+      if (!SinkOpts.empty()) {
         for (Option *SinkOpt : SinkOpts)
           SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
+        continue;
       }
+
+      auto ReportUnknownArgument = [&](bool IsArg,
+                                       StringRef NearestArgumentName) {
+        *Errs << ProgramName << ": Unknown "
+              << (IsArg ? "command line argument" : "subcommand") << " '"
+              << argv[i] << "'.  Try: '" << argv[0] << " --help'\n";
+
+        if (NearestArgumentName.empty())
+          return;
+
+        *Errs << ProgramName << ": Did you mean '";
+        if (IsArg)
+          *Errs << PrintArg(NearestArgumentName, 0);
+        else
+          *Errs << NearestArgumentName;
+        *Errs << "'?\n";
+      };
+
+      if (i > 1 || !MaybeNamedSubCommand)
+        ReportUnknownArgument(/*IsArg=*/true, NearestHandlerString);
+      else
+        ReportUnknownArgument(/*IsArg=*/false, NearestSubCommandString);
+
+      ErrorParsing = true;
       continue;
     }
 
@@ -2181,7 +2221,7 @@ void generic_parser_base::printGenericOptionDiff(
 
   unsigned NumOpts = getNumOptions();
   for (unsigned i = 0; i != NumOpts; ++i) {
-    if (Value.compare(getOptionValue(i)))
+    if (!Value.compare(getOptionValue(i)))
       continue;
 
     outs() << "= " << getOption(i);
@@ -2189,7 +2229,7 @@ void generic_parser_base::printGenericOptionDiff(
     size_t NumSpaces = MaxOptWidth > L ? MaxOptWidth - L : 0;
     outs().indent(NumSpaces) << " (default: ";
     for (unsigned j = 0; j != NumOpts; ++j) {
-      if (Default.compare(getOptionValue(j)))
+      if (!Default.compare(getOptionValue(j)))
         continue;
       outs() << getOption(j);
       break;
@@ -2365,7 +2405,7 @@ public:
 
     if (Sub == &SubCommand::getTopLevel()) {
       outs() << "USAGE: " << GlobalParser->ProgramName;
-      if (Subs.size() > 2)
+      if (!Subs.empty())
         outs() << " [subcommand]";
       outs() << " [options]";
     } else {

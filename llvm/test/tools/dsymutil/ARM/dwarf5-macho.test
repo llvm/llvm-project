@@ -21,28 +21,44 @@ RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
+
+### Uncomment following when llvm-dwarfdump will print resolved address ranges
+### for the case mutiplue compile units.
+COM: rm -rf %t.dir && mkdir -p %t.dir
+COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+COM: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s \
+COM: --check-prefixes=CHECK,CHECK-LLVM
+
+
 CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK-LLVM: Compile Unit: length = 0x0000001f, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+CHECK-LLVM: DW_TAG_compile_unit
+CHECK-LLVM: DW_TAG_base_type
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
-CHECK: 0x00000033:   DW_TAG_subprogram [2] * (0x0000000c)
-CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOCLIST_LOWPC:]])
-CHECK: 0x00000050:     DW_TAG_formal_parameter [3]   (0x00000033)
+CHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[#%.16x,LOCLIST_LOWPC:]])
+CHECK:     DW_TAG_formal_parameter
 CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 
 CHECK: .debug_loclists contents:
-CHECK-NEXT: locations list header: length = 0x0000001f, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: 0x[[LOC_OFFSET]]: 
-CHECK-NEXT:            DW_LLE_base_address    (0x[[#LOCLIST_LOWPC]])
+CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
-CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START]], 0x[[#LOCLIST_PAIR_END]]): [[LOCLIST_EXPR]]
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
-CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START2]], 0x[[#LOCLIST_PAIR_END2]]): [[LOCLIST_EXPR2]]
 CHECK-NEXT:            DW_LLE_end_of_list     ()
 
 CHECK: .debug_line contents:
@@ -85,9 +101,11 @@ CHECK-NEXT: 0x00000000: "/Users/shubham/Development/test109275485"
 CHECK-NEXT: 0x00000029: "a.cpp"
 
 CHECK: .debug_rnglists contents:
-CHECK-NEXT: 0x00000000: range list header: length = 0x00000013, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x00000000: range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: ranges:
-CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_base_addressx]:  0x0000000000000000
+CHECK-NEXT: 0x0000000e: [DW_RLE_offset_pair  ]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: 0x00000011: [DW_RLE_end_of_list  ]
 
 CHECK: .debug_names contents:
 CHECK-NEX:T Name Index @ 0x0 {

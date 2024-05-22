@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefixes=GCN,GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefixes=GCN,GFX11 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX11-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefixes=GCN,GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefixes=GCN,GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX11-ERR --implicit-check-not=error: %s
 
 //-----------------------------------------------------------------------------------------
 // On GFX10 we can use two scalar operands (except for 64-bit shift instructions)

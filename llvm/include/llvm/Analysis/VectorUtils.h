@@ -94,24 +94,24 @@ struct VFShape {
     assert(hasValidParameterList() && "Invalid parameter list");
   }
 
-  // Retrieve the VFShape that can be used to map a (scalar) function to itself,
-  // with VF = 1.
-  static VFShape getScalarShape(const CallInst &CI) {
-    return VFShape::get(CI, ElementCount::getFixed(1),
+  /// Retrieve the VFShape that can be used to map a scalar function to itself,
+  /// with VF = 1.
+  static VFShape getScalarShape(const FunctionType *FTy) {
+    return VFShape::get(FTy, ElementCount::getFixed(1),
                         /*HasGlobalPredicate*/ false);
   }
 
-  // Retrieve the basic vectorization shape of the function, where all
-  // parameters are mapped to VFParamKind::Vector with \p EC
-  // lanes. Specifies whether the function has a Global Predicate
-  // argument via \p HasGlobalPred.
-  static VFShape get(const CallInst &CI, ElementCount EC, bool HasGlobalPred) {
+  /// Retrieve the basic vectorization shape of the function, where all
+  /// parameters are mapped to VFParamKind::Vector with \p EC lanes. Specifies
+  /// whether the function has a Global Predicate argument via \p HasGlobalPred.
+  static VFShape get(const FunctionType *FTy, ElementCount EC,
+                     bool HasGlobalPred) {
     SmallVector<VFParameter, 8> Parameters;
-    for (unsigned I = 0; I < CI.arg_size(); ++I)
+    for (unsigned I = 0; I < FTy->getNumParams(); ++I)
       Parameters.push_back(VFParameter({I, VFParamKind::Vector}));
     if (HasGlobalPred)
       Parameters.push_back(
-          VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
+          VFParameter({FTy->getNumParams(), VFParamKind::GlobalPredicate}));
 
     return {EC, Parameters};
   }
@@ -174,34 +174,13 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 ///
 /// \param MangledName -> input string in the format
 /// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
-/// \param M -> Module used to retrieve informations about the vector
-/// function that are not possible to retrieve from the mangled
-/// name. At the moment, this parameter is needed only to retrieve the
-/// Vectorization Factor of scalable vector functions from their
-/// respective IR declarations.
+/// \param FTy -> FunctionType of the scalar function which we're trying to find
+/// a vectorized variant for. This is required to determine the vectorization
+/// factor for scalable vectors, since the mangled name doesn't encode that;
+/// it needs to be derived from the widest element types of vector arguments
+/// or return values.
 std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          const Module &M);
-
-/// This routine mangles the given VectorName according to the LangRef
-/// specification for vector-function-abi-variant attribute and is specific to
-/// the TLI mappings. It is the responsibility of the caller to make sure that
-/// this is only used if all parameters in the vector function are vector type.
-/// This returned string holds scalar-to-vector mapping:
-///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
-///
-/// where:
-///
-/// <isa> = "_LLVM_"
-/// <mask> = "M" if masked, "N" if no mask.
-/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
-///          field of the `VecDesc` struct. If the number of lanes is scalable
-///          then 'x' is printed instead.
-/// <vparams> = "v", as many as are the numArgs.
-/// <scalarname> = the name of the scalar function.
-/// <vectorname> = the name of the vector function.
-std::string mangleTLIVectorName(StringRef VectorName, StringRef ScalarName,
-                                unsigned numArgs, ElementCount VF,
-                                bool Masked = false);
+                                          const FunctionType *FTy);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -248,7 +227,7 @@ class VFDatabase {
       return;
     for (const auto &MangledName : ListOfStrings) {
       const std::optional<VFInfo> Shape =
-          VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));
+          VFABI::tryDemangleForVFABI(MangledName, CI.getFunctionType());
       // A match is found via scalar and vector names, and also by
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
@@ -297,7 +276,7 @@ public:
   /// @{
   /// Retrieve the Function with VFShape \p Shape.
   Function *getVectorizedFunction(const VFShape &Shape) const {
-    if (Shape == VFShape::getScalarShape(CI))
+    if (Shape == VFShape::getScalarShape(CI.getFunctionType()))
       return CI.getCalledFunction();
 
     for (const auto &Info : ScalarToVectorMappings)
@@ -670,7 +649,7 @@ public:
       return false;
 
     // Skip if there is already a member with the same index.
-    if (Members.find(Key) != Members.end())
+    if (Members.contains(Key))
       return false;
 
     if (Key > LargestKey) {

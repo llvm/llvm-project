@@ -101,7 +101,7 @@ namespace {
 
   private:
     bool enablePostRAScheduler(
-        const TargetSubtargetInfo &ST, CodeGenOpt::Level OptLevel,
+        const TargetSubtargetInfo &ST, CodeGenOptLevel OptLevel,
         TargetSubtargetInfo::AntiDepBreakMode &Mode,
         TargetSubtargetInfo::RegClassVector &CriticalPathRCs) const;
   };
@@ -260,8 +260,7 @@ LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
 #endif
 
 bool PostRAScheduler::enablePostRAScheduler(
-    const TargetSubtargetInfo &ST,
-    CodeGenOpt::Level OptLevel,
+    const TargetSubtargetInfo &ST, CodeGenOptLevel OptLevel,
     TargetSubtargetInfo::AntiDepBreakMode &Mode,
     TargetSubtargetInfo::RegClassVector &CriticalPathRCs) const {
   Mode = ST.getAntiDepBreakMode();

@@ -22,13 +22,13 @@
 ; CHECK: cond.false.i.i
 ; CHECK: maskrune
 ; CHECK-NEXT: movzbl
-; CHECK-NEXT: movzbl
+; CHECK-NEXT: movq
 ; CHECK-NEXT: testl
 ; CHECK-NEXT: je
 ; CHECK: cond.false.i.i219
 ; CHECK: maskrune
 ; CHECK-NEXT: movzbl
-; CHECK-NEXT: movzbl
+; CHECK-NEXT: movq
 ; CHECK-NEXT: testl
 ; CHECK-NEXT: jne
 

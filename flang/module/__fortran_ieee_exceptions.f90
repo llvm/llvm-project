@@ -11,7 +11,9 @@
 ! here under another name so that IEEE_ARITHMETIC can USE it and export its
 ! declarations without clashing with a non-intrinsic module in a program.
 
-module __Fortran_ieee_exceptions
+include '../include/flang/Runtime/magic-numbers.h'
+
+module __fortran_ieee_exceptions
 
   type :: ieee_flag_type ! Fortran 2018, 17.2 & 17.3
     private
@@ -19,25 +21,26 @@ module __Fortran_ieee_exceptions
   end type ieee_flag_type
 
   type(ieee_flag_type), parameter :: &
-    ieee_invalid = ieee_flag_type(1), &
-    ieee_overflow = ieee_flag_type(2), &
-    ieee_divide_by_zero = ieee_flag_type(4), &
-    ieee_underflow = ieee_flag_type(8), &
-    ieee_inexact = ieee_flag_type(16), &
-    ieee_denorm = ieee_flag_type(32) ! PGI extension
+    ieee_invalid = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INVALID), &
+    ieee_overflow = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_OVERFLOW), &
+    ieee_divide_by_zero = &
+        ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO), &
+    ieee_underflow = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_UNDERFLOW), &
+    ieee_inexact = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INEXACT), &
+    ieee_denorm = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DENORM) ! extension
 
   type(ieee_flag_type), parameter :: &
-    ieee_usual(*) = [ &
-      ieee_overflow, ieee_divide_by_zero, ieee_invalid ], &
-    ieee_all(*) = [ &
-      ieee_usual, ieee_underflow, ieee_inexact, ieee_denorm ]
+    ieee_usual(*) = [ ieee_overflow, ieee_divide_by_zero, ieee_invalid ], &
+    ieee_all(*) = [ ieee_usual, ieee_underflow, ieee_inexact ]
 
   type :: ieee_modes_type ! Fortran 2018, 17.7
-    private
+    private ! opaque fenv.h femode_t data
+    integer(kind=4) :: __data(_FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT)
   end type ieee_modes_type
 
   type :: ieee_status_type ! Fortran 2018, 17.7
-    private
+    private ! opaque fenv.h fenv_t data
+    integer(kind=4) :: __data(_FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT)
   end type ieee_status_type
 
 ! Define specifics with 1 LOGICAL or REAL argument for generic G.
@@ -63,59 +66,65 @@ module __Fortran_ieee_exceptions
   G##_a2, G##_a3, G##_a4, G##_a8, G##_a16
 #endif
 
+#define IEEE_GET_FLAG_L(FVKIND) \
+  elemental subroutine ieee_get_flag_l##FVKIND(flag, flag_value); \
+    import ieee_flag_type; \
+    type(ieee_flag_type), intent(in) :: flag; \
+    logical(FVKIND), intent(out) :: flag_value; \
+  end subroutine ieee_get_flag_l##FVKIND;
   interface ieee_get_flag
-    elemental subroutine ieee_get_flag_0(flag, flag_value)
-      import ieee_flag_type
-      type(ieee_flag_type), intent(in) :: flag
-      logical, intent(out) :: flag_value
-    end subroutine ieee_get_flag_0
-  end interface
+    SPECIFICS_L(IEEE_GET_FLAG_L)
+  end interface ieee_get_flag
+  PRIVATE_L(IEEE_GET_FLAG)
+#undef IEEE_GET_FLAG_L
 
+#define IEEE_GET_HALTING_MODE_L(HKIND) \
+  elemental subroutine ieee_get_halting_mode_l##HKIND(flag, halting); \
+    import ieee_flag_type; \
+    type(ieee_flag_type), intent(in) :: flag; \
+    logical(HKIND), intent(out) :: halting; \
+  end subroutine ieee_get_halting_mode_l##HKIND;
   interface ieee_get_halting_mode
-    elemental subroutine ieee_get_halting_mode_0(flag, halting)
-      import ieee_flag_type
-      type(ieee_flag_type), intent(in) :: flag
-      logical, intent(out) :: halting
-    end subroutine ieee_get_halting_mode_0
-  end interface
+    SPECIFICS_L(IEEE_GET_HALTING_MODE_L)
+  end interface ieee_get_halting_mode
+  PRIVATE_L(IEEE_GET_HALTING_MODE)
+#undef IEEE_GET_HALTING_MODE_L
 
   interface ieee_get_modes
-    subroutine ieee_get_modes_0(modes)
+    pure subroutine ieee_get_modes_0(modes)
       import ieee_modes_type
       type(ieee_modes_type), intent(out) :: modes
     end subroutine ieee_get_modes_0
   end interface
 
   interface ieee_get_status
-    subroutine ieee_get_status_0(status)
+    pure subroutine ieee_get_status_0(status)
       import ieee_status_type
       type(ieee_status_type), intent(out) :: status
     end subroutine ieee_get_status_0
   end interface
 
 #define IEEE_SET_FLAG_L(FVKIND) \
-  pure subroutine ieee_set_flag_l##FVKIND(flag,flag_value); \
+  elemental subroutine ieee_set_flag_l##FVKIND(flag, flag_value); \
     import ieee_flag_type; \
-    type(ieee_flag_type), intent(in) :: flag(..); \
-    logical(FVKIND), intent(in) :: flag_value(..); \
+    type(ieee_flag_type), intent(in) :: flag; \
+    logical(FVKIND), intent(in) :: flag_value; \
   end subroutine ieee_set_flag_l##FVKIND;
   interface ieee_set_flag
     SPECIFICS_L(IEEE_SET_FLAG_L)
   end interface ieee_set_flag
-  private :: ieee_set_flag_1
   PRIVATE_L(IEEE_SET_FLAG)
 #undef IEEE_SET_FLAG_L
 
 #define IEEE_SET_HALTING_MODE_L(HKIND) \
-  pure subroutine ieee_set_halting_mode_l##HKIND(flag,halting); \
+  elemental subroutine ieee_set_halting_mode_l##HKIND(flag, halting); \
     import ieee_flag_type; \
-    type(ieee_flag_type), intent(in) :: flag(..); \
-    logical(HKIND), intent(in) :: halting(..); \
+    type(ieee_flag_type), intent(in) :: flag; \
+    logical(HKIND), intent(in) :: halting; \
   end subroutine ieee_set_halting_mode_l##HKIND;
   interface ieee_set_halting_mode
     SPECIFICS_L(IEEE_SET_HALTING_MODE_L)
   end interface ieee_set_halting_mode
-  private :: ieee_set_halting_mode_1
   PRIVATE_L(IEEE_SET_HALTING_MODE)
 #undef IEEE_SET_HALTING_MODE_L
 
@@ -156,4 +165,4 @@ module __Fortran_ieee_exceptions
     end function ieee_support_halting_0
   end interface
 
-end module __Fortran_ieee_exceptions
+end module __fortran_ieee_exceptions

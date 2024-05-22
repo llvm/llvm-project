@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -176,6 +177,12 @@ void MachineFunction::handleInsertion(MachineInstr &MI) {
 void MachineFunction::handleRemoval(MachineInstr &MI) {
   if (TheDelegate)
     TheDelegate->MF_HandleRemoval(MI);
+}
+
+void MachineFunction::handleChangeDesc(MachineInstr &MI,
+                                       const MCInstrDesc &TID) {
+  if (TheDelegate)
+    TheDelegate->MF_HandleChangeDesc(MI, TID);
 }
 
 void MachineFunction::init() {
@@ -451,16 +458,17 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// Allocate a new MachineBasicBlock. Use this instead of
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
-MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
+MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
+                                         std::optional<UniqueBBID> BBID) {
   MachineBasicBlock *MBB =
       new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-          MachineBasicBlock(*this, bb);
+          MachineBasicBlock(*this, BB);
   // Set BBID for `-basic-block=sections=labels` and
   // `-basic-block-sections=list` to allow robust mapping of profiles to basic
   // blocks.
   if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
       Target.getBBSectionsType() == BasicBlockSection::List)
-    MBB->setBBID(NextBBID++);
+    MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
 }
 
@@ -1206,7 +1214,7 @@ bool MachineFunction::shouldUseDebugInstrRef() const {
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
   // should not suffer.
-  if (getTarget().getOptLevel() == CodeGenOpt::None)
+  if (getTarget().getOptLevel() == CodeGenOptLevel::None)
     return false;
 
   // Don't use instr-ref if this function is marked optnone.
@@ -1244,6 +1252,7 @@ unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_BlockAddress:
     return TD.getPointerSize();
   case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+  case MachineJumpTableInfo::EK_LabelDifference64:
     return 8;
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:
@@ -1264,6 +1273,7 @@ unsigned MachineJumpTableInfo::getEntryAlignment(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_BlockAddress:
     return TD.getPointerABIAlignment(0).value();
   case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+  case MachineJumpTableInfo::EK_LabelDifference64:
     return TD.getABIIntegerTypeAlignment(64).value();
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:

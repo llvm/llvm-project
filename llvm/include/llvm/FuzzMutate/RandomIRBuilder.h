@@ -96,8 +96,7 @@ struct RandomIRBuilder {
                              Value *V);
   /// Create a user for \c V in \c BB.
   Instruction *newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
-  Value *findPointer(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                     ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred);
+  Value *findPointer(BasicBlock &BB, ArrayRef<Instruction *> Insts);
   /// Return a uniformly choosen type from \c AllowedTypes
   Type *randomType();
   Function *createFunctionDeclaration(Module &M, uint64_t ArgNum);

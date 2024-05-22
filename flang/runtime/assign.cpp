@@ -11,6 +11,7 @@
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include "flang/Runtime/descriptor.h"
 
@@ -29,7 +30,7 @@ enum AssignFlags {
 
 // Predicate: is the left-hand side of an assignment an allocated allocatable
 // that must be deallocated?
-static inline bool MustDeallocateLHS(
+static inline RT_API_ATTRS bool MustDeallocateLHS(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
   // Top-level assignments to allocatable variables (*not* components)
   // may first deallocate existing content if there's about to be a
@@ -82,7 +83,7 @@ static inline bool MustDeallocateLHS(
 
 // Utility: allocate the allocatable left-hand side, either because it was
 // originally deallocated or because it required reallocation
-static int AllocateAssignmentLHS(
+static RT_API_ATTRS int AllocateAssignmentLHS(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
   to.raw().type = from.raw().type;
   if (!(flags & ExplicitLengthCharacterLHS)) {
@@ -117,7 +118,7 @@ static int AllocateAssignmentLHS(
 }
 
 // least <= 0, most >= 0
-static void MaximalByteOffsetRange(
+static RT_API_ATTRS void MaximalByteOffsetRange(
     const Descriptor &desc, std::int64_t &least, std::int64_t &most) {
   least = most = 0;
   if (desc.ElementBytes() == 0) {
@@ -139,15 +140,15 @@ static void MaximalByteOffsetRange(
   most += desc.ElementBytes() - 1;
 }
 
-static inline bool RangesOverlap(const char *aStart, const char *aEnd,
-    const char *bStart, const char *bEnd) {
+static inline RT_API_ATTRS bool RangesOverlap(const char *aStart,
+    const char *aEnd, const char *bStart, const char *bEnd) {
   return aEnd >= bStart && bEnd >= aStart;
 }
 
 // Predicate: could the left-hand and right-hand sides of the assignment
 // possibly overlap in memory?  Note that the descriptors themeselves
 // are included in the test.
-static bool MayAlias(const Descriptor &x, const Descriptor &y) {
+static RT_API_ATTRS bool MayAlias(const Descriptor &x, const Descriptor &y) {
   const char *xBase{x.OffsetElement()};
   const char *yBase{y.OffsetElement()};
   if (!xBase || !yBase) {
@@ -175,7 +176,7 @@ static bool MayAlias(const Descriptor &x, const Descriptor &y) {
   return true;
 }
 
-static void DoScalarDefinedAssignment(const Descriptor &to,
+static RT_API_ATTRS void DoScalarDefinedAssignment(const Descriptor &to,
     const Descriptor &from, const typeInfo::SpecialBinding &special) {
   bool toIsDesc{special.IsArgDescriptor(0)};
   bool fromIsDesc{special.IsArgDescriptor(1)};
@@ -199,7 +200,7 @@ static void DoScalarDefinedAssignment(const Descriptor &to,
   }
 }
 
-static void DoElementalDefinedAssignment(const Descriptor &to,
+static RT_API_ATTRS void DoElementalDefinedAssignment(const Descriptor &to,
     const Descriptor &from, const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special) {
   SubscriptValue toAt[maxRank], fromAt[maxRank];
@@ -220,15 +221,16 @@ static void DoElementalDefinedAssignment(const Descriptor &to,
 }
 
 template <typename CHAR>
-static void BlankPadCharacterAssignment(Descriptor &to, const Descriptor &from,
-    SubscriptValue toAt[], SubscriptValue fromAt[], std::size_t elements,
-    std::size_t toElementBytes, std::size_t fromElementBytes) {
+static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
+    const Descriptor &from, SubscriptValue toAt[], SubscriptValue fromAt[],
+    std::size_t elements, std::size_t toElementBytes,
+    std::size_t fromElementBytes) {
   std::size_t padding{(toElementBytes - fromElementBytes) / sizeof(CHAR)};
   std::size_t copiedCharacters{fromElementBytes / sizeof(CHAR)};
   for (; elements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
-    std::memmove(
+    Fortran::runtime::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
     p += copiedCharacters;
     for (auto n{padding}; n-- > 0;) {
@@ -248,7 +250,7 @@ static void BlankPadCharacterAssignment(Descriptor &to, const Descriptor &from,
 // of elements, but their shape need not to conform (the assignment is done in
 // element sequence order). This facilitates some internal usages, like when
 // dealing with array constructors.
-static void Assign(
+RT_API_ATTRS static void Assign(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
   bool mustDeallocateLHS{(flags & DeallocateLHS) ||
       MustDeallocateLHS(to, from, terminator, flags)};
@@ -261,10 +263,12 @@ static void Assign(
   }
   std::size_t toElementBytes{to.ElementBytes()};
   std::size_t fromElementBytes{from.ElementBytes()};
-  auto isSimpleMemmove{[&]() {
+  // The following lambda definition violates the conding style,
+  // but cuda-11.8 nvcc hits an internal error with the brace initialization.
+  auto isSimpleMemmove = [&]() {
     return !toDerived && to.rank() == from.rank() && to.IsContiguous() &&
         from.IsContiguous() && toElementBytes == fromElementBytes;
-  }};
+  };
   StaticDescriptor<maxRank, true, 10 /*?*/> deferredDeallocStatDesc;
   Descriptor *deferDeallocation{nullptr};
   if (MayAlias(to, from)) {
@@ -285,17 +289,21 @@ static void Assign(
       newFrom.raw().attribute = CFI_attribute_allocatable;
       auto stat{ReturnError(terminator, newFrom.Allocate())};
       if (stat == StatOk) {
-        char *toAt{newFrom.OffsetElement()};
-        std::size_t fromElements{from.Elements()};
-        if (from.IsContiguous()) {
-          std::memcpy(
-              toAt, from.OffsetElement(), fromElements * fromElementBytes);
+        if (HasDynamicComponent(from)) {
+          // If 'from' has allocatable/automatic component, we cannot
+          // just make a shallow copy of the descriptor member.
+          // This will still leave data overlap in 'to' and 'newFrom'.
+          // For example:
+          //   type t
+          //     character, allocatable :: c(:)
+          //   end type t
+          //   type(t) :: x(3)
+          //   x(2:3) = x(1:2)
+          // We have to make a deep copy into 'newFrom' in this case.
+          RTNAME(AssignTemporary)
+          (newFrom, from, terminator.sourceFileName(), terminator.sourceLine());
         } else {
-          SubscriptValue fromAt[maxRank];
-          for (from.GetLowerBounds(fromAt); fromElements-- > 0;
-               toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
-            std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
-          }
+          ShallowCopy(newFrom, from, true, from.IsContiguous());
         }
         Assign(to, newFrom, terminator,
             flags &
@@ -310,11 +318,12 @@ static void Assign(
     if (mustDeallocateLHS) {
       if (deferDeallocation) {
         if ((flags & NeedFinalization) && toDerived) {
-          Finalize(to, *toDerived);
+          Finalize(to, *toDerived, &terminator);
           flags &= ~NeedFinalization;
         }
       } else {
-        to.Destroy((flags & NeedFinalization) != 0);
+        to.Destroy((flags & NeedFinalization) != 0, /*destroyPointers=*/false,
+            &terminator);
         flags &= ~NeedFinalization;
       }
     } else if (to.rank() != from.rank() && !to.IsAllocated()) {
@@ -379,7 +388,7 @@ static void Assign(
     // for all components, including parent components (10.2.1.2-3).
     // The target is first finalized if still necessary (7.5.6.3(1))
     if (flags & NeedFinalization) {
-      Finalize(to, *updatedToDerived);
+      Finalize(to, *updatedToDerived, &terminator);
     }
     // Copy the data components (incl. the parent) first.
     const Descriptor &componentDesc{updatedToDerived->component()};
@@ -412,7 +421,7 @@ static void Assign(
           std::size_t componentByteSize{comp.SizeInBytes(to)};
           for (std::size_t j{0}; j < toElements; ++j,
                to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-            std::memmove(to.Element<char>(toAt) + comp.offset(),
+            Fortran::runtime::memmove(to.Element<char>(toAt) + comp.offset(),
                 from.Element<const char>(fromAt) + comp.offset(),
                 componentByteSize);
           }
@@ -422,7 +431,7 @@ static void Assign(
         std::size_t componentByteSize{comp.SizeInBytes(to)};
         for (std::size_t j{0}; j < toElements; ++j,
              to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-          std::memmove(to.Element<char>(toAt) + comp.offset(),
+          Fortran::runtime::memmove(to.Element<char>(toAt) + comp.offset(),
               from.Element<const char>(fromAt) + comp.offset(),
               componentByteSize);
         }
@@ -452,7 +461,8 @@ static void Assign(
               // This is just a shortcut, because the recursive Assign()
               // below would initiate the destruction for to.
               // No finalization is required.
-              toDesc->Destroy();
+              toDesc->Destroy(
+                  /*finalize=*/false, /*destroyPointers=*/false, &terminator);
               continue; // F'2018 10.2.1.3(13)(2)
             }
           }
@@ -472,14 +482,14 @@ static void Assign(
           *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
       for (std::size_t j{0}; j < toElements; ++j, to.IncrementSubscripts(toAt),
            from.IncrementSubscripts(fromAt)) {
-        std::memmove(to.Element<char>(toAt) + procPtr.offset,
+        Fortran::runtime::memmove(to.Element<char>(toAt) + procPtr.offset,
             from.Element<const char>(fromAt) + procPtr.offset,
             sizeof(typeInfo::ProcedurePointer));
       }
     }
   } else { // intrinsic type, intrinsic assignment
     if (isSimpleMemmove()) {
-      std::memmove(to.raw().base_addr, from.raw().base_addr,
+      Fortran::runtime::memmove(to.raw().base_addr, from.raw().base_addr,
           toElements * toElementBytes);
     } else if (toElementBytes > fromElementBytes) { // blank padding
       switch (to.type().raw()) {
@@ -503,19 +513,22 @@ static void Assign(
     } else { // elemental copies, possibly with character truncation
       for (std::size_t n{toElements}; n-- > 0;
            to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-        std::memmove(to.Element<char>(toAt), from.Element<const char>(fromAt),
-            toElementBytes);
+        Fortran::runtime::memmove(to.Element<char>(toAt),
+            from.Element<const char>(fromAt), toElementBytes);
       }
     }
   }
   if (deferDeallocation) {
     // deferDeallocation is used only when LHS is an allocatable.
     // The finalization has already been run for it.
-    deferDeallocation->Destroy();
+    deferDeallocation->Destroy(
+        /*finalize=*/false, /*destroyPointers=*/false, &terminator);
   }
 }
 
-void DoFromSourceAssign(
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS void DoFromSourceAssign(
     Descriptor &alloc, const Descriptor &source, Terminator &terminator) {
   if (alloc.rank() > 0 && source.rank() == 0) {
     // The value of each element of allocate object becomes the value of source.
@@ -534,8 +547,8 @@ void DoFromSourceAssign(
     } else { // intrinsic type
       for (std::size_t n{alloc.Elements()}; n-- > 0;
            alloc.IncrementSubscripts(allocAt)) {
-        std::memmove(alloc.Element<char>(allocAt), source.raw().base_addr,
-            alloc.ElementBytes());
+        Fortran::runtime::memmove(alloc.Element<char>(allocAt),
+            source.raw().base_addr, alloc.ElementBytes());
       }
     }
   } else {
@@ -543,8 +556,12 @@ void DoFromSourceAssign(
   }
 }
 
+RT_OFFLOAD_API_GROUP_END
+
 extern "C" {
-void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
+RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   // All top-level defined assignments can be recognized in semantics and
@@ -554,7 +571,7 @@ void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment);
 }
 
-void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
+void RTDEF(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   // Initialize the "to" if it is of derived type that needs initialization.
@@ -583,7 +600,7 @@ void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
   Assign(to, from, terminator, PolymorphicLHS);
 }
 
-void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
+void RTDEF(CopyOutAssign)(Descriptor &to, const Descriptor &from,
     bool skipToInit, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   // Initialize the "to" if it is of derived type that needs initialization.
@@ -605,7 +622,7 @@ void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
   Assign(to, from, terminator, NoAssignFlags);
 }
 
-void RTNAME(AssignExplicitLengthCharacter)(Descriptor &to,
+void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,
     const Descriptor &from, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   Assign(to, from, terminator,
@@ -613,12 +630,14 @@ void RTNAME(AssignExplicitLengthCharacter)(Descriptor &to,
           ExplicitLengthCharacterLHS);
 }
 
-void RTNAME(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
+void RTDEF(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   Assign(to, from, terminator,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment |
           PolymorphicLHS);
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

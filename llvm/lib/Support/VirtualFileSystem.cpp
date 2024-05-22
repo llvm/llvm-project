@@ -43,6 +43,7 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -488,7 +489,7 @@ void OverlayFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 
   if (Type == PrintType::Contents)
     Type = PrintType::Summary;
-  for (auto FS : overlays_range())
+  for (const auto &FS : overlays_range())
     FS->print(OS, Type, IndentLevel + 1);
 }
 
@@ -551,7 +552,7 @@ class CombiningDirIterImpl : public llvm::vfs::detail::DirIterImpl {
 public:
   CombiningDirIterImpl(ArrayRef<FileSystemPtr> FileSystems, std::string Dir,
                        std::error_code &EC) {
-    for (auto FS : FileSystems) {
+    for (const auto &FS : FileSystems) {
       std::error_code FEC;
       directory_iterator Iter = FS->dir_begin(Dir, FEC);
       if (FEC && FEC != errc::no_such_file_or_directory) {
@@ -725,7 +726,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  llvm::StringMap<std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -741,15 +742,14 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name);
+    auto I = Entries.find(Name.str());
     if (I != Entries.end())
       return I->second.get();
     return nullptr;
   }
 
   InMemoryNode *addChild(StringRef Name, std::unique_ptr<InMemoryNode> Child) {
-    return Entries.insert(make_pair(Name, std::move(Child)))
-        .first->second.get();
+    return Entries.emplace(Name, std::move(Child)).first->second.get();
   }
 
   using const_iterator = decltype(Entries)::const_iterator;
@@ -1337,7 +1337,7 @@ std::error_code RedirectingFileSystem::isLocal(const Twine &Path_,
   SmallString<256> Path;
   Path_.toVector(Path);
 
-  if (std::error_code EC = makeCanonical(Path))
+  if (makeCanonical(Path))
     return {};
 
   return ExternalFS->isLocal(Path, Result);
@@ -1385,7 +1385,7 @@ RedirectingFileSystem::makeAbsolute(StringRef WorkingDir,
 
   std::string Result = std::string(WorkingDir);
   StringRef Dir(Result);
-  if (!Dir.endswith(sys::path::get_separator(style))) {
+  if (!Dir.ends_with(sys::path::get_separator(style))) {
     Result += sys::path::get_separator(style);
   }
   // backslashes '\' are legit path charactors under POSIX. Windows APIs
@@ -2239,6 +2239,14 @@ RedirectingFileSystem::LookupResult::LookupResult(
   }
 }
 
+void RedirectingFileSystem::LookupResult::getPath(
+    llvm::SmallVectorImpl<char> &Result) const {
+  Result.clear();
+  for (Entry *Parent : Parents)
+    llvm::sys::path::append(Result, Parent->getName());
+  llvm::sys::path::append(Result, E->getName());
+}
+
 std::error_code
 RedirectingFileSystem::makeCanonical(SmallVectorImpl<char> &Path) const {
   if (std::error_code EC = makeAbsolute(Path))
@@ -2257,11 +2265,14 @@ ErrorOr<RedirectingFileSystem::LookupResult>
 RedirectingFileSystem::lookupPath(StringRef Path) const {
   sys::path::const_iterator Start = sys::path::begin(Path);
   sys::path::const_iterator End = sys::path::end(Path);
+  llvm::SmallVector<Entry *, 32> Entries;
   for (const auto &Root : Roots) {
     ErrorOr<RedirectingFileSystem::LookupResult> Result =
-        lookupPathImpl(Start, End, Root.get());
-    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
+        lookupPathImpl(Start, End, Root.get(), Entries);
+    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory) {
+      Result->Parents = std::move(Entries);
       return Result;
+    }
   }
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
@@ -2269,7 +2280,8 @@ RedirectingFileSystem::lookupPath(StringRef Path) const {
 ErrorOr<RedirectingFileSystem::LookupResult>
 RedirectingFileSystem::lookupPathImpl(
     sys::path::const_iterator Start, sys::path::const_iterator End,
-    RedirectingFileSystem::Entry *From) const {
+    RedirectingFileSystem::Entry *From,
+    llvm::SmallVectorImpl<Entry *> &Entries) const {
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
          "Paths should not contain traversal components");
@@ -2298,10 +2310,12 @@ RedirectingFileSystem::lookupPathImpl(
   auto *DE = cast<RedirectingFileSystem::DirectoryEntry>(From);
   for (const std::unique_ptr<RedirectingFileSystem::Entry> &DirEntry :
        llvm::make_range(DE->contents_begin(), DE->contents_end())) {
+    Entries.push_back(From);
     ErrorOr<RedirectingFileSystem::LookupResult> Result =
-        lookupPathImpl(Start, End, DirEntry.get());
+        lookupPathImpl(Start, End, DirEntry.get(), Entries);
     if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
       return Result;
+    Entries.pop_back();
   }
 
   return make_error_code(llvm::errc::no_such_file_or_directory);
@@ -2543,10 +2557,12 @@ RedirectingFileSystem::getRealPath(const Twine &OriginalPath,
     return P;
   }
 
-  // If we found a DirectoryEntry, still fallthrough to the original path if
-  // allowed, because directories don't have a single external contents path.
-  if (Redirection == RedirectKind::Fallthrough)
-    return ExternalFS->getRealPath(CanonicalPath, Output);
+  // We found a DirectoryEntry, which does not have a single external contents
+  // path. Use the canonical virtual path.
+  if (Redirection == RedirectKind::Fallthrough) {
+    Result->getPath(Output);
+    return {};
+  }
   return llvm::errc::invalid_argument;
 }
 

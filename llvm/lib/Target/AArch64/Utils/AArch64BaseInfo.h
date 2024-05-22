@@ -830,6 +830,7 @@ inline static StringRef AArch64PACKeyIDToString(AArch64PACKey::ID KeyID) {
   case AArch64PACKey::DB:
     return StringRef("db");
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return numeric key ID for 2-letter identifier string.

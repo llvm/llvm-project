@@ -41,13 +41,22 @@
 #include "llvm/Support/xxhash.h"
 
 #include <atomic>
+#include <optional>
 #include <thread>
 
 namespace llvm {
 
 using llvm::object::BuildIDRef;
 
-static std::string uniqueKey(llvm::StringRef S) { return utostr(xxHash64(S)); }
+namespace {
+std::optional<SmallVector<StringRef>> DebuginfodUrls;
+// Many Readers/Single Writer lock protecting the global debuginfod URL list.
+llvm::sys::RWMutex UrlsMutex;
+} // namespace
+
+static std::string uniqueKey(llvm::StringRef S) {
+  return utostr(xxh3_64bits(S));
+}
 
 // Returns a binary BuildID as a normalized hex string.
 // Uses lowercase for compatibility with common debuginfod servers.
@@ -60,13 +69,27 @@ bool canUseDebuginfod() {
 }
 
 SmallVector<StringRef> getDefaultDebuginfodUrls() {
-  const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
-  if (DebuginfodUrlsEnv == nullptr)
-    return SmallVector<StringRef>();
+  std::shared_lock<llvm::sys::RWMutex> ReadGuard(UrlsMutex);
+  if (!DebuginfodUrls) {
+    // Only read from the environment variable if the user hasn't already
+    // set the value
+    ReadGuard.unlock();
+    std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
+    DebuginfodUrls = SmallVector<StringRef>();
+    if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS")) {
+      StringRef(DebuginfodUrlsEnv)
+          .split(DebuginfodUrls.value(), " ", -1, false);
+    }
+    WriteGuard.unlock();
+    ReadGuard.lock();
+  }
+  return DebuginfodUrls.value();
+}
 
-  SmallVector<StringRef> DebuginfodUrls;
-  StringRef(DebuginfodUrlsEnv).split(DebuginfodUrls, " ");
-  return DebuginfodUrls;
+// Set the default debuginfod URL list, override the environment variable
+void setDefaultDebuginfodUrls(const SmallVector<StringRef> &URLs) {
+  std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
+  DebuginfodUrls = URLs;
 }
 
 /// Finds a default local file caching directory for the debuginfod client,

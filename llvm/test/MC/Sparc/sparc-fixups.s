@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-objdump -dr - | FileCheck %s
+! RUN: llvm-mc %s -triple=sparcv9 -filetype=obj | llvm-objdump -dr - | FileCheck %s
 .text
 
 ! Check that fixups are correctly applied.

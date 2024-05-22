@@ -34,4 +34,4 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 
 !hlsl.cbufs = !{!0}
 
-!0 = !{ptr @B.cb., !"B.cb.ty", i32 13, i32 1, i32 0}
+!0 = !{ptr @B.cb., !"B.cb.ty", i32 13, i1 false, i32 1, i32 0}

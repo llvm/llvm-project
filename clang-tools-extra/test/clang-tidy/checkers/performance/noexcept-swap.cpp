@@ -1,5 +1,14 @@
 // RUN: %check_clang_tidy %s performance-noexcept-swap %t -- -- -fexceptions
 
+namespace std
+{
+  template <typename T>
+  struct is_nothrow_move_constructible
+  {
+    static constexpr bool value = __is_nothrow_constructible(T, __add_rvalue_reference(T));
+  };
+} // namespace std
+
 void throwing_function() noexcept(false);
 void noexcept_function() noexcept;
 
@@ -54,9 +63,6 @@ struct D {
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: noexcept specifier on swap function evaluates to 'false' [performance-noexcept-swap]
 };
 
-template <typename T>
-void swap(D<T> &, D<T> &) noexcept(D<T>::kFalse);
-// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: noexcept specifier on swap function evaluates to 'false' [performance-noexcept-swap]
 void swap(D<int> &, D<int> &) noexcept(D<int>::kFalse);
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: noexcept specifier on swap function evaluates to 'false' [performance-noexcept-swap]
 
@@ -151,9 +157,8 @@ struct OK16 {
   void swap(OK16 &) noexcept(kTrue);
 };
 
-// FIXME: This gives a warning, but it should be OK.
-//template <typename T>
-//void swap(OK16<T> &, OK16<T> &) noexcept(OK16<T>::kTrue);
+template <typename T>
+void swap(OK16<T> &, OK16<T> &) noexcept(OK16<T>::kTrue);
 template <typename T>
 void swap(OK16<int> &, OK16<int> &) noexcept(OK16<int>::kTrue);
 
@@ -201,3 +206,29 @@ struct OK21 {
 template <typename T>
 void swap(OK21<T> &, OK21<T> &) noexcept(noexcept(TemplateNoexceptWithInt<int>::f()));
 void swap(OK21<int> &, OK21<int> &) noexcept(noexcept(TemplateNoexceptWithInt<int>::f()));
+
+namespace PR64303 {
+  void swap();
+  void swap(int&, bool&);
+  void swap(int&, int&, int&);
+  void swap(int&);
+
+  struct Test {
+    void swap();
+    void swap(Test&, Test&);
+    void swap(int&);
+    static void swap(int&, int&);
+
+    friend void swap(Test&, Test&);
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: swap functions should be marked noexcept [performance-noexcept-swap]
+  };
+} // namespace PR64303
+
+namespace gh68101
+{
+  template <typename T>
+  class Container {
+     public:
+      void swap(Container&) noexcept(std::is_nothrow_move_constructible<T>::value);
+  };
+} // namespace gh68101

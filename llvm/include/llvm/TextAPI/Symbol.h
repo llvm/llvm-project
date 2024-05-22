@@ -65,12 +65,26 @@ constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
 constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
 using TargetList = SmallVector<Target, 5>;
+
+// Keep containers that hold Targets in sorted order and uniqued.
+template <typename C>
+typename C::iterator addEntry(C &Container, const Target &Targ) {
+  auto Iter =
+      lower_bound(Container, Targ, [](const Target &LHS, const Target &RHS) {
+        return LHS < RHS;
+      });
+  if ((Iter != std::end(Container)) && !(Targ < *Iter))
+    return Iter;
+
+  return Container.insert(Iter, Targ);
+}
+
 class Symbol {
 public:
   Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
-  void addTarget(Target target) { Targets.emplace_back(target); }
+  void addTarget(Target InputTarget) { addEntry(Targets, InputTarget); }
   SymbolKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
   ArchitectureSet getArchitectures() const {
@@ -107,6 +121,14 @@ public:
     return (Flags & SymbolFlags::Text) == SymbolFlags::Text;
   }
 
+  bool hasArchitecture(Architecture Arch) const {
+    return mapToArchitectureSet(Targets).contains(Arch);
+  }
+
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }
@@ -128,8 +150,7 @@ public:
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 
   bool operator<(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) <
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
+    return std::tie(Kind, Name) < std::tie(O.Kind, O.Name);
   }
 
 private:
@@ -138,6 +159,23 @@ private:
   SymbolKind Kind;
   SymbolFlags Flags;
 };
+
+/// Lightweight struct for passing around symbol information.
+struct SimpleSymbol {
+  StringRef Name;
+  SymbolKind Kind;
+
+  bool operator<(const SimpleSymbol &O) const {
+    return std::tie(Name, Kind) < std::tie(O.Name, O.Kind);
+  }
+};
+
+/// Determine SymbolKind from Flags and parsing Name.
+///
+/// \param Name The name of symbol.
+/// \param Flags The flags pre-determined for the symbol.
+SimpleSymbol parseSymbol(StringRef SymName,
+                         const SymbolFlags Flags = SymbolFlags::None);
 
 } // end namespace MachO.
 } // end namespace llvm.

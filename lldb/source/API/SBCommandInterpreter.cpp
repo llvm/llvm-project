@@ -70,18 +70,20 @@ public:
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
-    bool ret = m_backend->DoExecute(debugger_sb, command.GetArgumentVector(),
-                                    sb_return);
-    return ret;
+    m_backend->DoExecute(debugger_sb, command.GetArgumentVector(), sb_return);
   }
   std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
   std::optional<std::string> m_auto_repeat_command;
 };
 } // namespace lldb_private
+
+SBCommandInterpreter::SBCommandInterpreter() : m_opaque_ptr() {
+  LLDB_INSTRUMENT_VA(this);
+}
 
 SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
     : m_opaque_ptr(interpreter) {

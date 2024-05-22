@@ -82,7 +82,6 @@ extern void *_NSConstantStringClassReference;
 // Test cases.
 //===----------------------------------------------------------------------===//
 
-//  <rdar://problem/6062730>
 // The analyzer doesn't perform any inter-procedural analysis, so delegates
 // involving [NSObject performSelector...] tend to lead to false positives.
 // For now the analyzer just stops tracking the reference count of the

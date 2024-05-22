@@ -381,6 +381,7 @@ private:
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
+  bool NonNeg : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
@@ -392,8 +393,8 @@ private:
   // We assume instructions do not raise floating-point exceptions by default,
   // and only those marked explicitly may do so.  We could choose to represent
   // this via a positive "FPExcept" flags like on the MI level, but having a
-  // negative "NoFPExcept" flag here (that defaults to true) makes the flag
-  // intersection logic more straightforward.
+  // negative "NoFPExcept" flag here makes the flag intersection logic more
+  // straightforward.
   bool NoFPExcept : 1;
   // Instructions with attached 'unpredictable' metadata on IR level.
   bool Unpredictable : 1;
@@ -401,9 +402,9 @@ private:
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
-      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NoNaNs(false),
-        NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
-        AllowContract(false), ApproximateFuncs(false),
+      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NonNeg(false),
+        NoNaNs(false), NoInfs(false), NoSignedZeros(false),
+        AllowReciprocal(false), AllowContract(false), ApproximateFuncs(false),
         AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
@@ -421,6 +422,7 @@ public:
   void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
   void setNoSignedWrap(bool b) { NoSignedWrap = b; }
   void setExact(bool b) { Exact = b; }
+  void setNonNeg(bool b) { NonNeg = b; }
   void setNoNaNs(bool b) { NoNaNs = b; }
   void setNoInfs(bool b) { NoInfs = b; }
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
@@ -435,6 +437,7 @@ public:
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
+  bool hasNonNeg() const { return NonNeg; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
@@ -451,6 +454,7 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
+    NonNeg &= Flags.NonNeg;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
@@ -1385,6 +1389,7 @@ public:
   const SDValue &getBasePtr() const {
     switch (getOpcode()) {
     case ISD::STORE:
+    case ISD::ATOMIC_STORE:
     case ISD::VP_STORE:
     case ISD::MSTORE:
     case ISD::VP_SCATTER:
@@ -1457,8 +1462,12 @@ public:
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
   }
 
-  const SDValue &getBasePtr() const { return getOperand(1); }
-  const SDValue &getVal() const { return getOperand(2); }
+  const SDValue &getBasePtr() const {
+    return getOpcode() == ISD::ATOMIC_STORE ? getOperand(2) : getOperand(1);
+  }
+  const SDValue &getVal() const {
+    return getOpcode() == ISD::ATOMIC_STORE ? getOperand(1) : getOperand(2);
+  }
 
   /// Returns true if this SDNode represents cmpxchg atomic operation, false
   /// otherwise.
@@ -3071,61 +3080,77 @@ namespace ISD {
 
   /// Returns true if the specified node is a non-extending and unindexed load.
   inline bool isNormalLoad(const SDNode *N) {
-    const LoadSDNode *Ld = dyn_cast<LoadSDNode>(N);
+    auto *Ld = dyn_cast<LoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-      Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is a non-extending load.
   inline bool isNON_EXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD;
   }
 
   /// Returns true if the specified node is a EXTLOAD.
   inline bool isEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::EXTLOAD;
   }
 
   /// Returns true if the specified node is a SEXTLOAD.
   inline bool isSEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::SEXTLOAD;
   }
 
   /// Returns true if the specified node is a ZEXTLOAD.
   inline bool isZEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::ZEXTLOAD;
   }
 
   /// Returns true if the specified node is an unindexed load.
   inline bool isUNINDEXEDLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is a non-truncating
   /// and unindexed store.
   inline bool isNormalStore(const SDNode *N) {
-    const StoreSDNode *St = dyn_cast<StoreSDNode>(N);
+    auto *St = dyn_cast<StoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-      St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is an unindexed store.
   inline bool isUNINDEXEDStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) &&
-      cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
+    auto *St = dyn_cast<StoreSDNode>(N);
+    return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
-  bool matchUnaryPredicate(SDValue Op,
-                           std::function<bool(ConstantSDNode *)> Match,
-                           bool AllowUndefs = false);
+  template <typename ConstNodeType>
+  bool matchUnaryPredicateImpl(SDValue Op,
+                               std::function<bool(ConstNodeType *)> Match,
+                               bool AllowUndefs = false);
+
+  /// Hook for matching ConstantSDNode predicate
+  inline bool matchUnaryPredicate(SDValue Op,
+                                  std::function<bool(ConstantSDNode *)> Match,
+                                  bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
+  }
+
+  /// Hook for matching ConstantFPSDNode predicate
+  inline bool
+  matchUnaryFpPredicate(SDValue Op,
+                        std::function<bool(ConstantFPSDNode *)> Match,
+                        bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, Match, AllowUndefs);
+  }
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
   /// constants or every element of a pair of constant BUILD_VECTORs.

@@ -46,7 +46,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const day& __lhs, const day& __rhs) noexcept
 { return static_cast<unsigned>(__lhs) == static_cast<unsigned>(__rhs); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const day& __lhs, const day& __rhs) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const day& __lhs, const day& __rhs) noexcept {
   return static_cast<unsigned>(__lhs) <=> static_cast<unsigned>(__rhs);
 }
 

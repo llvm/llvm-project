@@ -20,9 +20,8 @@
 #include "test_macros.h"
 
 template <class Range>
-concept HasReplaceWithRange = requires (std::string& c, Range&& range) {
-  c.replace_with_range(c.end(), c.end(), std::forward<Range>(range));
-};
+concept HasReplaceWithRange =
+    requires(std::string& c, Range&& range) { c.replace_with_range(c.end(), c.end(), std::forward<Range>(range)); };
 
 constexpr bool test_constraints_replace_with_range() {
   // Input range with the same value type.
@@ -44,7 +43,7 @@ using StrBuffer = Buffer<char, 256>;
 struct TestCaseReplacement {
   StrBuffer initial;
   std::size_t from = 0;
-  std::size_t to = 0;
+  std::size_t to   = 0;
   StrBuffer input;
   StrBuffer expected;
 };
@@ -57,549 +56,586 @@ struct TestCaseReplacement {
 
 // Empty string.
 
-constexpr TestCaseReplacement EmptyString_End_EmptyCut_EmptyRange {
-  .initial = "", .from = 0, .to = 0, .input = "", .expected = ""
-};
+constexpr TestCaseReplacement EmptyString_End_EmptyCut_EmptyRange{
+    .initial = "", .from = 0, .to = 0, .input = "", .expected = ""};
 
-constexpr TestCaseReplacement EmptyString_End_EmptyCut_OneElementRange {
-  .initial = "", .from = 0, .to = 0, .input = "a", .expected = "a"
-};
+constexpr TestCaseReplacement EmptyString_End_EmptyCut_OneElementRange{
+    .initial = "", .from = 0, .to = 0, .input = "a", .expected = "a"};
 
-constexpr TestCaseReplacement EmptyString_End_EmptyCut_MidRange {
-  .initial = "", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiou"
-};
+constexpr TestCaseReplacement EmptyString_End_EmptyCut_MidRange{
+    .initial = "", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiou"};
 
-constexpr TestCaseReplacement EmptyString_End_EmptyCut_LongRange {
-  .initial = "", .from = 0, .to = 0,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement EmptyString_End_EmptyCut_LongRange{
+    .initial  = "",
+    .from     = 0,
+    .to       = 0,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789"};
 
 // One-element string.
 
-constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_EmptyRange {
-  .initial = "B", .from = 0, .to = 0, .input = "", .expected = "B"
-};
+constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_EmptyRange{
+    .initial = "B", .from = 0, .to = 0, .input = "", .expected = "B"};
 
-constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_OneElementRange {
-  .initial = "B", .from = 0, .to = 0, .input = "a", .expected = "aB"
-};
+constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_OneElementRange{
+    .initial = "B", .from = 0, .to = 0, .input = "a", .expected = "aB"};
 
-constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_MidRange {
-  .initial = "B", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiouB"
-};
+constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_MidRange{
+    .initial = "B", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiouB"};
 
-constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_LongRange {
-  .initial = "B", .from = 0, .to = 0,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789B"
-};
+constexpr TestCaseReplacement OneElementString_Begin_EmptyCut_LongRange{
+    .initial  = "B",
+    .from     = 0,
+    .to       = 0,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789B"};
 
-constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_EmptyRange {
-  .initial = "B", .from = 0, .to = 1, .input = "", .expected = ""
-};
+constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_EmptyRange{
+    .initial = "B", .from = 0, .to = 1, .input = "", .expected = ""};
 
-constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_OneElementRange {
-  .initial = "B", .from = 0, .to = 1, .input = "a", .expected = "a"
-};
+constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_OneElementRange{
+    .initial = "B", .from = 0, .to = 1, .input = "a", .expected = "a"};
 
-constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_MidRange {
-  .initial = "B", .from = 0, .to = 1, .input = "aeiou", .expected = "aeiou"
-};
+constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_MidRange{
+    .initial = "B", .from = 0, .to = 1, .input = "aeiou", .expected = "aeiou"};
 
-constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_LongRange {
-  .initial = "B", .from = 0, .to = 1,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement OneElementString_Begin_OneElementCut_LongRange{
+    .initial  = "B",
+    .from     = 0,
+    .to       = 1,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789"};
 
-constexpr TestCaseReplacement OneElementString_End_EmptyCut_EmptyRange {
-  .initial = "B", .from = 1, .to = 1, .input = "", .expected = "B"
-};
+constexpr TestCaseReplacement OneElementString_End_EmptyCut_EmptyRange{
+    .initial = "B", .from = 1, .to = 1, .input = "", .expected = "B"};
 
-constexpr TestCaseReplacement OneElementString_End_EmptyCut_OneElementRange {
-  .initial = "B", .from = 1, .to = 1, .input = "a", .expected = "Ba"
-};
+constexpr TestCaseReplacement OneElementString_End_EmptyCut_OneElementRange{
+    .initial = "B", .from = 1, .to = 1, .input = "a", .expected = "Ba"};
 
-constexpr TestCaseReplacement OneElementString_End_EmptyCut_MidRange {
-  .initial = "B", .from = 1, .to = 1, .input = "aeiou", .expected = "Baeiou"
-};
+constexpr TestCaseReplacement OneElementString_End_EmptyCut_MidRange{
+    .initial = "B", .from = 1, .to = 1, .input = "aeiou", .expected = "Baeiou"};
 
-constexpr TestCaseReplacement OneElementString_End_EmptyCut_LongRange {
-  .initial = "B", .from = 1, .to = 1,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "Babcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement OneElementString_End_EmptyCut_LongRange{
+    .initial  = "B",
+    .from     = 1,
+    .to       = 1,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "Babcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Short string (using SSO).
 
 // Replace at the beginning.
 
-constexpr TestCaseReplacement ShortString_Begin_EmptyCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "", .expected = "_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_EmptyCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "", .expected = "_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_EmptyCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "a", .expected = "a_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_EmptyCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "a", .expected = "a_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_EmptyCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiou_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_EmptyCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 0, .input = "aeiou", .expected = "aeiou_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_EmptyCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 0,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_EmptyCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_OneElementCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "", .expected = "BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_OneElementCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "", .expected = "BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_OneElementCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "a", .expected = "aBCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_OneElementCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "a", .expected = "aBCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_OneElementCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "aeiou", .expected = "aeiouBCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_OneElementCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 1, .input = "aeiou", .expected = "aeiouBCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_OneElementCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 1,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_OneElementCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "", .expected = "DFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "", .expected = "DFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "a", .expected = "aDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "a", .expected = "aDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "aeiou", .expected = "aeiouDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 3, .input = "aeiou", .expected = "aeiouDFGHJ_"};
 
 // Note: this test case switches from SSO to non-SSO.
-constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 3,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789DFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Begin_MidSizedCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789DFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Begin_CutToEnd_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "", .expected = ""
-};
+constexpr TestCaseReplacement ShortString_Begin_CutToEnd_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "", .expected = ""};
 
-constexpr TestCaseReplacement ShortString_Begin_CutToEnd_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "a", .expected = "a"
-};
+constexpr TestCaseReplacement ShortString_Begin_CutToEnd_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "a", .expected = "a"};
 
-constexpr TestCaseReplacement ShortString_Begin_CutToEnd_MidRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "aeiou", .expected = "aeiou"
-};
+constexpr TestCaseReplacement ShortString_Begin_CutToEnd_MidRange{
+    .initial = "_BCDFGHJ_", .from = 0, .to = 9, .input = "aeiou", .expected = "aeiou"};
 
 // Note: this test case switches from SSO to non-SSO.
-constexpr TestCaseReplacement ShortString_Begin_CutToEnd_LongRange {
-  .initial = "_BCDFGHJ_", .from = 0, .to = 9,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement ShortString_Begin_CutToEnd_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 0,
+    .to       = 9,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Replace in the middle.
 
-constexpr TestCaseReplacement ShortString_Mid_EmptyCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "", .expected = "_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_EmptyCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "", .expected = "_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_EmptyCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "a", .expected = "_BCDaFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_EmptyCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "a", .expected = "_BCDaFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_EmptyCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "aeiou", .expected = "_BCDaeiouFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_EmptyCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 4, .input = "aeiou", .expected = "_BCDaeiouFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_EmptyCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 4,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789FGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_EmptyCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 4,
+    .to       = 4,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789FGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_OneElementCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "", .expected = "_BCDGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_OneElementCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "", .expected = "_BCDGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_OneElementCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "a", .expected = "_BCDaGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_OneElementCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "a", .expected = "_BCDaGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_OneElementCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "aeiou", .expected = "_BCDaeiouGHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_OneElementCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 5, .input = "aeiou", .expected = "_BCDaeiouGHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_OneElementCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 5,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789GHJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_OneElementCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 4,
+    .to       = 5,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789GHJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "", .expected = "_BCDJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "", .expected = "_BCDJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "a", .expected = "_BCDaJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "a", .expected = "_BCDaJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "aeiou", .expected = "_BCDaeiouJ_"
-};
+constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 7, .input = "aeiou", .expected = "_BCDaeiouJ_"};
 
-constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 7,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789J_"
-};
+constexpr TestCaseReplacement ShortString_Mid_MidSizedCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 4,
+    .to       = 7,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789J_"};
 
-constexpr TestCaseReplacement ShortString_Mid_CutToEnd_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "", .expected = "_BCD"
-};
+constexpr TestCaseReplacement ShortString_Mid_CutToEnd_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "", .expected = "_BCD"};
 
-constexpr TestCaseReplacement ShortString_Mid_CutToEnd_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "a", .expected = "_BCDa"
-};
+constexpr TestCaseReplacement ShortString_Mid_CutToEnd_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "a", .expected = "_BCDa"};
 
-constexpr TestCaseReplacement ShortString_Mid_CutToEnd_MidRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "aeiou", .expected = "_BCDaeiou"
-};
+constexpr TestCaseReplacement ShortString_Mid_CutToEnd_MidRange{
+    .initial = "_BCDFGHJ_", .from = 4, .to = 9, .input = "aeiou", .expected = "_BCDaeiou"};
 
-constexpr TestCaseReplacement ShortString_Mid_CutToEnd_LongRange {
-  .initial = "_BCDFGHJ_", .from = 4, .to = 9,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement ShortString_Mid_CutToEnd_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 4,
+    .to       = 9,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_BCDabcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Replace at the end.
 
-constexpr TestCaseReplacement ShortString_End_EmptyCut_EmptyRange {
-  .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "", .expected = "_BCDFGHJ_"
-};
+constexpr TestCaseReplacement ShortString_End_EmptyCut_EmptyRange{
+    .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "", .expected = "_BCDFGHJ_"};
 
-constexpr TestCaseReplacement ShortString_End_EmptyCut_OneElementRange {
-  .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "a", .expected = "_BCDFGHJ_a"
-};
+constexpr TestCaseReplacement ShortString_End_EmptyCut_OneElementRange{
+    .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "a", .expected = "_BCDFGHJ_a"};
 
-constexpr TestCaseReplacement ShortString_End_EmptyCut_MidRange {
-  .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "aeiou", .expected = "_BCDFGHJ_aeiou"
-};
+constexpr TestCaseReplacement ShortString_End_EmptyCut_MidRange{
+    .initial = "_BCDFGHJ_", .from = 9, .to = 9, .input = "aeiou", .expected = "_BCDFGHJ_aeiou"};
 
-constexpr TestCaseReplacement ShortString_End_EmptyCut_LongRange {
-  .initial = "_BCDFGHJ_", .from = 9, .to = 9,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_BCDFGHJ_abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement ShortString_End_EmptyCut_LongRange{
+    .initial  = "_BCDFGHJ_",
+    .from     = 9,
+    .to       = 9,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_BCDFGHJ_abcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Long string (no SSO).
 
 // Replace at the beginning.
 
-constexpr TestCaseReplacement LongString_Begin_EmptyCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 0, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_EmptyCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_EmptyCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 0, .input = "a",
-  .expected = "a_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_EmptyCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "a",
+    .expected = "a_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_EmptyCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 0, .input = "aeiou",
-  .expected = "aeiou_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_EmptyCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "aeiou",
+    .expected = "aeiou_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_EmptyCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 0,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_EmptyCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_EmptyCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 0,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_EmptyCut_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 0,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"
+                "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_OneElementCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 1, .input = "",
-  .expected = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_OneElementCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "",
+    .expected = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_OneElementCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 1, .input = "a",
-  .expected = "aABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_OneElementCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "a",
+    .expected = "aABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_OneElementCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 1, .input = "aeiou",
-  .expected = "aeiouABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_OneElementCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "aeiou",
+    .expected = "aeiouABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_OneElementCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 1,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_OneElementCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_OneElementCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 1,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_OneElementCut_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 1,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_MidSizedCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 3, .input = "",
-  .expected = "CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_MidSizedCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "",
+    .expected = "CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_MidSizedCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 3, .input = "a",
-  .expected = "aCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_MidSizedCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "a",
+    .expected = "aCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_MidSizedCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 3, .input = "aeiou",
-  .expected = "aeiouCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_MidSizedCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "aeiou",
+    .expected = "aeiouCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_MidSizedCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 3,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_MidSizedCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_MidSizedCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 3,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Begin_MidSizedCut_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 3,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"
+                "CDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Begin_CutToEnd_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "",
-  .expected = ""
-};
+constexpr TestCaseReplacement LongString_Begin_CutToEnd_EmptyRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "", .expected = ""};
 
-constexpr TestCaseReplacement LongString_Begin_CutToEnd_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "a",
-  .expected = "a"
-};
+constexpr TestCaseReplacement LongString_Begin_CutToEnd_OneElementRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "a", .expected = "a"};
 
-constexpr TestCaseReplacement LongString_Begin_CutToEnd_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "aeiou",
-  .expected = "aeiou"
-};
+constexpr TestCaseReplacement LongString_Begin_CutToEnd_MidRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38, .input = "aeiou", .expected = "aeiou"};
 
-constexpr TestCaseReplacement LongString_Begin_CutToEnd_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_Begin_CutToEnd_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789"};
 
-constexpr TestCaseReplacement LongString_Begin_CutToEnd_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 0, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_Begin_CutToEnd_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 0,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Replace in the middle.
 
-constexpr TestCaseReplacement LongString_Mid_EmptyCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 18, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_EmptyCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 18,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_EmptyCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 18, .input = "a",
-  .expected = "_ABCDEFGHIJKLMNOPQaRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_EmptyCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 18,
+    .input    = "a",
+    .expected = "_ABCDEFGHIJKLMNOPQaRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_EmptyCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 18, .input = "aeiou",
-  .expected = "_ABCDEFGHIJKLMNOPQaeiouRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_EmptyCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 18,
+    .input    = "aeiou",
+    .expected = "_ABCDEFGHIJKLMNOPQaeiouRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_EmptyCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 18,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789RSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_EmptyCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 18,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789RSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_EmptyCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 18,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQ"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "RSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_EmptyCut_LongerThanCapacityRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from    = 18,
+    .to      = 18,
+    .input   = "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected =
+        "_ABCDEFGHIJKLMNOPQ"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "RSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_OneElementCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 19, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_OneElementCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 19,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_OneElementCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 19, .input = "a",
-  .expected = "_ABCDEFGHIJKLMNOPQaSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_OneElementCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 19,
+    .input    = "a",
+    .expected = "_ABCDEFGHIJKLMNOPQaSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_OneElementCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 19, .input = "aeiou",
-  .expected = "_ABCDEFGHIJKLMNOPQaeiouSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_OneElementCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 19,
+    .input    = "aeiou",
+    .expected = "_ABCDEFGHIJKLMNOPQaeiouSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_OneElementCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 19,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789STUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_OneElementCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 19,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789STUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_OneElementCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 19,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQ"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "STUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_OneElementCut_LongerThanCapacityRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from    = 18,
+    .to      = 19,
+    .input   = "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected =
+        "_ABCDEFGHIJKLMNOPQ"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "STUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_MidSizedCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 21, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_MidSizedCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 21,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_MidSizedCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 21, .input = "a",
-  .expected = "_ABCDEFGHIJKLMNOPQaUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_MidSizedCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 21,
+    .input    = "a",
+    .expected = "_ABCDEFGHIJKLMNOPQaUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_MidSizedCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 21, .input = "aeiou",
-  .expected = "_ABCDEFGHIJKLMNOPQaeiouUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_MidSizedCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 21,
+    .input    = "aeiou",
+    .expected = "_ABCDEFGHIJKLMNOPQaeiouUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_MidSizedCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 21,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789UVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_MidSizedCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 21,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789UVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_MidSizedCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 21,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQ"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-              "UVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_Mid_MidSizedCut_LongerThanCapacityRange{
+    .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from    = 18,
+    .to      = 21,
+    .input   = "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789_"
+               "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected =
+        "_ABCDEFGHIJKLMNOPQ"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789_"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "UVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_Mid_CutToEnd_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 38, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQ"
-};
+constexpr TestCaseReplacement LongString_Mid_CutToEnd_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 38,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQ"};
 
-constexpr TestCaseReplacement LongString_Mid_CutToEnd_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 38, .input = "a",
-  .expected = "_ABCDEFGHIJKLMNOPQa"
-};
+constexpr TestCaseReplacement LongString_Mid_CutToEnd_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 38,
+    .input    = "a",
+    .expected = "_ABCDEFGHIJKLMNOPQa"};
 
-constexpr TestCaseReplacement LongString_Mid_CutToEnd_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 38, .input = "aeiou",
-  .expected = "_ABCDEFGHIJKLMNOPQaeiou"
-};
+constexpr TestCaseReplacement LongString_Mid_CutToEnd_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 38,
+    .input    = "aeiou",
+    .expected = "_ABCDEFGHIJKLMNOPQaeiou"};
 
-constexpr TestCaseReplacement LongString_Mid_CutToEnd_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_Mid_CutToEnd_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQabcdefghijklmnopqrstuvwxyz0123456789"};
 
-constexpr TestCaseReplacement LongString_Mid_CutToEnd_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 18, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQ"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_Mid_CutToEnd_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 18,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQ"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"};
 
 // Replace at the end.
 
-constexpr TestCaseReplacement LongString_End_EmptyCut_EmptyRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 38, .to = 38, .input = "",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-};
+constexpr TestCaseReplacement LongString_End_EmptyCut_EmptyRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 38,
+    .to       = 38,
+    .input    = "",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"};
 
-constexpr TestCaseReplacement LongString_End_EmptyCut_OneElementRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 38, .to = 38, .input = "a",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_a"
-};
+constexpr TestCaseReplacement LongString_End_EmptyCut_OneElementRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 38,
+    .to       = 38,
+    .input    = "a",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_a"};
 
-constexpr TestCaseReplacement LongString_End_EmptyCut_MidRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 38, .to = 38, .input = "aeiou",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_aeiou"
-};
+constexpr TestCaseReplacement LongString_End_EmptyCut_MidRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 38,
+    .to       = 38,
+    .input    = "aeiou",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_aeiou"};
 
-constexpr TestCaseReplacement LongString_End_EmptyCut_LongRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 38, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_End_EmptyCut_LongRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 38,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_abcdefghijklmnopqrstuvwxyz0123456789"};
 
-constexpr TestCaseReplacement LongString_End_EmptyCut_LongerThanCapacityRange {
-  .initial = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", .from = 38, .to = 38,
-  .input = "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789_"
-           "abcdefghijklmnopqrstuvwxyz0123456789",
-  .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789_"
-              "abcdefghijklmnopqrstuvwxyz0123456789"
-};
+constexpr TestCaseReplacement LongString_End_EmptyCut_LongerThanCapacityRange{
+    .initial  = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    .from     = 38,
+    .to       = 38,
+    .input    = "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789",
+    .expected = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789_"
+                "abcdefghijklmnopqrstuvwxyz0123456789"};
 
 template <class Iter, class Sent, class Alloc>
 constexpr void test_string_replace_with_range() {
@@ -608,9 +644,9 @@ constexpr void test_string_replace_with_range() {
 
     auto get_pos = [](auto& c, auto index) { return std::ranges::next(c.begin(), index); };
     Container c(test_case.initial.begin(), test_case.initial.end());
-    auto in = wrap_input<Iter, Sent>(test_case.input);
+    auto in   = wrap_input<Iter, Sent>(test_case.input);
     auto from = get_pos(c, test_case.from);
-    auto to = get_pos(c, test_case.to);
+    auto to   = get_pos(c, test_case.to);
 
     Container& result = c.replace_with_range(from, to, in);
     assert(&result == &c);
@@ -846,25 +882,25 @@ constexpr void test_string_replace_with_range_rvalue_range() {
 
   { // Lvalue.
     std::string in = "abc";
-    std::string c = "123";
+    std::string c  = "123";
     c.replace_with_range(c.begin(), c.end(), in);
   }
 
   { // Const lvalue.
     const std::string in = "abc";
-    std::string c = "123";
+    std::string c        = "123";
     c.replace_with_range(c.begin(), c.end(), in);
   }
 
   { // Rvalue.
     std::string in = "abc";
-    std::string c = "123";
+    std::string c  = "123";
     c.replace_with_range(c.begin(), c.end(), std::move(in));
   }
 
   { // Const rvalue.
     const std::string in = "abc";
-    std::string c = "123";
+    std::string c        = "123";
     c.replace_with_range(c.begin(), c.end(), std::move(in));
   }
 }

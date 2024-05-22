@@ -14,10 +14,12 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -33,6 +35,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -120,6 +123,18 @@ static cl::opt<unsigned>
                 cl::desc("Print IR at pass with this number as "
                          "reported by print-passes-names"));
 
+static cl::opt<std::string> IRDumpDirectory(
+    "ir-dump-directory",
+    cl::desc("If specified, IR printed using the "
+             "-print-[before|after]{-all} options will be dumped into "
+             "files in this directory rather than written to stderr"),
+    cl::Hidden, cl::value_desc("filename"));
+
+template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
+  const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
+  return IRPtr ? *IRPtr : nullptr;
+}
+
 namespace {
 
 // An option for specifying an executable that will be called with the IR
@@ -137,18 +152,18 @@ static cl::opt<std::string>
 /// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
 /// certain global filters. Will never return nullptr if \p Force is true.
 const Module *unwrapModule(Any IR, bool Force = false) {
-  if (const auto **M = any_cast<const Module *>(&IR))
-    return *M;
+  if (const auto *M = unwrapIR<Module>(IR))
+    return M;
 
-  if (const auto **F = any_cast<const Function *>(&IR)) {
-    if (!Force && !isFunctionInPrintList((*F)->getName()))
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    if (!Force && !isFunctionInPrintList(F->getName()))
       return nullptr;
 
-    return (*F)->getParent();
+    return F->getParent();
   }
 
-  if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR)) {
-    for (const LazyCallGraph::Node &N : **C) {
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
       if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
         return F.getParent();
@@ -158,8 +173,8 @@ const Module *unwrapModule(Any IR, bool Force = false) {
     return nullptr;
   }
 
-  if (const auto **L = any_cast<const Loop *>(&IR)) {
-    const Function *F = (*L)->getHeader()->getParent();
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    const Function *F = L->getHeader()->getParent();
     if (!Force && !isFunctionInPrintList(F->getName()))
       return nullptr;
     return F->getParent();
@@ -201,17 +216,20 @@ void printIR(raw_ostream &OS, const Loop *L) {
 }
 
 std::string getIRName(Any IR) {
-  if (any_cast<const Module *>(&IR))
+  if (unwrapIR<Module>(IR))
     return "[module]";
 
-  if (const auto **F = any_cast<const Function *>(&IR))
-    return (*F)->getName().str();
+  if (const auto *F = unwrapIR<Function>(IR))
+    return F->getName().str();
 
-  if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
-    return (*C)->getName();
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
+    return C->getName();
 
-  if (const auto **L = any_cast<const Loop *>(&IR))
-    return (*L)->getName().str();
+  if (const auto *L = unwrapIR<Loop>(IR))
+    return L->getName().str();
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    return MF->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -233,17 +251,17 @@ bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
 }
 
 bool shouldPrintIR(Any IR) {
-  if (const auto **M = any_cast<const Module *>(&IR))
-    return moduleContainsFilterPrintFunc(**M);
+  if (const auto *M = unwrapIR<Module>(IR))
+    return moduleContainsFilterPrintFunc(*M);
 
-  if (const auto **F = any_cast<const Function *>(&IR))
-    return isFunctionInPrintList((*F)->getName());
+  if (const auto *F = unwrapIR<Function>(IR))
+    return isFunctionInPrintList(F->getName());
 
-  if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
-    return sccContainsFilterPrintFunc(**C);
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
+    return sccContainsFilterPrintFunc(*C);
 
-  if (const auto **L = any_cast<const Loop *>(&IR))
-    return isFunctionInPrintList((*L)->getHeader()->getParent()->getName());
+  if (const auto *L = unwrapIR<Loop>(IR))
+    return isFunctionInPrintList(L->getHeader()->getParent()->getName());
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -260,23 +278,23 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     return;
   }
 
-  if (const auto **M = any_cast<const Module *>(&IR)) {
-    printIR(OS, *M);
+  if (const auto *M = unwrapIR<Module>(IR)) {
+    printIR(OS, M);
     return;
   }
 
-  if (const auto **F = any_cast<const Function *>(&IR)) {
-    printIR(OS, *F);
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    printIR(OS, F);
     return;
   }
 
-  if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR)) {
-    printIR(OS, *C);
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    printIR(OS, C);
     return;
   }
 
-  if (const auto **L = any_cast<const Loop *>(&IR)) {
-    printIR(OS, *L);
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    printIR(OS, L);
     return;
   }
   llvm_unreachable("Unknown wrapped IR type");
@@ -286,7 +304,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
-                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
+                        "VerifierPass", "PrintModulePass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -306,13 +325,10 @@ std::string makeHTMLReady(StringRef SR) {
 
 // Return the module when that is the appropriate level of comparison for \p IR.
 const Module *getModuleForComparison(Any IR) {
-  if (const auto **M = any_cast<const Module *>(&IR))
-    return *M;
-  if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
-    return (*C)
-        ->begin()
-        ->getFunction()
-        .getParent();
+  if (const auto *M = unwrapIR<Module>(IR))
+    return M;
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
+    return C->begin()->getFunction().getParent();
   return nullptr;
 }
 
@@ -325,8 +341,8 @@ bool isInterestingFunction(const Function &F) {
 bool isInteresting(Any IR, StringRef PassID, StringRef PassName) {
   if (isIgnored(PassID) || !isPassInPrintList(PassName))
     return false;
-  if (const auto **F = any_cast<const Function *>(&IR))
-    return isInterestingFunction(**F);
+  if (const auto *F = unwrapIR<Function>(IR))
+    return isInterestingFunction(*F);
   return true;
 }
 
@@ -501,7 +517,7 @@ void IRChangedTester::handleIR(const std::string &S, StringRef PassID) {
   static SmallVector<int> FD{-1};
   SmallVector<StringRef> SR{S};
   static SmallVector<std::string> FileName{""};
-  if (auto Err = prepareTempFiles(FD, SR, FileName)) {
+  if (prepareTempFiles(FD, SR, FileName)) {
     dbgs() << "Unable to create temporary file.";
     return;
   }
@@ -518,7 +534,7 @@ void IRChangedTester::handleIR(const std::string &S, StringRef PassID) {
     return;
   }
 
-  if (auto Err = cleanUpTempFiles(FileName))
+  if (cleanUpTempFiles(FileName))
     dbgs() << "Unable to remove temporary file.";
 }
 
@@ -648,12 +664,11 @@ template <typename T> void IRComparer<T>::analyzeIR(Any IR, IRDataT<T> &Data) {
     return;
   }
 
-  const Function **FPtr = any_cast<const Function *>(&IR);
-  const Function *F = FPtr ? *FPtr : nullptr;
+  const auto *F = unwrapIR<Function>(IR);
   if (!F) {
-    const Loop **L = any_cast<const Loop *>(&IR);
+    const auto *L = unwrapIR<Loop>(IR);
     assert(L && "Unknown IR unit.");
-    F = (*L)->getHeader()->getParent();
+    F = L->getHeader()->getParent();
   }
   assert(F && "Unknown IR unit.");
   generateFunctionData(Data, *F);
@@ -681,25 +696,111 @@ bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const Function &F) {
 }
 
 PrintIRInstrumentation::~PrintIRInstrumentation() {
-  assert(ModuleDescStack.empty() && "ModuleDescStack is not empty at exit");
+  assert(PassRunDescriptorStack.empty() &&
+         "PassRunDescriptorStack is not empty at exit");
 }
 
-void PrintIRInstrumentation::pushModuleDesc(StringRef PassID, Any IR) {
+static SmallString<32> getIRFileDisplayName(Any IR) {
+  SmallString<32> Result;
+  raw_svector_ostream ResultStream(Result);
   const Module *M = unwrapModule(IR);
-  ModuleDescStack.emplace_back(M, getIRName(IR), PassID);
+  stable_hash NameHash = stable_hash_combine_string(M->getName());
+  unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
+  write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
+  if (unwrapIR<Module>(IR)) {
+    ResultStream << "-module";
+  } else if (const auto *F = unwrapIR<Function>(IR)) {
+    ResultStream << "-function-";
+    stable_hash FunctionNameHash = stable_hash_combine_string(F->getName());
+    write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
+              MaxHashWidth);
+  } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    ResultStream << "-scc-";
+    stable_hash SCCNameHash = stable_hash_combine_string(C->getName());
+    write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
+  } else if (const auto *L = unwrapIR<Loop>(IR)) {
+    ResultStream << "-loop-";
+    stable_hash LoopNameHash = stable_hash_combine_string(L->getName());
+    write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
+  } else {
+    llvm_unreachable("Unknown wrapped IR type");
+  }
+  return Result;
 }
 
-PrintIRInstrumentation::PrintModuleDesc
-PrintIRInstrumentation::popModuleDesc(StringRef PassID) {
-  assert(!ModuleDescStack.empty() && "empty ModuleDescStack");
-  PrintModuleDesc ModuleDesc = ModuleDescStack.pop_back_val();
-  assert(std::get<2>(ModuleDesc).equals(PassID) && "malformed ModuleDescStack");
-  return ModuleDesc;
+std::string PrintIRInstrumentation::fetchDumpFilename(StringRef PassName,
+                                                      Any IR) {
+  const StringRef RootDirectory = IRDumpDirectory;
+  assert(!RootDirectory.empty() &&
+         "The flag -ir-dump-directory must be passed to dump IR to files");
+  SmallString<128> ResultPath;
+  ResultPath += RootDirectory;
+  SmallString<64> Filename;
+  raw_svector_ostream FilenameStream(Filename);
+  FilenameStream << CurrentPassNumber;
+  FilenameStream << "-";
+  FilenameStream << getIRFileDisplayName(IR);
+  FilenameStream << "-";
+  FilenameStream << PassName;
+  sys::path::append(ResultPath, Filename);
+  return std::string(ResultPath);
+}
+
+enum class IRDumpFileSuffixType {
+  Before,
+  After,
+  Invalidated,
+};
+
+static StringRef getFileSuffix(IRDumpFileSuffixType Type) {
+  static constexpr std::array FileSuffixes = {"-before.ll", "-after.ll",
+                                              "-invalidated.ll"};
+  return FileSuffixes[static_cast<size_t>(Type)];
+}
+
+void PrintIRInstrumentation::pushPassRunDescriptor(
+    StringRef PassID, Any IR, std::string &DumpIRFilename) {
+  const Module *M = unwrapModule(IR);
+  PassRunDescriptorStack.emplace_back(
+      PassRunDescriptor(M, DumpIRFilename, getIRName(IR), PassID));
+}
+
+PrintIRInstrumentation::PassRunDescriptor
+PrintIRInstrumentation::popPassRunDescriptor(StringRef PassID) {
+  assert(!PassRunDescriptorStack.empty() && "empty PassRunDescriptorStack");
+  PassRunDescriptor Descriptor = PassRunDescriptorStack.pop_back_val();
+  assert(Descriptor.PassID.equals(PassID) &&
+         "malformed PassRunDescriptorStack");
+  return Descriptor;
+}
+
+// Callers are responsible for closing the returned file descriptor
+static int prepareDumpIRFileDescriptor(const StringRef DumpIRFilename) {
+  std::error_code EC;
+  auto ParentPath = llvm::sys::path::parent_path(DumpIRFilename);
+  if (!ParentPath.empty()) {
+    std::error_code EC = llvm::sys::fs::create_directories(ParentPath);
+    if (EC)
+      report_fatal_error(Twine("Failed to create directory ") + ParentPath +
+                         " to support -ir-dump-directory: " + EC.message());
+  }
+  int Result = 0;
+  EC = sys::fs::openFile(DumpIRFilename, Result, sys::fs::CD_OpenAlways,
+                         sys::fs::FA_Write, sys::fs::OF_None);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + DumpIRFilename +
+                       " to support -ir-dump-directory: " + EC.message());
+  return Result;
 }
 
 void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (isIgnored(PassID))
     return;
+
+  std::string DumpIRFilename;
+  if (!IRDumpDirectory.empty() &&
+      (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID)))
+    DumpIRFilename = fetchDumpFilename(PassID, IR);
 
   // Saving Module for AfterPassInvalidated operations.
   // Note: here we rely on a fact that we do not change modules while
@@ -707,7 +808,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   // for all print operations that has not happen yet.
   if (shouldPrintPassNumbers() || shouldPrintAtPassNumber() ||
       shouldPrintAfterPass(PassID))
-    pushModuleDesc(PassID, IR);
+    pushPassRunDescriptor(PassID, IR, DumpIRFilename);
 
   if (!shouldPrintIR(IR))
     return;
@@ -715,14 +816,26 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   ++CurrentPassNumber;
 
   if (shouldPrintPassNumbers())
-    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << "\n";   
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
+           << " on " << getIRName(IR) << "\n";
 
   if (!shouldPrintBeforePass(PassID))
     return;
 
-  dbgs() << "*** IR Dump Before " << PassID << " on " << getIRName(IR)
-         << " ***\n";
-  unwrapAndPrint(dbgs(), IR);
+  auto WriteIRToStream = [&](raw_ostream &Stream) {
+    Stream << "; *** IR Dump Before " << PassID << " on " << getIRName(IR)
+           << " ***\n";
+    unwrapAndPrint(Stream, IR);
+  };
+
+  if (!DumpIRFilename.empty()) {
+    DumpIRFilename += getFileSuffix(IRDumpFileSuffixType::Before);
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilename), /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream);
+  } else {
+    WriteIRToStream(dbgs());
+  }
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
@@ -733,21 +846,33 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
       !shouldPrintAtPassNumber())
     return;
 
-  const Module *M;
-  std::string IRName;
-  StringRef StoredPassID;
-  std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+  auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
 
   if (!shouldPrintIR(IR) || !shouldPrintAfterPass(PassID))
     return;
 
-  dbgs() << "*** IR Dump "
-         << (shouldPrintAtPassNumber()
-                 ? StringRef(formatv("At {0}-{1}", CurrentPassNumber, PassID))
-                 : StringRef(formatv("After {0}", PassID)))
-         << " on " << IRName << " ***\n";
-  unwrapAndPrint(dbgs(), IR);
+  auto WriteIRToStream = [&](raw_ostream &Stream, const StringRef IRName) {
+    Stream << "; *** IR Dump "
+           << (shouldPrintAtPassNumber()
+                   ? StringRef(formatv("At {0}-{1}", CurrentPassNumber, PassID))
+                   : StringRef(formatv("After {0}", PassID)))
+           << " on " << IRName << " ***\n";
+    unwrapAndPrint(Stream, IR);
+  };
+
+  if (!IRDumpDirectory.empty()) {
+    assert(!DumpIRFilename.empty() && "DumpIRFilename must not be empty and "
+                                      "should be set in printBeforePass");
+    const std::string DumpIRFilenameWithSuffix =
+        DumpIRFilename + getFileSuffix(IRDumpFileSuffixType::After).str();
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilenameWithSuffix),
+        /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream, IRName);
+  } else {
+    WriteIRToStream(dbgs(), IRName);
+  }
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
@@ -758,25 +883,38 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
       !shouldPrintAtPassNumber())
     return;
 
-  const Module *M;
-  std::string IRName;
-  StringRef StoredPassID;
-  std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+  auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
   // Additional filtering (e.g. -filter-print-func) can lead to module
   // printing being skipped.
   if (!M || !shouldPrintAfterPass(PassID))
     return;
 
-  SmallString<20> Banner;
-  if (shouldPrintAtPassNumber())
-    Banner = formatv("*** IR Dump At {0}-{1} on {2} (invalidated) ***",
-                     CurrentPassNumber, PassID, IRName);
-  else 
-    Banner = formatv("*** IR Dump After {0} on {1} (invalidated) ***", 
-                     PassID, IRName);
-  dbgs() << Banner << "\n";
-  printIR(dbgs(), M);
+  auto WriteIRToStream = [&](raw_ostream &Stream, const Module *M,
+                             const StringRef IRName) {
+    SmallString<20> Banner;
+    if (shouldPrintAtPassNumber())
+      Banner = formatv("; *** IR Dump At {0}-{1} on {2} (invalidated) ***",
+                       CurrentPassNumber, PassID, IRName);
+    else
+      Banner = formatv("; *** IR Dump After {0} on {1} (invalidated) ***",
+                       PassID, IRName);
+    Stream << Banner << "\n";
+    printIR(Stream, M);
+  };
+
+  if (!IRDumpDirectory.empty()) {
+    assert(!DumpIRFilename.empty() && "DumpIRFilename must not be empty and "
+                                      "should be set in printBeforePass");
+    const std::string DumpIRFilenameWithSuffix =
+        DumpIRFilename + getFileSuffix(IRDumpFileSuffixType::Invalidated).str();
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilenameWithSuffix),
+        /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream, M, IRName);
+  } else {
+    WriteIRToStream(dbgs(), M, IRName);
+  }
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {
@@ -837,11 +975,10 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  const Function **FPtr = any_cast<const Function *>(&IR);
-  const Function *F = FPtr ? *FPtr : nullptr;
+  const auto *F = unwrapIR<Function>(IR);
   if (!F) {
-    if (const auto **L = any_cast<const Loop *>(&IR))
-      F = (*L)->getHeader()->getParent();
+    if (const auto *L = unwrapIR<Loop>(IR))
+      F = L->getHeader()->getParent();
   }
   bool ShouldRun = !(F && F->hasOptNone());
   if (!ShouldRun && DebugLogging) {
@@ -916,14 +1053,14 @@ void PrintPassInstrumentation::registerCallbacks(
 
     auto &OS = print();
     OS << "Running pass: " << PassID << " on " << getIRName(IR);
-    if (const auto **F = any_cast<const Function *>(&IR)) {
-      unsigned Count = (*F)->getInstructionCount();
+    if (const auto *F = unwrapIR<Function>(IR)) {
+      unsigned Count = F->getInstructionCount();
       OS << " (" << Count << " instruction";
       if (Count != 1)
         OS << 's';
       OS << ')';
-    } else if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR)) {
-      int Count = (*C)->size();
+    } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      int Count = C->size();
       OS << " (" << Count << " node";
       if (Count != 1)
         OS << 's';
@@ -1138,10 +1275,10 @@ bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
 static SmallVector<Function *, 1> GetFunctions(Any IR) {
   SmallVector<Function *, 1> Functions;
 
-  if (const auto **MaybeF = any_cast<const Function *>(&IR)) {
-    Functions.push_back(*const_cast<Function **>(MaybeF));
-  } else if (const auto **MaybeM = any_cast<const Module *>(&IR)) {
-    for (Function &F : **const_cast<Module **>(MaybeM))
+  if (const auto *MaybeF = unwrapIR<Function>(IR)) {
+    Functions.push_back(const_cast<Function *>(MaybeF));
+  } else if (const auto *MaybeM = unwrapIR<Module>(IR)) {
+    for (Function &F : *const_cast<Module *>(MaybeM))
       Functions.push_back(&F);
   }
   return Functions;
@@ -1176,8 +1313,8 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
       FAM.getResult<PreservedFunctionHashAnalysis>(*F);
     }
 
-    if (auto *MaybeM = any_cast<const Module *>(&IR)) {
-      Module &M = **const_cast<Module **>(MaybeM);
+    if (const auto *MPtr = unwrapIR<Module>(IR)) {
+      auto &M = *const_cast<Module *>(MPtr);
       MAM.getResult<PreservedModuleHashAnalysis>(M);
     }
   });
@@ -1235,8 +1372,8 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
         CheckCFG(P, F->getName(), *GraphBefore,
                  CFG(F, /* TrackBBLifetime */ false));
     }
-    if (auto *MaybeM = any_cast<const Module *>(&IR)) {
-      Module &M = **const_cast<Module **>(MaybeM);
+    if (const auto *MPtr = unwrapIR<Module>(IR)) {
+      auto &M = *const_cast<Module *>(MPtr);
       if (auto *HashBefore =
               MAM.getCachedResult<PreservedModuleHashAnalysis>(M)) {
         if (HashBefore->Hash != StructuralHash(M)) {
@@ -1254,11 +1391,10 @@ void VerifyInstrumentation::registerCallbacks(
       [this](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
         if (isIgnored(P) || P == "VerifierPass")
           return;
-        const Function **FPtr = any_cast<const Function *>(&IR);
-        const Function *F = FPtr ? *FPtr : nullptr;
+        const auto *F = unwrapIR<Function>(IR);
         if (!F) {
-          if (const auto **L = any_cast<const Loop *>(&IR))
-            F = (*L)->getHeader()->getParent();
+          if (const auto *L = unwrapIR<Loop>(IR))
+            F = L->getHeader()->getParent();
         }
 
         if (F) {
@@ -1266,13 +1402,14 @@ void VerifyInstrumentation::registerCallbacks(
             dbgs() << "Verifying function " << F->getName() << "\n";
 
           if (verifyFunction(*F, &errs()))
-            report_fatal_error("Broken function found, compilation aborted!");
+            report_fatal_error(formatv("Broken function found after pass "
+                                       "\"{0}\", compilation aborted!",
+                                       P));
         } else {
-          const Module **MPtr = any_cast<const Module *>(&IR);
-          const Module *M = MPtr ? *MPtr : nullptr;
+          const auto *M = unwrapIR<Module>(IR);
           if (!M) {
-            if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
-              M = (*C)->begin()->getFunction().getParent();
+            if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
+              M = C->begin()->getFunction().getParent();
           }
 
           if (M) {
@@ -1280,7 +1417,9 @@ void VerifyInstrumentation::registerCallbacks(
               dbgs() << "Verifying module " << M->getName() << "\n";
 
             if (verifyModule(*M, &errs()))
-              report_fatal_error("Broken module found, compilation aborted!");
+              report_fatal_error(formatv("Broken module found after pass "
+                                         "\"{0}\", compilation aborted!",
+                                         P));
           }
         }
       });

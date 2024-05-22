@@ -26,7 +26,7 @@
 #include "range_reduction.h"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -155,4 +155,4 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

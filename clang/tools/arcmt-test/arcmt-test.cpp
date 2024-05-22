@@ -129,7 +129,7 @@ static bool checkForMigration(StringRef resourcesPath,
     return true;
   }
 
-  if (!CI.getLangOpts()->ObjC)
+  if (!CI.getLangOpts().ObjC)
     return false;
 
   arcmt::checkForManualIssues(CI, CI.getFrontendOpts().Inputs[0],
@@ -167,14 +167,14 @@ static bool performTransformations(StringRef resourcesPath,
     return true;
   }
 
-  if (!origCI.getLangOpts()->ObjC)
+  if (!origCI.getLangOpts().ObjC)
     return false;
 
   MigrationProcess migration(origCI, std::make_shared<PCHContainerOperations>(),
                              DiagClient);
 
   std::vector<TransformFn>
-    transforms = arcmt::getAllTransformations(origCI.getLangOpts()->getGC(),
+    transforms = arcmt::getAllTransformations(origCI.getLangOpts().getGC(),
                                  origCI.getMigratorOpts().NoFinalizeRemoval);
   assert(!transforms.empty());
 
@@ -230,7 +230,7 @@ static bool verifyTransformedFiles(ArrayRef<std::string> resultFiles) {
   for (ArrayRef<std::string>::iterator
          I = resultFiles.begin(), E = resultFiles.end(); I != E; ++I) {
     StringRef fname(*I);
-    if (!fname.endswith(".result")) {
+    if (!fname.ends_with(".result")) {
       errs() << "error: filename '" << fname
                    << "' does not have '.result' extension\n";
       return true;

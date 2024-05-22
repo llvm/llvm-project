@@ -7,28 +7,37 @@ module openacc_declare_validity
 
   implicit none
 
-  real(8), dimension(10) :: aa, bb, ab, cc
+  real(8), dimension(10) :: aa, bb, ab, ac, ad, ae, af, cc, dd
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
 
   !$acc declare create(aa, bb)
 
+  !WARNING: 'aa' in the CREATE clause is already present in the same clause in this module
+  !$acc declare create(aa)
+
   !$acc declare link(ab)
 
   !$acc declare device_resident(cc)
 
   !ERROR: COPYOUT clause is not allowed on the DECLARE directive in module declaration section
-  !$acc declare copyout(ab)
+  !$acc declare copyout(ac)
 
   !ERROR: COPY clause is not allowed on the DECLARE directive in module declaration section
-  !$acc declare copy(ab)
+  !$acc declare copy(af)
 
   !ERROR: PRESENT clause is not allowed on the DECLARE directive in module declaration section
-  !$acc declare present(ab)
+  !$acc declare present(ad)
 
   !ERROR: DEVICEPTR clause is not allowed on the DECLARE directive in module declaration section
-  !$acc declare deviceptr(ab)
+  !$acc declare deviceptr(ae)
+
+  !ERROR: The ZERO modifier is not allowed for the CREATE clause on the DECLARE directive
+  !$acc declare create(zero: dd)
+
+  !ERROR: 'bb' in the COPYIN clause is already present in another CREATE clause in this module
+  !$acc declare copyin(bb)
 
 contains
 
@@ -36,6 +45,8 @@ contains
     real(8) :: cc(:)
     real(8) :: dd(:)
     !$acc declare present(cc, dd)
+    !ERROR: 'cc' in the CREATE clause is already present in another PRESENT clause in this module
+    !$acc declare create(cc)
   end subroutine sub1
 
   function fct1(ee, ff, gg, hh, ii)
@@ -53,5 +64,11 @@ contains
     !ERROR: Assumed-size dummy arrays may not appear on the DECLARE directive
     !$acc declare present(cc)
   end subroutine sub2
+
+  subroutine sub3()
+    real :: aa(100)
+    !ERROR: The ZERO modifier is not allowed for the COPYOUT clause on the DECLARE directive
+    !$acc declare copyout(zero: aa)
+  end subroutine
 
 end module openacc_declare_validity

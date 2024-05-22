@@ -14,10 +14,11 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sched_get_priority_min, (int policy)) {
-  long ret = __llvm_libc::syscall_impl(SYS_sched_get_priority_min, policy);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_get_priority_min, policy);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, sched_get_priority_min, (int policy)) {
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

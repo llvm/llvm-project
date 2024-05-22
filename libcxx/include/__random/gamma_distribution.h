@@ -29,6 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS gamma_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -40,19 +43,19 @@ public:
     public:
         typedef gamma_distribution distribution_type;
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit param_type(result_type __alpha = 1, result_type __beta = 1)
             : __alpha_(__alpha), __beta_(__beta) {}
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type alpha() const {return __alpha_;}
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type beta() const {return __beta_;}
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__alpha_ == __y.__alpha_ && __x.__beta_ == __y.__beta_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
     };
@@ -63,52 +66,52 @@ private:
 public:
     // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     gamma_distribution() : gamma_distribution(1) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit gamma_distribution(result_type __alpha, result_type __beta = 1)
         : __p_(param_type(__alpha, __beta)) {}
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit gamma_distribution(result_type __alpha = 1,
                                 result_type __beta = 1)
         : __p_(param_type(__alpha, __beta)) {}
 #endif
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit gamma_distribution(const param_type& __p)
         : __p_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type alpha() const {return __p_.alpha();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type beta() const {return __p_.beta();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return numeric_limits<result_type>::infinity();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const gamma_distribution& __x,
                         const gamma_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const gamma_distribution& __x,
                         const gamma_distribution& __y)
         {return !(__x == __y);}
@@ -137,7 +140,7 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
             const result_type __w = __u * (1 - __u);
             if (__w != 0)
             {
-                const result_type __y = _VSTD::sqrt(__c / __w) *
+                const result_type __y = std::sqrt(__c / __w) *
                                         (__u - result_type(0.5));
                 __x = __b + __y;
                 if (__x >= 0)
@@ -145,7 +148,7 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
                     const result_type __z = 64 * __w * __w * __w * __v * __v;
                     if (__z <= 1 - 2 * __y * __y / __x)
                         break;
-                    if (_VSTD::log(__z) <= 2 * (__b * _VSTD::log(__x / __b) - __y))
+                    if (std::log(__z) <= 2 * (__b * std::log(__x / __b) - __y))
                         break;
                 }
             }
@@ -159,14 +162,14 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
             const result_type __es = __egen(__g);
             if (__u <= 1 - __a)
             {
-                __x = _VSTD::pow(__u, 1 / __a);
+                __x = std::pow(__u, 1 / __a);
                 if (__x <= __es)
                     break;
             }
             else
             {
-                const result_type __e = -_VSTD::log((1-__u)/__a);
-                __x = _VSTD::pow(1 - __a + __a * __e, 1 / __a);
+                const result_type __e = -std::log((1-__u)/__a);
+                __x = std::pow(1 - __a + __a * __e, 1 / __a);
                 if (__x <= __e + __es)
                     break;
             }

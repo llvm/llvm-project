@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassOptions.h"
 
@@ -23,12 +23,11 @@ using namespace llvm::cl;
 namespace mlir {
 namespace sparse_tensor {
 
-/// Options for the "sparse-compiler" pipeline.  So far this only contains
+/// Options for the "sparsifier" pipeline.  So far this only contains
 /// a subset of the options that can be set for the underlying passes,
 /// because it must be manually kept in sync with the tablegen files
 /// for those passes.
-struct SparseCompilerOptions
-    : public PassPipelineOptions<SparseCompilerOptions> {
+struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   // These options must be kept in sync with `SparsificationBase`.
   // TODO(57514): These options are duplicated in Passes.td.
   PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
@@ -53,13 +52,6 @@ struct SparseCompilerOptions
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
 
-  PassOptions::Option<bool> enableIndexReduction{
-      *this, "enable-index-reduction",
-      desc("Enable dependent index reduction based algorithm to handle "
-           "non-trivial index expressions on sparse inputs (experimental "
-           "features)"),
-      init(false)};
-
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
       desc("Enable runtime library for manipulating sparse tensors"),
@@ -73,23 +65,19 @@ struct SparseCompilerOptions
       *this, "enable-buffer-initialization",
       desc("Enable zero-initialization of memory buffers"), init(false)};
 
+  // TODO: Delete the option, it should also be false after switching to
+  // buffer-deallocation-pass
   PassOptions::Option<bool> createSparseDeallocs{
       *this, "create-sparse-deallocs",
       desc("Specify if the temporary buffers created by the sparse "
            "compiler should be deallocated. For compatibility with core "
            "bufferization passes. "
-           "This option is only used when enable-runtime-library=false. "
-           "See also create-deallocs for BufferizationOption."),
+           "This option is only used when enable-runtime-library=false."),
       init(true)};
 
   PassOptions::Option<int32_t> vectorLength{
       *this, "vl", desc("Set the vector length (0 disables vectorization)"),
       init(0)};
-
-  // These options must be kept in sync with `SparseTensorConversionBase`.
-  PassOptions::Option<int32_t> sparseToSparse{
-      *this, "s2s-strategy",
-      desc("Set the strategy for sparse-to-sparse conversion"), init(0)};
 
   // These options must be kept in sync with the `ConvertVectorToLLVM`
   // (defined in include/mlir/Dialect/SparseTensor/Pipelines/Passes.h).
@@ -129,6 +117,23 @@ struct SparseCompilerOptions
                                            desc("GPU target architecture")};
   PassOptions::Option<std::string> gpuFeatures{*this, "gpu-features",
                                                desc("GPU target features")};
+  /// For NVIDIA GPUs there are 3 compilation format options:
+  /// 1. `isa`: the compiler generates PTX and the driver JITs the PTX.
+  /// 2. `bin`: generates a CUBIN object for `chip=gpuChip`.
+  /// 3. `fatbin`: generates a fat binary with a CUBIN object for `gpuChip` and
+  /// also embeds the PTX in the fat binary.
+  /// Notes:
+  /// Option 1 adds a significant runtime performance hit, however, tests are
+  /// more likely to pass with this option.
+  /// Option 2 is better for execution time as there is no JIT; however, the
+  /// program will fail if there's an architecture mismatch between `gpuChip`
+  /// and the GPU running the program.
+  /// Option 3 is the best compromise between options 1 and 2 as it can JIT in
+  /// case of an architecture mismatch between `gpuChip` and the running
+  /// architecture. However, it's only possible to JIT to a higher CC than
+  /// `gpuChip`.
+  PassOptions::Option<std::string> gpuFormat{
+      *this, "gpu-format", desc("GPU compilation format"), init("fatbin")};
 
   /// This option is used to enable GPU library generation.
   PassOptions::Option<bool> enableGPULibgen{
@@ -138,14 +143,7 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableIndexReduction,
-                                 enableGPULibgen, enableRuntimeLibrary);
-  }
-
-  /// Projects out the options for `createSparseTensorConversionPass`.
-  SparseTensorConversionOptions sparseTensorConversionOptions() const {
-    return SparseTensorConversionOptions(
-        sparseToSparseConversionStrategy(sparseToSparse));
+    return SparsificationOptions(parallelization, enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
@@ -165,15 +163,14 @@ struct SparseCompilerOptions
 // Building and Registering.
 //===----------------------------------------------------------------------===//
 
-/// Adds the "sparse-compiler" pipeline to the `OpPassManager`.  This
+/// Adds the "sparsifier" pipeline to the `OpPassManager`.  This
 /// is the standard pipeline for taking sparsity-agnostic IR using
 /// the sparse-tensor type and lowering it to LLVM IR with concrete
 /// representations and algorithms for sparse tensors.
-void buildSparseCompiler(OpPassManager &pm,
-                         const SparseCompilerOptions &options);
+void buildSparsifier(OpPassManager &pm, const SparsifierOptions &options);
 
 /// Registers all pipelines for the `sparse_tensor` dialect.  At present,
-/// this includes only "sparse-compiler".
+/// this includes only "sparsifier".
 void registerSparseTensorPipelines();
 
 } // namespace sparse_tensor

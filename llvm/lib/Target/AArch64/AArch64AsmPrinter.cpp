@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -47,10 +48,12 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -89,6 +92,10 @@ public:
 
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
+  std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+             codeview::JumpTableEntrySize>
+  getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
+                           const MCSymbol *BranchLabel) const override;
 
   void emitFunctionEntryLabel() override;
 
@@ -138,9 +145,9 @@ public:
     SetupMachineFunction(MF);
 
     if (STI->isTargetCOFF()) {
-      bool Internal = MF.getFunction().hasInternalLinkage();
-      COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
-                                              : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+      bool Local = MF.getFunction().hasLocalLinkage();
+      COFF::SymbolStorageClass Scl =
+          Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
       int Type =
         COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
@@ -194,6 +201,15 @@ private:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  const MCSubtargetInfo *getIFuncMCSubtargetInfo() const override {
+    assert(STI);
+    return STI;
+  }
+  void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                              MCSymbol *LazyPointer) override;
+  void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
+                                    MCSymbol *LazyPointer) override;
 };
 
 } // end anonymous namespace
@@ -970,6 +986,8 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       RegClass = &AArch64::ZPRRegClass;
     } else if (AArch64::PPRRegClass.contains(Reg)) {
       RegClass = &AArch64::PPRRegClass;
+    } else if (AArch64::PNRRegClass.contains(Reg)) {
+      RegClass = &AArch64::PNRRegClass;
     } else {
       RegClass = &AArch64::FPR128RegClass;
       AltName = AArch64::vreg;
@@ -1060,6 +1078,30 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
       OutStreamer->emitValue(Value, Size);
     }
   }
+}
+
+std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+           codeview::JumpTableEntrySize>
+AArch64AsmPrinter::getCodeViewJumpTableInfo(int JTI,
+                                            const MachineInstr *BranchInstr,
+                                            const MCSymbol *BranchLabel) const {
+  const auto AFI = MF->getInfo<AArch64FunctionInfo>();
+  const auto Base = AArch64FI->getJumpTableEntryPCRelSymbol(JTI);
+  codeview::JumpTableEntrySize EntrySize;
+  switch (AFI->getJumpTableEntrySize(JTI)) {
+  case 1:
+    EntrySize = codeview::JumpTableEntrySize::UInt8ShiftLeft;
+    break;
+  case 2:
+    EntrySize = codeview::JumpTableEntrySize::UInt16ShiftLeft;
+    break;
+  case 4:
+    EntrySize = codeview::JumpTableEntrySize::Int32;
+    break;
+  default:
+    llvm_unreachable("Unexpected jump table entry size");
+  }
+  return std::make_tuple(Base, 0, BranchLabel, EntrySize);
 }
 
 void AArch64AsmPrinter::emitFunctionEntryLabel() {
@@ -1330,7 +1372,7 @@ void AArch64AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI) {
 void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   Register DestReg = MI.getOperand(0).getReg();
   if (STI->hasZeroCycleZeroingFP() && !STI->hasZeroCycleZeroingFPWorkaround() &&
-      STI->hasNEON()) {
+      STI->isNeonAvailable()) {
     // Convert H/S register to corresponding D register
     if (AArch64::H0 <= DestReg && DestReg <= AArch64::H31)
       DestReg = AArch64::D0 + (DestReg - AArch64::H0);
@@ -1453,8 +1495,13 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
   }
   case AArch64::MOVIv2d_ns:
-    // If the target has <rdar://problem/16473581>, lower this
-    // instruction to movi.16b instead.
+    // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
+    // as movi is more efficient across all cores. Newer cores can eliminate
+    // fmovs early and there is no difference with movi, but this not true for
+    // all implementations.
+    //
+    // The floating-point version doesn't quite work in rare cases on older
+    // CPUs, so on those targets we lower this instruction to movi.16b instead.
     if (STI->hasZeroCycleZeroingFPWorkaround() &&
         MI->getOperand(1).getImm() == 0) {
       MCInst TmpInst;
@@ -1772,6 +1819,201 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                               MCSymbol *LazyPointer) {
+  // _ifunc:
+  //   adrp    x16, lazy_pointer@GOTPAGE
+  //   ldr     x16, [x16, lazy_pointer@GOTPAGEOFF]
+  //   ldr     x16, [x16]
+  //   br      x16
+
+  {
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X16));
+    MCOperand SymPage;
+    MCInstLowering.lowerOperand(
+        MachineOperand::CreateMCSymbol(LazyPointer,
+                                       AArch64II::MO_GOT | AArch64II::MO_PAGE),
+        SymPage);
+    Adrp.addOperand(SymPage);
+    OutStreamer->emitInstruction(Adrp, *STI);
+  }
+
+  {
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    MCOperand SymPageOff;
+    MCInstLowering.lowerOperand(
+        MachineOperand::CreateMCSymbol(LazyPointer, AArch64II::MO_GOT |
+                                                        AArch64II::MO_PAGEOFF),
+        SymPageOff);
+    Ldr.addOperand(SymPageOff);
+    Ldr.addOperand(MCOperand::createImm(0));
+    OutStreamer->emitInstruction(Ldr, *STI);
+  }
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRXui)
+                                   .addReg(AArch64::X16)
+                                   .addReg(AArch64::X16)
+                                   .addImm(0),
+                               *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
+                                                 ? AArch64::BRAAZ
+                                                 : AArch64::BR)
+                                   .addReg(AArch64::X16),
+                               *STI);
+}
+
+void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
+                                                     const GlobalIFunc &GI,
+                                                     MCSymbol *LazyPointer) {
+  // These stub helpers are only ever called once, so here we're optimizing for
+  // minimum size by using the pre-indexed store variants, which saves a few
+  // bytes of instructions to bump & restore sp.
+
+  // _ifunc.stub_helper:
+  //   stp	fp, lr, [sp, #-16]!
+  //   mov	fp, sp
+  //   stp	x1, x0, [sp, #-16]!
+  //   stp	x3, x2, [sp, #-16]!
+  //   stp	x5, x4, [sp, #-16]!
+  //   stp	x7, x6, [sp, #-16]!
+  //   stp	d1, d0, [sp, #-16]!
+  //   stp	d3, d2, [sp, #-16]!
+  //   stp	d5, d4, [sp, #-16]!
+  //   stp	d7, d6, [sp, #-16]!
+  //   bl	_resolver
+  //   adrp	x16, lazy_pointer@GOTPAGE
+  //   ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
+  //   str	x0, [x16]
+  //   mov	x16, x0
+  //   ldp	d7, d6, [sp], #16
+  //   ldp	d5, d4, [sp], #16
+  //   ldp	d3, d2, [sp], #16
+  //   ldp	d1, d0, [sp], #16
+  //   ldp	x7, x6, [sp], #16
+  //   ldp	x5, x4, [sp], #16
+  //   ldp	x3, x2, [sp], #16
+  //   ldp	x1, x0, [sp], #16
+  //   ldp	fp, lr, [sp], #16
+  //   br	x16
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
+                                   .addReg(AArch64::SP)
+                                   .addReg(AArch64::FP)
+                                   .addReg(AArch64::LR)
+                                   .addReg(AArch64::SP)
+                                   .addImm(-2),
+                               *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
+                                   .addReg(AArch64::FP)
+                                   .addReg(AArch64::SP)
+                                   .addImm(0)
+                                   .addImm(0),
+                               *STI);
+
+  for (int I = 0; I != 4; ++I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
+                                     .addReg(AArch64::SP)
+                                     .addReg(AArch64::X1 + 2 * I)
+                                     .addReg(AArch64::X0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-2),
+                                 *STI);
+
+  for (int I = 0; I != 4; ++I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDpre)
+                                     .addReg(AArch64::SP)
+                                     .addReg(AArch64::D1 + 2 * I)
+                                     .addReg(AArch64::D0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-2),
+                                 *STI);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(AArch64::BL)
+          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
+      *STI);
+
+  {
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X16));
+    MCOperand SymPage;
+    MCInstLowering.lowerOperand(
+        MachineOperand::CreateES(LazyPointer->getName().data() + 1,
+                                 AArch64II::MO_GOT | AArch64II::MO_PAGE),
+        SymPage);
+    Adrp.addOperand(SymPage);
+    OutStreamer->emitInstruction(Adrp, *STI);
+  }
+
+  {
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    MCOperand SymPageOff;
+    MCInstLowering.lowerOperand(
+        MachineOperand::CreateES(LazyPointer->getName().data() + 1,
+                                 AArch64II::MO_GOT | AArch64II::MO_PAGEOFF),
+        SymPageOff);
+    Ldr.addOperand(SymPageOff);
+    Ldr.addOperand(MCOperand::createImm(0));
+    OutStreamer->emitInstruction(Ldr, *STI);
+  }
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STRXui)
+                                   .addReg(AArch64::X0)
+                                   .addReg(AArch64::X16)
+                                   .addImm(0),
+                               *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
+                                   .addReg(AArch64::X16)
+                                   .addReg(AArch64::X0)
+                                   .addImm(0)
+                                   .addImm(0),
+                               *STI);
+
+  for (int I = 3; I != -1; --I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDpost)
+                                     .addReg(AArch64::SP)
+                                     .addReg(AArch64::D1 + 2 * I)
+                                     .addReg(AArch64::D0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(2),
+                                 *STI);
+
+  for (int I = 3; I != -1; --I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
+                                     .addReg(AArch64::SP)
+                                     .addReg(AArch64::X1 + 2 * I)
+                                     .addReg(AArch64::X0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(2),
+                                 *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
+                                   .addReg(AArch64::SP)
+                                   .addReg(AArch64::FP)
+                                   .addReg(AArch64::LR)
+                                   .addReg(AArch64::SP)
+                                   .addImm(2),
+                               *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
+                                                 ? AArch64::BRAAZ
+                                                 : AArch64::BR)
+                                   .addReg(AArch64::X16),
+                               *STI);
 }
 
 // Force static initialization.

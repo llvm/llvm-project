@@ -1,7 +1,6 @@
 // RUN: %clang_cc1  -fsyntax-only -triple x86_64-apple-macosx10.11 -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -triple x86_64-apple-macosx10.11 -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://20408445
  
 @protocol NSFileManagerDelegate @end
 

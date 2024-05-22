@@ -239,8 +239,9 @@ public:
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope());
-    } else if constexpr (std::is_same_v<A, parser::EndSelectStmt>) {
-      // the label on an END SELECT is not in the last case
+    } else if constexpr (std::is_same_v<A, parser::EndIfStmt> ||
+        std::is_same_v<A, parser::EndSelectStmt>) {
+      // the label on an END IF/SELECT is not in the last part/case
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(), true);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
       constexpr bool isExecutableConstructEndStmt{true};
@@ -274,16 +275,43 @@ public:
     return PushConstructName(criticalConstruct);
   }
   bool Pre(const parser::DoConstruct &doConstruct) {
-    return PushConstructName(doConstruct);
+    const auto &optionalName{std::get<std::optional<parser::Name>>(
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
+            .statement.t)};
+    if (optionalName) {
+      constructNames_.emplace_back(optionalName->ToString());
+    }
+    // Allow FORTRAN '66 extended DO ranges
+    PushScope().isExteriorGotoFatal = false;
+    // Process labels of the DO and END DO statements, but not the
+    // statements themselves, so that a non-construct END DO
+    // can be distinguished (below).
+    Pre(std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t));
+    Walk(std::get<parser::Block>(doConstruct.t), *this);
+    Pre(std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t));
+    PopConstructName(doConstruct);
+    return false;
+  }
+  void Post(const parser::EndDoStmt &endDoStmt) {
+    // Visited only for non-construct labeled DO termination
+    if (const auto &name{endDoStmt.v}) {
+      context_.Say(name->source, "Unexpected DO construct name '%s'"_err_en_US,
+          name->source);
+    }
   }
   bool Pre(const parser::IfConstruct &ifConstruct) {
     return PushConstructName(ifConstruct);
   }
+  void Post(const parser::IfThenStmt &) { PushScope(); }
   bool Pre(const parser::IfConstruct::ElseIfBlock &) {
     return SwitchToNewScope();
   }
   bool Pre(const parser::IfConstruct::ElseBlock &) {
     return SwitchToNewScope();
+  }
+  bool Pre(const parser::EndIfStmt &) {
+    PopScope();
+    return true;
   }
   bool Pre(const parser::CaseConstruct &caseConstruct) {
     return PushConstructName(caseConstruct);
@@ -323,9 +351,6 @@ public:
   }
   void Post(const parser::CriticalConstruct &criticalConstruct) {
     PopConstructName(criticalConstruct);
-  }
-  void Post(const parser::DoConstruct &doConstruct) {
-    PopConstructName(doConstruct);
   }
   void Post(const parser::IfConstruct &ifConstruct) {
     PopConstructName(ifConstruct);
@@ -710,6 +735,22 @@ private:
   // C1131
   void CheckName(const parser::DoConstruct &doConstruct) {
     CheckEndName<parser::NonLabelDoStmt, parser::EndDoStmt>("DO", doConstruct);
+    if (auto label{std::get<std::optional<parser::Label>>(
+            std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
+                .statement.t)}) {
+      const auto &endDoStmt{
+          std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t)};
+      if (!endDoStmt.label || *endDoStmt.label != *label) {
+        context_
+            .Say(endDoStmt.source,
+                "END DO statement must have the label '%d' matching its DO statement"_err_en_US,
+                *label)
+            .Attach(std::get<parser::Statement<parser::NonLabelDoStmt>>(
+                        doConstruct.t)
+                        .source,
+                "corresponding DO statement"_en_US);
+      }
+    }
   }
   // C1035
   void CheckName(const parser::ForallConstruct &forallConstruct) {
@@ -1008,14 +1049,17 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
       }
       bool isFatal{false};
       ProxyForScope fromScope{scope};
-      for (ProxyForScope toScope{target.proxyForScope}; fromScope != toScope;
+      for (ProxyForScope toScope{target.proxyForScope}; HasScope(toScope);
            toScope = scopes[toScope].parent) {
+        while (scopes[fromScope].depth > scopes[toScope].depth) {
+          fromScope = scopes[fromScope].parent;
+        }
+        if (toScope == fromScope) {
+          break;
+        }
         if (scopes[toScope].isExteriorGotoFatal) {
           isFatal = true;
           break;
-        }
-        if (scopes[toScope].depth == scopes[fromScope].depth) {
-          fromScope = scopes[fromScope].parent;
         }
       }
       context.Say(position,

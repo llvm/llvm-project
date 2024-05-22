@@ -27,6 +27,7 @@
 // CHECK: __ARM_FEATURE_LDREX 0xF
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 1
+// CHECK-NOT: __ARM_FEATURE_RCPC 3
 // CHECK-NOT: __ARM_FEATURE_SHA2 1
 // CHECK-NOT: __ARM_FEATURE_SHA3 1
 // CHECK-NOT: __ARM_FEATURE_SHA512 1
@@ -139,8 +140,8 @@
 // RUN: %clang -target aarch64-none-elf -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-QRDMX %s
 // CHECK-QRDMX: __ARM_FEATURE_QRDMX 1
 
-// RUN: %clang -target aarch64 -march=arm64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
-// RUN: %clang -target aarch64 -march=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
+// RUN: not %clang -target aarch64 -march=arm64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
+// RUN: not %clang -target aarch64 -march=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
 // CHECK-ARCH-NOT-ACCEPT: error: unsupported argument {{.*}} to option '-march='
 
 // RUN: %clang -target aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-GENERIC %s
@@ -206,6 +207,7 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -472,10 +474,10 @@
 // RUN: %clang -target aarch64 -mtune=CyclonE -mcpu=cortex-a53  -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-MTUNE %s
 // CHECK-MCPU-MTUNE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+sha2" "-target-feature" "+neon" "-target-feature" "+zcm" "-target-feature" "+zcz"
 
-// RUN: %clang -target aarch64 -mcpu=generic+neon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
-// RUN: %clang -target aarch64 -mcpu=generic+noneon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
-// RUN: %clang -target aarch64 -march=armv8-a+neon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
-// RUN: %clang -target aarch64 -march=armv8-a+noneon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
+// RUN: not %clang -target aarch64 -mcpu=generic+neon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
+// RUN: not %clang -target aarch64 -mcpu=generic+noneon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
+// RUN: not %clang -target aarch64 -march=armv8-a+neon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
+// RUN: not %clang -target aarch64 -march=armv8-a+noneon -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ERROR-NEON %s
 // CHECK-ERROR-NEON: error: [no]neon is not accepted as modifier, please use [no]simd instead
 
 // RUN: %clang -target aarch64 -march=armv8.1a+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V81A-FEATURE-1 %s
@@ -598,6 +600,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
@@ -612,3 +615,6 @@
 
 // RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC %s
 // CHECK-RCPC: __ARM_FEATURE_RCPC 1
+
+// RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC3 %s
+// CHECK-RCPC3: __ARM_FEATURE_RCPC 3

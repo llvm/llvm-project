@@ -74,7 +74,7 @@ int main(int, char**) {
   std::array a5{3, 4, 5, 6, 7};
   // check that explicit construction works, i.e. no error
   static_assert(std::is_constructible_v< std::extents<int, D, D, 5, D, D>, decltype(a5)>,
-                "extents unexpectectly not constructible");
+                "extents unexpectedly not constructible");
   // check that implicit construction doesn't work
   assert((implicit_construction<std::extents<int, D, D, 5, D, D>>(a5).value == false));
 
@@ -82,5 +82,17 @@ int main(int, char**) {
   static_assert(std::is_convertible_v<IntType, int>, "Test helper IntType unexpectedly not convertible to int");
   static_assert(!std::is_constructible_v< std::extents<unsigned long, D>, std::array<IntType, 1>>,
                 "extents constructible from illegal arguments");
+
+  // index_type is not nothrow constructible
+  static_assert(std::is_convertible_v<IntType, unsigned char>);
+  static_assert(std::is_convertible_v<const IntType&, unsigned char>);
+  static_assert(!std::is_nothrow_constructible_v<unsigned char, const IntType&>);
+  static_assert(!std::is_constructible_v<std::dextents<unsigned char, 2>, std::array<IntType, 2>>);
+
+  // convertible from non-const to index_type but not  from const
+  static_assert(std::is_convertible_v<IntTypeNC, int>);
+  static_assert(!std::is_convertible_v<const IntTypeNC&, int>);
+  static_assert(std::is_nothrow_constructible_v<int, IntTypeNC>);
+  static_assert(!std::is_constructible_v<std::dextents<int, 2>, std::array<IntTypeNC, 2>>);
   return 0;
 }

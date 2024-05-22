@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64 -run-pass=prologepilog \
-# RUN: -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs -run-pass=aarch64-ptrauth %s -o - | FileCheck %s
 
 # Check that we save LR to a callee-saved register when possible.
 # foo() should use a callee-saved register. However, bar() should not.
@@ -32,7 +32,6 @@
 # CHECK:            BL @[[OUTLINED_FUNCTION]]
 # CHECK:        bb.5:
 # CHECK:            frame-destroy AUTIBSP
-# CHECK-NEXT:       frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:       RET
 name:            foo
 tracksRegLiveness: true

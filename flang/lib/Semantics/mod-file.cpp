@@ -44,10 +44,11 @@ struct ModHeader {
 };
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
-static void CollectSymbols(const Scope &, SymbolVector &, SymbolVector &);
+static void CollectSymbols(const Scope &, SymbolVector &, SymbolVector &,
+    std::map<const Symbol *, SourceName> &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
-    const parser::Expr *);
+    const parser::Expr *, const std::map<const Symbol *, SourceName> &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
@@ -173,11 +174,81 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   return all.str();
 }
 
+// Collect symbols from initializations that are being referenced directly
+// from other modules; they may require new USE associations.
+static void HarvestInitializerSymbols(
+    SourceOrderedSymbolSet &set, const Scope &scope) {
+  for (const auto &[_, symbol] : scope) {
+    if (symbol->has<DerivedTypeDetails>()) {
+      if (symbol->scope()) {
+        HarvestInitializerSymbols(set, *symbol->scope());
+      }
+    } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
+      if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
+        if (object->init()) {
+          for (SymbolRef ref : evaluate::CollectSymbols(*object->init())) {
+            set.emplace(*ref);
+          }
+        }
+      } else if (const auto *proc{symbol->detailsIf<ProcEntityDetails>()}) {
+        if (proc->init() && *proc->init()) {
+          set.emplace(**proc->init());
+        }
+      }
+    }
+  }
+}
+
+void ModFileWriter::PrepareRenamings(const Scope &scope) {
+  SourceOrderedSymbolSet symbolsInInits;
+  HarvestInitializerSymbols(symbolsInInits, scope);
+  for (SymbolRef s : symbolsInInits) {
+    const Scope *sMod{FindModuleContaining(s->owner())};
+    if (!sMod) {
+      continue;
+    }
+    SourceName rename{s->name()};
+    if (const Symbol * found{scope.FindSymbol(s->name())}) {
+      if (found == &*s) {
+        continue; // available in scope
+      }
+      if (const auto *generic{found->detailsIf<GenericDetails>()}) {
+        if (generic->derivedType() == &*s || generic->specific() == &*s) {
+          continue;
+        }
+      } else if (found->has<UseDetails>()) {
+        if (&found->GetUltimate() == &*s) {
+          continue; // already use-associated with same name
+        }
+      }
+      if (&s->owner() != &found->owner()) { // Symbol needs renaming
+        rename = scope.context().SaveTempName(
+            DEREF(sMod->symbol()).name().ToString() + "$" +
+            s->name().ToString());
+      }
+    }
+    // Symbol is used in this scope but not visible under its name
+    if (sMod->parent().IsIntrinsicModules()) {
+      uses_ << "use,intrinsic::";
+    } else {
+      uses_ << "use ";
+    }
+    uses_ << DEREF(sMod->symbol()).name() << ",only:";
+    if (rename != s->name()) {
+      uses_ << rename << "=>";
+    }
+    uses_ << s->name() << '\n';
+    useExtraAttrs_ << "private::" << rename << '\n';
+    renamings_.emplace(&*s, rename);
+  }
+}
+
 // Put out the visible symbols from scope.
 void ModFileWriter::PutSymbols(const Scope &scope) {
   SymbolVector sorted;
   SymbolVector uses;
-  CollectSymbols(scope, sorted, uses);
+  PrepareRenamings(scope);
+  CollectSymbols(scope, sorted, uses, renamings_);
   std::string buf; // stuff after CONTAINS in derived type
   llvm::raw_string_ostream typeBindings{buf};
   for (const Symbol &symbol : sorted) {
@@ -244,6 +315,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   }
 }
 
+// Return the symbol's attributes that should be written
+// into the mod file.
+static Attrs getSymbolAttrsToWrite(const Symbol &symbol) {
+  // Is SAVE attribute is implicit, it should be omitted
+  // to not violate F202x C862 for a common block member.
+  return symbol.attrs() & ~(symbol.implicitAttrs() & Attrs{Attr::SAVE});
+}
+
 static llvm::raw_ostream &PutGenericName(
     llvm::raw_ostream &os, const Symbol &symbol) {
   if (IsGenericDefinedOp(symbol)) {
@@ -271,13 +350,6 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.specific());
-              }
-              if (x.derivedType() &&
-                  &x.derivedType()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.derivedType());
-              }
             }
           },
           [&](const UseDetails &) { PutUse(symbol); },
@@ -321,7 +393,7 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(),
+              PutAttrs(decls_, getSymbolAttrsToWrite(symbol), x.bindName(),
                   x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
@@ -330,9 +402,7 @@ void ModFileWriter::PutSymbol(
           [](const MiscDetails &) {},
           [&](const auto &) {
             PutEntity(decls_, symbol);
-            if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
-              decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
-            }
+            PutDirective(decls_, symbol);
           },
       },
       symbol.details());
@@ -405,7 +475,7 @@ void ModFileWriter::PutDECStructure(
         }
         decls_ << ref->name();
         PutShape(decls_, object->shape(), '(', ')');
-        PutInit(decls_, *ref, object->init(), nullptr);
+        PutInit(decls_, *ref, object->init(), nullptr, renamings_);
         emittedDECFields_.insert(*ref);
       } else if (any) {
         break; // any later use of this structure will use RECORD/str/
@@ -420,6 +490,35 @@ void ModFileWriter::PutDECStructure(
 // Attributes that may be in a subprogram prefix
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
+
+static void PutOpenACCRoutineInfo(
+    llvm::raw_ostream &os, const SubprogramDetails &details) {
+  for (auto info : details.openACCRoutineInfos()) {
+    os << "!$acc routine";
+    if (info.isSeq()) {
+      os << " seq";
+    }
+    if (info.isGang()) {
+      os << " gang";
+      if (info.gangDim() > 0) {
+        os << "(dim: " << info.gangDim() << ")";
+      }
+    }
+    if (info.isVector()) {
+      os << " vector";
+    }
+    if (info.isWorker()) {
+      os << " worker";
+    }
+    if (info.isNohost()) {
+      os << " nohost";
+    }
+    if (info.bindName()) {
+      os << " bind(" << *info.bindName() << ")";
+    }
+    os << "\n";
+  }
+}
 
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
@@ -522,6 +621,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     decls_ << "import::" << import << "\n";
   }
   os << writer.decls_.str();
+  PutOpenACCRoutineInfo(os, details);
   os << "end\n";
   if (isInterface) {
     os << "end interface\n";
@@ -585,21 +685,8 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-// When a generic interface has the same name as a derived type
-// in the same scope, the generic shadows the derived type.
-// If the derived type were declared first, emit the generic
-// interface at the position of derived type's declaration.
-// (ReplaceName() is not used for this purpose because doing so
-// would confusingly position error messages pertaining to the generic
-// interface upon the derived type's declaration.)
 static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
-    if (const auto *derivedTypeOverload{generic->derivedType()}) {
-      if (derivedTypeOverload->name().begin() < symbol.name().begin()) {
-        return derivedTypeOverload->name();
-      }
-    }
-  } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
     if (use->symbol().attrs().test(Attr::PRIVATE)) {
       // Avoid the use in sorting of names created to access private
       // specific procedures as a result of generic resolution;
@@ -611,30 +698,41 @@ static inline SourceName NameInModuleFile(const Symbol &symbol) {
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
-// Namelists are an exception: they are sorted after other symbols.
-void CollectSymbols(
-    const Scope &scope, SymbolVector &sorted, SymbolVector &uses) {
-  SymbolVector namelist;
-  std::size_t commonSize{scope.commonBlocks().size()};
+// Generics and namelists are exceptions: they are sorted after other symbols.
+void CollectSymbols(const Scope &scope, SymbolVector &sorted,
+    SymbolVector &uses, std::map<const Symbol *, SourceName> &renamings) {
+  SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
+  std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
   for (SymbolRef symbol : symbols) {
-    if (!symbol->test(Symbol::Flag::ParentComp)) {
-      if (symbol->has<NamelistDetails>()) {
-        namelist.push_back(symbol);
-      } else {
-        sorted.push_back(symbol);
+    if (symbol->test(Symbol::Flag::ParentComp)) {
+    } else if (symbol->has<NamelistDetails>()) {
+      namelist.push_back(symbol);
+    } else if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
+      if (generic->specific() &&
+          &generic->specific()->owner() == &symbol->owner()) {
+        sorted.push_back(*generic->specific());
+      } else if (generic->derivedType() &&
+          &generic->derivedType()->owner() == &symbol->owner()) {
+        sorted.push_back(*generic->derivedType());
       }
-      if (const auto *details{symbol->detailsIf<GenericDetails>()}) {
-        uses.insert(uses.end(), details->uses().begin(), details->uses().end());
-      }
+      generics.push_back(symbol);
+    } else {
+      sorted.push_back(symbol);
+    }
+    if (const auto *details{symbol->detailsIf<GenericDetails>()}) {
+      uses.insert(uses.end(), details->uses().begin(), details->uses().end());
     }
   }
   // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
   // location of a symbol's name is the first "real" use.
-  std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(x).begin() < NameInModuleFile(y).begin();
-  });
+  auto sorter{[](SymbolRef x, SymbolRef y) {
+    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
+  }};
+  std::sort(sorted.begin(), sorted.end(), sorter);
+  std::sort(generics.begin(), generics.end(), sorter);
+  sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
@@ -703,10 +801,11 @@ void ModFileWriter::PutObjectEntity(
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
-      symbol.attrs());
+      getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
-  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
+  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit(),
+      renamings_);
   os << '\n';
   if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
     os << "!dir$ ignore_tkr(";
@@ -738,6 +837,15 @@ void ModFileWriter::PutObjectEntity(
   if (auto attr{details.cudaDataAttr()}) {
     PutLower(os << "attributes(", common::EnumToString(*attr))
         << ") " << symbol.name() << '\n';
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
+      }
+    }
   }
 }
 
@@ -791,12 +899,25 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
 }
 
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
-    const parser::Expr *unanalyzed) {
-  if (symbol.attrs().test(Attr::PARAMETER) || symbol.owner().IsDerivedType()) {
+    const parser::Expr *unanalyzed,
+    const std::map<const Symbol *, SourceName> &renamings) {
+  if (IsNamedConstant(symbol) || symbol.owner().IsDerivedType()) {
     const char *assign{symbol.attrs().test(Attr::POINTER) ? "=>" : "="};
     if (unanalyzed) {
       parser::Unparse(os << assign, *unanalyzed);
     } else if (init) {
+      if (const auto *dtConst{
+              evaluate::UnwrapExpr<evaluate::Constant<evaluate::SomeDerived>>(
+                  *init)}) {
+        const Symbol &dtSym{dtConst->result().derivedTypeSpec().typeSymbol()};
+        if (auto iter{renamings.find(&dtSym)}; iter != renamings.end()) {
+          // Initializer is a constant whose derived type's name has
+          // been brought into scope from a module under a new name
+          // to avoid a conflict.
+          dtConst->AsFortran(os << assign, &iter->second);
+          return;
+        }
+      }
       init->AsFortran(os << assign);
     }
   }
@@ -872,6 +993,46 @@ llvm::raw_ostream &PutLower(llvm::raw_ostream &os, std::string_view str) {
     os << parser::ToLowerCaseLetter(c);
   }
   return os;
+}
+
+void PutOpenACCDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::AccDeclare)) {
+    os << "!$acc declare ";
+    if (symbol.test(Symbol::Flag::AccCopy)) {
+      os << "copy";
+    } else if (symbol.test(Symbol::Flag::AccCopyIn) ||
+        symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "copyin";
+    } else if (symbol.test(Symbol::Flag::AccCopyOut)) {
+      os << "copyout";
+    } else if (symbol.test(Symbol::Flag::AccCreate)) {
+      os << "create";
+    } else if (symbol.test(Symbol::Flag::AccPresent)) {
+      os << "present";
+    } else if (symbol.test(Symbol::Flag::AccDevicePtr)) {
+      os << "deviceptr";
+    } else if (symbol.test(Symbol::Flag::AccDeviceResident)) {
+      os << "device_resident";
+    } else if (symbol.test(Symbol::Flag::AccLink)) {
+      os << "link";
+    }
+    os << "(";
+    if (symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "readonly: ";
+    }
+    os << symbol.name() << ")\n";
+  }
+}
+
+void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+    os << "!$omp threadprivate(" << symbol.name() << ")\n";
+  }
+}
+
+void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  PutOpenACCDirective(os, symbol);
+  PutOpenMPDirective(os, symbol);
 }
 
 struct Temp {
@@ -1106,30 +1267,49 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
-  if (!ancestor) {
+  Symbol *moduleSymbol{nullptr};
+  if (!ancestor) { // module, not submodule
     parentScope = &topScope;
+    auto pair{parentScope->try_emplace(name, UnknownDetails{})};
+    if (!pair.second) {
+      return nullptr;
+    }
+    moduleSymbol = &*pair.first->second;
+    moduleSymbol->set(Symbol::Flag::ModFile);
   } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
+    // submodule with submodule parent
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
+    // submodule with module parent
     parentScope = ancestor;
   }
-  auto pair{parentScope->try_emplace(name, UnknownDetails{})};
-  if (!pair.second) {
-    return nullptr;
-  }
   // Process declarations from the module file
-  Symbol &modSymbol{*pair.first->second};
-  modSymbol.set(Symbol::Flag::ModFile);
   bool wasInModuleFile{context_.foldingContext().inModuleFile()};
   context_.foldingContext().set_inModuleFile(true);
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_inModuleFile(wasInModuleFile);
-  CHECK(modSymbol.has<ModuleDetails>());
-  CHECK(modSymbol.test(Symbol::Flag::ModFile));
-  if (isIntrinsic.value_or(false)) {
-    modSymbol.attrs().set(Attr::INTRINSIC);
+  if (!moduleSymbol) {
+    // Submodule symbols' storage are owned by their parents' scopes,
+    // but their names are not in their parents' dictionaries -- we
+    // don't want to report bogus errors about clashes between submodule
+    // names and other objects in the parent scopes.
+    if (Scope * submoduleScope{ancestor->FindSubmodule(name)}) {
+      moduleSymbol = submoduleScope->symbol();
+      if (moduleSymbol) {
+        moduleSymbol->set(Symbol::Flag::ModFile);
+      }
+    }
   }
-  return modSymbol.scope();
+  if (moduleSymbol) {
+    CHECK(moduleSymbol->has<ModuleDetails>());
+    CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
+    if (isIntrinsic.value_or(false)) {
+      moduleSymbol->attrs().set(Attr::INTRINSIC);
+    }
+    return moduleSymbol->scope();
+  } else {
+    return nullptr;
+  }
 }
 
 parser::Message &ModFileReader::Say(const SourceName &name,

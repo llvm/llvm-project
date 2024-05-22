@@ -23,28 +23,28 @@
 
 // Test target codegen - host bc file has to be created first. (no significant differences with host version of target region)
 // RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK13
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK13
 // RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK15
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
 
 // RUN: %clang_cc1 -DLAMBDA -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK17
 
 // RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK7
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
 // RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK9
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK9
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
 
 // RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK11
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -3508,8 +3508,9 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l122
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], i64 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK13-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], i64 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK13-NEXT:  entry:
+// CHECK13-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[VEC_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK13-NEXT:    [[S_ARR_ADDR:%.*]] = alloca ptr, align 8
@@ -3517,6 +3518,7 @@ int main() {
 // CHECK13-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK13-NEXT:    [[T_VAR_CASTED:%.*]] = alloca i64, align 8
 // CHECK13-NEXT:    [[SIVAR_CASTED:%.*]] = alloca i64, align 8
+// CHECK13-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK13-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 8
 // CHECK13-NEXT:    store i64 [[T_VAR]], ptr [[T_VAR_ADDR]], align 8
 // CHECK13-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
@@ -3850,14 +3852,16 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l81
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
+// CHECK13-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[VEC_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK13-NEXT:    [[S_ARR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[VAR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[T_VAR_CASTED:%.*]] = alloca i64, align 8
+// CHECK13-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK13-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 8
 // CHECK13-NEXT:    store i64 [[T_VAR]], ptr [[T_VAR_ADDR]], align 8
 // CHECK13-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
@@ -4252,8 +4256,9 @@ int main() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l122
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], i32 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK15-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], i32 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK15-NEXT:  entry:
+// CHECK15-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[VEC_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[S_ARR_ADDR:%.*]] = alloca ptr, align 4
@@ -4261,6 +4266,7 @@ int main() {
 // CHECK15-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[T_VAR_CASTED:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[SIVAR_CASTED:%.*]] = alloca i32, align 4
+// CHECK15-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK15-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 4
 // CHECK15-NEXT:    store i32 [[T_VAR]], ptr [[T_VAR_ADDR]], align 4
 // CHECK15-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
@@ -4588,14 +4594,16 @@ int main() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l81
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR0]] {
+// CHECK15-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 noundef [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR0]] {
 // CHECK15-NEXT:  entry:
+// CHECK15-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[VEC_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[S_ARR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[VAR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[TMP:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[T_VAR_CASTED:%.*]] = alloca i32, align 4
+// CHECK15-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK15-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 4
 // CHECK15-NEXT:    store i32 [[T_VAR]], ptr [[T_VAR_ADDR]], align 4
 // CHECK15-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
@@ -4984,8 +4992,9 @@ int main() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l99
-// CHECK17-SAME: (i64 noundef [[G:%.*]], i64 noundef [[G1:%.*]], i64 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[G:%.*]], i64 noundef [[G1:%.*]], i64 noundef [[SIVAR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[G_ADDR:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[G1_ADDR:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i64, align 8
@@ -4993,6 +5002,7 @@ int main() {
 // CHECK17-NEXT:    [[G_CASTED:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[G1_CASTED:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[SIVAR_CASTED:%.*]] = alloca i64, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[G]], ptr [[G_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[G1]], ptr [[G1_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8

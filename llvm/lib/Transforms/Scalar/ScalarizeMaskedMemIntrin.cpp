@@ -125,7 +125,7 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
 //  br label %else
 //
 // else:                                             ; preds = %0, %cond.load
-//  %res.phi.else = phi <16 x i32> [ %5, %cond.load ], [ undef, %0 ]
+//  %res.phi.else = phi <16 x i32> [ %5, %cond.load ], [ poison, %0 ]
 //  %6 = extractelement <16 x i1> %mask, i32 1
 //  br i1 %6, label %cond.load1, label %else2
 //
@@ -386,11 +386,11 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
 // cond.load:
 // %Ptr0 = extractelement <16 x i32*> %Ptrs, i32 0
 // %Load0 = load i32, i32* %Ptr0, align 4
-// %Res0 = insertelement <16 x i32> undef, i32 %Load0, i32 0
+// %Res0 = insertelement <16 x i32> poison, i32 %Load0, i32 0
 // br label %else
 //
 // else:
-// %res.phi.else = phi <16 x i32>[%Res0, %cond.load], [undef, %0]
+// %res.phi.else = phi <16 x i32>[%Res0, %cond.load], [poison, %0]
 // %Mask1 = extractelement <16 x i1> %Mask, i32 1
 // br i1 %Mask1, label %cond.load1, label %else2
 //
@@ -645,7 +645,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   Value *VResult = PassThru;
 
   // Shorten the way if the mask is a vector of constants.
-  // Create a build_vector pattern, with loads/undefs as necessary and then
+  // Create a build_vector pattern, with loads/poisons as necessary and then
   // shuffle blend with the pass through value.
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
@@ -654,7 +654,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       Value *InsertElt;
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue()) {
-        InsertElt = UndefValue::get(EltTy);
+        InsertElt = PoisonValue::get(EltTy);
         ShuffleMask[Idx] = Idx + VectorWidth;
       } else {
         Value *NewPtr =

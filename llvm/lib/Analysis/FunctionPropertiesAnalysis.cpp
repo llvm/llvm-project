@@ -16,11 +16,35 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/CommandLine.h"
 #include <deque>
 
 using namespace llvm;
+
+namespace llvm {
+cl::opt<bool> EnableDetailedFunctionProperties(
+    "enable-detailed-function-properties", cl::Hidden, cl::init(false),
+    cl::desc("Whether or not to compute detailed function properties."));
+
+cl::opt<unsigned> BigBasicBlockInstructionThreshold(
+    "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
+    cl::desc("The minimum number of instructions a basic block should contain "
+             "before being considered big."));
+
+cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
+    "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
+    cl::desc("The minimum number of instructions a basic block should contain "
+             "before being considered medium-sized."));
+}
+
+static cl::opt<unsigned> CallWithManyArgumentsThreshold(
+    "call-with-many-arguments-threshold", cl::Hidden, cl::init(4),
+    cl::desc("The minimum number of arguments a function call must have before "
+             "it is considered having many arguments."));
 
 namespace {
 int64_t getNrBlocksFromCond(const BasicBlock &BB) {
@@ -62,6 +86,118 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     }
   }
   TotalInstructionCount += Direction * BB.sizeWithoutDebug();
+
+  if (EnableDetailedFunctionProperties) {
+    unsigned SuccessorCount = succ_size(&BB);
+    if (SuccessorCount == 1)
+      BasicBlocksWithSingleSuccessor += Direction;
+    else if (SuccessorCount == 2)
+      BasicBlocksWithTwoSuccessors += Direction;
+    else if (SuccessorCount > 2)
+      BasicBlocksWithMoreThanTwoSuccessors += Direction;
+
+    unsigned PredecessorCount = pred_size(&BB);
+    if (PredecessorCount == 1)
+      BasicBlocksWithSinglePredecessor += Direction;
+    else if (PredecessorCount == 2)
+      BasicBlocksWithTwoPredecessors += Direction;
+    else if (PredecessorCount > 2)
+      BasicBlocksWithMoreThanTwoPredecessors += Direction;
+
+    if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
+      BigBasicBlocks += Direction;
+    else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
+      MediumBasicBlocks += Direction;
+    else
+      SmallBasicBlocks += Direction;
+
+    // Calculate critical edges by looking through all successors of a basic
+    // block that has multiple successors and finding ones that have multiple
+    // predecessors, which represent critical edges.
+    if (SuccessorCount > 1) {
+      for (const auto *Successor : successors(&BB)) {
+        if (pred_size(Successor) > 1)
+          CriticalEdgeCount += Direction;
+      }
+    }
+
+    ControlFlowEdgeCount += Direction * SuccessorCount;
+
+    if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
+      if (!BI->isConditional())
+        UnconditionalBranchCount += Direction;
+    }
+
+    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+      if (I.isCast())
+        CastInstructionCount += Direction;
+
+      if (I.getType()->isFloatTy())
+        FloatingPointInstructionCount += Direction;
+      else if (I.getType()->isIntegerTy())
+        IntegerInstructionCount += Direction;
+
+      if (isa<IntrinsicInst>(I))
+        ++IntrinsicCount;
+
+      if (const auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Call->isIndirectCall())
+          IndirectCallCount += Direction;
+        else
+          DirectCallCount += Direction;
+
+        if (Call->getType()->isIntegerTy())
+          CallReturnsIntegerCount += Direction;
+        else if (Call->getType()->isFloatingPointTy())
+          CallReturnsFloatCount += Direction;
+        else if (Call->getType()->isPointerTy())
+          CallReturnsPointerCount += Direction;
+        else if (Call->getType()->isVectorTy()) {
+          if (Call->getType()->getScalarType()->isIntegerTy())
+            CallReturnsVectorIntCount += Direction;
+          else if (Call->getType()->getScalarType()->isFloatingPointTy())
+            CallReturnsVectorFloatCount += Direction;
+          else if (Call->getType()->getScalarType()->isPointerTy())
+            CallReturnsVectorPointerCount += Direction;
+        }
+
+        if (Call->arg_size() > CallWithManyArgumentsThreshold)
+          CallWithManyArgumentsCount += Direction;
+
+        for (const auto &Arg : Call->args()) {
+          if (Arg->getType()->isPointerTy()) {
+            CallWithPointerArgumentCount += Direction;
+            break;
+          }
+        }
+      }
+
+#define COUNT_OPERAND(OPTYPE)                                                  \
+  if (isa<OPTYPE>(Operand)) {                                                  \
+    OPTYPE##OperandCount += Direction;                                         \
+    continue;                                                                  \
+  }
+
+      for (unsigned int OperandIndex = 0; OperandIndex < I.getNumOperands();
+           ++OperandIndex) {
+        Value *Operand = I.getOperand(OperandIndex);
+        COUNT_OPERAND(GlobalValue)
+        COUNT_OPERAND(ConstantInt)
+        COUNT_OPERAND(ConstantFP)
+        COUNT_OPERAND(Constant)
+        COUNT_OPERAND(Instruction)
+        COUNT_OPERAND(BasicBlock)
+        COUNT_OPERAND(InlineAsm)
+        COUNT_OPERAND(Argument)
+
+        // We only get to this point if we haven't matched any of the other
+        // operand types.
+        UnknownOperandCount += Direction;
+      }
+
+#undef CHECK_OPERAND
+    }
+  }
 }
 
 void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
@@ -99,17 +235,59 @@ FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
 }
 
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
-  OS << "BasicBlockCount: " << BasicBlockCount << "\n"
-     << "BlocksReachedFromConditionalInstruction: "
-     << BlocksReachedFromConditionalInstruction << "\n"
-     << "Uses: " << Uses << "\n"
-     << "DirectCallsToDefinedFunctions: " << DirectCallsToDefinedFunctions
-     << "\n"
-     << "LoadInstCount: " << LoadInstCount << "\n"
-     << "StoreInstCount: " << StoreInstCount << "\n"
-     << "MaxLoopDepth: " << MaxLoopDepth << "\n"
-     << "TopLevelLoopCount: " << TopLevelLoopCount << "\n"
-     << "TotalInstructionCount: " << TotalInstructionCount << "\n\n";
+#define PRINT_PROPERTY(PROP_NAME) OS << #PROP_NAME ": " << PROP_NAME << "\n";
+
+  PRINT_PROPERTY(BasicBlockCount)
+  PRINT_PROPERTY(BlocksReachedFromConditionalInstruction)
+  PRINT_PROPERTY(Uses)
+  PRINT_PROPERTY(DirectCallsToDefinedFunctions)
+  PRINT_PROPERTY(LoadInstCount)
+  PRINT_PROPERTY(StoreInstCount)
+  PRINT_PROPERTY(MaxLoopDepth)
+  PRINT_PROPERTY(TopLevelLoopCount)
+  PRINT_PROPERTY(TotalInstructionCount)
+
+  if (EnableDetailedFunctionProperties) {
+    PRINT_PROPERTY(BasicBlocksWithSingleSuccessor)
+    PRINT_PROPERTY(BasicBlocksWithTwoSuccessors)
+    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors)
+    PRINT_PROPERTY(BasicBlocksWithSinglePredecessor)
+    PRINT_PROPERTY(BasicBlocksWithTwoPredecessors)
+    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors)
+    PRINT_PROPERTY(BigBasicBlocks)
+    PRINT_PROPERTY(MediumBasicBlocks)
+    PRINT_PROPERTY(SmallBasicBlocks)
+    PRINT_PROPERTY(CastInstructionCount)
+    PRINT_PROPERTY(FloatingPointInstructionCount)
+    PRINT_PROPERTY(IntegerInstructionCount)
+    PRINT_PROPERTY(ConstantIntOperandCount)
+    PRINT_PROPERTY(ConstantFPOperandCount)
+    PRINT_PROPERTY(ConstantOperandCount)
+    PRINT_PROPERTY(InstructionOperandCount)
+    PRINT_PROPERTY(BasicBlockOperandCount)
+    PRINT_PROPERTY(GlobalValueOperandCount)
+    PRINT_PROPERTY(InlineAsmOperandCount)
+    PRINT_PROPERTY(ArgumentOperandCount)
+    PRINT_PROPERTY(UnknownOperandCount)
+    PRINT_PROPERTY(CriticalEdgeCount)
+    PRINT_PROPERTY(ControlFlowEdgeCount)
+    PRINT_PROPERTY(UnconditionalBranchCount)
+    PRINT_PROPERTY(IntrinsicCount)
+    PRINT_PROPERTY(DirectCallCount)
+    PRINT_PROPERTY(IndirectCallCount)
+    PRINT_PROPERTY(CallReturnsIntegerCount)
+    PRINT_PROPERTY(CallReturnsFloatCount)
+    PRINT_PROPERTY(CallReturnsPointerCount)
+    PRINT_PROPERTY(CallReturnsVectorIntCount)
+    PRINT_PROPERTY(CallReturnsVectorFloatCount)
+    PRINT_PROPERTY(CallReturnsVectorPointerCount)
+    PRINT_PROPERTY(CallWithManyArgumentsCount)
+    PRINT_PROPERTY(CallWithPointerArgumentCount)
+  }
+
+#undef PRINT_PROPERTY
+
+  OS << "\n";
 }
 
 AnalysisKey FunctionPropertiesAnalysis::Key;

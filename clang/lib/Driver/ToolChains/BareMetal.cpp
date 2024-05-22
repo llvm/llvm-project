@@ -12,12 +12,14 @@
 #include "Gnu.h"
 #include "clang/Driver/InputInfo.h"
 
+#include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -114,10 +116,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-/// Is the triple {arm,thumb}-none-none-{eabi,eabihf} ?
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
 static bool isARMBareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::arm &&
-      Triple.getArch() != llvm::Triple::thumb)
+      Triple.getArch() != llvm::Triple::thumb &&
+      Triple.getArch() != llvm::Triple::armeb &&
+      Triple.getArch() != llvm::Triple::thumbeb)
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -133,9 +137,10 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
   return true;
 }
 
-/// Is the triple aarch64-none-elf?
+/// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::aarch64)
+  if (Triple.getArch() != llvm::Triple::aarch64 &&
+      Triple.getArch() != llvm::Triple::aarch64_be)
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -158,6 +163,12 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
     return false;
 
   return Triple.getEnvironmentName() == "elf";
+}
+
+/// Is the triple powerpc[64][le]-*-none-eabi?
+static bool isPPCBareMetal(const llvm::Triple &Triple) {
+  return Triple.isPPC() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironment() == llvm::Triple::EABI;
 }
 
 static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
@@ -225,7 +236,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return isARMBareMetal(Triple) || isAArch64BareMetal(Triple) ||
-         isRISCVBareMetal(Triple);
+         isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -425,14 +436,24 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   auto &TC = static_cast<const toolchains::BareMetal &>(getToolChain());
+  const llvm::Triple::ArchType Arch = TC.getArch();
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-Bstatic");
 
-  Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_e, options::OPT_s, options::OPT_t,
-                            options::OPT_Z_Flag, options::OPT_r});
+  if (Triple.isARM() || Triple.isThumb()) {
+    bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
+    if (IsBigEndian)
+      arm::appendBE8LinkFlag(Args, CmdArgs, Triple);
+    CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
+  } else if (Triple.isAArch64()) {
+    CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
+  }
+
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
@@ -469,4 +490,30 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(),
       Args.MakeArgString(TC.GetLinkerPath()), CmdArgs, Inputs, Output));
+}
+
+// BareMetal toolchain allows all sanitizers where the compiler generates valid
+// code, ignoring all runtime library support issues on the assumption that
+// baremetal targets typically implement their own runtime support.
+SanitizerMask BareMetal::getSupportedSanitizers() const {
+  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
+  const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
+                         getTriple().getArch() == llvm::Triple::aarch64_be;
+  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::KernelAddress;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
+  Res |= SanitizerKind::Vptr;
+  Res |= SanitizerKind::SafeStack;
+  Res |= SanitizerKind::Thread;
+  Res |= SanitizerKind::Scudo;
+  if (IsX86_64 || IsAArch64 || IsRISCV64) {
+    Res |= SanitizerKind::HWAddress;
+    Res |= SanitizerKind::KernelHWAddress;
+  }
+  return Res;
 }

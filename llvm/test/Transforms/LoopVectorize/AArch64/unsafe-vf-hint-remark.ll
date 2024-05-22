@@ -1,14 +1,13 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
-; Specify a large unsafe vectorization factor of 32 that gets clamped to 16,
-; then test an even smaller VF of 2 is selected based on the cost-model.
+; Specify a large unsafe vectorization factor of 32 that gets clamped to 16.
 
 ; CHECK: LV: User VF=32 is unsafe, clamping to max safe VF=16.
 ; CHECK: remark: <unknown>:0:0: User-specified vectorization factor 32 is unsafe, clamping to maximum safe vectorization factor 16
-; CHECK: LV: Selecting VF: 2.
+; CHECK: LV: Selecting VF: 16.
 ; CHECK-LABEL: @test
-; CHECK: <2 x i64>
+; CHECK: <16 x i64>
 define void @test(ptr nocapture %a, ptr nocapture readonly %b) {
 entry:
   br label %loop.header

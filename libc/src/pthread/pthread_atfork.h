@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_ATFORK_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_ATFORK_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_atfork(__atfork_callback_t prepare, __atfork_callback_t parent,
                    __atfork_callback_t child);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_ATFORK_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H

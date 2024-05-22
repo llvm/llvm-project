@@ -1,4 +1,4 @@
-; RUN: opt -S -structurizecfg %s -o - | FileCheck %s
+; RUN: opt -S -passes='lowerswitch,structurizecfg' %s -o - | FileCheck %s
 
 ; The structurizecfg pass cannot handle switch instructions, so we need to
 ; make sure the lower switch pass is always run before structurizecfg.

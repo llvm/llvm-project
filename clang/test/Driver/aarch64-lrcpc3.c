@@ -17,7 +17,7 @@
 // RUN: %clang -### --target=aarch64-none-elf -march=armv9-a+norcpc3 %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 // FEAT_RCPC3 is invalid before v8
-// RUN: %clang -### --target=arm-none-none-eabi -march=armv7-a+rcpc3         %s 2>&1 | FileCheck %s --check-prefix=INVALID
+// RUN: not %clang -### --target=arm-none-none-eabi -march=armv7-a+rcpc3         %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
 // INVALID: error: unsupported argument 'armv7-a+rcpc3' to option '-march='
 // ENABLED: "-target-feature" "+rcpc3"

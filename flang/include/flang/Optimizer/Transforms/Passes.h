@@ -20,6 +20,7 @@ class GreedyRewriteConfig;
 class Operation;
 class Pass;
 class Region;
+class ModuleOp;
 } // namespace mlir
 
 namespace fir {
@@ -60,6 +61,7 @@ std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
 std::unique_ptr<mlir::Pass> createStackArraysPass();
+std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass> createSimplifyIntrinsicsPass();
 std::unique_ptr<mlir::Pass> createAddDebugFoundationPass();
 std::unique_ptr<mlir::Pass> createLoopVersioningPass();
@@ -72,6 +74,14 @@ std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
+
+std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+createOMPMarkDeclareTargetPass();
+
+std::unique_ptr<mlir::Pass> createVScaleAttrPass();
+std::unique_ptr<mlir::Pass>
+createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

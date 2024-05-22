@@ -34,6 +34,8 @@
 #include "CompileCommands.h"
 #include "Compiler.h"
 #include "Config.h"
+#include "ConfigFragment.h"
+#include "ConfigProvider.h"
 #include "Diagnostics.h"
 #include "Feature.h"
 #include "GlobalCompilationDatabase.h"
@@ -47,7 +49,7 @@
 #include "SourceCode.h"
 #include "TidyProvider.h"
 #include "XRefs.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "refactor/Tweak.h"
 #include "support/Context.h"
@@ -103,15 +105,19 @@ llvm::cl::opt<bool> CheckCompletion{
     "check-completion",
     llvm::cl::desc("Run code-completion at each point (slow)"),
     llvm::cl::init(false)};
+llvm::cl::opt<bool> CheckWarnings{
+    "check-warnings",
+    llvm::cl::desc("Print warnings as well as errors"),
+    llvm::cl::init(false)};
 
-// Print (and count) the error-level diagnostics (warnings are ignored).
+// Print the diagnostics meeting severity threshold, and return count of errors.
 unsigned showErrors(llvm::ArrayRef<Diag> Diags) {
   unsigned ErrCount = 0;
   for (const auto &D : Diags) {
-    if (D.Severity >= DiagnosticsEngine::Error) {
+    if (D.Severity >= DiagnosticsEngine::Error || CheckWarnings)
       elog("[{0}] Line {1}: {2}", D.Name, D.Range.start.line + 1, D.Message);
+    if (D.Severity >= DiagnosticsEngine::Error)
       ++ErrCount;
-    }
   }
   return ErrCount;
 }
@@ -231,12 +237,12 @@ public:
     Preamble = buildPreamble(
         File, *Invocation, Inputs, /*StoreInMemory=*/true,
         [&](CapturedASTCtx Ctx,
-            const std::shared_ptr<const CanonicalIncludes> Includes) {
+            std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
           if (!Opts.BuildDynamicSymbolIndex)
             return;
           log("Indexing headers...");
           Index.updatePreamble(File, /*Version=*/"null", Ctx.getASTContext(),
-                               Ctx.getPreprocessor(), *Includes);
+                               Ctx.getPreprocessor(), *PI);
         });
     if (!Preamble) {
       elog("Failed to build preamble");
@@ -476,8 +482,23 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
   }
   log("Testing on source file {0}", File);
 
+  class OverrideConfigProvider : public config::Provider {
+    std::vector<config::CompiledFragment>
+    getFragments(const config::Params &,
+                 config::DiagnosticCallback Diag) const override {
+      config::Fragment F;
+      // If we're timing clang-tidy checks, implicitly disabling the slow ones
+      // is counterproductive! 
+      if (CheckTidyTime.getNumOccurrences())
+        F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
+      return {std::move(F).compile(Diag)};
+    }
+  } OverrideConfig;
+  auto ConfigProvider =
+      config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
+
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
-      Opts.ConfigProvider, nullptr);
+      ConfigProvider.get(), nullptr);
   WithContext Ctx(ContextProvider(
       FakeFile.empty()
           ? File

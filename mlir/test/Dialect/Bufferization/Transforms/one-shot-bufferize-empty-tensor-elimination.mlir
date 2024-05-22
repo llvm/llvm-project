@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -eliminate-empty-tensors -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs" -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -eliminate-empty-tensors -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries" -cse -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -eliminate-empty-tensors | FileCheck %s --check-prefix=CHECK-ELIM
 
 //      CHECK: func @buffer_forwarding_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
@@ -101,7 +102,6 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
   %c5 = arith.constant 5 : index
 
   // CHECK-NOT: memref.alloc
-  // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
   %blank = tensor.empty() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
@@ -109,6 +109,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
     %iv_i32 = arith.index_cast %iv : index to i32
     %f = arith.sitofp %iv_i32 : i32 to f32
 
+    // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
     // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[subview]]
     %filled = linalg.fill ins(%f : f32) outs(%blank : tensor<5xf32>) -> tensor<5xf32>
 
@@ -123,8 +124,8 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 // -----
 
 // EmptyTensorElimination does currently not apply to chains where the type is
-// changing. This test just ensures that we do not crash or generate IR that
-// does not verify.
+// changing. (Casts are supported.) This test just ensures that we do not crash
+// or generate IR that does not verify.
 
 // CHECK-LABEL: func @shape_mismatch
 func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
@@ -136,6 +137,24 @@ func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
   %3 = tensor.insert_slice %2 into %t[2, 3, 0][1, 1, 128][1, 1, 1]
       : tensor<1x1x128xf32> into tensor<5x6x128xf32>
   return %3 : tensor<5x6x128xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @cast(
+//  CHECK-SAME:     %[[t:.*]]: memref<256xf32,
+//       CHECK:   %[[sv:.*]] = memref.subview %[[t]]
+//       CHECK:   linalg.fill {{.*}} outs(%[[sv]]
+//       CHECK:   return %[[t]]
+func.func @cast(%t: tensor<256xf32>) -> tensor<256xf32> {
+  %cst = arith.constant 8.0 : f32
+  %c128 = arith.constant 128 : index
+  %0 = tensor.empty(%c128) : tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
+  %2 = tensor.cast %1 : tensor<?xf32> to tensor<128xf32>
+  %3 = tensor.insert_slice %2 into %t[2][128][1]
+      : tensor<128xf32> into tensor<256xf32>
+  return %3 : tensor<256xf32>
 }
 
 // -----
@@ -272,4 +291,77 @@ func.func @regression_multiple_insertion_points(%t1: tensor<?x?xf32>) -> tensor<
   %filled = linalg.fill ins(%f0 : f32) outs(%empty : tensor<2x5xf32>) -> tensor<2x5xf32>
   %2 = tensor.insert_slice %filled into %t1 [%0, %1] [2, 5] [1, 1] : tensor<2x5xf32> into tensor<?x?xf32>
   return %2 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @materialize_in_destination(
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?], offset: ?>>,
+//       CHECK:   linalg.fill {{.*}} outs(%[[m]]
+//       CHECK:   return %[[m]]
+func.func @materialize_in_destination(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %1 = bufferization.materialize_in_destination %filled in %t : (tensor<5xf32>, tensor<5xf32>) -> tensor<5xf32>
+  return %1 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @materialize_in_destination_buffer(
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32>,
+//  CHECK-NEXT:   linalg.fill {{.*}} outs(%[[m]]
+//  CHECK-NEXT:   return
+func.func @materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32) {
+  %0 = tensor.empty() : tensor<5xf32>
+  %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  bufferization.materialize_in_destination %filled in restrict writable %m : (tensor<5xf32>, memref<5xf32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @linalg_copy(
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?], offset: ?>>,
+//       CHECK:   linalg.fill {{.*}} outs(%[[m]]
+//       CHECK:   return %[[m]]
+func.func @linalg_copy(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %1 = linalg.copy ins(%filled : tensor<5xf32>) outs(%t : tensor<5xf32>) -> tensor<5xf32>
+  return %1 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @linalg_copy_empty(
+// CHECK: %[[ret:.*]] = memref.alloc()
+// CHECK-NEXT: return %[[ret]]
+func.func @linalg_copy_empty() -> tensor<26xi32> {
+  %0 = tensor.empty() : tensor<26xi32>
+  %1 = linalg.copy ins(%0 : tensor<26xi32>) outs(%0 : tensor<26xi32>) -> tensor<26xi32>
+  return %1 : tensor<26xi32>
+}
+
+// -----
+
+// CHECK-ELIM-LABEL: func @multiple_materialize_in_destination_buffer(
+//  CHECK-ELIM-SAME:     %[[m:.*]]: memref<5xf32>
+//       CHECK-ELIM:   tensor.empty
+//       CHECK-ELIM:   bufferization.to_tensor %[[m]] restrict writable
+//       CHECK-ELIM:   bufferization.materialize_in_destination {{.*}} in writable %[[m]]
+func.func @multiple_materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32, %f2: f32, %c: i1) {
+  %0 = tensor.empty() : tensor<5xf32>
+  %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+
+  %1 = tensor.empty() : tensor<5xf32>
+  %filled2 = linalg.fill ins(%f2 : f32) outs(%1 : tensor<5xf32>) -> tensor<5xf32>
+
+  %selected = scf.if %c -> tensor<5xf32> {
+    scf.yield %filled : tensor<5xf32>
+  } else {
+    scf.yield %filled2 : tensor<5xf32>
+  }
+  bufferization.materialize_in_destination %selected in restrict writable %m : (tensor<5xf32>, memref<5xf32>) -> ()
+  return
 }

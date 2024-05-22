@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -36,12 +39,23 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                    bool appendUnderscore) {
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
-    return "__BLNK__";
+    return Fortran::common::blankCommonObjectName;
+  return Fortran::common::GetExternalAssemblyName(result.second.name,
+                                                  appendUnderscore);
+}
 
-  if (appendUnderscore)
-    return result.second.name + "_";
-
-  return result.second.name;
+/// Update the early outlining parent name
+void updateEarlyOutliningParentName(mlir::func::FuncOp funcOp,
+                                    bool appendUnderscore) {
+  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
+          funcOp.getOperation())) {
+    auto oldName = earlyOutlineOp.getParentName();
+    if (oldName != "") {
+      auto dName = fir::NameUniquer::deconstruct(oldName);
+      std::string newName = mangleExternalName(dName, appendUnderscore);
+      earlyOutlineOp.setParentName(newName);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +77,8 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::LogicalResult ret = success();
     rewriter.startRootUpdate(op);
-    auto result = fir::NameUniquer::deconstruct(op.getSymName());
+    llvm::StringRef oldName = op.getSymName();
+    auto result = fir::NameUniquer::deconstruct(oldName);
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
       auto newSymbol =
           rewriter.getStringAttr(mangleExternalName(result, appendUnderscore));
@@ -74,8 +89,12 @@ public:
 
       op.setSymNameAttr(newSymbol);
       mlir::SymbolTable::setSymbolName(op, newSymbol);
+
+      op->setAttr(fir::getInternalFuncNameAttrName(),
+                  mlir::StringAttr::get(op->getContext(), oldName));
     }
 
+    updateEarlyOutliningParentName(op, appendUnderscore);
     rewriter.finalizeRootUpdate(op);
     return ret;
   }
@@ -143,13 +162,14 @@ public:
   ExternalNameConversionPass(bool appendUnderscoring)
       : appendUnderscores(appendUnderscoring) {}
 
-  ExternalNameConversionPass() { appendUnderscores = appendUnderscore; }
+  ExternalNameConversionPass() { usePassOpt = true; }
 
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
 
 private:
   bool appendUnderscores;
+  bool usePassOpt = false;
 };
 } // namespace
 
@@ -157,9 +177,11 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
+  appendUnderscores = (usePassOpt) ? appendUnderscoreOpt : appendUnderscores;
+
   mlir::RewritePatternSet patterns(context);
   patterns.insert<MangleNameOnFuncOp, MangleNameForCommonBlock,
-                  MangleNameOnAddrOfOp>(context, appendUnderscore);
+                  MangleNameOnAddrOfOp>(context, appendUnderscores);
 
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect, LLVM::LLVMDialect,

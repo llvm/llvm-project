@@ -182,7 +182,7 @@ private:
   /// Each row of the Matrix represents a single division dividend. The
   /// `i^th` row represents the dividend of the variable at `divOffset + i`
   /// in the constraint system (and the `i^th` local variable).
-  Matrix dividends;
+  IntMatrix dividends;
 
   /// Denominators of each division. If a denominator of a division is `0`, the
   /// division variable is considered to not have a division representation.
@@ -276,6 +276,11 @@ SmallVector<MPInt, 8> getNegatedCoeffs(ArrayRef<MPInt> coeffs);
 /// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
 /// since all the variables are constrained to be integers.
 SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
+
+/// Compute the dot product of two vectors.
+/// The vectors must have the same sizes.
+Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
+
 } // namespace presburger
 } // namespace mlir
 

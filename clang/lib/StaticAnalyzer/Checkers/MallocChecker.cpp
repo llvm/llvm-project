@@ -1141,22 +1141,28 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   llvm::Triple::OSType OS = Ctx.getTargetInfo().getTriple().getOS();
 
   if (!KernelZeroFlagVal) {
-    if (OS == llvm::Triple::FreeBSD)
+    switch (OS) {
+    case llvm::Triple::FreeBSD:
       KernelZeroFlagVal = 0x0100;
-    else if (OS == llvm::Triple::NetBSD)
+      break;
+    case llvm::Triple::NetBSD:
       KernelZeroFlagVal = 0x0002;
-    else if (OS == llvm::Triple::OpenBSD)
+      break;
+    case llvm::Triple::OpenBSD:
       KernelZeroFlagVal = 0x0008;
-    else if (OS == llvm::Triple::Linux)
+      break;
+    case llvm::Triple::Linux:
       // __GFP_ZERO
       KernelZeroFlagVal = 0x8000;
-    else
+      break;
+    default:
       // FIXME: We need a more general way of getting the M_ZERO value.
       // See also: O_CREAT in UnixAPIChecker.cpp.
 
       // Fall back to normal malloc behavior on platforms where we don't
       // know M_ZERO.
       return std::nullopt;
+    }
   }
 
   // We treat the last argument as the flags argument, and callers fall-back to
@@ -1722,13 +1728,15 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
     return nullptr;
 
   // Bind the return value to the symbolic value from the heap region.
-  // TODO: We could rewrite post visit to eval call; 'malloc' does not have
-  // side effects other than what we model here.
+  // TODO: move use of this functions to an EvalCall callback, becasue
+  // BindExpr() should'nt be used elsewhere.
   unsigned Count = C.blockCount();
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  DefinedSVal RetVal = svalBuilder.getConjuredHeapSymbolVal(CE, LCtx, Count)
-      .castAs<DefinedSVal>();
+  DefinedSVal RetVal =
+      ((Family == AF_Alloca) ? SVB.getAllocaRegionVal(CE, LCtx, Count)
+                             : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count)
+                                   .castAs<DefinedSVal>());
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
 
   // Fill the region with the initialization value.
@@ -1740,7 +1748,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
 
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
-                           Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
+                           Size.castAs<DefinedOrUnknownSVal>(), SVB);
 
   return MallocUpdateRefState(C, CE, State, Family);
 }
@@ -1955,13 +1963,10 @@ ProgramStateRef MallocChecker::FreeMemAux(
   // Parameters, locals, statics, globals, and memory returned by
   // __builtin_alloca() shouldn't be freed.
   if (!isa<UnknownSpaceRegion, HeapSpaceRegion>(MS)) {
-    // FIXME: at the time this code was written, malloc() regions were
-    // represented by conjured symbols, which are all in UnknownSpaceRegion.
-    // This means that there isn't actually anything from HeapSpaceRegion
-    // that should be freed, even though we allow it here.
-    // Of course, free() can work on memory allocated outside the current
-    // function, so UnknownSpaceRegion is always a possibility.
-    // False negatives are better than false positives.
+    // Regions returned by malloc() are represented by SymbolicRegion objects
+    // within HeapSpaceRegion. Of course, free() can work on memory allocated
+    // outside the current function, so UnknownSpaceRegion is also a
+    // possibility here.
 
     if (isa<AllocaRegion>(R))
       HandleFreeAlloca(C, ArgVal, ArgExpr->getSourceRange());
@@ -3145,16 +3150,16 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     // transferred. Again, though, we can't be sure that the object will use
     // free() to deallocate the memory, so we can't model it explicitly.
     StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
-    if (FirstSlot.endswith("NoCopy"))
+    if (FirstSlot.ends_with("NoCopy"))
       return true;
 
     // If the first selector starts with addPointer, insertPointer,
     // or replacePointer, assume we are dealing with NSPointerArray or similar.
     // This is similar to C++ containers (vector); we still might want to check
     // that the pointers get freed by following the container itself.
-    if (FirstSlot.startswith("addPointer") ||
-        FirstSlot.startswith("insertPointer") ||
-        FirstSlot.startswith("replacePointer") ||
+    if (FirstSlot.starts_with("addPointer") ||
+        FirstSlot.starts_with("insertPointer") ||
+        FirstSlot.starts_with("replacePointer") ||
         FirstSlot.equals("valueWithPointer")) {
       return true;
     }
@@ -3194,7 +3199,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
 
   // White list the 'XXXNoCopy' CoreFoundation functions.
   // We specifically check these before
-  if (FName.endswith("NoCopy")) {
+  if (FName.ends_with("NoCopy")) {
     // Look for the deallocator argument. We know that the memory ownership
     // is not transferred only if the deallocator argument is
     // 'kCFAllocatorNull'.

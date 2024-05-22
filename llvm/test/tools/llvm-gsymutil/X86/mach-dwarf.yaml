@@ -11,8 +11,8 @@
 # CONVERT: Input file: {{.*\.yaml\.tmp}}
 # CONVERT: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}
 # CONVERT: Loaded 2 functions from DWARF.
-# CONVERT: Loaded 0 functions from symbol table.
-# CONVERT: Pruned 0 functions, ended with 2 total
+# CONVERT: Loaded 2 functions from symbol table.
+# CONVERT: Pruned 2 functions, ended with 2 total
 
 # ADDR:      Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
 # ADDR-NEXT: 0x0000000000000000: error: address 0x0 is not in GSYM

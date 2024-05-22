@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRERROR_H
 #define LLVM_LIBC_SRC_STRING_STRERROR_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *strerror(int err_num);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRERROR_H

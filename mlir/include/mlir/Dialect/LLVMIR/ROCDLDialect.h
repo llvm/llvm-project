@@ -29,6 +29,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 ///// Ops /////
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/ROCDLOpsAttributes.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.h.inc"
 

@@ -193,7 +193,7 @@ std::string printQualifiedName(const NamedDecl &ND) {
   Policy.AnonymousTagLocations = false;
   ND.printQualifiedName(OS, Policy);
   OS.flush();
-  assert(!StringRef(QName).startswith("::"));
+  assert(!StringRef(QName).starts_with("::"));
   return QName;
 }
 
@@ -482,7 +482,11 @@ public:
   //- auto* i = &a;
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
-        D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
+        !D->getTypeSourceInfo()->getTypeLoc().getContainedAutoTypeLoc() ||
+        D->getTypeSourceInfo()
+                ->getTypeLoc()
+                .getContainedAutoTypeLoc()
+                .getNameLoc() != SearchedLocation)
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
@@ -692,7 +696,7 @@ std::string getQualification(ASTContext &Context,
                              const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces) {
   for (llvm::StringRef NS : VisibleNamespaces) {
-    assert(NS.endswith("::"));
+    assert(NS.ends_with("::"));
     (void)NS;
   }
   return getQualification(

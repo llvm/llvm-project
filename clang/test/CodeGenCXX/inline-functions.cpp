@@ -26,7 +26,6 @@ void B<char>::f() { }
 // MSVCCOMPAT-LABEL: define dso_local void @"?f@@YAXXZ"
 void f() { }
 
-// <rdar://problem/8740363>
 inline void f1(int);
 
 // NORMAL-LABEL: define linkonce_odr void @_Z2f1i

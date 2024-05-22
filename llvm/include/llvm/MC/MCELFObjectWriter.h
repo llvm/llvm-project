@@ -71,8 +71,6 @@ public:
 
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
-      case Triple::CloudABI:
-        return ELF::ELFOSABI_CLOUDABI;
       case Triple::HermitCore:
         return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:
@@ -88,7 +86,7 @@ public:
   virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                                 const MCFixup &Fixup, bool IsPCRel) const = 0;
 
-  virtual bool needsRelocateWithSymbol(const MCSymbol &Sym,
+  virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                        unsigned Type) const;
 
   virtual void sortRelocs(const MCAssembler &Asm,

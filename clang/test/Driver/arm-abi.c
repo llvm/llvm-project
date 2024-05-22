@@ -33,6 +33,8 @@
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm--openbsd- %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
+// RUN: %clang -target arm--haiku- %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 
 // Otherwise, ABI is selected based on environment
 // RUN: %clang -target arm---android %s -### -o %t.o 2>&1 \
@@ -63,6 +65,8 @@
 // CHECK-AAPCS-LINUX: "-target-abi" "aapcs-linux"
 
 // RUN: %clang --target=arm---gnueabi -mabi=aapcs -x assembler %s -### -o /dev/null 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ASM %s
+// RUN: %clang --target=arm---gnueabi -mabi=aapcs -x assembler %s -### -o /dev/null -fno-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASM %s
 
 /// The combination -x assember & -mabi is not implemented, but for GCC compatibility we accept with a warning.

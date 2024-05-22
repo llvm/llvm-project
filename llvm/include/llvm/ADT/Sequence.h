@@ -306,6 +306,16 @@ auto seq(T Begin, T End) {
   return iota_range<T>(Begin, End, false);
 }
 
+/// Iterate over an integral type from 0 up to - but not including - Size.
+/// Note: Size value has to be within [INTMAX_MIN, INTMAX_MAX - 1] for
+/// forward iteration (resp. [INTMAX_MIN + 1, INTMAX_MAX - 1] for reverse
+/// iteration).
+template <typename T, typename = std::enable_if_t<std::is_integral<T>::value &&
+                                                  !std::is_enum<T>::value>>
+auto seq(T Size) {
+  return seq<T>(0, Size);
+}
+
 /// Iterate over an integral type from Begin to End inclusive.
 /// Note: Begin and End values have to be within [INTMAX_MIN, INTMAX_MAX - 1]
 /// for forward iteration (resp. [INTMAX_MIN + 1, INTMAX_MAX - 1] for reverse

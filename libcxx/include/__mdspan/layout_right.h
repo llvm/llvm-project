@@ -74,8 +74,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr mapping() noexcept               = default;
   _LIBCPP_HIDE_FROM_ABI constexpr mapping(const mapping&) noexcept = default;
   _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext) noexcept : __extents_(__ext) {
-    _LIBCPP_ASSERT(__required_span_size_is_representable(__ext),
-                   "layout_right::mapping extents ctor: product of extents must be representable as index_type.");
+    // not catching this could lead to out-of-bounds access later when used inside mdspan
+    // mapping<dextents<char, 2>> map(dextents<char, 2>(40,40)); map(3, 10) == -126
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __required_span_size_is_representable(__ext),
+        "layout_right::mapping extents ctor: product of extents must be representable as index_type.");
   }
 
   template <class _OtherExtents>
@@ -83,7 +86,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
-    _LIBCPP_ASSERT(
+    // not catching this could lead to out-of-bounds access later when used inside mdspan
+    // mapping<dextents<char, 2>> map(mapping<dextents<int, 2>>(dextents<int, 2>(40,40))); map(3, 10) == -126
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
@@ -93,17 +98,38 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const layout_left::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
-    _LIBCPP_ASSERT(
+    // not catching this could lead to out-of-bounds access later when used inside mdspan
+    // Note: since this is constraint to rank 1, extents itself would catch the invalid conversion first
+    //       and thus this assertion should never be triggered, but keeping it here for consistency
+    // layout_right::mapping<dextents<char, 1>> map(
+    //           layout_left::mapping<dextents<unsigned, 1>>(dextents<unsigned, 1>(200))); map.extents().extent(0) ==
+    //           -56
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
 
-// FIXME: add when we add other layouts
-#  if 0
-    template<class _OtherExtents>
-      constexpr explicit(extents_type::rank() > 0)
-        mapping(const layout_stride::mapping_<OtherExtents>&) noexcept;
-#  endif
+  template <class _OtherExtents>
+    requires(is_constructible_v<extents_type, _OtherExtents>)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(extents_type::rank() > 0)
+      mapping(const layout_stride::mapping<_OtherExtents>& __other) noexcept
+      : __extents_(__other.extents()) {
+    if constexpr (extents_type::rank() > 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          ([&]() {
+            using _CommonType = common_type_t<typename extents_type::index_type, typename _OtherExtents::index_type>;
+            for (rank_type __r = 0; __r < extents_type::rank(); __r++)
+              if (static_cast<_CommonType>(stride(__r)) != static_cast<_CommonType>(__other.stride(__r)))
+                return false;
+            return true;
+          }()),
+          "layout_right::mapping from layout_stride ctor: strides are not compatible with layout_right.");
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
+          "layout_right::mapping from layout_stride ctor: other.required_span_size() must be representable as "
+          "index_type.");
+    }
+  }
 
   _LIBCPP_HIDE_FROM_ABI constexpr mapping& operator=(const mapping&) noexcept = default;
 
@@ -121,8 +147,12 @@ public:
     requires((sizeof...(_Indices) == extents_type::rank()) && (is_convertible_v<_Indices, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _Indices> && ...))
   _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
-    _LIBCPP_ASSERT(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
-                   "layout_right::mapping: out of bounds indexing");
+    // Mappings are generally meant to be used for accessing allocations and are meant to guarantee to never
+    // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
+    // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
+    // However, mdspan does check this on its own, so for now we avoid double checking in hardened mode
+    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
+                                 "layout_right::mapping: out of bounds indexing");
     return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
       index_type __res = 0;
       ((__res = static_cast<index_type>(__idx) + __extents_.extent(_Pos) * __res), ...);
@@ -141,7 +171,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const noexcept
     requires(extents_type::rank() > 0)
   {
-    _LIBCPP_ASSERT(__r < extents_type::rank(), "layout_right::mapping::stride(): invalid rank index");
+    // While it would be caught by extents itself too, using a too large __r
+    // is functionally an out of bounds access on the stored information needed to compute strides
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __r < extents_type::rank(), "layout_right::mapping::stride(): invalid rank index");
     index_type __s = 1;
     for (rank_type __i = extents_type::rank() - 1; __i > __r; __i--)
       __s *= __extents_.extent(__i);
@@ -156,7 +189,7 @@ public:
   }
 
 private:
-  extents_type __extents_{}; // exposition only
+  _LIBCPP_NO_UNIQUE_ADDRESS extents_type __extents_{};
 };
 
 #endif // _LIBCPP_STD_VER >= 23

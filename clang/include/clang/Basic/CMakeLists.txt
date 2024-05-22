@@ -30,6 +30,16 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
+clang_tablegen(AttrLeftSideCanPrintList.inc -gen-clang-attr-can-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrCanPrintLeftList)
+
+clang_tablegen(AttrLeftSideMustPrintList.inc -gen-clang-attr-must-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrMustPrintLeftList)
+
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
@@ -78,6 +88,9 @@ clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
 clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
   SOURCE arm_sve.td
   TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_sve_streaming_attrs.inc -gen-arm-sve-streaming-attrs
+  SOURCE arm_sve.td
+  TARGET ClangARMSveStreamingAttrs)
 clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltins)
@@ -87,6 +100,12 @@ clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
 clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
   SOURCE arm_sme.td
   TARGET ClangARMSmeSemaRangeChecks)
+clang_tablegen(arm_sme_streaming_attrs.inc -gen-arm-sme-streaming-attrs
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeStreamingAttrs)
+clang_tablegen(arm_sme_builtins_za_state.inc -gen-arm-sme-builtin-za-state
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinsZAState)
 clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
   SOURCE arm_cde.td
   TARGET ClangARMCdeBuiltinsDef)

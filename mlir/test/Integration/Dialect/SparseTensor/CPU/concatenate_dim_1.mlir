@@ -1,42 +1,49 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{run_option} =
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext %{run_option} | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
 
-#MAT_C_C = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
-#MAT_D_C = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
-#MAT_C_D = #sparse_tensor.encoding<{lvlTypes = ["compressed", "dense"]}>
+#MAT_C_C = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+#MAT_D_C = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
+#MAT_C_D = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : dense)}>
 #MAT_D_D = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "dense"],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : dense)
 }>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : dense)
 }>
 
 #MAT_D_C_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 module {

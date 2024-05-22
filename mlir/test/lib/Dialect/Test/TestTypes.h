@@ -14,8 +14,8 @@
 #ifndef MLIR_TESTTYPES_H
 #define MLIR_TESTTYPES_H
 
-#include <tuple>
 #include <optional>
+#include <tuple>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
@@ -91,9 +91,6 @@ struct FieldParser<std::optional<int>> {
 
 #include "TestTypeInterfaces.h.inc"
 
-#define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.h.inc"
-
 namespace test {
 
 /// Storage for simple named recursive types, where the type is identified by
@@ -135,6 +132,8 @@ class TestRecursiveType
 public:
   using Base::Base;
 
+  static constexpr ::mlir::StringLiteral name = "test.recursive";
+
   static TestRecursiveType get(::mlir::MLIRContext *ctx,
                                ::llvm::StringRef name) {
     return Base::get(ctx, name);
@@ -149,5 +148,8 @@ public:
 };
 
 } // namespace test
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.h.inc"
 
 #endif // MLIR_TESTTYPES_H

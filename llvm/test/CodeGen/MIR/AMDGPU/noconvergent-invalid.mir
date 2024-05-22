@@ -1,0 +1,11 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+
+---
+name:            noconvergent_invalid
+registers:
+body: |
+  bb.0:
+    ; CHECK: NoConvergent flag expected only on convergent instructions.
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:sreg_32 = noconvergent S_ADD_I32 %2, 1, implicit-def $scc
+...

@@ -21,6 +21,10 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace llvm {
+class ThreadPool;
+} // namespace llvm
+
 /// Converts a StringRef into its MLIR C API equivalent.
 inline MlirStringRef wrap(llvm::StringRef ref) {
   return mlirStringRefCreate(ref.data(), ref.size());
@@ -41,6 +45,7 @@ inline mlir::LogicalResult unwrap(MlirLogicalResult res) {
   return mlir::success(mlirLogicalResultIsSuccess(res));
 }
 
+DEFINE_C_API_PTR_METHODS(MlirLlvmThreadPool, llvm::ThreadPool)
 DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
 DEFINE_C_API_PTR_METHODS(MlirTypeIDAllocator, mlir::TypeIDAllocator)
 

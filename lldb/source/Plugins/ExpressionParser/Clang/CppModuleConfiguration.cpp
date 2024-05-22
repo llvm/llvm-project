@@ -72,7 +72,7 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
   // path. Ignore subdirectories such as /c++/v1/experimental as those don't
   // need to be specified in the header search.
   if (libcpp_regex.match(f.GetPath()) &&
-      parent_path(posix_dir, Style::posix).endswith("c++")) {
+      parent_path(posix_dir, Style::posix).ends_with("c++")) {
     if (!m_std_inc.TrySet(posix_dir))
       return false;
     if (triple.str().empty())

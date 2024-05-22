@@ -26,7 +26,7 @@ end subroutine
 ! CHECK:             %[[VAL_17:.*]] = arith.addi %[[VAL_14]], %[[VAL_16]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_17]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_19:.*]](%[[VAL_3]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
+! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_19:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_18]]#1, %[[VAL_18]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_19]] : !hlfir.expr<4xi32>
@@ -72,7 +72,7 @@ end subroutine
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> i32
 ! CHECK:             hlfir.yield_element %[[VAL_31]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_33:.*]](%[[VAL_19]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_33:.*]](%[[VAL_19]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_32]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<4xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_34]]) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_32]]#1, %[[VAL_32]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -109,7 +109,7 @@ end subroutine
 ! CHECK:             %[[VAL_16:.*]] = fir.call @_QPfoo(%[[VAL_15]]) fastmath<contract> : (i32) -> i32
 ! CHECK:             hlfir.yield_element %[[VAL_16]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
+! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_17]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_17]]#1, %[[VAL_17]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_18]] : !hlfir.expr<4xi32>
@@ -128,3 +128,32 @@ subroutine test_with_impure_call(n)
 end subroutine
 ! CHECK-NOT: hlfir.elemental
 ! CHECK:  return
+
+! Test that the hlfir.expr result of the outer intrinsic call
+! is not destructed.
+subroutine test_hlfir_expr_result_destruction
+  character(4) :: a(21)
+  a = (/ (repeat(repeat(char(i),2),2),i=1,n) /)
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_hlfir_expr_result_destruction() {
+! CHECK:           %[[VAL_36:.*]] = hlfir.elemental %{{.*}} typeparams %{{.*}} unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
+! CHECK:             %[[VAL_48:.*]] = hlfir.as_expr %{{.*}} move %{{.*}} : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
+! CHECK:             %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_48]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
+! CHECK:             %[[VAL_64:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,2>>, index) -> (!fir.heap<!fir.char<1,2>>, !fir.heap<!fir.char<1,2>>)
+! CHECK:             %[[VAL_66:.*]] = hlfir.as_expr %[[VAL_64]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,2>>, i1) -> !hlfir.expr<!fir.char<1,2>>
+! CHECK:             %[[VAL_68:.*]]:3 = hlfir.associate %[[VAL_66]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
+! CHECK:             %[[VAL_81:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,4>>, index) -> (!fir.heap<!fir.char<1,4>>, !fir.heap<!fir.char<1,4>>)
+! CHECK:             %[[VAL_83:.*]] = hlfir.as_expr %[[VAL_81]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,4>>, i1) -> !hlfir.expr<!fir.char<1,4>>
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:             hlfir.end_associate %[[VAL_68]]#1, %[[VAL_68]]#2 : !fir.ref<!fir.char<1,2>>, i1
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:             hlfir.destroy %[[VAL_66]] : !hlfir.expr<!fir.char<1,2>>
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:             hlfir.end_associate %[[VAL_51]]#1, %[[VAL_51]]#2 : !fir.ref<!fir.char<1>>, i1
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:             hlfir.destroy %[[VAL_48]] : !hlfir.expr<!fir.char<1>>
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:             hlfir.yield_element %[[VAL_83]] : !hlfir.expr<!fir.char<1,4>>
+! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK:           }
+! CHECK-NOT:       hlfir.destroy %[[VAL_83]]

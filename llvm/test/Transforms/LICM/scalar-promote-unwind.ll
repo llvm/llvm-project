@@ -147,9 +147,8 @@ for.cond.cleanup:
   ret void
 }
 
-; TODO: sret could be specified to not be accessed on unwind either.
-define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
-; CHECK-LABEL: @test_sret(
+define void @test_dead_on_unwind(ptr noalias dead_on_unwind %a, i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test_dead_on_unwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -157,7 +156,6 @@ define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @f()
@@ -167,6 +165,8 @@ define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INC]] ]
+; CHECK-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -309,7 +309,7 @@ define void @loop_within_tryblock() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP1]])
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    call void @__cxa_end_catch()
 ; CHECK-NEXT:    br label [[TRY_CONT:%.*]]
 ; CHECK:       try.cont:
@@ -383,10 +383,10 @@ define void @malloc_no_capture() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @malloc_no_capture(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 4)
-; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[CALL_PROMOTED:%.*]] = load i32, ptr [[CALL]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[DOTPROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_LATCH:%.*]] ]
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[CALL_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_LATCH]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    br label [[FOR_CALL:%.*]]
@@ -405,14 +405,14 @@ define void @malloc_no_capture() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br label [[FUN_RET:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_CALL]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    catch ptr null
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
 ; CHECK-NEXT:    br label [[CATCH:%.*]]
 ; CHECK:       catch:
-; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP1]])
 ; CHECK-NEXT:    call void @free(ptr [[CALL]])
 ; CHECK-NEXT:    call void @__cxa_end_catch()
 ; CHECK-NEXT:    br label [[FUN_RET]]
@@ -467,10 +467,10 @@ define void @malloc_capture(ptr noalias %A) personality ptr @__gxx_personality_v
 ; CHECK-LABEL: @malloc_capture(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 4)
-; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[CALL_PROMOTED:%.*]] = load i32, ptr [[CALL]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[DOTPROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_LATCH:%.*]] ]
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[CALL_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_LATCH]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[CALL]], align 4
@@ -488,13 +488,13 @@ define void @malloc_capture(ptr noalias %A) personality ptr @__gxx_personality_v
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[FUN_RET:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    catch ptr null
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
 ; CHECK-NEXT:    br label [[CATCH:%.*]]
 ; CHECK:       catch:
-; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP1]])
 ; CHECK-NEXT:    call void @free(ptr [[CALL]])
 ; CHECK-NEXT:    call void @__cxa_end_catch()
 ; CHECK-NEXT:    br label [[FUN_RET]]

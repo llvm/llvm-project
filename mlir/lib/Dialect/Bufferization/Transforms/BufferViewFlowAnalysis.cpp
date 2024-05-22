@@ -45,6 +45,18 @@ void BufferViewFlowAnalysis::remove(const SetVector<Value> &aliasValues) {
     llvm::set_subtract(entry.second, aliasValues);
 }
 
+void BufferViewFlowAnalysis::rename(Value from, Value to) {
+  dependencies[to] = dependencies[from];
+  dependencies.erase(from);
+
+  for (auto &[key, value] : dependencies) {
+    if (value.contains(from)) {
+      value.insert(to);
+      value.erase(from);
+    }
+  }
+}
+
 /// This function constructs a mapping from values to its immediate
 /// dependencies. It iterates over all blocks, gets their predecessors,
 /// determines the values that will be passed to the corresponding block
@@ -88,16 +100,13 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       // Query the RegionBranchOpInterface to find potential successor regions.
       // Extract all entry regions and wire all initial entry successor inputs.
       SmallVector<RegionSuccessor, 2> entrySuccessors;
-      regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
+      regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
                                           entrySuccessors);
       for (RegionSuccessor &entrySuccessor : entrySuccessors) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
-        assert(entrySuccessor.getSuccessor() &&
-               "Invalid entry region without an attached successor region");
         registerDependencies(
-            regionInterface.getSuccessorEntryOperands(
-                entrySuccessor.getSuccessor()->getRegionNumber()),
+            regionInterface.getEntrySuccessorOperands(entrySuccessor),
             entrySuccessor.getSuccessorInputs());
       }
 
@@ -106,24 +115,16 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         // Iterate over all successor region entries that are reachable from the
         // current region.
         SmallVector<RegionSuccessor, 2> successorRegions;
-        regionInterface.getSuccessorRegions(region.getRegionNumber(),
-                                            successorRegions);
+        regionInterface.getSuccessorRegions(region, successorRegions);
         for (RegionSuccessor &successorRegion : successorRegions) {
-          // Determine the current region index (if any).
-          std::optional<unsigned> regionIndex;
-          Region *regionSuccessor = successorRegion.getSuccessor();
-          if (regionSuccessor)
-            regionIndex = regionSuccessor->getRegionNumber();
           // Iterate over all immediate terminator operations and wire the
           // successor inputs with the successor operands of each terminator.
-          for (Block &block : region) {
-            auto successorOperands = getRegionBranchSuccessorOperands(
-                block.getTerminator(), regionIndex);
-            if (successorOperands) {
-              registerDependencies(*successorOperands,
-                                   successorRegion.getSuccessorInputs());
-            }
-          }
+          for (Block &block : region)
+            if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
+                    block.getTerminator()))
+              registerDependencies(
+                  terminator.getSuccessorOperands(successorRegion),
+                  successorRegion.getSuccessorInputs());
         }
       }
 

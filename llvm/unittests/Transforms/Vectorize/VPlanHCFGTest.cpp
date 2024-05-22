@@ -101,7 +101,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -112,28 +112,28 @@ compound=true
   ]
   N1 [label =
     "vector.ph:\l" +
-    "Successor(s): for.body\l"
+    "Successor(s): vector loop\l"
   ]
   N1 -> N2 [ label="" lhead=cluster_N3]
   subgraph cluster_N3 {
     fontname=Courier
-    label="\<x1\> for.body"
+    label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\> ir\<10\>\l" +
-      "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT branch-on-cond ir\<%exitcond\>\l" +
       "No successors\l"
     ]
   }
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
-    "for.end:\l" +
+    "middle.block:\l" +
     "No successors\l"
   ]
 }

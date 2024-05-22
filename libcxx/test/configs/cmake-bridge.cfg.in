@@ -30,7 +30,6 @@ config.substitutions.append(('%{include}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
 config.substitutions.append(('%{target-include}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))
 config.substitutions.append(('%{lib}', '@LIBCXX_LIBRARY_DIR@'))
 config.substitutions.append(('%{module}', '@LIBCXX_GENERATED_MODULE_DIR@'))
-config.substitutions.append(('%{executor}', '@LIBCXX_EXECUTOR@'))
 config.substitutions.append(('%{test-tools}', '@LIBCXX_TEST_TOOLS_PATH@'))
 
 # The test needs to manually rebuild the module. The compiler flags used in the

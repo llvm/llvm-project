@@ -64,6 +64,11 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I);
 bool extractBranchWeights(const MDNode *ProfileData,
                           SmallVectorImpl<uint32_t> &Weights);
 
+/// Faster version of extractBranchWeights() that skips checks and must only
+/// be called with "branch_weights" metadata nodes.
+void extractFromBranchWeightMD(const MDNode *ProfileData,
+                               SmallVectorImpl<uint32_t> &Weights);
+
 /// Extract branch weights attatched to an Instruction
 ///
 /// \param I The Instruction to extract weights from.
@@ -98,6 +103,10 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
 bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
+
+/// Create a new `branch_weights` metadata node and add or overwrite
+/// a `prof` metadata reference to instruction `I`.
+void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights);
 
 } // namespace llvm
 #endif

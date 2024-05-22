@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify=expected,notc2x -Wno-strict-prototypes %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,notc2x -Wno-strict-prototypes %s
 // RUN: %clang_cc1 -fsyntax-only -std=gnu2x -verify=expected,c2x %s
 
 enum [[]] E {
@@ -16,13 +16,20 @@ enum { [[]] Six }; // expected-error {{expected identifier}}
 // FIXME: this diagnostic can be improved.
 enum E3 [[]] { Seven }; // expected-error {{expected identifier or '('}}
 
-[[deprecated([""])]] int WrongArgs; // expected-error {{expected expression}}
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
 [[maybe_unused,,,]] int Commas3; // ok
 [[,,maybe_unused,]] int Commas4; // ok
 [[foo bar]] int NoComma; // expected-error {{expected ','}} \
                          // expected-warning {{unknown attribute 'foo' ignored}}
+
+
+[[deprecated(L"abc")]] void unevaluated_string(void);
+// expected-warning@-1 {{encoding prefix 'L' on an unevaluated string literal has no effect}}
+
+[[nodiscard("\123")]] int unevaluated_string2(void);
+// expected-error@-1 {{invalid escape sequence '\123' in an unevaluated string literal}}
 
 struct [[]] S1 {
   int i [[]];

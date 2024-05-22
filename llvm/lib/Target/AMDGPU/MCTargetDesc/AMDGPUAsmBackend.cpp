@@ -28,7 +28,7 @@ namespace {
 
 class AMDGPUAsmBackend : public MCAsmBackend {
 public:
-  AMDGPUAsmBackend(const Target &T) : MCAsmBackend(support::little) {}
+  AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
   unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
 
@@ -53,7 +53,8 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 };
 
 } //End anonymous namespace
@@ -185,12 +186,15 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
 
 bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
                                              const MCFixup &Fixup,
-                                             const MCValue &) {
+                                             const MCValue &,
+                                             const MCSubtargetInfo *STI) {
   return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 

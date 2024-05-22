@@ -30,14 +30,14 @@ neg.cont:
   br label %cleanup
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare void @prototype(ptr, i1 zeroext)

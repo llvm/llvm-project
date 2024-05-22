@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 v_cndmask_b32 v5, v1, v2, vcc
 // CHECK: [0x01,0x05,0x0a,0x00]

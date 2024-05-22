@@ -12,6 +12,15 @@ entry:
 ; 16: 	lw	${{[0-9]+}}, %call16(__sync_fetch_and_add_4)(${{[0-9]+}})
 }
 
+define i32 @atomic_load_sub(ptr %mem, i32 %val, i32 %c) nounwind {
+; 16-LABEL: atomic_load_sub:
+; 16:	lw	${{[0-9]+}}, %call16(__sync_synchronize)(${{[0-9]+}})
+; 16: 	lw	${{[0-9]+}}, %call16(__sync_fetch_and_sub_4)(${{[0-9]+}})
+entry:
+  %0 = atomicrmw sub ptr %mem, i32 %val seq_cst
+  ret i32 %0
+}
+
 define i32 @main() nounwind {
 entry:
   %x = alloca i32, align 4
@@ -37,5 +46,3 @@ entry:
 }
 
 declare i32 @printf(ptr nocapture, ...) nounwind
-
-

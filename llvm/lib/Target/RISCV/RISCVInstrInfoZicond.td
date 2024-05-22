@@ -14,6 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def riscv_czero_eqz : SDNode<"RISCVISD::CZERO_EQZ", SDTIntBinOp>;
+def riscv_czero_nez : SDNode<"RISCVISD::CZERO_NEZ", SDTIntBinOp>;
+
+//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -29,33 +36,17 @@ def CZERO_NEZ : ALU_rr<0b0000111, 0b111, "czero.nez">,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZicond] in {
-// Directly use CZERO_EQZ/CZERO_NEZ in case of any of the operands being 0.
-def : Pat<(XLenVT (select (XLenVT GPR:$rc), GPR:$rs1, 0)),
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (select (XLenVT GPR:$rc), 0, GPR:$rs1)),
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
 
-def : Pat<(XLenVT (select (riscv_setne (XLenVT GPR:$rc)), GPR:$rs1, 0)),
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (select (riscv_seteq (XLenVT GPR:$rc)), GPR:$rs1, 0)),
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (select (riscv_setne (XLenVT GPR:$rc)), 0, GPR:$rs1)),
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (select (riscv_seteq (XLenVT GPR:$rc)), 0, GPR:$rs1)),
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-
-// Conditional AND operation patterns.
-def : Pat<(XLenVT (select (XLenVT GPR:$rc), (and GPR:$rs1, GPR:$rs2), GPR:$rs1)),
-          (OR (AND $rs1, $rs2), (CZERO_NEZ $rs1, $rc))>;
-def : Pat<(XLenVT (select (XLenVT GPR:$rc), GPR:$rs1, (and GPR:$rs1, GPR:$rs2))),
-          (OR (AND $rs1, $rs2), (CZERO_EQZ $rs1, $rc))>;
-
-// Basic select pattern that selects between 2 registers.
-def : Pat<(XLenVT (select (XLenVT GPR:$rc), GPR:$rs1, GPR:$rs2)),
-          (OR (CZERO_EQZ $rs1, $rc), (CZERO_NEZ $rs2, $rc))>;
-
-def : Pat<(XLenVT (select (riscv_setne (XLenVT GPR:$rc)), GPR:$rs1, GPR:$rs2)),
-          (OR (CZERO_EQZ GPR:$rs1, GPR:$rc), (CZERO_NEZ GPR:$rs2, GPR:$rc))>;
-def : Pat<(XLenVT (select (riscv_seteq (XLenVT GPR:$rc)), GPR:$rs2, GPR:$rs1)),
-          (OR (CZERO_EQZ GPR:$rs1, GPR:$rc), (CZERO_NEZ GPR:$rs2, GPR:$rc))>;
 } // Predicates = [HasStdExtZicond]

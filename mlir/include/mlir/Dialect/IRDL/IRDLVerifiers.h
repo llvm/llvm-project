@@ -14,8 +14,10 @@
 #define MLIR_DIALECT_IRDL_IRDLVERIFIERS_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace mlir {
@@ -178,6 +180,30 @@ public:
                        ConstraintVerifier &context) const override;
 };
 
+/// A constraint checking that a region satisfies `irdl.region` requirements
+struct RegionConstraint {
+  /// The constructor accepts constrained entities from the `irdl.region`
+  /// operation, such as slots of constraints for the region's arguments and the
+  /// block count.
+
+  // Both entities are optional, which means if an entity is not present, then
+  // it is not constrained.
+  RegionConstraint(std::optional<SmallVector<unsigned>> argumentConstraints,
+                   std::optional<size_t> blockCount)
+      : argumentConstraints(std::move(argumentConstraints)),
+        blockCount(blockCount) {}
+
+  /// Check that the `region` satisfies the constraint.
+  ///
+  /// `constraintContext` is needed to verify the region's arguments
+  /// constraints.
+  LogicalResult verify(mlir::Region &region,
+                       ConstraintVerifier &constraintContext);
+
+private:
+  std::optional<SmallVector<unsigned>> argumentConstraints;
+  std::optional<size_t> blockCount;
+};
 } // namespace irdl
 } // namespace mlir
 

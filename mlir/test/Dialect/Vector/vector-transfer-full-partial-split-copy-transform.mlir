@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-DAG: #[[$map_p4:.*]] = affine_map<()[s0] -> (s0 + 4)>
 // CHECK-DAG: #[[$map_p8:.*]] = affine_map<()[s0] -> (s0 + 8)>
@@ -106,11 +106,13 @@ func.func @split_vector_transfer_read_strided_2d(
   return %1 : vector<4x8xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -167,11 +169,13 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK:           return
 // CHECK:         }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -235,9 +239,11 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:           return
 // CHECK:         }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

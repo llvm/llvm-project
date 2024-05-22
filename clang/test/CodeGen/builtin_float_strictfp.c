@@ -19,15 +19,11 @@ void test_half(__fp16 *H, __fp16 *H2) {
   // NOFP16:       [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8
   // NOFP16-NEXT:  [[IHALF:%.*]]  = load i16, ptr [[LDADDR]], align 2
   // NOFP16-NEXT:  [[CONV:%.*]]   = call float @llvm.convert.from.fp16.f32(i16 [[IHALF]])
-  // NOFP16-NEXT:  [[IFLOAT:%.*]] = bitcast float [[CONV]] to i32
-  // NOFP16-NEXT:  [[SHL:%.*]]    = shl i32 [[IFLOAT]], 1
-  // NOFP16-NEXT:  [[RES1:%.*]]   = icmp eq i32 [[SHL]], -16777216
+  // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], i32 516)
   // NOFP16-NEXT:                   zext i1 [[RES1]] to i32
   // FP16:         [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8
   // FP16-NEXT:    [[HALF:%.*]]   = load half, ptr [[LDADDR]], align 2
-  // FP16-NEXT:    [[IHALF:%.*]]  = bitcast half [[HALF]] to i16
-  // FP16-NEXT:    [[SHL:%.*]]    = shl i16 [[IHALF]], 1
-  // FP16-NEXT:    [[RES1:%.*]]   = icmp eq i16 [[SHL]], -2048
+  // FP16-NEXT:    [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f16(half [[HALF]], i32 516)
   // FP16-NEXT:                     zext i1 [[RES1]] to i32
 }
 

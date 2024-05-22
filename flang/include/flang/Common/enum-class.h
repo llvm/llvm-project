@@ -12,7 +12,7 @@
 //   enum class className { enum1, enum2, ... , enumN };
 // as well as the introspective utilities
 //   static constexpr std::size_t className_enumSize{N};
-//   static inline const std::string_view EnumToString(className);
+//   static inline std::string_view EnumToString(className);
 
 #ifndef FORTRAN_COMMON_ENUM_CLASS_H_
 #define FORTRAN_COMMON_ENUM_CLASS_H_
@@ -63,9 +63,8 @@ constexpr std::array<std::string_view, ITEMS> EnumNames(const char *p) {
   [[maybe_unused]] static constexpr std::size_t NAME##_enumSize{ \
       ::Fortran::common::CountEnumNames(#__VA_ARGS__)}; \
   [[maybe_unused]] static inline std::string_view EnumToString(NAME e) { \
-    static const constexpr char vaArgs[]{#__VA_ARGS__}; \
     static const constexpr auto names{ \
-        ::Fortran::common::EnumNames<NAME##_enumSize>(vaArgs)}; \
+        ::Fortran::common::EnumNames<NAME##_enumSize>(#__VA_ARGS__)}; \
     return names[static_cast<std::size_t>(e)]; \
   }
 

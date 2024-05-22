@@ -28,13 +28,11 @@ set(sources
   X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
-  X86CallLowering.cpp
   X86CmovConversion.cpp
   X86DomainReassignment.cpp
   X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
-  X86PreAMXConfig.cpp
   X86LowerAMXIntrinsics.cpp
   X86TileConfig.cpp
   X86FastPreTileConfig.cpp
@@ -52,9 +50,9 @@ set(sources
   X86FlagsCopyLowering.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp
-  X86InstructionSelector.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
+  X86ISelLoweringCall.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
@@ -64,7 +62,6 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86EvexToVex.cpp
-  X86LegalizerInfo.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
@@ -73,7 +70,6 @@ set(sources
   X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
   X86PartialReduction.cpp
-  X86RegisterBankInfo.cpp
   X86RegisterInfo.cpp
   X86ReturnThunks.cpp
   X86SelectionDAGInfo.cpp
@@ -87,6 +83,10 @@ set(sources
   X86VZeroUpper.cpp
   X86WinEHState.cpp
   X86InsertWait.cpp
+  GISel/X86CallLowering.cpp
+  GISel/X86InstructionSelector.cpp
+  GISel/X86LegalizerInfo.cpp
+  GISel/X86RegisterBankInfo.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources}

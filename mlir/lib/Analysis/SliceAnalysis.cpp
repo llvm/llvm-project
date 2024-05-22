@@ -26,7 +26,7 @@ using namespace mlir;
 
 static void
 getForwardSliceImpl(Operation *op, SetVector<Operation *> *forwardSlice,
-                    SliceOptions::TransitiveFilter filter = nullptr) {
+                    const SliceOptions::TransitiveFilter &filter = nullptr) {
   if (!op)
     return;
 
@@ -51,7 +51,7 @@ getForwardSliceImpl(Operation *op, SetVector<Operation *> *forwardSlice,
 }
 
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                           ForwardSliceOptions options) {
+                           const ForwardSliceOptions &options) {
   getForwardSliceImpl(op, forwardSlice, options.filter);
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
@@ -62,25 +62,25 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
   // in-place swap based thing (the real std::reverse, not the LLVM adapter).
-  std::vector<Operation *> v(forwardSlice->takeVector());
+  SmallVector<Operation *, 0> v(forwardSlice->takeVector());
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                           SliceOptions options) {
+                           const SliceOptions &options) {
   for (Operation *user : root.getUsers())
     getForwardSliceImpl(user, forwardSlice, options.filter);
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
   // in-place swap based thing (the real std::reverse, not the LLVM adapter).
-  std::vector<Operation *> v(forwardSlice->takeVector());
+  SmallVector<Operation *, 0> v(forwardSlice->takeVector());
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
 static void getBackwardSliceImpl(Operation *op,
                                  SetVector<Operation *> *backwardSlice,
-                                 BackwardSliceOptions options) {
+                                 const BackwardSliceOptions &options) {
   if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return;
 
@@ -119,7 +119,7 @@ static void getBackwardSliceImpl(Operation *op,
 
 void mlir::getBackwardSlice(Operation *op,
                             SetVector<Operation *> *backwardSlice,
-                            BackwardSliceOptions options) {
+                            const BackwardSliceOptions &options) {
   getBackwardSliceImpl(op, backwardSlice, options);
 
   if (!options.inclusive) {
@@ -130,7 +130,7 @@ void mlir::getBackwardSlice(Operation *op,
 }
 
 void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                            BackwardSliceOptions options) {
+                            const BackwardSliceOptions &options) {
   if (Operation *definingOp = root.getDefiningOp()) {
     getBackwardSlice(definingOp, backwardSlice, options);
     return;
@@ -139,9 +139,9 @@ void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
   getBackwardSlice(bbAargOwner, backwardSlice, options);
 }
 
-SetVector<Operation *> mlir::getSlice(Operation *op,
-                                      BackwardSliceOptions backwardSliceOptions,
-                                      ForwardSliceOptions forwardSliceOptions) {
+SetVector<Operation *>
+mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
+               const ForwardSliceOptions &forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
 

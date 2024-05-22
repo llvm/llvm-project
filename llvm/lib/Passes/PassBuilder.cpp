@@ -67,12 +67,28 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/StructuralHash.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/InterleavedLoadCombine.h"
+#include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -88,11 +104,13 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "llvm/Transforms/Coroutines/CoroElide.h"
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
+#include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/Annotation2Metadata.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
@@ -170,6 +188,7 @@
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
+#include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
@@ -231,6 +250,7 @@
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
+#include "llvm/Transforms/Utils/DXILUpgrade.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
@@ -399,6 +419,32 @@ public:
   static StringRef name() { return "TriggerCrashPass"; }
 };
 
+// A pass for testing message reporting of -verify-each failures.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerVerifierErrorPass
+    : public PassInfoMixin<TriggerVerifierErrorPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    // Intentionally break the Module by creating an alias without setting the
+    // aliasee.
+    auto *PtrTy = llvm::PointerType::getUnqual(M.getContext());
+    GlobalAlias::create(PtrTy, PtrTy->getAddressSpace(),
+                        GlobalValue::LinkageTypes::InternalLinkage,
+                        "__bad_alias", nullptr, &M);
+    return PreservedAnalyses::none();
+  }
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    // Intentionally break the Function by inserting a terminator
+    // instruction in the middle of a basic block.
+    BasicBlock &BB = F.getEntryBlock();
+    new UnreachableInst(F.getContext(), BB.getTerminator());
+    return PreservedAnalyses::none();
+  }
+
+  static StringRef name() { return "TriggerVerifierErrorPass"; }
+};
+
 } // namespace
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
@@ -525,7 +571,7 @@ static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
   // normal pass name w/o parameters == default parameters
   if (Name.empty())
     return true;
-  return Name.startswith("<") && Name.endswith(">");
+  return Name.starts_with("<") && Name.ends_with(">");
 }
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
@@ -693,8 +739,28 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
 }
 
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "skip-non-recursive",
+  return parseSinglePassOption(Params, "skip-non-recursive-function-attrs",
                                "PostOrderFunctionAttrs");
+}
+
+Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
+  if (Params.empty())
+    return CFGuardPass::Mechanism::Check;
+
+  auto [Param, RHS] = Params.split(';');
+  if (!RHS.empty())
+    return make_error<StringError>(
+        formatv("too many CFGuardPass parameters '{0}' ", Params).str(),
+        inconvertibleErrorCode());
+
+  if (Param == "check")
+    return CFGuardPass::Mechanism::Check;
+  if (Param == "dispatch")
+    return CFGuardPass::Mechanism::Dispatch;
+
+  return make_error<StringError>(
+      formatv("invalid CFGuardPass mechanism: '{0}' ", Param).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
@@ -744,26 +810,6 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
-    }
-  }
-  return Result;
-}
-
-Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
-  EmbedBitcodeOptions Result;
-  while (!Params.empty()) {
-    StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
-
-    if (ParamName == "thinlto") {
-      Result.IsThinLTO = true;
-    } else if (ParamName == "emit-summary") {
-      Result.EmitLTOSummary = true;
-    } else {
-      return make_error<StringError>(
-          formatv("invalid EmbedBitcode pass parameter '{0}' ", ParamName)
               .str(),
           inconvertibleErrorCode());
     }
@@ -845,6 +891,9 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
 
 Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
   InstCombineOptions Result;
+  // When specifying "instcombine" in -passes enable fix-point verification by
+  // default, as this is what most tests should use.
+  Result.setVerifyFixpoint(true);
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
@@ -852,6 +901,8 @@ Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "use-loop-info") {
       Result.setUseLoopInfo(Enable);
+    } else if (ParamName == "verify-fixpoint") {
+      Result.setVerifyFixpoint(Enable);
     } else if (Enable && ParamName.consume_front("max-iterations=")) {
       APInt MaxIterations;
       if (ParamName.getAsInteger(0, MaxIterations))
@@ -1066,13 +1117,50 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
   return *L;
 }
 
+Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "no-ensure-optimized-uses",
+                               "MemorySSAPrinterPass");
+}
+
+Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "only-if-divergent-target",
+                               "SpeculativeExecutionPass");
+}
+
+Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
+  std::string Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("profile-filename=")) {
+      Result = ParamName.str();
+    } else {
+      return make_error<StringError>(
+          formatv("invalid MemProfUse pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "detailed",
+                               "StructuralHashPrinterPass");
+}
+
+Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "demote-catchswitch-only",
+                               "WinEHPreparePass");
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
 /// alias.
 static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
-  return Name.startswith("default") || Name.startswith("thinlto") ||
-         Name.startswith("lto");
+  return Name.starts_with("default") || Name.starts_with("thinlto") ||
+         Name.starts_with("lto");
 }
 
 /// Tests whether registered callbacks will accept a given pass name.

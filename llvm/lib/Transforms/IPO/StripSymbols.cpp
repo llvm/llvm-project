@@ -30,11 +30,17 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    StripGlobalConstants("strip-global-constants", cl::init(false), cl::Hidden,
+                         cl::desc("Removes debug compile units which reference "
+                                  "to non-existing global constants"));
 
 /// OnlyUsedBy - Return true if V is only used by Usr.
 static bool OnlyUsedBy(Value *V, Value *Usr) {
@@ -73,7 +79,7 @@ static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
     Value *V = VI->getValue();
     ++VI;
     if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
-      if (!PreserveDbgInfo || !V->getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !V->getName().starts_with("llvm.dbg"))
         // Set name to "", removing from symbol table!
         V->setName("");
     }
@@ -88,7 +94,7 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
   for (StructType *STy : StructTypes) {
     if (STy->isLiteral() || STy->getName().empty()) continue;
 
-    if (PreserveDbgInfo && STy->getName().startswith("llvm.dbg"))
+    if (PreserveDbgInfo && STy->getName().starts_with("llvm.dbg"))
       continue;
 
     STy->setName("");
@@ -118,13 +124,13 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasLocalLinkage() && !llvmUsedValues.contains(&GV))
-      if (!PreserveDbgInfo || !GV.getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !GV.getName().starts_with("llvm.dbg"))
         GV.setName(""); // Internal symbols can't participate in linkage
   }
 
   for (Function &I : M) {
     if (I.hasLocalLinkage() && !llvmUsedValues.contains(&I))
-      if (!PreserveDbgInfo || !I.getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !I.getName().starts_with("llvm.dbg"))
         I.setName(""); // Internal symbols can't participate in linkage
     if (auto *Symtab = I.getValueSymbolTable())
       StripSymtab(*Symtab, PreserveDbgInfo);
@@ -216,7 +222,8 @@ static bool stripDeadDebugInfoImpl(Module &M) {
     // Create our live global variable list.
     bool GlobalVariableChange = false;
     for (auto *DIG : DIC->getGlobalVariables()) {
-      if (DIG->getExpression() && DIG->getExpression()->isConstant())
+      if (DIG->getExpression() && DIG->getExpression()->isConstant() &&
+          !StripGlobalConstants)
         LiveGVs.insert(DIG);
 
       // Make sure we only visit each global variable only once.

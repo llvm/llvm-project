@@ -158,6 +158,7 @@ public:
   template <typename T>
   OutgoingNotification<T> outgoingNotification(llvm::StringLiteral method) {
     return [&, method](const T &params) {
+      std::lock_guard<std::mutex> transportLock(transportOutputMutex);
       Logger::info("--> {0}", method);
       transport.notify(method, llvm::json::Value(params));
     };
@@ -172,6 +173,9 @@ private:
       methodHandlers;
 
   JSONTransport &transport;
+
+  /// Mutex to guard sending output messages to the transport.
+  std::mutex transportOutputMutex;
 };
 
 } // namespace lsp

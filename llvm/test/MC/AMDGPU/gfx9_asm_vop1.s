@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 v_nop
 // CHECK: [0x00,0x00,0x00,0x7e]

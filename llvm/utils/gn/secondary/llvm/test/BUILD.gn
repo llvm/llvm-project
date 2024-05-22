@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
@@ -64,6 +65,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DXIL_TESTS=0",
+    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
     "LLVM_LIBS_DIR=" + rebase_path("$root_out_dir/lib", dir),
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
@@ -175,12 +177,6 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "ENABLE_ASSERTIONS=0" ]  # Must be 0.
   }
 
-  if (llvm_enable_libxar) {
-    extra_values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    extra_values += [ "LLVM_HAVE_LIBXAR=0" ]  # Must be 0.
-  }
-
   if (llvm_enable_dia_sdk) {
     extra_values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
@@ -216,12 +212,21 @@ write_lit_config("lit_site_cfg") {
   } else {
     extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
   }
+
+  if (llvm_enable_reverse_iteration) {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=0" ]  # Must be 0.
+  }
 }
 
 write_lit_config("lit_unit_site_cfg") {
   input = "//llvm/test/Unit/lit.site.cfg.py.in"
   output = llvm_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_GTEST_RUN_UNDER=",
+  ]
 }
 
 # This target should contain all dependencies of check-llvm.
@@ -290,8 +295,8 @@ group("test") {
     "//llvm/tools/llvm-profgen",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi",
     "//llvm/tools/llvm-reduce",
-    "//llvm/tools/llvm-remark-size-diff",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
     "//llvm/tools/llvm-sim",
@@ -300,7 +305,6 @@ group("test") {
     "//llvm/tools/llvm-stress",
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
-    "//llvm/tools/llvm-tapi-diff",
     "//llvm/tools/llvm-tli-checker",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",

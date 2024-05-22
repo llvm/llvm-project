@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <unistd.h>
 
 namespace scudo {
 
@@ -111,19 +112,19 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
-// Hardware specific inlinable functions.
+inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
+                              uptr *Fractional) {
+  constexpr uptr Digits = 100;
+  if (Denominator == 0) {
+    *Integral = 100;
+    *Fractional = 0;
+    return;
+  }
 
-inline void yieldProcessor(UNUSED u8 Count) {
-#if defined(__i386__) || defined(__x86_64__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("pause");
-#elif defined(__aarch64__) || defined(__arm__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("yield");
-#endif
-  __asm__ __volatile__("" ::: "memory");
+  *Integral = Numerator * Digits / Denominator;
+  *Fractional =
+      (((Numerator * Digits) % Denominator) * Digits + Denominator / 2) /
+      Denominator;
 }
 
 // Platform specific functions.
@@ -131,9 +132,10 @@ inline void yieldProcessor(UNUSED u8 Count) {
 extern uptr PageSizeCached;
 uptr getPageSizeSlow();
 inline uptr getPageSizeCached() {
-  // Bionic uses a hardcoded value.
-  if (SCUDO_ANDROID)
-    return 4096U;
+#if SCUDO_ANDROID && defined(PAGE_SIZE)
+  // Most Android builds have a build-time constant page size.
+  return PAGE_SIZE;
+#endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
   return getPageSizeSlow();
@@ -143,8 +145,6 @@ inline uptr getPageSizeCached() {
 u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);
-
-uptr GetRSS();
 
 u64 getMonotonicTime();
 // Gets the time faster but with less accuracy. Can call getMonotonicTime
@@ -189,10 +189,6 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data = nullptr);
-
-// Internal map & unmap fatal error. This must not call map(). SizeIfOOM shall
-// hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM = 0);
 
 // Logging related functions.
 

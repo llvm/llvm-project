@@ -62,20 +62,34 @@ public:
     if (const auto &cycleName{cycleStmt.v}) {
       CheckConstructNameBranching("CYCLE", cycleName.value());
     } else {
-      switch ((llvm::omp::Directive)currentDirective_) {
-      // exclude directives which do not need a check for unlabelled CYCLES
-      case llvm::omp::Directive::OMPD_do:
-      case llvm::omp::Directive::OMPD_simd:
-      case llvm::omp::Directive::OMPD_parallel_do:
-      case llvm::omp::Directive::OMPD_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for:
-      case llvm::omp::Directive::OMPD_distribute_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
-        return;
-      default:
-        break;
+      if constexpr (std::is_same_v<D, llvm::omp::Directive>) {
+        switch ((llvm::omp::Directive)currentDirective_) {
+        // exclude directives which do not need a check for unlabelled CYCLES
+        case llvm::omp::Directive::OMPD_do:
+        case llvm::omp::Directive::OMPD_simd:
+        case llvm::omp::Directive::OMPD_parallel_do:
+        case llvm::omp::Directive::OMPD_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for:
+        case llvm::omp::Directive::OMPD_distribute_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+          return;
+        default:
+          break;
+        }
+      } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+        switch ((llvm::acc::Directive)currentDirective_) {
+        // exclude loop directives which do not need a check for unlabelled
+        // CYCLES
+        case llvm::acc::Directive::ACCD_loop:
+        case llvm::acc::Directive::ACCD_kernels_loop:
+        case llvm::acc::Directive::ACCD_parallel_loop:
+        case llvm::acc::Directive::ACCD_serial_loop:
+          return;
+        default:
+          break;
+        }
       }
       CheckConstructNameBranching("CYCLE");
     }
@@ -156,7 +170,7 @@ private:
 // Generic structure checker for directives/clauses language such as OpenMP
 // and OpenACC.
 // typename D is the directive enumeration.
-// tyepname C is the clause enumeration.
+// typename C is the clause enumeration.
 // typename PC is the parser class defined in parse-tree.h for the clauses.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 class DirectiveStructureChecker : public virtual BaseChecker {
@@ -331,9 +345,13 @@ protected:
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
 
-  void CheckRequireAtLeastOneOf();
+  void CheckRequireAtLeastOneOf(bool warnInsteadOfError = false);
 
-  void CheckAllowed(C clause);
+  void CheckAllowed(C clause, bool warnInsteadOfError = false);
+
+  // Check that the clause appears only once. The counter is reset when the
+  // separator clause appears.
+  void CheckAllowedOncePerGroup(C clause, C separator);
 
   void CheckAtLeastOneClause();
 
@@ -422,18 +440,29 @@ DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
 // directive.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckRequireAtLeastOneOf() {
-  if (GetContext().requiredClauses.empty())
+    ClauseEnumSize>::CheckRequireAtLeastOneOf(bool warnInsteadOfError) {
+  if (GetContext().requiredClauses.empty()) {
     return;
+  }
   for (auto cl : GetContext().actualClauses) {
-    if (GetContext().requiredClauses.test(cl))
+    if (GetContext().requiredClauses.test(cl)) {
       return;
+    }
   }
   // No clause matched in the actual clauses list
-  context_.Say(GetContext().directiveSource,
-      "At least one of %s clause must appear on the %s directive"_err_en_US,
-      ClauseSetToString(GetContext().requiredClauses),
-      ContextDirectiveAsFortran());
+  if (warnInsteadOfError) {
+    if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+      context_.Say(GetContext().directiveSource,
+          "At least one of %s clause should appear on the %s directive"_port_en_US,
+          ClauseSetToString(GetContext().requiredClauses),
+          ContextDirectiveAsFortran());
+    }
+  } else {
+    context_.Say(GetContext().directiveSource,
+        "At least one of %s clause must appear on the %s directive"_err_en_US,
+        ClauseSetToString(GetContext().requiredClauses),
+        ContextDirectiveAsFortran());
+  }
 }
 
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
@@ -446,15 +475,25 @@ std::string DirectiveStructureChecker<D, C, PC,
 // Check that clauses present on the directive are allowed clauses.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
-    C clause) {
+    C clause, bool warnInsteadOfError) {
   if (!GetContext().allowedClauses.test(clause) &&
       !GetContext().allowedOnceClauses.test(clause) &&
       !GetContext().allowedExclusiveClauses.test(clause) &&
       !GetContext().requiredClauses.test(clause)) {
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(getClauseName(clause).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+    if (warnInsteadOfError) {
+      if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+        context_.Say(GetContext().clauseSource,
+            "%s clause is not allowed on the %s directive and will be ignored"_port_en_US,
+            parser::ToUpperCaseLetters(getClauseName(clause).str()),
+            parser::ToUpperCaseLetters(
+                GetContext().directiveSource.ToString()));
+      }
+    } else {
+      context_.Say(GetContext().clauseSource,
+          "%s clause is not allowed on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()),
+          parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+    }
     return;
   }
   if ((GetContext().allowedOnceClauses.test(clause) ||
@@ -507,6 +546,27 @@ void DirectiveStructureChecker<D, C, PC,
           parser::ToUpperCaseLetters(getClauseName(clause).str()),
           ContextDirectiveAsFortran());
     }
+  }
+}
+
+template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+void DirectiveStructureChecker<D, C, PC,
+    ClauseEnumSize>::CheckAllowedOncePerGroup(C clause, C separator) {
+  bool clauseIsPresent = false;
+  for (auto cl : GetContext().actualClauses) {
+    if (cl == clause) {
+      if (clauseIsPresent) {
+        context_.Say(GetContext().clauseSource,
+            "At most one %s clause can appear on the %s directive or in group separated by the %s clause"_err_en_US,
+            parser::ToUpperCaseLetters(getClauseName(clause).str()),
+            parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
+            parser::ToUpperCaseLetters(getClauseName(separator).str()));
+      } else {
+        clauseIsPresent = true;
+      }
+    }
+    if (cl == separator)
+      clauseIsPresent = false;
   }
 }
 

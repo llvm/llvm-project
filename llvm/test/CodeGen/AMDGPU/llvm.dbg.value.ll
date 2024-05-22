@@ -1,9 +1,9 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
 
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
-; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[8:9], 0x0
+; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; NOOPT-NEXT: .Ltmp
 ; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
 
@@ -12,8 +12,8 @@
 define amdgpu_kernel void @test_debug_value(ptr addrspace(1) nocapture %globalptr_arg) #0 !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata ptr addrspace(1) %globalptr_arg, metadata !10, metadata !13), !dbg !14
-  store i32 123, ptr addrspace(1) %globalptr_arg, align 4
-  ret void
+  store i32 123, ptr addrspace(1) %globalptr_arg, align 4, !dbg !14
+  ret void, !dbg !14
 }
 
 ; Check for infinite loop in some cases with dbg_value in
@@ -27,7 +27,7 @@ entry:
 define amdgpu_kernel void @only_undef_dbg_value() #1 {
 bb:
   call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
-  ret void
+  ret void, !dbg !14
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
@@ -36,7 +36,7 @@ attributes #0 = { nounwind  }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!11, !12}
+!llvm.module.flags = !{!11, !12, !15}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 244715) (llvm/trunk 244718)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/test_debug_value.cl", directory: "/Users/matt/src/llvm/build_debug")
@@ -52,3 +52,4 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 42, scope: !4)
+!15 = !{i32 1, !"amdgpu_code_object_version", i32 500}

@@ -1163,7 +1163,7 @@ caveats to this use of name mangling:
 * The ``overloadable`` attribute has almost no meaning when used in C++,
   because names will already be mangled and functions are already overloadable.
   However, when an ``overloadable`` function occurs within an ``extern "C"``
-  linkage specification, it's name *will* be mangled in the same way as it
+  linkage specification, its name *will* be mangled in the same way as it
   would in C.
 
 For the purpose of backwards compatibility, at most one function with the same
@@ -1405,6 +1405,10 @@ Example usage:
 
 ``[[no_unique_address]]`` is a standard C++20 attribute. Clang supports its use
 in C++11 onwards.
+
+On MSVC targets, ``[[no_unique_address]]`` is ignored; use
+``[[msvc::no_unique_address]]`` instead. Currently there is no guarantee of ABI
+compatibility or stability with MSVC.
   }];
 }
 
@@ -1858,7 +1862,8 @@ The attribute may be applied to the declaration of a class, a typedef, a
 variable, a function or method, a function parameter, an enumeration, an
 enumerator, a non-static data member, or a label.
 
-.. code-block: c++
+.. code-block:: c++
+
   #include <cassert>
 
   [[maybe_unused]] void f([[maybe_unused]] bool thing1,
@@ -1887,7 +1892,8 @@ literal contents) are allowed. If there are redeclarations of the entity with
 differing string literals, it is unspecified which one will be used by Clang
 in any resulting diagnostics.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] error_info { /*...*/ };
   error_info enable_missile_safety_mode();
 
@@ -1904,7 +1910,8 @@ marked with ``[[nodiscard]]`` or a constructor of a type marked
 ``[[nodiscard]]`` will also diagnose. This also applies to type conversions that
 use the annotated ``[[nodiscard]]`` constructor or result in an annotated type.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] marked_type {/*..*/ };
   struct marked_ctor {
     [[nodiscard]] marked_ctor();
@@ -2192,6 +2199,43 @@ preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
+
+def BPFPreserveStaticOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``__attribute__((preserve_static_offset))``
+attribute for the BPF target. This attribute may be attached to a
+struct or union declaration. Reading or writing fields of types having
+such annotation is guaranteed to generate LDX/ST/STX instruction with
+offset corresponding to the field.
+
+For example:
+
+.. code-block:: c
+
+  struct foo {
+    int a;
+    int b;
+  };
+
+  struct bar {
+    int a;
+    struct foo b;
+  } __attribute__((preserve_static_offset));
+
+  void buz(struct bar *g) {
+    g->b.a = 42;
+  }
+
+The assignment to ``g``'s field would produce an ST instruction with
+offset 8: ``*(u32)(r1 + 8) = 42;``.
+
+Without this attribute generated instructions might be different,
+depending on optimizations behavior. E.g. the example above could be
+rewritten as ``r1 += 8; *(u32)(r1 + 0) = 42;``.
+  }];
+}
+
 def BTFDeclTagDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2508,6 +2552,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -2608,8 +2659,9 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes;
-  - The AMDGPU target backend is unable to create machine code that can meet the
-    request.
+
+The AMDGPU target backend will emit a warning whenever it is unable to
+create machine code that meets the request.
   }];
 }
 
@@ -2774,7 +2826,7 @@ On x86 targets, this attribute changes the calling convention to
 as possible in registers. It also tries to utilize registers for the
 return value whenever it is possible.
 
-.. _`__regcall`: https://software.intel.com/en-us/node/693069
+.. _`__regcall`: https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2023-2/c-c-sycl-calling-conventions.html
   }];
 }
 
@@ -2815,6 +2867,18 @@ allows the caller to align the parameter memory.
 See the documentation for `__vectorcall`_ on MSDN for more details.
 
 .. _`__vectorcall`: http://msdn.microsoft.com/en-us/library/dn375768.aspx
+  }];
+}
+
+def M68kRTDDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On M68k targets, this attribute changes the calling convention of a function
+to clear parameters off the stack on return. In other words, callee is
+responsible for cleaning out the stack space allocated for incoming paramters.
+This convention does not support variadic calls or unprototyped functions in C.
+When targeting M68010 or newer CPUs, this calling convention is implemented
+using the `rtd` instruction.
   }];
 }
 
@@ -3591,6 +3655,21 @@ an error:
   int S::*i;
   struct S {};
 }];
+}
+
+def MSConstexprDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[msvc::constexpr]]`` attribute can be applied only to a function
+definition or a ``return`` statement. It does not impact function declarations.
+A ``[[msvc::constexpr]]`` function cannot be ``constexpr`` or ``consteval``.
+A ``[[msvc::constexpr]]`` function is treated as if it were a ``constexpr`` function
+when it is evaluated in a constant context of ``[[msvc::constexpr]] return`` statement.
+Otherwise, it is treated as a regular function.
+
+Semantics of this attribute are enabled only under MSVC compatibility
+(``-fms-compatibility-version``) 19.33 and later.
+  }];
 }
 
 def MSNoVTableDocs : Documentation {
@@ -4798,6 +4877,54 @@ Marking virtual functions as ``disable_tail_calls`` is legal.
   }];
 }
 
+def AnyX86InterruptDocs : Documentation {
+    let Category = DocCatFunction;
+    let Heading = "interrupt (X86)";
+    let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt))`` attribute on X86
+targets. This attribute may be attached to a function definition and instructs
+the backend to generate appropriate function entry/exit code so that it can be
+used directly as an interrupt service routine.
+
+Interrupt handlers have access to the stack frame pushed onto the stack by the processor,
+and return using the ``IRET`` instruction. All registers in an interrupt handler are callee-saved.
+Exception handlers also have access to the error code pushed onto the stack by the processor,
+when applicable.
+
+An interrupt handler must take the following arguments:
+
+  .. code-block:: c
+
+   __attribute__ ((interrupt))
+   void f (struct stack_frame *frame) {
+       ...
+   }
+
+  Where ``struct stack_frame`` is a suitable struct matching the stack frame pushed by the
+  processor.
+
+An exception handler must take the following arguments:
+
+  .. code-block:: c
+
+   __attribute__ ((interrupt))
+   void g (struct stack_frame *frame, unsigned long code) {
+       ...
+   }
+
+  On 32-bit targets, the ``code`` argument should be of type ``unsigned int``.
+
+Exception handlers should only be used when an error code is pushed by the processor.
+Using the incorrect handler type will crash the system.
+
+Interrupt and exception handlers cannot be called by other functions and must have return type ``void``.
+
+Interrupt and exception handlers should only call functions with the 'no_caller_saved_registers'
+attribute, or should be compiled with the '-mgeneral-regs-only' flag to avoid saving unused
+non-GPR registers.
+    }];
+}
+
 def AnyX86NoCallerSavedRegistersDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -4811,6 +4938,10 @@ passing or returning arguments to the function.
 The user can call functions specified with the 'no_caller_saved_registers'
 attribute from an interrupt handler without saving and restoring all
 call-clobbered registers.
+
+Functions specified with the 'no_caller_saved_registers' attribute should only
+call other functions with the 'no_caller_saved_registers' attribute, or should be
+compiled with the '-mgeneral-regs-only' flag to avoid saving unused non-GPR registers.
 
 Note that 'no_caller_saved_registers' attribute is not a calling convention.
 In fact, it only overrides the decision of which registers should be saved by
@@ -5136,7 +5267,74 @@ the ``int`` parameter is the one that represents the error.
 def SuppressDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
-The ``[[gsl::suppress]]`` attribute suppresses specific
+The ``suppress`` attribute suppresses unwanted warnings coming from static
+analysis tools such as the Clang Static Analyzer. The tool will not report
+any issues in source code annotated with the attribute.
+
+The attribute cannot be used to suppress traditional Clang warnings, because
+many such warnings are emitted before the attribute is fully parsed.
+Consider using ``#pragma clang diagnostic`` to control such diagnostics,
+as described in `Controlling Diagnostics via Pragmas
+<https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas>`_.
+
+The ``suppress`` attribute can be placed on an individual statement in order to
+suppress warnings about undesirable behavior occurring at that statement:
+
+.. code-block:: c++
+
+  int foo() {
+    int *x = nullptr;
+    ...
+    [[clang::suppress]]
+    return *x;  // null pointer dereference warning suppressed here
+  }
+
+Putting the attribute on a compound statement suppresses all warnings in scope:
+
+.. code-block:: c++
+
+  int foo() {
+    [[clang::suppress]] {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire scope
+    }
+  }
+
+Some static analysis warnings are accompanied by one or more notes, and the
+line of code against which the warning is emitted isn't necessarily the best
+for suppression purposes. In such cases the tools are allowed to implement
+additional ways to suppress specific warnings based on the attribute attached
+to a note location.
+
+For example, the Clang Static Analyzer suppresses memory leak warnings when
+the suppression attribute is placed at the allocation site (highlited by
+a "note: memory is allocated"), which may be different from the line of code
+at which the program "loses track" of the pointer (where the warning
+is ultimately emitted):
+
+.. code-block:: c
+
+  int bar1(bool coin_flip) {
+    __attribute__((suppress))
+    int *result = (int *)malloc(sizeof(int));
+    if (coin_flip)
+      return 1;  // warning about this leak path is suppressed
+
+    return *result;  // warning about this leak path is also suppressed
+  }
+
+  int bar2(bool coin_flip) {
+    int *result = (int *)malloc(sizeof(int));
+    if (coin_flip)
+      return 1;  // leak warning on this path NOT suppressed
+
+    __attribute__((suppress))
+    return *result;  // leak warning is suppressed only on this path
+  }
+
+
+When written as ``[[gsl::suppress]]``, this attribute suppresses specific
 clang-tidy diagnostics for rules of the `C++ Core Guidelines`_ in a portable
 way. The attribute can be attached to declarations, statements, and at
 namespace scope.
@@ -5337,7 +5535,9 @@ considered inline.
 Not all targets support this attribute. ELF target support depends on both the
 linker and runtime linker, and is available in at least lld 4.0 and later,
 binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
-Non-ELF targets currently do not support this attribute.
+Mach-O targets support it, but with slightly different semantics: the resolver
+is run at first call, instead of at load time by the runtime linker. Targets
+other than ELF and Mach-O currently do not support this attribute.
   }];
 }
 
@@ -5685,12 +5885,12 @@ accessed. The following are examples of valid expressions where may not be diagn
 ``noderef`` is currently only supported for pointers and arrays and not usable
 for references or Objective-C object pointers.
 
-.. code-block: c++
+.. code-block:: c++
 
   int x = 2;
   int __attribute__((noderef)) &y = x;  // warning: 'noderef' can only be used on an array or pointer type
 
-.. code-block: objc
+.. code-block:: objc
 
   id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only be used on an array or pointer type
 }];
@@ -6578,38 +6778,147 @@ Requirements on Development Tools - Engineering Specification Documentation
   }];
 }
 
-def ArmStreamingDocs : Documentation {
-  let Category = DocCatType;
+def DocCatArmSmeAttributes : DocumentationCategory<"AArch64 SME Attributes"> {
   let Content = [{
-.. Note:: This attribute has not been implemented yet, but once it is
-   implemented, it will behave as described below.
+Clang supports a number of AArch64-specific attributes to manage state
+added by the Scalable Matrix Extension (SME). This state includes the
+runtime mode that the processor is in (e.g. non-streaming or streaming)
+as well as the state of the ``ZA`` Matrix Storage.
 
-The ``__arm_streaming`` keyword is only available on AArch64 targets.
-It applies to function types and specifies that the function has a
-"streaming interface".  This means that:
+The attributes come in the form of type- and declaration attributes:
 
-* the function requires the Scalable Matrix Extension (SME)
+* The SME declaration attributes can appear anywhere that a standard
+  ``[[...]]`` declaration attribute can appear.
+
+* The SME type attributes apply only to prototyped functions and can appear
+  anywhere that a standard ``[[...]]`` type attribute can appear. The SME
+  type attributes do not apply to functions having a K&R-style
+  unprototyped function type.
+
+See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
+for more details about the features related to the SME extension.
+
+See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
+<https://github.com/ARM-software/abi-aa>`_ for more details about
+streaming-interface functions and shared/private-ZA interface functions.
+  }];
+}
+
+def ArmSmeStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming`` keyword applies to prototyped function types and specifies
+that the function has a "streaming interface".  This means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
 
 * the function must be entered in streaming mode (that is, with PSTATE.SM
   set to 1)
 
 * the function must return in streaming mode
 
-See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
-<https://github.com/ARM-software/abi-aa>`_ for more details about
-streaming-interface functions.
-
 Clang manages PSTATE.SM automatically; it is not the source code's
-responsibility to do this.  For example, if a normal non-streaming
+responsibility to do this.  For example, if a non-streaming
 function calls an ``__arm_streaming`` function, Clang generates code
 that switches into streaming mode before calling the function and
 switches back to non-streaming mode on return.
+  }];
+}
 
-``__arm_streaming`` can appear anywhere that a standard ``[[...]]`` type
-attribute can appear.
+def ArmSmeStreamingCompatibleDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming_compatible`` keyword applies to prototyped function types and
+specifies that the function has a "streaming compatible interface".  This
+means that:
 
-See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
-for more details about this extension, and for other related SME features.
+* the function may be entered in either non-streaming mode (PSTATE.SM=0) or
+  in streaming mode (PSTATE.SM=1).
+
+* the function must return in the same mode as it was entered.
+
+* the code executed in the function is compatible with either mode.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  Clang will ensure that the generated code in
+streaming-compatible functions is valid in either mode (PSTATE.SM=0 or
+PSTATE.SM=1). For example, if an ``__arm_streaming_compatible`` function calls a
+non-streaming function, Clang generates code to temporarily switch out of streaming
+mode before calling the function and switch back to streaming-mode on return if
+``PSTATE.SM`` is ``1`` on entry of the caller. If ``PSTATE.SM`` is ``0`` on
+entry to the ``__arm_streaming_compatible`` function, the call will be executed
+without changing modes.
+  }];
+}
+
+def ArmSmeSharedZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_shared_za`` keyword applies to prototyped function types and specifies
+that the function shares SME's matrix storage (ZA) with its caller.  This
+means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function enters with ZA in an active state.
+
+* the function returns with ZA in an active state.
+  }];
+}
+
+def ArmSmePreservesZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_preserves_za`` keyword applies to prototyped function types and
+specifies that the function does not modify ZA state.
+  }];
+}
+
+
+def ArmSmeLocallyStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_locally_streaming`` keyword applies to function declarations
+and specifies that all the statements in the function are executed in
+streaming mode. This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the program automatically puts the machine into streaming mode before
+  executing the statements and automatically restores the previous mode
+  afterwards.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, Clang will emit code to enable
+streaming mode at the start of the function, and disable streaming mode
+at the end of the function.
+  }];
+}
+
+def ArmSmeNewZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_new_za`` keyword applies to function declarations and specifies
+that the function will be set up with a fresh ZA context.
+
+This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function will commit any lazily saved ZA data.
+
+* the function will create a new ZA context and enable PSTATE.ZA.
+
+* the function will disable PSTATE.ZA (by setting it to 0) before returning.
+
+For ``__arm_new_za`` functions Clang will set up the ZA context automatically
+on entry to the function, and disable it before returning. For example, if ZA is
+in a dormant state Clang will generate the code to commit a lazy-save and set up
+a new ZA state before executing user code.
   }];
 }
 
@@ -6881,6 +7190,26 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
   }];
 }
 
+def HLSLParamQualifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Parameter Modifiers";
+  let Content = [{
+HLSL function parameters are passed by value. Parameter declarations support
+three qualifiers to denote parameter passing behavior. The three qualifiers are
+`in`, `out` and `inout`.
+
+Parameters annotated with `in` or with no annotation are passed by value from
+the caller to the callee.
+
+Parameters annotated with `out` are written to the argument after the callee
+returns (Note: arguments values passed into `out` parameters *are not* copied
+into the callee).
+
+Parameters annotated with `inout` are copied into the callee via a temporary,
+and copied back to the argument after the callee returns.
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -7051,8 +7380,71 @@ its underlying representation to be a WebAssembly ``funcref``.
   }];
 }
 
+def PreferredTypeDocumentation : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+This attribute allows adjusting the type of a bit-field in debug information.
+This can be helpful when a bit-field is intended to store an enumeration value,
+but has to be specified as having the enumeration's underlying type in order to
+facilitate compiler optimizations or bit-field packing behavior. Normally, the
+underlying type is what is emitted in debug information, which can make it hard
+for debuggers to know to map a bit-field's value back to a particular enumeration.
+
+.. code-block:: c++
+
+    enum Colors { Red, Green, Blue };
+
+    struct S {
+      [[clang::preferred_type(Colors)]] unsigned ColorVal : 2;
+      [[clang::preferred_type(bool)]] unsigned UseAlternateColorSpace : 1;
+    } s = { Green, false };
+
+Without the attribute, a debugger is likely to display the value ``1`` for ``ColorVal``
+and ``0`` for ``UseAlternateColorSpace``. With the attribute, the debugger may now
+display ``Green`` and ``false`` instead.
+
+This can be used to map a bit-field to an arbitrary type that isn't integral
+or an enumeration type. For example:
+
+.. code-block:: c++
+
+    struct A {
+      short a1;
+      short a2;
+    };
+
+    struct B {
+      [[clang::preferred_type(A)]] unsigned b1 : 32 = 0x000F'000C;
+    };
+
+will associate the type ``A`` with the ``b1`` bit-field and is intended to display
+something like this in the debugger:
+
+.. code-block:: text
+
+    Process 2755547 stopped
+    * thread #1, name = 'test-preferred-', stop reason = step in
+        frame #0: 0x0000555555555148 test-preferred-type`main at test.cxx:13:14
+       10   int main()
+       11   {
+       12       B b;
+    -> 13       return b.b1;
+       14   }
+    (lldb) v -T
+    (B) b = {
+      (A:32) b1 = {
+        (short) a1 = 12
+        (short) a2 = 15
+      }
+    }
+
+Note that debuggers may not be able to handle more complex mappings, and so
+this usage is debugger-dependent.
+  }];
+}
+
 def CleanupDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatVariable;
   let Content = [{
 This attribute allows a function to be run when a local variable goes out of
 scope. The attribute takes the identifier of a function with a parameter type
@@ -7075,5 +7467,324 @@ address of ``x`` when ``x`` goes out of scope. If two or more variables share
 the same scope, their ``cleanup`` callbacks are invoked in the reverse order
 the variables were declared in. It is not possible to check the return value
 (if any) of these ``cleanup`` callback functions.
+}];
+}
+
+def CtorDtorDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``constructor`` attribute causes the function to be called before entering
+``main()``, and the ``destructor`` attribute causes the function to be called
+after returning from ``main()`` or when the ``exit()`` function has been
+called. Note, ``quick_exit()``, ``_Exit()``, and ``abort()`` prevent a function
+marked ``destructor`` from being called.
+
+The constructor or destructor function should not accept any arguments and its
+return type should be ``void``.
+
+The attributes accept an optional argument used to specify the priority order
+in which to execute constructor and destructor functions. The priority is
+given as an integer constant expression between 101 and 65535 (inclusive).
+Priorities outside of that range are reserved for use by the implementation. A
+lower value indicates a higher priority of initialization. Note that only the
+relative ordering of values is important. For example:
+
+.. code-block:: c++
+
+  __attribute__((constructor(200))) void foo(void);
+  __attribute__((constructor(101))) void bar(void);
+
+``bar()`` will be called before ``foo()``, and both will be called before
+``main()``. If no argument is given to the ``constructor`` or ``destructor``
+attribute, they default to the value ``65535``.
+}];
+}
+
+def CountedByDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+Clang supports the ``counted_by`` attribute on the flexible array member of a
+structure in C. The argument for the attribute is the name of a field member in
+the same structure holding the count of elements in the flexible array. This
+information can be used to improve the results of the array bound sanitizer and
+the ``__builtin_dynamic_object_size`` builtin.
+
+For example, the following code:
+
+.. code-block:: c
+
+  struct bar;
+
+  struct foo {
+    size_t count;
+    char other;
+    struct bar *array[] __attribute__((counted_by(count)));
+  };
+
+specifies that the flexible array member ``array`` has the number of elements
+allocated for it stored in ``count``. This establishes a relationship between
+``array`` and ``count``. Specifically, ``p->array`` must have at least
+``p->count`` number of elements available. It's the user's responsibility to
+ensure that this relationship is maintained through changes to the structure.
+
+In the following example, the allocated array erroneously has fewer elements
+than what's specified by ``p->count``. This would result in an out-of-bounds
+access not being detected.
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count + SIZE_INCR;
+  }
+
+The next example updates ``p->count``, breaking the relationship requirement
+that ``p->array`` must have at least ``p->count`` number of elements available:
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count;
+  }
+
+  void use_foo(int index) {
+    p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
+    p->array[index] = 0;       /* the sanitizer can't properly check if this is an out-of-bounds access. */
+  }
+
+  }];
+}
+
+def CoroOnlyDestroyWhenCompleteDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `coro_only_destroy_when_complete` attribute should be marked on a C++ class. The coroutines
+whose return type is marked with the attribute are assumed to be destroyed only after the coroutine has
+reached the final suspend point.
+
+This is helpful for the optimizers to reduce the size of the destroy function for the coroutines.
+
+For example,
+
+.. code-block:: c++
+
+  A foo() {
+    dtor d;
+    co_await something();
+    dtor d1;
+    co_await something();
+    dtor d2;
+    co_return 43;
+  }
+
+The compiler may generate the following pseudocode:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    switch(frame->suspend_index()) {
+      case 1:
+        frame->d.~dtor();
+        break;
+      case 2:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        break;
+      case 3:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        frame->d2.~dtor();
+        break;
+      default: // coroutine completed or haven't started
+        break;
+    }
+
+    frame->promise.~promise_type();
+    delete frame;
+  }
+
+The `foo.destroy()` function's purpose is to release all of the resources
+initialized for the coroutine when it is destroyed in a suspended state.
+However, if the coroutine is only ever destroyed at the final suspend state,
+the rest of the conditions are superfluous.
+
+The user can use the `coro_only_destroy_when_complete` attributo suppress
+generation of the other destruction cases, optimizing the above `foo.destroy` to:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    frame->promise.~promise_type();
+    delete frame;
+  }
+
+  }];
+}
+
+def CoroReturnTypeAndWrapperDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_return_type]]`` attribute is used to help static analyzers to recognize
+coroutines from the function signatures.
+
+The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
+a **coroutine return type (CRT)**.
+
+A function ``R func(P1, .., PN)`` has a coroutine return type (CRT) ``R`` if ``R``
+is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type associated to it
+(i.e., std::coroutine_traits<R, P1, .., PN>::promise_type is a valid promise type).
+
+If the return type of a function is a ``CRT`` then the function must be a coroutine.
+Otherwise the program is invalid. It is allowed for a non-coroutine to return a ``CRT``
+if the function is marked with ``[[clang::coro_wrapper]]``.
+
+The ``[[clang::coro_wrapper]]`` attribute should be marked on a C++ function to mark it as
+a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``,
+is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
+
+Clang will enforce that all functions that return a ``CRT`` are either coroutines or marked
+with ``[[clang::coro_wrapper]]``. Clang will enforce this with an error.
+
+From a language perspective, it is not possible to differentiate between a coroutine and a
+function returning a CRT by merely looking at the function signature.
+
+Coroutine wrappers, in particular, are susceptible to capturing
+references to temporaries and other lifetime issues. This allows to avoid such lifetime
+issues with coroutine wrappers.
+
+For example,
+
+.. code-block:: c++
+
+  // This is a CRT.
+  template <typename T> struct [[clang::coro_return_type]] Task {
+    using promise_type = some_promise_type;
+  };
+
+  Task<int> increment(int a) { co_return a + 1; } // Fine. This is a coroutine.
+  Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
+
+  // Fine for a coroutine wrapper to return a CRT.
+  [[clang::coro_wrapper]] Task<int> foo() { return increment(1); }
+
+  void bar() {
+    // Invalid. This intantiates a function which returns a CRT but is not marked as
+    // a coroutine wrapper.
+    std::function<Task<int>(int)> f = increment;
+  }
+
+Note: ``a_promise_type::get_return_object`` is exempted from this analysis as it is a necessary
+implementation detail of any coroutine library.
+}];
+}
+
+def CodeAlignAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "clang::code_align";
+  let Content = [{
+The ``clang::code_align(N)`` attribute applies to a loop and specifies the byte
+alignment for a loop. The attribute accepts a positive integer constant
+initialization expression indicating the number of bytes for the minimum
+alignment boundary. Its value must be a power of 2, between 1 and 4096
+(inclusive).
+
+.. code-block:: c++
+
+  void foo() {
+    int var = 0;
+    [[clang::code_align(16)]] for (int i = 0; i < 10; ++i) var++;
+  }
+
+  void Array(int *array, size_t n) {
+    [[clang::code_align(64)]] for (int i = 0; i < n; ++i) array[i] = 0;
+  }
+
+  void count () {
+    int a1[10], int i = 0;
+    [[clang::code_align(32)]] while (i < 10) { a1[i] += 3; }
+  }
+
+  void check() {
+    int a = 10;
+    [[clang::code_align(8)]] do {
+      a = a + 1;
+    } while (a < 20);
+  }
+
+  template<int A>
+  void func() {
+    [[clang::code_align(A)]] for(;;) { }
+  }
+
+  }];
+}
+
+def CoroLifetimeBoundDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
+to a coroutine return type (`CRT`_) (i.e.
+it should also be annotated with ``[[clang::coro_return_type]]``).
+
+All parameters of a function are considered to be lifetime bound. See `documentation`_
+of ``[[clang::lifetimebound]]`` for more details.
+if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+
+Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
+
+For example,
+
+.. code-block:: c++
+
+  task<int> coro(const int& a) { co_return a + 1; }
+  task<int> dangling_refs(int a) {
+    // `coro` captures reference to a temporary. `foo` would now contain a dangling reference to `a`.
+    auto foo = coro(1);
+    // `coro` captures reference to local variable `a` which is destroyed after the return.
+    return coro(a);
+  }
+
+Lifetime bound static analysis can be used to detect such instances when coroutines capture references
+which may die earlier than the coroutine frame itself. In the above example, if the CRT `task` is annotated with
+``[[clang::coro_lifetimebound]]``, then lifetime bound analysis would detect capturing reference to
+temporaries or return address of a local variable.
+
+Both coroutines and coroutine wrappers are part of this analysis.
+
+.. code-block:: c++
+
+  template <typename T> struct [[clang::coro_return_type, clang::coro_lifetimebound]] Task {
+    using promise_type = some_promise_type;
+  };
+
+  Task<int> coro(const int& a) { co_return a + 1; }
+  Task<int> [[clang::coro_wrapper]] coro_wrapper(const int& a, const int& b) {
+    return a > b ? coro(a) : coro(b);
+  }
+  Task<int> temporary_reference() {
+    auto foo = coro(1); // warning: capturing reference to a temporary which would die after the expression.
+
+    int a = 1;
+    auto bar = coro_wrapper(a, 0); // warning: `b` captures reference to a temporary.
+
+    co_return co_await coro(1); // fine.
+  }
+  [[clang::coro_wrapper]] Task<int> stack_reference(int a) {
+    return coro(a); // warning: returning address of stack variable `a`.
+  }
+
+.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
+.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }

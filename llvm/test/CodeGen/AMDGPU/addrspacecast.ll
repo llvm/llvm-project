@@ -1,11 +1,7 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_dispatch_ptr = 0
-; CI: enable_sgpr_queue_ptr = 1
-; GFX9: enable_sgpr_queue_ptr = 0
 
 ; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
@@ -23,6 +19,11 @@
 ; GFX9-DAG: s_cselect_b32 s[[HI:[0-9]+]], [[PTR]], 0
 
 ; HSA: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
+
+; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
+; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
+; CI:   .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
 
 ; At most 2 digits. Make sure src_shared_base is not counted as a high
 ; number SGPR.
@@ -59,10 +60,6 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}use_private_to_flat_addrspacecast:
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_dispatch_ptr = 0
-; CI: enable_sgpr_queue_ptr = 1
-; GFX9: enable_sgpr_queue_ptr = 0
 
 ; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
@@ -82,6 +79,11 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 
 ; HSA: flat_store_dword v[[[LO]]:[[HI]]], [[K]]
 
+; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
+; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
+; CI:   .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
 ; HSA: NumSgprs: {{[0-9]+}}
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
@@ -91,13 +93,14 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 
 ; no-op
 ; HSA-LABEL: {{^}}use_global_to_flat_addrspacecast:
-; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
 ; HSA: flat_store_dword v[[[VPTRLO]]:[[VPTRHI]]], [[K]]
+
+; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(1) %ptr to ptr
   store volatile i32 7, ptr %stof
@@ -131,9 +134,6 @@ define amdgpu_kernel void @use_constant_to_global_addrspacecast(ptr addrspace(4)
 }
 
 ; HSA-LABEL: {{^}}use_flat_to_group_addrspacecast:
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_dispatch_ptr = 0
-; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]]
 ; CI-DAG: v_cmp_ne_u64_e64 s[[[CMP_LO:[0-9]+]]:[[CMP_HI:[0-9]+]]], s[[[PTR_LO]]:[[PTR_HI]]], 0{{$}}
@@ -146,6 +146,10 @@ define amdgpu_kernel void @use_constant_to_global_addrspacecast(ptr addrspace(4)
 ; GFX9-DAG: v_mov_b32_e32 [[CASTPTR:v[0-9]+]], s[[PTR_LO]]
 ; CI-DAG: ds_write_b32 [[VCASTPTR]], v[[K]]
 ; GFX9-DAG: ds_write_b32 [[CASTPTR]], v[[K]]
+
+; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
+; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
+; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #0 {
   %ftos = addrspacecast ptr %ptr to ptr addrspace(3)
   store volatile i32 0, ptr addrspace(3) %ftos
@@ -153,9 +157,6 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}use_flat_to_private_addrspacecast:
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_dispatch_ptr = 0
-; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]]
 ; CI-DAG v_cmp_ne_u64_e64 vcc, s[[[PTR_LO]]:[[PTR_HI]]], 0{{$}}
@@ -171,6 +172,10 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #0 {
 ; GFX9-DAG: v_mov_b32_e32 [[CASTPTR:v[0-9]+]], s[[PTR_LO]]
 ; CI: buffer_store_dword v[[K]], [[VCASTPTR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 ; GFX9: buffer_store_dword v[[K]], [[CASTPTR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
+
+; HSA:  .amdhsa_user_sgpr_private_segment_buffer 1
+; HSA:  .amdhsa_user_sgpr_dispatch_ptr 0
+; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #0 {
   %ftos = addrspacecast ptr %ptr to ptr addrspace(5)
   store volatile i32 0, ptr addrspace(5) %ftos
@@ -178,7 +183,6 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}use_flat_to_global_addrspacecast:
-; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]], s[4:5], 0x0
 ; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
@@ -188,6 +192,8 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #0 {
 
 ; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GFX9: global_store_dword [[ZERO]], [[ZERO]], s[[[PTRLO]]:[[PTRHI]]{{\]$}}
+
+; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #0 {
   %ftos = addrspacecast ptr %ptr to ptr addrspace(1)
   store volatile i32 0, ptr addrspace(1) %ftos
@@ -195,10 +201,11 @@ define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}use_flat_to_constant_addrspacecast:
-; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]], s[4:5], 0x0
 ; HSA: s_load_dword s{{[0-9]+}}, s[[[PTRLO]]:[[PTRHI]]], 0x0
+
+; HSA:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #0 {
   %ftos = addrspacecast ptr %ptr to ptr addrspace(4)
   load volatile i32, ptr addrspace(4) %ftos
@@ -279,13 +286,14 @@ define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
 
 
 ; HSA-LABEL: {{^}}cast_neg1_private_to_flat_addrspacecast:
-; CI: enable_sgpr_queue_ptr = 1
-; GFX9: enable_sgpr_queue_ptr = 0
 
 ; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA: {{flat|global}}_store_dword v[[[LO]]:[[HI]]], v[[K]]
+
+; CI:  .amdhsa_user_sgpr_queue_ptr 1
+; GFX9:  .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @cast_neg1_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast ptr addrspace(5) inttoptr (i32 -1 to ptr addrspace(5)) to ptr
   store volatile i32 7, ptr %cast
@@ -416,4 +424,4 @@ attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

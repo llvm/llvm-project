@@ -397,12 +397,9 @@ clang/lib/Driver/ToolChains/AIX.cpp
 clang/lib/Driver/ToolChains/AIX.h
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
-clang/lib/Driver/ToolChains/Ananas.h
 clang/lib/Driver/ToolChains/AVR.cpp
 clang/lib/Driver/ToolChains/AVR.h
-clang/lib/Driver/ToolChains/CloudABI.cpp
 clang/lib/Driver/ToolChains/CommonArgs.h
-clang/lib/Driver/ToolChains/Contiki.cpp
 clang/lib/Driver/ToolChains/CrossWindows.h
 clang/lib/Driver/ToolChains/DragonFly.h
 clang/lib/Driver/ToolChains/FreeBSD.cpp
@@ -416,7 +413,6 @@ clang/lib/Driver/ToolChains/Hurd.cpp
 clang/lib/Driver/ToolChains/Hurd.h
 clang/lib/Driver/ToolChains/InterfaceStubs.cpp
 clang/lib/Driver/ToolChains/InterfaceStubs.h
-clang/lib/Driver/ToolChains/Minix.h
 clang/lib/Driver/ToolChains/MipsLinux.cpp
 clang/lib/Driver/ToolChains/MSP430.h
 clang/lib/Driver/ToolChains/PPCFreeBSD.cpp
@@ -1841,7 +1837,7 @@ compiler-rt/lib/sanitizer_common/sanitizer_stack_store.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_stack_store.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_fuchsia.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_win.cpp
-compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_fuchsia.h
+compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_markup_constants.h
 compiler-rt/lib/sanitizer_common/sanitizer_thread_safety.h
 compiler-rt/lib/sanitizer_common/sanitizer_tls_get_addr.h
 compiler-rt/lib/sanitizer_common/sanitizer_type_traits.cpp
@@ -2185,6 +2181,8 @@ flang/include/flang/Runtime/time-intrinsic.h
 flang/include/flang/Runtime/transformational.h
 flang/include/flang/Runtime/type-code.h
 flang/include/flang/Semantics/attr.h
+flang/include/flang/Semantics/expression.h
+flang/include/flang/Semantics/openmp-directive-sets.h
 flang/include/flang/Semantics/runtime-type-info.h
 flang/include/flang/Semantics/scope.h
 flang/include/flang/Semantics/semantics.h
@@ -5802,7 +5800,7 @@ llvm/lib/CodeGen/MIRPrintingPass.cpp
 llvm/lib/CodeGen/MIRSampleProfile.cpp
 llvm/lib/CodeGen/MIRVRegNamerUtils.cpp
 llvm/lib/CodeGen/MIRYamlMapping.cpp
-llvm/lib/CodeGen/MLRegallocEvictAdvisor.cpp
+llvm/lib/CodeGen/MLRegAllocEvictAdvisor.cpp
 llvm/lib/CodeGen/MultiHazardRecognizer.cpp
 llvm/lib/CodeGen/NonRelocatableStringpool.cpp
 llvm/lib/CodeGen/ParallelCG.cpp
@@ -6815,7 +6813,6 @@ llvm/lib/Target/X86/X86LoadValueInjectionRetHardening.cpp
 llvm/lib/Target/X86/X86LowerAMXIntrinsics.cpp
 llvm/lib/Target/X86/X86LowerAMXType.cpp
 llvm/lib/Target/X86/X86LowerTileCopy.cpp
-llvm/lib/Target/X86/X86PreAMXConfig.cpp
 llvm/lib/Target/X86/X86PreTileConfig.cpp
 llvm/lib/Target/X86/X86RegisterBankInfo.h
 llvm/lib/Target/X86/X86ShuffleDecodeConstantPool.cpp
@@ -7142,7 +7139,6 @@ llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.cpp
 llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.h
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.cpp
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.h
-llvm/tools/llvm-remark-size-diff/RemarkSizeDiff.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/DummyDemanglerFuzzer.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/llvm-rust-demangle-fuzzer.cpp
 llvm/tools/llvm-shlib/libllvm.cpp
@@ -7577,7 +7573,6 @@ mlir/include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h
 mlir/include/mlir/Conversion/GPUToROCDL/Runtimes.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h
-mlir/include/mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h
 mlir/include/mlir/Conversion/LinalgToStandard/LinalgToStandard.h
@@ -8005,7 +8000,6 @@ mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRV.cpp
 mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRVPass.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertGPULaunchFuncToVulkanLaunchFunc.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertLaunchFuncToVulkanCalls.cpp
-mlir/lib/Conversion/LinalgToLLVM/LinalgToLLVM.cpp
 mlir/lib/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.cpp
 mlir/lib/Conversion/LLVMCommon/ConversionTarget.cpp
 mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp

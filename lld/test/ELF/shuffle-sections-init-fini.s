@@ -1,11 +1,11 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld -z norelro %t.o -o %t
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t | \
 # RUN:   FileCheck --check-prefixes=CHECK,ORDERED %s
 
-# RUN: ld.lld %t.o --shuffle-sections '*=1' -o %t1
+# RUN: ld.lld -z norelro %t.o --shuffle-sections '*=1' -o %t1
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t1 | \
 # RUN:   FileCheck --check-prefixes=CHECK,SHUFFLED %s
 

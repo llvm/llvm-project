@@ -33,7 +33,6 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
-using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -290,6 +289,15 @@ TEST_F(HeadersTest, IncludeDirective) {
               UnorderedElementsAre(directive(tok::pp_include),
                                    directive(tok::pp_import),
                                    directive(tok::pp_include_next)));
+}
+
+TEST_F(HeadersTest, SearchPath) {
+  FS.Files["foo/bar.h"] = "x";
+  FS.Files["foo/bar/baz.h"] = "y";
+  CDB.ExtraClangFlags.push_back("-Ifoo/bar");
+  CDB.ExtraClangFlags.push_back("-Ifoo/bar/..");
+  EXPECT_THAT(collectIncludes().SearchPathsCanonical,
+              ElementsAre(Subdir, testPath("foo/bar"), testPath("foo")));
 }
 
 TEST_F(HeadersTest, InsertInclude) {

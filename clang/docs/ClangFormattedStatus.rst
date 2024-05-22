@@ -5869,11 +5869,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `39`
      - `1`
      - :part:`97%`
-   * - llvm/tools/llvm-remark-size-diff
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - llvm/tools/llvm-rtdyld
      - `1`
      - `0`
@@ -6694,11 +6689,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `0`
      - `1`
      - :none:`0%`
-   * - mlir/include/mlir/Conversion/LinalgToLLVM
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - mlir/include/mlir/Conversion/LinalgToSPIRV
      - `2`
      - `2`
@@ -7462,11 +7452,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
    * - mlir/lib/Conversion/GPUToVulkan
      - `2`
      - `2`
-     - `0`
-     - :good:`100%`
-   * - mlir/lib/Conversion/LinalgToLLVM
-     - `1`
-     - `1`
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/LinalgToSPIRV

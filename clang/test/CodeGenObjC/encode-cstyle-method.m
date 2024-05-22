@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
-// rdar: // 7445205
 
 @interface Foo 
 - (id)test:(id)one, id two;

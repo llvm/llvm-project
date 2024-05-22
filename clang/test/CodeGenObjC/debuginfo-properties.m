@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -debug-info-kind=limited -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
 // Check that we emit the correct method names for properties from a protocol.
-// rdar://problem/13798000
 @protocol NSObject
 - (id)init;
 @end

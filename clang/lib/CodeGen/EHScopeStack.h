@@ -166,10 +166,10 @@ public:
         F_IsEHCleanupKind = 0x4,
         F_HasExitSwitch = 0x8,
       };
-      unsigned flags;
+      unsigned flags = 0;
 
     public:
-      Flags() : flags(0) {}
+      Flags() = default;
 
       /// isForEH - true if the current emission is for an EH cleanup.
       bool isForEHCleanup() const { return flags & F_IsForEH; }
@@ -277,6 +277,9 @@ public:
       InnermostNormalCleanup(stable_end()), InnermostEHScope(stable_end()),
       CGF(nullptr) {}
   ~EHScopeStack() { delete[] StartOfBuffer; }
+
+  EHScopeStack(const EHScopeStack &) = delete;
+  EHScopeStack &operator=(const EHScopeStack &) = delete;
 
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind Kind, As... A) {

@@ -40,7 +40,7 @@ _Size
 __loadword(const void* __p)
 {
     _Size __r;
-    _VSTD::memcpy(&__r, __p, sizeof(__r));
+    std::memcpy(&__r, __p, sizeof(__r));
     return __r;
 }
 
@@ -127,7 +127,7 @@ struct __murmur2_or_cityhash<_Size, 64>
         __v = __weak_hash_len_32_with_seeds(__s, __v.second * __k1, __x + __w.first);
         __w = __weak_hash_len_32_with_seeds(__s + 32, __z + __w.second,
                                             __y + std::__loadword<_Size>(__s + 16));
-        _VSTD::swap(__z, __x);
+        std::swap(__z, __x);
         __s += 64;
         __len -= 64;
     } while (__len != 0);
@@ -673,7 +673,7 @@ using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
 
 template <class _Type, class ..._Keys>
 using __enable_hash_helper _LIBCPP_NODEBUG = __enable_hash_helper_imp<_Type,
-  typename enable_if<__all<__has_enabled_hash<_Keys>::value...>::value>::type
+  __enable_if_t<__all<__has_enabled_hash<_Keys>::value...>::value>
 >;
 #else
 template <class _Type, class ...>

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-redundant-string-cstr %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: readability-redundant-string-cstr.StringParameterFunctions, \
-// RUN:               value: '::fmt::format; ::fmt::print; ::BaseLogger::operator(); ::BaseLogger::Log'}] \
+// RUN:             {readability-redundant-string-cstr.StringParameterFunctions: \
+// RUN:              '::fmt::format; ::fmt::print; ::BaseLogger::operator(); ::BaseLogger::Log'} \
 // RUN:             }" \
 // RUN:   -- -isystem %clang_tidy_headers
 #include <string>

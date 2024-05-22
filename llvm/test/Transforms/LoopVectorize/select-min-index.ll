@@ -4,7 +4,7 @@
 
 ; Test cases for selecting the index with the minimum value.
 
-define i64 @test_vectorize_select_umin_idx(ptr %src) {
+define i64 @test_vectorize_select_umin_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx(
 ; CHECK-NOT:   vector.body:
 ;
@@ -21,7 +21,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -29,7 +29,7 @@ exit:
   ret i64 %res
 }
 
-define i64 @test_vectorize_select_umin_idx_all_exit_inst(ptr %src, ptr %umin) {
+define i64 @test_vectorize_select_umin_idx_all_exit_inst(ptr %src, ptr %umin, i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx_all_exit_inst(
 ; CHECK-NOT:   vector.body:
 ;
@@ -46,7 +46,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -56,7 +56,7 @@ exit:
   ret i64 %res
 }
 
-define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src) {
+define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx_min_ops_switched(
 ; CHECK-NOT:   vector.body:
 ;
@@ -73,7 +73,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %l, i64 %min.val)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -81,7 +81,7 @@ exit:
   ret i64 %res
 }
 
-define i64 @test_not_vectorize_select_no_min_reduction(ptr %src) {
+define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_not_vectorize_select_no_min_reduction(
 ; CHECK-NOT:   vector.body:
 ;
@@ -99,7 +99,7 @@ loop:
   %foo = call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -108,7 +108,7 @@ exit:
 }
 
 
-define i64 @test_not_vectorize_cmp_value(i64 %x) {
+define i64 @test_not_vectorize_cmp_value(i64 %x, i64 %n) {
 ; CHECK-LABEL: @test_not_vectorize_cmp_value(
 ; CHECK-NOT:   vector.body:
 ;
@@ -123,7 +123,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 0)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -131,7 +131,7 @@ exit:
   ret i64 %res
 }
 
-define i32 @test_vectorize_select_umin_idx_with_trunc() {
+define i32 @test_vectorize_select_umin_idx_with_trunc(i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx_with_trunc(
 ; CHECK-NOT:   vector.body:
 ;
@@ -147,7 +147,7 @@ loop:
   %trunc = trunc i64 %iv to i32
   %min.idx.next = select i1 %cmp, i32 %trunc, i32 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:

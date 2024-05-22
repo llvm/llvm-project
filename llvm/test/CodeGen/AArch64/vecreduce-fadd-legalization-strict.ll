@@ -144,8 +144,8 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -170,7 +170,7 @@ define float @test_v16f32(<16 x float> %a, float %s) nounwind {
 ; CHECK-NEXT:    fadd s4, s4, s0
 ; CHECK-NEXT:    mov s7, v0.s[2]
 ; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    mov s5, v3.s[1]
+; CHECK-NEXT:    mov s5, v2.s[1]
 ; CHECK-NEXT:    fadd s4, s4, s6
 ; CHECK-NEXT:    mov s6, v1.s[2]
 ; CHECK-NEXT:    fadd s4, s4, s7
@@ -179,21 +179,21 @@ define float @test_v16f32(<16 x float> %a, float %s) nounwind {
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    fadd s0, s0, s4
-; CHECK-NEXT:    mov s4, v2.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s6
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s1, v2.s[1]
+; CHECK-NEXT:    mov s1, v2.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s1, v2.s[3]
-; CHECK-NEXT:    mov s2, v3.s[3]
-; CHECK-NEXT:    fadd s0, s0, s4
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s1, v3.s[2]
-; CHECK-NEXT:    fadd s0, s0, s3
+; CHECK-NEXT:    mov s2, v2.s[3]
 ; CHECK-NEXT:    fadd s0, s0, s5
 ; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v3.s[1]
 ; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov s2, v3.s[2]
+; CHECK-NEXT:    fadd s0, s0, s3
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v3.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v16f32(float %s, <16 x float> %a)
   ret float %b
@@ -205,24 +205,24 @@ define float @test_v16f32_neutral(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    mov s5, v0.s[2]
 ; CHECK-NEXT:    faddp s6, v0.2s
 ; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    mov s4, v2.s[1]
+; CHECK-NEXT:    mov s4, v1.s[1]
 ; CHECK-NEXT:    fadd s5, s6, s5
-; CHECK-NEXT:    mov s6, v1.s[2]
 ; CHECK-NEXT:    fadd s0, s5, s0
-; CHECK-NEXT:    mov s5, v1.s[1]
+; CHECK-NEXT:    mov s5, v1.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s4
+; CHECK-NEXT:    mov s4, v2.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s5
-; CHECK-NEXT:    fadd s0, s0, s6
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s1, v2.s[2]
+; CHECK-NEXT:    mov s1, v2.s[1]
 ; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    mov s2, v2.s[3]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v2.s[3]
+; CHECK-NEXT:    mov s2, v3.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s4
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    mov s1, v3.s[1]
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    mov s2, v3.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s3
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    mov s1, v3.s[3]

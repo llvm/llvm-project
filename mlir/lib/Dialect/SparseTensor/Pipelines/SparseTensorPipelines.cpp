@@ -25,47 +25,33 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
-using namespace mlir;
-using namespace mlir::sparse_tensor;
-
-/// Return configuration options for One-Shot Bufferize.
-static bufferization::OneShotBufferizationOptions
-getBufferizationOptions(bool analysisOnly) {
-  using namespace bufferization;
-  OneShotBufferizationOptions options;
-  options.bufferizeFunctionBoundaries = true;
-  // TODO(springerm): To spot memory leaks more easily, returning dense allocs
-  // should be disallowed.
-  options.allowReturnAllocs = true;
-  options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
-                                      const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
-  };
-  if (analysisOnly) {
-    options.testAnalysisOnly = true;
-    options.printConflicts = true;
-  }
-  return options;
-}
-
 //===----------------------------------------------------------------------===//
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
 
-void mlir::sparse_tensor::buildSparseCompiler(
-    OpPassManager &pm, const SparseCompilerOptions &options) {
+void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
+                                          const SparsifierOptions &options) {
+  // Rewrite named linalg ops into generic ops.
+
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
+
+  // Sparsification and bufferization mini-pipeline.
   pm.addPass(createSparsificationAndBufferizationPass(
-      getBufferizationOptions(options.testBufferizationAnalysisOnly),
-      options.sparsificationOptions(), options.sparseTensorConversionOptions(),
-      options.createSparseDeallocs, options.enableRuntimeLibrary,
-      options.enableBufferInitialization, options.vectorLength,
+      getBufferizationOptionsForSparsification(
+          options.testBufferizationAnalysisOnly),
+      options.sparsificationOptions(), options.createSparseDeallocs,
+      options.enableRuntimeLibrary, options.enableBufferInitialization,
+      options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
-      /*enableSIMDIndex32=*/options.force32BitVectorIndices));
+      /*enableSIMDIndex32=*/options.force32BitVectorIndices,
+      options.enableGPULibgen));
+
+  // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
     return;
+
+  // Storage specifier lowering and bufferization wrap-up.
+  pm.addPass(createStorageSpecifierToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
@@ -76,13 +62,14 @@ void mlir::sparse_tensor::buildSparseCompiler(
     pm.addPass(createSparseGPUCodegenPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
-    pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
   }
 
   // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
   // it to this pipeline.
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
+  pm.addNestedPass<func::FuncOp>(memref::createExpandReallocPass());
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
@@ -93,19 +80,25 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
+
   // Repeat convert-vector-to-llvm.
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+
   pm.addPass(createConvertComplexToLLVMPass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
-#if MLIR_GPU_TO_CUBIN_PASS_ENABLE
-    pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
-        options.gpuTriple, options.gpuChip, options.gpuFeatures));
-#endif
+    GpuNVVMAttachTargetOptions nvvmTargetOptions;
+    nvvmTargetOptions.triple = options.gpuTriple;
+    nvvmTargetOptions.chip = options.gpuChip;
+    nvvmTargetOptions.features = options.gpuFeatures;
+    pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
     pm.addPass(createGpuToLLVMConversionPass());
+    GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+    gpuModuleToBinaryPassOptions.compilationTarget = options.gpuFormat;
+    pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
   pm.addPass(createReconcileUnrealizedCastsPass());
@@ -116,10 +109,10 @@ void mlir::sparse_tensor::buildSparseCompiler(
 //===----------------------------------------------------------------------===//
 
 void mlir::sparse_tensor::registerSparseTensorPipelines() {
-  PassPipelineRegistration<SparseCompilerOptions>(
-      "sparse-compiler",
+  PassPipelineRegistration<SparsifierOptions>(
+      "sparsifier",
       "The standard pipeline for taking sparsity-agnostic IR using the"
       " sparse-tensor type, and lowering it to LLVM IR with concrete"
       " representations and algorithms for sparse tensors.",
-      buildSparseCompiler);
+      buildSparsifier);
 }

@@ -15,15 +15,16 @@ define <vscale x 1 x double> @test(%struct.test* %addr, i64 %vl) {
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
-; CHECK-NEXT:    addi a2, a0, 8
+; CHECK-NEXT:    csrrs a2, vlenb, zero
+; CHECK-NEXT:    vl1re64.v v8, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1re64.v v9, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs1r.v v8, (a0)
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vs1r.v v9, (a2)
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
-; CHECK-NEXT:    addi a0, sp, 24
-; CHECK-NEXT:    vs1r.v v8, (a0)
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vs1r.v v9, (a2)
-; CHECK-NEXT:    vl1re64.v v8, (a0)
-; CHECK-NEXT:    vl1re64.v v9, (a2)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
@@ -41,7 +42,7 @@ entry:
   %3 = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(
     <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
-    <vscale x 1 x double> %2, i64 %vl)
+    <vscale x 1 x double> %2, i64 7, i64 %vl)
   ret <vscale x 1 x double> %3
 }
 
@@ -49,4 +50,4 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x double>,
-  i64)
+  i64, i64)

@@ -35,6 +35,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +50,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
+
+static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
+    "object-size-offset-visitor-max-visit-instructions",
+    cl::desc("Maximum number of instructions for ObjectSizeOffsetVisitor to "
+             "look at"),
+    cl::init(100));
 
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
@@ -275,10 +282,7 @@ static AllocFnKind getAllocFnKind(const Value *V) {
 }
 
 static AllocFnKind getAllocFnKind(const Function *F) {
-  Attribute Attr = F->getFnAttribute(Attribute::AllocKind);
-  if (Attr.isValid())
-    return AllocFnKind(Attr.getValueAsInt());
-  return AllocFnKind::Unknown;
+  return F->getAttributes().getAllocKind();
 }
 
 static bool checkFnAllocKind(const Value *V, AllocFnKind Wanted) {
@@ -694,6 +698,11 @@ ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
+  InstructionsVisited = 0;
+  return computeImpl(V);
+}
+
+SizeOffsetType ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   unsigned InitialIntTyBits = DL.getIndexTypeSizeInBits(V->getType());
 
   // Stripping pointer casts can strip address space casts which can change the
@@ -710,14 +719,15 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getZero(IntTyBits);
 
+  SizeOffsetType SOT = computeValue(V);
+
   bool IndexTypeSizeChanged = InitialIntTyBits != IntTyBits;
   if (!IndexTypeSizeChanged && Offset.isZero())
-    return computeImpl(V);
+    return SOT;
 
   // We stripped an address space cast that changed the index type size or we
   // accumulated some constant offset (or both). Readjust the bit width to match
   // the argument index type size and apply the offset, as required.
-  SizeOffsetType SOT = computeImpl(V);
   if (IndexTypeSizeChanged) {
     if (knownSize(SOT) && !::CheckedZextOrTrunc(SOT.first, InitialIntTyBits))
       SOT.first = APInt();
@@ -729,14 +739,21 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
           SOT.second.getBitWidth() > 1 ? SOT.second + Offset : SOT.second};
 }
 
-SizeOffsetType ObjectSizeOffsetVisitor::computeImpl(Value *V) {
+SizeOffsetType ObjectSizeOffsetVisitor::computeValue(Value *V) {
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     // If we have already seen this instruction, bail out. Cycles can happen in
     // unreachable code after constant propagation.
-    if (!SeenInsts.insert(I).second)
+    auto P = SeenInsts.try_emplace(I, unknown());
+    if (!P.second)
+      return P.first->second;
+    ++InstructionsVisited;
+    if (InstructionsVisited > ObjectSizeOffsetVisitorMaxVisitInstructions)
       return unknown();
-
-    return visit(*I);
+    SizeOffsetType Res = visit(*I);
+    // Cache the result for later visits. If we happened to visit this during
+    // the above recursion, we would consider it unknown until now.
+    SeenInsts[I] = Res;
+    return Res;
   }
   if (Argument *A = dyn_cast<Argument>(V))
     return visitArgument(*A);
@@ -826,7 +843,7 @@ ObjectSizeOffsetVisitor::visitExtractValueInst(ExtractValueInst&) {
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {
   if (GA.isInterposable())
     return unknown();
-  return compute(GA.getAliasee());
+  return computeImpl(GA.getAliasee());
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV){
@@ -881,7 +898,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::findLoadSizeOffset(
         continue;
       case AliasResult::MustAlias:
         if (SI->getValueOperand()->getType()->isPointerTy())
-          return Known(compute(SI->getValueOperand()));
+          return Known(computeImpl(SI->getValueOperand()));
         else
           return Unknown(); // No handling of non-pointer values by `compute`.
       default:
@@ -984,7 +1001,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
     return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS))) ? LHS
                                                                    : unknown();
   case ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset:
-    return LHS == RHS && LHS.second.eq(RHS.second) ? LHS : unknown();
+    return LHS == RHS ? LHS : unknown();
   }
   llvm_unreachable("missing an eval mode");
 }
@@ -994,15 +1011,15 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
     return unknown();
   auto IncomingValues = PN.incoming_values();
   return std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
-                         compute(*IncomingValues.begin()),
+                         computeImpl(*IncomingValues.begin()),
                          [this](SizeOffsetType LHS, Value *VRHS) {
-                           return combineSizeOffset(LHS, compute(VRHS));
+                           return combineSizeOffset(LHS, computeImpl(VRHS));
                          });
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitSelectInst(SelectInst &I) {
-  return combineSizeOffset(compute(I.getTrueValue()),
-                           compute(I.getFalseValue()));
+  return combineSizeOffset(computeImpl(I.getTrueValue()),
+                           computeImpl(I.getFalseValue()));
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitUndefValue(UndefValue&) {
@@ -1191,7 +1208,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
 
   // Compute offset/size for each PHI incoming pointer.
   for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i) {
-    Builder.SetInsertPoint(&*PHI.getIncomingBlock(i)->getFirstInsertionPt());
+    BasicBlock *IncomingBlock = PHI.getIncomingBlock(i);
+    Builder.SetInsertPoint(IncomingBlock, IncomingBlock->getFirstInsertionPt());
     SizeOffsetEvalType EdgeData = compute_(PHI.getIncomingValue(i));
 
     if (!bothKnown(EdgeData)) {
@@ -1203,8 +1221,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
       InsertedInstructions.erase(SizePHI);
       return unknown();
     }
-    SizePHI->addIncoming(EdgeData.first, PHI.getIncomingBlock(i));
-    OffsetPHI->addIncoming(EdgeData.second, PHI.getIncomingBlock(i));
+    SizePHI->addIncoming(EdgeData.first, IncomingBlock);
+    OffsetPHI->addIncoming(EdgeData.second, IncomingBlock);
   }
 
   Value *Size = SizePHI, *Offset = OffsetPHI;

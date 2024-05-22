@@ -558,9 +558,9 @@ define fp128 @qp_minnum(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fminf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -601,9 +601,9 @@ define fp128 @qp_maxnum(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fmaxf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -644,9 +644,9 @@ define fp128 @qp_pow(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl powf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -771,8 +771,7 @@ define dso_local void @qp_powi(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r5
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lwz r3, 0(r4)
-; CHECK-P8-NEXT:    mr r5, r3
+; CHECK-P8-NEXT:    lwz r5, 0(r4)
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __powikf2
 ; CHECK-P8-NEXT:    nop
@@ -825,13 +824,13 @@ define fp128 @qp_frem() #0 {
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, b@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, a@toc@l
-; CHECK-P8-NEXT:    addi r4, r4, b@toc@l
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, b@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, b@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fmodf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -1284,11 +1283,11 @@ define dso_local void @qpFMA(ptr %a, ptr %b, ptr %c, ptr %res) {
 ; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
-; CHECK-P8-NEXT:    lxvd2x vs2, 0, r5
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
-; CHECK-P8-NEXT:    xxswapd v4, vs2
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-P8-NEXT:    xxswapd v4, vs0
 ; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -1307,3 +1306,58 @@ entry:
   ret void
 }
 declare fp128 @llvm.fma.f128(fp128, fp128, fp128)
+
+define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
+; CHECK-LABEL: qpFREXP:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu r1, -64(r1)
+; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    addi r5, r1, 44
+; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    bl frexpf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lwz r3, 44(r1)
+; CHECK-NEXT:    stw r3, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: qpFREXP:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stdu r1, -64(r1)
+; CHECK-P8-NEXT:    std r0, 80(r1)
+; CHECK-P8-NEXT:    addi r5, r1, 44
+; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    bl frexpf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    lwz r3, 44(r1)
+; CHECK-P8-NEXT:    stw r3, 0(r30)
+; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load fp128, ptr %a, align 16
+  %1 = tail call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %0)
+  %2 = extractvalue { fp128, i32 } %1, 1
+  store i32 %2, ptr %b, align 4
+  %3 = extractvalue { fp128, i32 } %1, 0
+  ret fp128 %3
+}
+declare { fp128, i32 } @llvm.frexp.f128.i32(fp128)

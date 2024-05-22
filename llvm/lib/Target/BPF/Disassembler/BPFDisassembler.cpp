@@ -57,8 +57,7 @@ public:
     BPF_ABS = 0x1,
     BPF_IND = 0x2,
     BPF_MEM = 0x3,
-    BPF_LEN = 0x4,
-    BPF_MSH = 0x5,
+    BPF_MEMSX = 0x4,
     BPF_ATOMIC = 0x6
   };
 

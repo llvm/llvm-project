@@ -76,8 +76,8 @@ struct IndexCastOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
@@ -123,8 +123,8 @@ struct SelectOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {{op->getOpResult(0) /*result*/, BufferRelation::Equivalent,
              /*isDefinite=*/false}};
   }
@@ -133,6 +133,13 @@ struct SelectOpInterface
                           const BufferizationOptions &options) const {
     auto selectOp = cast<arith::SelectOp>(op);
     Location loc = selectOp.getLoc();
+
+    // Elementwise conditions are not supported yet. To bufferize such an op,
+    // it could be lowered to an elementwise "linalg.generic" with a new
+    // "tensor.empty" out tensor, followed by "empty tensor elimination". Such
+    // IR will bufferize.
+    if (!selectOp.getCondition().getType().isInteger(1))
+      return op->emitOpError("only i1 condition values are supported");
 
     // TODO: It would be more efficient to copy the result of the `select` op
     // instead of its OpOperands. In the worst case, 2 copies are inserted at
@@ -155,10 +162,12 @@ struct SelectOpInterface
           bufferization::getBufferType(selectOp.getResult(), options);
       if (failed(targetType))
         return failure();
-      trueBuffer =
-          rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
-      falseBuffer =
-          rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
+      if (trueBuffer.getType() != *targetType)
+        trueBuffer =
+            rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
+      if (falseBuffer.getType() != *targetType)
+        falseBuffer =
+            rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(
@@ -168,13 +177,13 @@ struct SelectOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto selectOp = cast<arith::SelectOp>(op);
     assert(value == selectOp.getResult() && "invalid value");
     auto trueType = bufferization::getBufferType(selectOp.getTrueValue(),
-                                                 options, fixedTypes);
+                                                 options, invocationStack);
     auto falseType = bufferization::getBufferType(selectOp.getFalseValue(),
-                                                  options, fixedTypes);
+                                                  options, invocationStack);
     if (failed(trueType) || failed(falseType))
       return failure();
     if (*trueType == *falseType)

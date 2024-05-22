@@ -23,7 +23,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -34,6 +33,7 @@
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
@@ -197,7 +197,7 @@ void Target::DeleteCurrentProcess() {
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
-    m_process_sp->Finalize();
+    m_process_sp->Finalize(false /* not destructing */);
 
     CleanupProcess();
 
@@ -335,6 +335,45 @@ BreakpointSP Target::GetBreakpointByID(break_id_t break_id) {
   return bp_sp;
 }
 
+lldb::BreakpointSP
+lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
+  ModuleSP main_module_sp = GetExecutableModule();
+  FileSpecList shared_lib_filter;
+  shared_lib_filter.Append(main_module_sp->GetFileSpec());
+  llvm::SetVector<std::string, std::vector<std::string>,
+                  std::unordered_set<std::string>>
+      entryPointNamesSet;
+  for (LanguageType lang_type : Language::GetSupportedLanguages()) {
+    Language *lang = Language::FindPlugin(lang_type);
+    if (!lang) {
+      error.SetErrorString("Language not found\n");
+      return lldb::BreakpointSP();
+    }
+    std::string entryPointName = lang->GetUserEntryPointName().str();
+    if (!entryPointName.empty())
+      entryPointNamesSet.insert(entryPointName);
+  }
+  if (entryPointNamesSet.empty()) {
+    error.SetErrorString("No entry point name found\n");
+    return lldb::BreakpointSP();
+  }
+  BreakpointSP bp_sp = CreateBreakpoint(
+      &shared_lib_filter,
+      /*containingSourceFiles=*/nullptr, entryPointNamesSet.takeVector(),
+      /*func_name_type_mask=*/eFunctionNameTypeFull,
+      /*language=*/eLanguageTypeUnknown,
+      /*offset=*/0,
+      /*skip_prologue=*/eLazyBoolNo,
+      /*internal=*/false,
+      /*hardware=*/false);
+  if (!bp_sp) {
+    error.SetErrorString("Breakpoint creation failed.\n");
+    return lldb::BreakpointSP();
+  }
+  bp_sp->SetOneShot(true);
+  return bp_sp;
+}
+
 BreakpointSP Target::CreateSourceRegexBreakpoint(
     const FileSpecList *containingModules,
     const FileSpecList *source_file_spec_list,
@@ -441,12 +480,12 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
 
 lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
-                                        const FileSpec *file_spec,
+                                        const FileSpec &file_spec,
                                         bool request_hardware) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
   BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec ? *file_spec : FileSpec()));
+      nullptr, file_addr, file_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -688,7 +727,7 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   }
 }
 
-void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
+void Target::AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
                                  Status &error) {
   BreakpointSP bp_sp =
       m_breakpoint_list.FindBreakpointByID(id.GetBreakpointID());
@@ -701,7 +740,7 @@ void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
   AddNameToBreakpoint(bp_sp, name, error);
 }
 
-void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, const char *name,
+void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
                                  Status &error) {
   if (!bp_sp)
     return;
@@ -853,6 +892,18 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (ABISP abi = m_process_sp->GetABI())
     addr = abi->FixDataAddress(addr);
 
+  // LWP_TODO this sequence is looking for an existing watchpoint
+  // at the exact same user-specified address, disables the new one
+  // if addr/size/type match.  If type/size differ, disable old one.
+  // This isn't correct, we need both watchpoints to use a shared
+  // WatchpointResource in the target, and expand the WatchpointResource
+  // to handle the needs of both Watchpoints.
+  // Also, even if the addresses don't match, they may need to be
+  // supported by the same WatchpointResource, e.g. a watchpoint
+  // watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
+  // They're in the same word and must be watched by a single hardware
+  // watchpoint register.
+
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
   WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
@@ -860,14 +911,15 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     size_t old_size = matched_sp->GetByteSize();
     uint32_t old_type =
         (matched_sp->WatchpointRead() ? LLDB_WATCH_TYPE_READ : 0) |
-        (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0);
+        (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0) |
+        (matched_sp->WatchpointModify() ? LLDB_WATCH_TYPE_MODIFY : 0);
     // Return the existing watchpoint if both size and type match.
     if (size == old_size && kind == old_type) {
       wp_sp = matched_sp;
       wp_sp->SetEnabled(false, notify);
     } else {
       // Nil the matched watchpoint; we will be creating a new one.
-      m_process_sp->DisableWatchpoint(matched_sp.get(), notify);
+      m_process_sp->DisableWatchpoint(matched_sp, notify);
       m_watchpoint_list.Remove(matched_sp->GetID(), true);
     }
   }
@@ -878,7 +930,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     m_watchpoint_list.Add(wp_sp, true);
   }
 
-  error = m_process_sp->EnableWatchpoint(wp_sp.get(), notify);
+  error = m_process_sp->EnableWatchpoint(wp_sp, notify);
   LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
             __FUNCTION__, error.Success() ? "succeeded" : "failed",
             wp_sp->GetID());
@@ -887,11 +939,6 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     // Enabling the watchpoint on the device side failed. Remove the said
     // watchpoint from the list maintained by the target instance.
     m_watchpoint_list.Remove(wp_sp->GetID(), true);
-    // See if we could provide more helpful error message.
-    if (!OptionGroupWatchpoint::IsWatchSizeSupported(size))
-      error.SetErrorStringWithFormat(
-          "watch size of %" PRIu64 " is not supported", (uint64_t)size);
-
     wp_sp.reset();
   } else
     m_last_created_watchpoint = wp_sp;
@@ -1191,7 +1238,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1220,7 +1267,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1247,7 +1294,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1310,7 +1357,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1329,7 +1376,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1393,8 +1440,8 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
   StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(
-                       target, error, &feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
+                                                             feedback_stream)) {
     if (error.AsCString())
       target->GetDebugger().GetErrorStream().Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -1813,7 +1860,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     } else {
       // We have at least one section loaded. This can be because we have
       // manually loaded some sections with "target modules load ..." or
-      // because we have have a live process that has sections loaded through
+      // because we have a live process that has sections loaded through
       // the dynamic loader
       load_addr =
           fixed_addr.GetOffset(); // "fixed_addr" doesn't have a section, so
@@ -2096,7 +2143,7 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
       } else {
         // We have at least one section loaded. This can be because we have
         // manually loaded some sections with "target modules load ..." or
-        // because we have have a live process that has sections loaded through
+        // because we have a live process that has sections loaded through
         // the dynamic loader
         section_load_list.ResolveLoadAddress(pointer_vm_addr, pointer_addr);
       }
@@ -2129,19 +2176,48 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
                      // of the library
     bool did_create_module = false;
     FileSpecList search_paths = GetExecutableSearchPaths();
-    // If there are image search path entries, try to use them first to acquire
-    // a suitable image.
-    if (m_image_search_paths.GetSize()) {
-      ModuleSpec transformed_spec(module_spec);
-      ConstString transformed_dir;
-      if (m_image_search_paths.RemapPath(
-              module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
-        transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
-        transformed_spec.GetFileSpec().SetFilename(
-              module_spec.GetFileSpec().GetFilename());
-        error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &search_paths, &old_modules,
-                                            &did_create_module);
+    FileSpec symbol_file_spec;
+
+    // Call locate module callback if set. This allows users to implement their
+    // own module cache system. For example, to leverage build system artifacts,
+    // to bypass pulling files from remote platform, or to search symbol files
+    // from symbol servers.
+    if (m_platform_sp)
+      m_platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, &did_create_module);
+
+    // The result of this CallLocateModuleCallbackIfSet is one of the following.
+    // 1. module_sp:loaded, symbol_file_spec:set
+    //      The callback found a module file and a symbol file for the
+    //      module_spec. We will call module_sp->SetSymbolFileFileSpec with
+    //      the symbol_file_spec later.
+    // 2. module_sp:loaded, symbol_file_spec:empty
+    //      The callback only found a module file for the module_spec.
+    // 3. module_sp:empty, symbol_file_spec:set
+    //      The callback only found a symbol file for the module. We continue
+    //      to find a module file for this module_spec and we will call
+    //      module_sp->SetSymbolFileFileSpec with the symbol_file_spec later.
+    // 4. module_sp:empty, symbol_file_spec:empty
+    //      Platform does not exist, the callback is not set, the callback did
+    //      not find any module files nor any symbol files, the callback failed,
+    //      or something went wrong. We continue to find a module file for this
+    //      module_spec.
+
+    if (!module_sp) {
+      // If there are image search path entries, try to use them to acquire a
+      // suitable image.
+      if (m_image_search_paths.GetSize()) {
+        ModuleSpec transformed_spec(module_spec);
+        ConstString transformed_dir;
+        if (m_image_search_paths.RemapPath(
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+          transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
+          transformed_spec.GetFileSpec().SetFilename(
+                module_spec.GetFileSpec().GetFilename());
+          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
+                                              &search_paths, &old_modules,
+                                              &did_create_module);
+        }
       }
     }
 
@@ -2232,11 +2308,15 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
           });
         }
 
+        // If the locate module callback had found a symbol file, set it to the
+        // module_sp before preloading symbols.
+        if (symbol_file_spec)
+          module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+
         // Preload symbols outside of any lock, so hopefully we can do this for
         // each library in parallel.
         if (GetPreloadSymbols())
           module_sp->PreloadSymbols();
-
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
@@ -2831,12 +2911,12 @@ bool Target::RunStopHooks() {
   if (!any_active_hooks)
     return false;
 
-  // <rdar://problem/12027563> make sure we check that we are not stopped
-  // because of us running a user expression since in that case we do not want
-  // to run the stop-hooks.  Note, you can't just check whether the last stop
-  // was for a User Expression, because breakpoint commands get run before
-  // stop hooks, and one of them might have run an expression.  You have
-  // to ensure you run the stop hooks once per natural stop.
+  // Make sure we check that we are not stopped because of us running a user
+  // expression since in that case we do not want to run the stop-hooks. Note,
+  // you can't just check whether the last stop was for a User Expression,
+  // because breakpoint commands get run before stop hooks, and one of them
+  // might have run an expression. You have to ensure you run the stop hooks
+  // once per natural stop.
   uint32_t last_natural_stop = m_process_sp->GetModIDRef().GetLastNaturalStopID();
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
@@ -3826,11 +3906,10 @@ void Target::StopHookScripted::GetSubclassDescription(
   s.Indent("Args:\n");
   s.SetIndentLevel(s.GetIndentLevel() + 4);
 
-  auto print_one_element = [&s](ConstString key,
+  auto print_one_element = [&s](llvm::StringRef key,
                                 StructuredData::Object *object) {
     s.Indent();
-    s.Printf("%s : %s\n", key.GetCString(),
-              object->GetStringValue().str().c_str());
+    s.Format("{0} : {1}\n", key, object->GetStringValue());
     return true;
   };
 
@@ -4029,7 +4108,7 @@ enum {
 class TargetOptionValueProperties
     : public Cloneable<TargetOptionValueProperties, OptionValueProperties> {
 public:
-  TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
+  TargetOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -4065,7 +4144,7 @@ class TargetExperimentalOptionValueProperties
                        OptionValueProperties> {
 public:
   TargetExperimentalOptionValueProperties()
-      : Cloneable(ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(Properties::GetExperimentalSettingsName()) {}
 };
 
 TargetExperimentalProperties::TargetExperimentalProperties()
@@ -4119,8 +4198,7 @@ TargetProperties::TargetProperties(Target *target)
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
   } else {
-    m_collection_sp =
-        std::make_shared<TargetOptionValueProperties>(ConstString("target"));
+    m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
     m_collection_sp->Initialize(g_target_properties);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
@@ -4205,6 +4283,10 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
+  if (INTERRUPT_REQUESTED(m_target->GetDebugger(),
+                          "Interrupted checking preload symbols")) {
+    return false;
+  }
   const uint32_t idx = ePropertyPreloadSymbols;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
@@ -4500,6 +4582,12 @@ void TargetProperties::CheckJITObjectsDir() {
 
 bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::ShowHexVariableValuesWithLeadingZeroes() const {
+  const uint32_t idx = ePropertyShowHexVariableValuesWithLeadingZeroes;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
 }

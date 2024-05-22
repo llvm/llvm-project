@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -show-encoding %s | FileCheck %s
 # Check that we generate a duplex for this packet.
 # CHECK: encoding: [A,0x40'A',A,A,0x01'B',0x28'B',B,0x20'B']
 

@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMRegisterInfo.h"
+#include "ARMMCTargetDesc.h"
 #include "ARMUnwindOpAsm.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"

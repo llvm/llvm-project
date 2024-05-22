@@ -11,6 +11,7 @@
 // CHECK-NEXT: apiModeling.TrustReturnsNonnull
 // CHECK-NEXT: apiModeling.llvm.CastValue
 // CHECK-NEXT: apiModeling.llvm.ReturnValue
+// CHECK-NEXT: core.BitwiseShift
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
@@ -43,9 +44,11 @@
 // CHECK-NEXT: unix.API
 // CHECK-NEXT: unix.cstring.CStringModeling
 // CHECK-NEXT: unix.DynamicMemoryModeling
+// CHECK-NEXT: unix.Errno
 // CHECK-NEXT: unix.Malloc
 // CHECK-NEXT: unix.MallocSizeof
 // CHECK-NEXT: unix.MismatchedDeallocator
+// CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg
 // CHECK-NEXT: unix.cstring.NullArg

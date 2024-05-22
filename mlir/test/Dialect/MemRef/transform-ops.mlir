@@ -1,4 +1,37 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -verify-diagnostics -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -verify-diagnostics -allow-unregistered-dialect -split-input-file | FileCheck %s
+
+// CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2x32xf32>
+// CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2x32xf32>
+
+// CHECK-DAG: func.func @func(%[[LB:.*]]: index, %[[UB:.*]]: index)
+func.func @func(%lb: index, %ub: index) {
+  // CHECK-DAG: scf.forall (%[[ARG0:.*]], %[[ARG1:.*]]) in (%[[LB]], %[[UB]])
+  scf.forall (%arg0, %arg1) in (%lb, %ub) {
+    // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
+    // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[MR0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[MR1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    %cst = arith.constant 0.0 : f32
+    %mr0 = memref.alloca() : memref<2x32xf32>
+    %mr1 = memref.alloca() : memref<2x32xf32>
+    memref.store %cst, %mr0[%arg0, %arg1] : memref<2x32xf32>
+    memref.store %cst, %mr1[%arg0, %arg1] : memref<2x32xf32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloca">
+    %get_global, %global = transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
@@ -28,12 +61,14 @@ func.func @multi_buffer(%in: memref<16xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -63,12 +98,14 @@ func.func @multi_buffer_on_affine_loop(%in: memref<16xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -101,10 +138,12 @@ func.func @multi_buffer_uses_with_no_loop_dominator(%in: memref<16xf32>, %cond: 
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -136,11 +175,13 @@ func.func @multi_buffer_reject_alloca(%in: memref<16xf32>, %cond: i1) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloca">
-  // expected-error @below {{'transform.memref.multibuffer' op operand #0 must be Transform IR handle to memref.alloc operations, but got '!transform.op<"memref.alloca">'}}
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloca">) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloca">
+    // expected-error @below {{'transform.memref.multibuffer' op operand #0 must be Transform IR handle to memref.alloc operations, but got '!transform.op<"memref.alloca">'}}
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloca">) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -178,12 +219,14 @@ func.func @multi_buffer_one_alloc_with_use_outside_of_loop(%in: memref<16xf32>) 
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -212,12 +255,14 @@ func.func @multi_buffer_no_analysis(%in: memref<16xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -249,10 +294,82 @@ func.func @multi_buffer_dealloc(%in: memref<16xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-  %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
-  // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
+    // Verify that the returned handle is usable.
+    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @dead_alloc
+func.func @dead_alloc() {
+  // CHECK-NOT: %{{.+}} = memref.alloc
+  %0 = memref.alloc() : memref<8x64xf32, 3>
+  %1 = memref.subview %0[0, 0] [8, 4] [1, 1] : memref<8x64xf32, 3> to
+    memref<8x4xf32, affine_map<(d0, d1) -> (d0 * 64 + d1)>, 3>
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<1x4xf32>
+  vector.transfer_write %cst_0, %1[%c0, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, memref<8x4xf32, affine_map<(d0, d1) -> (d0 * 64 + d1)>, 3>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.memref.erase_dead_alloc_and_stores %0 : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @store_to_load
+//  CHECK-SAME:   (%[[ARG:.+]]: vector<4xf32>)
+//   CHECK-NOT:   memref.alloc()
+//   CHECK-NOT:   vector.transfer_write
+//   CHECK-NOT:   vector.transfer_read
+//       CHECK:   return %[[ARG]] : vector<4xf32>
+func.func @store_to_load(%arg: vector<4xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_1 = arith.constant 0.000000e+00 : f32
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
+  vector.transfer_write %arg, %alloc[%c0] {in_bounds = [true]} : vector<4xf32>, memref<64xf32>
+  %r = vector.transfer_read %alloc[%c0], %cst_1 {in_bounds = [true]} : memref<64xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.memref.erase_dead_alloc_and_stores %0 : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @lower_to_llvm
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   llvm.call @malloc
+func.func @lower_to_llvm() {
+  %0 = memref.alloc() : memref<2048xi8>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_conversion_patterns to %0 {
+      transform.apply_conversion_patterns.dialect_to_llvm "memref"
+    } with type_converter {
+      transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+    } {legal_dialects = ["func", "llvm"]} : !transform.any_op
+    transform.yield
+  }
 }

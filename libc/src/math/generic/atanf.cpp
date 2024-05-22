@@ -13,10 +13,15 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/inv_trigf_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
+  // x == 0.0
+  if (LIBC_UNLIKELY(x == 0.0f))
+    return x;
+
   FPBits xbits(x);
   bool sign = xbits.get_sign();
   xbits.set_sign(false);
@@ -56,4 +61,4 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   return static_cast<float>(atan_eval(x));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

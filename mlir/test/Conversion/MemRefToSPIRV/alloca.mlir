@@ -16,7 +16,6 @@ module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader
 //       CHECK:   %[[STOREPTR:.+]] = spirv.AccessChain %[[VAR]]
 //       CHECK:   spirv.Store "Function" %[[STOREPTR]], %[[VAL]] : f32
 
-
 // -----
 
 module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader], []>, #spirv.resource_limits<>>} {
@@ -69,3 +68,15 @@ module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader
     return %1: f32
   }
 }
+
+// -----
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @zero_size() {
+    %0 = memref.alloca() : memref<0xf32, #spirv.storage_class<Function>>
+    return
+  }
+}
+
+// Zero-sized allocations are not handled yet. Just make sure we do not crash.
+// CHECK-LABEL: func @zero_size

@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -100,20 +101,19 @@ static constexpr std::tuple<
     mkIOKey(InputAscii), mkIOKey(InputComplex32), mkIOKey(InputComplex64),
     mkIOKey(InputDerivedType), mkIOKey(InputDescriptor), mkIOKey(InputInteger),
     mkIOKey(InputLogical), mkIOKey(InputNamelist), mkIOKey(InputReal32),
-    mkIOKey(InputReal64), mkIOKey(InputUnformattedBlock),
-    mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
+    mkIOKey(InputReal64), mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
     mkIOKey(InquireLogical), mkIOKey(InquirePendingId), mkIOKey(OutputAscii),
     mkIOKey(OutputComplex32), mkIOKey(OutputComplex64),
     mkIOKey(OutputDerivedType), mkIOKey(OutputDescriptor),
     mkIOKey(OutputInteger8), mkIOKey(OutputInteger16), mkIOKey(OutputInteger32),
     mkIOKey(OutputInteger64), mkIOKey(OutputInteger128), mkIOKey(OutputLogical),
     mkIOKey(OutputNamelist), mkIOKey(OutputReal32), mkIOKey(OutputReal64),
-    mkIOKey(OutputUnformattedBlock), mkIOKey(SetAccess), mkIOKey(SetAction),
-    mkIOKey(SetAdvance), mkIOKey(SetAsynchronous), mkIOKey(SetBlank),
-    mkIOKey(SetCarriagecontrol), mkIOKey(SetConvert), mkIOKey(SetDecimal),
-    mkIOKey(SetDelim), mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
-    mkIOKey(SetPad), mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec),
-    mkIOKey(SetRecl), mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
+    mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
+    mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
+    mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
+    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm), mkIOKey(SetPad),
+    mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl),
+    mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -361,17 +361,14 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
                       Fortran::evaluate::ProcedureDesignator{*procSym}},
                   stmtCtx))));
         } else {
-          std::string procName = converter.mangleName(*procSym);
-          mlir::func::FuncOp procDef = builder.getNamedFunction(procName);
-          if (!procDef)
-            procDef = Fortran::lower::getOrDeclareFunction(
-                procName, Fortran::evaluate::ProcedureDesignator{*procSym},
-                converter);
-          insert(
-              builder.createConvert(loc, refTy,
-                                    builder.create<fir::AddrOfOp>(
-                                        loc, procDef.getFunctionType(),
-                                        builder.getSymbolRefAttr(procName))));
+          mlir::func::FuncOp procDef = Fortran::lower::getOrDeclareFunction(
+              Fortran::evaluate::ProcedureDesignator{*procSym}, converter);
+          mlir::SymbolRefAttr nameAttr =
+              builder.getSymbolRefAttr(procDef.getSymName());
+          insert(builder.createConvert(
+              loc, refTy,
+              builder.create<fir::AddrOfOp>(loc, procDef.getFunctionType(),
+                                            nameAttr)));
         }
       } else {
         insert(builder.createNullConstant(loc, refTy));
@@ -497,7 +494,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
     // A global pointer or allocatable variable has a descriptor for typical
     // accesses. Variables in multiple namelist groups may already have one.
     // Create descriptors for other cases.
-    if (!IsAllocatableOrPointer(s)) {
+    if (!IsAllocatableOrObjectPointer(&s)) {
       std::string mangleName =
           Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))
@@ -644,7 +641,8 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   makeNextConditionalOn(builder, loc, checkResult, ok);
   mlir::Type argType = funcOp.getFunctionType().getInput(1);
-  mlir::Value groupAddr = getNamelistGroup(converter, symbol, stmtCtx);
+  mlir::Value groupAddr =
+      getNamelistGroup(converter, symbol.GetUltimate(), stmtCtx);
   groupAddr = builder.createConvert(loc, argType, groupAddr);
   llvm::SmallVector<mlir::Value> args = {cookie, groupAddr};
   ok = builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
@@ -654,7 +652,7 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
 static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         mlir::Type type, bool isFormatted) {
-  if (type.isa<fir::RecordType>())
+  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
     return getIORuntimeFunc<mkIOKey(OutputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
@@ -736,7 +734,7 @@ static void genOutputItemList(
     if (argType.isa<fir::BoxType>()) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-      if (itemTy.isa<fir::RecordType>())
+      if (fir::unwrapPassByRefType(itemTy).isa<fir::RecordType>())
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
       fir::ExtendedValue exv = converter.genExprAddr(loc, expr, stmtCtx);
@@ -771,7 +769,7 @@ static void genOutputItemList(
 static mlir::func::FuncOp getInputFunc(mlir::Location loc,
                                        fir::FirOpBuilder &builder,
                                        mlir::Type type, bool isFormatted) {
-  if (type.isa<fir::RecordType>())
+  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
     return getIORuntimeFunc<mkIOKey(InputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
@@ -833,7 +831,7 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
     auto boxTy = box.getType().dyn_cast<fir::BaseBoxType>();
     assert(boxTy && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-    if (boxTy.getEleTy().isa<fir::RecordType>())
+    if (fir::unwrapPassByRefType(boxTy).isa<fir::RecordType>())
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
@@ -1639,12 +1637,6 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
                              const Fortran::lower::SomeExpr &expr,
                              mlir::Type strTy, mlir::Type lenTy,
                              Fortran::lower::StatementContext &stmtCtx) {
-  // Possible optimization TODO: Instead of inlining a selectOp every time there
-  // is a variable reference to a format statement, a function with the selectOp
-  // could be generated to reduce code size. It is not clear if such an
-  // optimization would be deployed very often or improve the object code
-  // beyond, say, what GVN/GCM might produce.
-
   // Create the requisite blocks to inline a selectOp.
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Block *startBlock = builder.getBlock();
@@ -1657,9 +1649,7 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
 
   auto symbol = GetLastSymbol(&expr);
   Fortran::lower::pft::LabelSet labels;
-  [[maybe_unused]] auto foundLabelSet =
-      converter.lookupLabelSet(*symbol, labels);
-  assert(foundLabelSet && "Label not found in map");
+  converter.lookupLabelSet(*symbol, labels);
 
   for (auto label : labels) {
     indexList.push_back(label);
@@ -1698,11 +1688,11 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
   // Create the unit case which should result in an error.
   auto *unitBlock = block->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToEnd(unitBlock);
-
-  // Crash the program.
+  fir::runtime::genReportFatalUserError(
+      builder, loc,
+      "Assigned format variable '" + symbol->name().ToString() +
+          "' has not been assigned a valid format label");
   builder.create<fir::UnreachableOp>(loc);
-
-  // Add unit case to the select statement.
   blockList.push_back(unitBlock);
 
   // Lower the selectOp.

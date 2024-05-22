@@ -92,7 +92,6 @@ Symbol *SymbolTable::insert(StringRef name) {
   memset(sym, 0, sizeof(Symbol));
   sym->setName(name);
   sym->partition = 1;
-  sym->verdefIndex = -1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
@@ -235,10 +234,9 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
         sym->getName().contains('@'))
       continue;
 
-    // If the version has not been assigned, verdefIndex is -1. Use an arbitrary
-    // number (0) to indicate the version has been assigned.
-    if (sym->verdefIndex == uint16_t(-1)) {
-      sym->verdefIndex = 0;
+    // If the version has not been assigned, assign versionId to the symbol.
+    if (!sym->versionScriptAssigned) {
+      sym->versionScriptAssigned = true;
       sym->versionId = versionId;
     }
     if (sym->versionId == versionId)
@@ -256,8 +254,8 @@ void SymbolTable::assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
   // so we set a version to a symbol only if no version has been assigned
   // to the symbol. This behavior is compatible with GNU.
   for (Symbol *sym : findAllByVersion(ver, includeNonDefault))
-    if (sym->verdefIndex == uint16_t(-1)) {
-      sym->verdefIndex = 0;
+    if (!sym->versionScriptAssigned) {
+      sym->versionScriptAssigned = true;
       sym->versionId = versionId;
     }
 }
@@ -313,7 +311,7 @@ void SymbolTable::scanVersionScript() {
 
   // Then, assign versions to "*". In GNU linkers they have lower priority than
   // other wildcards.
-  for (VersionDefinition &v : config->versionDefinitions) {
+  for (VersionDefinition &v : llvm::reverse(config->versionDefinitions)) {
     for (SymbolVersion &pat : v.nonLocalPatterns)
       if (pat.hasWildcard && pat.name == "*")
         assignWildcard(pat, v.id, v.name);

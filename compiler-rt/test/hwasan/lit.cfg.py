@@ -13,7 +13,7 @@ clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
 
-if config.target_arch == "x86_64" and config.enable_aliases == "1":
+if config.target_arch == "x86_64" and config.enable_aliases != "0":
     clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
 else:
     config.available_features.add("pointer-tagging")

@@ -3148,7 +3148,7 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
       return false;
   }
 
-  if (str.startswith("nan") || str.startswith("NaN")) {
+  if (str.starts_with("nan") || str.starts_with("NaN")) {
     str = str.drop_front(3);
 
     // A NaN without payload.
@@ -4292,6 +4292,35 @@ bool IEEEFloat::getExactInverse(APFloat *inv) const {
   return true;
 }
 
+int IEEEFloat::getExactLog2Abs() const {
+  if (!isFinite() || isZero())
+    return INT_MIN;
+
+  const integerPart *Parts = significandParts();
+  const int PartCount = partCountForBits(semantics->precision);
+
+  int PopCount = 0;
+  for (int i = 0; i < PartCount; ++i) {
+    PopCount += llvm::popcount(Parts[i]);
+    if (PopCount > 1)
+      return INT_MIN;
+  }
+
+  if (exponent != semantics->minExponent)
+    return exponent;
+
+  int CountrParts = 0;
+  for (int i = 0; i < PartCount;
+       ++i, CountrParts += APInt::APINT_BITS_PER_WORD) {
+    if (Parts[i] != 0) {
+      return exponent - semantics->precision + CountrParts +
+             llvm::countr_zero(Parts[i]) + 1;
+    }
+  }
+
+  llvm_unreachable("didn't find the set bit");
+}
+
 bool IEEEFloat::isSignaling() const {
   if (!isNaN())
     return false;
@@ -5085,6 +5114,16 @@ bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
   auto Ret = Tmp.getExactInverse(&Inv);
   *inv = APFloat(semPPCDoubleDouble, Inv.bitcastToAPInt());
   return Ret;
+}
+
+int DoubleAPFloat::getExactLog2() const {
+  // TODO: Implement me
+  return INT_MIN;
+}
+
+int DoubleAPFloat::getExactLog2Abs() const {
+  // TODO: Implement me
+  return INT_MIN;
 }
 
 DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,

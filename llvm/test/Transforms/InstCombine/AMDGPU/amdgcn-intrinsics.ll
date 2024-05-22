@@ -107,8 +107,7 @@ define double @test_constant_fold_sqrt_f64_undef() nounwind {
 
 define half @test_constant_fold_sqrt_f16_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.sqrt.f16(half 0xH0000) #[[ATTR15:[0-9]+]]
-; CHECK-NEXT:    ret half [[VAL]]
+; CHECK-NEXT:    ret half 0xH0000
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half 0.0) nounwind readnone
   ret half %val
@@ -116,7 +115,7 @@ define half @test_constant_fold_sqrt_f16_0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR15:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
@@ -134,8 +133,7 @@ define double @test_constant_fold_sqrt_f64_0() nounwind {
 
 define half @test_constant_fold_sqrt_f16_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.sqrt.f16(half 0xH8000) #[[ATTR15]]
-; CHECK-NEXT:    ret half [[VAL]]
+; CHECK-NEXT:    ret half 0xH8000
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half -0.0) nounwind readnone
   ret half %val
@@ -183,6 +181,42 @@ define double @test_constant_fold_sqrt_neg1() nounwind {
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double -1.0)
+  ret double %val
+}
+
+define half @test_amdgcn_sqrt_f16(half %arg) {
+; CHECK-LABEL: @test_amdgcn_sqrt_f16(
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.sqrt.f16(half [[ARG:%.*]])
+; CHECK-NEXT:    ret half [[VAL]]
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half %arg)
+  ret half %val
+}
+
+define half @test_amdgcn_sqrt_f16_flags(half %arg) {
+; CHECK-LABEL: @test_amdgcn_sqrt_f16_flags(
+; CHECK-NEXT:    [[VAL:%.*]] = call nnan half @llvm.sqrt.f16(half [[ARG:%.*]])
+; CHECK-NEXT:    ret half [[VAL]]
+;
+  %val = call nnan half @llvm.amdgcn.sqrt.f16(half %arg)
+  ret half %val
+}
+
+define float @test_amdgcn_sqrt_f32(float %arg) {
+; CHECK-LABEL: @test_amdgcn_sqrt_f32(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float %arg)
+  ret float %val
+}
+
+define double @test_amdgcn_sqrt_f64(double %arg) {
+; CHECK-LABEL: @test_amdgcn_sqrt_f64(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double %arg)
   ret double %val
 }
 
@@ -682,7 +716,7 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
   ret i1 %val
 }
 
-define i1 @test_class_isnan_f32_strict(float %x) nounwind {
+define i1 @test_class_isnan_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR16:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -700,7 +734,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
   ret i1 %val
 }
 
-define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind {
+define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR16]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -5624,7 +5658,7 @@ define double @trig_preop_constfold() {
   ret double %val
 }
 
-define double @trig_preop_constfold_strictfp() {
+define double @trig_preop_constfold_strictfp() strictfp {
 ; CHECK-LABEL: @trig_preop_constfold_strictfp(
 ; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) #[[ATTR16]]
 ; CHECK-NEXT:    ret double [[VAL]]

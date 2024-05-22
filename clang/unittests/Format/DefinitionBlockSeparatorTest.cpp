@@ -140,7 +140,7 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
 
   verifyFormat("enum Foo { FOO, BAR };\n"
                "\n"
-               "enum Bar { FOOBAR, BARFOO };\n",
+               "enum Bar { FOOBAR, BARFOO };",
                Style);
 
   FormatStyle BreakAfterReturnTypeStyle = Style;
@@ -158,7 +158,7 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "    int r = t * p;\n"
                "    return r;\n"
                "  }\n"
-               "}\n",
+               "}",
                BreakAfterReturnTypeStyle);
 }
 
@@ -283,6 +283,15 @@ TEST_F(DefinitionBlockSeparatorTest, UntouchBlockStartStyle) {
 TEST_F(DefinitionBlockSeparatorTest, Always) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+
+  verifyFormat("// clang-format off\n"
+               "template<class T>\n"
+               "concept C = not A<S<T>>;\n"
+               "// clang-format on\n"
+               "\n"
+               "struct E {};",
+               Style);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"

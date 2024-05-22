@@ -58,7 +58,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a1, a0, 255
 ; RV64NOZBB-NEXT:    beqz a1, .LBB0_2
 ; RV64NOZBB-NEXT:  # %bb.1: # %cond.false
-; RV64NOZBB-NEXT:    addiw a1, a0, -1
+; RV64NOZBB-NEXT:    addi a1, a0, -1
 ; RV64NOZBB-NEXT:    not a0, a0
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
@@ -308,7 +308,7 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    negw a1, a0
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 30667
-; RV64M-NEXT:    addiw a1, a1, 1329
+; RV64M-NEXT:    addi a1, a1, 1329
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srliw a0, a0, 27
 ; RV64M-NEXT:    lui a1, %hi(.LCPI2_0)
@@ -567,7 +567,7 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
 ;
 ; RV64NOZBB-LABEL: test_cttz_i8_zero_undef:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    addiw a1, a0, -1
+; RV64NOZBB-NEXT:    addi a1, a0, -1
 ; RV64NOZBB-NEXT:    not a0, a0
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
@@ -753,7 +753,7 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
 ; RV64M-NEXT:    negw a1, a0
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 30667
-; RV64M-NEXT:    addiw a1, a1, 1329
+; RV64M-NEXT:    addi a1, a1, 1329
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srliw a0, a0, 27
 ; RV64M-NEXT:    lui a1, %hi(.LCPI6_0)
@@ -1315,10 +1315,10 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    srli a1, a0, 4
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
-; RV64M-NEXT:    addiw a1, a1, -241
+; RV64M-NEXT:    addi a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 4112
-; RV64M-NEXT:    addiw a1, a1, 257
+; RV64M-NEXT:    addi a1, a1, 257
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srliw a0, a0, 24
 ; RV64M-NEXT:    ret
@@ -1969,10 +1969,10 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ; RV64M-NEXT:    srli a1, a0, 4
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
-; RV64M-NEXT:    addiw a1, a1, -241
+; RV64M-NEXT:    addi a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 4112
-; RV64M-NEXT:    addiw a1, a1, 257
+; RV64M-NEXT:    addi a1, a1, 257
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srliw a0, a0, 24
 ; RV64M-NEXT:    ret
@@ -2558,10 +2558,10 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    srli a1, a0, 4
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
-; RV64M-NEXT:    addiw a1, a1, -241
+; RV64M-NEXT:    addi a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 4112
-; RV64M-NEXT:    addiw a1, a1, 257
+; RV64M-NEXT:    addi a1, a1, 257
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srliw a0, a0, 24
 ; RV64M-NEXT:    ret

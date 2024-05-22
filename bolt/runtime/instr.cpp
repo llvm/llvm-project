@@ -40,7 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined (__x86_64__)
 #include "common.h"
 
 // Enables a very verbose logging to stderr useful when debugging
@@ -199,6 +198,9 @@ public:
     __munmap(StackBase, MaxSize);
   }
 
+  // Placement operator to construct allocator in possibly shared mmaped memory
+  static void *operator new(size_t, void *Ptr) { return Ptr; };
+
 private:
   static constexpr uint64_t Magic = 0x1122334455667788ull;
   uint64_t MaxSize = 0xa00000;
@@ -210,7 +212,18 @@ private:
 
 /// Used for allocating indirect call instrumentation counters. Initialized by
 /// __bolt_instr_setup, our initialization routine.
-BumpPtrAllocator GlobalAlloc;
+BumpPtrAllocator *GlobalAlloc;
+
+// Base address which we substract from recorded PC values when searching for
+// indirect call description entries. Needed because indCall descriptions are
+// mapped read-only and contain static addresses. Initialized in
+// __bolt_instr_setup.
+uint64_t TextBaseAddress = 0;
+
+// Storage for GlobalAlloc which can be shared if not using
+// instrumentation-file-append-pid.
+void *GlobalMetadataStorage;
+
 } // anonymous namespace
 
 // User-defined placement new operators. We only use those (as opposed to
@@ -295,12 +308,22 @@ public:
   /// Increment by 1 the value of \p Key. If it is not in this table, it will be
   /// added to the table and its value set to 1.
   void incrementVal(uint64_t Key, BumpPtrAllocator &Alloc) {
-    ++get(Key, Alloc).Val;
+    if (!__bolt_instr_conservative) {
+      TryLock L(M);
+      if (!L.isLocked())
+        return;
+      auto &E = getOrAllocEntry(Key, Alloc);
+      ++E.Val;
+      return;
+    }
+    Lock L(M);
+    auto &E = getOrAllocEntry(Key, Alloc);
+    ++E.Val;
   }
 
   /// Basic member accessing interface. Here we pass the allocator explicitly to
   /// avoid storing a pointer to it as part of this table (remember there is one
-  /// hash for each indirect call site, so we wan't to minimize our footprint).
+  /// hash for each indirect call site, so we want to minimize our footprint).
   MapEntry &get(uint64_t Key, BumpPtrAllocator &Alloc) {
     if (!__bolt_instr_conservative) {
       TryLock L(M);
@@ -339,10 +362,10 @@ private:
       if (Entry.Key == VacantMarker)
         continue;
       if (Entry.Key & FollowUpTableMarker) {
-        forEachElement(Callback, IncSize,
-                       reinterpret_cast<MapEntry *>(Entry.Key &
-                                                    ~FollowUpTableMarker),
-                       args...);
+        MapEntry *Next =
+            reinterpret_cast<MapEntry *>(Entry.Key & ~FollowUpTableMarker);
+        assert(Next != Entries, "Circular reference!");
+        forEachElement(Callback, IncSize, Next, args...);
         continue;
       }
       Callback(Entry, args...);
@@ -407,8 +430,11 @@ private:
   }
 
   MapEntry &getOrAllocEntry(uint64_t Key, BumpPtrAllocator &Alloc) {
-    if (TableRoot)
-      return getEntry(TableRoot, Key, Key, Alloc, 0);
+    if (TableRoot) {
+      MapEntry &E = getEntry(TableRoot, Key, Key, Alloc, 0);
+      assert(!(E.Key & FollowUpTableMarker), "Invalid entry!");
+      return E;
+    }
     return firstAllocation(Key, Alloc);
   }
 };
@@ -663,18 +689,17 @@ static char *getBinaryPath() {
     return TargetPath;
 
   unsigned long CurAddr = (unsigned long)__get_pc();
-  uint64_t FDdir = __open(DirPath,
-                          /*flags=*/0 /*O_RDONLY*/,
+  uint64_t FDdir = __open(DirPath, O_RDONLY,
                           /*mode=*/0666);
   assert(static_cast<int64_t>(FDdir) >= 0,
          "failed to open /proc/self/map_files");
 
-  while (long Nread = __getdents(FDdir, (struct dirent *)Buf, BufSize)) {
+  while (long Nread = __getdents64(FDdir, (struct dirent64 *)Buf, BufSize)) {
     assert(static_cast<int64_t>(Nread) != -1, "failed to get folder entries");
 
-    struct dirent *d;
+    struct dirent64 *d;
     for (long Bpos = 0; Bpos < Nread; Bpos += d->d_reclen) {
-      d = (struct dirent *)(Buf + Bpos);
+      d = (struct dirent64 *)(Buf + Bpos);
 
       uint64_t StartAddress, EndAddress;
       if (!parseAddressRange(d->d_name, StartAddress, EndAddress))
@@ -699,15 +724,14 @@ ProfileWriterContext readDescriptions() {
   char *BinPath = getBinaryPath();
   assert(BinPath && BinPath[0] != '\0', "failed to find binary path");
 
-  uint64_t FD = __open(BinPath,
-                       /*flags=*/0 /*O_RDONLY*/,
+  uint64_t FD = __open(BinPath, O_RDONLY,
                        /*mode=*/0666);
   assert(static_cast<int64_t>(FD) >= 0, "failed to open binary path");
 
   Result.FileDesc = FD;
 
   // mmap our binary to memory
-  uint64_t Size = __lseek(FD, 0, 2 /*SEEK_END*/);
+  uint64_t Size = __lseek(FD, 0, SEEK_END);
   uint8_t *BinContents = reinterpret_cast<uint8_t *>(
       __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
   assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
@@ -1257,7 +1281,7 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
 
 /// Write to \p FD all of the edge profiles for function \p FuncDesc. Uses
 /// \p Alloc to allocate helper dynamic structures used to compute profile for
-/// edges that we do not explictly instrument.
+/// edges that we do not explicitly instrument.
 const uint8_t *writeFunctionProfile(int FD, ProfileWriterContext &Ctx,
                                     const uint8_t *FuncDesc,
                                     BumpPtrAllocator &Alloc) {
@@ -1370,7 +1394,7 @@ void visitIndCallCounter(IndirectCallHashTable::MapEntry &Entry,
   const IndCallDescription *CallsiteDesc =
       &Ctx->IndCallDescriptions[CallsiteID];
   const IndCallTargetDescription *TargetDesc =
-      Ctx->lookupIndCallTarget(Entry.Key);
+      Ctx->lookupIndCallTarget(Entry.Key - TextBaseAddress);
   if (!TargetDesc) {
     DEBUG(report("Failed to lookup indirect call target\n"));
     char LineBuf[BufSize];
@@ -1449,8 +1473,7 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf,
-                       /*flags=*/0x241 /*O_WRONLY|O_TRUNC|O_CREAT*/,
+  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT,
                        /*mode=*/0666);
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");
@@ -1491,25 +1514,27 @@ extern "C" void __bolt_instr_clear_counters() {
 ///  * Program execution ended, finalization methods are running and BOLT
 ///    hooked into FINI from your binary dynamic section;
 ///  * You used the sleep timer option and during initialization we forked
-///    a separete process that will call this function periodically;
+///    a separate process that will call this function periodically;
 ///  * BOLT prints this function address so you can attach a debugger and
 ///    call this function directly to get your profile written to disk
 ///    on demand.
 ///
 extern "C" void __attribute((force_align_arg_pointer))
-__bolt_instr_data_dump() {
+__bolt_instr_data_dump(int FD) {
   // Already dumping
   if (!GlobalWriteProfileMutex->acquire())
     return;
 
+  int ret = __lseek(FD, 0, SEEK_SET);
+  assert(ret == 0, "Failed to lseek!");
+  ret = __ftruncate(FD, 0);
+  assert(ret == 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
   HashAlloc.setMaxSize(0x6400000);
   ProfileWriterContext Ctx = readDescriptions();
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
   DEBUG(printStats(Ctx));
-
-  int FD = openProfile();
 
   BumpPtrAllocator Alloc;
   Alloc.setMaxSize(0x6400000);
@@ -1526,7 +1551,6 @@ __bolt_instr_data_dump() {
   Ctx.CallFlowTable->forEachElement(visitCallFlowEntry, FD, &Ctx);
 
   __fsync(FD);
-  __close(FD);
   __munmap(Ctx.MMapPtr, Ctx.MMapSize);
   __close(Ctx.FileDesc);
   HashAlloc.destroy();
@@ -1539,6 +1563,7 @@ __bolt_instr_data_dump() {
 void watchProcess() {
   timespec ts, rem;
   uint64_t Ellapsed = 0ull;
+  int FD = openProfile();
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
     // Store parent pgid
@@ -1550,7 +1575,7 @@ void watchProcess() {
     ppid = __getppid();
     if (ppid == 1) {
       // Parent already dead
-      __bolt_instr_data_dump();
+      __bolt_instr_data_dump(FD);
       goto out;
     }
   }
@@ -1563,7 +1588,7 @@ void watchProcess() {
     // so no need for us to keep dumping.
     if (__kill(ppid, 0) < 0) {
       if (__bolt_instr_no_counters_clear)
-        __bolt_instr_data_dump();
+        __bolt_instr_data_dump(FD);
       break;
     }
 
@@ -1571,13 +1596,14 @@ void watchProcess() {
       continue;
 
     Ellapsed = 0;
-    __bolt_instr_data_dump();
+    __bolt_instr_data_dump(FD);
     if (__bolt_instr_no_counters_clear == false)
       __bolt_instr_clear_counters();
   }
 
 out:;
   DEBUG(report("My parent process is dead, bye!\n"));
+  __close(FD);
   __exit(0);
 }
 
@@ -1588,6 +1614,7 @@ extern "C" void __bolt_instr_indirect_tailcall();
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
   __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+  TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
       reinterpret_cast<uint64_t>(&__bolt_instr_locations[0]);
@@ -1606,13 +1633,19 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
              MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
   assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
 
-  // Conservatively reserve 100MiB shared pages
-  GlobalAlloc.setMaxSize(0x6400000);
-  GlobalAlloc.setShared(Shared);
-  GlobalWriteProfileMutex = new (GlobalAlloc, 0) Mutex();
+  GlobalMetadataStorage = __mmap(0, 4096, PROT_READ | PROT_WRITE,
+                                 MapPrivateOrShared | MAP_ANONYMOUS, -1, 0);
+  assert(GlobalMetadataStorage != MAP_FAILED,
+         "__bolt_instr_setup: failed to mmap page for metadata!");
+
+  GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
+  // Conservatively reserve 100MiB
+  GlobalAlloc->setMaxSize(0x6400000);
+  GlobalAlloc->setShared(Shared);
+  GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
-        new (GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+        new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
 
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group
@@ -1627,13 +1660,24 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
 
 extern "C" __attribute((force_align_arg_pointer)) void
 instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
-  GlobalIndCallCounters[IndCallID].incrementVal(Target, GlobalAlloc);
+  GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
 }
 
 /// We receive as in-stack arguments the identifier of the indirect call site
 /// as well as the target address for the call
 extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "ldp x0, x1, [sp, #288]\n"
+                       "bl instrumentIndirectCall\n"
+                       RESTORE_ALL
+                       "ret\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "mov 0xa0(%%rsp), %%rdi\n"
                        "mov 0x98(%%rsp), %%rsi\n"
@@ -1641,10 +1685,23 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "ldp x0, x1, [sp, #288]\n"
+                       "bl instrumentIndirectCall\n"
+                       RESTORE_ALL
+                       "ret\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "mov 0x98(%%rsp), %%rdi\n"
                        "mov 0x90(%%rsp), %%rsi\n"
@@ -1652,23 +1709,53 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 /// This is hooking ELF's entry, it needs to save all machine state.
 extern "C" __attribute((naked)) void __bolt_instr_start()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "bl __bolt_instr_setup\n"
+                       RESTORE_ALL
+                       "adrp x16, __bolt_start_trampoline\n"
+                       "add x16, x16, #:lo12:__bolt_start_trampoline\n"
+                       "br x16\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "call __bolt_instr_setup\n"
                        RESTORE_ALL
                        "jmp __bolt_start_trampoline\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 /// This is hooking into ELF's DT_FINI
 extern "C" void __bolt_instr_fini() {
-  __bolt_fini_trampoline();
-  if (__bolt_instr_sleep_time == 0)
-    __bolt_instr_data_dump();
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "adrp x16, __bolt_fini_trampoline\n"
+                       "add x16, x16, #:lo12:__bolt_fini_trampoline\n"
+                       "blr x16\n"
+                       RESTORE_ALL
+                       :::);
+  // clang-format on
+#else
+  __asm__ __volatile__("call __bolt_fini_trampoline\n" :::);
+#endif
+  if (__bolt_instr_sleep_time == 0) {
+    int FD = openProfile();
+    __bolt_instr_data_dump(FD);
+    __close(FD);
+  }
   DEBUG(report("Finished.\n"));
 }
 
@@ -1714,5 +1801,4 @@ void _bolt_instr_fini() {
   __bolt_instr_data_dump();
 }
 
-#endif
 #endif

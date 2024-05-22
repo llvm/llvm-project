@@ -17,7 +17,7 @@
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
-#include <__threading_support>
+#include <__thread/id.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
@@ -30,6 +30,8 @@
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#ifndef _LIBCPP_HAS_NO_THREADS
 
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<__thread_id, _CharT> {
@@ -68,6 +70,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<__thread_id, _CharT> {
 
     __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
 };
+
+#endif // !_LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

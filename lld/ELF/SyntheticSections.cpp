@@ -583,13 +583,14 @@ static uint64_t readFdeAddr(uint8_t *buf, int size) {
 uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
                                   uint8_t enc) const {
   // The starting address to which this FDE applies is
-  // stored at FDE + 8 byte.
+  // stored at FDE + 8 byte. And this offset is within
+  // the .eh_frame section.
   size_t off = fdeOff + 8;
   uint64_t addr = readFdeAddr(buf + off, enc & 0xf);
   if ((enc & 0x70) == DW_EH_PE_absptr)
     return addr;
   if ((enc & 0x70) == DW_EH_PE_pcrel)
-    return addr + getParent()->addr + off;
+    return addr + getParent()->addr + off + outSecOff;
   fatal("unknown FDE size relative encoding");
 }
 
@@ -1453,6 +1454,10 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
+      if (mainPart->memtagDescriptors->isNeeded()) {
+        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagDescriptors);
+        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ, mainPart->memtagDescriptors->getSize());
+      }
     }
   }
 
@@ -2684,6 +2689,10 @@ size_t IBTPltSection::getSize() const {
 
 bool IBTPltSection::isNeeded() const { return in.plt->getNumEntries() > 0; }
 
+RelroPaddingSection::RelroPaddingSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1, ".relro_padding") {
+}
+
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
   uint32_t h = 0;
@@ -3131,10 +3140,8 @@ bool VersionTableSection::isNeeded() const {
 
 void elf::addVerneed(Symbol *ss) {
   auto &file = cast<SharedFile>(*ss->file);
-  if (ss->verdefIndex == VER_NDX_GLOBAL) {
-    ss->versionId = VER_NDX_GLOBAL;
+  if (ss->versionId == VER_NDX_GLOBAL)
     return;
-  }
 
   if (file.vernauxs.empty())
     file.vernauxs.resize(file.verdefs.size());
@@ -3143,10 +3150,10 @@ void elf::addVerneed(Symbol *ss) {
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum()]; this causes the vernaux identifiers to start from
   // getVerDefNum()+1.
-  if (file.vernauxs[ss->verdefIndex] == 0)
-    file.vernauxs[ss->verdefIndex] = ++SharedFile::vernauxNum + getVerDefNum();
+  if (file.vernauxs[ss->versionId] == 0)
+    file.vernauxs[ss->versionId] = ++SharedFile::vernauxNum + getVerDefNum();
 
-  ss->versionId = file.vernauxs[ss->verdefIndex];
+  ss->versionId = file.vernauxs[ss->versionId];
 }
 
 template <class ELFT>
@@ -3835,6 +3842,7 @@ void InStruct::reset() {
   got.reset();
   gotPlt.reset();
   igotPlt.reset();
+  relroPadding.reset();
   armCmseSGSection.reset();
   ppc64LongBranchTarget.reset();
   mipsAbiFlags.reset();
@@ -3898,6 +3906,76 @@ void PackageMetadataNote::writeTo(uint8_t *buf) {
 size_t PackageMetadataNote::getSize() const {
   return sizeof(llvm::ELF::Elf64_Nhdr) + 4 +
          alignTo(config->packageMetadata.size() + 1, 4);
+}
+
+// Helper function, return the size of the ULEB128 for 'v', optionally writing
+// it to `*(buf + offset)` if `buf` is non-null.
+static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
+  if (buf)
+    return encodeULEB128(v, buf + offset);
+  return getULEB128Size(v);
+}
+
+// https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
+constexpr uint64_t kMemtagStepSizeBits = 3;
+constexpr uint64_t kMemtagGranuleSize = 16;
+static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+                                      uint8_t *buf = nullptr) {
+  size_t sectionSize = 0;
+  uint64_t lastGlobalEnd = 0;
+
+  for (const Symbol *sym : symbols) {
+    if (!includeInSymtab(*sym))
+      continue;
+    const uint64_t addr = sym->getVA();
+    const uint64_t size = sym->getSize();
+
+    if (addr <= kMemtagGranuleSize && buf != nullptr)
+      errorOrWarn("address of the tagged symbol \"" + sym->getName() +
+                  "\" falls in the ELF header. This is indicative of a "
+                  "compiler/linker bug");
+    if (addr % kMemtagGranuleSize != 0)
+      errorOrWarn("address of the tagged symbol \"" + sym->getName() +
+                  "\" at 0x" + Twine::utohexstr(addr) +
+                  "\" is not granule (16-byte) aligned");
+    if (size == 0)
+      errorOrWarn("size of the tagged symbol \"" + sym->getName() +
+                  "\" is not allowed to be zero");
+    if (size % kMemtagGranuleSize != 0)
+      errorOrWarn("size of the tagged symbol \"" + sym->getName() +
+                  "\" (size 0x" + Twine::utohexstr(size) +
+                  ") is not granule (16-byte) aligned");
+
+    const uint64_t sizeToEncode = size / kMemtagGranuleSize;
+    const uint64_t stepToEncode = ((addr - lastGlobalEnd) / kMemtagGranuleSize)
+                                  << kMemtagStepSizeBits;
+    if (sizeToEncode < (1 << kMemtagStepSizeBits)) {
+      sectionSize += computeOrWriteULEB128(stepToEncode | sizeToEncode, buf, sectionSize);
+    } else {
+      sectionSize += computeOrWriteULEB128(stepToEncode, buf, sectionSize);
+      sectionSize += computeOrWriteULEB128(sizeToEncode - 1, buf, sectionSize);
+    }
+    lastGlobalEnd = addr + size;
+  }
+
+  return sectionSize;
+}
+
+bool MemtagDescriptors::updateAllocSize() {
+  size_t oldSize = getSize();
+  std::stable_sort(symbols.begin(), symbols.end(),
+                   [](const Symbol *s1, const Symbol *s2) {
+                     return s1->getVA() < s2->getVA();
+                   });
+  return oldSize != getSize();
+}
+
+void MemtagDescriptors::writeTo(uint8_t *buf) {
+  createMemtagDescriptors(symbols, buf);
+}
+
+size_t MemtagDescriptors::getSize() const {
+  return createMemtagDescriptors(symbols);
 }
 
 InStruct elf::in;

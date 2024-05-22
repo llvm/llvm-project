@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcessInfoList.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
 #include "lldb/Target/Platform.h"
@@ -573,6 +577,43 @@ SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {
   });
 }
 
+SBProcess SBPlatform::Attach(SBAttachInfo &attach_info,
+                             const SBDebugger &debugger, SBTarget &target,
+                             SBError &error) {
+  LLDB_INSTRUMENT_VA(this, attach_info, debugger, target, error);
+
+  if (PlatformSP platform_sp = GetSP()) {
+    if (platform_sp->IsConnected()) {
+      ProcessAttachInfo &info = attach_info.ref();
+      Status status;
+      ProcessSP process_sp = platform_sp->Attach(info, debugger.ref(),
+                                                 target.GetSP().get(), status);
+      error.SetError(status);
+      return SBProcess(process_sp);
+    }
+
+    error.SetErrorString("not connected");
+    return {};
+  }
+
+  error.SetErrorString("invalid platform");
+  return {};
+}
+
+SBProcessInfoList SBPlatform::GetAllProcesses(SBError &error) {
+  if (PlatformSP platform_sp = GetSP()) {
+    if (platform_sp->IsConnected()) {
+      ProcessInstanceInfoList list = platform_sp->GetAllProcesses();
+      return SBProcessInfoList(list);
+    }
+    error.SetErrorString("not connected");
+    return {};
+  }
+
+  error.SetErrorString("invalid platform");
+  return {};
+}
+
 SBError SBPlatform::Kill(const lldb::pid_t pid) {
   LLDB_INSTRUMENT_VA(this, pid);
   return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
@@ -654,4 +695,42 @@ SBEnvironment SBPlatform::GetEnvironment() {
   }
 
   return SBEnvironment();
+}
+
+SBError SBPlatform::SetLocateModuleCallback(
+    lldb::SBPlatformLocateModuleCallback callback, void *callback_baton) {
+  LLDB_INSTRUMENT_VA(this, callback, callback_baton);
+  PlatformSP platform_sp(GetSP());
+  if (!platform_sp)
+    return SBError("invalid platform");
+
+  if (!callback) {
+    // Clear the callback.
+    platform_sp->SetLocateModuleCallback(nullptr);
+    return SBError();
+  }
+
+  // Platform.h does not accept lldb::SBPlatformLocateModuleCallback directly
+  // because of the SBModuleSpec and SBFileSpec dependencies. Use a lambda to
+  // convert ModuleSpec/FileSpec <--> SBModuleSpec/SBFileSpec for the callback
+  // arguments.
+  platform_sp->SetLocateModuleCallback(
+      [callback, callback_baton](const ModuleSpec &module_spec,
+                                 FileSpec &module_file_spec,
+                                 FileSpec &symbol_file_spec) {
+        SBModuleSpec module_spec_sb(module_spec);
+        SBFileSpec module_file_spec_sb;
+        SBFileSpec symbol_file_spec_sb;
+
+        SBError error = callback(callback_baton, module_spec_sb,
+                                 module_file_spec_sb, symbol_file_spec_sb);
+
+        if (error.Success()) {
+          module_file_spec = module_file_spec_sb.ref();
+          symbol_file_spec = symbol_file_spec_sb.ref();
+        }
+
+        return error.ref();
+      });
+  return SBError();
 }

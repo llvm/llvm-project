@@ -15,8 +15,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ds.swizzle), [[COPY1]](s32), 0
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), [[COPY1]](s32), 0
     %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ds.swizzle), %0, 0
+    %1:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0, 0
 
 ...

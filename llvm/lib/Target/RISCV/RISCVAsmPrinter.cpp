@@ -36,6 +36,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 
@@ -45,6 +46,10 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
+
+namespace llvm {
+extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+} // namespace llvm
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
@@ -56,6 +61,15 @@ public:
       : AsmPrinter(TM, std::move(Streamer)) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
+
+  void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
+                     const MachineInstr &MI);
+
+  void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
+
+  void LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -83,6 +97,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
+  bool emitDirectiveOptionArch();
 
 private:
   void emitAttributes();
@@ -91,6 +106,78 @@ private:
 
   bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
+}
+
+void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
+                                    const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+
+  SM.recordStackMap(*MILabel, MI);
+  assert(NumNOPBytes % NOPBytes == 0 &&
+         "Invalid number of NOP bytes requested!");
+
+  // Scan ahead to trim the shadow.
+  const MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::const_iterator MII(MI);
+  ++MII;
+  while (NumNOPBytes > 0) {
+    if (MII == MBB.end() || MII->isCall() ||
+        MII->getOpcode() == RISCV::DBG_VALUE ||
+        MII->getOpcode() == TargetOpcode::PATCHPOINT ||
+        MII->getOpcode() == TargetOpcode::STACKMAP)
+      break;
+    ++MII;
+    NumNOPBytes -= 4;
+  }
+
+  // Emit nops.
+  emitNops(NumNOPBytes / NOPBytes);
+}
+
+// Lower a patchpoint of the form:
+// [<def>], <id>, <numBytes>, <target>, <numArgs>
+void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                      const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordPatchPoint(*MILabel, MI);
+
+  PatchPointOpers Opers(&MI);
+
+  unsigned EncodedBytes = 0;
+
+  // Emit padding.
+  unsigned NumBytes = Opers.getNumPatchBytes();
+  assert(NumBytes >= EncodedBytes &&
+         "Patchpoint can't request size less than the length of a call.");
+  assert((NumBytes - EncodedBytes) % NOPBytes == 0 &&
+         "Invalid number of NOP bytes requested!");
+  emitNops((NumBytes - EncodedBytes) / NOPBytes);
+}
+
+void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                      const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+
+  StatepointOpers SOpers(&MI);
+  if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
+    assert(PatchBytes % NOPBytes == 0 &&
+           "Invalid number of NOP bytes requested!");
+    emitNops(PatchBytes / NOPBytes);
+  }
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordStatepoint(*MILabel, MI);
 }
 
 void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
@@ -160,6 +247,12 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::PseudoRVVInitUndefM4:
   case RISCV::PseudoRVVInitUndefM8:
     return;
+  case TargetOpcode::STACKMAP:
+    return LowerSTACKMAP(*OutStreamer, SM, *MI);
+  case TargetOpcode::PATCHPOINT:
+    return LowerPATCHPOINT(*OutStreamer, SM, *MI);
+  case TargetOpcode::STATEPOINT:
+    return LowerSTATEPOINT(*OutStreamer, SM, *MI);
   }
 
   MCInst OutInst;
@@ -225,24 +318,63 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   const MachineOperand &AddrReg = MI->getOperand(OpNo);
   assert(MI->getNumOperands() > OpNo + 1 && "Expected additional operand");
-  const MachineOperand &DispImm = MI->getOperand(OpNo + 1);
+  const MachineOperand &Offset = MI->getOperand(OpNo + 1);
   // All memory operands should have a register and an immediate operand (see
   // RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand).
   if (!AddrReg.isReg())
     return true;
-  if (!DispImm.isImm())
+  if (!Offset.isImm() && !Offset.isGlobal() && !Offset.isBlockAddress())
     return true;
 
-  OS << DispImm.getImm() << "("
-     << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  MCOperand MCO;
+  if (!lowerOperand(Offset, MCO))
+    return true;
+
+  if (Offset.isImm())
+    OS << MCO.getImm();
+  else if (Offset.isGlobal() || Offset.isBlockAddress())
+    OS << *MCO.getExpr();
+  OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  return false;
+}
+
+bool RISCVAsmPrinter::emitDirectiveOptionArch() {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
+  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
+  for (const auto &Feature : RISCVFeatureKV) {
+    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+      continue;
+
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+      continue;
+
+    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                                : RISCVOptionArchArgType::Minus;
+    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+  }
+  if (!NeedEmitStdOptionArgs.empty()) {
+    RTS.emitDirectiveOptionPush();
+    RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+    return true;
+  }
+
   return false;
 }
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
+  bool EmittedOptionArch = emitDirectiveOptionArch();
 
   SetupMachineFunction(MF);
   emitFunctionBody();
+
+  if (EmittedOptionArch)
+    RTS.emitDirectiveOptionPop();
   return false;
 }
 
@@ -731,12 +863,13 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   uint64_t TSFlags = MCID.TSFlags;
   unsigned NumOps = MI->getNumExplicitOperands();
 
-  // Skip policy, VL and SEW operands which are the last operands if present.
+  // Skip policy, SEW, VL, VXRM/FRM operands which are the last operands if
+  // present.
   if (RISCVII::hasVecPolicyOp(TSFlags))
     --NumOps;
-  if (RISCVII::hasVLOp(TSFlags))
-    --NumOps;
   if (RISCVII::hasSEWOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasVLOp(TSFlags))
     --NumOps;
   if (RISCVII::hasRoundModeOp(TSFlags))
     --NumOps;

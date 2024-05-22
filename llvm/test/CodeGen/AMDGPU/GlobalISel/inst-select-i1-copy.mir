@@ -30,6 +30,7 @@ body: |
     ; WAVE64-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
     ; WAVE64-NEXT: EXP_DONE 0, [[V_CNDMASK_B32_e64_]], [[V_CNDMASK_B32_e64_1]], [[COPY6]], [[COPY7]], -1, 0, 15, implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0
+    ;
     ; WAVE32-LABEL: name: i1_vcc_to_vcc_copy
     ; WAVE32: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; WAVE32-NEXT: {{  $}}
@@ -87,16 +88,17 @@ body: |
     ; WAVE64-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2
     ; WAVE64-NEXT: S_CMP_EQ_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
     ; WAVE64-NEXT: [[COPY5:%[0-9]+]]:sreg_32 = COPY $scc
-    ; WAVE64-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def $scc
+    ; WAVE64-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def dead $scc
     ; WAVE64-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
-    ; WAVE64-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def $scc
+    ; WAVE64-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def dead $scc
     ; WAVE64-NEXT: [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_1]], implicit $exec
     ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY4]], 0, [[COPY3]], [[V_CMP_NE_U32_e64_1]], implicit $exec
     ; WAVE64-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
     ; WAVE64-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
     ; WAVE64-NEXT: EXP_DONE 0, [[V_CNDMASK_B32_e64_]], [[V_CNDMASK_B32_e64_1]], [[COPY6]], [[COPY7]], -1, 0, 15, implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0
+    ;
     ; WAVE32-LABEL: name: i1_sgpr_to_vcc_copy
     ; WAVE32: liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; WAVE32-NEXT: {{  $}}
@@ -109,10 +111,10 @@ body: |
     ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2
     ; WAVE32-NEXT: S_CMP_EQ_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
     ; WAVE32-NEXT: [[COPY5:%[0-9]+]]:sreg_32 = COPY $scc
-    ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def $scc
+    ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def dead $scc
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
-    ; WAVE32-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def $scc
+    ; WAVE32-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def dead $scc
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_1]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY4]], 0, [[COPY3]], [[V_CMP_NE_U32_e64_1]], implicit $exec
     ; WAVE32-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[DEF]]

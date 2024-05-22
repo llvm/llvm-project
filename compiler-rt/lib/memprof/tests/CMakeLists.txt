@@ -58,7 +58,8 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST MEMPROF_SUPPORTED_ARCH)
     $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
   set_target_compile_flags(MemProfUnitTests ${MEMPROF_UNITTEST_CFLAGS})
   set_target_link_flags(MemProfUnitTests ${MEMPROF_UNITTEST_LINK_FLAGS})
   target_link_libraries(MemProfUnitTests ${MEMPROF_UNITTEST_LINK_LIBRARIES})

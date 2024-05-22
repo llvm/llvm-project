@@ -2,6 +2,24 @@ add_custom_target(libcxx-generate-feature-test-macros
     COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_feature_test_macro_components.py"
     COMMENT "Generate the <version> header and tests for feature test macros.")
 
+add_custom_target(libcxx-generate-std-clang-module-header
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_std_clang_module_header.py"
+  COMMENT "Generate the <__std_clang_module> header")
+
+add_custom_target(libcxx-generate-std-cppm-in-file
+  COMMAND
+        "${Python3_EXECUTABLE}"
+		"${LIBCXX_SOURCE_DIR}/utils/generate_libcxx_cppm_in.py"
+		"std"
+  COMMENT "Generate the std.cppm.in file")
+
+add_custom_target(libcxx-generate-std-compat-cppm-in-file
+  COMMAND
+        "${Python3_EXECUTABLE}"
+		"${LIBCXX_SOURCE_DIR}/utils/generate_libcxx_cppm_in.py"
+		"std.compat"
+  COMMENT "Generate the std.compat.cppm.in file")
+
 add_custom_target(libcxx-generate-extended-grapheme-cluster-tables
     COMMAND
         "${Python3_EXECUTABLE}"
@@ -38,6 +56,9 @@ add_custom_target(libcxx-generate-iwyu-mapping
 
 add_custom_target(libcxx-generate-files
     DEPENDS libcxx-generate-feature-test-macros
+            libcxx-generate-std-clang-module-header
+            libcxx-generate-std-cppm-in-file
+            libcxx-generate-std-compat-cppm-in-file
             libcxx-generate-extended-grapheme-cluster-tables
             libcxx-generate-extended-grapheme-cluster-tests
             libcxx-generate-escaped-output-table

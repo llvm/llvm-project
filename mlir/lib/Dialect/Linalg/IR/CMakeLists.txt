@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRBufferizationDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
+  MLIRFunctionInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser

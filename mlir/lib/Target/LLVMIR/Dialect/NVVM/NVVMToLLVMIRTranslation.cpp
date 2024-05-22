@@ -165,7 +165,7 @@ public:
       if (!dyn_cast<ArrayAttr>(attribute.getValue()))
         return failure();
       SmallVector<int64_t> values =
-          extractFromI64ArrayAttr(attribute.getValue());
+          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getMaxntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getMaxntidYName());
@@ -175,7 +175,7 @@ public:
       if (!dyn_cast<ArrayAttr>(attribute.getValue()))
         return failure();
       SmallVector<int64_t> values =
-          extractFromI64ArrayAttr(attribute.getValue());
+          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getReqntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getReqntidYName());

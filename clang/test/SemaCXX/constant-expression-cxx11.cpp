@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx11_20,cxx20_23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -11,7 +11,7 @@ static_assert(false, "test"); // expected-error {{test}}
 
 }
 
-int array[(long)(char *)0]; // expected-warning {{variable length arrays are a C99 feature}} \
+int array[(long)(char *)0]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
                             // expected-warning {{variable length array folded to constant array as an extension}} \
                             // expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
 
@@ -185,7 +185,7 @@ namespace FunctionCast {
   constexpr int f() { return 1; }
   typedef double (*DoubleFn)();
   typedef int (*IntFn)();
-  int a[(int)DoubleFn(f)()]; // expected-error {{variable length array}} expected-warning{{C99 feature}}
+  int a[(int)DoubleFn(f)()]; // expected-error {{variable length array}} expected-warning{{Clang extension}}
   int b[(int)IntFn(f)()];    // ok
 }
 
@@ -1606,7 +1606,7 @@ namespace RecursiveOpaqueExpr {
 namespace VLASizeof {
 
   void f(int k) { // expected-note {{here}}
-    int arr[k]; // expected-warning {{C99}} expected-note {{function parameter 'k'}}
+    int arr[k]; // expected-warning {{Clang extension}} expected-note {{function parameter 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;
@@ -1781,7 +1781,7 @@ namespace Void {
   static_assert(get(arr, 1) == 1, "");
   static_assert(get(arr, 4) == 4, "");
   static_assert(get(arr, 0) == 4, ""); // expected-error{{not an integral constant expression}} \
-  // expected-note{{in call to 'get(arr, 0)'}}
+  // expected-note{{in call to 'get<const int, 5UL>(arr, 0)'}}
 }
 
 namespace std { struct type_info; }
@@ -2449,6 +2449,8 @@ E2 testDefaultArgForParam(E2 e2Param = (E2)-1) { // ok, not a constant expressio
   return e2LocalInit;
 }
 
+#include <enum-constexpr-conversion-system-header.h>
+
 void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8);
@@ -2486,6 +2488,9 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+
+  CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
+  // expected-error@-1 {{integer value 123 is outside the valid range of values [0, 1] for the enumeration type 'SystemEnum'}}
 }
 
 template<class T, unsigned size> struct Bitfield {

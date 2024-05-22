@@ -17,10 +17,10 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) , ptr addrspace(1) %va
 ; IR-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(1) [[ELE]], align 4
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[MEM_LOCATION]], i32 4
 ; IR-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; IR-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
-; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP3]], i32 0)
+; IR-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; IR-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP1]], 32
+; IR-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; IR-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
 ; IR-NEXT:    [[TMP7:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]])
 ; IR-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
@@ -66,10 +66,10 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, ptr addrspace(
 ; IR-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(1) [[ELE]], align 4
 ; IR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[MEM_LOCATION]], i32 4
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
-; IR-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; IR-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
+; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    br label [[COMPUTELOOP:%.*]]

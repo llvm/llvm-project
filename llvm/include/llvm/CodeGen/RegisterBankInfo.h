@@ -29,6 +29,7 @@
 namespace llvm {
 
 class MachineInstr;
+class MachineIRBuilder;
 class MachineRegisterInfo;
 class raw_ostream;
 class TargetInstrInfo;
@@ -62,8 +63,8 @@ public:
     PartialMapping() = default;
 
     /// Provide a shortcut for quickly building PartialMapping.
-    PartialMapping(unsigned StartIdx, unsigned Length,
-                   const RegisterBank &RegBank)
+    constexpr PartialMapping(unsigned StartIdx, unsigned Length,
+                             const RegisterBank &RegBank)
         : StartIdx(StartIdx), Length(Length), RegBank(&RegBank) {}
 
     /// \return the index of in the original value of the most
@@ -156,7 +157,8 @@ public:
     /// Initialize a ValueMapping with the given parameter.
     /// \p BreakDown needs to have a life time at least as long
     /// as this instance.
-    ValueMapping(const PartialMapping *BreakDown, unsigned NumBreakDowns)
+    constexpr ValueMapping(const PartialMapping *BreakDown,
+                           unsigned NumBreakDowns)
         : BreakDown(BreakDown), NumBreakDowns(NumBreakDowns) {}
 
     /// Iterators through the PartialMappings.
@@ -175,7 +177,7 @@ public:
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify(const RegisterBankInfo &RBI, unsigned MeaningfulBitWidth) const;
+    bool verify(const RegisterBankInfo &RBI, TypeSize MeaningfulBitWidth) const;
 
     /// Print this on dbgs() stream.
     void dump() const;
@@ -571,8 +573,9 @@ public:
   static void applyDefaultMapping(const OperandsMapper &OpdMapper);
 
   /// See ::applyMapping.
-  virtual void applyMappingImpl(const OperandsMapper &OpdMapper) const {
-    llvm_unreachable("The target has to implement that part");
+  virtual void applyMappingImpl(MachineIRBuilder &Builder,
+                                const OperandsMapper &OpdMapper) const {
+    llvm_unreachable("The target has to implement this");
   }
 
 public:
@@ -628,7 +631,7 @@ public:
   ///
   /// \note Since this is a copy, both registers have the same size.
   virtual unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                            unsigned Size) const {
+                            TypeSize Size) const {
     // Optimistically assume that copies are coalesced. I.e., when
     // they are on the same bank, they are free.
     // Otherwise assume a non-zero cost of 1. The targets are supposed
@@ -638,7 +641,7 @@ public:
 
   /// \returns true if emitting a copy from \p Src to \p Dst is impossible.
   bool cannotCopy(const RegisterBank &Dst, const RegisterBank &Src,
-                  unsigned Size) const {
+                  TypeSize Size) const {
     return copyCost(Dst, Src, Size) == std::numeric_limits<unsigned>::max();
   }
 
@@ -729,14 +732,15 @@ public:
   ///
   /// Therefore, getting the mapping and applying it should be kept in
   /// sync.
-  void applyMapping(const OperandsMapper &OpdMapper) const {
+  void applyMapping(MachineIRBuilder &Builder,
+                    const OperandsMapper &OpdMapper) const {
     // The only mapping we know how to handle is the default mapping.
     if (OpdMapper.getInstrMapping().getID() == DefaultMappingID)
       return applyDefaultMapping(OpdMapper);
     // For other mapping, the target needs to do the right thing.
     // If that means calling applyDefaultMapping, fine, but this
     // must be explicitly stated.
-    applyMappingImpl(OpdMapper);
+    applyMappingImpl(Builder, OpdMapper);
   }
 
   /// Get the size in bits of \p Reg.
@@ -745,7 +749,7 @@ public:
   /// virtual register.
   ///
   /// \pre \p Reg != 0 (NoRegister).
-  unsigned getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
+  TypeSize getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
                          const TargetRegisterInfo &TRI) const;
 
   /// Check that information hold by this instance make sense for the

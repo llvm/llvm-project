@@ -39,3 +39,88 @@ exit:
   %conv5 = zext i32 %iv to i64
   ret i64 %conv5
 }
+
+
+define void @pr63840_crash(i64 %sext974, i64 %sext982, i8 %x) {
+; CHECK-LABEL: define void @pr63840_crash
+; CHECK-SAME: (i64 [[SEXT974:%.*]], i64 [[SEXT982:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[SEXT982]], [[SEXT974]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], [[SEXT974]]
+; CHECK-NEXT:    br label [[BB983:%.*]]
+; CHECK:       bb983:
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi i64 [ [[LSR_IV_NEXT8:%.*]], [[BB983]] ], [ [[TMP4]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[BB983]] ], [ [[TMP3]], [[BB]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT2]] = sub i64 [[LSR_IV1]], [[SEXT982]]
+; CHECK-NEXT:    [[LSR_IV_NEXT8]] = sub i64 [[LSR_IV7]], [[SEXT982]]
+; CHECK-NEXT:    br i1 false, label [[BB992:%.*]], label [[BB983]]
+; CHECK:       bb992:
+; CHECK-NEXT:    [[LSR_IV_NEXT8_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT8]], [[BB983]] ]
+; CHECK-NEXT:    [[SEXT1046:%.*]] = sext i8 [[X]] to i64
+; CHECK-NEXT:    br label [[BB1092:%.*]]
+; CHECK:       bb1051:
+; CHECK-NEXT:    ret void
+; CHECK:       bb1053:
+; CHECK-NEXT:    [[ADD1054:%.*]] = add i64 [[PHI1094:%.*]], [[SEXT1046]]
+; CHECK-NEXT:    br i1 false, label [[BB1059:%.*]], label [[BB1064SPLIT:%.*]]
+; CHECK:       bb1059:
+; CHECK-NEXT:    [[ADD1061:%.*]] = add i64 [[ADD1054]], [[SEXT1046]]
+; CHECK-NEXT:    store i64 [[ADD1061]], ptr addrspace(1) null, align 8
+; CHECK-NEXT:    br i1 false, label [[BB1059_BB1064_CRIT_EDGE:%.*]], label [[BB1092]]
+; CHECK:       bb1064split:
+; CHECK-NEXT:    br label [[BB1064:%.*]]
+; CHECK:       bb1059.bb1064_crit_edge:
+; CHECK-NEXT:    [[LSR_IV_NEXT4_LCSSA6:%.*]] = phi i64 [ [[LSR_IV_NEXT4:%.*]], [[BB1059]] ]
+; CHECK-NEXT:    br label [[BB1064]]
+; CHECK:       bb1064:
+; CHECK-NEXT:    [[PHI1065:%.*]] = phi i64 [ [[LSR_IV_NEXT4_LCSSA6]], [[BB1059_BB1064_CRIT_EDGE]] ], [ 0, [[BB1064SPLIT]] ]
+; CHECK-NEXT:    ret void
+; CHECK:       bb1092:
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i64 [ [[LSR_IV_NEXT4]], [[BB1059]] ], [ [[LSR_IV1]], [[BB992]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB1059]] ], [ -1, [[BB992]] ]
+; CHECK-NEXT:    [[PHI1094]] = phi i64 [ [[LSR_IV_NEXT8_LCSSA]], [[BB992]] ], [ [[ADD1054]], [[BB1059]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i64 [[LSR_IV3]], [[SEXT1046]]
+; CHECK-NEXT:    [[ICMP1050:%.*]] = icmp ult i64 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[ICMP1050]], label [[BB1053:%.*]], label [[BB1051:%.*]]
+;
+bb:
+  %sub975 = sub i64 0, %sext974
+  br label %bb983
+
+bb983:                                            ; preds = %bb983, %bb
+  %phi985 = phi i64 [ %sub989, %bb983 ], [ %sub975, %bb ]
+  %sub989 = sub i64 %phi985, %sext982
+  br i1 false, label %bb992, label %bb983
+
+bb992:                                            ; preds = %bb983
+  %sext1046 = sext i8 %x to i64
+  %add1047 = add i64 %sub989, %sext1046
+  br label %bb1092
+
+bb1051:                                           ; preds = %bb1092
+  ret void
+
+bb1053:                                           ; preds = %bb1092
+  %add1054 = add i64 %phi1094, %sext1046
+  br i1 false, label %bb1059, label %bb1064
+
+bb1059:                                           ; preds = %bb1053
+  %add1060 = add i64 %phi1093, 1
+  %add1061 = add i64 %add1054, %sext1046
+  store i64 %add1061, ptr addrspace(1) null, align 8
+  br i1 false, label %bb1064, label %bb1092
+
+bb1064:                                           ; preds = %bb1059, %bb1053
+  %phi1065 = phi i64 [ 0, %bb1053 ], [ %add1061, %bb1059 ]
+  ret void
+
+bb1092:                                           ; preds = %bb1059, %bb992
+  %phi1093 = phi i64 [ 0, %bb992 ], [ %add1060, %bb1059 ]
+  %phi1094 = phi i64 [ %add1047, %bb992 ], [ %add1054, %bb1059 ]
+  %icmp1050 = icmp ult i64 %phi1093, 0
+  br i1 %icmp1050, label %bb1053, label %bb1051
+}

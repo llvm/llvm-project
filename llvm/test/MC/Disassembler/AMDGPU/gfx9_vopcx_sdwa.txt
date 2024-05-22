@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: v_cmpx_class_f32_sdwa s[6:7], v1, v2 src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x22,0x7c,0x01,0x86,0x06,0x06]
 0xf9,0x04,0x22,0x7c,0x01,0x86,0x06,0x06

@@ -1,10 +1,10 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
-! CHECK-LABEL: fir.global @_QCblock
+! CHECK-LABEL: fir.global @block_
 ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant 2.400000e+00 : f32
 ! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK: %[[VAL_4:.*]] = fir.undefined tuple<!fir.array<5x5xf32>>
+! CHECK: %[[VAL_4:.*]] = fir.zero_bits tuple<!fir.array<5x5xf32>>
 ! CHECK: %[[VAL_5:.*]] = fir.undefined !fir.array<5x5xf32>
 ! CHECK: %[[VAL_6:.*]] = fir.insert_on_range %[[VAL_5]], %[[VAL_1]] from (0, 0) to (1, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
 ! CHECK: %[[VAL_7:.*]] = fir.insert_on_range %[[VAL_6]], %[[VAL_3]] from (2, 0) to (4, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
@@ -103,12 +103,19 @@ subroutine range()
   real, dimension(2,3) ::  a1
   integer, dimension(3,4) :: a2
   integer, dimension(2,3,4) :: a3
- 
+  complex, dimension(2,3) :: c0, c1
+
   a0 = (/1, 2, 3, 3, 3, 3, 3, 3, 3, 3/)
   a1 = reshape((/3.5, 3.5, 3.5, 3.5, 3.5, 3.5/), shape(a1))
   a2 = reshape((/1, 3, 3, 5, 3, 3, 3, 3, 9, 9, 9, 8/), shape(a2))
   a3 = reshape((/1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12/), shape(a3))
+
+  c0 = reshape((/(1.0, 1.5), (2.0, 2.5), (3.0, 3.5), (4.0, 4.5), (5.0, 5.5), (6.0, 6.5)/), shape(c0))
+  data c1/6 * (0.0, 0.0)/
 end subroutine range
+
+! c1 data
+! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) : !fir.array<2x3x!fir.complex<4>>
 
 ! a0 array constructor
 ! CHECK: fir.global internal @_QQro.10xi4.{{.*}}(dense<[1, 2, 3, 3, 3, 3, 3, 3, 3, 3]> : tensor<10xi32>) constant : !fir.array<10xi32>
@@ -121,6 +128,9 @@ end subroutine range
 
 ! a3 array constructor
 ! CHECK: fir.global internal @_QQro.2x3x4xi4.{{.*}}(dense<{{\[\[\[1, 1], \[2, 2], \[3, 3]], \[\[4, 4], \[5, 5], \[6, 6]], \[\[7, 7], \[8, 8], \[9, 9]], \[\[10, 10], \[11, 11], \[12, 12]]]}}> : tensor<4x3x2xi32>) constant : !fir.array<2x3x4xi32>
+
+! c0 array constructor
+! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3x!fir.complex<4>>
 
 ! CHECK-LABEL rangeGlobal
 subroutine rangeGlobal()

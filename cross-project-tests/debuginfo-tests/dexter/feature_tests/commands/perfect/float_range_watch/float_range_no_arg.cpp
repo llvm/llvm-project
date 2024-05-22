@@ -7,7 +7,8 @@
 // work for both dbgeng and lldb, which output floats differently.
 // UNSUPPORTED: system-darwin, system-windows
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: float_range_no_arg.cpp:
 
 int main() {

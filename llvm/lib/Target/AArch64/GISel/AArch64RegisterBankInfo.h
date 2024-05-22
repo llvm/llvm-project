@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64REGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64REGISTERBANKINFO_H
 
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 
 #define GET_REGBANK_DECLARATIONS
@@ -42,9 +43,9 @@ protected:
     PMI_Min = PMI_FirstFPR,
   };
 
-  static RegisterBankInfo::PartialMapping PartMappings[];
-  static RegisterBankInfo::ValueMapping ValMappings[];
-  static PartialMappingIdx BankIDToCopyMapIdx[];
+  static const RegisterBankInfo::PartialMapping PartMappings[];
+  static const RegisterBankInfo::ValueMapping ValMappings[];
+  static const PartialMappingIdx BankIDToCopyMapIdx[];
 
   enum ValueMappingIdx {
     InvalidIdx = 0,
@@ -103,7 +104,8 @@ protected:
 /// This class provides the information for the target register banks.
 class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   /// See RegisterBankInfo::applyMapping.
-  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+  void applyMappingImpl(MachineIRBuilder &Builder,
+                        const OperandsMapper &OpdMapper) const override;
 
   /// Get an instruction mapping where all the operands map to
   /// the same register bank and have similar size.
@@ -130,11 +132,15 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                      const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 
+  /// \returns true if the load \p MI is likely loading from a floating-point
+  /// type.
+  bool isLoadFromFPType(const MachineInstr &MI) const;
+
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
 
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                    unsigned Size) const override;
+                    TypeSize Size) const override;
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT) const override;

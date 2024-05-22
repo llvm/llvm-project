@@ -515,6 +515,67 @@ func.func @generateVariadicOutputOpInNestedPattern() -> (i32) {
   return %0 : i32
 }
 
+// CHECK-LABEL: @testMatchVariadic
+func.func @testMatchVariadic(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg1, %arg2) <{attr1 = 0 : i32, pattern_name = "MatchVariadic"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 0 : i32} : (i32, i32, i32) -> ()
+
+  // Note: Not rewritten because variadic operand size mismatches.
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2, %arg3) <{attr1 = 0 : i32}> : (i32, i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2, %arg3) {attr1 = 0 : i32} : (i32, i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchVariadicSubDag
+func.func @testMatchVariadicSubDag(%arg0: i32, %arg1: i32, %arg2: i32) -> () {
+  // CHECK: %[[IN0:.*]] = "test.mixed_variadic_in_out_i32"(%arg0) : (i32) -> i32
+  %0 = "test.mixed_variadic_in_out_i32"(%arg0) : (i32) -> i32
+  // CHECK: %[[IN1:.*]] = "test.mixed_variadic_in_out_i32"(%arg1) : (i32) -> i32
+  %1 = "test.mixed_variadic_in_out_i32"(%arg1) : (i32) -> i32
+
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg1, %arg2) <{attr1 = 1 : i32, pattern_name = "MatchVariadicSubDag"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%0, %1, %arg2) {attr1 = 1 : i32} : (i32, i32, i32) -> ()
+
+  // Note: MatchVariadicSubDag doesn't apply
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) <{attr1 = 1 : i32}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 1 : i32} : (i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchVariadicSameSymbol
+func.func @testMatchVariadicSameSymbol(%arg0: i32, %arg1: i32, %arg2: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg0, %arg2) <{attr1 = 2 : i32, pattern_name = "MatchVariadicSameSymbol"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg0, %arg2) {attr1 = 2 : i32} : (i32, i32, i32) -> ()
+
+  // Note: MatchVariadicSameSymbol doesn't apply.
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 2 : i32} : (i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchAndRewriteVariadicFullRange
+func.func @testMatchAndRewriteVariadicFullRange(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in6"(%arg2, %arg3, %arg0, %arg1) <{attr1 = -1 : i32}> : (i32, i32, i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1, %arg2, %arg3) {attr1 = 1 : i32} : (i32, i32, i32, i32) -> ()
+
+  // Note: MatchAndRewriteVariadicFullRange doesn't apply because the length of each variadic operand is not equal to 2.
+  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1) <{attr1 = 1 : i32}> : (i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1) {attr1 = 1 : i32} : (i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchMultiVariadicSubSymbol
+func.func @testMatchMultiVariadicSubSymbol(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg2, %arg3, %arg1) <{attr1 = 2 : i32, pattern_name = "MatchMultiVariadicSubSymbol"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1, %arg2, %arg3) {attr1 = 2 : i32} : (i32, i32, i32, i32) -> ()
+
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Test that natives calls are only called once during rewrites.
 //===----------------------------------------------------------------------===//
@@ -620,5 +681,18 @@ func.func @returnTypeAndLocation(%arg0 : i32) -> i1 {
 func.func @testConstantStrAttr() -> () {
   // CHECK: test.has_str_value {value = "foo"}
   test.no_str_value {value = "bar"}
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Test that patterns with variadics propagate sizes
+//===----------------------------------------------------------------------===//
+
+func.func @testVariadic(%arg_0: i32, %arg_1: i32, %brg: i64,
+    %crg_0: f32, %crg_1: f32, %crg_2: f32, %crg_3: f32) -> () {
+  // CHECK: "test.variadic_rewrite_dst_op"(%arg2, %arg3, %arg4, %arg5, %arg6, %arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 4, 2>}> : (i64, f32, f32, f32, f32, i32, i32) -> ()
+  "test.variadic_rewrite_src_op"(%arg_0, %arg_1, %brg,
+    %crg_0, %crg_1, %crg_2, %crg_3) {operandSegmentSizes = array<i32: 2, 1, 4>} :
+    (i32, i32, i64, f32, f32, f32, f32) -> ()
   return
 }

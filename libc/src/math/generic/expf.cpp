@@ -20,7 +20,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   // When |x| >= 89, |x| < 2^-25, or x is nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
-    if (xbits.get_unbiased_exponent() <= 101) {
+    if (xbits.get_biased_exponent() <= 101) {
       return 1.0f + x;
     }
 
@@ -105,4 +105,4 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

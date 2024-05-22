@@ -173,7 +173,7 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: log2_ceil_i32:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    addiw a0, a0, -1
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NEXT:    not a0, a0
 ; RV64XTHEADBB-NEXT:    slli a0, a0, 32
 ; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
@@ -415,10 +415,6 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NEXT:  .LBB6_2:
 ; RV64XTHEADBB-NEXT:    li a0, 32
 ; RV64XTHEADBB-NEXT:    ret
-; RV64ZBB-LABEL: cttz_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ctzw a0, a0
-; RV64ZBB-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
 }
@@ -778,7 +774,7 @@ define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a2, a0, 8
 ; RV64I-NEXT:    lui a3, 16
-; RV64I-NEXT:    addiw a3, a3, -256
+; RV64I-NEXT:    addi a3, a3, -256
 ; RV64I-NEXT:    and a2, a2, a3
 ; RV64I-NEXT:    srliw a4, a0, 24
 ; RV64I-NEXT:    or a2, a2, a4

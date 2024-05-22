@@ -21,7 +21,6 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -140,6 +139,21 @@ TEST(GSYMTest, TestFunctionInfo) {
   // that has name, size and any number of line table entries
   EXPECT_LT(FISymtab, FIWithLines);
 
+  // Test that if we have a function info without inline info and one with
+  // that the one without inline info is less than the one with.
+  FunctionInfo FIWithInlines = FISymtab;
+  FIWithInlines.Inline = InlineInfo();
+  FIWithInlines.Inline->Ranges.insert(
+      AddressRange(StartAddr, StartAddr + 0x10));
+  EXPECT_LT(FISymtab, FIWithInlines);
+
+  // Test that if we have a function info with inline entries and one more
+  // inline entries that the one with fewer inline functins is less than the
+  // one with more.
+  FunctionInfo FIWithMoreInlines = FIWithInlines;
+  FIWithMoreInlines.Inline->Children.push_back(InlineInfo());
+  EXPECT_LT(FIWithInlines, FIWithMoreInlines);
+
   FunctionInfo FIWithLinesAndInline = FIWithLines;
   FIWithLinesAndInline.Inline = InlineInfo();
   FIWithLinesAndInline.Inline->Ranges.insert(
@@ -161,12 +175,12 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_LT(FIWithLines, FIWithLinesWithHigherAddress);
 }
 
-static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
+static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -177,7 +191,7 @@ static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
 TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
   // Test decoding FunctionInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -205,9 +219,9 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
       "0x00000008: unsupported InfoType 4");
 }
 
-static void TestFunctionInfoEncodeError(llvm::support::endianness ByteOrder,
-                                      const FunctionInfo &FI,
-                                      std::string ExpectedErrorMsg) {
+static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
+                                        const FunctionInfo &FI,
+                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -222,25 +236,26 @@ TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
   const uint32_t InvalidName = 0;
   const uint32_t ValidName = 1;
   FunctionInfo InvalidNameFI(FuncAddr, FuncSize, InvalidName);
-  TestFunctionInfoEncodeError(llvm::support::little, InvalidNameFI,
+  TestFunctionInfoEncodeError(
+      llvm::endianness::little, InvalidNameFI,
       "attempted to encode invalid FunctionInfo object");
 
   FunctionInfo InvalidLineTableFI(FuncAddr, FuncSize, ValidName);
   // Empty line tables are not valid. Verify if the encoding of anything
   // in our line table fails, that we see get the error propagated.
   InvalidLineTableFI.OptLineTable = LineTable();
-  TestFunctionInfoEncodeError(llvm::support::little, InvalidLineTableFI,
-      "attempted to encode invalid LineTable object");
+  TestFunctionInfoEncodeError(llvm::endianness::little, InvalidLineTableFI,
+                              "attempted to encode invalid LineTable object");
 
   FunctionInfo InvalidInlineInfoFI(FuncAddr, FuncSize, ValidName);
   // Empty line tables are not valid. Verify if the encoding of anything
   // in our line table fails, that we see get the error propagated.
   InvalidInlineInfoFI.Inline = InlineInfo();
-  TestFunctionInfoEncodeError(llvm::support::little, InvalidInlineInfoFI,
-      "attempted to encode invalid InlineInfo object");
+  TestFunctionInfoEncodeError(llvm::endianness::little, InvalidInlineInfoFI,
+                              "attempted to encode invalid InlineInfo object");
 }
 
-static void TestFunctionInfoEncodeDecode(llvm::support::endianness ByteOrder,
+static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
                                          const FunctionInfo &FI) {
   // Test encoding and decoding FunctionInfo objects.
   SmallString<512> Str;
@@ -252,7 +267,7 @@ static void TestFunctionInfoEncodeDecode(llvm::support::endianness ByteOrder,
   ASSERT_EQ(ExpectedOffset.get(), 0ULL);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<FunctionInfo> Decoded =
       FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
@@ -291,33 +306,33 @@ TEST(GSYMTest, TestFunctionInfoEncoding) {
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // or inline info.
   FunctionInfo FI(FuncAddr, FuncSize, FuncName);
-  TestFunctionInfoEncodeDecode(llvm::support::little, FI);
-  TestFunctionInfoEncodeDecode(llvm::support::big, FI);
+  TestFunctionInfoEncodeDecode(llvm::endianness::little, FI);
+  TestFunctionInfoEncodeDecode(llvm::endianness::big, FI);
 
   // Make sure that we can encode and decode a FunctionInfo with a line table
   // and no inline info.
   FunctionInfo FILines(FuncAddr, FuncSize, FuncName);
   AddLines(FuncAddr, FileIdx, FILines);
-  TestFunctionInfoEncodeDecode(llvm::support::little, FILines);
-  TestFunctionInfoEncodeDecode(llvm::support::big, FILines);
+  TestFunctionInfoEncodeDecode(llvm::endianness::little, FILines);
+  TestFunctionInfoEncodeDecode(llvm::endianness::big, FILines);
 
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // and with inline info.
   FunctionInfo FIInline(FuncAddr, FuncSize, FuncName);
   AddInline(FuncAddr, FuncSize, FIInline);
-  TestFunctionInfoEncodeDecode(llvm::support::little, FIInline);
-  TestFunctionInfoEncodeDecode(llvm::support::big, FIInline);
+  TestFunctionInfoEncodeDecode(llvm::endianness::little, FIInline);
+  TestFunctionInfoEncodeDecode(llvm::endianness::big, FIInline);
 
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // and with inline info.
   FunctionInfo FIBoth(FuncAddr, FuncSize, FuncName);
   AddLines(FuncAddr, FileIdx, FIBoth);
   AddInline(FuncAddr, FuncSize, FIBoth);
-  TestFunctionInfoEncodeDecode(llvm::support::little, FIBoth);
-  TestFunctionInfoEncodeDecode(llvm::support::big, FIBoth);
+  TestFunctionInfoEncodeDecode(llvm::endianness::little, FIBoth);
+  TestFunctionInfoEncodeDecode(llvm::endianness::big, FIBoth);
 }
 
-static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
+static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
                                        const InlineInfo &Inline) {
   // Test encoding and decoding InlineInfo objects
   SmallString<512> Str;
@@ -328,7 +343,7 @@ static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -336,11 +351,11 @@ static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
   EXPECT_EQ(Inline, Decoded.get());
 }
 
-static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
+static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -348,7 +363,7 @@ static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-static void TestInlineInfoEncodeError(llvm::support::endianness ByteOrder,
+static void TestInlineInfoEncodeError(llvm::endianness ByteOrder,
                                       const InlineInfo &Inline,
                                       std::string ExpectedErrorMsg) {
   SmallString<512> Str;
@@ -454,8 +469,8 @@ TEST(GSYMTest, TestInlineInfo) {
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
 
   // Test encoding and decoding InlineInfo objects
-  TestInlineInfoEncodeDecode(llvm::support::little, Root);
-  TestInlineInfoEncodeDecode(llvm::support::big, Root);
+  TestInlineInfoEncodeDecode(llvm::endianness::little, Root);
+  TestInlineInfoEncodeDecode(llvm::endianness::big, Root);
 }
 
 TEST(GSYMTest, TestInlineInfoEncodeErrors) {
@@ -465,16 +480,16 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   // that has no ranges.
   InlineInfo Empty;
   std::string EmptyErr("attempted to encode invalid InlineInfo object");
-  TestInlineInfoEncodeError(llvm::support::little, Empty, EmptyErr);
-  TestInlineInfoEncodeError(llvm::support::big, Empty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::endianness::little, Empty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::endianness::big, Empty, EmptyErr);
 
   // Verify that we get an error trying to encode an InlineInfo object that has
   // a child InlineInfo that has no ranges.
   InlineInfo ContainsEmpty;
   ContainsEmpty.Ranges.insert({0x100, 0x200});
   ContainsEmpty.Children.push_back(Empty);
-  TestInlineInfoEncodeError(llvm::support::little, ContainsEmpty, EmptyErr);
-  TestInlineInfoEncodeError(llvm::support::big, ContainsEmpty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::endianness::little, ContainsEmpty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::endianness::big, ContainsEmpty, EmptyErr);
 
   // Verify that we get an error trying to encode an InlineInfo object that has
   // a child whose address range is not contained in the parent address range.
@@ -484,17 +499,16 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   InlineInfo ChildNotContainedChild;
   ChildNotContainedChild.Ranges.insert({0x200, 0x300});
   ChildNotContained.Children.push_back(ChildNotContainedChild);
-  TestInlineInfoEncodeError(llvm::support::little, ChildNotContained,
+  TestInlineInfoEncodeError(llvm::endianness::little, ChildNotContained,
                             ChildNotContainedErr);
-  TestInlineInfoEncodeError(llvm::support::big, ChildNotContained,
+  TestInlineInfoEncodeError(llvm::endianness::big, ChildNotContained,
                             ChildNotContainedErr);
-
 }
 
 TEST(GSYMTest, TestInlineInfoDecodeErrors) {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -556,7 +570,7 @@ TEST(GSYMTest, TestStringTable) {
   EXPECT_EQ(StrTab.getString(13), "");
 }
 
-static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
+static void TestFileWriterHelper(llvm::endianness ByteOrder) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -586,7 +600,7 @@ static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
 
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   uint64_t Offset = 0;
   EXPECT_EQ(Data.getU8(&Offset), U8);
   EXPECT_EQ(Data.getU16(&Offset), U16);
@@ -602,8 +616,8 @@ static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
 }
 
 TEST(GSYMTest, TestFileWriter) {
-  TestFileWriterHelper(llvm::support::little);
-  TestFileWriterHelper(llvm::support::big);
+  TestFileWriterHelper(llvm::endianness::little);
+  TestFileWriterHelper(llvm::endianness::big);
 }
 
 TEST(GSYMTest, TestAddressRangeEncodeDecode) {
@@ -613,7 +627,7 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   // the base address of the parent range for subranges.
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = llvm::support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   const uint64_t BaseAddr = 0x1000;
   const AddressRange Range1(0x1000, 0x1010);
@@ -622,7 +636,7 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   encodeRange(Range2, FW, BaseAddr);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
 
   AddressRange DecodedRange1, DecodedRange2;
   uint64_t Offset = 0;
@@ -636,13 +650,13 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
                                                const uint64_t BaseAddr) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = llvm::support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   encodeRanges(Ranges, FW, BaseAddr);
 
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
 
   AddressRanges DecodedRanges;
   uint64_t Offset = 0;
@@ -671,7 +685,7 @@ TEST(GSYMTest, TestAddressRangesEncodeDecode) {
   TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
 }
 
-static void TestLineTableHelper(llvm::support::endianness ByteOrder,
+static void TestLineTableHelper(llvm::endianness ByteOrder,
                                 const LineTable &LT) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -681,7 +695,7 @@ static void TestLineTableHelper(llvm::support::endianness ByteOrder,
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -715,8 +729,8 @@ TEST(GSYMTest, TestLineTable) {
   ASSERT_EQ(LT[2], Line2);
 
   // Test encoding and decoding line tables.
-  TestLineTableHelper(llvm::support::little, LT);
-  TestLineTableHelper(llvm::support::big, LT);
+  TestLineTableHelper(llvm::endianness::little, LT);
+  TestLineTableHelper(llvm::endianness::big, LT);
 
   // Verify the clear method works as expected.
   LT.clear();
@@ -747,11 +761,11 @@ TEST(GSYMTest, TestLineTable) {
   ASSERT_FALSE(LT2 < LT2);
 }
 
-static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
+static void TestLineTableDecodeError(llvm::endianness ByteOrder,
                                      StringRef Bytes, const uint64_t BaseAddr,
                                      std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -762,7 +776,7 @@ static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
 TEST(GSYMTest, TestLineTableDecodeErrors) {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -798,7 +812,7 @@ TEST(GSYMTest, TestLineTableDecodeErrors) {
 TEST(GSYMTest, TestLineTableEncodeErrors) {
   const uint64_t BaseAddr = 0x1000;
   const uint32_t FileIdx = 1;
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -827,7 +841,7 @@ TEST(GSYMTest, TestLineTableEncodeErrors) {
 
 static void TestHeaderEncodeError(const Header &H,
                                   std::string ExpectedErrorMsg) {
-  const support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -837,9 +851,9 @@ static void TestHeaderEncodeError(const Header &H,
 
 static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
-  const support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<Header> Decoded = Header::decode(Data);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -882,7 +896,7 @@ TEST(GSYMTest, TestHeaderEncodeErrors) {
 }
 
 TEST(GSYMTest, TestHeaderDecodeErrors) {
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -904,7 +918,7 @@ TEST(GSYMTest, TestHeaderDecodeErrors) {
 }
 
 static void TestHeaderEncodeDecode(const Header &H,
-                                   support::endianness ByteOrder) {
+                                   llvm::endianness ByteOrder) {
   uint8_t AddressSize = 4;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -912,21 +926,20 @@ static void TestHeaderEncodeDecode(const Header &H,
   llvm::Error Err = H.encode(FW);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
   llvm::Expected<Header> Decoded = Header::decode(Data);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   EXPECT_EQ(H, Decoded.get());
-
 }
 TEST(GSYMTest, TestHeaderEncodeDecode) {
   Header H;
   InitHeader(H);
-  TestHeaderEncodeDecode(H, llvm::support::little);
-  TestHeaderEncodeDecode(H, llvm::support::big);
+  TestHeaderEncodeDecode(H, llvm::endianness::little);
+  TestHeaderEncodeDecode(H, llvm::endianness::big);
 }
 
-static void TestGsymCreatorEncodeError(llvm::support::endianness ByteOrder,
+static void TestGsymCreatorEncodeError(llvm::endianness ByteOrder,
                                        const GsymCreator &GC,
                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;
@@ -946,7 +959,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
   // function infos. We shouldn't be saving a GSYM file in this case since
   // there is nothing inside of it.
   GsymCreator GC;
-  TestGsymCreatorEncodeError(llvm::support::little, GC,
+  TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "no functions to encode");
   const uint64_t FuncAddr = 0x1000;
   const uint64_t FuncSize = 0x100;
@@ -954,7 +967,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
   // Verify we get an error trying to encode a GsymCreator that isn't
   // finalized.
   GC.addFunctionInfo(FunctionInfo(FuncAddr, FuncSize, FuncName));
-  TestGsymCreatorEncodeError(llvm::support::little, GC,
+  TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "GsymCreator wasn't finalized prior to encoding");
   std::string finalizeIssues;
   raw_string_ostream OS(finalizeIssues);
@@ -966,7 +979,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
   // Verify we get an error trying to encode a GsymCreator with a UUID that is
   // too long.
   GC.setUUID(InvalidUUID);
-  TestGsymCreatorEncodeError(llvm::support::little, GC,
+  TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "invalid UUID size 21");
   GC.setUUID(ValidUUID);
   // Verify errors are propagated when we try to encoding an invalid line
@@ -975,7 +988,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
     FI.OptLineTable = LineTable(); // Invalid line table.
     return false; // Stop iterating
   });
-  TestGsymCreatorEncodeError(llvm::support::little, GC,
+  TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "attempted to encode invalid LineTable object");
   // Verify errors are propagated when we try to encoding an invalid inline
   // info.
@@ -984,7 +997,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
     FI.Inline = InlineInfo(); // Invalid InlineInfo.
     return false; // Stop iterating
   });
-  TestGsymCreatorEncodeError(llvm::support::little, GC,
+  TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "attempted to encode invalid InlineInfo object");
 }
 
@@ -999,10 +1012,10 @@ static void Compare(const GsymCreator &GC, const GsymReader &GR) {
   });
 }
 
-static void TestEncodeDecode(const GsymCreator &GC,
-                             support::endianness ByteOrder, uint16_t Version,
-                             uint8_t AddrOffSize, uint64_t BaseAddress,
-                             uint32_t NumAddresses, ArrayRef<uint8_t> UUID) {
+static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
+                             uint16_t Version, uint8_t AddrOffSize,
+                             uint64_t BaseAddress, uint32_t NumAddresses,
+                             ArrayRef<uint8_t> UUID) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -1032,15 +1045,11 @@ TEST(GSYMTest, TestGsymCreator1ByteAddrOffsets) {
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20, 0x10, Func2Name));
   Error Err = GC.finalize(llvm::nulls());
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::support::little,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::support::big,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1058,15 +1067,11 @@ TEST(GSYMTest, TestGsymCreator2ByteAddrOffsets) {
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x200, 0x100, Func2Name));
   Error Err = GC.finalize(llvm::nulls());
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::support::little,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::support::big,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1084,15 +1089,11 @@ TEST(GSYMTest, TestGsymCreator4ByteAddrOffsets) {
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20000, 0x100, Func2Name));
   Error Err = GC.finalize(llvm::nulls());
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::support::little,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::support::big,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1110,15 +1111,11 @@ TEST(GSYMTest, TestGsymCreator8ByteAddrOffsets) {
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x100000000, 0x100, Func2Name));
   Error Err = GC.finalize(llvm::nulls());
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::support::little,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::support::big,
-                   GSYM_VERSION,
-                   AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1127,7 +1124,7 @@ TEST(GSYMTest, TestGsymCreator8ByteAddrOffsets) {
 static void VerifyFunctionInfo(const GsymReader &GR, uint64_t Addr,
                                const FunctionInfo &FI) {
   auto ExpFI = GR.getFunctionInfo(Addr);
-  ASSERT_TRUE(bool(ExpFI));
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(FI, ExpFI.get());
 }
 
@@ -1148,7 +1145,7 @@ TEST(GSYMTest, TestGsymReader) {
   constexpr uint64_t FuncSize = 0x10;
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   GC.addFunctionInfo(FunctionInfo(Func1Addr, FuncSize, Func1Name));
   GC.addFunctionInfo(FunctionInfo(Func2Addr, FuncSize, Func2Name));
   Error FinalizeErr = GC.finalize(llvm::nulls());
@@ -1186,7 +1183,7 @@ TEST(GSYMTest, TestGsymLookups) {
   // symbolication.
   GsymCreator GC;
   FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FI.OptLineTable = LineTable();
   const uint32_t MainFileIndex = GC.insertFile("/tmp/main.c");
   const uint32_t FooFileIndex = GC.insertFile("/tmp/foo.h");
@@ -1333,13 +1330,13 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1410,13 +1407,13 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1517,13 +1514,13 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1617,18 +1614,18 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   // Only allow addresses between [0x1000 - 0x2000) to be linked into the
   // GSYM.
   AddressRanges TextRanges;
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1657,7 +1654,7 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1820,13 +1817,13 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2080,13 +2077,13 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2259,13 +2256,13 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2399,13 +2396,13 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2435,11 +2432,12 @@ TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
   GC.addFunctionInfo(FunctionInfo(BaseAddr, 0, Func2Name));
   Error Err = GC.finalize(llvm::nulls());
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::support::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
                    1, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::support::big, GSYM_VERSION, AddrOffSize, BaseAddr,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+                   BaseAddr,
                    1, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
 }
@@ -2492,7 +2490,7 @@ static Expected<GsymReader> FinalizeEncodeAndDecode(GsymCreator &GC) {
     return std::move(FinalizeErr);
   SmallString<1024> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = GC.encode(FW);
   if (Err)
@@ -2650,4 +2648,2233 @@ TEST(GSYMTest, TestGsymSegmenting) {
     ASSERT_THAT_EXPECTED(GR4000->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED(GR4000->lookup(0x3000), Failed());
   }
+}
+
+TEST(GSYMTest, TestGsymSegmentingNoBase) {
+  // Test creating a GSYM file with function infos and segment the information.
+  // We verify segmenting is working by creating a full GSYM and also by
+  // encoding multiple segments, then we verify that we get the same information
+  // when doing lookups on the full GSYM that was decoded from encoding the
+  // entire GSYM and also by decoding information from the segments themselves.
+  GsymCreator GC;
+  AddFunctionInfo(GC, "main", 0x1000, "/tmp/main.c", "/tmp/main.h");
+  AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
+  AddFunctionInfo(GC, "bar", 0x3000, "/tmp/bar.c", "/tmp/bar.h");
+  AddFunctionInfo(GC, "baz", 0x4000, "/tmp/baz.c", "/tmp/baz.h");
+  Expected<GsymReader> GR = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  //GR->dump(outs());
+
+  // Create segmented GSYM files where each file contains 1 function. We will
+  // then test doing lookups on the "GR", or the full GSYM file and then test
+  // doing lookups on the GsymReader objects for each segment to ensure we get
+  // the exact same information. So after all of the code below we will have
+  // GsymReader objects that each contain one function. We name the creators
+  // and readers to match the one and only address they contain.
+  // GC1000 and GR1000 are for [0x1000-0x1030)
+  // GC2000 and GR2000 are for [0x2000-0x2030)
+  // GC3000 and GR3000 are for [0x3000-0x3030)
+  // GC4000 and GR4000 are for [0x4000-0x4030)
+
+  // Create the segments and verify that FuncIdx, an in/out parameter, gets
+  // updated as expected.
+  size_t FuncIdx = 0;
+  // Make sure we get an error if the segment size is too small to encode a
+  // single function info.
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
+      GC.createSegment(57, FuncIdx);
+  ASSERT_FALSE((bool)GCError);
+  checkError("a segment size of 57 is to small to fit any function infos, "
+             "specify a larger value", GCError.takeError());
+  // Make sure that the function index didn't get incremented when we didn't
+  // encode any values into the segmented GsymCreator.
+  ASSERT_EQ(FuncIdx, (size_t)0);
+
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC1000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)1);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC2000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)2);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC3000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)3);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC4000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)4);
+  // When there are no function infos left to encode we expect to get  no error
+  // and get a NULL GsymCreator in the return value from createSegment.
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GCNull, Succeeded());
+  ASSERT_TRUE(GC1000.get() != nullptr);
+  ASSERT_TRUE(GC2000.get() != nullptr);
+  ASSERT_TRUE(GC3000.get() != nullptr);
+  ASSERT_TRUE(GC4000.get() != nullptr);
+  ASSERT_TRUE(GCNull.get() == nullptr);
+  // Encode and decode the GsymReader for each segment and verify they succeed.
+  Expected<GsymReader> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  ASSERT_THAT_EXPECTED(GR1000, Succeeded());
+  Expected<GsymReader> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  ASSERT_THAT_EXPECTED(GR2000, Succeeded());
+  Expected<GsymReader> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  ASSERT_THAT_EXPECTED(GR3000, Succeeded());
+  Expected<GsymReader> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  ASSERT_THAT_EXPECTED(GR4000, Succeeded());
+
+  // Verify that all lookups match the range [0x1000-0x1030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR1000.
+  for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR1000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x3000), Failed());
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x4000), Failed());
+  }
+
+  // Verify that all lookups match the range [0x2000-0x2030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR2000.
+  for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR2000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x3000), Failed());
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x4000), Failed());
+
+  }
+
+  // Verify that all lookups match the range [0x3000-0x3030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR3000.
+  for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR3000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x4000), Failed());
+}
+
+  // Verify that all lookups match the range [0x4000-0x4030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR4000.
+  for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    // Lookup in the GsymReader for that contains 0x4000
+    auto SegmentLR = GR4000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x3000), Failed());
+  }
+}
+
+
+TEST(GSYMTest, TestDWARFInlineRangeScopes) {
+  // Test cases where inlined functions address ranges are not contained in the
+  // parent ranges and that we can successfully remove them and emit error
+  // messages. The DWARF for this looks like the dump below. The inlined
+  // functions named "invalid1" and "invalid2" are expected to be removed and
+  // an appropriate error message will be emitted.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000002000)
+  //
+  // 0x0000002a:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("invalid1")
+  //                   DW_AT_low_pc	(0x0000000000000fff)
+  //                   DW_AT_high_pc	(0x0000000000001001)
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(10)
+  //
+  // 0x00000041:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("valid1")
+  //                   DW_AT_low_pc	(0x0000000000001010)
+  //                   DW_AT_high_pc	(0x0000000000001100)
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x00000058:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name	("invalid2")
+  //                     DW_AT_low_pc	(0x0000000000001000)
+  //                     DW_AT_high_pc	(0x0000000000001100)
+  //                     DW_AT_call_file	("/tmp/main.cpp")
+  //                     DW_AT_call_line	(12)
+  //
+  // 0x0000006f:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name	("valid2")
+  //                     DW_AT_low_pc	(0x0000000000001020)
+  //                     DW_AT_high_pc	(0x0000000000001030)
+  //                     DW_AT_call_file	("/tmp/main.cpp")
+  //                     DW_AT_call_line	(13)
+  //
+  // 0x00000086:       NULL
+  //
+  // 0x00000087:     NULL
+  //
+  // 0x00000088:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - invalid1
+    - valid1
+    - invalid2
+    - valid2
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
+        - Code:            0x4
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0x85
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x2000
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0xFFF
+            - Value:           0x1001
+            - Value:           0x1
+            - Value:           0xA
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x1C
+            - Value:           0x1010
+            - Value:           0x1100
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x23
+            - Value:           0x1000
+            - Value:           0x1100
+            - Value:           0x1
+            - Value:           0xC
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2C
+            - Value:           0x1020
+            - Value:           0x1030
+            - Value:           0x1
+            - Value:           0xD
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          84
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            4048
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           -1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+  std::vector<std::string> ExpectedLogErrors = {
+    "error: inlined function DIE at 0x0000002a has a range [0x0000000000000fff "
+    "- 0x0000000000001001) that isn't contained in any parent address ranges, "
+    "this inline range will be removed.",
+    "error: inlined function DIE at 0x00000058 has a range [0x0000000000001000 "
+    "- 0x0000000000001100) that isn't contained in any parent address ranges, "
+    "this inline range will be removed."
+  };
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Error: ExpectedLogErrors) {
+    EXPECT_TRUE(OS.str().find(Error) != std::string::npos);
+  }
+  // The top level inline info is for the function "foo" itself. Verify that
+  // we have only 1 inline function inside of this, even though the DWARF
+  // contains two. One of the inline functions in "foo" is invalid, so we must
+  // only end up with 1.
+  StringRef InlineFuncName = GR->getString(ExpFI->Inline->Name);
+  EXPECT_EQ(InlineFuncName, "foo");
+  EXPECT_EQ(ExpFI->Inline->CallFile, 0u);
+  EXPECT_EQ(ExpFI->Inline->CallLine, 0u);
+  EXPECT_EQ(ExpFI->Inline->Children.size(), 1u);
+
+
+  // The first inline function "valid1" contains two inline functions in the
+  // DWARF, but one has an address range which isn't contained in any ranges
+  // from "foo", so only 1 inline function be parsed.
+  InlineInfo &Inline1 = ExpFI->Inline->Children[0];
+  StringRef Inline1Name = GR->getString(Inline1.Name);
+  EXPECT_EQ(Inline1Name, "valid1");
+  EXPECT_EQ(Inline1.CallFile, 1u);
+  EXPECT_EQ(Inline1.CallLine, 11u);
+  EXPECT_EQ(Inline1.Children.size(), 1u);
+
+
+  // The second inline function "valid2" contains two inline functions in the
+  // DWARF, but one has an address range which isn't contained in any ranges
+  // from "valid1", so only 1 inline function be parsed.
+  InlineInfo &Inline2 = Inline1.Children[0];
+  StringRef Inline2Name = GR->getString(Inline2.Name);
+  EXPECT_EQ(Inline2Name, "valid2");
+  EXPECT_EQ(Inline2.CallFile, 1u);
+  EXPECT_EQ(Inline2.CallLine, 13u);
+  EXPECT_EQ(Inline2.Children.size(), 0u);
+}
+
+TEST(GSYMTest, TestDWARFEmptyInline) {
+  // Test cases where we have inline function information in the DWARF that
+  // results in us trying to parse the inline info, but since the inline
+  // info ends up not adding any valid inline functions due to ranges
+  // not being correct, we end up not encoding any inline information. This
+  // tests that if we end up creating an empty inline info struct, we end up
+  // not encoding it into the GSYM file.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("inlineWithInvalidRange")
+  //                   DW_AT_low_pc	(0x0000000000001100)
+  //                   DW_AT_high_pc	(0x0000000000001200)
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x00000047:     NULL
+  //
+  // 0x00000048:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inlineWithInvalidRange
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+  debug_info:
+    - Length:          0x45
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x1100
+            - Value:           0x1200
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          76
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            32
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+  std::vector<std::string> ExpectedLogErrors = {
+    "error: inlined function DIE at 0x0000002a has a range [0x0000000000001100"
+    " - 0x0000000000001200) that isn't contained in any parent address ranges,"
+    " this inline range will be removed.",
+    "warning: DIE contains inline function information that has no valid "
+    "ranges, removing inline information:",
+  };
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Error: ExpectedLogErrors) {
+    EXPECT_TRUE(OS.str().find(Error) != std::string::npos);
+  }
+}
+
+TEST(GSYMTest, TestFinalizeForLineTables) {
+  // This example has two compile units:
+  // - one contains a function "foo" with line table entries and "bar" without
+  // - one contains a function "bar" with line table entries and "foo" without
+  // This test ensures that no matter what order information gets processed,
+  // we want to make sure that we prioritize the entries with the most debug
+  // info.
+  //
+  // The DWARF is the same for the functions, but the first compile unit has
+  // lines entries for "foo" and the second one doesn't. And the first compile
+  // unit has no line entries for "bar", but the second one does. We expect the
+  // resulting gsym file to have a "foo" and "bar" that both have line entries.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:   DW_TAG_subprogram
+  //                 DW_AT_name	("bar")
+  //                 DW_AT_low_pc	(0x0000000000002000)
+  //                 DW_AT_high_pc	(0x0000000000002050)
+  //
+  // 0x0000003f:   NULL
+  // 0x00000040: Compile Unit: length = 0x0000003c, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000080)
+  //
+  // 0x0000004b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000043)
+  //
+  // 0x00000055:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000006a:   DW_TAG_subprogram
+  //                 DW_AT_name	("bar")
+  //                 DW_AT_low_pc	(0x0000000000002000)
+  //                 DW_AT_high_pc	(0x0000000000002050)
+  //
+  // 0x0000007f:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - bar
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x3C
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x13
+            - Value:           0x2000
+            - Value:           0x2050
+        - AbbrCode:        0x0
+    - Length:          0x3C
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x43
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x13
+            - Value:           0x2000
+            - Value:           0x2050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          63
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            80
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+    - Length:          63
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            8192
+        - Opcode:          DW_LNS_advance_line
+          SData:           19
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            80
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be two functions in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  // Verify "foo" is present and has a line table
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Verify "foo" is present and has a line table
+  auto ExpFI2 = GR->getFunctionInfo(0x2000);
+  ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
+  ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
+  EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI2->Inline.has_value());
+  StringRef FuncName2 = GR->getString(ExpFI2->Name);
+  EXPECT_EQ(FuncName2, "bar");
+}
+
+
+TEST(GSYMTest, TestRangeWarnings) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has two discontiguous ranges. We will create two FunctionInfo objects for
+  // each range in the function that only contains info for each range. We also
+  // want to verify that we only emit errors and warnings for ranges that
+  // aren't contained in any parent address ranges if this is true. Prior to
+  // this fix we would create two FunctionInfo objects and as each one was
+  // being created we would end up warning about all of the ranges that weren't
+  // in the current FunctionInfo's range even though the DWARF was well formed.
+  // Now we don't incorrectly emit errors when there are none.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_ranges	(0x00000000
+  //                    [0x0000000000001000, 0x0000000000001050)
+  //                    [0x0000000000002000, 0x0000000000002050))
+  //
+  // 0x0000001e:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("inline1")
+  //                   DW_AT_ranges	(0x00000030
+  //                      [0x0000000000001010, 0x0000000000001040)
+  //                      [0x0000000000002010, 0x0000000000002040))
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x0000002f:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name	("inline2")
+  //                     DW_AT_ranges	(0x00000060
+  //                        [0x0000000000001015, 0x0000000000001020)
+  //                        [0x0000000000002015, 0x0000000000002020))
+  //                     DW_AT_call_file	("/tmp/inline.h")
+  //                     DW_AT_call_line	(21)
+  //
+  // 0x00000040:       NULL
+  //
+  // 0x00000041:     NULL
+  //
+  // 0x00000042:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inline1
+    - inline2
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x4
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+  debug_ranges:
+    - Offset:          0x0
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1000
+          HighOffset:      0x1050
+        - LowOffset:       0x2000
+          HighOffset:      0x2050
+    - Offset:          0x30
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1010
+          HighOffset:      0x1040
+        - LowOffset:       0x2010
+          HighOffset:      0x2040
+    - Offset:          0x60
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1015
+          HighOffset:      0x1020
+        - LowOffset:       0x2015
+          HighOffset:      0x2020
+  debug_info:
+    - Length:          0x3F
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x0
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x30
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x1B
+            - Value:           0x60
+            - Value:           0x2
+            - Value:           0x15
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          120
+      Version:         2
+      PrologueLength:  48
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            8192
+        - Opcode:          DW_LNS_advance_line
+          SData:           19
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be two functions in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  // Verify "foo" is present and has a line table
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Verify "foo" is present and has a line table
+  auto ExpFI2 = GR->getFunctionInfo(0x2000);
+  ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
+  ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
+  EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI2->Inline.has_value());
+  StringRef FuncName2 = GR->getString(ExpFI2->Name);
+  EXPECT_EQ(FuncName2, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}
+
+TEST(GSYMTest, TestEmptyRangeWarnings) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has a function that contains an inlined function that has an empty range.
+  // We want to make sure that if we run into only empty inline functions
+  // inside of a real function, that we don't end up with inline information
+  // in the GSYM and we don't warn about the inline function's range not being
+  // contined in the parent ranges since it is ok for inline functions to be
+  // elided.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("inline1")
+  //                   DW_AT_low_pc	(0x0000000000001010)
+  //                   DW_AT_high_pc	(0x0000000000001010)
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x00000047:     NULL
+  //
+  // 0x00000048:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inline1
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+  debug_info:
+    - Length:          0x45
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x1010
+            - Value:           0x1010
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          89
+      Version:         2
+      PrologueLength:  48
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}
+
+
+TEST(GSYMTest, TestEmptyLinkageName) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has a function that has an empty linkage name and a valid normal name.
+  // Previously this would cause an encoding error:
+  //
+  // DWARF conversion failed: attempted to encode invalid FunctionInfo object
+  //
+  // This was because we would get a valid but empty linkage name and we would
+  // try to use this in the GSYM FunctionInfo and that would cause the error
+  // as the name was empty.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("/tmp/main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_stmt_list   (0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name      ("foo")
+  //                 DW_AT_linkage_name      ("")
+  //                 DW_AT_low_pc    (0x0000000000001000)
+  //                 DW_AT_high_pc   (0x0000000000001050)
+  //
+  // 0x0000002e:   NULL
+
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - ''
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_linkage_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x2B
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x13
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          68
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}
+
+TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
+  // Test that lookups find the right line table entry when there are multiple
+  // line entries with the same address. When we have multiple line table
+  // entries with the same address, we need to pick the last one in the line
+  // table. We do this because a line entry's start address in the defined by
+  // the line table entry's address and the size is determined by the
+  // subtracting the next line table's address. If the current line table
+  // entry's address is the same as the next one, then there is no code
+  // assiciated with the current line table entry and it should be ignored.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("/tmp/main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_stmt_list   (0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name      ("foo")
+  //                 DW_AT_low_pc    (0x0000000000001000)
+  //                 DW_AT_high_pc   (0x0000000000001050)
+  //
+  // 0x0000002a:   NULL
+  //
+  // The line table has a duplicate entry at 0x1010:
+  //
+  // Address    Line   Column File   ISA Discriminator Flags
+  // ---------- ------ ------ ------ --- ------------- -------------
+  // 0x00001000     10      0      1   0             0  is_stmt
+  // 0x00001010     11      0      1   0             0  is_stmt
+  // 0x00001010     12      0      1   0             0  is_stmt
+  // 0x00001050     13      0      1   0             0  is_stmt end_sequence
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x27
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          71
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            64
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+
+  // Make sure that when we lookup address 0x1010, that we get the entry that
+  // matches line 12, the second line entry that also has the address of
+  // 0x1010.
+  auto LR = GR->lookup(0x1010);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  SourceLocation src_loc = {"foo", "/tmp", "main.cpp", 12, 16};
+  EXPECT_THAT(LR->Locations, testing::ElementsAre(src_loc));
+}
+
+TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
+  // Test that llvm-gsymutil can handle invalid file indexes in the following
+  // cases:
+  //  - In line entries in the line table
+  //  - When parsing inline entries that have a DW_AT_call_file
+  //  - When parsing function dies with no line table entries and it tries to
+  //    use the DW_AT_decl_file
+  //
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("/tmp/main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_stmt_list   (0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name      ("foo")
+  //                 DW_AT_low_pc    (0x0000000000001000)
+  //                 DW_AT_high_pc   (0x0000000000001050)
+  //
+  // 0x0000002a:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name    ("inline_with_invalid_call_file")
+  //                   DW_AT_low_pc  (0x0000000000001010)
+  //                   DW_AT_high_pc (0x0000000000001020)
+  //                   DW_AT_call_file       (0x0000000a)
+  //                   DW_AT_call_line       (11)
+  //
+  // 0x00000047:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name
+  //                     ("inline_inside_parent_with_invalid_call_file")
+  //                     DW_AT_low_pc        (0x0000000000001010)
+  //                     DW_AT_high_pc       (0x0000000000001015)
+  //                     DW_AT_call_file     ("/tmp/main.cpp")
+  //                     DW_AT_call_line     (12)
+  //
+  // 0x00000064:       NULL
+  //
+  // 0x00000065:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name    ("inline_with_valid_call_file")
+  //                   DW_AT_low_pc  (0x0000000000001020)
+  //                   DW_AT_high_pc (0x0000000000001030)
+  //                   DW_AT_call_file       ("/tmp/main.cpp")
+  //                   DW_AT_call_line       (13)
+  //
+  // 0x00000082:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name
+  //                     ("inline_inside_parent_with_valid_call_file")
+  //                     DW_AT_low_pc        (0x0000000000001020)
+  //                     DW_AT_high_pc       (0x0000000000001025)
+  //                     DW_AT_call_file     ("/tmp/main.cpp")
+  //                     DW_AT_call_line     (14)
+  //
+  // 0x0000009f:       NULL
+  //
+  // 0x000000a0:     NULL
+  //
+  // 0x000000a1:   DW_TAG_subprogram
+  //                 DW_AT_name      ("func_with_valid_decl_file")
+  //                 DW_AT_decl_file ("/tmp/main.cpp")
+  //                 DW_AT_decl_line (20)
+  //                 DW_AT_low_pc    (0x0000000000002000)
+  //                 DW_AT_high_pc   (0x0000000000002050)
+  //
+  // 0x000000b8:   DW_TAG_subprogram
+  //                 DW_AT_name      ("func_with_invalid_decl_file")
+  //                 DW_AT_decl_file (0x0a)
+  //                 DW_AT_decl_line (20)
+  //                 DW_AT_low_pc    (0x0000000000003000)
+  //                 DW_AT_high_pc   (0x0000000000003050)
+  //
+  // 0x000000cf:   NULL
+  //
+  // The table looks has an entry at address 0x0000000000001010 that has an
+  // invalid file index that needs to be removed.
+  //
+  // Address            Line   Column File   ISA Discriminator Flags
+  // ---------- ------ ------ ------ --- ------------- -------------
+  // 0x00001000     10      0      1   0             0  is_stmt
+  // 0x00001010     11      0     10   0             0  is_stmt
+  // 0x00001020     11      0      1   0             0  is_stmt
+  // 0x00001030     12      0      1   0             0  is_stmt
+  // 0x00001050     12      0      1   0             0  is_stmt end_sequence
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inline_with_invalid_call_file
+    - inline_inside_parent_with_invalid_call_file
+    - inline_with_valid_call_file
+    - inline_inside_parent_with_valid_call_file
+    - func_with_valid_decl_file
+    - func_with_invalid_decl_file
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x4
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0xCC
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x1010
+            - Value:           0x1020
+            - Value:           0xA
+            - Value:           0xB
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x31
+            - Value:           0x1010
+            - Value:           0x1015
+            - Value:           0x1
+            - Value:           0xC
+        - AbbrCode:        0x0
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x5D
+            - Value:           0x1020
+            - Value:           0x1030
+            - Value:           0x1
+            - Value:           0xD
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x79
+            - Value:           0x1020
+            - Value:           0x1025
+            - Value:           0x1
+            - Value:           0xE
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0xA3
+            - Value:           0x1
+            - Value:           0x14
+            - Value:           0x2000
+            - Value:           0x2050
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0xBD
+            - Value:           0xA
+            - Value:           0x14
+            - Value:           0x3000
+            - Value:           0x3050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          78
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            10
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            32
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  // Make sure we only have 3 entries to show we removed the line entry with
+  // the invalid file index whose address is 0x0000000000001010.
+  ASSERT_EQ(ExpFI->OptLineTable->size(), 3u);
+  EXPECT_TRUE(ExpFI->Inline.has_value());
+
+  // Make sure that we only have one inline function, not two. We remove one of
+  // the inline functions because it has an invalid DW_AT_call_file attribute.
+  ASSERT_EQ(ExpFI->Inline->Children.size(), 1u);
+  StringRef InlineName = GR->getString(ExpFI->Inline->Children[0].Name);
+  EXPECT_EQ(InlineName, "inline_with_valid_call_file");
+
+  ExpFI = GR->getFunctionInfo(0x0000000000002000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x2050));
+  FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "func_with_valid_decl_file");
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  // Make sure we only have 1 entry in the line table which indicates we were
+  // able to parse the DW_AT_decl_file/DW_AT_decl_line correctly.
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  ASSERT_EQ(ExpFI->OptLineTable->size(), 1u);
+
+  ExpFI = GR->getFunctionInfo(0x0000000000003000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x3050));
+  FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "func_with_invalid_decl_file");
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  // Make sure we only no line table because there are no line entries in the
+  // line table and the DW_AT_decl_file attribute was invalid so we were not
+  // able to parse the DW_AT_decl_file/DW_AT_decl_line correctly.
+  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
+
+  // Make sure we don't see spurious errors in the output:
+  std::vector<std::string> ExpectedLogErrors = {
+      "error: function DIE at 0x00000015 has a line entry with invalid DWARF "
+      "file index, this entry will be removed:",
+      "error: inlined function DIE at 0x0000002a has an invalid file index 10 "
+      "in its DW_AT_call_file attribute, this inline entry and all children "
+      "will be removed.",
+      "error: function DIE at 0x000000b8 has an invalid file index 10 in its "
+      "DW_AT_decl_file attribute, unable to create a single line entry from "
+      "the DW_AT_decl_file/DW_AT_decl_line attributes."};
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Error : ExpectedLogErrors)
+    EXPECT_TRUE(errors.find(Error) != std::string::npos);
+}
+
+TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
+  // Test that llvm-gsymutil lookup the correct funtion info when address
+  // ranges overlap. When functions overlap we always want to pick the first
+  // function info when symbolicating if there are multiple entries with the
+  // same address. Previous to this fix we would just binary search the address
+  // table and pick the first function info that matched the address. After
+  // this fix we now always select the first matching entry whose address range
+  // contains the lookup address to ensure we have the most debug info. We have
+  // seen case where the debug info would contain a small range and a symbol
+  // would have the same start address but the range was larger and sometimes,
+  // depending on how the binary search of the address table happened, we would
+  // pick these latter entries. We want the first entries because they always
+  // have the most debug info.
+  //
+  // To repro this case, we just make some simple DWARF that has two
+  // overlapping ranges and ensure that any lookups between 0x1000 and 0x104f
+  // match "foo", and any ranges between 0x1050 and 0x1fff match "bar".
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:   DW_TAG_subprogram
+  //                 DW_AT_name	("bar")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001100)
+  //
+  // 0x0000003f:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - bar
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x3C
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x13
+            - Value:           0x1000
+            - Value:           0x1100
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          71
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            64
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be two functions in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  // Verify "foo" is correctly looked up for each of its addresses.
+  for (uint64_t Addr = 0x1000; Addr < 0x1050; ++Addr) {
+    auto ExpFI = GR->getFunctionInfo(Addr);
+    ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+    ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+    StringRef FuncName = GR->getString(ExpFI->Name);
+    EXPECT_EQ(FuncName, "foo");
+  }
+
+  // Verify "bar" is correctly looked up for each of its addresses.
+  for (uint64_t Addr = 0x1050; Addr < 0x1100; ++Addr) {
+    auto ExpFI = GR->getFunctionInfo(Addr);
+    ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+    ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1100));
+    StringRef FuncName = GR->getString(ExpFI->Name);
+    EXPECT_EQ(FuncName, "bar");
+  }
+
+  // Prior to the fix for this issue when we dumped an entire GSYM file, we
+  // were using a function that would extract a FunctionInfo object for a
+  // given address which caused us to always dump the first FunctionInfo
+  // entry for a given address. We now dump it correctly using an address
+  // index. Below we verify that we dump the right FunctionInfo gets dumped.
+
+  SmallString<512> DumpStr;
+  raw_svector_ostream DumpStrm(DumpStr);
+  GR->dump(DumpStrm);
+
+  // Make sure we see both "foo" and "bar" in the output of an entire GSYM
+  // dump. Prior to this fix we would two "foo" entries.
+  std::vector<std::string> ExpectedDumpLines = {
+      "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
+      "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""};
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Line : ExpectedDumpLines)
+    EXPECT_TRUE(DumpStr.find(Line) != std::string::npos);
 }

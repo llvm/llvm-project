@@ -26,6 +26,7 @@
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
@@ -85,10 +86,10 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
       List.push_back(Path);
   };
 
-  for (const auto &Path : getRuntimePaths())
-    addIfExists(getLibraryPaths(), Path);
-  for (const auto &Path : getStdlibPaths())
-    addIfExists(getFilePaths(), Path);
+  if (std::optional<std::string> Path = getRuntimePath())
+    getLibraryPaths().push_back(*Path);
+  if (std::optional<std::string> Path = getStdlibPath())
+    getFilePaths().push_back(*Path);
   for (const auto &Path : getArchSpecificLibPaths())
     addIfExists(getFilePaths(), Path);
 }
@@ -314,7 +315,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 
   for (const auto &DS : DriverSuffixes) {
     StringRef Suffix(DS.Suffix);
-    if (ProgName.endswith(Suffix)) {
+    if (ProgName.ends_with(Suffix)) {
       Pos = ProgName.size() - Suffix.size();
       return &DS;
     }
@@ -344,7 +345,7 @@ static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   // added via -target as implicit first argument.
   const DriverSuffix *DS = FindDriverSuffix(ProgName, Pos);
 
-  if (!DS && ProgName.endswith(".exe")) {
+  if (!DS && ProgName.ends_with(".exe")) {
     // Try again after stripping the executable suffix:
     // clang++.exe -> clang++
     ProgName = ProgName.drop_back(StringRef(".exe").size());
@@ -424,6 +425,12 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
 ToolChain::UnwindTableLevel
 ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   return UnwindTableLevel::None;
+}
+
+unsigned ToolChain::GetDefaultDwarfVersion() const {
+  // TODO: Remove the RISC-V special case when R_RISCV_SET_ULEB128 linker
+  // support becomes more widely available.
+  return getTriple().isRISCV() ? 4 : 5;
 }
 
 Tool *ToolChain::getClang() const {
@@ -670,15 +677,63 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
   return Args.MakeArgString(getCompilerRT(Args, Component, Type));
 }
 
-ToolChain::path_list ToolChain::getRuntimePaths() const {
-  path_list Paths;
-  auto addPathForTriple = [this, &Paths](const llvm::Triple &Triple) {
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "lib", Triple.str());
-    Paths.push_back(std::string(P.str()));
+// Android target triples contain a target version. If we don't have libraries
+// for the exact target version, we should fall back to the next newest version
+// or a versionless path, if any.
+std::optional<std::string>
+ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
+  llvm::Triple TripleWithoutLevel(getTriple());
+  TripleWithoutLevel.setEnvironmentName("android"); // remove any version number
+  const std::string &TripleWithoutLevelStr = TripleWithoutLevel.str();
+  unsigned TripleVersion = getTriple().getEnvironmentVersion().getMajor();
+  unsigned BestVersion = 0;
+
+  SmallString<32> TripleDir;
+  bool UsingUnversionedDir = false;
+  std::error_code EC;
+  for (llvm::vfs::directory_iterator LI = getVFS().dir_begin(BaseDir, EC), LE;
+       !EC && LI != LE; LI = LI.increment(EC)) {
+    StringRef DirName = llvm::sys::path::filename(LI->path());
+    StringRef DirNameSuffix = DirName;
+    if (DirNameSuffix.consume_front(TripleWithoutLevelStr)) {
+      if (DirNameSuffix.empty() && TripleDir.empty()) {
+        TripleDir = DirName;
+        UsingUnversionedDir = true;
+      } else {
+        unsigned Version;
+        if (!DirNameSuffix.getAsInteger(10, Version) && Version > BestVersion &&
+            Version < TripleVersion) {
+          BestVersion = Version;
+          TripleDir = DirName;
+          UsingUnversionedDir = false;
+        }
+      }
+    }
+  }
+
+  if (TripleDir.empty())
+    return {};
+
+  SmallString<128> P(BaseDir);
+  llvm::sys::path::append(P, TripleDir);
+  if (UsingUnversionedDir)
+    D.Diag(diag::warn_android_unversioned_fallback) << P << getTripleString();
+  return std::string(P);
+}
+
+std::optional<std::string>
+ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
+  auto getPathForTriple =
+      [&](const llvm::Triple &Triple) -> std::optional<std::string> {
+    SmallString<128> P(BaseDir);
+    llvm::sys::path::append(P, Triple.str());
+    if (getVFS().exists(P))
+      return std::string(P);
+    return {};
   };
 
-  addPathForTriple(getTriple());
+  if (auto Path = getPathForTriple(getTriple()))
+    return *Path;
 
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
@@ -698,28 +753,26 @@ ToolChain::path_list ToolChain::getRuntimePaths() const {
   if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
     llvm::Triple ArmTriple = getTriple();
     ArmTriple.setArch(Triple::arm);
-    addPathForTriple(ArmTriple);
+    if (auto Path = getPathForTriple(ArmTriple))
+      return *Path;
   }
 
-  // Android targets may include an API level at the end. We still want to fall
-  // back on a path without the API level.
-  if (getTriple().isAndroid() &&
-      getTriple().getEnvironmentName() != "android") {
-    llvm::Triple TripleWithoutLevel = getTriple();
-    TripleWithoutLevel.setEnvironmentName("android");
-    addPathForTriple(TripleWithoutLevel);
-  }
+  if (getTriple().isAndroid())
+    return getFallbackAndroidTargetPath(BaseDir);
 
-  return Paths;
+  return {};
 }
 
-ToolChain::path_list ToolChain::getStdlibPaths() const {
-  path_list Paths;
-  SmallString<128> P(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", getTripleString());
-  Paths.push_back(std::string(P.str()));
+std::optional<std::string> ToolChain::getRuntimePath() const {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, "lib");
+  return getTargetSubDirPath(P);
+}
 
-  return Paths;
+std::optional<std::string> ToolChain::getStdlibPath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib");
+  return getTargetSubDirPath(P);
 }
 
 ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
@@ -1266,7 +1319,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
-      getTriple().isAArch64() || getTriple().isRISCV())
+      getTriple().isAArch64() || getTriple().isRISCV() ||
+      getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().isAArch64(64) || getTriple().isRISCV())
@@ -1358,7 +1412,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     // matches the current toolchain triple. If it is not present
     // at all, target and host share a toolchain.
     if (A->getOption().matches(options::OPT_m_Group)) {
-      if (SameTripleAsHost)
+      // Pass code object version to device toolchain
+      // to correctly set metadata in intermediate files.
+      if (SameTripleAsHost ||
+          A->getOption().matches(options::OPT_mcode_object_version_EQ))
         DAL->append(A);
       else
         Modified = true;

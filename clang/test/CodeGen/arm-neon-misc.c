@@ -9,8 +9,8 @@
 
 #include <arm_neon.h>
 
-// Radar 11998303: Avoid using i64 types for vld1q_lane and vst1q_lane Neon
-// intrinsics with <2 x i64> vectors to avoid poor code for i64 in the backend.
+// Avoid using i64 types for vld1q_lane and vst1q_lane Neon intrinsics with
+// <2 x i64> vectors to avoid poor code for i64 in the backend.
 void t1(uint64_t *src, uint8_t *dst) {
 // CHECK: @t1
   uint64x2_t q = vld1q_u64(src);

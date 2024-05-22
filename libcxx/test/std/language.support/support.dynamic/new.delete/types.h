@@ -22,6 +22,7 @@ struct TrackLifetime {
     TrackLifetime(LifetimeInformation& info) : info_(&info) {
         info_->address_constructed = this;
     }
+    TrackLifetime(TrackLifetime const&) = default;
     ~TrackLifetime() {
         info_->address_destroyed = this;
     }
@@ -43,6 +44,7 @@ struct alignas(std::max_align_t) TrackLifetimeMaxAligned {
     TrackLifetimeMaxAligned(LifetimeInformation& info) : info_(&info) {
         info_->address_constructed = this;
     }
+    TrackLifetimeMaxAligned(TrackLifetimeMaxAligned const&) = default;
     ~TrackLifetimeMaxAligned() {
         info_->address_destroyed = this;
     }

@@ -1,6 +1,10 @@
 Generating Public and Internal headers
 ======================================
 
+.. warning::
+  This page is severely out of date. Much of the information it contains may be
+  incorrect. Please only remove this warning once the page has been updated.
+
 Other libc implementations make use of preprocessor macro tricks to make header
 files platform agnostic. When macros aren't suitable, they rely on build
 system tricks to pick the right set of files to compile and export. While these

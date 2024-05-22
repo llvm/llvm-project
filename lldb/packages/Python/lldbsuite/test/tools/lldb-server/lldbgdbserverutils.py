@@ -1,8 +1,6 @@
 """Module for supporting unit testing of the lldb-server debug monitor exe.
 """
 
-from __future__ import division, print_function
-
 import binascii
 import os
 import os.path

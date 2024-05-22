@@ -219,7 +219,6 @@ define i1 @test_shl_const_nuw_unsigned_10(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i8 [[START]], [[START_SHL_5]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_SHL_3]], [[START_SHL_5]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -239,7 +238,6 @@ define i1 @test_shl_const_nuw_unsigned_11(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i8 [[START]], [[START_SHL_5]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nuw i8 [[START]], 3
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[START_SHL_5]], [[START_SHL_3]]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -259,7 +257,6 @@ define i1 @test_shl_const_nuw_unsigned_12(i8 %start) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START]], [[START_SHL_3]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_SHL_5:%.*]] = shl nuw i8 [[START]], 5
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_SHL_3]], [[START_SHL_5]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -1281,7 +1278,7 @@ define i1 @shl_55() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 1, 55
 ; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 1
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
 ;
 entry:
   %shl.ub = shl nuw nsw i256 1, 55

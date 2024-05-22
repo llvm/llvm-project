@@ -5,200 +5,201 @@
 define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8, float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16, float %17, float %18, float %19, float %20, float %21, float %22, float %23, float %24, float %25, float %26, float %27, float %28, float %29, float %30, float %31, float %32, float %33, float %34, float %35, float %36, float %37, float %38, float %39, float %40, float %41, float %42, float %43, float %44, float %45, float %46, float %47, float %48, float %49, float %50, float %51, float %52, float %53, float %54, float %55, float %56, float %57, float %58, float %59, float %60, float %61, float %62, float %63, float %64, float %65, float %66, float %67, float %68, float %69, float %70, float %71, float %72, float %73, float %74, float %75, float %76, float %77, float %78, float %79, ptr %80) {
 ; CHECK-LABEL: tester:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovaps %xmm3, %xmm15
-; CHECK-NEXT:    vmovss {{.*#+}} xmm14 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovaps %xmm3, %xmm13
+; CHECK-NEXT:    vmovaps %xmm1, %xmm14
+; CHECK-NEXT:    vmovss {{.*#+}} xmm11 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm9 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm13 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm12
-; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm10
-; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm10 = (xmm3 * xmm10) - xmm0
+; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm12 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm2
-; CHECK-NEXT:    vmulss %xmm2, %xmm10, %xmm4
+; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vmulss %xmm6, %xmm12, %xmm2
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm7 * xmm2) + xmm0
-; CHECK-NEXT:    vmulss %xmm4, %xmm2, %xmm5
-; CHECK-NEXT:    vmulss %xmm0, %xmm13, %xmm2
+; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vmulss %xmm0, %xmm9, %xmm2
 ; CHECK-NEXT:    vmovss %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmulss %xmm2, %xmm9, %xmm2
+; CHECK-NEXT:    vmulss %xmm2, %xmm8, %xmm2
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm7, %xmm3
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm3 = -(xmm3 * mem) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm3, %xmm2
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm3
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm4
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm4 = -(xmm14 * xmm4) + xmm0
-; CHECK-NEXT:    vmulss %xmm5, %xmm4, %xmm4
-; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm5 = -(xmm5 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm5, %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm7 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm7, %xmm5
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm9 * xmm5) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm4 = -(xmm11 * xmm4) + xmm0
+; CHECK-NEXT:    vmulss %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm2
+; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm6, %xmm5
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm8 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm4
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss %xmm0, %xmm5, %xmm8
-; CHECK-NEXT:    vmovss %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmovaps %xmm5, %xmm10
-; CHECK-NEXT:    vmulss %xmm14, %xmm8, %xmm5
+; CHECK-NEXT:    vmulss %xmm0, %xmm5, %xmm1
+; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    vmovaps %xmm5, %xmm15
+; CHECK-NEXT:    vmulss %xmm1, %xmm11, %xmm5
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm12 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm5, %xmm2
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm13 * xmm5) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm9 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm11
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm9
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm11 * xmm3) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm9 * xmm3) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm3, %xmm2
 ; CHECK-NEXT:    vmulss %xmm4, %xmm2, %xmm2
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm15 * xmm3) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm13 * xmm3) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm4
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm8, %xmm6
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm6 = -(xmm6 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm4, %xmm6, %xmm4
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm9, %xmm4
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm4 = -(xmm1 * xmm4) + xmm0
-; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm6 = -(xmm6 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm4, %xmm6, %xmm4
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm10, %xmm1
-; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm4 = -(xmm1 * xmm4) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm4
-; CHECK-NEXT:    vmulss %xmm0, %xmm12, %xmm5
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm10
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm14, %xmm5
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm5 = -(xmm5 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm7 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm7, %xmm10
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm10 = -(xmm10 * mem) + xmm0
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm13, %xmm12
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm12 = -(xmm7 * xmm12) + xmm0
+; CHECK-NEXT:    vmulss %xmm5, %xmm10, %xmm5
+; CHECK-NEXT:    vmulss %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm8, %xmm5
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm5 = -(xmm5 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm14 * xmm5) + xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm10 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm10 = -(xmm10 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm5, %xmm10, %xmm5
+; CHECK-NEXT:    vmulss %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmovss {{.*#+}} xmm10 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm15, %xmm1
+; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm10 = -(xmm1 * xmm10) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm10, %xmm3
+; CHECK-NEXT:    vmulss %xmm0, %xmm12, %xmm15
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm15, %xmm10
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm10 = -(xmm10 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm12
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm12 = -(xmm6 * xmm12) + xmm0
 ; CHECK-NEXT:    vmulss %xmm10, %xmm12, %xmm10
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vmulss %xmm4, %xmm10, %xmm12
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vmulss %xmm3, %xmm10, %xmm12
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm7 * xmm2) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm6 * xmm2) + xmm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss %xmm5, %xmm3, %xmm6
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm6 = -(xmm6 * mem) + xmm0
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm9
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm9, %xmm1
+; CHECK-NEXT:    vmulss %xmm3, %xmm15, %xmm1
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm6, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm6
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm6 = -(xmm6 * mem) + xmm0
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm8
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm8, %xmm5
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm5 = -(xmm5 * mem) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vmulss %xmm1, %xmm6, %xmm1
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm2
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm13 * xmm2) + xmm0
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm1, %xmm5, %xmm1
+; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm3, %xmm2
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm4 * xmm2) + xmm0
 ; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm12, %xmm2
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm4
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm12 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm6, %xmm3
+; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm3
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm12 * xmm3) + xmm0
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm2
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
-; CHECK-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vmulss %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm15, %xmm1
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
+; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmulss %xmm3, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm1 = -(xmm3 * xmm1) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm3 * xmm2) + xmm0
+; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm2
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 4-byte Reload
 ; CHECK-NEXT:    # xmm10 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm10, %xmm2
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm7 = -(xmm7 * mem) + xmm0
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm6 = -(xmm6 * mem) + xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm12 * xmm2) + xmm0
+; CHECK-NEXT:    vmulss %xmm2, %xmm6, %xmm2
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm7 = -(xmm7 * mem) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm7, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm8 = -(xmm8 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm8, %xmm2
 ; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm15 * xmm2) + xmm0
-; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; CHECK-NEXT:    vmulss %xmm0, %xmm6, %xmm2
-; CHECK-NEXT:    vmulss %xmm3, %xmm2, %xmm2
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm13 * xmm2) + xmm0
+; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vmulss %xmm0, %xmm5, %xmm1
+; CHECK-NEXT:    vmulss %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm6 * xmm3) + xmm0
-; CHECK-NEXT:    vmulss %xmm3, %xmm2, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm9, %xmm3
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm9, %xmm4
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm5 * xmm3) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm1, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm8, %xmm1
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm8, %xmm4
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm11 = -(xmm6 * xmm11) + xmm0
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm2
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm15 * xmm2) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmulss %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm9 = -(xmm5 * xmm9) + xmm0
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm15, %xmm3
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm13 * xmm3) + xmm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm4
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm11, %xmm2
-; CHECK-NEXT:    vmulss %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vfnmadd132ss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm14 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm14 = -(xmm14 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm14, %xmm4
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm2
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
-; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss %xmm6, %xmm13, %xmm7
-; CHECK-NEXT:    vmulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm6, %xmm6 # 4-byte Folded Reload
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm8
-; CHECK-NEXT:    vmulss %xmm5, %xmm15, %xmm5
+; CHECK-NEXT:    vmulss %xmm3, %xmm9, %xmm3
+; CHECK-NEXT:    vmulss %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vfnmadd132ss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm11 # 4-byte Folded Reload
+; CHECK-NEXT:    # xmm11 = -(xmm11 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm11, %xmm3
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm4
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm4 = -(xmm4 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm5, %xmm6
+; CHECK-NEXT:    vmulss %xmm5, %xmm14, %xmm5
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm15, %xmm7
+; CHECK-NEXT:    vmulss %xmm15, %xmm13, %xmm8
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm11 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm11 * xmm5) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm8 = -(xmm11 * xmm8) + xmm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm9 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm9, %xmm9
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm9 = -(xmm11 * xmm9) + xmm0
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm7 = -(xmm11 * xmm7) + xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm6 = -(xmm11 * xmm6) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm11 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm10, %xmm10
 ; CHECK-NEXT:    vmulss %xmm0, %xmm12, %xmm11
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm11, %xmm11
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm12 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm11 = -(xmm12 * xmm11) + xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm10 = -(xmm12 * xmm10) + xmm0
-; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm8 = (xmm15 * xmm8) - xmm0
-; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm3 = -(xmm3 * mem) + xmm0
-; CHECK-NEXT:    vmulss %xmm4, %xmm3, %xmm0
-; CHECK-NEXT:    vmulss %xmm0, %xmm5, %xmm0
+; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm7 = (xmm13 * xmm7) - xmm0
+; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
+; CHECK-NEXT:    vmulss %xmm3, %xmm1, %xmm0
+; CHECK-NEXT:    vmulss %xmm0, %xmm8, %xmm0
 ; CHECK-NEXT:    vmulss %xmm0, %xmm9, %xmm0
-; CHECK-NEXT:    vmulss %xmm0, %xmm7, %xmm0
-; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vmulss %xmm0, %xmm6, %xmm0
+; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm2, %xmm1
 ; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmulss %xmm2, %xmm6, %xmm1
+; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm1
 ; CHECK-NEXT:    vmulss %xmm1, %xmm11, %xmm1
 ; CHECK-NEXT:    vmulss %xmm1, %xmm10, %xmm1
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm0, %xmm0
-; CHECK-NEXT:    vmulss %xmm1, %xmm8, %xmm1
+; CHECK-NEXT:    vmulss %xmm1, %xmm7, %xmm1
 ; CHECK-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
 ; CHECK-NEXT:    retq

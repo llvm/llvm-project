@@ -111,6 +111,13 @@ void test_builtin_elementwise_sin() {
   static_assert(!is_const<decltype(__builtin_elementwise_sin(b))>::value);
 }
 
+void test_builtin_elementwise_sqrt() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_sqrt(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_sqrt(b))>::value);
+}
+
 void test_builtin_elementwise_log() {
   const float a = 42.0;
   float b = 42.3;
@@ -197,4 +204,19 @@ void test_builtin_elementwise_fma() {
   static_assert(!is_const<decltype(__builtin_elementwise_fma(a, b, c))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_fma(b, a, c))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_fma(c, c, c))>::value);
+}
+
+void test_builtin_elementwise_pow() {
+  const double a = 2;
+  double b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_pow(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_pow(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_pow(a, a))>::value);
+}
+
+void test_builtin_elementwise_bitreverse() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(b))>::value);  
 }

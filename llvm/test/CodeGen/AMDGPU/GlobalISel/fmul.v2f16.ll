@@ -145,8 +145,7 @@ define <3 x half> @v_fmul_v3f16_fneg_lhs(<3 x half> %a, <3 x half> %b) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0x80008000
-; GFX8-NEXT:    v_xor_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
 ; GFX8-NEXT:    v_mul_f16_e32 v4, v0, v2
 ; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mul_f16_e32 v1, v1, v3
@@ -176,8 +175,7 @@ define <3 x half> @v_fmul_v3f16_fneg_rhs(<3 x half> %a, <3 x half> %b) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0x80008000
-; GFX8-NEXT:    v_xor_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80008000, v3
 ; GFX8-NEXT:    v_mul_f16_e32 v4, v0, v2
 ; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mul_f16_e32 v1, v1, v3

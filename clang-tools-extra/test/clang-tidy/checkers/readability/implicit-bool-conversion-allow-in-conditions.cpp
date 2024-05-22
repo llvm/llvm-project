@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: readability-implicit-bool-conversion.AllowIntegerConditions, value: true}, \
-// RUN:   {key: readability-implicit-bool-conversion.AllowPointerConditions, value: true}]}'
+// RUN:  {readability-implicit-bool-conversion.AllowIntegerConditions: true, \
+// RUN:   readability-implicit-bool-conversion.AllowPointerConditions: true}}'
 
 template<typename T>
 void functionTaking(T);
@@ -38,6 +38,9 @@ void implicitConversionIntegerToBoolInConditionalsIsAllowed() {
   while (functionReturningInt()) {}
   while (functionReturningPointer()) {}
   while (functionReturningInt() && !functionReturningPointer() || (!functionReturningInt() && functionReturningPointer())) {}
+  do {} while (functionReturningInt());
+  do {} while (functionReturningPointer());
+  do {} while (functionReturningInt() && !functionReturningPointer() || (!functionReturningInt() && functionReturningPointer()));
   int value1 = functionReturningInt() ? 1 : 2;
   int value2 = !functionReturningInt() ? 1 : 2;
   int value3 = (functionReturningInt() && functionReturningPointer() || !functionReturningInt()) ? 1 : 2;

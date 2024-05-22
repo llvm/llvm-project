@@ -18,7 +18,7 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -36,6 +36,7 @@ class DerivedType;
 namespace Fortran::runtime {
 
 using SubscriptValue = ISO::CFI_index_t;
+class Terminator;
 
 RT_VAR_GROUP_BEGIN
 static constexpr RT_CONST_VAR_ATTRS int maxRank{CFI_MAX_RANK};
@@ -179,21 +180,26 @@ public:
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  // CUDA_TODO: Clang does not support unique_ptr on device.
-  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
-      void *p = nullptr, int rank = maxRank,
+  // To create a descriptor for a derived type the caller
+  // must provide non-null dt argument.
+  // The addendum argument is only used for testing purposes,
+  // and it may force a descriptor with an addendum while
+  // dt may be null.
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
+      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      int derivedTypeLenParameters = 0);
-  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
+      bool addendum = false, const typeInfo::DerivedType *dt = nullptr);
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(int characterKind,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(int characterKind,
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(
+      const typeInfo::DerivedType &dt, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
@@ -247,6 +253,13 @@ public:
   template <typename A>
   RT_API_ATTRS A *Element(const SubscriptValue subscript[]) const {
     return OffsetElement<A>(SubscriptsToByteOffset(subscript));
+  }
+
+  template <typename A>
+  RT_API_ATTRS A *ElementComponent(
+      const SubscriptValue subscript[], std::size_t componentOffset) const {
+    return OffsetElement<A>(
+        SubscriptsToByteOffset(subscript) + componentOffset);
   }
 
   template <typename A>
@@ -369,21 +382,29 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false);
+  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false,
+      Terminator * = nullptr);
 
   RT_API_ATTRS bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    // Arrays with more than 2 elements may also be contiguous even if a
+    // byte stride in one dimension is not a perfect multiple, as long as
+    // this is the last dimension, or if the dimension has one extent and
+    // the following dimension have either one extents or contiguous byte
+    // strides.
+    return stridesAreContiguous || bytes == 0;
   }
 
   // Establishes a pointer to a section or element.
@@ -391,6 +412,8 @@ public:
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
+
+  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
 
   RT_API_ATTRS void Check() const;
 
@@ -413,11 +436,13 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 template <int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
 class alignas(Descriptor) StaticDescriptor {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr int maxRank{MAX_RANK};
   static constexpr int maxLengthTypeParameters{MAX_LEN_PARMS};
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  RT_OFFLOAD_VAR_GROUP_END
 
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);

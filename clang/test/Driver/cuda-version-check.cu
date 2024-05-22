@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
@@ -19,22 +19,22 @@
 // RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION_CXX
 
 // The installation at Inputs/CUDA is CUDA 7.0, which doesn't support sm_60.
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=ERR_SM60
 
 // This should only complain about sm_60, not sm_35.
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_35 \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_35 \
 // RUN:    --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=ERR_SM60 --check-prefix=OK_SM35
 
 // We should get two errors here, one for sm_60 and one for sm_61.
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_61 \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_61 \
 // RUN:    --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=ERR_SM60 --check-prefix=ERR_SM61
 
 // We should still get an error if we pass -nocudainc, because this compilation
 // would invoke ptxas, and we do a version check on that, too.
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=ERR_SM60
 
 // If with -nocudainc and -E, we don't touch the CUDA install, so we
@@ -54,7 +54,7 @@
 // the same check.
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda -S 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-device-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda -S 2>&1 %s | \
+// RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-device-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda -S 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=ERR_SM60
 
 // OK-NOT: error: GPU arch
@@ -73,3 +73,11 @@
 
 // UNKNOWN_VERSION: CUDA version is newer than the latest{{.*}} supported version
 // UNKNOWN_VERSION_CXX-NOT: unknown CUDA version
+
+// Check to make sure we do not emit these warnings for OpenMP or cross-compilation.
+// RUN: %clang --target=x86_64-linux -v -### -fopenmp -nogpulib --offload-arch=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 -x c %s | \
+// RUN:    FileCheck %s --check-prefix=VERSION
+// RUN: %clang --target=nvptx64-nvidia-cuda -v -### -nogpulib -march=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 -x c %s | \
+// RUN:    FileCheck %s --check-prefix=VERSION
+// VERSION-NOT: CUDA version is newer than the latest{{.*}} supported version
+

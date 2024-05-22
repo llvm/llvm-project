@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpGenHelpers.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -62,4 +63,20 @@ mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
   }
 
   return defs;
+}
+
+bool mlir::tblgen::isPythonReserved(StringRef str) {
+  static llvm::StringSet<> reserved({
+      "False",  "None",   "True",    "and",      "as",       "assert", "async",
+      "await",  "break",  "class",   "continue", "def",      "del",    "elif",
+      "else",   "except", "finally", "for",      "from",     "global", "if",
+      "import", "in",     "is",      "lambda",   "nonlocal", "not",    "or",
+      "pass",   "raise",  "return",  "try",      "while",    "with",   "yield",
+  });
+  // These aren't Python keywords but builtin functions that shouldn't/can't be
+  // shadowed.
+  reserved.insert("callable");
+  reserved.insert("issubclass");
+  reserved.insert("type");
+  return reserved.contains(str);
 }

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck %s -check-prefix=GFX11 --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck %s -check-prefix=GFX11 --implicit-check-not=error: --strict-whitespace
 
 s_waitcnt_vscnt s0, 0x1234
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: src0 must be null

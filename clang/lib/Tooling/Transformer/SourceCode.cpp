@@ -50,9 +50,9 @@ CharSourceRange clang::tooling::maybeExtendRange(CharSourceRange Range,
   return CharSourceRange::getTokenRange(Range.getBegin(), Tok.getLocation());
 }
 
-static llvm::Error validateRange(const CharSourceRange &Range,
-                                 const SourceManager &SM,
-                                 bool AllowSystemHeaders) {
+llvm::Error clang::tooling::validateRange(const CharSourceRange &Range,
+                                          const SourceManager &SM,
+                                          bool AllowSystemHeaders) {
   if (Range.isInvalid())
     return llvm::make_error<StringError>(errc::invalid_argument,
                                          "Invalid range");
@@ -425,7 +425,7 @@ CharSourceRange tooling::getAssociatedRange(const Decl &Decl,
 
     for (llvm::StringRef Prefix : {"[[", "__attribute__(("}) {
       // Handle whitespace between attribute prefix and attribute value.
-      if (BeforeAttrStripped.endswith(Prefix)) {
+      if (BeforeAttrStripped.ends_with(Prefix)) {
         // Move start to start position of prefix, which is
         // length(BeforeAttr) - length(BeforeAttrStripped) + length(Prefix)
         // positions to the left.

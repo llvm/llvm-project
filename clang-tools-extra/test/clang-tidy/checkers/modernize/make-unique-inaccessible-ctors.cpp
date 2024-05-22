@@ -62,7 +62,7 @@ void f() {
   // "new NoCopyMoveCtor{}" is processed differently in C++14/17 and C++20:
   //   * In C++14/17, it is recognized as aggregate initialization,
   //     no fixes will be generated although the generated fix is compilable.
-  //   * In C++20, it is is recognized as default constructor initialization
+  //   * In C++20, it is recognized as default constructor initialization
   //     (similar to "new NoCopyMoveCtor()"), the check will emit the fix and
   //     the fix is correct.
   auto PNoCopyMoveCtor = std::unique_ptr<NoCopyMoveCtor>(new NoCopyMoveCtor{});

@@ -28,11 +28,12 @@ struct PGOOptions {
   enum PGOAction { NoAction, IRInstr, IRUse, SampleUse };
   enum CSPGOAction { NoCSAction, CSIRInstr, CSIRUse };
   PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
-             std::string ProfileRemappingFile,
+             std::string ProfileRemappingFile, std::string MemoryProfile,
              IntrusiveRefCntPtr<vfs::FileSystem> FS,
              PGOAction Action = NoAction, CSPGOAction CSAction = NoCSAction,
              bool DebugInfoForProfiling = false,
-             bool PseudoProbeForProfiling = false);
+             bool PseudoProbeForProfiling = false,
+             bool AtomicCounterUpdate = false);
   PGOOptions(const PGOOptions &);
   ~PGOOptions();
   PGOOptions &operator=(const PGOOptions &);
@@ -40,10 +41,12 @@ struct PGOOptions {
   std::string ProfileFile;
   std::string CSProfileGenFile;
   std::string ProfileRemappingFile;
+  std::string MemoryProfile;
   PGOAction Action;
   CSPGOAction CSAction;
   bool DebugInfoForProfiling;
   bool PseudoProbeForProfiling;
+  bool AtomicCounterUpdate;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 } // namespace llvm

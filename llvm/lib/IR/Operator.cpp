@@ -32,11 +32,17 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::AShr:
   case Instruction::LShr:
     return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(this)->isDisjoint();
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
     return GEP->isInBounds() || GEP->getInRangeIndex() != std::nullopt;
   }
+  case Instruction::ZExt:
+    if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
+      return NNI->hasNonNeg();
+    return false;
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
@@ -127,9 +133,7 @@ bool GEPOperator::accumulateConstantOffset(
   auto end = generic_gep_type_iterator<decltype(Index.end())>::end(Index.end());
   for (auto GTI = begin, GTE = end; GTI != GTE; ++GTI) {
     // Scalable vectors are multiplied by a runtime constant.
-    bool ScalableType = false;
-    if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      ScalableType = true;
+    bool ScalableType = GTI.getIndexedType()->isScalableTy();
 
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
@@ -189,7 +193,7 @@ bool GEPOperator::collectOffset(
   for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
        GTI != GTE; ++GTI) {
     // Scalable vectors are multiplied by a runtime constant.
-    bool ScalableType = isa<ScalableVectorType>(GTI.getIndexedType());
+    bool ScalableType = GTI.getIndexedType()->isScalableTy();
 
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
@@ -225,8 +229,8 @@ bool GEPOperator::collectOffset(
     // Insert an initial offset of 0 for V iff none exists already, then
     // increment the offset by IndexedSize.
     if (!IndexedSize.isZero()) {
-      VariableOffsets.insert({V, APInt(BitWidth, 0)});
-      VariableOffsets[V] += IndexedSize;
+      auto *It = VariableOffsets.insert({V, APInt(BitWidth, 0)}).first;
+      It->second += IndexedSize;
     }
   }
   return true;

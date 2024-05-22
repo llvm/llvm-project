@@ -26,6 +26,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -127,31 +128,12 @@ void MipsMCCodeEmitter::EmitByte(unsigned char C, raw_ostream &OS) const {
   OS << (char)C;
 }
 
-void MipsMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &OS) const {
-  // Output the instruction encoding in little endian byte order.
-  // Little-endian byte ordering:
-  //   mips32r2:   4 | 3 | 2 | 1
-  //   microMIPS:  2 | 1 | 4 | 3
-  if (IsLittleEndian && Size == 4 && isMicroMips(STI)) {
-    emitInstruction(Val >> 16, 2, STI, OS);
-    emitInstruction(Val, 2, STI, OS);
-  } else {
-    for (unsigned i = 0; i < Size; ++i) {
-      unsigned Shift = IsLittleEndian ? i * 8 : (Size - 1 - i) * 8;
-      EmitByte((Val >> Shift) & 0xff, OS);
-    }
-  }
-}
-
 /// encodeInstruction - Emit the instruction.
 /// Size the instruction with Desc.getSize().
-void MipsMCCodeEmitter::
-encodeInstruction(const MCInst &MI, raw_ostream &OS,
-                  SmallVectorImpl<MCFixup> &Fixups,
-                  const MCSubtargetInfo &STI) const
-{
+void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                          SmallVectorImpl<char> &CB,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
   // Non-pseudo instructions that get changed for direct object
   // only based on operand values.
   // If this list of instructions get much longer we will move
@@ -224,7 +206,16 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   if (!Size)
     llvm_unreachable("Desc.getSize() returns 0");
 
-  emitInstruction(Binary, Size, STI, OS);
+  auto Endian =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
+  if (Size == 2) {
+    support::endian::write<uint16_t>(CB, Binary, Endian);
+  } else if (IsLittleEndian && isMicroMips(STI)) {
+    support::endian::write<uint16_t>(CB, Binary >> 16, Endian);
+    support::endian::write<uint16_t>(CB, Binary & 0xffff, Endian);
+  } else {
+    support::endian::write<uint32_t>(CB, Binary, Endian);
+  }
 }
 
 /// getBranchTargetOpValue - Return binary encoding of the branch

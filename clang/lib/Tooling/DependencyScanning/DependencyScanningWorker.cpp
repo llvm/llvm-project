@@ -137,8 +137,9 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
-      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
+      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs,
+      bool EagerLoadModules, bool DisableFree,
+      std::optional<StringRef> ModuleName = std::nullopt)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         Controller(Controller), DepFS(std::move(DepFS)), Format(Format),
         OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
@@ -252,6 +253,13 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
+        true;
+
+    // Avoid some checks and module map parsing when loading PCM files.
+    ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
 
     std::unique_ptr<FrontendAction> Action;
 
@@ -292,7 +300,7 @@ private:
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ScanningOutputFormat Format;
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
   std::optional<StringRef> ModuleName;
@@ -307,7 +315,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
       EagerLoadModules(Service.shouldEagerLoadModules()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -382,10 +390,33 @@ static bool forEachDriverJob(
   if (!Compilation)
     return false;
 
+  if (Compilation->containsError())
+    return false;
+
   for (const driver::Command &Job : Compilation->getJobs()) {
     if (!Callback(Job))
       return false;
   }
+  return true;
+}
+
+static bool createAndRunToolInvocation(
+    std::vector<std::string> CommandLine, DependencyScanningAction &Action,
+    FileManager &FM,
+    std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
+    DiagnosticsEngine &Diags, DependencyConsumer &Consumer) {
+
+  // Save executable path before providing CommandLine to ToolInvocation
+  std::string Executable = CommandLine[0];
+  ToolInvocation Invocation(std::move(CommandLine), &Action, &FM,
+                            PCHContainerOps);
+  Invocation.setDiagnosticConsumer(Diags.getClient());
+  Invocation.setDiagnosticOptions(&Diags.getDiagnosticOptions());
+  if (!Invocation.run())
+    return false;
+
+  std::vector<std::string> Args = Action.takeLastCC1Arguments();
+  Consumer.handleBuildCommand({std::move(Executable), std::move(Args)});
   return true;
 }
 
@@ -451,37 +482,37 @@ bool DependencyScanningWorker::computeDependencies(
   DependencyScanningAction Action(WorkingDirectory, Consumer, Controller, DepFS,
                                   Format, OptimizeArgs, EagerLoadModules,
                                   DisableFree, ModuleName);
-  bool Success = forEachDriverJob(
-      FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
-        if (StringRef(Cmd.getCreator().getName()) != "clang") {
-          // Non-clang command. Just pass through to the dependency
-          // consumer.
-          Consumer.handleBuildCommand(
-              {Cmd.getExecutable(),
-               {Cmd.getArguments().begin(), Cmd.getArguments().end()}});
-          return true;
-        }
 
-        std::vector<std::string> Argv;
-        Argv.push_back(Cmd.getExecutable());
-        Argv.insert(Argv.end(), Cmd.getArguments().begin(),
-                    Cmd.getArguments().end());
+  bool Success = false;
+  if (FinalCommandLine[1] == "-cc1") {
+    Success = createAndRunToolInvocation(FinalCommandLine, Action, *FileMgr,
+                                         PCHContainerOps, *Diags, Consumer);
+  } else {
+    Success = forEachDriverJob(
+        FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
+          if (StringRef(Cmd.getCreator().getName()) != "clang") {
+            // Non-clang command. Just pass through to the dependency
+            // consumer.
+            Consumer.handleBuildCommand(
+                {Cmd.getExecutable(),
+                 {Cmd.getArguments().begin(), Cmd.getArguments().end()}});
+            return true;
+          }
 
-        // Create an invocation that uses the underlying file
-        // system to ensure that any file system requests that
-        // are made by the driver do not go through the
-        // dependency scanning filesystem.
-        ToolInvocation Invocation(std::move(Argv), &Action, &*FileMgr,
-                                  PCHContainerOps);
-        Invocation.setDiagnosticConsumer(Diags->getClient());
-        Invocation.setDiagnosticOptions(&Diags->getDiagnosticOptions());
-        if (!Invocation.run())
-          return false;
+          // Insert -cc1 comand line options into Argv
+          std::vector<std::string> Argv;
+          Argv.push_back(Cmd.getExecutable());
+          Argv.insert(Argv.end(), Cmd.getArguments().begin(),
+                      Cmd.getArguments().end());
 
-        std::vector<std::string> Args = Action.takeLastCC1Arguments();
-        Consumer.handleBuildCommand({Cmd.getExecutable(), std::move(Args)});
-        return true;
-      });
+          // Create an invocation that uses the underlying file
+          // system to ensure that any file system requests that
+          // are made by the driver do not go through the
+          // dependency scanning filesystem.
+          return createAndRunToolInvocation(std::move(Argv), Action, *FileMgr,
+                                            PCHContainerOps, *Diags, Consumer);
+        });
+  }
 
   if (Success && !Action.hasScanned())
     Diags->Report(diag::err_fe_expected_compiler_job)

@@ -1,5 +1,5 @@
 ! Test lowering of IO read SIZE control-spec (12.6.2.15)
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest_read_size(
 ! CHECK-SAME: %[[sizeVar:[^:]+]]: !fir.ref<i32>{{[^,]*}},

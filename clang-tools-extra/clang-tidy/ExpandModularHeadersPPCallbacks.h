@@ -41,7 +41,7 @@ namespace tooling {
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
   ExpandModularHeadersPPCallbacks(
-      CompilerInstance *Compiler,
+      CompilerInstance *CI,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   ~ExpandModularHeadersPPCallbacks();
 

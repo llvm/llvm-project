@@ -96,7 +96,6 @@ namespace test0 {
   void g() { X<2>(); }
 }
 
-// <rdar://problem/8302161>
 namespace test1 {
   template <typename T> void f(T const &t) {
     union { char c; T t_; };

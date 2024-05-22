@@ -97,6 +97,8 @@ class BinarySection {
   mutable bool IsReordered{false}; // Have the contents been reordered?
   bool IsAnonymous{false};         // True if the name should not be included
                                    // in the output file.
+  bool IsLinkOnly{false};          // True if the section should not be included
+                                   // in the output file.
 
   uint64_t hash(const BinaryData &BD,
                 std::map<const BinaryData *, uint64_t> &Cache) const;
@@ -125,7 +127,7 @@ class BinarySection {
     return *ContentsOrErr;
   }
 
-  /// Get the set of relocations refering to data in this section that
+  /// Get the set of relocations referring to data in this section that
   /// has been reordered.  The relocation offsets will be modified to
   /// reflect the new data locations.
   RelocationSetType reorderRelocations(bool Inplace) const;
@@ -373,8 +375,12 @@ public:
   /// Add a dynamic relocation at the given /p Offset.
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint64_t Type,
                             uint64_t Addend, uint64_t Value = 0) {
-    assert(Offset < getSize() && "offset not within section bounds");
-    DynamicRelocations.emplace(Relocation{Offset, Symbol, Type, Addend, Value});
+    addDynamicRelocation(Relocation{Offset, Symbol, Type, Addend, Value});
+  }
+
+  void addDynamicRelocation(const Relocation &Reloc) {
+    assert(Reloc.Offset < getSize() && "offset not within section bounds");
+    DynamicRelocations.emplace(Reloc);
   }
 
   /// Add relocation against the original contents of this section.
@@ -406,6 +412,18 @@ public:
     Relocation Key{Offset, 0, 0, 0, 0};
     auto Itr = DynamicRelocations.find(Key);
     return Itr != DynamicRelocations.end() ? &*Itr : nullptr;
+  }
+
+  std::optional<Relocation> takeDynamicRelocationAt(uint64_t Offset) {
+    Relocation Key{Offset, 0, 0, 0, 0};
+    auto Itr = DynamicRelocations.find(Key);
+
+    if (Itr == DynamicRelocations.end())
+      return std::nullopt;
+
+    Relocation Reloc = *Itr;
+    DynamicRelocations.erase(Itr);
+    return Reloc;
   }
 
   uint64_t hash(const BinaryData &BD) const {
@@ -452,6 +470,8 @@ public:
   void setIndex(uint32_t I) { Index = I; }
   void setOutputName(const Twine &Name) { OutputName = Name.str(); }
   void setAnonymous(bool Flag) { IsAnonymous = Flag; }
+  bool isLinkOnly() const { return IsLinkOnly; }
+  void setLinkOnly() { IsLinkOnly = true; }
 
   /// Emit the section as data, possibly with relocations.
   /// Use name \p SectionName for the section during the emission.

@@ -328,7 +328,7 @@ public:
   /// If Signed is a function that takes an n-bit tuple and maps to the
   /// integer domain as the tuples value interpreted as twos complement,
   /// and Unsigned a function that takes an n-bit tuple and maps to the
-  /// integer domain as as the base two value of input tuple, then a + b
+  /// integer domain as the base two value of input tuple, then a + b
   /// has IncrementNUSW iff:
   ///
   /// 0 <= Unsigned(a) + Signed(b) < 2^n
@@ -525,7 +525,7 @@ public:
   ///     loop { v2 = load @global2; }
   /// }
   /// No SCEV with operand V1, and v2 can exist in this program.
-  bool instructionCouldExistWitthOperands(const SCEV *A, const SCEV *B);
+  bool instructionCouldExistWithOperands(const SCEV *A, const SCEV *B);
 
   /// Return true if the SCEV is a scAddRecExpr or it contains
   /// scAddRecExpr. The result will be cached in HasRecMap.
@@ -855,7 +855,7 @@ public:
                                         const BasicBlock *ExitingBlock);
 
   /// The terms "backedge taken count" and "exit count" are used
-  /// interchangeably to refer to the number of times the backedge of a loop 
+  /// interchangeably to refer to the number of times the backedge of a loop
   /// has executed before the loop is exited.
   enum ExitCountKind {
     /// An expression exactly describing the number of times the backedge has
@@ -868,7 +868,7 @@ public:
   };
 
   /// Return the number of times the backedge executes before the given exit
-  /// would be taken; if not exactly computable, return SCEVCouldNotCompute. 
+  /// would be taken; if not exactly computable, return SCEVCouldNotCompute.
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
@@ -942,6 +942,10 @@ public:
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.
   void forgetValue(Value *V);
+
+  /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
+  /// such that it may no longer be trivial.
+  void forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V);
 
   /// Called when the client has changed the disposition of values in
   /// this loop.
@@ -1303,6 +1307,12 @@ public:
   /// Return true if this loop is finite by assumption.  That is,
   /// to be infinite, it must also be undefined.
   bool loopIsFiniteByAssumption(const Loop *L);
+
+  /// Return the set of Values that, if poison, will definitively result in S
+  /// being poison as well. The returned set may be incomplete, i.e. there can
+  /// be additional Values that also result in S being poison.
+  void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
+                                 const SCEV *S);
 
   class FoldID {
     const SCEV *Op = nullptr;
@@ -1936,7 +1946,9 @@ private:
   /// true.  Utility function used by isImpliedCondOperands.  Tries to get
   /// cases like "X `sgt` 0 => X - 1 `sgt` -1".
   bool isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred, const SCEV *LHS,
-                                      const SCEV *RHS, const SCEV *FoundLHS,
+                                      const SCEV *RHS,
+                                      ICmpInst::Predicate FoundPred,
+                                      const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied

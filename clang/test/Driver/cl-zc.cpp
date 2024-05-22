@@ -28,11 +28,11 @@
 // KERNEL-NO-RTTI: "-fno-rtti"
 // KERNEL-NO-EXCEPTIONS-NOT: "-fcxx-exceptions" "-fexceptions"
 
-// RUN: %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:SSE -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-SSE %s
-// RUN: %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:SSE2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-SSE2 %s
-// RUN: %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX %s
-// RUN: %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX2 %s
-// RUN: %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX512 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX512 %s
+// RUN: not %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:SSE -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-SSE %s
+// RUN: not %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:SSE2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-SSE2 %s
+// RUN: not %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX %s
+// RUN: not %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX2 %s
+// RUN: not %clang_cl /c -### --target=i686-pc-windows-msvc /kernel /arch:AVX512 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-AVX512 %s
 // KERNEL-SSE: error: invalid argument '/arch:SSE' not allowed with '/kernel'
 // KERNEL-SSE2: error: invalid argument '/arch:SSE2' not allowed with '/kernel'
 // KERNEL-AVX: error: invalid argument '/arch:AVX' not allowed with '/kernel'
@@ -40,13 +40,13 @@
 // KERNEL-AVX512: error: invalid argument '/arch:AVX512' not allowed with '/kernel'
 
 // RUN: %clang_cl /c -### /kernel /EHsc -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-EHSC %s
-// RUN: %clang_cl /c -### /kernel /GR -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-GR %s
+// RUN: not %clang_cl /c -### /kernel /GR -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-GR %s
 // KERNEL-EHSC-NOT: "-fcxx-exceptions" "-fexceptions"
 // KERNEL-GR: error: invalid argument '/GR' not allowed with '/kernel'
 
-// RUN: %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX %s
-// RUN: %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX2 %s
-// RUN: %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX512 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX512 %s
+// RUN: not %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX %s
+// RUN: not %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX2 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX2 %s
+// RUN: not %clang_cl /c -### --target=x86_64-pc-windows-msvc /kernel /arch:AVX512 -- %s 2>&1 | FileCheck -check-prefixes=KERNEL-X64-AVX512 %s
 // KERNEL-X64-AVX: error: invalid argument '/arch:AVX' not allowed with '/kernel'
 // KERNEL-X64-AVX2: error: invalid argument '/arch:AVX2' not allowed with '/kernel'
 // KERNEL-X64-AVX512: error: invalid argument '/arch:AVX512' not allowed with '/kernel'

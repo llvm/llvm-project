@@ -9,7 +9,9 @@
 #ifndef TEST_STD_UTILITIES_EXPECTED_TYPES_H
 #define TEST_STD_UTILITIES_EXPECTED_TYPES_H
 
+#include <cstring>
 #include <utility>
+#include <type_traits>
 #include "test_macros.h"
 
 template <bool copyMoveNoexcept, bool convertNoexcept = true>
@@ -141,5 +143,60 @@ struct ThrowOnMove {
 };
 
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+struct MoveOnlyErrorType {
+  constexpr MoveOnlyErrorType(int) {}
+  MoveOnlyErrorType(MoveOnlyErrorType&&) {}
+  MoveOnlyErrorType(const MoveOnlyErrorType&&) {}
+  MoveOnlyErrorType(const MoveOnlyErrorType&)            = delete;
+  MoveOnlyErrorType& operator=(const MoveOnlyErrorType&) = delete;
+};
+
+// This type has one byte of tail padding where `std::expected` may put its
+// "has value" flag. The constructor will clobber all bytes including the
+// tail padding. With this type we can check that `std::expected` handles
+// the case where the "has value" flag is an overlapping subobject correctly.
+//
+// See https://github.com/llvm/llvm-project/issues/68552 for details.
+template <int Constant>
+struct TailClobberer {
+  constexpr TailClobberer() noexcept {
+    if (!std::is_constant_evaluated()) {
+      std::memset(this, Constant, sizeof(*this));
+    }
+    // Always set `b` itself to `false` so that the comparison works.
+    b = false;
+  }
+  constexpr TailClobberer(const TailClobberer&) : TailClobberer() {}
+  constexpr TailClobberer(TailClobberer&&) = default;
+  // Converts from `int`/`std::initializer_list<int>, used in some tests.
+  constexpr TailClobberer(int) : TailClobberer() {}
+  constexpr TailClobberer(std::initializer_list<int>) noexcept : TailClobberer() {}
+
+  friend constexpr bool operator==(const TailClobberer&, const TailClobberer&) = default;
+
+  friend constexpr void swap(TailClobberer&, TailClobberer&) {}
+
+private:
+  alignas(2) bool b;
+};
+static_assert(!std::is_trivially_copy_constructible_v<TailClobberer<0>>);
+static_assert(std::is_trivially_move_constructible_v<TailClobberer<0>>);
+
+template <int Constant, bool Noexcept = true, bool ThrowOnMove = false>
+struct TailClobbererNonTrivialMove : TailClobberer<Constant> {
+  using TailClobberer<Constant>::TailClobberer;
+  constexpr TailClobbererNonTrivialMove(TailClobbererNonTrivialMove&&) noexcept(Noexcept) : TailClobberer<Constant>() {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if constexpr (!Noexcept && ThrowOnMove)
+      throw Except{};
+#endif
+  }
+};
+static_assert(!std::is_trivially_copy_constructible_v<TailClobbererNonTrivialMove<0>>);
+static_assert(std::is_move_constructible_v<TailClobbererNonTrivialMove<0>>);
+static_assert(!std::is_trivially_move_constructible_v<TailClobbererNonTrivialMove<0>>);
+static_assert(std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, true>>);
+static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, false>>);
 
 #endif // TEST_STD_UTILITIES_EXPECTED_TYPES_H

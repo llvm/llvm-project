@@ -18,10 +18,23 @@ function(_get_common_compile_options output_var flags)
     set(ADD_SSE4_2_FLAG TRUE)
   endif()
 
+  list(FIND flags ${PREFER_GENERIC_FLAG} prefer_generic)
+  if(${prefer_generic} LESS 0)
+    list(FIND flags "${PREFER_GENERIC_FLAG}__ONLY" prefer_generic)
+  endif()
+  if(${prefer_generic} GREATER -1)
+    set(ADD_PREFER_GENERIC_FLAG TRUE)
+  endif()
+
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
-    list(APPEND compile_options "-ffreestanding")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+    endif()
+
     list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
@@ -30,6 +43,8 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fno-rtti")
     list(APPEND compile_options "-Wall")
     list(APPEND compile_options "-Wextra")
+    list(APPEND compile_options "-Wconversion")
+    list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
     list(APPEND compile_options "-Wextra-semi")
@@ -38,6 +53,7 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wstrict-prototypes")
       list(APPEND compile_options "-Wthread-safety")
+      list(APPEND compile_options "-Wglobal-constructors")
     endif()
     if(ADD_FMA_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86)
@@ -50,16 +66,28 @@ function(_get_common_compile_options output_var flags)
     if(ADD_SSE4_2_FLAG)
       list(APPEND compile_options "-msse4.2")
     endif()
+    if(ADD_PREFER_GENERIC_FLAG)
+      list(APPEND compile_options "-D__LIBC_PREFER_GENERIC")
+    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")
     if(ADD_FMA_FLAG)
       list(APPEND compile_options "/arch:AVX2")
     endif()
+    if(ADD_PREFER_GENERIC_FLAG)
+      list(APPEND compile_options "/D__LIBC_PREFER_GENERIC")
+    endif()
   endif()
   if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
     list(APPEND compile_options "-nogpulib")
     list(APPEND compile_options "-fvisibility=hidden")
+    list(APPEND compile_options "-fconvergent-functions")
+
+    # Manually disable all standard include paths and include the resource
+    # directory to prevent system headers from being included.
+    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+    list(APPEND compile_options "-nostdinc")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -75,6 +103,7 @@ function(get_nvptx_compile_options output_var gpu_arch)
   set(nvptx_options "")
   list(APPEND nvptx_options "-march=${gpu_arch}")
   list(APPEND nvptx_options "-Wno-unknown-cuda-version")
+  list(APPEND nvptx_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
   if(${gpu_arch} STREQUAL "sm_35")
     list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_37")
@@ -100,6 +129,10 @@ function(get_nvptx_compile_options output_var gpu_arch)
   elseif(${gpu_arch} STREQUAL "sm_80")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   elseif(${gpu_arch} STREQUAL "sm_86")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_89")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_90")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   else()
     message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
@@ -134,7 +167,6 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -151,6 +183,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
         set(gpu_target_triple "amdgcn-amd-amdhsa")
         list(APPEND compile_options "-mcpu=${gpu_arch}")
+        list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
       elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
         set(gpu_target_triple "nvptx64-nvidia-cuda")
         get_nvptx_compile_options(nvptx_options ${gpu_arch})
@@ -171,22 +204,25 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       )
 
       target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
-      target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
+      target_include_directories(${gpu_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+      target_include_directories(${gpu_target_name} PRIVATE ${LIBC_SOURCE_DIR})
       target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
-      set_target_properties(
-        ${gpu_target_name}
-        PROPERTIES
-          CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
-      )
+      set_target_properties(${gpu_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
       if(ADD_GPU_OBJ_DEPENDS)
         add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
       endif()
 
       # Append this target to a list of images to package into a single binary.
       set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
-      list(APPEND packager_images
-           --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
-      list(APPEND gpu_target_names ${gpu_target_name})
+      if("${gpu_arch}" IN_LIST all_nvptx_architectures)
+        string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
+        list(APPEND packager_images
+             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple},feature=${nvptx_ptx_feature})
+      else()
+        list(APPEND packager_images
+             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
+       endif()
+      list(APPEND gpu_target_objects ${input_file})
     endforeach()
 
     # After building the target for the desired GPUs we must package the output
@@ -198,7 +234,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     add_custom_command(OUTPUT ${packaged_output_name}
                        COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
                                ${packager_images} -o ${packaged_output_name}
-                       DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
+                       DEPENDS ${gpu_target_objects} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
                        COMMENT "Packaging LLVM offloading binary")
     add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
     list(APPEND packaged_gpu_names ${packaged_target_name})
@@ -218,7 +254,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-    DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
+    DEPENDS ${gpu_target_objects} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
   )
   set(stub_target_name ${fq_target_name}.__stub__)
   add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})
@@ -237,7 +273,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${fq_target_name} PRIVATE
                            "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
   endforeach()
-  target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name}
                    ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
 
@@ -254,12 +291,15 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE
                            ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
+      target_compile_options(${internal_target_name} PRIVATE
+                             "SHELL:-Xclang -mcode-object-version=none"
+                             -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
       get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
       target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
     endif()
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     if(full_deps_list)
       add_dependencies(${internal_target_name} ${full_deps_list})
     endif()
@@ -343,13 +383,8 @@ function(create_object_library fq_target_name)
       ${ADD_OBJECT_SRCS}
       ${ADD_OBJECT_HDRS}
     )
-    target_include_directories(
-      ${fq_target_name}
-      PRIVATE
-        ${LIBC_BUILD_DIR}/include
-        ${LIBC_SOURCE_DIR}
-        ${LIBC_BUILD_DIR}
-    )
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()
 
@@ -364,6 +399,8 @@ function(create_object_library fq_target_name)
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
+    # Add deps as link libraries to inherit interface compile and link options.
+    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
   if(NOT ADD_OBJECT_CXX_STANDARD)
@@ -483,6 +520,7 @@ function(add_object_library target_name)
 endfunction(add_object_library)
 
 set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
+set(ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE "ENTRYPOINT_OBJ_VENDOR")
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -500,12 +538,20 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 function(create_entrypoint_object fq_target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "ALIAS;REDIRECTED" # Optional argument
+    "ALIAS;REDIRECTED;VENDOR" # Optional argument
     "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
     ${ARGN}
   )
 
+  set(entrypoint_target_type ${ENTRYPOINT_OBJ_TARGET_TYPE})
+  if(${ADD_ENTRYPOINT_OBJ_VENDOR})
+    # TODO: We currently rely on external definitions of certain math functions
+    # provided by GPU vendors like AMD or Nvidia. We need to mark these so we
+    # don't end up running tests on these. In the future all of these should be
+    # implemented and this can be removed.
+    set(entrypoint_target_type ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+  endif()
   list(FIND TARGET_ENTRYPOINT_NAME_LIST ${ADD_ENTRYPOINT_OBJ_NAME} entrypoint_name_index)
   if(${entrypoint_name_index} EQUAL -1)
     add_custom_target(${fq_target_name})
@@ -513,7 +559,7 @@ function(create_entrypoint_object fq_target_name)
       ${fq_target_name}
       PROPERTIES
         "ENTRYPOINT_NAME" ${ADD_ENTRYPOINT_OBJ_NAME}
-        "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "TARGET_TYPE" ${entrypoint_target_type}
         "OBJECT_FILE" ""
         "OBJECT_FILE_RAW" ""
         "DEPS" ""
@@ -524,6 +570,8 @@ function(create_entrypoint_object fq_target_name)
     endif()
     return()
   endif()
+
+  set(internal_target_name ${fq_target_name}.__internal__)
 
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
@@ -547,19 +595,32 @@ function(create_entrypoint_object fq_target_name)
     endif()
 
     get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
-    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})))
+    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+                               ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    add_custom_target(${fq_target_name})
-    add_dependencies(${fq_target_name} ${fq_dep_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
+    add_library(
+      ${internal_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file_raw}
+    )
+    add_dependencies(${internal_target_name} ${fq_dep_name})
+    add_library(
+      ${fq_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file}
+    )
+    add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
         ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-        TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        TARGET_TYPE ${entrypoint_target_type}
         IS_ALIAS "YES"
         OBJECT_FILE ""
         OBJECT_FILE_RAW ""
@@ -584,8 +645,6 @@ function(create_entrypoint_object fq_target_name)
     "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
-  set(internal_target_name ${fq_target_name}.__internal__)
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
@@ -622,8 +681,10 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${internal_target_name} ${full_deps_list})
+    target_link_libraries(${internal_target_name} ${full_deps_list})
 
     add_library(
       ${fq_target_name}
@@ -635,8 +696,10 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
-    target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${fq_target_name} ${full_deps_list})
+    target_link_libraries(${fq_target_name} ${full_deps_list})
   endif()
 
   set_target_properties(

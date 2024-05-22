@@ -28,7 +28,31 @@
 extern "C" {
 #endif
 
-/* Intrinsics that are available only if __ADX__ defined */
+/* Intrinsics that are available only if __ADX__ is defined. */
+
+/// Adds unsigned 32-bit integers \a __x and \a __y, plus 0 or 1 as indicated
+///    by the carry flag \a __cf. Stores the unsigned 32-bit sum in the memory
+///    at \a __p, and returns the 8-bit carry-out (carry flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store32(__p, __x + __y + temp)
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c ADCX instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    A 32-bit unsigned addend.
+/// \param __y
+///    A 32-bit unsigned addend.
+/// \param __p
+///    Pointer to memory for storing the sum.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char
     __attribute__((__always_inline__, __nodebug__, __target__("adx")))
     _addcarryx_u32(unsigned char __cf, unsigned int __x, unsigned int __y,
@@ -37,6 +61,29 @@ __INLINE unsigned char
 }
 
 #ifdef __x86_64__
+/// Adds unsigned 64-bit integers \a __x and \a __y, plus 0 or 1 as indicated
+///    by the carry flag \a __cf. Stores the unsigned 64-bit sum in the memory
+///    at \a __p, and returns the 8-bit carry-out (carry flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store64(__p, __x + __y + temp)
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c ADCX instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    A 64-bit unsigned addend.
+/// \param __y
+///    A 64-bit unsigned addend.
+/// \param __p
+///    Pointer to memory for storing the sum.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char
     __attribute__((__always_inline__, __nodebug__, __target__("adx")))
     _addcarryx_u64(unsigned char __cf, unsigned long long __x,
@@ -45,7 +92,31 @@ __INLINE unsigned char
 }
 #endif
 
-/* Intrinsics that are also available if __ADX__ undefined */
+/* Intrinsics that are also available if __ADX__ is undefined. */
+
+/// Adds unsigned 32-bit integers \a __x and \a __y, plus 0 or 1 as indicated
+///    by the carry flag \a __cf. Stores the unsigned 32-bit sum in the memory
+///    at \a __p, and returns the 8-bit carry-out (carry flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store32(__p, __x + __y + temp)
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c ADC instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    A 32-bit unsigned addend.
+/// \param __y
+///    A 32-bit unsigned addend.
+/// \param __p
+///    Pointer to memory for storing the sum.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char __DEFAULT_FN_ATTRS _addcarry_u32(unsigned char __cf,
                                                         unsigned int __x,
                                                         unsigned int __y,
@@ -54,6 +125,29 @@ __INLINE unsigned char __DEFAULT_FN_ATTRS _addcarry_u32(unsigned char __cf,
 }
 
 #ifdef __x86_64__
+/// Adds unsigned 64-bit integers \a __x and \a __y, plus 0 or 1 as indicated
+///    by the carry flag \a __cf. Stores the unsigned 64-bit sum in the memory
+///    at \a __p, and returns the 8-bit carry-out (carry flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store64(__p, __x + __y + temp)
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c ADC instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    A 64-bit unsigned addend.
+/// \param __y
+///    A 64-bit unsigned addend.
+/// \param __p
+///    Pointer to memory for storing the sum.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char __DEFAULT_FN_ATTRS
 _addcarry_u64(unsigned char __cf, unsigned long long __x,
               unsigned long long __y, unsigned long long *__p) {
@@ -61,6 +155,30 @@ _addcarry_u64(unsigned char __cf, unsigned long long __x,
 }
 #endif
 
+/// Adds unsigned 32-bit integer \a __y to 0 or 1 as indicated by the carry
+///    flag \a __cf, and subtracts the result from unsigned 32-bit integer
+///    \a __x. Stores the unsigned 32-bit difference in the memory at \a __p,
+///    and returns the 8-bit carry-out (carry or overflow flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store32(__p, __x - (__y + temp))
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c SBB instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    The 32-bit unsigned minuend.
+/// \param __y
+///    The 32-bit unsigned subtrahend.
+/// \param __p
+///    Pointer to memory for storing the difference.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char __DEFAULT_FN_ATTRS _subborrow_u32(unsigned char __cf,
                                                          unsigned int __x,
                                                          unsigned int __y,
@@ -69,6 +187,30 @@ __INLINE unsigned char __DEFAULT_FN_ATTRS _subborrow_u32(unsigned char __cf,
 }
 
 #ifdef __x86_64__
+/// Adds unsigned 64-bit integer \a __y to 0 or 1 as indicated by the carry
+///    flag \a __cf, and subtracts the result from unsigned 64-bit integer
+///    \a __x. Stores the unsigned 64-bit difference in the memory at \a __p,
+///    and returns the 8-bit carry-out (carry or overflow flag).
+///
+/// \code{.operation}
+/// temp := (__cf == 0) ? 0 : 1
+/// Store64(__p, __x - (__y + temp))
+/// result := CF
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c ADC instruction.
+///
+/// \param __cf
+///    The 8-bit unsigned carry flag; any non-zero value indicates carry.
+/// \param __x
+///    The 64-bit unsigned minuend.
+/// \param __y
+///    The 64-bit unsigned subtrahend.
+/// \param __p
+///    Pointer to memory for storing the difference.
+/// \returns The 8-bit unsigned carry-out value.
 __INLINE unsigned char __DEFAULT_FN_ATTRS
 _subborrow_u64(unsigned char __cf, unsigned long long __x,
                unsigned long long __y, unsigned long long *__p) {

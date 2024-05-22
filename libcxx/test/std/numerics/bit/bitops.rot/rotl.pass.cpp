@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
@@ -31,6 +31,7 @@ constexpr bool test()
     ASSERT_SAME_TYPE(decltype(std::rotl(T(), 0)), T);
     ASSERT_NOEXCEPT(std::rotl(T(), 0));
     T max = std::numeric_limits<T>::max();
+    T highbit = std::rotr(T(1), 1);
 
     assert(std::rotl(T(max - 1), 0) == T(max - 1));
     assert(std::rotl(T(max - 1), 1) == T(max - 2));
@@ -41,6 +42,14 @@ constexpr bool test()
     assert(std::rotl(T(max - 1), 6) == T(max - 64));
     assert(std::rotl(T(max - 1), 7) == T(max - 128));
 
+    assert(std::rotl(T(max - 1), -1) == T(max - highbit));
+    assert(std::rotl(T(max - 1), -2) == T(max - (highbit >> 1)));
+    assert(std::rotl(T(max - 1), -3) == T(max - (highbit >> 2)));
+    assert(std::rotl(T(max - 1), -4) == T(max - (highbit >> 3)));
+    assert(std::rotl(T(max - 1), -5) == T(max - (highbit >> 4)));
+    assert(std::rotl(T(max - 1), -6) == T(max - (highbit >> 5)));
+    assert(std::rotl(T(max - 1), -7) == T(max - (highbit >> 6)));
+
     assert(std::rotl(T(1), 0) == T(1));
     assert(std::rotl(T(1), 1) == T(2));
     assert(std::rotl(T(1), 2) == T(4));
@@ -49,6 +58,14 @@ constexpr bool test()
     assert(std::rotl(T(1), 5) == T(32));
     assert(std::rotl(T(1), 6) == T(64));
     assert(std::rotl(T(1), 7) == T(128));
+
+    assert(std::rotl(T(128), -1) == T(64));
+    assert(std::rotl(T(128), -2) == T(32));
+    assert(std::rotl(T(128), -3) == T(16));
+    assert(std::rotl(T(128), -4) == T(8));
+    assert(std::rotl(T(128), -5) == T(4));
+    assert(std::rotl(T(128), -6) == T(2));
+    assert(std::rotl(T(128), -7) == T(1));
 
 #ifndef TEST_HAS_NO_INT128
     if constexpr (std::is_same_v<T, __uint128_t>) {
@@ -59,6 +76,12 @@ constexpr bool test()
         assert(std::rotl(val, 1) == val << 1);
         assert(std::rotl(val, 127) == val >> 1);
         assert(std::rotl(T(3), 127) == ((T(1) << 127) | T(1)));
+
+        assert(std::rotl(val, -128) == val);
+        assert(std::rotl(val, -256) == val);
+        assert(std::rotl(val, -1) == val >> 1);
+        assert(std::rotl(val, -127) == val << 1);
+        assert(std::rotl(T(3), -1) == ((T(1) << 127) | T(1)));
     }
 #endif
 

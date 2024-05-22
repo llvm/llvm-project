@@ -140,6 +140,9 @@ public:
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
   DenseIntElementsAttr getIndexVectorAttr(ArrayRef<int64_t> values);
 
+  DenseFPElementsAttr getF32VectorAttr(ArrayRef<float> values);
+  DenseFPElementsAttr getF64VectorAttr(ArrayRef<double> values);
+
   /// Tensor-typed DenseIntElementsAttr getters. `values` can be empty.
   /// These are generally preferable for representing general lists of integers
   /// as attributes.
@@ -474,8 +477,8 @@ private:
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
           "Building op `" + OpT::getOperationName() +
-          "` but it isn't registered in this MLIRContext: the dialect may not "
-          "be loaded or this operation isn't registered by the dialect. See "
+          "` but it isn't known in this MLIRContext: the dialect may not "
+          "be loaded or this operation hasn't been added by the dialect. See "
           "also https://mlir.llvm.org/getting_started/Faq/"
           "#registered-loaded-dependent-whats-up-with-dialects-management");
     }
@@ -501,18 +504,20 @@ public:
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
-    // Create the operation without using 'create' as we don't want to
-    // insert it yet.
+    // Create the operation without using 'create' as we want to control when
+    // the listener is notified.
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
+    if (block)
+      block->getOperations().insert(insertPoint, op);
 
-    // Fold the operation. If successful destroy it, otherwise insert it.
+    // Fold the operation. If successful erase it, otherwise notify.
     if (succeeded(tryFold(op, results)))
-      op->destroy();
-    else
-      insert(op);
+      op->erase();
+    else if (listener)
+      listener->notifyOperationInserted(op);
   }
 
   /// Overload to create or fold a single result operation.

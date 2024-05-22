@@ -1,21 +1,18 @@
-// RUN: rm -rf %t.dir
-// RUN: rm -rf %t.cdb
-// RUN: mkdir -p %t.dir
-// RUN: cp %s %t.dir/has_include_if_elif2.cpp
-// RUN: cp %s %t.dir/has_include_if_elif2_clangcl.cpp
-// RUN: mkdir %t.dir/Inputs
-// RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
-// RUN: cp %S/Inputs/header.h %t.dir/Inputs/header2.h
-// RUN: cp %S/Inputs/header.h %t.dir/Inputs/header3.h
-// RUN: cp %S/Inputs/header.h %t.dir/Inputs/header4.h
-// RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/has_include_if_elif.json > %t.cdb
-//
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
-// RUN:   FileCheck %s
+// RUN: rm -rf %t
+// RUN: split-file %s %t
 
-#if __has_include("header.h")
+//--- cdb.json.in
+[{
+  "directory": "DIR",
+  "command": "clang -c DIR/tu.c -o DIR/tu.o -IDIR/include",
+  "file": "DIR/tu.c"
+}]
+//--- include/header1.h
+//--- include/header2.h
+//--- include/header3.h
+//--- include/header4.h
+//--- tu.c
+#if __has_include("header1.h")
 #endif
 
 #if 0
@@ -27,19 +24,16 @@
 #endif
 
 #define H4 __has_include("header4.h")
-
 #if 0
 #elif H4
 #endif
 
-// CHECK: has_include_if_elif2.cpp
-// CHECK-NEXT: Inputs{{/|\\}}header.h
-// CHECK-NEXT: Inputs{{/|\\}}header2.h
-// CHECK-NEXT: Inputs{{/|\\}}header3.h
-// CHECK-NEXT: Inputs{{/|\\}}header4.h
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -mode preprocess-dependency-directives | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -mode preprocess | FileCheck %s
 
-// CHECK: has_include_if_elif2_clangcl.cpp
-// CHECK-NEXT: Inputs{{/|\\}}header.h
-// CHECK-NEXT: Inputs{{/|\\}}header2.h
-// CHECK-NEXT: Inputs{{/|\\}}header3.h
-// CHECK-NEXT: Inputs{{/|\\}}header4.h
+// CHECK: tu.c
+// CHECK-NEXT: header1.h
+// CHECK-NEXT: header2.h
+// CHECK-NEXT: header3.h
+// CHECK-NEXT: header4.h

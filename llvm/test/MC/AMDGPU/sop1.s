@@ -1,12 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=GFX89 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefixes=GFX89,GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=GFX89 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefixes=GFX89,GFX9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=NOSICIVI,NOGFX89 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=NOGFX9,NOGFX89 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 2>&1 %s | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=NOSICIVI,NOGFX89 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=NOGFX9,NOGFX89 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 2>&1 %s | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
 
 s_mov_b32 s1, s2
 // SICI: s_mov_b32 s1, s2 ; encoding: [0x02,0x03,0x81,0xbe]

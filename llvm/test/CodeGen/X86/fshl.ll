@@ -267,8 +267,8 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-FAST-NEXT:    pushl %ebx
 ; X86-FAST-NEXT:    pushl %edi
 ; X86-FAST-NEXT:    pushl %esi
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -276,16 +276,16 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-FAST-NEXT:    jne .LBB6_1
 ; X86-FAST-NEXT:  # %bb.2:
 ; X86-FAST-NEXT:    movl %ebx, %ebp
-; X86-FAST-NEXT:    movl %edx, %ebx
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-FAST-NEXT:    movl %edi, %eax
-; X86-FAST-NEXT:    movl %esi, %edi
+; X86-FAST-NEXT:    movl %esi, %ebx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-FAST-NEXT:    movl %edi, %eax
+; X86-FAST-NEXT:    movl %edx, %edi
+; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    testb $32, %cl
 ; X86-FAST-NEXT:    je .LBB6_5
 ; X86-FAST-NEXT:  .LBB6_4:
-; X86-FAST-NEXT:    movl %edx, %esi
-; X86-FAST-NEXT:    movl %edi, %edx
+; X86-FAST-NEXT:    movl %esi, %edx
+; X86-FAST-NEXT:    movl %edi, %esi
 ; X86-FAST-NEXT:    movl %ebx, %edi
 ; X86-FAST-NEXT:    movl %eax, %ebx
 ; X86-FAST-NEXT:    jmp .LBB6_6
@@ -301,12 +301,12 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-FAST-NEXT:    shldl %cl, %ebp, %eax
 ; X86-FAST-NEXT:    movl %edi, %ebp
 ; X86-FAST-NEXT:    shldl %cl, %ebx, %ebp
-; X86-FAST-NEXT:    movl %edx, %ebx
+; X86-FAST-NEXT:    movl %esi, %ebx
 ; X86-FAST-NEXT:    shldl %cl, %edi, %ebx
 ; X86-FAST-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-FAST-NEXT:    shldl %cl, %edx, %esi
+; X86-FAST-NEXT:    shldl %cl, %esi, %edx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-FAST-NEXT:    movl %esi, 12(%ecx)
+; X86-FAST-NEXT:    movl %edx, 12(%ecx)
 ; X86-FAST-NEXT:    movl %ebx, 8(%ecx)
 ; X86-FAST-NEXT:    movl %ebp, 4(%ecx)
 ; X86-FAST-NEXT:    movl %eax, (%ecx)
@@ -324,26 +324,26 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SLOW-NEXT:    pushl %edi
 ; X86-SLOW-NEXT:    pushl %esi
 ; X86-SLOW-NEXT:    pushl %eax
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    testb $64, %al
 ; X86-SLOW-NEXT:    jne .LBB6_1
 ; X86-SLOW-NEXT:  # %bb.2:
 ; X86-SLOW-NEXT:    movl %edx, %ebp
-; X86-SLOW-NEXT:    movl %edi, %edx
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SLOW-NEXT:    movl %ebx, %ecx
-; X86-SLOW-NEXT:    movl %esi, %ebx
+; X86-SLOW-NEXT:    movl %ebx, %edx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SLOW-NEXT:    movl %edi, %ecx
+; X86-SLOW-NEXT:    movl %esi, %edi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SLOW-NEXT:    testb $32, %al
 ; X86-SLOW-NEXT:    je .LBB6_5
 ; X86-SLOW-NEXT:  .LBB6_4:
-; X86-SLOW-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X86-SLOW-NEXT:    movl %ebx, %edi
-; X86-SLOW-NEXT:    movl %edx, %ebx
+; X86-SLOW-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; X86-SLOW-NEXT:    movl %edi, %ebx
+; X86-SLOW-NEXT:    movl %edx, %edi
 ; X86-SLOW-NEXT:    movl %ecx, %edx
 ; X86-SLOW-NEXT:    jmp .LBB6_6
 ; X86-SLOW-NEXT:  .LBB6_1:
@@ -364,30 +364,30 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SLOW-NEXT:    movb %ch, %cl
 ; X86-SLOW-NEXT:    shrl %cl, %ebp
 ; X86-SLOW-NEXT:    orl %esi, %ebp
-; X86-SLOW-NEXT:    movl %ebx, %esi
+; X86-SLOW-NEXT:    movl %edi, %esi
 ; X86-SLOW-NEXT:    movb %al, %cl
 ; X86-SLOW-NEXT:    shll %cl, %esi
 ; X86-SLOW-NEXT:    shrl %edx
 ; X86-SLOW-NEXT:    movb %ch, %cl
 ; X86-SLOW-NEXT:    shrl %cl, %edx
 ; X86-SLOW-NEXT:    orl %esi, %edx
-; X86-SLOW-NEXT:    movl %edi, %esi
+; X86-SLOW-NEXT:    movl %ebx, %esi
 ; X86-SLOW-NEXT:    movb %al, %cl
 ; X86-SLOW-NEXT:    shll %cl, %esi
-; X86-SLOW-NEXT:    shrl %ebx
-; X86-SLOW-NEXT:    movb %ch, %cl
-; X86-SLOW-NEXT:    shrl %cl, %ebx
-; X86-SLOW-NEXT:    orl %esi, %ebx
-; X86-SLOW-NEXT:    movb %al, %cl
-; X86-SLOW-NEXT:    movl (%esp), %eax # 4-byte Reload
-; X86-SLOW-NEXT:    shll %cl, %eax
 ; X86-SLOW-NEXT:    shrl %edi
 ; X86-SLOW-NEXT:    movb %ch, %cl
 ; X86-SLOW-NEXT:    shrl %cl, %edi
-; X86-SLOW-NEXT:    orl %eax, %edi
+; X86-SLOW-NEXT:    orl %esi, %edi
+; X86-SLOW-NEXT:    movb %al, %cl
+; X86-SLOW-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-SLOW-NEXT:    shll %cl, %eax
+; X86-SLOW-NEXT:    shrl %ebx
+; X86-SLOW-NEXT:    movb %ch, %cl
+; X86-SLOW-NEXT:    shrl %cl, %ebx
+; X86-SLOW-NEXT:    orl %eax, %ebx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLOW-NEXT:    movl %edi, 12(%eax)
-; X86-SLOW-NEXT:    movl %ebx, 8(%eax)
+; X86-SLOW-NEXT:    movl %ebx, 12(%eax)
+; X86-SLOW-NEXT:    movl %edi, 8(%eax)
 ; X86-SLOW-NEXT:    movl %edx, 4(%eax)
 ; X86-SLOW-NEXT:    movl %ebp, (%eax)
 ; X86-SLOW-NEXT:    addl $4, %esp

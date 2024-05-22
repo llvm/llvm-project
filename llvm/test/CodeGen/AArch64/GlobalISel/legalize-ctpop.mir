@@ -15,6 +15,7 @@ body:             |
     ; CHECK-NEXT: %ctpop:_(<8 x s8>) = G_CTPOP %copy(<8 x s8>)
     ; CHECK-NEXT: $d0 = COPY %ctpop(<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: v8s8_legal
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -41,6 +42,7 @@ body:             |
     ; CHECK-NEXT: %ctpop:_(<16 x s8>) = G_CTPOP %copy(<16 x s8>)
     ; CHECK-NEXT: $q0 = COPY %ctpop(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: v16s8_legal
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -70,6 +72,7 @@ body:             |
     ; CHECK-NEXT: %ctpop:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
     ; CHECK-NEXT: $w0 = COPY %ctpop(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: s32_lower
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -99,6 +102,7 @@ body:             |
     ; CHECK-NEXT: %ctpop:_(s64) = G_ZEXT [[INT]](s32)
     ; CHECK-NEXT: $x0 = COPY %ctpop(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    ;
     ; CHECK-CSSC-LABEL: name: s64_lower
     ; CHECK-CSSC: liveins: $x0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -134,6 +138,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[MV1]](s64)
     ; CHECK-NEXT: $x1 = COPY [[C1]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
+    ;
     ; CHECK-CSSC-LABEL: name: s128_lower
     ; CHECK-CSSC: liveins: $x0, $x1
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -167,8 +172,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -176,6 +181,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: widen_s16
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -205,8 +211,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -214,6 +220,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: widen_s8
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -243,8 +250,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -252,6 +259,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: widen_s3
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -280,8 +288,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -289,6 +297,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: different_sizes
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -323,6 +332,7 @@ body:             |
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
     ; CHECK-NEXT: $q0 = COPY [[INT]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: custom_8x16
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -355,6 +365,7 @@ body:             |
     ; CHECK-NEXT: [[INT1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<8 x s16>)
     ; CHECK-NEXT: $q0 = COPY [[INT1]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: custom_4x32
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -389,6 +400,7 @@ body:             |
     ; CHECK-NEXT: [[INT2:%[0-9]+]]:_(<2 x s64>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT1]](<4 x s32>)
     ; CHECK-NEXT: $q0 = COPY [[INT2]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: custom_2x64
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -422,6 +434,7 @@ body:             |
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(<4 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<8 x s8>)
     ; CHECK-NEXT: $d0 = COPY [[INT]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: custom_4x16
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -454,6 +467,7 @@ body:             |
     ; CHECK-NEXT: [[INT1:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<4 x s16>)
     ; CHECK-NEXT: $d0 = COPY [[INT1]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: custom_2x32
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}

@@ -26,16 +26,16 @@ libc_test(
 )
 
 libc_test(
-    name = "printf_string_writer_test",
-    srcs = ["printf_core/string_writer_test.cpp"],
+    name = "printf_writer_test",
+    srcs = ["printf_core/writer_test.cpp"],
     libc_function_deps = [
     ],
     deps = [
         "//libc:__support_arg_list",
         "//libc:__support_cpp_string_view",
         "//libc:printf_core_structs",
-        "//libc:printf_string_writer",
         "//libc:printf_writer",
+        "//libc:string_memory_utils",
     ],
 )
 
@@ -49,7 +49,6 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:printf_converter",
         "//libc:printf_core_structs",
-        "//libc:printf_string_writer",
         "//libc:printf_writer",
     ],
 )
@@ -62,7 +61,6 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_platform_defs",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -88,5 +86,37 @@ libc_test(
     srcs = ["fprintf_test.cpp"],
     libc_function_deps = [
         "//libc:fprintf",
+    ],
+)
+
+libc_test(
+    name = "vsprintf_test",
+    srcs = ["vsprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsprintf",
+    ],
+)
+
+libc_test(
+    name = "vsnprintf_test",
+    srcs = ["vsnprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsnprintf",
+    ],
+)
+
+libc_test(
+    name = "vprintf_test",
+    srcs = ["vprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vprintf",
+    ],
+)
+
+libc_test(
+    name = "vfprintf_test",
+    srcs = ["vfprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vfprintf",
     ],
 )

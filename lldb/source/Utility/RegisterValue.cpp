@@ -342,9 +342,8 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
       break;
     }
     if (value_str.getAsInteger(0, uval64)) {
-      error.SetErrorStringWithFormat(
-          "'%s' is not a valid unsigned integer string value",
-          value_str.str().c_str());
+      error.SetErrorStringWithFormatv(
+          "'{0}' is not a valid unsigned integer string value", value_str);
       break;
     }
 
@@ -371,9 +370,8 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     }
 
     if (value_str.getAsInteger(0, ival64)) {
-      error.SetErrorStringWithFormat(
-          "'%s' is not a valid signed integer string value",
-          value_str.str().c_str());
+      error.SetErrorStringWithFormatv(
+          "'{0}' is not a valid signed integer string value", value_str);
       break;
     }
 

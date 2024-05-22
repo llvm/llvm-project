@@ -1,6 +1,17 @@
-; RUN: opt %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
+;; Replicate those tests with non-instruction debug markers.
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
+; NOENTRY-NOT: OP_llvm_entry_value
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-apple-macosx13.0.0"
 
 ; This coroutine has one split point and two variables defined by:
 ;   %var_with_dbg_value,   which has multiple dbg.value intrinsics associated with
@@ -19,9 +30,9 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-LABEL: define {{.*}} @coroutineA(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; CHECK:      @llvm.dbg.declare(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
+; CHECK-SAME:                   DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
 ; CHECK:      @llvm.dbg.value(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_deref)
+; CHECK-SAME:                 DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
 
   %i7 = call ptr @llvm.coro.async.resume(), !dbg !54
@@ -31,6 +42,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   call void @dont_optimize(ptr %var_with_dbg_value, ptr %var_with_dbg_declare)
   call void @llvm.dbg.value(metadata ptr %var_with_dbg_value, metadata !50, metadata !DIExpression(DW_OP_deref)), !dbg !54
   %i17 = load i32, ptr getelementptr inbounds (<{i32, i32}>, ptr @coroutineBTu, i64 0, i32 1), align 8, !dbg !54
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %var_with_dbg_value, i32 %i17), metadata !501, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg !54
   %i18 = zext i32 %i17 to i64, !dbg !54
   %i19 = call swiftcc ptr @swift_task_alloc(i64 %i18), !dbg !54
 ; CHECK-NOT: define
@@ -40,6 +52,8 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
 ; CHECK:      @llvm.dbg.value(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_deref)
+; CHECK:      @llvm.dbg.value(metadata !DIArgList(ptr %[[frame_ptr]], i32 %{{.*}}), {{.*}} !DIExpression(
+; CHECK-SAME:                 DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 16, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)
 ; CHECK:      call {{.*}} @coroutineB
 
   %i23 = call ptr @llvm.coro.async.resume(), !dbg !54
@@ -135,6 +149,7 @@ declare { ptr } @llvm.coro.suspend.async.sl_p0s(i32, ptr, ptr, ...)
 
 !50 = !DILocalVariable(name: "k1", scope: !48, file: !17, line: 7, type: !53)
 !500 = !DILocalVariable(name: "k2", scope: !48, file: !17, line: 7, type: !53)
+!501 = !DILocalVariable(name: "k3", scope: !48, file: !17, line: 7, type: !53)
 !49 = !{!50, !500}
 
 !16 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !17, producer: "", emissionKind: FullDebug)

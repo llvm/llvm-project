@@ -23,6 +23,20 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// [rand.req.genl]/1.4:
+// The effect of instantiating a template that has a template type parameter
+// named RealType is undefined unless the corresponding template argument is
+// cv-unqualified and is one of float, double, or long double.
+
+template <class>
+struct __libcpp_random_is_valid_realtype : false_type {};
+template <>
+struct __libcpp_random_is_valid_realtype<float> : true_type {};
+template <>
+struct __libcpp_random_is_valid_realtype<double> : true_type {};
+template <>
+struct __libcpp_random_is_valid_realtype<long double> : true_type {};
+
 // [rand.req.genl]/1.5:
 // The effect of instantiating a template that has a template type parameter
 // named IntType is undefined unless the corresponding template argument is

@@ -1,5 +1,5 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX90A %s
-; RUN: not --crash llc -global-isel < %s -march=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
+; RUN: not --crash llc -global-isel < %s -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
 
 declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float)
 declare <2 x half> @llvm.amdgcn.global.atomic.fadd.f32.p1.v2f16(ptr addrspace(1) nocapture, <2 x half>)

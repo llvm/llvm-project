@@ -21,18 +21,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -63,6 +57,7 @@ class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
 class BlockExpr;
+struct BlockVarCopyInit;
 class BuiltinTemplateDecl;
 class CharUnits;
 class ConceptDecl;
@@ -71,16 +66,19 @@ class CXXConstructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
-class ParentMapContext;
 class DynTypedNodeList;
 class Expr;
 enum class FloatModeKind;
 class GlobalDecl;
+class IdentifierTable;
+class LangOptions;
 class MangleContext;
 class MangleNumberingContext;
 class MemberSpecializationInfo;
 class Module;
 struct MSGuidDeclParts;
+class NestedNameSpecifier;
+class NoSanitizeList;
 class ObjCCategoryDecl;
 class ObjCCategoryImplDecl;
 class ObjCContainerDecl;
@@ -94,8 +92,10 @@ class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 class OMPTraitInfo;
+class ParentMapContext;
 struct ParsedTargetAttr;
 class Preprocessor;
+class ProfileList;
 class StoredDeclsMap;
 class TargetAttr;
 class TargetInfo;
@@ -108,7 +108,7 @@ class UnresolvedSetIterator;
 class UsingShadowDecl;
 class VarTemplateDecl;
 class VTableContextBase;
-struct BlockVarCopyInit;
+class XRayFunctionFilter;
 
 namespace Builtin {
 
@@ -195,20 +195,25 @@ class ASTContext : public RefCountedBase<ASTContext> {
       ConstantArrayTypes;
   mutable llvm::FoldingSet<IncompleteArrayType> IncompleteArrayTypes;
   mutable std::vector<VariableArrayType*> VariableArrayTypes;
-  mutable llvm::FoldingSet<DependentSizedArrayType> DependentSizedArrayTypes;
-  mutable llvm::FoldingSet<DependentSizedExtVectorType>
-    DependentSizedExtVectorTypes;
-  mutable llvm::FoldingSet<DependentAddressSpaceType>
+  mutable llvm::ContextualFoldingSet<DependentSizedArrayType, ASTContext &>
+      DependentSizedArrayTypes;
+  mutable llvm::ContextualFoldingSet<DependentSizedExtVectorType, ASTContext &>
+      DependentSizedExtVectorTypes;
+  mutable llvm::ContextualFoldingSet<DependentAddressSpaceType, ASTContext &>
       DependentAddressSpaceTypes;
   mutable llvm::FoldingSet<VectorType> VectorTypes;
-  mutable llvm::FoldingSet<DependentVectorType> DependentVectorTypes;
+  mutable llvm::ContextualFoldingSet<DependentVectorType, ASTContext &>
+      DependentVectorTypes;
   mutable llvm::FoldingSet<ConstantMatrixType> MatrixTypes;
-  mutable llvm::FoldingSet<DependentSizedMatrixType> DependentSizedMatrixTypes;
+  mutable llvm::ContextualFoldingSet<DependentSizedMatrixType, ASTContext &>
+      DependentSizedMatrixTypes;
   mutable llvm::FoldingSet<FunctionNoProtoType> FunctionNoProtoTypes;
   mutable llvm::ContextualFoldingSet<FunctionProtoType, ASTContext&>
     FunctionProtoTypes;
-  mutable llvm::FoldingSet<DependentTypeOfExprType> DependentTypeOfExprTypes;
-  mutable llvm::FoldingSet<DependentDecltypeType> DependentDecltypeTypes;
+  mutable llvm::ContextualFoldingSet<DependentTypeOfExprType, ASTContext &>
+      DependentTypeOfExprTypes;
+  mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
+      DependentDecltypeTypes;
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmType>
@@ -238,7 +243,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AttributedType> AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
-  mutable llvm::FoldingSet<DependentBitIntType> DependentBitIntTypes;
+  mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
+      DependentBitIntTypes;
   llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
@@ -1141,11 +1147,18 @@ public:
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
+  /// This does not include extern shared variables used by device host
+  /// functions as addresses of shared variables are per warp, therefore
+  /// cannot be accessed by host code.
   llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
   /// host code.
   llvm::DenseSet<const ValueDecl *> CUDAExternalDeviceDeclODRUsedByHost;
+
+  /// Keep track of CUDA/HIP implicit host device functions used on device side
+  /// in device compilation.
+  llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
@@ -1188,8 +1201,9 @@ public:
 
   /// Create a new implicit TU-level CXXRecordDecl or RecordDecl
   /// declaration.
-  RecordDecl *buildImplicitRecord(StringRef Name,
-                                  RecordDecl::TagKind TK = TTK_Struct) const;
+  RecordDecl *buildImplicitRecord(
+      StringRef Name,
+      RecordDecl::TagKind TK = RecordDecl::TagKind::Struct) const;
 
   /// Create a new implicit TU-level typedef declaration.
   TypedefDecl *buildImplicitTypedef(QualType T, StringRef Name) const;
@@ -1421,8 +1435,7 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArrayType::ArraySizeModifier ASM,
-                                unsigned IndexTypeQuals,
+                                ArraySizeModifier ASM, unsigned IndexTypeQuals,
                                 SourceRange Brackets) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
@@ -1431,21 +1444,19 @@ public:
   /// FIXME: We will need these to be uniqued, or at least comparable, at some
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
-                                      ArrayType::ArraySizeModifier ASM,
+                                      ArraySizeModifier ASM,
                                       unsigned IndexTypeQuals,
                                       SourceRange Brackets) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
-  QualType getIncompleteArrayType(QualType EltTy,
-                                  ArrayType::ArraySizeModifier ASM,
+  QualType getIncompleteArrayType(QualType EltTy, ArraySizeModifier ASM,
                                   unsigned IndexTypeQuals) const;
 
   /// Return the unique reference to the type for a constant array of
   /// the specified element type.
   QualType getConstantArrayType(QualType EltTy, const llvm::APInt &ArySize,
-                                const Expr *SizeExpr,
-                                ArrayType::ArraySizeModifier ASM,
+                                const Expr *SizeExpr, ArraySizeModifier ASM,
                                 unsigned IndexTypeQuals) const;
 
   /// Return a type for a constant array for a string literal of the
@@ -1487,12 +1498,12 @@ public:
   ///
   /// \pre \p VectorType must be a built-in type.
   QualType getVectorType(QualType VectorType, unsigned NumElts,
-                         VectorType::VectorKind VecKind) const;
+                         VectorKind VecKind) const;
   /// Return the unique reference to the type for a dependently sized vector of
   /// the specified element type.
   QualType getDependentVectorType(QualType VectorType, Expr *SizeExpr,
                                   SourceLocation AttrLoc,
-                                  VectorType::VectorKind VecKind) const;
+                                  VectorKind VecKind) const;
 
   /// Return the unique reference to an extended vector type
   /// of the specified element type and size.
@@ -1693,7 +1704,7 @@ public:
   /// Return a ObjCObjectPointerType type for the given ObjCObjectType.
   QualType getObjCObjectPointerType(QualType OIT) const;
 
-  /// C2x feature and GCC extension.
+  /// C23 feature and GCC extension.
   QualType getTypeOfExprType(Expr *E, TypeOfKind Kind) const;
   QualType getTypeOfType(QualType QT, TypeOfKind Kind) const;
 

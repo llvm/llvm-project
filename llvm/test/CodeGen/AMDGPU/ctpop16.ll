@@ -520,18 +520,18 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: v_ctpop_v8i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
-; SI-NEXT:    s_mov_b32 s11, s7
+; SI-NEXT:    s_mov_b32 s11, s3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[8:11], 0 addr64
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -557,7 +557,7 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; SI-NEXT:    v_or_b32_e32 v2, v6, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v5, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v4, v0
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_ctpop_v8i16:
@@ -1523,9 +1523,8 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
-; VI-NEXT:    v_cmp_ne_u16_e64 s[6:7], s5, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; VI-NEXT:    s_cbranch_vccz .LBB14_4
+; VI-NEXT:    s_cmp_lg_u32 s5, 0
+; VI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
@@ -1554,50 +1553,48 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; EG:       ; %bb.0: ; %entry
 ; EG-NEXT:    ALU 0, @20, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @14
-; EG-NEXT:    ALU_PUSH_BEFORE 6, @21, KC0[], KC1[]
+; EG-NEXT:    ALU_PUSH_BEFORE 4, @21, KC0[], KC1[]
 ; EG-NEXT:    JUMP @7 POP:1
-; EG-NEXT:    ALU 0, @28, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @26, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @16
-; EG-NEXT:    ALU_POP_AFTER 1, @29, KC0[], KC1[]
-; EG-NEXT:    ALU_PUSH_BEFORE 2, @31, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU_POP_AFTER 1, @27, KC0[], KC1[]
+; EG-NEXT:    ALU_PUSH_BEFORE 2, @29, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    JUMP @11 POP:1
 ; EG-NEXT:    TEX 0 @18
-; EG-NEXT:    ALU_POP_AFTER 0, @34, KC0[], KC1[]
-; EG-NEXT:    ALU 11, @35, KC0[], KC1[]
+; EG-NEXT:    ALU_POP_AFTER 0, @32, KC0[], KC1[]
+; EG-NEXT:    ALU 11, @33, KC0[], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T1.XW, T0.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 14:
-; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 46, #3
+; EG-NEXT:     VTX_READ_16 T2.X, T1.X, 46, #3
 ; EG-NEXT:    Fetch clause starting at 16:
-; EG-NEXT:     VTX_READ_16 T1.X, T1.X, 2, #1
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 2, #1
 ; EG-NEXT:    Fetch clause starting at 18:
-; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 44, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T1.X, 44, #3
 ; EG-NEXT:    ALU clause starting at 20:
-; EG-NEXT:     MOV * T0.X, 0.0,
+; EG-NEXT:     MOV * T1.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 21:
-; EG-NEXT:     AND_INT * T0.W, T1.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV T1.X, literal.x,
+; EG-NEXT:     MOV T0.X, literal.x,
 ; EG-NEXT:     MOV T1.W, literal.y,
-; EG-NEXT:     SETNE_INT * T0.W, PV.W, 0.0,
+; EG-NEXT:     SETNE_INT * T0.W, T2.X, 0.0,
 ; EG-NEXT:    0(0.000000e+00), 1(1.401298e-45)
 ; EG-NEXT:     PRED_SETNE_INT * ExecMask,PredicateBit (MASKED), PS, 0.0,
-; EG-NEXT:    ALU clause starting at 28:
-; EG-NEXT:     MOV * T1.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 29:
+; EG-NEXT:    ALU clause starting at 26:
+; EG-NEXT:     MOV * T0.X, KC0[2].Z,
+; EG-NEXT:    ALU clause starting at 27:
 ; EG-NEXT:     MOV * T1.W, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 31:
+; EG-NEXT:    ALU clause starting at 29:
 ; EG-NEXT:     MOV T0.W, KC0[2].Y,
 ; EG-NEXT:     SETE_INT * T1.W, T1.W, 0.0,
 ; EG-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PS, 0.0,
-; EG-NEXT:    ALU clause starting at 34:
-; EG-NEXT:     BCNT_INT * T1.X, T0.X,
-; EG-NEXT:    ALU clause starting at 35:
+; EG-NEXT:    ALU clause starting at 32:
+; EG-NEXT:     BCNT_INT * T0.X, T0.X,
+; EG-NEXT:    ALU clause starting at 33:
 ; EG-NEXT:     LSHL * T1.W, T0.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T1.X, literal.y,
+; EG-NEXT:     AND_INT * T2.W, T0.X, literal.y,
 ; EG-NEXT:    24(3.363116e-44), 65535(9.183409e-41)
 ; EG-NEXT:     LSHL T1.X, PS, PV.W,
 ; EG-NEXT:     LSHL * T1.W, literal.x, PV.W,

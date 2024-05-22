@@ -56,17 +56,7 @@ void RTNAME(PointerSetDerivedLength)(
 
 void RTNAME(PointerApplyMold)(
     Descriptor &pointer, const Descriptor &mold, int rank) {
-  pointer = mold;
-  pointer.set_base_addr(nullptr);
-  pointer.raw().attribute = CFI_attribute_pointer;
-  pointer.raw().rank = rank;
-  if (auto *pointerAddendum{pointer.Addendum()}) {
-    if (const auto *moldAddendum{mold.Addendum()}) {
-      if (const auto *derived{moldAddendum->derivedType()}) {
-        pointerAddendum->set_derivedType(derived);
-      }
-    }
-  }
+  pointer.ApplyMold(mold, rank);
 }
 
 void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
@@ -154,9 +144,6 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
 int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
-  if (pointer.Elements() == 0) {
-    return StatOk;
-  }
   int stat{RTNAME(PointerAllocate)(
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
@@ -175,7 +162,9 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
+  return ReturnError(terminator,
+      pointer.Destroy(/*finalize=*/true, /*destroyPointers=*/true, &terminator),
+      errMsg, hasStat);
 }
 
 int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
@@ -184,14 +173,15 @@ int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
   int stat{RTNAME(PointerDeallocate)(
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
-    DescriptorAddendum *addendum{pointer.Addendum()};
-    if (addendum) {
+    if (DescriptorAddendum * addendum{pointer.Addendum()}) {
       addendum->set_derivedType(derivedType);
+      pointer.raw().type = derivedType ? CFI_type_struct : CFI_type_other;
     } else {
       // Unlimited polymorphic descriptors initialized with
       // PointerNullifyIntrinsic do not have an addendum. Make sure the
       // derivedType is null in that case.
       INTERNAL_CHECK(!derivedType);
+      pointer.raw().type = CFI_type_other;
     }
   }
   return stat;

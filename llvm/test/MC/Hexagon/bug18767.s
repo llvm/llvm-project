@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=asm %s 2>%t; FileCheck %s < %t
+# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2>%t; FileCheck %s < %t
 
 .L_:
 {

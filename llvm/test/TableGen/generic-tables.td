@@ -24,30 +24,35 @@ include "llvm/TableGen/SearchableTable.td"
 
 // CHECK-LABEL: GET_ATable_IMPL
 // CHECK: constexpr AEntry ATable[] = {
-// CHECK:   { "baz"
-// CHECK:   { "foo"
-// CHECK:   { "foobar"
-// CHECK:   { "bar"
+// CHECK-NOT:   { "aaa"
+// CHECK:       { "baz", 0x2, 0x6, 0xFFFFFFFF00000000 },
+// CHECK:       { "foo", 0x4, 0x4, 0x100000000 },
+// CHECK:       { "foobar", 0x4, 0x5, 0x100000000 },
+// CHECK:       { "bar", 0x5, 0x3, 0x100000000 },
 // CHECK: };
 
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
 // CHECK:   return &*Idx;
 // CHECK: }
 
-class AEntry<string str, int val1, int val2> {
+class AEntry<string str, int val1, int val2, bits<64> val3> {
   string Str = str;
   bits<8> Val1 = val1;
   bits<10> Val2 = val2;
+  bits<64> Val3 = val3;
+  bit IsNeeded = 1;
 }
 
-def : AEntry<"bar",    5, 3>;
-def : AEntry<"baz",    2, 6>;
-def : AEntry<"foo",    4, 4>;
-def : AEntry<"foobar", 4, 5>;
+def : AEntry<"aaa", 0, 0, 0> { let IsNeeded = 0; }
+def : AEntry<"bar",    5, 3, 0x100000000>;
+def : AEntry<"baz",    2, 6, 0xFFFFFFFF00000000>;
+def : AEntry<"foo",    4, 4, 0b0000000000000000000000000000000100000000000000000000000000000000>;
+def : AEntry<"foobar", 4, 5, 4294967296>;
 
 def ATable : GenericTable {
   let FilterClass = "AEntry";
-  let Fields = ["Str", "Val1", "Val2"];
+  let FilterClassField = "IsNeeded";
+  let Fields = ["Str", "Val1", "Val2", "Val3"];
 
   let PrimaryKey = ["Val1", "Val2"];
   let PrimaryKeyName = "lookupATableByValues";
@@ -171,3 +176,65 @@ def DTable : GenericTable {
 }
 
 #endif // ERROR1
+
+// CHECK-LABEL: GET_EEntryEvenTable_DECL
+// CHECK: const EEntry *lookupEEntryEvenTableByValue(uint8_t Value);
+
+// CHECK-LABEL: GET_EEntryEvenTable_IMPL
+// CHECK: constexpr EEntry EEntryEvenTable[] = {
+// CHECK:   { 0x2
+// CHECK:   { 0x4
+// CHECK:   { 0x6
+// CHECK:   { 0x8
+// CHECK:   { 0xA
+// CHECK: };
+
+// CHECK: const EEntry *lookupEEntryEvenTableByValue(uint8_t Value) {
+// CHECK:   return &*Idx;
+// CHECK: }
+
+// CHECK-LABEL: GET_EEntryOddTable_DECL
+// CHECK: const EEntry *lookupEEntryOddTableByValue(uint8_t Value);
+
+// CHECK-LABEL: GET_EEntryOddTable_IMPL
+// CHECK: constexpr EEntry EEntryOddTable[] = {
+// CHECK:   { 0x1
+// CHECK:   { 0x3
+// CHECK:   { 0x5
+// CHECK:   { 0x7
+// CHECK:   { 0x9
+// CHECK: };
+
+// CHECK: const EEntry *lookupEEntryOddTableByValue(uint8_t Value) {
+// CHECK:   return &*Idx;
+// CHECK: }
+
+// We can construct two GenericTables with the same FilterClass, so that they
+// select from the same overall set of records, but assign them with different
+// FilterClassField values so that they include different subsets of the records
+// of that class.
+class EEntry<bits<8> value> {
+  bits<8> Value = value;
+  bit IsEven = !eq(!and(value, 1), 0);
+  bit IsOdd = !not(IsEven);
+}
+
+foreach i = {1-10} in {
+  def : EEntry<i>;
+}
+
+def EEntryEvenTable : GenericTable {
+  let FilterClass = "EEntry";
+  let FilterClassField = "IsEven";
+  let Fields = ["Value"];
+  let PrimaryKey = ["Value"];
+  let PrimaryKeyName = "lookupEEntryEvenTableByValue";
+}
+
+def EEntryOddTable : GenericTable {
+  let FilterClass = "EEntry";
+  let FilterClassField = "IsOdd";
+  let Fields = ["Value"];
+  let PrimaryKey = ["Value"];
+  let PrimaryKeyName = "lookupEEntryOddTableByValue";
+}

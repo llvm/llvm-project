@@ -14,7 +14,6 @@
 
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/CodeGen.h"
@@ -36,7 +35,7 @@ public:
   HexagonDAGToDAGISel() = delete;
 
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
-                               CodeGenOpt::Level OptLevel)
+                               CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), HST(nullptr), HII(nullptr),
         HRI(nullptr) {}
 
@@ -85,7 +84,7 @@ public:
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    unsigned ConstraintID,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
   bool tryLoadOfLoadIntrinsic(LoadSDNode *N);
   bool SelectBrevLdIntrinsic(SDNode *IntN);

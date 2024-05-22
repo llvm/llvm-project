@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPmodulo_testr(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {
@@ -8,9 +8,9 @@ subroutine modulo_testr(r, a, p)
     ! CHECK-DAG: %[[p:.*]] = fir.load %[[arg2]] : !fir.ref<f64>
     ! CHECK-DAG: %[[rem:.*]] = arith.remf %[[a]], %[[p]] {{.*}}: f64
     ! CHECK-DAG: %[[zero:.*]] = arith.constant 0.000000e+00 : f64
-    ! CHECK-DAG: %[[remNotZero:.*]] = arith.cmpf une, %[[rem]], %[[zero]] : f64
-    ! CHECK-DAG: %[[aNeg:.*]] = arith.cmpf olt, %[[a]], %[[zero]] : f64
-    ! CHECK-DAG: %[[pNeg:.*]] = arith.cmpf olt, %[[p]], %[[zero]] : f64
+    ! CHECK-DAG: %[[remNotZero:.*]] = arith.cmpf une, %[[rem]], %[[zero]] {{.*}} : f64
+    ! CHECK-DAG: %[[aNeg:.*]] = arith.cmpf olt, %[[a]], %[[zero]] {{.*}} : f64
+    ! CHECK-DAG: %[[pNeg:.*]] = arith.cmpf olt, %[[p]], %[[zero]] {{.*}} : f64
     ! CHECK-DAG: %[[signDifferent:.*]] = arith.xori %[[aNeg]], %[[pNeg]] : i1
     ! CHECK-DAG: %[[mustAddP:.*]] = arith.andi %[[remNotZero]], %[[signDifferent]] : i1
     ! CHECK-DAG: %[[remPlusP:.*]] = arith.addf %[[rem]], %[[p]] {{.*}}: f64

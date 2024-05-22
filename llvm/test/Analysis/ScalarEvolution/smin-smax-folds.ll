@@ -38,7 +38,7 @@ define void @smin_simplify_with_guard(i32 %n) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %cmp10 = icmp sgt i32 %n, -1
@@ -75,7 +75,7 @@ define void @smin_to_smax(i32 %n) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body.lr.ph
@@ -111,7 +111,7 @@ define void @smax_simplify_with_guard(i32 %start, i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + %n)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) + %n)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %guard = icmp sge i32 %n, %start

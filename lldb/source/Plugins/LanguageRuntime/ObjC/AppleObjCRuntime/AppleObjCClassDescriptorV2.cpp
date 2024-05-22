@@ -10,8 +10,10 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -666,6 +668,19 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   }
 
   return 0;
+}
+
+// From the ObjC runtime.
+static uint8_t IS_SWIFT_STABLE = 1U << 1;
+
+LanguageType ClassDescriptorV2::GetImplementationLanguage() const {
+  std::unique_ptr<objc_class_t> objc_class;
+  if (auto *process = m_runtime.GetProcess())
+    if (Read_objc_class(process, objc_class))
+      if (objc_class->m_flags & IS_SWIFT_STABLE)
+        return lldb::eLanguageTypeSwift;
+
+  return lldb::eLanguageTypeObjC;
 }
 
 ClassDescriptorV2::iVarsStorage::iVarsStorage() : m_ivars(), m_mutex() {}

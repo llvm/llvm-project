@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -x hip --gpu-max-threads-per-block=1024 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -x hip -nogpulib -nogpuinc --gpu-max-threads-per-block=1024 %s 2>&1 | FileCheck %s
 
 // Check that there are commands for both host- and device-side compilations.
 //
@@ -22,7 +22,7 @@
 // PTH: "-cc1"{{.*}} "-fgpu-default-stream=per-thread" {{.*}}"-x" "hip-cpp-output"
 
 // Check -mprintf-kind=hostcall
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -mprintf-kind=hostcall  %s -save-temps 2>&1 | FileCheck -check-prefix=HOSTC %s
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=hostcall  %s -save-temps 2>&1 | FileCheck -check-prefix=HOSTC %s
 // HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=hostcall" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
 // HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
 // HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "ir"
@@ -30,26 +30,26 @@
 // HOSTC: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
 // Check -mprintf-kind=buffered
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -mprintf-kind=buffered  %s -save-temps 2>&1 | FileCheck -check-prefix=BUFF %s
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=buffered  %s -save-temps 2>&1 | FileCheck -check-prefix=BUFF %s
 // BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=buffered" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
 // BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
 // BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "ir"
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
-// RUN: %clang -### -x hip --target=x86_64-pc-windows-msvc -fms-extensions \
+// RUN: %clang -### -x hip -nogpulib -nogpuinc --target=x86_64-pc-windows-msvc -fms-extensions \
 // RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MLLVM %s
 // MLLVM-NOT: "-mllvm"{{.*}}"-amdgpu-early-inline-all=true"{{.*}}"-mllvm"{{.*}}"-amdgpu-early-inline-all=true"
 
-// RUN: %clang -### -Xarch_device -g -nogpulib --cuda-gpu-arch=gfx900 \
+// RUN: %clang -### -Xarch_device -g -nogpulib -nogpuinc --cuda-gpu-arch=gfx900 \
 // RUN:   -Xarch_device -fcf-protection=branch -Xarch_device -mllvm=--inline-threshold=100 \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=DEV %s
 // DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch" {{.*}}"-mllvm" "--inline-threshold=100"
 // DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch" {{.*}}"-mllvm" "--inline-threshold=100"
 // DEV-NOT: clang{{.*}} {{.*}} "-debug-info-kind={{.*}}"
 
-// RUN: %clang -### -Xarch_host -g -nogpulib --cuda-gpu-arch=gfx900 \
+// RUN: %clang -### -Xarch_host -g -nogpulib -nogpuinc --cuda-gpu-arch=gfx900 \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=HOST %s
 // HOST-NOT: "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}"
 // HOST-NOT: "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}"
@@ -169,3 +169,63 @@
 // RUN: %clang -### -nogpuinc -nogpulib -fhip-fp32-correctly-rounded-divide-sqrt \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=CRDS %s
 // CRDS-NOT: "-f{{(no-)?}}hip-fp32-correctly-rounded-divide-sqrt"
+
+// Check -fgpu-approx-transcendentals is passed to clang -cc1 but
+// (default) -fno-gpu-approx-transcendentals is not.
+// -ffast-math implies -fgpu-approx-transcendentals, which can be overridden
+// by -fno-gpu-approx-transcendentals.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=APPROX %s
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -ffast-math \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=APPROX %s
+
+// APPROX: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fgpu-approx-transcendentals"
+// APPROX: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fgpu-approx-transcendentals"
+
+// RUN: %clang -### -nogpuinc -nogpulib -fno-gpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib -ffast-math -fno-fast-math \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib -ffast-math -fno-gpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// NOAPPROX-NOT: "-f{{(no-)?}}gpu-approx-transcendentals"
+
+// Check no warnings for -fgpu-approx-transcendentals.
+
+// RUN: %clang -fdriver-only -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | count 0
+
+// RUN: %clang -fdriver-only -Werror --target=x86_64-unknown-linux-gnu -nostdinc -nostdlib -fgpu-approx-transcendentals \
+// RUN:   -x c++ %s 2>&1 | count 0
+/ Check -fno-offload-uniform-block is passed to clang -cc1 but
+// (default) -fno-offload-uniform-block is not.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fno-offload-uniform-block \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOUNIBLK %s
+
+// NOUNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fno-offload-uniform-block"
+// NOUNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fno-offload-uniform-block"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -foffload-uniform-block \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=UNIBLK %s
+
+// UNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-foffload-uniform-block"
+// UNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-foffload-uniform-block"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=DEFUNIBLK %s
+
+// DEFUNIBLK-NOT: "-f{{(no-)?}}offload-uniform-block"
+
+// Check no warnings for -f[no-]offload-uniform-block.
+
+// RUN: %clang -fdriver-only -c -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fno-offload-uniform-block \
+// RUN:   -foffload-uniform-block --cuda-gpu-arch=gfx906 %s 2>&1 | count 0

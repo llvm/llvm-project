@@ -22,6 +22,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -112,7 +113,7 @@ private:
   uint64_t fileSize = 0;
 
   std::vector<WasmInitEntry> initFunctions;
-  llvm::StringMap<std::vector<InputChunk *>> customSectionMapping;
+  llvm::MapVector<StringRef, std::vector<InputChunk *>> customSectionMapping;
 
   // Stable storage for command export wrapper function name strings.
   std::list<std::string> commandExportWrapperNames;
@@ -162,7 +163,7 @@ void Writer::calculateCustomSections() {
 void Writer::createCustomSections() {
   log("createCustomSections");
   for (auto &pair : customSectionMapping) {
-    StringRef name = pair.first();
+    StringRef name = pair.first;
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
 
     OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
@@ -290,7 +291,7 @@ void Writer::writeBuildId() {
   case BuildIdKind::Fast: {
     std::vector<uint8_t> fileHash(8);
     computeHash(fileHash, buf, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      support::endian::write64le(dest, xxHash64(arr));
+      support::endian::write64le(dest, xxh3_64bits(arr));
     });
     makeUUID(5, fileHash, buildId);
     break;
@@ -357,13 +358,6 @@ void Writer::layoutMemory() {
       memoryPtr = config->globalBase;
     }
   } else {
-    if (!config->globalBase && !config->relocatable && !config->isPic) {
-      // The default offset for static/global data, for when --global-base is
-      // not specified on the command line.  The precise value of 1024 is
-      // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
-      // emscripten used prior to wasm-ld).
-      config->globalBase = 1024;
-    }
     memoryPtr = config->globalBase;
   }
 
@@ -443,6 +437,16 @@ void Writer::layoutMemory() {
     // TODO: Update once we decide on a reasonable limit here:
     // https://github.com/WebAssembly/memory64/issues/33
     maxMemorySetting = 1ULL << 34;
+  }
+
+  if (config->initialHeap != 0) {
+    if (config->initialHeap != alignTo(config->initialHeap, WasmPageSize))
+      error("initial heap must be " + Twine(WasmPageSize) + "-byte aligned");
+    uint64_t maxInitialHeap = maxMemorySetting - memoryPtr;
+    if (config->initialHeap > maxInitialHeap)
+      error("initial heap too large, cannot be greater than " +
+            Twine(maxInitialHeap));
+    memoryPtr += config->initialHeap;
   }
 
   if (config->initialMemory != 0) {
@@ -675,7 +679,10 @@ done:
   // memory is not being imported then we can assume its zero initialized.
   // In the case the memory is imported, and we can use the memory.fill
   // instruction, then we can also avoid including the segments.
-  if (config->memoryImport.has_value() && !allowed.count("bulk-memory"))
+  // Finally, if we are emitting relocations, they may refer to locations within
+  // the bss segments, so these segments need to exist in the binary.
+  if (config->emitRelocs ||
+      (config->memoryImport.has_value() && !allowed.count("bulk-memory")))
     config->emitBssSegments = true;
 
   if (allowed.count("extended-const"))
@@ -1681,7 +1688,6 @@ void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
   if (!config->isPic) {
-    config->tableBase = 1;
     if (WasmSym::definedTableBase)
       WasmSym::definedTableBase->setVA(config->tableBase);
     if (WasmSym::definedTableBase32)

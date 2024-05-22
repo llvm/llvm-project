@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
-// rdar://problem/13359718
 // Substitute the actual type for a method returning instancetype.
 @interface NSObject
 + (id)alloc;

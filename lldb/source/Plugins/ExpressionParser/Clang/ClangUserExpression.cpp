@@ -27,7 +27,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -873,7 +872,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 }
 
 lldb::addr_t ClangUserExpression::GetCppObjectPointer(
-    lldb::StackFrameSP frame_sp, ConstString &object_name, Status &err) {
+    lldb::StackFrameSP frame_sp, llvm::StringRef object_name, Status &err) {
   auto valobj_sp =
       GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
 
@@ -890,9 +889,9 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormat(
-        "Couldn't load '%s' because its value couldn't be evaluated",
-        object_name.AsCString());
+    err.SetErrorStringWithFormatv(
+        "Couldn't load '{0}' because its value couldn't be evaluated",
+        object_name);
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -911,18 +910,17 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     if (!frame_sp)
       return true;
 
-    ConstString object_name;
-
-    if (m_in_cplusplus_method) {
-      object_name.SetCString("this");
-    } else if (m_in_objectivec_method) {
-      object_name.SetCString("self");
-    } else {
+    if (!m_in_cplusplus_method && !m_in_objectivec_method) {
       diagnostic_manager.PutString(
           eDiagnosticSeverityError,
           "need object pointer but don't know the language");
       return false;
     }
+
+    static constexpr llvm::StringLiteral g_cplusplus_object_name("this");
+    static constexpr llvm::StringLiteral g_objc_object_name("self");
+    llvm::StringRef object_name =
+        m_in_cplusplus_method ? g_cplusplus_object_name : g_objc_object_name;
 
     Status object_ptr_error;
 
@@ -943,14 +941,14 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     }
 
     if (!object_ptr_error.Success()) {
-      exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (substituting 0). %s\n",
-          object_name.AsCString(), object_ptr_error.AsCString());
+      exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Format(
+          "warning: `{0}' is not accessible (substituting 0). {1}\n",
+          object_name, object_ptr_error.AsCString());
       object_ptr = 0;
     }
 
     if (m_in_objectivec_method) {
-      ConstString cmd_name("_cmd");
+      static constexpr llvm::StringLiteral cmd_name("_cmd");
 
       cmd_ptr = GetObjectPointer(frame_sp, cmd_name, object_ptr_error);
 

@@ -23,9 +23,6 @@ class StringRef;
 namespace LoongArch {
 
 enum FeatureKind : uint32_t {
-  FK_INVALID = 0,
-  FK_NONE = 1,
-
   // 64-bit ISA is available.
   FK_64BIT = 1 << 1,
 
@@ -67,11 +64,14 @@ struct ArchInfo {
   uint32_t Features;
 };
 
-ArchKind parseArch(StringRef Arch);
+bool isValidArchName(StringRef Arch);
 bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
+bool isValidCPUName(StringRef TuneCPU);
+void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
+StringRef getDefaultArch(bool Is64Bit);
 
 } // namespace LoongArch
 
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_LOONGARCHTARGETPARSER_H
+#endif // LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H

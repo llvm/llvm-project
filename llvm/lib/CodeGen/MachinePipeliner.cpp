@@ -1039,7 +1039,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         const MCProcResourceDesc *ProcResource =
             STI->getSchedModel().getProcResource(PRE.ProcResourceIdx);
@@ -1082,7 +1082,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         Resources[PRE.ProcResourceIdx]++;
       }
@@ -2225,7 +2225,7 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 }
 
 /// Return true for an order or output dependence that is loop carried
-/// potentially. A dependence is loop carried if the destination defines a valu
+/// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
 bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
                                          bool isSucc) {
@@ -2251,10 +2251,12 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
       SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
     return true;
 
-  // Only chain dependences between a load and store can be loop carried.
-  if (!DI->mayStore() || !SI->mayLoad())
+  if (!DI->mayLoadOrStore() || !SI->mayLoadOrStore())
     return false;
 
+  // The conservative assumption is that a dependence between memory operations
+  // may be loop carried. The following code checks when it can be proved that
+  // there is no loop carried dependence.
   unsigned DeltaS, DeltaD;
   if (!computeDelta(*SI, DeltaS) || !computeDelta(*DI, DeltaD))
     return true;
@@ -2635,7 +2637,7 @@ bool SMSchedule::isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi) {
 ///        v1 = phi(v2, v3)
 ///  (Def) v3 = op v1
 ///  (MO)   = v1
-/// If MO appears before Def, then then v1 and v3 may get assigned to the same
+/// If MO appears before Def, then v1 and v3 may get assigned to the same
 /// register.
 bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
                                        MachineInstr *Def, MachineOperand &MO) {
@@ -2706,7 +2708,7 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
     if (OldCycle != NewCycle) {
       InstrToCycle[&SU] = NewCycle;
       auto &OldS = getInstructions(OldCycle);
-      llvm::erase_value(OldS, &SU);
+      llvm::erase(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
       LLVM_DEBUG(dbgs() << "SU(" << SU.NodeNum
                         << ") is not pipelined; moving from cycle " << OldCycle
@@ -3092,7 +3094,7 @@ void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       ++MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3104,7 +3106,7 @@ void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       --MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3220,10 +3222,10 @@ int ResourceManager::calculateResMII() const {
         if (SwpDebugResource) {
           const MCProcResourceDesc *Desc =
               SM.getProcResource(PRE.ProcResourceIdx);
-          dbgs() << Desc->Name << ": " << PRE.Cycles << ", ";
+          dbgs() << Desc->Name << ": " << PRE.ReleaseAtCycle << ", ";
         }
       });
-      ResourceCount[PRE.ProcResourceIdx] += PRE.Cycles;
+      ResourceCount[PRE.ProcResourceIdx] += PRE.ReleaseAtCycle;
     }
     LLVM_DEBUG(if (SwpDebugResource) dbgs() << "\n");
   }

@@ -107,7 +107,8 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
 ///
 /// For example, given `b^ar()` wher bar return Foo, this function returns the
 /// definition of class Foo.
-std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos);
+std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
+                                    const SymbolIndex *Index);
 
 /// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).

@@ -1,4 +1,4 @@
-.. pstl-status:
+.. _pstl-status:
 
 ==========================
 libc++ Parallel STL Status
@@ -19,7 +19,7 @@ assigned to these sub-projects. This is imperative to effective implementation
 so that work is not duplicated.
 
 If you are interested in contributing to the libc++ PSTL, please send a message
-to the #libcxx channel in the LLVM discoard. Please *do not* start working on
+to the #libcxx channel in the LLVM discord. Please *do not* start working on
 any of the *assigned* items below.
 
 Sub-Projects in the Implementation Effort

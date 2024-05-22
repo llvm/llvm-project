@@ -238,12 +238,12 @@ define amdgpu_kernel void @s_fneg_v2i16(ptr addrspace(1) %out, i32 %arg) {
 }
 
 ; FUNC-LABEL: {{^}}v_fneg_v2i16:
-; SI: v_lshlrev_b32_e32 v1, 16, v1
+; SI: v_xor_b32_e32 v1, 0x8000, v1
 ; SI: v_xor_b32_e32 v0, 0x8000, v0
-; SI: v_xor_b32_e32 v1, 0x80000000, v1
+; SI: v_lshlrev_b32_e32 v2, 16, v1
 ; SI: v_and_b32_e32 v0, 0xffff, v0
-; SI: v_or_b32_e32 v0, v0, v1
-; SI: v_lshrrev_b32_e32 v1, 16, v1
+; SI: v_or_b32_e32 v0, v0, v2
+; SI: v_and_b32_e32 v1, 0xffff, v1
 
 ; VI: s_waitcnt
 ; VI-NEXT: v_xor_b32_e32 v0, 0x80008000, v0

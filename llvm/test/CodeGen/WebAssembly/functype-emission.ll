@@ -3,8 +3,8 @@
 ; Demonstrates that appropriate .functype directives are emitted for defined
 ; functions, declared functions, and any libcalls.
 
-; CHECK: .functype __unordtf2 (i64, i64, i64, i64) -> (i32)
 ; CHECK: .functype __multi3 (i32, i64, i64, i64, i64) -> ()
+; CHECK: .functype __unordtf2 (i64, i64, i64, i64) -> (i32)
 ; CHECK: .functype defined_fun_1 (f64) -> (i64)
 ; CHECK: .functype defined_fun_2 (f64, i32) -> (i64)
 ; CHECK: .functype declared_fun (i32, f32, i64) -> (i32)

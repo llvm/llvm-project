@@ -63,6 +63,9 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
   }
+
+  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu))
+    Features.push_back("+fast-unaligned-access");
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -166,6 +169,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+save-restore");
   else
     Features.push_back("-save-restore");
+
+  // -mno-unaligned-access is default, unless -munaligned-access is specified.
+  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
+                   options::OPT_mno_unaligned_access, "fast-unaligned-access");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
@@ -294,7 +301,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
       return "rv32imafdc";
     else if (MABI.starts_with_insensitive("lp64")) {
       if (Triple.isAndroid())
-        return "rv64imafdc_zbb";
+        return "rv64imafdcv_zba_zbb_zbs";
 
       return "rv64imafdc";
     }
@@ -314,7 +321,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv64imac";
     else if (Triple.isAndroid())
-      return "rv64imafdc_zbb";
+      return "rv64imafdcv_zba_zbb_zbs";
     else
       return "rv64imafdc";
   }

@@ -193,23 +193,6 @@ enum EdgeKind_i386 : Edge::Kind {
 /// only
 const char *getEdgeKindName(Edge::Kind K);
 
-/// Returns true if the given uint32_t value is in range for a uint16_t.
-inline bool isInRangeForImmU16(uint32_t Value) {
-  return Value <= std::numeric_limits<uint16_t>::max();
-}
-
-/// Returns true if the given int32_t value is in range for an int16_t.
-inline bool isInRangeForImmS16(int32_t Value) {
-  return (Value >= std::numeric_limits<int16_t>::min() &&
-          Value <= std::numeric_limits<int16_t>::max());
-}
-
-/// Returns true if the given int64_t value is in range for an int32_t.
-inline bool isInRangeForImmS32(int64_t Value) {
-  return (Value >= std::numeric_limits<int32_t>::min() &&
-          Value <= std::numeric_limits<int32_t>::max());
-}
-
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
@@ -240,7 +223,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case i386::Pointer16: {
     uint32_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmU16(Value)))
+    if (LLVM_LIKELY(isUInt<16>(Value)))
       *(ulittle16_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -250,7 +233,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case i386::PCRel16: {
     int32_t Value =
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS16(Value)))
+    if (LLVM_LIKELY(isInt<16>(Value)))
       *(little16_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);

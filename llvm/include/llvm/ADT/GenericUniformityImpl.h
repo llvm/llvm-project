@@ -49,8 +49,6 @@
 
 #define DEBUG_TYPE "uniformity"
 
-using namespace llvm;
-
 namespace llvm {
 
 template <typename Range> auto unique(Range &&R) {
@@ -129,11 +127,11 @@ private:
   const ContextT &Context;
 
   void computeCyclePO(const CycleInfoT &CI, const CycleT *Cycle,
-                      SmallPtrSetImpl<BlockT *> &Finalized);
+                      SmallPtrSetImpl<const BlockT *> &Finalized);
 
-  void computeStackPO(SmallVectorImpl<BlockT *> &Stack, const CycleInfoT &CI,
-                      const CycleT *Cycle,
-                      SmallPtrSetImpl<BlockT *> &Finalized);
+  void computeStackPO(SmallVectorImpl<const BlockT *> &Stack,
+                      const CycleInfoT &CI, const CycleT *Cycle,
+                      SmallPtrSetImpl<const BlockT *> &Finalized);
 };
 
 template <typename> class DivergencePropagator;
@@ -342,11 +340,10 @@ public:
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
   using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
-  GenericUniformityAnalysisImpl(const FunctionT &F, const DominatorTreeT &DT,
-                                const CycleInfoT &CI,
+  GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
-      : Context(CI.getSSAContext()), F(F), CI(CI), TTI(TTI), DT(DT),
-        SDA(Context, DT, CI) {}
+      : Context(CI.getSSAContext()), F(*Context.getFunction()), CI(CI),
+        TTI(TTI), DT(DT), SDA(Context, DT, CI) {}
 
   void initialize();
 
@@ -947,19 +944,22 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
   if (Cycle->contains(DivTermBlock))
     return nullptr;
 
+  const auto *OriginalCycle = Cycle;
+  const auto *Parent = Cycle->getParentCycle();
+  while (Parent && !Parent->contains(DivTermBlock)) {
+    Cycle = Parent;
+    Parent = Cycle->getParentCycle();
+  }
+
+  // If the original cycle is not the outermost cycle, then the outermost cycle
+  // is irreducible. If the outermost cycle were reducible, then external
+  // diverged paths would not reach the original inner cycle.
+  (void)OriginalCycle;
+  assert(Cycle == OriginalCycle || !Cycle->isReducible());
+
   if (Cycle->isReducible()) {
     assert(Cycle->getHeader() == JoinBlock);
     return nullptr;
-  }
-
-  const auto *Parent = Cycle->getParentCycle();
-  while (Parent && !Parent->contains(DivTermBlock)) {
-    // If the join is inside a child, then the parent must be
-    // irreducible. The only join in a reducible cyle is its own
-    // header.
-    assert(!Parent->isReducible());
-    Cycle = Parent;
-    Parent = Cycle->getParentCycle();
   }
 
   LLVM_DEBUG(dbgs() << "cycle made divergent by external branch\n");
@@ -977,7 +977,7 @@ getIntDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
                const BlockT *JoinBlock, const DominatorTreeT &DT,
                ContextT &Context) {
   LLVM_DEBUG(dbgs() << "examine join " << Context.print(JoinBlock)
-                    << "for internal branch " << Context.print(DivTermBlock)
+                    << " for internal branch " << Context.print(DivTermBlock)
                     << "\n");
   if (DT.properlyDominates(DivTermBlock, JoinBlock))
     return nullptr;
@@ -1135,10 +1135,9 @@ bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
 
 template <typename ContextT>
 GenericUniformityInfo<ContextT>::GenericUniformityInfo(
-    FunctionT &Func, const DominatorTreeT &DT, const CycleInfoT &CI,
-    const TargetTransformInfo *TTI)
-    : F(&Func) {
-  DA.reset(new ImplT{Func, DT, CI, TTI});
+    const DominatorTreeT &DT, const CycleInfoT &CI,
+    const TargetTransformInfo *TTI) {
+  DA.reset(new ImplT{DT, CI, TTI});
 }
 
 template <typename ContextT>
@@ -1214,6 +1213,12 @@ bool GenericUniformityInfo<ContextT>::hasDivergence() const {
   return DA->hasDivergence();
 }
 
+template <typename ContextT>
+const typename ContextT::FunctionT &
+GenericUniformityInfo<ContextT>::getFunction() const {
+  return DA->getFunction();
+}
+
 /// Whether \p V is divergent at its definition.
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
@@ -1243,8 +1248,8 @@ void GenericUniformityInfo<ContextT>::print(raw_ostream &out) const {
 
 template <typename ContextT>
 void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
-    SmallVectorImpl<BlockT *> &Stack, const CycleInfoT &CI, const CycleT *Cycle,
-    SmallPtrSetImpl<BlockT *> &Finalized) {
+    SmallVectorImpl<const BlockT *> &Stack, const CycleInfoT &CI,
+    const CycleT *Cycle, SmallPtrSetImpl<const BlockT *> &Finalized) {
   LLVM_DEBUG(dbgs() << "inside computeStackPO\n");
   while (!Stack.empty()) {
     auto *NextBB = Stack.back();
@@ -1313,9 +1318,9 @@ void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
 template <typename ContextT>
 void ModifiedPostOrder<ContextT>::computeCyclePO(
     const CycleInfoT &CI, const CycleT *Cycle,
-    SmallPtrSetImpl<BlockT *> &Finalized) {
+    SmallPtrSetImpl<const BlockT *> &Finalized) {
   LLVM_DEBUG(dbgs() << "inside computeCyclePO\n");
-  SmallVector<BlockT *> Stack;
+  SmallVector<const BlockT *> Stack;
   auto *CycleHeader = Cycle->getHeader();
 
   LLVM_DEBUG(dbgs() << "  noted header: "
@@ -1352,11 +1357,11 @@ void ModifiedPostOrder<ContextT>::computeCyclePO(
 /// \brief Generically compute the modified post order.
 template <typename ContextT>
 void llvm::ModifiedPostOrder<ContextT>::compute(const CycleInfoT &CI) {
-  SmallPtrSet<BlockT *, 32> Finalized;
-  SmallVector<BlockT *> Stack;
+  SmallPtrSet<const BlockT *, 32> Finalized;
+  SmallVector<const BlockT *> Stack;
   auto *F = CI.getFunction();
   Stack.reserve(24); // FIXME made-up number
-  Stack.push_back(GraphTraits<FunctionT *>::getEntryNode(F));
+  Stack.push_back(&F->front());
   computeStackPO(Stack, CI, nullptr, Finalized);
 }
 

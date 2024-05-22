@@ -89,6 +89,7 @@ subroutine unknown_function_call(x)
 end subroutine
 !CHECK-LABEL: ------------ scheduling forall in _QPunknown_function_call ------------
 !CHECK-NEXT: unknown effect: {{.*}} fir.call @_QPfoo
+!CHECK-NEXT: unknown effect: {{.*}} fir.call @_QPfoo
 !CHECK-NEXT: conflict: R/W: <unknown> W:<block argument> of type '!fir.ref<!fir.array<10xf32>>' at index: 0
 !CHECK-NEXT: run 1 save    : forall/region_assign1/rhs
 !CHECK-NEXT: run 2 evaluate: forall/region_assign1
@@ -106,6 +107,7 @@ subroutine unknown_function_call2(x)
   forall(i=1:10) x(i) = foo2(i)
 end subroutine
 !CHECK-LABEL: ------------ scheduling forall in _QPunknown_function_call2 ------------
+!CHECK-NEXT: unknown effect: {{.*}} fir.call @_QPfoo2(
 !CHECK-NEXT: unknown effect: {{.*}} fir.call @_QPfoo2(
 !CHECK-NEXT: conflict: R/W: <unknown> W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0
 !CHECK-NEXT: run 1 save    : forall/region_assign1/rhs

@@ -110,7 +110,7 @@ namespace llvm {
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
-    EVT changeTypeToInteger() {
+    EVT changeTypeToInteger() const {
       if (isVector())
         return changeVectorElementTypeToInteger();
 

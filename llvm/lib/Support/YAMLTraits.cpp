@@ -75,13 +75,6 @@ Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
 
-// Pin the vtables to this file.
-void Input::HNode::anchor() {}
-void Input::EmptyHNode::anchor() {}
-void Input::ScalarHNode::anchor() {}
-void Input::MapHNode::anchor() {}
-void Input::SequenceHNode::anchor() {}
-
 bool Input::outputting() const {
   return false;
 }
@@ -99,8 +92,9 @@ bool Input::setCurrentDocument() {
       ++DocIterator;
       return setCurrentDocument();
     }
+    releaseHNodeBuffers();
     TopNode = createHNodes(N);
-    CurrentNode = TopNode.get();
+    CurrentNode = TopNode;
     return true;
   }
   return false;
@@ -162,6 +156,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
   if (!CurrentNode) {
     if (Required)
       EC = make_error_code(errc::invalid_argument);
+    else
+      UseDefault = true;
     return false;
   }
 
@@ -174,7 +170,7 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
     return false;
   }
   MN->ValidKeys.push_back(Key);
-  HNode *Value = MN->Mapping[Key].first.get();
+  HNode *Value = MN->Mapping[Key].first;
   if (!Value) {
     if (Required)
       setError(CurrentNode, Twine("missing required key '") + Key + "'");
@@ -237,7 +233,7 @@ bool Input::preflightElement(unsigned Index, void *&SaveInfo) {
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     SaveInfo = CurrentNode;
-    CurrentNode = SQ->Entries[Index].get();
+    CurrentNode = SQ->Entries[Index];
     return true;
   }
   return false;
@@ -254,7 +250,7 @@ bool Input::preflightFlowElement(unsigned index, void *&SaveInfo) {
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     SaveInfo = CurrentNode;
-    CurrentNode = SQ->Entries[index].get();
+    CurrentNode = SQ->Entries[index];
     return true;
   }
   return false;
@@ -313,7 +309,7 @@ bool Input::bitSetMatch(const char *Str, bool) {
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     unsigned Index = 0;
     for (auto &N : SQ->Entries) {
-      if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N.get())) {
+      if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N)) {
         if (SN->value().equals(Str)) {
           BitValuesUsed[Index] = true;
           return true;
@@ -336,7 +332,7 @@ void Input::endBitSetScalar() {
     assert(BitValuesUsed.size() == SQ->Entries.size());
     for (unsigned i = 0; i < SQ->Entries.size(); ++i) {
       if (!BitValuesUsed[i]) {
-        setError(SQ->Entries[i].get(), "unknown bit value");
+        setError(SQ->Entries[i], "unknown bit value");
         return;
       }
     }
@@ -395,7 +391,14 @@ void Input::reportWarning(const SMRange &range, const Twine &message) {
   Strm->printError(range, message, SourceMgr::DK_Warning);
 }
 
-std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
+void Input::releaseHNodeBuffers() {
+  EmptyHNodeAllocator.DestroyAll();
+  ScalarHNodeAllocator.DestroyAll();
+  SequenceHNodeAllocator.DestroyAll();
+  MapHNodeAllocator.DestroyAll();
+}
+
+Input::HNode *Input::createHNodes(Node *N) {
   SmallString<128> StringStorage;
   switch (N->getType()) {
   case Node::NK_Scalar: {
@@ -405,27 +408,27 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
       // Copy string to permanent storage
       KeyStr = StringStorage.str().copy(StringAllocator);
     }
-    return std::make_unique<ScalarHNode>(N, KeyStr);
+    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
   }
   case Node::NK_BlockScalar: {
     BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N);
     StringRef ValueCopy = BSN->getValue().copy(StringAllocator);
-    return std::make_unique<ScalarHNode>(N, ValueCopy);
+    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
   }
   case Node::NK_Sequence: {
     SequenceNode *SQ = dyn_cast<SequenceNode>(N);
-    auto SQHNode = std::make_unique<SequenceHNode>(N);
+    auto SQHNode = new (SequenceHNodeAllocator.Allocate()) SequenceHNode(N);
     for (Node &SN : *SQ) {
       auto Entry = createHNodes(&SN);
       if (EC)
         break;
-      SQHNode->Entries.push_back(std::move(Entry));
+      SQHNode->Entries.push_back(Entry);
     }
-    return std::move(SQHNode);
+    return SQHNode;
   }
   case Node::NK_Mapping: {
     MappingNode *Map = dyn_cast<MappingNode>(N);
-    auto mapHNode = std::make_unique<MapHNode>(N);
+    auto mapHNode = new (MapHNodeAllocator.Allocate()) MapHNode(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
       ScalarNode *Key = dyn_cast_or_null<ScalarNode>(KeyNode);
@@ -457,7 +460,7 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
     return std::move(mapHNode);
   }
   case Node::NK_Null:
-    return std::make_unique<EmptyHNode>(N);
+    return new (EmptyHNodeAllocator.Allocate()) EmptyHNode(N);
   default:
     setError(N, "unknown node kind");
     return nullptr;

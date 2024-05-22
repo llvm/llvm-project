@@ -69,6 +69,11 @@ Filters:
     Scope: "myAnotherNamespace::"
     Args:  [0]
 
+  # char *str; // str is tainted
+  # sanitizeCmd(str) // str is not tainted anymore
+  - Name: sanitizeCmd
+    Args: [0]
+
 # A list of sink functions
 Sinks:
   # int x, y; // x and y are tainted

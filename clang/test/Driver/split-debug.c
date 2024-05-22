@@ -15,7 +15,7 @@
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
 // RUN: %clang -### -c -target wasm32 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
-// RUN: %clang -### -c -target amdgcn-amd-amdhsa -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+// RUN: %clang -### -c --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 // RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gno-split-dwarf -gsplit-dwarf -g -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 
 /// -gsplit-dwarf is a no-op on a non-ELF platform.

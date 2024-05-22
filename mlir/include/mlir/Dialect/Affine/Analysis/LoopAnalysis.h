@@ -70,7 +70,7 @@ bool isVectorizableLoopBody(AffineForOp loop,
                             NestedPattern &vectorTransferMatcher);
 
 /// Checks whether the loop is structurally vectorizable and that all the LoadOp
-/// and StoreOp matched have access indexing functions that are are either:
+/// and StoreOp matched have access indexing functions that are either:
 ///   1. invariant along the loop induction variable created by 'loop';
 ///   2. varying along at most one memory dimension. If such a unique dimension
 ///      is found, it is written into `memRefDim`.

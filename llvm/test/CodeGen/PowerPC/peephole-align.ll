@@ -208,10 +208,10 @@ entry:
 
 ; CHECK-LABEL: test_d2:
 ; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
+; CHECK: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
 ; CHECK: addi [[BASEV:[0-9]+]], [[REGSTRUCT]], d2v@toc@l
-; CHECK-DAG: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
-; CHECK-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
 ; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
 ; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
 ; CHECK-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: std [[REG1_1]], 8([[BASEV]])

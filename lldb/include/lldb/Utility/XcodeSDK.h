@@ -69,7 +69,7 @@ public:
 
   XcodeSDK &operator=(const XcodeSDK &other);
   XcodeSDK(const XcodeSDK&) = default;
-  bool operator==(const XcodeSDK &other);
+  bool operator==(const XcodeSDK &other) const;
 
   /// Return parsed SDK type and version number.
   Info Parse() const;

@@ -131,10 +131,22 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 }
 #endif
 
+struct ThreadStartParams {
+  thread_callback_t start_routine;
+  void *arg;
+};
+
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  return t->ThreadStart(GetTid());
+  t->ThreadStart(GetTid());
+
+  ThreadStartParams params;
+  t->GetStartData(params);
+
+  auto res = (*params.start_routine)(params.arg);
+  t->Destroy();  // POSIX calls this from TSD destructor.
+  return res;
 }
 
 INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
@@ -148,8 +160,8 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
   // one.  This is a bandaid fix for PR22025.
   bool detached = false;  // FIXME: how can we determine it on Windows?
   u32 current_tid = GetCurrentTidOrInvalid();
-  AsanThread *t =
-      AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
+  ThreadStartParams params = {start_routine, arg};
+  AsanThread *t = AsanThread::Create(params, current_tid, &stack, detached);
   return REAL(CreateThread)(security, stack_size, asan_thread_start, t,
                             thr_flags, tid);
 }
@@ -190,6 +202,8 @@ void InitializePlatformInterceptors() {
 }
 
 void InstallAtExitCheckLeaks() {}
+
+void InstallAtForkHandler() {}
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();

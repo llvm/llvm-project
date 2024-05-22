@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-unhandled-self-assignment %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField, \
-// RUN:               value: false}]}"
+// RUN:             {bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField: false}}"
 
 // Classes with pointer field are still caught.
 class PtrField {

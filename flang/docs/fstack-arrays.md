@@ -129,7 +129,7 @@ TODO
 
 ### Detecting Allocations to Move
 Allocations which could be moved to the stack will be detected by performing a
-forward dense data flow analysis using `mlir::dataflow::DenseDataFlowAnalysis`.
+forward dense data flow analysis using `mlir::dataflow::DenseForwardDataFlowAnalysis`.
 This analysis will search for SSA values created by a `fir.allocmem` which are
 always freed using `fir.freemem` within the same function.
 

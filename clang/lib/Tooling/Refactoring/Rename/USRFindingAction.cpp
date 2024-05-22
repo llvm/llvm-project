@@ -243,7 +243,8 @@ private:
           DiagnosticsEngine::Error,
           "SourceLocation in file %0 at offset %1 is invalid");
       Engine.Report(SourceLocation(), InvalidOffset)
-          << SourceMgr.getFileEntryForID(MainFileID)->getName() << SymbolOffset;
+          << SourceMgr.getFileEntryRefForID(MainFileID)->getName()
+          << SymbolOffset;
       return false;
     }
 
