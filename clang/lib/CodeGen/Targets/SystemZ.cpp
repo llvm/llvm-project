@@ -640,37 +640,47 @@ bool ZOSXPLinkABIInfo::isFPArgumentType(QualType Ty) const {
 }
 
 QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
-  if (const RecordType *RT = Ty->getAsStructureType()) {
+  const RecordType *RT = Ty->getAs<RecordType>();
+
+  if (RT && RT->isStructureOrClassType()) {
     const RecordDecl *RD = RT->getDecl();
     QualType Found;
 
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-      for (const auto &I : CXXRD->bases()) {
-        QualType Base = I.getType();
+      if (CXXRD->hasDefinition())
+        for (const auto &I : CXXRD->bases()) {
+          QualType Base = I.getType();
 
-        // Empty bases don't affect things either way.
-        if (isEmptyRecord(getContext(), Base, true))
-          continue;
+          // Empty bases don't affect things either way.
+          if (isEmptyRecord(getContext(), Base, true))
+            continue;
 
-        if (!Found.isNull())
-          return Ty;
-        Found = getSingleElementType(Base);
-      }
+          if (!Found.isNull())
+            return Ty;
+          Found = getSingleElementType(Base);
+        }
 
     // Check the fields.
     for (const auto *FD : RD->fields()) {
-      // Unlike isSingleElementStruct(), empty structure and array fields
-      // do count.  So do anonymous bitfields that aren't zero-sized.
-      if (getContext().getLangOpts().CPlusPlus &&
-          FD->isZeroLengthBitField(getContext()))
+      QualType FT = FD->getType();
+
+      // Ignore empty fields.
+      if (isEmptyField(getContext(), FD, true))
         continue;
 
-      // Unlike isSingleElementStruct(), arrays do not count.
-      // Nested structures still do though.
       if (!Found.isNull())
         return Ty;
-      Found = getSingleElementType(FD->getType());
+
+      // Treat single element arrays as the element.
+      while (const ConstantArrayType *AT =
+                 getContext().getAsConstantArrayType(FT)) {
+        if (AT->getZExtSize() != 1)
+          break;
+        FT = AT->getElementType();
+      }
+
+      Found = getSingleElementType(FT);
     }
 
     // Unlike isSingleElementStruct(), trailing padding is allowed.
@@ -724,6 +734,8 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
 
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
+      if (getContext().getTypeSize(FTSingleTy) != getContext().getTypeSize(FT))
+        return std::nullopt;
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
         switch (BT->getKind()) {

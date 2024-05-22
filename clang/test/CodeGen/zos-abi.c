@@ -85,6 +85,47 @@ struct complexlike_longdouble { long double re, im; };
 struct complexlike_longdouble pass_complexlike_longdouble(struct complexlike_longdouble arg) { return arg; }
 // CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
 
+struct single_element_float { float f; };
+struct complexlike_struct {
+  struct single_element_float x;
+  struct single_element_float y;
+};
+struct complexlike_struct pass_complexlike_struct(struct complexlike_struct arg) { return arg; }
+// CHECK-LABEL: define %struct.complexlike_struct @pass_complexlike_struct({ float, float } %{{.*}})
+
+struct single_element_float_arr {
+  unsigned int :0;
+  float f[1];
+};
+struct complexlike_struct2 {
+  struct single_element_float_arr x;
+  struct single_element_float_arr y;
+};
+struct complexlike_struct2 pass_complexlike_struct2(struct complexlike_struct2 arg) { return arg; }
+// CHECK-LABEL: define %struct.complexlike_struct2 @pass_complexlike_struct2({ float, float } %{{.*}})
+
+struct float_and_empties {
+  struct S {} s;
+  int a[0];
+  float f;
+};
+struct complexlike_struct3 {
+  struct float_and_empties x;
+  struct float_and_empties y;
+};
+struct complexlike_struct3 pass_complexlike_struct3(struct complexlike_struct3 arg) { return arg; }
+// CHECK-LABEL: define %struct.complexlike_struct3 @pass_complexlike_struct3({ float, float } %{{.*}})
+
+
+
+// structures with one field as complex type are not considered complex types.
+
+struct single_complex_struct {
+  _Complex float f;
+};
+struct single_complex_struct pass_single_complex_struct(struct single_complex_struct arg) {return arg; }
+// CHECK-LABEL: define inreg i64 @pass_single_complex_struct(i64 %{{.*}})
+
 // Structures with extra padding are not considered complex types.
 struct complexlike_float_padded1 {
   float x __attribute__((aligned(8)));
@@ -92,12 +133,32 @@ struct complexlike_float_padded1 {
 };
 struct complexlike_float_padded1 pass_complexlike_float_padded1(struct complexlike_float_padded1 arg) { return arg; }
 // CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded1([2 x i64] %{{.*}})
+
 struct complexlike_float_padded2 {
   float x;
   float y;
 } __attribute__((aligned(16)));
 struct complexlike_float_padded2 pass_complexlike_float_padded2(struct complexlike_float_padded2 arg) { return arg; }
 // CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded2([2 x i64] %{{.*}})
+
+struct single_padded_struct {
+  float f;
+  unsigned int :2;
+};
+struct complexlike_float_padded3 {
+  struct single_padded_struct x;
+  struct single_padded_struct y;
+};
+struct complexlike_float_padded3 pass_complexlike_float_padded3(struct complexlike_float_padded3 arg) { return arg; }
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded3([2 x i64] %{{.*}})
+
+struct multi_element_float_arr { float f[2]; };
+struct complexlike_struct4 {
+  struct multi_element_float_arr x;
+  struct multi_element_float_arr y;
+};
+struct complexlike_struct4 pass_complexlike_struct4(struct complexlike_struct4 arg) { return arg; }
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_struct4([2 x i64] %{{.*}})
 
 typedef double align32_double __attribute__((aligned(32)));
 struct complexlike_double_padded {
