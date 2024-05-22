@@ -309,6 +309,8 @@ private:
                        bool RequiresNullTerminator,
                        std::optional<cas::ObjectRef> *CASContents) const;
 
+  DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
+
 public:
   /// Get the 'stat' information for the given \p Path.
   ///
