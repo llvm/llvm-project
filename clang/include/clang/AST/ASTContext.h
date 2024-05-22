@@ -2611,7 +2611,7 @@ public:
   ///
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
-  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals);
+  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.

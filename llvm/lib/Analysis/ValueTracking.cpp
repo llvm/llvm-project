@@ -706,17 +706,22 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
           LHSRange = LHSRange.sub(*Offset);
         Known = Known.unionWith(LHSRange.toKnownBits());
       }
-      // X & Y u> C -> X u> C && Y u> C
-      if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) &&
-          match(LHS, m_c_And(m_V, m_Value()))) {
-        Known.One.setHighBits(
-            (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
+      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+        // X & Y u> C     -> X u> C && Y u> C
+        // X nuw- Y u> C  -> X u> C
+        if (match(LHS, m_c_And(m_V, m_Value())) ||
+            match(LHS, m_NUWSub(m_V, m_Value())))
+          Known.One.setHighBits(
+              (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
       }
-      // X | Y u< C -> X u< C && Y u< C
-      if ((Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) &&
-          match(LHS, m_c_Or(m_V, m_Value()))) {
-        Known.Zero.setHighBits(
-            (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
+      if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
+        // X | Y u< C    -> X u< C && Y u< C
+        // X nuw+ Y u< C -> X u< C && Y u< C
+        if (match(LHS, m_c_Or(m_V, m_Value())) ||
+            match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
+          Known.Zero.setHighBits(
+              (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
+        }
       }
     }
     break;
@@ -1115,6 +1120,45 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // (bitcast i64 %x to <2 x i32>)
         !I->getType()->isVectorTy()) {
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+      break;
+    }
+
+    const Value *V;
+    // Handle bitcast from floating point to integer.
+    if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
+        V->getType()->isFPOrFPVectorTy()) {
+      Type *FPType = V->getType()->getScalarType();
+      KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
+      FPClassTest FPClasses = Result.KnownFPClasses;
+
+      // TODO: Treat it as zero/poison if the use of I is unreachable.
+      if (FPClasses == fcNone)
+        break;
+
+      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+
+        if (FPClasses & fcInf)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
+
+        if (FPClasses & fcZero)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APInt::getZero(FPType->getScalarSizeInBits())));
+
+        Known.Zero.clearSignBit();
+        Known.One.clearSignBit();
+      }
+
+      if (Result.SignBit) {
+        if (*Result.SignBit)
+          Known.makeNegative();
+        else
+          Known.makeNonNegative();
+      }
+
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       break;
     }
 
@@ -2449,9 +2493,20 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   }
 }
 
+static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
+  ICmpInst::Predicate Pred;
+  return (match(Op0, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op1), m_Zero()))) ||
+          match(Op1, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op0), m_Zero())))) &&
+         Pred == ICmpInst::ICMP_EQ;
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y, bool NSW, bool NUW) {
+  // (X + (X != 0)) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   if (NUW)
     return isKnownNonZero(Y, DemandedElts, Q, Depth) ||
            isKnownNonZero(X, DemandedElts, Q, Depth);
@@ -2495,6 +2550,11 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
+  // (X - (X != 0)) is non zero
+  // ((X != 0) - X) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
     if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
@@ -2654,7 +2714,15 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1));
+  case Instruction::Xor:
+    // (X ^ (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
+    break;
   case Instruction::Or:
+    // (X | (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth) ||
            isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
@@ -2945,6 +3013,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isKnownNonZero(II->getArgOperand(0), Q, Depth);
       case Intrinsic::umax:
       case Intrinsic::uadd_sat:
+        // umax(X, (X != 0)) is non zero
+        // X +usat (X != 0) is non zero
+        if (matchOpWithOpEqZero(II->getArgOperand(0), II->getArgOperand(1)))
+          return true;
+
         return isKnownNonZero(II->getArgOperand(1), DemandedElts, Q, Depth) ||
                isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
       case Intrinsic::smax: {
@@ -4707,7 +4780,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass();
         return;
       }
-      if (isa<UndefValue>(Elt))
+      if (isa<PoisonValue>(Elt))
         continue;
       auto *CElt = dyn_cast<ConstantFP>(Elt);
       if (!CElt) {
@@ -4896,11 +4969,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // subnormal input could produce a negative zero output.
       const Function *F = II->getFunction();
       if (Q.IIQ.hasNoSignedZeros(II) ||
-          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))) {
+          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType())))
         Known.knownNot(fcNegZero);
-        if (KnownSrc.isKnownNeverNaN())
-          Known.signBitMustBeZero();
-      }
 
       break;
     }
@@ -9537,14 +9607,20 @@ void llvm::findValuesAffectedByCondition(
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
             AddAffected(X);
 
-          Value *Y;
-          // X & Y u> C -> X >u C && Y >u C
-          // X | Y u< C -> X u< C && Y u< C
-          if (ICmpInst::isUnsigned(Pred) &&
-              (match(A, m_And(m_Value(X), m_Value(Y))) ||
-               match(A, m_Or(m_Value(X), m_Value(Y))))) {
-            AddAffected(X);
-            AddAffected(Y);
+          if (ICmpInst::isUnsigned(Pred)) {
+            Value *Y;
+            // X & Y u> C    -> X >u C && Y >u C
+            // X | Y u< C    -> X u< C && Y u< C
+            // X nuw+ Y u< C -> X u< C && Y u< C
+            if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                match(A, m_Or(m_Value(X), m_Value(Y))) ||
+                match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
+              AddAffected(X);
+              AddAffected(Y);
+            }
+            // X nuw- Y u> C -> X u> C
+            if (match(A, m_NUWSub(m_Value(X), m_Value())))
+              AddAffected(X);
           }
         }
 

@@ -194,3 +194,30 @@ void h() {
   // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
 }
 }
+
+namespace GH91885 {
+
+void test(auto...args){
+    [&]<int idx>(){
+        using R = decltype( args...[idx] ) ;
+    }.template operator()<0>();
+}
+
+template<int... args>
+void test2(){
+  [&]<int idx>(){
+    using R = decltype( args...[idx] ) ; // #test2-R
+  }.template operator()<0>(); // #test2-call
+}
+
+void f( ) {
+  test(1);
+  test2<1>();
+  test2();
+  // expected-error@#test2-R {{invalid index 0 for pack args of size 0}}
+  // expected-note@#test2-call {{requested here}}
+  // expected-note@-3 {{requested here}}
+}
+
+
+}

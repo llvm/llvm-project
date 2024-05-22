@@ -233,9 +233,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // sources.
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
-
-    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, MVT::v2bf16, MVT::v2i16);
   }
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
@@ -744,9 +741,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v8i32, Expand);
 
-    if (!Subtarget->hasVOP3PInsts())
-      setOperationAction(ISD::BUILD_VECTOR,
-                         {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
+                       Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
     setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
@@ -959,6 +955,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
 const GCNSubtarget *SITargetLowering::getSubtarget() const {
   return Subtarget;
+}
+
+ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
+  return RCRegs;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1237,13 +1238,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
       switch (IntrID) {
       default:
+        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
         // XXX - Should this be volatile without known ordering?
         Info.flags |= MachineMemOperand::MOVolatile;
         break;
@@ -2980,12 +2981,20 @@ SDValue SITargetLowering::LowerFormalArguments(
                                    DL, Elts);
           }
 
-          SDValue CMemVT;
-          if (VT.isScalarInteger() && VT.bitsLT(NewArg.getSimpleValueType()))
-            CMemVT = DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewArg);
-          else
-            CMemVT = DAG.getBitcast(MemVT, NewArg);
-          NewArg = convertArgType(DAG, VT, MemVT, DL, CMemVT,
+          // If the argument was preloaded to multiple consecutive 32-bit
+          // registers because of misalignment between addressable SGPR tuples
+          // and the argument size, we can still assume that because of kernarg
+          // segment alignment restrictions that NewArg's size is the same as
+          // MemVT and just do a bitcast. If MemVT is less than 32-bits we add a
+          // truncate since we cannot preload to less than a single SGPR and the
+          // MemVT may be smaller.
+          EVT MemVTInt =
+              EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+          if (MemVT.bitsLT(NewArg.getSimpleValueType()))
+            NewArg = DAG.getNode(ISD::TRUNCATE, DL, MemVTInt, NewArg);
+
+          NewArg = DAG.getBitcast(MemVT, NewArg);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, NewArg,
                                   Ins[i].Flags.isSExt(), &Ins[i]);
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
@@ -3863,19 +3872,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InGlue.getNode())
-    Ops.push_back(InGlue);
-
-  // NOTE: This potentially results in *two* glue operands, and the wrong one
-  // might possibly show up where the other was intended. In particular,
-  // Emitter::EmitMachineNode() expects only the glued convergence token if it
-  // exists. Similarly, the selection of the call expects to match only the
-  // InGlue operand if it exists.
   if (SDValue Token = CLI.ConvergenceControlToken) {
-    Ops.push_back(SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE,
-                                             DL, MVT::Glue, Token),
-                          0));
+    SmallVector<SDValue, 2> GlueOps;
+    GlueOps.push_back(Token);
+    if (InGlue)
+      GlueOps.push_back(InGlue);
+
+    InGlue = SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE, DL,
+                                        MVT::Glue, GlueOps),
+                     0);
   }
+
+  if (InGlue)
+    Ops.push_back(InGlue);
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
@@ -7057,7 +7066,7 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
                                DAG.getSplatBuildVector(VecVT, SL, InsVal));
 
-  // 2. Mask off all other indicies except the required index within (1).
+  // 2. Mask off all other indices except the required index within (1).
   SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, BFM, ExtVal);
 
   // 3. Mask off the required index within the target vector.
@@ -7584,8 +7593,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
                           ? (ReqRetNumElts + 1) / 2
                           : ReqRetNumElts;
 
-  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    DMaskPop : (DMaskPop + 1) / 2;
+  int MaskPopDwords = (!IsD16 || Unpacked) ? DMaskPop : (DMaskPop + 1) / 2;
 
   MVT DataDwordVT = NumDataDwords == 1 ?
     MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
@@ -12070,11 +12078,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
     auto VecIdx = IdxOp->getZExtValue();
     auto ScalarSize = Op.getScalarValueSizeInBits();
-    if (ScalarSize != 32) {
+    if (ScalarSize < 32)
       Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
-    }
-
-    return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
+    return calculateSrcByte(ScalarSize >= 32 ? Op : Op.getOperand(0),
                             StartingIndex, Index);
   }
 

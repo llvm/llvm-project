@@ -70,3 +70,22 @@ subroutine lastprivate_iv_dec()
   end do
   !$omp end do
 end subroutine
+
+
+!CHECK-LABEL:  @_QPlastprivate_iv_i1
+subroutine lastprivate_iv_i1
+  integer*1 :: i1
+  i1=0
+!CHECK:    omp.wsloop
+!CHECK:      omp.loop_nest
+!CHECK:        fir.if %{{.*}} {
+!CHECK:          %[[I8_VAL:.*]] = fir.convert %{{.*}} : (i32) -> i8
+!CHECK:          fir.store %[[I8_VAL]] to %[[IV:.*]]#1 : !fir.ref<i8>
+!CHECK:          %[[IV_VAL:.*]] = fir.load %[[IV]]#0 : !fir.ref<i8>
+!CHECK:          hlfir.assign %[[IV_VAL]] to %{{.*}}#0 temporary_lhs : i8, !fir.ref<i8>
+!CHECK:        }
+  !$omp do lastprivate(i1)
+  do i1=1,8
+  enddo
+!$omp end do
+end subroutine

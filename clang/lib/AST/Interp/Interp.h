@@ -1245,6 +1245,8 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
     return false;
 
@@ -1536,9 +1538,6 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
 template <class T, ArithOp Op>
 bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
                   const Pointer &Ptr) {
-  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
-    return false;
-
   // A zero offset does not change the pointer.
   if (Offset.isZero()) {
     S.Stk.push<Pointer>(Ptr);
@@ -1556,8 +1555,12 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  uint64_t Index = Ptr.getIndex();
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  uint64_t Index;
+  if (Ptr.isOnePastEnd())
+    Index = MaxIndex;
+  else
+    Index = Ptr.getIndex();
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
@@ -1569,9 +1572,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-        << NewIndex
-        << /*array*/ static_cast<int>(!Ptr.inArray())
-        << static_cast<unsigned>(MaxIndex);
+        << NewIndex << /*array*/ static_cast<int>(!Ptr.inArray()) << MaxIndex;
     Invalid = true;
   };
 
@@ -1598,7 +1599,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     }
   }
 
-  if (Invalid && !Ptr.isDummy() && S.getLangOpts().CPlusPlus)
+  if (Invalid && S.getLangOpts().CPlusPlus)
     return false;
 
   // Offset is valid - compute it on unsigned.
@@ -2109,6 +2110,9 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
+
+  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
+    return false;
 
   if (!Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
