@@ -51,9 +51,9 @@ target datalayout = "p:32:32"
 @addrspace3 = internal addrspace(3) global i32 undef
 
 ; CHECK: @no.fold.addrspace.icmp.eq.gv.null = global i1 icmp eq (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
-; CHECK: @no.fold.addrspace.icmp.eq.null.gv = global i1 icmp eq (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
+; CHECK: @no.fold.addrspace.icmp.eq.null.gv = global i1 icmp eq (ptr addrspace(3) null, ptr addrspace(3) @addrspace3)
 ; CHECK: @no.fold.addrspace.icmp.ne.gv.null = global i1 icmp ne (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
-; CHECK: @no.fold.addrspace.icmp.ne.null.gv = global i1 icmp ne (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
+; CHECK: @no.fold.addrspace.icmp.ne.null.gv = global i1 icmp ne (ptr addrspace(3) null, ptr addrspace(3) @addrspace3)
 @no.fold.addrspace.icmp.eq.gv.null = global i1 icmp eq (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
 @no.fold.addrspace.icmp.eq.null.gv = global i1 icmp eq (ptr addrspace(3) null, ptr addrspace(3) @addrspace3)
 @no.fold.addrspace.icmp.ne.gv.null = global i1 icmp ne (ptr addrspace(3) @addrspace3, ptr addrspace(3) null)
