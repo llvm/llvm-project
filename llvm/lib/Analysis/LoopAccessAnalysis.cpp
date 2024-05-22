@@ -389,8 +389,8 @@ void RuntimePointerChecking::generateChecks(
 
 bool RuntimePointerChecking::needsChecking(
     const RuntimeCheckingPtrGroup &M, const RuntimeCheckingPtrGroup &N) const {
-  for (auto &I : M.Members)
-    for (auto &J : N.Members)
+  for (const auto &I : M.Members)
+    for (const auto &J : N.Members)
       if (needsChecking(I, J))
         return true;
   return false;
@@ -2062,9 +2062,10 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize)
+      if (HasSameSize) {
         // Write to the same location with the same size.
         return Dependence::Forward;
+      }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
                            "different type sizes\n");
       return Dependence::Unknown;
@@ -3029,10 +3030,11 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
   if (TTI) {
     TypeSize FixedWidth =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
-    if (FixedWidth.isNonZero())
+    if (FixedWidth.isNonZero()) {
       // Scale the vector width by 2 as rough estimate to also consider
       // interleaving.
       MaxTargetVectorWidthInBits = FixedWidth.getFixedValue() * 2;
+    }
 
     TypeSize ScalableWidth =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_ScalableVector);
