@@ -158,8 +158,7 @@ foreach (file IN LISTS files)
 endforeach ()
 
 add_custom_target(polly-check-format DEPENDS ${check_format_depends})
-set_target_properties(polly-check-format PROPERTIES FOLDER "Polly/Meta")
+set_target_properties(polly-check-format PROPERTIES FOLDER "Polly/Metatargets")
 
 add_custom_target(polly-update-format DEPENDS ${update_format_depends})
-set_target_properties(polly-update-format PROPERTIES FOLDER "Polly/Meta")
-
+set_target_properties(polly-update-format PROPERTIES FOLDER "Polly/Metatargets")

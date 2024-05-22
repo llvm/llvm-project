@@ -111,5 +111,5 @@ configure_file(
 
 # Add a legacy target spelling: polly-test
 add_custom_target(polly-test)
-set_target_properties(polly-test PROPERTIES FOLDER "Polly/Meta")
+set_target_properties(polly-test PROPERTIES FOLDER "Polly/Metatargets")
 add_dependencies(polly-test check-polly)
