@@ -1201,16 +1201,14 @@ void expectSymbolicIntegerLexMin(
   SymbolicLexOpt result = poly.findSymbolicIntegerLexMin();
 
   if (expectedLexminRepr.empty()) {
-    EXPECT_TRUE(
-        result.lexopt.getDomain().isEmpty(SolverKind::IntegerSimplex));
+    EXPECT_TRUE(result.lexopt.getDomain().isEmpty(SolverKind::IntegerSimplex));
   } else {
     PWMAFunction expectedLexmin = parsePWMAF(expectedLexminRepr);
     EXPECT_TRUE(result.lexopt.isEqual(expectedLexmin));
   }
 
   if (expectedUnboundedDomainRepr.empty()) {
-    EXPECT_TRUE(
-        result.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
+    EXPECT_TRUE(result.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
   } else {
     PresburgerSet expectedUnboundedDomain =
         parsePresburgerSet(expectedUnboundedDomainRepr);

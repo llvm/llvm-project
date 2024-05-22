@@ -722,8 +722,7 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
   // set empty.
   int64_t ineqPos = cstr.getNumInequalities();
   cstr.addInequality(eq);
-  bool isEmpty =
-      cstr.isEmpty(presburger::SolverKind::FourierMotzkin);
+  bool isEmpty = cstr.isEmpty(presburger::SolverKind::FourierMotzkin);
   cstr.removeInequality(ineqPos);
   return isEmpty;
 }
