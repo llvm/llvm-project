@@ -766,6 +766,7 @@ Miscellaneous Bug Fixes
 
 - Fixed an infinite recursion in ASTImporter, on return type declared inside
   body of C++11 lambda without trailing return (#GH68775).
+- Fixed declaration name source location of instantiated function definitions (GH71161).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
