@@ -615,6 +615,17 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
     o.close();
 }
 
+int getArgValue(args::ValueFlag<int> &arg, const int defaultValue,
+                const std::string &name) {
+    int v = defaultValue;
+    if (arg) {
+        v = args::get(arg);
+        requireTrue(v >= 1, name + " must be greater than 0");
+    }
+    logger.info("{}: {}", name, v);
+    return v;
+}
+
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
@@ -650,26 +661,8 @@ int main(int argc, const char **argv) {
 
     logger.info("AST & ICFG generation method: sequential");
 
-    {
-        int ASTPoolSize = 10;
-        if (argPoolSize) {
-            ASTPoolSize = args::get(argPoolSize);
-            requireTrue(ASTPoolSize >= 1,
-                        "AST pool size must be greater than 0");
-        }
-        logger.info("AST pool size: {}", ASTPoolSize);
-        Global.ASTPoolSize = ASTPoolSize;
-    }
-
-    {
-        int callDepth = 4;
-        if (argCallDepth) {
-            callDepth = args::get(argCallDepth);
-            requireTrue(callDepth >= 1, "Call depth must be greater than 0");
-        }
-        logger.info("Max call depth: {}", callDepth);
-        Global.callDepth = callDepth;
-    }
+    Global.ASTPoolSize = getArgValue(argPoolSize, 10, "AST pool size");
+    Global.callDepth = getArgValue(argCallDepth, 4, "Max call depth");
 
     setClangPath(argv[0]);
 
