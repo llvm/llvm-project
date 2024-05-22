@@ -2451,6 +2451,13 @@ static bool isItaniumPOD(const ASTContext &Context, const CXXRecordDecl *RD) {
 /// Does the target C++ ABI require us to skip over the tail-padding
 /// of the given class (considering it as a base class) when allocating
 /// objects?
+///
+/// This decision cannot be changed without breaking platform ABI
+/// compatibility. In ISO C++98, tail padding reuse was only permitted for
+/// non-POD base classes, but that restriction was removed retroactively by
+/// DR 43, and tail padding reuse is always permitted in all de facto C++
+/// language modes. However, many platforms use a variant of the old C++98
+/// rule for compatibility.
 static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
                                 const CXXRecordDecl *RD) {
   // This is equivalent to
@@ -2458,36 +2465,11 @@ static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
   // but with a lot of abstraction penalty stripped off.  This does
   // assume that these properties are set correctly even in C++98
   // mode; fortunately, that is true because we want to assign
-  // consistently semantics to the type-traits intrinsics (or at
+  // consistent semantics to the type-traits intrinsics (or at
   // least as many of them as possible).
   auto IsCXX11PODType = [&]() -> bool {
     return RD->isTrivial() && RD->isCXX11StandardLayout();
   };
-
-  if (Context.getLangOpts().getClangABICompat() <=
-      LangOptions::ClangABI::Ver18) {
-    switch (ABI.getKind()) {
-    // ABIs derived from Itanium: In Clang 18, did not check for over-large
-    // bit-fields or potentially overlapping members
-    case TargetCXXABI::GenericItanium:
-    case TargetCXXABI::GenericAArch64:
-    case TargetCXXABI::GenericARM:
-    case TargetCXXABI::iOS:
-    case TargetCXXABI::GenericMIPS:
-    case TargetCXXABI::XL:
-      return RD->isPOD();
-
-    case TargetCXXABI::AppleARM64:
-    case TargetCXXABI::Fuchsia:
-    case TargetCXXABI::WebAssembly:
-    case TargetCXXABI::WatchOS:
-      return IsCXX11PODType();
-
-    case TargetCXXABI::Microsoft:
-      return true;
-    }
-    llvm_unreachable("bad ABI kind");
-  }
 
   switch (ABI.getKind()) {
   // To preserve binary compatibility, the generic Itanium ABI has permanently
@@ -2497,26 +2479,44 @@ static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericARM:
   case TargetCXXABI::GenericMIPS:
-    return RD->isPOD() && isItaniumPOD(Context, RD);
+    if (!RD->isPOD())
+      return false;
+    // Prior to Clang 19, over-large bitfields and potentially overlapping
+    // members were not checked
+    return (Context.getLangOpts().getClangABICompat() <=
+            LangOptions::ClangABI::Ver18) ||
+           isItaniumPOD(Context, RD);
 
-  case TargetCXXABI::XL:
+  // The same as generic Itanium but does not honor the exception about classes
+  // with over-large bit-fields.
+  // FIXME: do the iOS/AppleARM64/WatchOS ABI care about potentially-overlapping
+  // members?
   case TargetCXXABI::iOS:
     return RD->isPOD();
 
   // https://github.com/WebAssembly/tool-conventions/blob/cd83f847828336f10643d1f48aa60867c428c55c/ItaniumLikeC%2B%2BABI.md
   // The same as Itanium except with C++11 POD instead of C++ TC1 POD
   case TargetCXXABI::WebAssembly:
-    return IsCXX11PODType() && isItaniumPOD(Context, RD);
+    if (!IsCXX11PODType())
+      return false;
+    return (Context.getLangOpts().getClangABICompat() <=
+            LangOptions::ClangABI::Ver18) ||
+           isItaniumPOD(Context, RD);
 
-  // Also uses C++11 POD but do not honor the Itanium exception about classes
-  // with over-large bitfields.
+  // Also use C++11 POD but without honoring the exception about classes with
+  // over-large bit-fields.
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::WatchOS:
+    return IsCXX11PODType();
+
+  // FIXME: do these two ABIs need to check isItaniumPOD?
+  case TargetCXXABI::XL:
+    return RD->isPOD();
   case TargetCXXABI::Fuchsia:
     return IsCXX11PODType();
 
-  // MSVC always allocates fields in the tail-padding of a base class
-  // subobject, even if they're POD.
+  // MSVC always allocates fields in the tail-padding of a base class subobject,
+  // even if they're POD.
   case TargetCXXABI::Microsoft:
     return true;
   }
