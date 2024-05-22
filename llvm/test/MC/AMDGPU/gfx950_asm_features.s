@@ -1149,3 +1149,36 @@ buffer_atomic_pk_add_bf16 v5, off, s[8:11], 0.5 offset:4095
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: buffer_atomic_pk_add_bf16 v5, off, s[8:11], -4.0 offset:4095 ; encoding: [0xff,0x0f,0x48,0xe1,0x00,0x05,0x02,0xf7]
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], -4.0 offset:4095
+
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, v2, v3, v4           ; encoding: [0x01,0x00,0xa9,0xd2,0x02,0x07,0x12,0x04]
+v_maximum3_f32 v1, v2, v3, v4
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, -v2, -v3, -v4        ; encoding: [0x01,0x00,0xa9,0xd2,0x02,0x07,0x12,0xe4]
+v_maximum3_f32 v1, -v2, -v3, -v4
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, -|v2|, -|v3|, -|v4|  ; encoding: [0x01,0x07,0xa9,0xd2,0x02,0x07,0x12,0xe4]
+v_maximum3_f32 v1, -|v2|, -|v3|, -|v4|
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, 0, 1.0, v3           ; encoding: [0x01,0x00,0xa9,0xd2,0x80,0xe4,0x0d,0x04]
+v_maximum3_f32 v1, 0.0, 1.0, v3
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v2, 0, v3, 1.0           ; encoding: [0x02,0x00,0xa9,0xd2,0x80,0x06,0xca,0x03]
+v_maximum3_f32 v2, 0.0, v3, 1.0
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, s8, v3, 1.0          ; encoding: [0x01,0x00,0xa9,0xd2,0x08,0x06,0xca,0x03]
+v_maximum3_f32 v1, s8, v3, 1.0
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_maximum3_f32 v1, v2, s8, v3           ; encoding: [0x01,0x00,0xa9,0xd2,0x02,0x11,0x0c,0x04]
+v_maximum3_f32 v1, v2, s8, v3
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_minimum3_f32 v0, v1, v2, v3           ; encoding: [0x00,0x00,0xa8,0xd2,0x01,0x05,0x0e,0x04]
+v_minimum3_f32 v0, v1, v2, v3
