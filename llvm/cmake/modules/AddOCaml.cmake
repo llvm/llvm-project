@@ -173,7 +173,8 @@ function(add_ocaml_library name)
     VERBATIM)
 
   add_custom_target("ocaml_${name}" ALL DEPENDS ${ocaml_outputs} "${bin}/${name}.odoc")
-  set_target_properties("ocaml_${name}" PROPERTIES FOLDER "LLVM/Bindings/OCaml")
+  get_subproject_title(subproject_title)
+  set_target_properties("ocaml_${name}" PROPERTIES FOLDER "${subproject_title}/Bindings/OCaml")
 
   set_target_properties("ocaml_${name}" PROPERTIES
     OCAML_FLAGS "-I;${bin}")
