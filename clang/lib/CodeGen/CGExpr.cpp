@@ -4701,7 +4701,7 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
     if (ThisTy != LambdaTy) {
       const CXXCastPath &BasePathArray = getContext().LambdaCastPaths.at(MD);
       Address Base = GetAddressOfBaseClass(
-          LambdaLV.getAddress(*this), ThisTy, BasePathArray.begin(),
+          LambdaLV.getAddress(), ThisTy, BasePathArray.begin(),
           BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
       LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
     }
