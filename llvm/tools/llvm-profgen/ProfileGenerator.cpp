@@ -76,10 +76,9 @@ static cl::opt<int, true> CSProfMaxContextDepth(
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));
 
 static cl::opt<double> ProfileDensityThreshold(
-    "profile-density-threshold", llvm::cl::init(20),
-    llvm::cl::desc(
-        "Set the profile density threshold(default: 20), which is used to "
-        "provide suggestions for user to increase the sampling rate.\n"),
+    "profile-density-threshold", llvm::cl::init(50),
+    llvm::cl::desc("If the profile density is below the given threshold, it "
+                   "will be suggested to increase the sampling rate."),
     llvm::cl::Optional);
 static cl::opt<bool> ShowDensity("show-density", llvm::cl::init(false),
                                  llvm::cl::desc("show profile density details"),
@@ -748,24 +747,24 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
   }
 }
 
-// Note taht ideally the size should be the number of function's instruction.
+// Note that ideally the size should be the number of function instruction.
 // However, for probe-based profile, we don't have the accurate instruction
-// count for each probe, Instead, the probe sample is the samples count for the
-// block, which is equivelant to total_instruction_samples/num_instruction in
+// count for each probe, instead, the probe sample is the samples count for the
+// block, which is equivelant to total_instruction_samples/num_of_instruction in
 // one block. Hence, we use the number of probe as a proxy for the function's
 // size.
 void ProfileGeneratorBase::calculateBodySamplesAndSize(
     const FunctionSamples &FSamples, uint64_t &TotalBodySamples,
     uint64_t &FuncBodySize) {
-  for (const auto &I : FSamples.getBodySamples()) {
+  FuncBodySize +=
+      FSamples.getBodySamples().size() + FSamples.getCallsiteSamples().size();
+
+  for (const auto &I : FSamples.getBodySamples())
     TotalBodySamples += I.second.getSamples();
-    FuncBodySize++;
-  }
 
   // The whole function could be inlined and optimized out, use the callsite
   // head samples instead to estimate the body count.
-  for (const auto &CallsiteSamples : FSamples.getCallsiteSamples()) {
-    FuncBodySize++;
+  for (const auto &CallsiteSamples : FSamples.getCallsiteSamples())
     for (const auto &Callee : CallsiteSamples.second) {
       // This is used for caluculating the binary-level density, so the
       // inlinees' samples and size should be included in the calculation.
@@ -773,7 +772,6 @@ void ProfileGeneratorBase::calculateBodySamplesAndSize(
                                   FuncBodySize);
       TotalBodySamples += Callee.second.getHeadSamplesEstimate();
     }
-  }
 }
 
 // Calculate Profile-density:
