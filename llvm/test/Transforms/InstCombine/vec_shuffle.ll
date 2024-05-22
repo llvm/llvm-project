@@ -2330,3 +2330,19 @@ define <4 x i16> @blend_elements_from_load(ptr align 8 %_0) {
   %rv = shufflevector <3 x i16> <i16 0, i16 undef, i16 undef>, <3 x i16> %load, <4 x i32> <i32 0, i32 1, i32 3, i32 5>
   ret <4 x i16> %rv
 }
+
+; FIXME: This is a miscompile.
+define i16 @pr92887(<2 x i16> %v) {
+; CHECK-LABEL: @pr92887(
+; CHECK-NEXT:    ret i16 poison
+;
+  %v0 = extractelement <2 x i16> %v, i64 0
+  %v0lo = and i16 %v0, 1
+  %v1 = extractelement <2 x i16> %v, i64 1
+  %v1lo = and i16 %v1, 1
+  %ins1 = insertelement <4 x i16> poison, i16 %v0lo, i64 0
+  %ins2 = insertelement <4 x i16> %ins1, i16 %v1lo, i64 1
+  %shuf = shufflevector <4 x i16> %ins2, <4 x i16> <i16 poison, i16 poison, i16 undef, i16 undef>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %extract = extractelement <4 x i16> %shuf, i32 2
+  ret i16 %extract
+}
