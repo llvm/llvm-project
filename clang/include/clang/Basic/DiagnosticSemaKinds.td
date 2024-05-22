@@ -310,7 +310,7 @@ def err_invalid_vector_long_double_decl_spec : Error<
 def err_invalid_vector_complex_decl_spec : Error<
   "cannot use '_Complex' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
-  "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
+  "use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
 def err_redeclaration_different_type : Error<
   "redeclaration of %0 with a different type%diff{: $ vs $|}1,2">;
