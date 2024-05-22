@@ -457,9 +457,9 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Read))
     return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
-    return false;
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
     return false;
