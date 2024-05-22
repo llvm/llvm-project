@@ -3718,7 +3718,6 @@ static const struct Extension {
     {"sb", {AArch64::FeatureSB}},
     {"ssbs", {AArch64::FeatureSSBS}},
     {"tme", {AArch64::FeatureTME}},
-    {"fpmr", {AArch64::FeatureFPMR}},
     {"fp8", {AArch64::FeatureFP8}},
     {"faminmax", {AArch64::FeatureFAMINMAX}},
     {"fp8fma", {AArch64::FeatureFP8FMA}},
@@ -3731,7 +3730,7 @@ static const struct Extension {
     {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
     {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
     {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
-    {"sme-fa64",  {AArch64::FeatureSMEFA64}},
+    {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
 };
