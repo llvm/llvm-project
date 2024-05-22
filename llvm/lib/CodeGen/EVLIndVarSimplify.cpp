@@ -96,7 +96,7 @@ static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
         V = V.zextOrTrunc(Fixed->getBitWidth());
         uint64_t VF = V.udiv(*Fixed).getLimitedValue();
         if (VF && llvm::isUInt<32>(VF) &&
-            // Make sure step is dividable by vscale.
+            // Make sure step is divisible by vscale.
             V.urem(*Fixed).isZero())
           return static_cast<uint32_t>(VF);
       }
