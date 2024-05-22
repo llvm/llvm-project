@@ -120,8 +120,6 @@ private:
   uint32_t m_next_user_file_id = 0;
   // The counter used by GetNextPersistentVariableName
   uint32_t m_next_persistent_variable_id = 0;
-  /// The counter used by GetNextResultName when is_error is true.
-  uint32_t m_next_persistent_error_id;
 
   typedef llvm::DenseMap<const char *, clang::TypeDecl *>
       ClangPersistentTypeMap;
