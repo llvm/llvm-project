@@ -372,8 +372,10 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Create necessary metadata for the flow function
   for (FlowJump &Jump : Func.Jumps) {
-    Func.Blocks.at(Jump.Source).SuccJumps.push_back(&Jump);
-    Func.Blocks.at(Jump.Target).PredJumps.push_back(&Jump);
+    assert(Jump.Source < Func.Blocks.size());
+    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
+    assert(Jump.Target < Func.Blocks.size());
+    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
   }
   return Func;
 }
