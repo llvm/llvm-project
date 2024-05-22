@@ -556,11 +556,15 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() || getSize() == getOffset();
+    return isElementPastEnd() ||
+           (getSize() == getOffset() && !isZeroSizeArray());
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
   bool isElementPastEnd() const { return Offset == PastEndMark; }
+
+  /// Checks if the pointer is pointing to a zero-size array.
+  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
