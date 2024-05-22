@@ -37,6 +37,7 @@ class raw_ostream;
 
 namespace AMDGPU {
 
+struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
@@ -860,7 +861,7 @@ unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);

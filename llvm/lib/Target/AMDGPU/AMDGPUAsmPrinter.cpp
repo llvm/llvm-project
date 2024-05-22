@@ -19,7 +19,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUResourceUsageAnalysis.h"
-#include "AMDKernelCodeT.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
@@ -29,6 +28,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -205,8 +205,9 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   if (STM.isMesaKernel(F) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
-    amd_kernel_code_t KernelCode;
+    AMDGPUMCKernelCodeT KernelCode;
     getAmdKernelCode(KernelCode, CurrentProgramInfo, *MF);
+    KernelCode.validate(&STM, MF->getContext());
     getTargetStreamer()->EmitAMDKernelCodeT(KernelCode);
   }
 
@@ -1317,7 +1318,7 @@ static amd_element_byte_size_t getElementByteSizeValue(unsigned Size) {
   }
 }
 
-void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
+void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
                                         const SIProgramInfo &CurrentProgramInfo,
                                         const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
@@ -1328,24 +1329,22 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
-  AMDGPU::initDefaultAMDKernelCodeT(Out, &STM);
+  Out.initDefault(&STM, Ctx, /*InitMCExpr=*/false);
 
-  Out.compute_pgm_resource_registers =
-      CurrentProgramInfo.getComputePGMRSrc1(STM) |
-      (CurrentProgramInfo.getComputePGMRSrc2() << 32);
+  Out.compute_pgm_resource1_registers =
+      CurrentProgramInfo.getComputePGMRSrc1(STM, Ctx);
+  Out.compute_pgm_resource2_registers =
+      CurrentProgramInfo.getComputePGMRSrc2(Ctx);
   Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
 
-  if (getMCExprValue(CurrentProgramInfo.DynamicCallStack, Ctx))
-    Out.code_properties |= AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK;
+  Out.is_dynamic_callstack = CurrentProgramInfo.DynamicCallStack;
 
-  AMD_HSA_BITS_SET(Out.code_properties,
-                   AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
+  AMD_HSA_BITS_SET(Out.code_properties, AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
                    getElementByteSizeValue(STM.getMaxPrivateElementSize(true)));
 
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI->getUserSGPRInfo();
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
-    Out.code_properties |=
-      AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
 
   if (UserSGPRInfo.hasDispatchPtr())
@@ -1371,10 +1370,9 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   Align MaxKernArgAlign;
   Out.kernarg_segment_byte_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
-  Out.wavefront_sgpr_count = getMCExprValue(CurrentProgramInfo.NumSGPR, Ctx);
-  Out.workitem_vgpr_count = getMCExprValue(CurrentProgramInfo.NumVGPR, Ctx);
-  Out.workitem_private_segment_byte_size =
-      getMCExprValue(CurrentProgramInfo.ScratchSize, Ctx);
+  Out.wavefront_sgpr_count = CurrentProgramInfo.NumSGPR;
+  Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
+  Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
   Out.workgroup_group_segment_byte_size = CurrentProgramInfo.LDSSize;
 
   // kernarg_segment_alignment is specified as log of the alignment.
