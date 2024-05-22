@@ -1611,9 +1611,10 @@ FailureOr<VectorType> dropNonScalableUnitDimType(VectorType VT) {
   VectorType newVT = VT;
   int removed = 0;
   auto shape = VT.getShape();
+  auto builder = VectorType::Builder(newVT);
   for (unsigned i = 0; i < shape.size(); i++) {
     if (shape[i] == 1 && !VT.getScalableDims()[i]) {
-      newVT = VectorType::Builder(newVT).dropDim(i - removed);
+      newVT = builder.dropDim(i - removed);
       removed++;
     }
   }
