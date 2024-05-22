@@ -138,6 +138,25 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   if (method_name.GetMangledCounterpart(counterpart))
     if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetStringRef()))
       variant_names.emplace_back(counterpart, eFunctionNameTypeFull);
+
+  // Properties can have multiple accessor blocks. This section of code supports
+  // breakpoints on accessor blocks by name.
+  //
+  // By default, the name `A.B` is treated as a fully qualified name, where `B`
+  // is the basename. However, some names can be interpretted in two ways, for
+  // example `A.get`. First, it can refer to the name `get` (in module `A`, or
+  // in type `A`). Second, it can refer the *getter* block for property `A`.
+  // LLDB's baseline behavior handles the first case. The second case is
+  // produced here as a variant name.
+  for (StringRef suffix : {".get", ".set", ".willSet", ".didSet"})
+    if (method_name.GetStringRef().ends_with(suffix)) {
+      // The method name, complete with suffix, *is* the variant.
+      variant_names.emplace_back(method_name, eFunctionNameTypeFull |
+                                                  eFunctionNameTypeBase |
+                                                  eFunctionNameTypeMethod);
+      break;
+    }
+
   return variant_names;
 }
 
