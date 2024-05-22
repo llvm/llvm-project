@@ -86,7 +86,9 @@ func.func @pack_empty_dynamic(%arg0: tensor<?x?x?x?xf32>, %dim0: index, %dim1: i
 }
 
 // CHECK-LABEL: func.func @pack_empty_dynamic(
-// CHECK-SAME:   %[[T:.+]]: tensor<?x?x?x?xf32>
+// CHECK-SAME:   %[[T:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index
 // CHECK-NOT:    tensor.pack
 // CHECK:        return %[[T]] : tensor<?x?x?x?xf32>
 
@@ -112,7 +114,11 @@ func.func @unpack_empty_dynamic(%arg0: tensor<?x?xf32>, %dim0: index, %dim1: ind
 }
 
 // CHECK-LABEL: func.func @unpack_empty_dynamic(
-// CHECK-SAME:   %[[T:.+]]: tensor<?x?xf32>
+// CHECK-SAME:   %[[T:.+]]: tensor<?x?xf32>,
+// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM2:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM3:[a-zA-Z0-9_]+]]: index
 // CHECK-NOT:    tensor.unpack
 // CHECK:        return %[[T]] : tensor<?x?xf32>
 
