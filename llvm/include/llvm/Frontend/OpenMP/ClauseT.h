@@ -1067,6 +1067,14 @@ struct SizesT {
   SizeList v;
 };
 
+// V6.0:  `permutation` clause
+template <typename T, typename I, typename E> //
+struct PermutationT {
+  using ArgList = ListT<E>;
+  using WrapperTrait = std::true_type;
+  ArgList v;
+};
+
 // V5.2: [5.5.9] `task_reduction` clause
 template <typename T, typename I, typename E> //
 struct TaskReductionT {
@@ -1255,9 +1263,9 @@ using WrapperClausesT = std::variant<
     NovariantsT<T, I, E>, NumTeamsT<T, I, E>, NumThreadsT<T, I, E>,
     OrderedT<T, I, E>, PartialT<T, I, E>, PriorityT<T, I, E>, PrivateT<T, I, E>,
     ProcBindT<T, I, E>, SafelenT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>,
-    SimdlenT<T, I, E>, SizesT<T, I, E>, ThreadLimitT<T, I, E>,
-    UniformT<T, I, E>, UpdateT<T, I, E>, UseDeviceAddrT<T, I, E>,
-    UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
+    SimdlenT<T, I, E>, SizesT<T, I, E>, PermutationT<T, I, E>,
+    ThreadLimitT<T, I, E>, UniformT<T, I, E>, UpdateT<T, I, E>,
+    UseDeviceAddrT<T, I, E>, UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using UnionOfAllClausesT = typename type::Union< //

@@ -2373,6 +2373,12 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPPermutationClause(
+    const OMPPermutationClause *C) {
+  for (auto E : C->getArgsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPFullClause(const OMPFullClause *C) {}
 
 void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {

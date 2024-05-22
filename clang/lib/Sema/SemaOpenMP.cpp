@@ -9827,25 +9827,6 @@ static Stmt *buildPreInits(ASTContext &Context,
   return nullptr;
 }
 
-/// Append the \p Item or the content of a CompoundStmt to the list \p
-/// TargetList.
-///
-/// A CompoundStmt is used as container in case multiple statements need to be
-/// stored in lieu of using an explicit list. Flattening is necessary because
-/// contained DeclStmts need to be visible after the execution of the list. Used
-/// for OpenMP pre-init declarations/statements.
-static void appendFlattendedStmtList(SmallVectorImpl<Stmt *> &TargetList,
-                                     Stmt *Item) {
-  // nullptr represents an empty list.
-  if (!Item)
-    return;
-
-  if (auto *CS = dyn_cast<CompoundStmt>(Item))
-    llvm::append_range(TargetList, CS->body());
-  else
-    TargetList.push_back(Item);
-}
-
 /// Build preinits statement for the given declarations.
 static Stmt *
 buildPreInits(ASTContext &Context,
@@ -9861,13 +9842,19 @@ buildPreInits(ASTContext &Context,
 
 /// Build pre-init statement for the given statements.
 static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
-  if (PreInits.empty())
-    return nullptr;
-
-  SmallVector<Stmt *> Stmts;
-  for (Stmt *S : PreInits)
-    appendFlattendedStmtList(Stmts, S);
-  return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
+  if (!PreInits.empty()) {
+    SmallVector<Stmt *> Stmts;
+    for (Stmt *S : PreInits) {
+      // Do not nest CompoundStmts.
+      if (auto *CS = dyn_cast<CompoundStmt>(S)) {
+        llvm::append_range(Stmts, CS->body());
+        continue;
+      }
+      Stmts.push_back(S);
+    }
+    return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
+  }
+  return nullptr;
 }
 
 /// Build postupdate expression for the given list of postupdates expressions.
@@ -9970,9 +9957,12 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             // Search for pre-init declared variables that need to be captured
             // to be referenceable inside the directive.
             SmallVector<Stmt *> Constituents;
-            appendFlattendedStmtList(Constituents, DependentPreInits);
+            if (auto *CS = dyn_cast<CompoundStmt>(DependentPreInits))
+              llvm::append_range(Constituents, CS->body());
+            else
+              Constituents.push_back(DependentPreInits);
             for (Stmt *S : Constituents) {
-              if (auto *DC = dyn_cast<DeclStmt>(S)) {
+              if (DeclStmt *DC = dyn_cast<DeclStmt>(S)) {
                 for (Decl *C : DC->decls()) {
                   auto *D = cast<VarDecl>(C);
                   DeclRefExpr *Ref = buildDeclRefExpr(
@@ -15149,8 +15139,15 @@ bool SemaOpenMP::checkTransformableLoopNest(
           DependentPreInits = Dir->getPreInits();
         else
           llvm_unreachable("Unhandled loop transformation");
-
-        appendFlattendedStmtList(OriginalInits.back(), DependentPreInits);
+        if (!DependentPreInits)
+          return;
+        // CompoundStmts are used as lists of other statements, add their
+        // contents, not the lists themselves to avoid nesting. This is
+        // necessary because DeclStmts need to be visible after the pre-init.
+        else if (auto *CS = dyn_cast<CompoundStmt>(DependentPreInits))
+          llvm::append_range(OriginalInits.back(), CS->body());
+        else
+          OriginalInits.back().push_back(DependentPreInits);
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
@@ -15209,7 +15206,7 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
         LoopStmts[Cnt] = CurStmt;
         return false;
       });
-  assert(!is_contained(LoopStmts, nullptr) &&
+  assert(llvm::all_of(LoopStmts, [](Stmt *LoopStmt) { return LoopStmt; }) &&
          "Expecting a loop statement for each affected loop");
 }
 
@@ -15957,7 +15954,9 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     return StmtError();
 
   // interchange without permutation clause swaps two loops.
-  constexpr size_t NumLoops = 2;
+  const OMPPermutationClause *PermutationClause =
+      OMPExecutableDirective::getSingleClause<OMPPermutationClause>(Clauses);
+  size_t NumLoops = PermutationClause ? PermutationClause->getNumLoops() : 2;
 
   // Verify and diagnose loop nest.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
@@ -15972,6 +15971,12 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                            NumLoops, AStmt, nullptr, nullptr);
 
+  // An invalid expression in the permutation clause is set to nullptr in
+  // ActOnOpenMPPermutationClause.
+  if (PermutationClause && llvm::any_of(PermutationClause->getArgsRefs(),
+                                        [](Expr *E) { return !E; }))
+    return StmtError();
+
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionaly to match number of "
          "affected loops");
@@ -15980,7 +15985,44 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
          "affected loops");
 
   // Decode the permutation clause.
-  constexpr uint64_t Permutation[] = {1, 0};
+  SmallVector<uint64_t, 2> Permutation;
+  if (!PermutationClause) {
+    Permutation = {1, 0};
+  } else {
+    ArrayRef<Expr *> PermArgs = PermutationClause->getArgsRefs();
+    llvm::BitVector Flags(PermArgs.size());
+    for (Expr *PermArg : PermArgs) {
+      std::optional<llvm::APSInt> PermCstExpr =
+          PermArg->getIntegerConstantExpr(Context);
+      if (!PermCstExpr)
+        continue;
+      uint64_t PermInt = PermCstExpr->getZExtValue();
+      assert(1 <= PermInt && PermInt <= NumLoops &&
+             "Must be a permutation; diagnostic emitted in "
+             "ActOnOpenMPPermutationClause");
+      if (Flags[PermInt - 1]) {
+        SourceRange ExprRange(PermArg->getBeginLoc(), PermArg->getEndLoc());
+        Diag(PermArg->getExprLoc(),
+             diag::err_omp_interchange_permutation_value_repeated)
+            << PermInt << ExprRange;
+        continue;
+      }
+      Flags[PermInt - 1] = true;
+
+      Permutation.push_back(PermInt - 1);
+    }
+
+    if (Permutation.size() != NumLoops)
+      return StmtError();
+  }
+
+  // Nothing to transform with trivial permutation.
+  if (NumLoops <= 1 || llvm::all_of(llvm::enumerate(Permutation), [](auto p) {
+        auto [Idx, Arg] = p;
+        return Idx == Arg;
+      }))
+    return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                           NumLoops, AStmt, AStmt, nullptr);
 
   // Find the affected loops.
   SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
@@ -17946,6 +17988,44 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
 
   return OMPSizesClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
                                 SanitizedSizeExprs);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                                    SourceLocation StartLoc,
+                                                    SourceLocation LParenLoc,
+                                                    SourceLocation EndLoc) {
+  size_t NumLoops = PermExprs.size();
+  SmallVector<Expr *> SanitizedPermExprs;
+  llvm::append_range(SanitizedPermExprs, PermExprs);
+
+  for (Expr *&PermExpr : SanitizedPermExprs) {
+    // Skip if template-dependent or already sanitized, e.g. during a partial
+    // template instantiation.
+    if (!PermExpr || PermExpr->isInstantiationDependent())
+      continue;
+
+    llvm::APSInt PermVal;
+    ExprResult PermEvalExpr = SemaRef.VerifyIntegerConstantExpression(
+        PermExpr, &PermVal, Sema::AllowFold);
+    bool IsValid = PermEvalExpr.isUsable();
+    if (IsValid)
+      PermExpr = PermEvalExpr.get();
+
+    if (IsValid && (PermVal < 1 || NumLoops < PermVal)) {
+      SourceRange ExprRange(PermEvalExpr.get()->getBeginLoc(),
+                            PermEvalExpr.get()->getEndLoc());
+      Diag(PermEvalExpr.get()->getExprLoc(),
+           diag::err_omp_interchange_permutation_value_range)
+          << NumLoops << ExprRange;
+      IsValid = false;
+    }
+
+    if (!PermExpr->isInstantiationDependent() && !IsValid)
+      PermExpr = nullptr;
+  }
+
+  return OMPPermutationClause::Create(getASTContext(), StartLoc, LParenLoc,
+                                      EndLoc, SanitizedPermExprs);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPFullClause(SourceLocation StartLoc,

@@ -971,6 +971,25 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
+OMPPermutationClause *OMPPermutationClause::Create(const ASTContext &C,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc,
+                                                   ArrayRef<Expr *> Args) {
+  OMPPermutationClause *Clause = CreateEmpty(C, Args.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setArgRefs(Args);
+  return Clause;
+}
+
+OMPPermutationClause *OMPPermutationClause::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumLoops));
+  return new (Mem) OMPPermutationClause(NumLoops);
+}
+
 OMPFullClause *OMPFullClause::Create(const ASTContext &C,
                                      SourceLocation StartLoc,
                                      SourceLocation EndLoc) {
@@ -1766,6 +1785,18 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
   OS << "sizes(";
   bool First = true;
   for (auto *Size : Node->getSizesRefs()) {
+    if (!First)
+      OS << ", ";
+    Size->printPretty(OS, nullptr, Policy, 0);
+    First = false;
+  }
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
+  OS << "permutation(";
+  bool First = true;
+  for (Expr *Size : Node->getArgsRefs()) {
     if (!First)
       OS << ", ";
     Size->printPretty(OS, nullptr, Policy, 0);
