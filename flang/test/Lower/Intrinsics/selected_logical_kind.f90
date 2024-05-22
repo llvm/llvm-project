@@ -1,4 +1,3 @@
-! REQUIRES: shell
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine selected_logical_kind_test1(input)
