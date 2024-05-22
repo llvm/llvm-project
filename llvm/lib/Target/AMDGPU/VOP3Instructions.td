@@ -224,7 +224,7 @@ let mayRaiseFPException = 0 in {
   defm V_MED3_F32 : VOP3Inst <"v_med3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfmed3>;
 } // End mayRaiseFPException = 0
 
-let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+let SubtargetPredicate = HasMinimum3Maximum3F32, ReadsModeReg = 0 in {
   defm V_MINIMUM3_F32 : VOP3Inst <"v_minimum3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfminimum3>;
   defm V_MAXIMUM3_F32 : VOP3Inst <"v_maximum3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
@@ -629,7 +629,7 @@ defm V_MAX3_F16 : VOP3Inst <"v_max3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3
 defm V_MAX3_I16 : VOP3Inst <"v_max3_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUsmax3>;
 defm V_MAX3_U16 : VOP3Inst <"v_max3_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUumax3>;
 
-let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
   defm V_MINIMUM3_F16 : VOP3Inst <"v_minimum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfminimum3>;
   defm V_MAXIMUM3_F16 : VOP3Inst <"v_maximum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0

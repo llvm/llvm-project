@@ -137,6 +137,18 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
+  "HasMinimum3Maximum3F32",
+  "true",
+  "Has v_minimum3_f32 and v_maximum3_f32 instructions"
+>;
+
+def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
+  "HasMinimum3Maximum3F16",
+  "true",
+  "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -1289,7 +1301,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32
+   FeatureMaxHardClauseLength32,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -2012,6 +2025,15 @@ def isGFX12Only :
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def HasMinimum3Maximum3F32 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F32)>;
+
+def HasMinimum3Maximum3F16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
