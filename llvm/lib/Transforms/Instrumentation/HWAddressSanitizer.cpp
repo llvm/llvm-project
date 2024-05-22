@@ -1589,6 +1589,14 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   assert(!ShadowBase);
 
+  // Remove memory attributes that are about to become invalid.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  F.removeFnAttr(llvm::Attribute::Memory);
+  for (auto &A : F.args())
+    A.removeAttr(llvm::Attribute::WriteOnly);
+
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
   emitPrologue(EntryIRB,
