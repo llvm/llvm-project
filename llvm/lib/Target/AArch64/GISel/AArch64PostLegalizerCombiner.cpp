@@ -655,13 +655,17 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
     // should only be in a single block.
     resetState();
     for (auto &MI : MBB) {
+      // Skip for scalable vectors
+      if (auto *LdSt = dyn_cast<GLoadStore>(&MI);
+          LdSt && MRI.getType(LdSt->getOperand(0).getReg()).isScalableVector())
+        continue;
+
       if (auto *St = dyn_cast<GStore>(&MI)) {
         Register PtrBaseReg;
         APInt Offset;
         LLT StoredValTy = MRI.getType(St->getValueReg());
-        const auto ValSize = StoredValTy.getSizeInBits();
-        if (ValSize.getKnownMinValue() < 32 ||
-            St->getMMO().getSizeInBits() != ValSize)
+        unsigned ValSize = StoredValTy.getSizeInBits();
+        if (ValSize < 32 || St->getMMO().getSizeInBits() != ValSize)
           continue;
 
         Register PtrReg = St->getPointerReg();
