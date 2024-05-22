@@ -7458,7 +7458,7 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
       if (!CostCtx.SkipCostComputation.insert(I).second)
         continue;
       LLVM_DEBUG(dbgs() << "Cost of " << ReductionCost << " for VF " << VF
-             << ":\n in-loop reduction " << *I << "\n");
+                        << ":\n in-loop reduction " << *I << "\n");
       Cost += *ReductionCost;
     }
   }
