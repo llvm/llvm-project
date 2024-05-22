@@ -831,52 +831,38 @@ void ReductionClauseParsing() {
   // expected-error@+1{{expected '('}}
 #pragma acc serial reduction
   for(;;){}
-  // expected-error@+3{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial reduction()
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin)
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin, End)
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(+:Begin)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(+:Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(*: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(max : Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(min: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(&: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(|: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(^: Begin, End)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial seq, reduction(&&: Begin, End)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial reduction(||: Begin, End), seq
   for(;;){}

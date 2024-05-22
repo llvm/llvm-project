@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! OpenMP Version 5.2, Sections 3.2.1 & 5.3
 subroutine omp_firstprivate(init)

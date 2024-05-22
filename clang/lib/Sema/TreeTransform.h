@@ -42,6 +42,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -11136,7 +11137,8 @@ class OpenACCClauseTransform final
       if (!Res.isUsable())
         continue;
 
-      Res = Self.getSema().OpenACC().ActOnVar(Res.get());
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+                                              Res.get());
 
       if (Res.isUsable())
         InstantiatedVarList.push_back(Res.get());
@@ -11495,6 +11497,24 @@ void OpenACCClauseTransform<Derived>::VisitDeviceTypeClause(
       Self.getSema().getASTContext(), C.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       C.getArchitectures(), ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());
+  SmallVector<Expr *> ValidVars;
+
+  for (Expr *Var : TransformedVars) {
+    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(Var);
+    if (Res.isUsable())
+      ValidVars.push_back(Res.get());
+  }
+
+  NewClause = OpenACCReductionClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
+      ParsedClause.getEndLoc());
 }
 } // namespace
 template <typename Derived>
@@ -11893,7 +11913,7 @@ TreeTransform<Derived>::TransformPseudoObjectExpr(PseudoObjectExpr *E) {
   // better solution (rebuilding the semantic expressions and
   // rebinding OVEs as necessary) doesn't work; we'd need
   // TreeTransform to not strip away implicit conversions.
-  Expr *newSyntacticForm = SemaRef.recreateSyntacticForm(E);
+  Expr *newSyntacticForm = SemaRef.PseudoObject().recreateSyntacticForm(E);
   ExprResult result = getDerived().TransformExpr(newSyntacticForm);
   if (result.isInvalid()) return ExprError();
 
@@ -11901,7 +11921,7 @@ TreeTransform<Derived>::TransformPseudoObjectExpr(PseudoObjectExpr *E) {
   // expression must have been an lvalue-to-rvalue conversion which we
   // should reapply.
   if (result.get()->hasPlaceholderType(BuiltinType::PseudoObject))
-    result = SemaRef.checkPseudoObjectRValue(result.get());
+    result = SemaRef.PseudoObject().checkRValue(result.get());
 
   return result;
 }
@@ -16197,8 +16217,8 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   if (First->getObjectKind() == OK_ObjCProperty) {
     BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
     if (BinaryOperator::isAssignmentOp(Opc))
-      return SemaRef.checkPseudoObjectAssignment(/*Scope=*/nullptr, OpLoc, Opc,
-                                                 First, Second);
+      return SemaRef.PseudoObject().checkAssignment(/*Scope=*/nullptr, OpLoc,
+                                                    Opc, First, Second);
     ExprResult Result = SemaRef.CheckPlaceholderExpr(First);
     if (Result.isInvalid())
       return ExprError();
