@@ -658,7 +658,8 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
         APInt Offset;
         LLT StoredValTy = MRI.getType(St->getValueReg());
         const auto ValSize = StoredValTy.getSizeInBits();
-        if (ValSize.getKnownMinValue() < 32 || St->getMMO().getSizeInBits() != ValSize)
+        if (ValSize.getKnownMinValue() < 32 ||
+            St->getMMO().getSizeInBits() != ValSize)
           continue;
 
         Register PtrReg = St->getPointerReg();

@@ -63,7 +63,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   const LLT nxv16s8 = LLT::scalable_vector(16, s8);
   const LLT nxv8s16 = LLT::scalable_vector(8, s16);
-  const LLT nxv4s32 = LLT::scalable_vector(4, s32); 
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32);
   const LLT nxv2s64 = LLT::scalable_vector(2, s64);
   const LLT nxv2p0 = LLT::scalable_vector(2, p0);
 
@@ -341,12 +341,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   if (ST.hasSVE()) {
     for (auto *Actions : {&LoadActions, &StoreActions}) {
       Actions->legalForTypesWithMemDesc({
-        // 128 bit base sizes
-        {nxv16s8, p0, nxv16s8, 128},
-        {nxv8s16, p0, nxv8s16, 128},
-        {nxv4s32, p0, nxv4s32, 128},
-        {nxv2s64, p0, nxv2s64, 128},
-        {nxv2p0, p0, nxv2p0, 128},
+          // 128 bit base sizes
+          {nxv16s8, p0, nxv16s8, 128},
+          {nxv8s16, p0, nxv8s16, 128},
+          {nxv4s32, p0, nxv4s32, 128},
+          {nxv2s64, p0, nxv2s64, 128},
+          {nxv2p0, p0, nxv2p0, 128},
       });
     }
   }
@@ -410,18 +410,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
       })
-      .legalForTypesWithMemDesc(
-          {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
-           {s32, p0, s8, 8},                       // truncstorei8 from s32
-           {s64, p0, s8, 8},                       // truncstorei8 from s64
-           {s16, p0, s16, 8},   {s32, p0, s16, 8}, // truncstorei16 from s32
-           {s64, p0, s16, 8},                      // truncstorei16 from s64
-           {s32, p0, s8, 8},    {s32, p0, s16, 8},    {s32, p0, s32, 8},
-           {s64, p0, s64, 8},   {s64, p0, s32, 8}, // truncstorei32 from s64
-           {p0, p0, s64, 8},    {s128, p0, s128, 8},  {v16s8, p0, s128, 8},
-           {v8s8, p0, s64, 8},  {v4s16, p0, s64, 8},  {v8s16, p0, s128, 8},
-           {v2s32, p0, s64, 8}, {v4s32, p0, s128, 8}, {v2s64, p0, s128, 8},
-          })
+      .legalForTypesWithMemDesc({
+          {s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
+          {s32, p0, s8, 8},                       // truncstorei8 from s32
+          {s64, p0, s8, 8},                       // truncstorei8 from s64
+          {s16, p0, s16, 8},   {s32, p0, s16, 8}, // truncstorei16 from s32
+          {s64, p0, s16, 8},                      // truncstorei16 from s64
+          {s32, p0, s8, 8},    {s32, p0, s16, 8},    {s32, p0, s32, 8},
+          {s64, p0, s64, 8},   {s64, p0, s32, 8}, // truncstorei32 from s64
+          {p0, p0, s64, 8},    {s128, p0, s128, 8},  {v16s8, p0, s128, 8},
+          {v8s8, p0, s64, 8},  {v4s16, p0, s64, 8},  {v8s16, p0, s128, 8},
+          {v2s32, p0, s64, 8}, {v4s32, p0, s128, 8}, {v2s64, p0, s128, 8},
+      })
       .clampScalar(0, s8, s64)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
@@ -447,23 +447,22 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Idx 0 == Ptr, Idx 1 == Val
       // TODO: we can implement legalizations but as of now these are
       // generated in a very specific way.
-      .legalForTypesWithMemDesc({
-          {p0, s8, s8, 8},
-          {p0, s16, s16, 8},
-          {p0, s32, s8, 8},
-          {p0, s32, s16, 8},
-          {p0, s32, s32, 8},
-          {p0, s64, s64, 8},
-          {p0, p0, p0, 8},
-          {p0, v8s8, v8s8, 8},
-          {p0, v16s8, v16s8, 8},
-          {p0, v4s16, v4s16, 8},
-          {p0, v8s16, v8s16, 8},
-          {p0, v2s32, v2s32, 8},
-          {p0, v4s32, v4s32, 8},
-          {p0, v2s64, v2s64, 8},
-          {p0, v2p0, v2p0, 8},
-          {p0, s128, s128, 8}})
+      .legalForTypesWithMemDesc({{p0, s8, s8, 8},
+                                 {p0, s16, s16, 8},
+                                 {p0, s32, s8, 8},
+                                 {p0, s32, s16, 8},
+                                 {p0, s32, s32, 8},
+                                 {p0, s64, s64, 8},
+                                 {p0, p0, p0, 8},
+                                 {p0, v8s8, v8s8, 8},
+                                 {p0, v16s8, v16s8, 8},
+                                 {p0, v4s16, v4s16, 8},
+                                 {p0, v8s16, v8s16, 8},
+                                 {p0, v2s32, v2s32, 8},
+                                 {p0, v4s32, v4s32, 8},
+                                 {p0, v2s64, v2s64, 8},
+                                 {p0, v2p0, v2p0, 8},
+                                 {p0, s128, s128, 8}})
       .unsupported();
 
   auto IndexedLoadBasicPred = [=](const LegalityQuery &Query) {

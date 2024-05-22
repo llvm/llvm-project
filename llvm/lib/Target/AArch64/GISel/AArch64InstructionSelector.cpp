@@ -901,24 +901,24 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
-/// Select the AArch64 opcode for the G_LOAD or G_STORE operation for scalable 
+/// Select the AArch64 opcode for the G_LOAD or G_STORE operation for scalable
 /// vectors.
 /// \p ElementSize size of the element of the scalable vector
 static unsigned selectLoadStoreSVEOp(const unsigned GenericOpc,
                                      const unsigned ElementSize) {
   const bool isStore = GenericOpc == TargetOpcode::G_STORE;
-  
+
   switch (ElementSize) {
-    case 8:
-      return isStore ? AArch64::ST1B : AArch64::LD1B;
-    case 16:
-      return isStore ? AArch64::ST1H : AArch64::LD1H;
-    case 32:
-      return isStore ? AArch64::ST1W : AArch64::LD1W;
-    case 64:
-      return isStore ? AArch64::ST1D : AArch64::LD1D;
+  case 8:
+    return isStore ? AArch64::ST1B : AArch64::LD1B;
+  case 16:
+    return isStore ? AArch64::ST1H : AArch64::LD1H;
+  case 32:
+    return isStore ? AArch64::ST1W : AArch64::LD1W;
+  case 64:
+    return isStore ? AArch64::ST1D : AArch64::LD1D;
   }
-  
+
   return GenericOpc;
 }
 
@@ -2875,7 +2875,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     uint64_t MemSizeInBytes = LdSt.getMemSize().getValue().getKnownMinValue();
-    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue().getKnownMinValue();
+    unsigned MemSizeInBits =
+        LdSt.getMemSizeInBits().getValue().getKnownMinValue();
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
@@ -2928,14 +2929,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
 
     assert((!ValTy.isScalableVector() || STI.hasSVE()) &&
-      "Load/Store register operand is scalable vector "
-      "while SVE is not supported by the target");
-    
+           "Load/Store register operand is scalable vector "
+           "while SVE is not supported by the target");
+
     // The code below doesn't support truncating stores, so we need to split it
     // again.
     // Truncate only if type is not scalable vector
-    const bool NeedTrunc = !ValTy.isScalableVector() 
-                      && ValTy.getSizeInBits().getFixedValue() > MemSizeInBits;
+    const bool NeedTrunc =
+        !ValTy.isScalableVector() &&
+        ValTy.getSizeInBits().getFixedValue() > MemSizeInBits;
     if (isa<GStore>(LdSt) && NeedTrunc) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
@@ -2981,7 +2983,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       bool IsStore = isa<GStore>(I);
       unsigned NewOpc;
       if (ValTy.isScalableVector()) {
-        NewOpc = selectLoadStoreSVEOp(I.getOpcode(), ValTy.getElementType().getSizeInBits());
+        NewOpc = selectLoadStoreSVEOp(I.getOpcode(),
+                                      ValTy.getElementType().getSizeInBits());
       } else {
         NewOpc = selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
       }

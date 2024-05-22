@@ -749,7 +749,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector())
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else if (isPreISelGenericFloatingPointOpcode(Opc) ||
-        Ty.getSizeInBits() > 64)
+             Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
       OpRegBankIdx[Idx] = PMI_FirstGPR;

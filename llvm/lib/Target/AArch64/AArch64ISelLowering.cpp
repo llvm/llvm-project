@@ -26401,7 +26401,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       if (AI->getAllocatedType()->isScalableTy())
         return true;
     }
-  } 
+  }
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
