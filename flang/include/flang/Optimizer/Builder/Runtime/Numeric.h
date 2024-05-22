@@ -50,6 +50,10 @@ mlir::Value genScale(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genSelectedIntKind(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value x);
 
+/// Generate call to Selected_logical_kind intrinsic runtime routine.
+mlir::Value genSelectedLogicalKind(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value x);
+
 /// Generate call to Selected_real_kind intrinsic runtime routine.
 mlir::Value genSelectedRealKind(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value precision, mlir::Value range,
