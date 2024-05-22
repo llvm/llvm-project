@@ -898,15 +898,7 @@ bool IRSimilarityCandidate::compareStructure(
 
 bool IRSimilarityCandidate::overlap(const IRSimilarityCandidate &A,
                                     const IRSimilarityCandidate &B) {
-  auto DoesOverlap = [](const IRSimilarityCandidate &X,
-                        const IRSimilarityCandidate &Y) {
-    // Check:
-    // XXXXXX        X starts before Y ends
-    //      YYYYYYY  Y starts after X starts
-    return X.StartIdx <= Y.getEndIdx() && Y.StartIdx >= X.StartIdx;
-  };
-
-  return DoesOverlap(A, B) || DoesOverlap(B, A);
+  return A.StartIdx <= B.getEndIdx() && B.StartIdx <= A.getEndIdx();
 }
 
 void IRSimilarityIdentifier::populateMapper(
