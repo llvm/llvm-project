@@ -32,7 +32,7 @@ define i32 @load_store_global() nounwind {
 ; LA64NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(G)
 ; LA64NOPIC-NEXT:    addi.d $a1, $a0, %pc_lo12(G)
 ; LA64NOPIC-NEXT:    ld.w $a0, $a1, 0
-; LA64NOPIC-NEXT:    addi.d $a0, $a0, 1
+; LA64NOPIC-NEXT:    addi.w $a0, $a0, 1
 ; LA64NOPIC-NEXT:    st.w $a0, $a1, 0
 ; LA64NOPIC-NEXT:    ret
 ;
@@ -41,7 +41,7 @@ define i32 @load_store_global() nounwind {
 ; LA64PIC-NEXT:    pcalau12i $a0, %pc_hi20(.LG$local)
 ; LA64PIC-NEXT:    addi.d $a1, $a0, %pc_lo12(.LG$local)
 ; LA64PIC-NEXT:    ld.w $a0, $a1, 0
-; LA64PIC-NEXT:    addi.d $a0, $a0, 1
+; LA64PIC-NEXT:    addi.w $a0, $a0, 1
 ; LA64PIC-NEXT:    st.w $a0, $a1, 0
 ; LA64PIC-NEXT:    ret
   %v = load i32, ptr @G

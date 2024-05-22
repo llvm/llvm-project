@@ -34,7 +34,7 @@ define i32 @defined_function(i32 %a) nounwind {
 ;
 ; LA64-LABEL: defined_function:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, 1
+; LA64-NEXT:    addi.w $a0, $a0, 1
 ; LA64-NEXT:    ret
   %1 = add i32 %a, 1
   ret i32 %1
