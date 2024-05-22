@@ -29,19 +29,10 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<bool> TimeOpts;
-
 static cl::opt<bool> IterativeGuess(
     "iterative-guess",
     cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
     cl::Hidden, cl::cat(BoltOptCategory));
-
-static cl::opt<bool> UseRArcs(
-    "mcf-use-rarcs",
-    cl::desc("in MCF, consider the possibility of cancelling flow to balance "
-             "edges"),
-    cl::Hidden, cl::cat(BoltOptCategory));
-
 } // namespace opts
 
 namespace llvm {
@@ -460,10 +451,6 @@ void estimateEdgeCounts(BinaryFunction &BF) {
     guessEdgeByRelHotness(BF, /*UseSuccs=*/false, PredEdgeWeights,
                           SuccEdgeWeights);
   recalculateBBCounts(BF, /*AllEdges=*/false);
-}
-
-void solveMCF(BinaryFunction &BF, MCFCostFunction CostFunction) {
-  llvm_unreachable("not implemented");
 }
 
 } // namespace bolt
