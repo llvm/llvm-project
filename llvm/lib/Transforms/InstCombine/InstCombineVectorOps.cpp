@@ -2462,7 +2462,7 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
 
   // Match 1-input (unary) shuffle.
   // shuffle (fneg/fabs X), Mask --> fneg/fabs (shuffle X, Mask)
-  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Undef())) {
+  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Poison())) {
     Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
     if (IsFNeg)
       return UnaryOperator::CreateFNegFMF(NewShuf, S0);
