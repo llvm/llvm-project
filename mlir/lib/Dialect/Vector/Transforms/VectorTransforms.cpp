@@ -1695,7 +1695,6 @@ struct DropUnitDimFromElementwiseOps final
   }
 };
 
-
 /// Removes unit dimensions from a transpose op. Generates a vector.shape_cast
 /// on the operand and result to match types.
 ///
@@ -1741,7 +1740,8 @@ struct DropUnitDimFromTransposeOp final
           }
           // Decrement all dimensions of higher rank to keep permutation map
           // in range of the new rank.
-          else if ((unsigned)newPerm[permutationIdx] > dim.index() - removedDims) {
+          else if ((unsigned)newPerm[permutationIdx] >
+                   dim.index() - removedDims) {
             newPerm[permutationIdx]--;
           }
         }
