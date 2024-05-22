@@ -178,9 +178,10 @@ public:
   /// constructed with. This function will destroy the internal state of the
   /// instance.
   SetVector<Operation *> sort() {
-    if (toSort.size() <= 1)
+    if (toSort.size() <= 1) {
       // Note: Creates a copy on purpose.
       return toSort;
+    }
 
     // First, find the root region to start the traversal through the IR. This
     // additionally enriches the internal caches with all relevant ancestor
@@ -188,7 +189,7 @@ public:
     Region *rootRegion = findCommonAncestorRegion();
     assert(rootRegion && "expected all ops to have a common ancestor");
 
-    // Sort all element in `toSort` by traversing the IR in the appropriate
+    // Sort all elements in `toSort` by traversing the IR in the appropriate
     // order.
     SetVector<Operation *> result = topoSortRegion(*rootRegion);
     assert(result.size() == toSort.size() &&
@@ -198,7 +199,6 @@ public:
 
 private:
   /// Computes the closest common ancestor region of all operations in `toSort`.
-  /// Remembers all the traversed regions in `ancestorRegions`.
   Region *findCommonAncestorRegion() {
     // Map to count the number of times a region was encountered.
     DenseMap<Region *, size_t> regionCounts;
@@ -212,7 +212,6 @@ private:
       // Store the block as an ancestor block.
       ancestorBlocks.insert(op->getBlock());
       while (current) {
-
         // Insert or update the count and compare it.
         if (++regionCounts[current] == expectedCount) {
           res = current;
@@ -243,11 +242,12 @@ private:
       if (auto *region = dyn_cast<Region *>(current)) {
         // A region's blocks need to be traversed in dominance order.
         SetVector<Block *> sortedBlocks = getBlocksSortedByDominance(*region);
-        for (Block *block : llvm::reverse(sortedBlocks))
+        for (Block *block : llvm::reverse(sortedBlocks)) {
           // Only add blocks to the stack that are ancestors of the operations
           // to sort.
           if (ancestorBlocks.contains(block))
             stack.push_back(block);
+        }
         continue;
       }
 
