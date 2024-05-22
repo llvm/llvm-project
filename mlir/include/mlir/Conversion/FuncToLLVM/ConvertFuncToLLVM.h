@@ -14,7 +14,6 @@
 #ifndef MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 #define MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
