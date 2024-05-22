@@ -10,6 +10,7 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
+#include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
@@ -63,7 +64,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   BF.computeHash(UseDFS);
   BF.computeBlockHashes();
 
-  YamlBF.Name = BF.getPrintName();
+  YamlBF.Name = DataAggregator::getLocationName(BF, BAT);
   YamlBF.Id = BF.getFunctionNumber();
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
