@@ -2027,9 +2027,6 @@ Different optimisers are likely to react differently to the presence of
 this attribute; in some cases, adding ``assume`` may affect performance
 negatively. It should be used with parsimony and care.
 
-Note that `clang::assume` is a different attribute. Always write ``assume``
-without a namespace if you intend to use the standard C++ attribute.
-
 Example:
 
 .. code-block:: c++
@@ -4740,7 +4737,7 @@ def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
-Clang supports the ``__attribute__((assume("assumption")))`` attribute to
+Clang supports the ``[[omp::assume("assumption")]]`` attribute to
 provide additional information to the optimizer. The string-literal, here
 "assumption", will be attached to the function declaration such that later
 analysis and optimization passes can assume the "assumption" to hold.
@@ -4752,7 +4749,7 @@ A function can have multiple assume attributes and they propagate from prior
 declarations to later definitions. Multiple assumptions are aggregated into a
 single comma separated string. Thus, one can provide multiple assumptions via
 a comma separated string, i.a.,
-``__attribute__((assume("assumption1,assumption2")))``.
+``[[omp::assume("assumption1,assumption2")]]``.
 
 While LLVM plugins might provide more assumption strings, the default LLVM
 optimization passes are aware of the following assumptions:

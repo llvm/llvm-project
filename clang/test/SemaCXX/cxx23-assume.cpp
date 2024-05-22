@@ -58,6 +58,11 @@ void g(int x) {
   [[assume(true)]] while (false) {} // expected-error {{only applies to empty statements}}
   [[assume(true)]] label:; // expected-error {{cannot be applied to a declaration}}
   [[assume(true)]] goto label; // expected-error {{only applies to empty statements}}
+
+  // Also check variant spellings.
+  __attribute__((__assume__(true))); // Should not issue a warning because it doesn't use the [[]] spelling.
+  __attribute__((assume(true))) {}; // expected-error {{only applies to empty statements}}
+  [[clang::assume(true)]] {}; // expected-error {{only applies to empty statements}}
 }
 
 // Check that 'x' is ODR-used here.
@@ -142,4 +147,14 @@ static_assert(foo() == 0);
 template <bool ...val>
 void f() {
     [[assume(val)]]; // expected-error {{expression contains unexpanded parameter pack}}
+}
+
+namespace gh71858 {
+int
+foo (int x, int y)
+{
+  __attribute__((assume(x == 42)));
+  __attribute__((assume(++y == 43))); // expected-warning {{has side effects that will be discarded}}
+  return x + y;
+}
 }
