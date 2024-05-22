@@ -78,6 +78,7 @@ enum TypeKind {
 enum CastKind {
   CastKindSignExt = 0,
   CastKindZeroExt = 1,
+  CastKindTrunc = 2,
 };
 
 // A predicate used in a numeric comparison.
@@ -963,6 +964,36 @@ private:
     InstIdx++;
   }
 
+  /// Serialise a trunc instruction.
+  void serialiseTruncInst(TruncInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                          unsigned &InstIdx) {
+    // We don't support vectors.
+    if (I->getOperand(0)->getType()->isVectorTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
+    DataLayout DL(&M);
+    TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
+    TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
+
+    // The bit size of the value must be larger than the bit size of the
+    // destination type.
+    assert(SrcSize > DstSize);
+
+    // opcode:
+    serialiseOpcode(OpCodeCast);
+    // cast_kind:
+    serialiseCastKind(CastKindTrunc);
+    // val:
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
+    // dest_type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
   /// Serialise ptrtoint instruction.
   void serialisePtrToIntInst(PtrToIntInst *I, FuncLowerCtxt &FLCtxt,
                              unsigned BBIdx, unsigned &InstIdx) {
@@ -1075,6 +1106,7 @@ private:
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
     INST_SERIALISE(I, ZExtInst, serialiseZExtInst);
     INST_SERIALISE(I, SExtInst, serialiseSExtInst);
+    INST_SERIALISE(I, TruncInst, serialiseTruncInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
     INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
     INST_SERIALISE(I, PtrToIntInst, serialisePtrToIntInst);
