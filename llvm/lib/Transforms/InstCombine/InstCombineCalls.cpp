@@ -2424,17 +2424,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::fmuladd: {
-    // Canonicalize fast fmuladd to the separate fmul + fadd.
-    if (II->isFast()) {
-      BuilderTy::FastMathFlagGuard Guard(Builder);
-      Builder.setFastMathFlags(II->getFastMathFlags());
-      Value *Mul = Builder.CreateFMul(II->getArgOperand(0),
-                                      II->getArgOperand(1));
-      Value *Add = Builder.CreateFAdd(Mul, II->getArgOperand(2));
-      Add->takeName(II);
-      return replaceInstUsesWith(*II, Add);
-    }
-
     // Try to simplify the underlying FMul.
     if (Value *V = simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
                                     II->getFastMathFlags(),
