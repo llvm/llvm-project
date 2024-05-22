@@ -39,6 +39,10 @@ const BinaryFunction *YAMLProfileWriter::setCSIDestination(
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
       if (BAT && BAT->isBATFunction(Callee->getAddress()))
         std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
+      else if (const BinaryBasicBlock *BB =
+                   Callee->getBasicBlockContainingOffset(Offset))
+        BC.getFunctionForSymbol(Callee->getSecondaryEntryPointSymbol(*BB),
+                                &EntryID);
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
       return Callee;
