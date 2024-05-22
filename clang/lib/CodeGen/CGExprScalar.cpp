@@ -4822,13 +4822,13 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
     LV.getQuals().removePointerAuth();
     llvm::Value *RV = CGF.EmitPointerAuthQualify(ptrauth, E->getRHS(),
-                                                 LV.getAddress(CGF));
+                                                 LV.getAddress());
     CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
     CGF.EmitStoreThroughLValue(RValue::get(RV), LV);
 
     if (Ignore) return nullptr;
     RV = CGF.EmitPointerAuthUnqualify(ptrauth, RV, LV.getType(),
-                                      LV.getAddress(CGF), /*nonnull*/ false);
+                                      LV.getAddress(), /*nonnull*/ false);
     return RV;
   }
 

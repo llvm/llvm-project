@@ -796,7 +796,7 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   if (!lifetime) {
     llvm::Value *value;
     if (auto ptrauth = lvalue.getQuals().getPointerAuth()) {
-      value = EmitPointerAuthQualify(ptrauth, init, lvalue.getAddress(*this));
+      value = EmitPointerAuthQualify(ptrauth, init, lvalue.getAddress());
       lvalue.getQuals().removePointerAuth();
     } else {
       value = EmitScalarExpr(init);
