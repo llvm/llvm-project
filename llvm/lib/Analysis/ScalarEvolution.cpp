@@ -10629,7 +10629,8 @@ ScalarEvolution::getPredecessorWithUniqueSuccessorForBB(const BasicBlock *BB)
 /// front-end may have replicated the controlling expression.
 static bool HasSameValue(SCEVUse A, SCEVUse B) {
   // Quick check to see if they are the same SCEV, ignoring use-specific flags.
-  if (A.getPointer() == B.getPointer()) return true;
+  if (A.getPointer() == B.getPointer())
+    return true;
 
   auto ComputesEqualValues = [](const Instruction *A, const Instruction *B) {
     // Not all instructions that are "identical" compute the same value.  For
