@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -2401,7 +2402,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     }
 
     // Allow bitcasting between SVE VLATs and VLSTs, and vice-versa.
-    if (Self.isValidRVVBitcast(SrcType, DestType)) {
+    if (Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
       Kind = CK_BitCast;
       return TC_Success;
     }
@@ -3012,7 +3013,7 @@ void CastOperation::CheckCStyleCast() {
 
   // Allow bitcasting between compatible RVV vector types.
   if ((SrcType->isVectorType() || DestType->isVectorType()) &&
-      Self.isValidRVVBitcast(SrcType, DestType)) {
+      Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
     Kind = CK_BitCast;
     return;
   }
