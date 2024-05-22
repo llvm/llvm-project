@@ -2,7 +2,8 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "../cpu_model/aarch64.c"
+#include "../cpu_model/aarch64.h"
+#include <arm_sme.h>
 
 __attribute__((visibility("hidden"), nocommon))
 _Bool __aarch64_has_sme_and_tpidr2_el0;
@@ -56,20 +57,24 @@ static void init_aarch64_has_sme(void) {
 #if __GNUC__ >= 9
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif
-__attribute__((constructor(90))) void get_aarch64_cpu_features(void) {
-  if (!__aarch64_cpu_features.features)
+__attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
+  if (!get_features())
     __init_cpu_features();
 }
 
-__attribute__((target("sve"))) long emit_cntd(void) {
-  long vl;
-  __asm__ __volatile__("cntd %0" : "=r"(vl));
-  return vl;
-}
+extern bool __arm_in_streaming_mode(void) __arm_streaming_compatible;
 
-long get_runtime_vl(void) {
-  if (__aarch64_cpu_features.features & (1ULL << FEAT_SVE))
-    return emit_cntd();
-  else
+__attribute__((target("sve"))) long
+__arm_get_current_vg(void) __arm_streaming_compatible {
+  bool HasSVE = get_features() & (1ULL << FEAT_SVE);
+  if (!HasSVE && !has_sme())
     return 0;
+
+  if (HasSVE || __arm_in_streaming_mode()) {
+    long vl;
+    __asm__ __volatile__("cntd %0" : "=r"(vl));
+    return vl;
+  }
+
+  return 0;
 }
