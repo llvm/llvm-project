@@ -298,9 +298,6 @@ struct DfsPathFinder : public ICFGPathFinder {
     }
 
   private:
-    /**
-     * TODO: 目前 pointsToAvoid 还没处理
-     */
     void _search(const std::vector<int> &pointsToPass,
                  const std::set<int> &pointsToAvoid,
                  int maxCallDepth) override {

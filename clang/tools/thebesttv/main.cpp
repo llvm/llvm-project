@@ -261,10 +261,6 @@ void dumpICFGNode(int u, ordered_json &jPath) {
 
     logger.info(">> Node {} is in {} B{}", u, loc.name, bid);
 
-    // FIXME: compile_commands
-    // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
-    // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
-
     auto ASTFromFile = getASTOfFile(loc.file);
     auto AST = ASTFromFile->getAST();
     requireTrue(AST != nullptr);
