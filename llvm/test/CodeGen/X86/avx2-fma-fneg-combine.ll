@@ -131,7 +131,7 @@ define <4 x double> @test9(<4 x double> %a) {
 define <4 x double> @test10(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd {{.*#+}} ymm2 = <-9.5E+0,u,-5.5E+0,-2.5E+0>
+; CHECK-NEXT:    vmovapd {{.*#+}} ymm2 = [-9.5E+0,u,-5.5E+0,-2.5E+0]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm3
 ; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm1
 ; CHECK-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm0 * ymm2) + ymm1

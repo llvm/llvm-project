@@ -30,8 +30,8 @@ bool ChainedOriginDepotPut(u32 here_id, u32 prev_id, u32 *new_id);
 // Retrieves the stored StackDepot ID for the given origin ID.
 u32 ChainedOriginDepotGet(u32 id, u32 *other);
 
-void ChainedOriginDepotLockAll();
-void ChainedOriginDepotUnlockAll();
+void ChainedOriginDepotBeforeFork();
+void ChainedOriginDepotAfterFork(bool fork_child);
 
 }  // namespace __msan
 

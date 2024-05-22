@@ -12,7 +12,7 @@
 @array = internal addrspace(1) global [ 2 x i32 ] zeroinitializer 
 
 define i32 @foo() {
-  %A = load i32, ptr addrspace(1) getelementptr ({ i32, i32 }, ptr addrspace(1) @struct, i32 0, i32 0)
+  %A = load i32, ptr addrspace(1) @struct
   %B = load i32, ptr addrspace(1) @array
   ; Use the loaded values, so they won't get removed completely
   %R = add i32 %A, %B
@@ -23,6 +23,6 @@ define i32 @foo() {
 ; optimized away completely.
 define void @bar(i32 %R) {
   store i32 %R, ptr addrspace(1) @array
-  store i32 %R, ptr addrspace(1) getelementptr ({ i32, i32 }, ptr addrspace(1) @struct, i32 0, i32 0)
+  store i32 %R, ptr addrspace(1) @struct
   ret void
 }

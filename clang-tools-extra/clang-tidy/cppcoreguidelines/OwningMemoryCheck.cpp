@@ -19,6 +19,17 @@ using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::cppcoreguidelines {
 
+namespace {
+AST_MATCHER_P(LambdaExpr, hasCallOperator, Matcher<CXXMethodDecl>,
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.getCallOperator(), Finder, Builder);
+}
+
+AST_MATCHER_P(LambdaExpr, hasLambdaBody, Matcher<Stmt>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getBody(), Finder, Builder);
+}
+} // namespace
+
 void OwningMemoryCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LegacyResourceProducers", LegacyResourceProducers);
   Options.store(Opts, "LegacyResourceConsumers", LegacyResourceConsumers);
@@ -55,6 +66,8 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
             CreatesLegacyOwner, LegacyOwnerCast);
 
   const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
+  const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),
+                                      recordDecl(), functionDecl());
 
   // Find delete expressions that delete non-owners.
   Finder->addMatcher(
@@ -144,13 +157,51 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                              .bind("bad_owner_creation_parameter"))),
                      this);
 
+  auto IsNotInSubLambda = stmt(
+      hasAncestor(
+          stmt(anyOf(equalsBoundNode("body"), lambdaExpr())).bind("scope")),
+      hasAncestor(stmt(equalsBoundNode("scope"), equalsBoundNode("body"))));
+
   // Matching on functions, that return an owner/resource, but don't declare
   // their return type as owner.
   Finder->addMatcher(
-      functionDecl(hasDescendant(returnStmt(hasReturnValue(ConsideredOwner))
-                                     .bind("bad_owner_return")),
-                   unless(returns(qualType(hasDeclaration(OwnerDecl)))))
-          .bind("function_decl"),
+      functionDecl(
+          decl().bind("function_decl"),
+          hasBody(
+              stmt(stmt().bind("body"),
+                   hasDescendant(
+                       returnStmt(hasReturnValue(ConsideredOwner),
+                                  // Ignore sub-lambda expressions
+                                  IsNotInSubLambda,
+                                  // Ignore sub-functions
+                                  hasAncestor(functionDecl().bind("context")),
+                                  hasAncestor(functionDecl(
+                                      equalsBoundNode("context"),
+                                      equalsBoundNode("function_decl"))))
+                           .bind("bad_owner_return")))),
+          returns(qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))),
+      this);
+
+  // Matching on lambdas, that return an owner/resource, but don't declare
+  // their return type as owner.
+  Finder->addMatcher(
+      lambdaExpr(
+          hasAncestor(decl(ScopeDeclaration).bind("scope-decl")),
+          hasLambdaBody(
+              stmt(stmt().bind("body"),
+                   hasDescendant(
+                       returnStmt(
+                           hasReturnValue(ConsideredOwner),
+                           // Ignore sub-lambdas
+                           IsNotInSubLambda,
+                           // Ignore sub-functions
+                           hasAncestor(decl(ScopeDeclaration).bind("context")),
+                           hasAncestor(decl(equalsBoundNode("context"),
+                                            equalsBoundNode("scope-decl"))))
+                           .bind("bad_owner_return")))),
+          hasCallOperator(returns(
+              qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))))
+          .bind("lambda"),
       this);
 
   // Match on classes that have an owner as member, but don't declare a
@@ -329,7 +380,7 @@ bool OwningMemoryCheck::handleReturnValues(const BoundNodes &Nodes) {
   // Function return statements, that are owners/resources, but the function
   // declaration does not declare its return value as owner.
   const auto *BadReturnType = Nodes.getNodeAs<ReturnStmt>("bad_owner_return");
-  const auto *Function = Nodes.getNodeAs<FunctionDecl>("function_decl");
+  const auto *ResultType = Nodes.getNodeAs<QualType>("result");
 
   // Function return values, that should be owners but aren't.
   if (BadReturnType) {
@@ -338,8 +389,9 @@ bool OwningMemoryCheck::handleReturnValues(const BoundNodes &Nodes) {
     diag(BadReturnType->getBeginLoc(),
          "returning a newly created resource of "
          "type %0 or 'gsl::owner<>' from a "
-         "function whose return type is not 'gsl::owner<>'")
-        << Function->getReturnType() << BadReturnType->getSourceRange();
+         "%select{function|lambda}1 whose return type is not 'gsl::owner<>'")
+        << *ResultType << (Nodes.getNodeAs<Expr>("lambda") != nullptr)
+        << BadReturnType->getSourceRange();
 
     // FIXME: Rewrite the return type as 'gsl::owner<OriginalType>'
     return true;

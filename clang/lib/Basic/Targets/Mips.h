@@ -85,8 +85,13 @@ public:
     return CPU == "mips32r6" || CPU == "mips64r6";
   }
 
-  bool isFP64Default() const {
-    return CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64";
+  enum FPModeEnum getDefaultFPMode() const {
+    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+      return FP64;
+    else if (CPU == "mips1")
+      return FP32;
+    else
+      return FPXX;
   }
 
   bool isNan2008() const override { return IsNan2008; }
@@ -237,12 +242,14 @@ public:
     case 'r': // CPU registers.
     case 'd': // Equivalent to "r" unless generating MIPS16 code.
     case 'y': // Equivalent to "r", backward compatibility only.
-    case 'f': // floating-point registers.
     case 'c': // $25 for indirect jumps
     case 'l': // lo register
     case 'x': // hilo register pair
       Info.setAllowsRegister();
       return true;
+    case 'f': // floating-point registers.
+      Info.setAllowsRegister();
+      return FloatABI != SoftFloat;
     case 'I': // Signed 16-bit constant
     case 'J': // Integer 0
     case 'K': // Unsigned 16-bit constant
@@ -313,9 +320,11 @@ public:
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
-    FPMode = isFP64Default() ? FP64 : FPXX;
     NoOddSpreg = false;
+    FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
+    bool StrictAlign = false;
+    bool FpGiven = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -326,6 +335,12 @@ public:
         IsMips16 = true;
       else if (Feature == "+micromips")
         IsMicromips = true;
+      else if (Feature == "+mips32r6" || Feature == "+mips64r6")
+        HasUnalignedAccess = true;
+      // We cannot be sure that the order of strict-align vs mips32r6.
+      // Thus we need an extra variable here.
+      else if (Feature == "+strict-align")
+        StrictAlign = true;
       else if (Feature == "+dsp")
         DspRev = std::max(DspRev, DSP1);
       else if (Feature == "+dspr2")
@@ -334,13 +349,16 @@ public:
         HasMSA = true;
       else if (Feature == "+nomadd4")
         DisableMadd4 = true;
-      else if (Feature == "+fp64")
+      else if (Feature == "+fp64") {
         FPMode = FP64;
-      else if (Feature == "-fp64")
+        FpGiven = true;
+      } else if (Feature == "-fp64") {
         FPMode = FP32;
-      else if (Feature == "+fpxx")
+        FpGiven = true;
+      } else if (Feature == "+fpxx") {
         FPMode = FPXX;
-      else if (Feature == "+nan2008")
+        FpGiven = true;
+      } else if (Feature == "+nan2008")
         IsNan2008 = true;
       else if (Feature == "-nan2008")
         IsNan2008 = false;
@@ -363,6 +381,14 @@ public:
 
     if (FPMode == FPXX && !OddSpregGiven)
       NoOddSpreg = true;
+
+    if (StrictAlign)
+      HasUnalignedAccess = false;
+
+    if (HasMSA && !FpGiven) {
+      FPMode = FP64;
+      Features.push_back("+fp64");
+    }
 
     setDataLayout();
 
@@ -419,6 +445,10 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 } // namespace targets
 } // namespace clang

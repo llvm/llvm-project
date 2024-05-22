@@ -51,6 +51,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
@@ -1065,11 +1066,8 @@ static int ConstantIntSortPredicate(ConstantInt *const *P1,
 static void GetBranchWeights(Instruction *TI,
                              SmallVectorImpl<uint64_t> &Weights) {
   MDNode *MD = TI->getMetadata(LLVMContext::MD_prof);
-  assert(MD);
-  for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
-    ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(i));
-    Weights.push_back(CI->getValue().getZExtValue());
-  }
+  assert(MD && "Invalid branch-weight metadata");
+  extractFromBranchWeightMD64(MD, Weights);
 
   // If TI is a conditional eq, the default case is the false case,
   // and the corresponding branch-weight data is at index 2. We swap the
@@ -1084,7 +1082,7 @@ static void GetBranchWeights(Instruction *TI,
 
 /// Keep halving the weights until all can fit in uint32_t.
 static void FitWeights(MutableArrayRef<uint64_t> Weights) {
-  uint64_t Max = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t Max = *llvm::max_element(Weights);
   if (Max > UINT_MAX) {
     unsigned Offset = 32 - llvm::countl_zero(Max);
     for (uint64_t &I : Weights)
@@ -1126,8 +1124,8 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
-    RemapDPValueRange(NewBonusInst->getModule(), Range, VMap,
-                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -1526,6 +1524,63 @@ static bool shouldHoistCommonInstructions(Instruction *I1, Instruction *I2,
   return true;
 }
 
+/// Hoists DbgVariableRecords from \p I1 and \p OtherInstrs that are identical
+/// in lock-step to \p TI. This matches how dbg.* intrinsics are hoisting in
+/// hoistCommonCodeFromSuccessors. e.g. The input:
+///    I1                DVRs: { x, z },
+///    OtherInsts: { I2  DVRs: { x, y, z } }
+/// would result in hoisting only DbgVariableRecord x.
+static void hoistLockstepIdenticalDbgVariableRecords(
+    Instruction *TI, Instruction *I1,
+    SmallVectorImpl<Instruction *> &OtherInsts) {
+  if (!I1->hasDbgRecords())
+    return;
+  using CurrentAndEndIt =
+      std::pair<DbgRecord::self_iterator, DbgRecord::self_iterator>;
+  // Vector of {Current, End} iterators.
+  SmallVector<CurrentAndEndIt> Itrs;
+  Itrs.reserve(OtherInsts.size() + 1);
+  // Helper lambdas for lock-step checks:
+  // Return true if this Current == End.
+  auto atEnd = [](const CurrentAndEndIt &Pair) {
+    return Pair.first == Pair.second;
+  };
+  // Return true if all Current are identical.
+  auto allIdentical = [](const SmallVector<CurrentAndEndIt> &Itrs) {
+    return all_of(make_first_range(ArrayRef(Itrs).drop_front()),
+                  [&](DbgRecord::self_iterator I) {
+                    return Itrs[0].first->isIdenticalToWhenDefined(*I);
+                  });
+  };
+
+  // Collect the iterators.
+  Itrs.push_back(
+      {I1->getDbgRecordRange().begin(), I1->getDbgRecordRange().end()});
+  for (Instruction *Other : OtherInsts) {
+    if (!Other->hasDbgRecords())
+      return;
+    Itrs.push_back(
+        {Other->getDbgRecordRange().begin(), Other->getDbgRecordRange().end()});
+  }
+
+  // Iterate in lock-step until any of the DbgRecord lists are exausted. If
+  // the lock-step DbgRecord are identical, hoist all of them to TI.
+  // This replicates the dbg.* intrinsic behaviour in
+  // hoistCommonCodeFromSuccessors.
+  while (none_of(Itrs, atEnd)) {
+    bool HoistDVRs = allIdentical(Itrs);
+    for (CurrentAndEndIt &Pair : Itrs) {
+      // Increment Current iterator now as we may be about to move the
+      // DbgRecord.
+      DbgRecord &DR = *Pair.first++;
+      if (HoistDVRs) {
+        DR.removeFromParent();
+        TI->getParent()->insertDbgRecordBefore(&DR, TI->getIterator());
+      }
+    }
+  }
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If EqTermsOnly is
 /// given, only perform hoisting in case both blocks only contain a terminator.
@@ -1598,7 +1653,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     auto OtherSuccIterRange = make_first_range(OtherSuccIterPairRange);
 
     Instruction *I1 = &*BB1ItrPair.first;
-    auto *BB1 = I1->getParent();
 
     // Skip debug info if it is not identical.
     bool AllDbgInstsAreIdentical = all_of(OtherSuccIterRange, [I1](auto &Iter) {
@@ -1620,9 +1674,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && !I1->isIdenticalToWhenDefined(I2))
+      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }
+
+    SmallVector<Instruction *, 8> OtherInsts;
+    for (auto &SuccIter : OtherSuccIterRange)
+      OtherInsts.push_back(&*SuccIter);
 
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
@@ -1630,12 +1689,13 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       // Even if BB, which contains only one unreachable instruction, is ignored
       // at the beginning of the loop, we can hoist the terminator instruction.
       // If any instructions remain in the block, we cannot hoist terminators.
-      if (NumSkipped || !AllInstsAreIdentical)
+      if (NumSkipped || !AllInstsAreIdentical) {
+        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
         return Changed;
-      SmallVector<Instruction *, 8> Insts;
-      for (auto &SuccIter : OtherSuccIterRange)
-        Insts.push_back(&*SuccIter);
-      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, Insts) || Changed;
+      }
+
+      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, OtherInsts) ||
+             Changed;
     }
 
     if (AllInstsAreIdentical) {
@@ -1660,18 +1720,25 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        I1->moveBeforePreserving(TI);
+        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
+        // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
+        // and leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBeforePreserving(TI);
+          I2->moveBefore(TI);
         }
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        I1->moveBeforePreserving(TI);
-        BB->splice(TI->getIterator(), BB1, I1->getIterator());
+        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
+        // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
+        // and leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);
@@ -1690,8 +1757,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       Changed = true;
       NumHoistCommonInstrs += SuccIterPairs.size();
     } else {
-      if (NumSkipped >= HoistCommonSkipLimit)
+      if (NumSkipped >= HoistCommonSkipLimit) {
+        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
         return Changed;
+      }
       // We are about to skip over a pair of non-identical instructions. Record
       // if any have characteristics that would prevent reordering instructions
       // across them.
@@ -1752,7 +1821,10 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
     }
   }
 
-  // Okay, it is safe to hoist the terminator.
+  // Hoist DbgVariableRecords attached to the terminator to match dbg.*
+  // intrinsic hoisting behaviour in hoistCommonCodeFromSuccessors.
+  hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherSuccTIs);
+  // Clone the terminator and hoist it into the pred, without any debug info.
   Instruction *NT = I1->clone();
   NT->insertInto(TIParent, TI->getIterator());
   if (!NT->getType()->isVoidTy()) {
@@ -1890,6 +1962,7 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
+  const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
@@ -1900,6 +1973,11 @@ static bool canSinkInstructions(
     if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
       return false;
     if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+
+    // Treat MMRAs conservatively. This pass can be quite aggressive and
+    // could drop a lot of MMRAs otherwise.
+    if (MMRAMetadata(*I) != I0MMRA)
       return false;
   }
 
@@ -2638,7 +2716,7 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
     // Form a PHI out of all the data ops under this index.
     PHINode *PN = PHINode::Create(
-        U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke);
+        U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke->getIterator());
     for (InvokeInst *II : Invokes)
       PN->addIncoming(II->getOperand(U.getOperandNo()), II->getParent());
 
@@ -2814,7 +2892,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // simple, to avoid introducing a spurious non-atomic write after an
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
-          SI->getValueOperand()->getType() == StoreTy && SI->isSimple())
+          SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
+          SI->getAlign() >= StoreToHoist->getAlign())
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
@@ -2822,7 +2901,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
-          LI->isSimple()) {
+          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         // Local objects (created by an `alloca` instruction) are always
         // writable, so once we are past a read from a location it is valid to
         // also write to that same location.
@@ -3101,10 +3180,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (llvm::is_contained(DAI->location_ops(), OrigV))
-        DAI->replaceVariableLocationOp(OrigV, S);
-    }
+    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
+        DbgAssign->replaceVariableLocationOp(OrigV, S);
+    };
+    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
+    for_each(at::getDVRAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3129,11 +3210,16 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   }
 
   // Hoist the instructions.
-  // In "RemoveDIs" non-instr debug-info mode, drop DPValues attached to these
-  // instructions, in the same way that dbg.value intrinsics are dropped at the
-  // end of this block.
+  // In "RemoveDIs" non-instr debug-info mode, drop DbgVariableRecords attached
+  // to these instructions, in the same way that dbg.value intrinsics are
+  // dropped at the end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    It.dropDbgValues();
+    for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
+      // Drop all records except assign-kind DbgVariableRecords (dbg.assign
+      // equivalent).
+      if (DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&DR);
+          !DVR || !DVR->isDbgAssign())
+        It.dropOneDbgRecord(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -3307,7 +3393,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     TranslateMap[Cond] = CB;
 
     // RemoveDIs: track instructions that we optimise away while folding, so
-    // that we can copy DPValues from them later.
+    // that we can copy DbgVariableRecords from them later.
     BasicBlock::iterator SrcDbgCursor = BB->begin();
     for (BasicBlock::iterator BBI = BB->begin(); &*BBI != BI; ++BBI) {
       if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
@@ -3771,9 +3857,10 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   if (PredBlock->IsNewDbgInfoFormat) {
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
-    for (DPValue &DPV : PredBlock->getTerminator()->getDbgValueRange()) {
-      RemapDPValue(M, &DPV, VMap,
-                   RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    for (DbgVariableRecord &DVR :
+         filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
+      RemapDbgRecord(M, &DVR, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -4585,7 +4672,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
     // terminator must be unreachable.
-    new UnreachableInst(OldTerm->getContext(), OldTerm);
+    new UnreachableInst(OldTerm->getContext(), OldTerm->getIterator());
   } else {
     // One of the selected values was a successor, but the other wasn't.
     // Insert an unconditional branch to the one that was found;
@@ -5226,11 +5313,11 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   // Ensure that any debug-info records that used to occur after the Unreachable
   // are moved to in front of it -- otherwise they'll "dangle" at the end of
   // the block.
-  BB->flushTerminatorDbgValues();
+  BB->flushTerminatorDbgRecords();
 
   // Debug-info records on the unreachable inst itself should be deleted, as
   // below we delete everything past the final executable instruction.
-  UI->dropDbgValues();
+  UI->dropDbgRecords();
 
   // If there are any instructions immediately before the unreachable that can
   // be removed, do so.
@@ -5248,9 +5335,9 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
     // block will be the unwind edges of Invoke/CatchSwitch/CleanupReturn,
     // and we can therefore guarantee this block will be erased.
 
-    // If we're deleting this, we're deleting any subsequent dbg.values, so
-    // delete DPValue records of variable information.
-    BBI->dropDbgValues();
+    // If we're deleting this, we're deleting any subsequent debug info, so
+    // delete DbgRecords.
+    BBI->dropDbgRecords();
 
     // Delete this instruction (any uses are guaranteed to be dead)
     BBI->replaceAllUsesWith(PoisonValue::get(BBI->getType()));
@@ -5275,7 +5362,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
       // or a degenerate conditional branch with matching destinations.
       if (all_of(BI->successors(),
                  [BB](auto *Successor) { return Successor == BB; })) {
-        new UnreachableInst(TI->getContext(), TI);
+        new UnreachableInst(TI->getContext(), TI->getIterator());
         TI->eraseFromParent();
         Changed = true;
       } else {
@@ -5374,7 +5461,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
             removeUnwindEdge(EHPred, DTU);
         }
         // The catchswitch is no longer reachable.
-        new UnreachableInst(CSI->getContext(), CSI);
+        new UnreachableInst(CSI->getContext(), CSI->getIterator());
         CSI->eraseFromParent();
         Changed = true;
       }
@@ -5384,7 +5471,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
              "Expected to always have an unwind to BB.");
       if (DTU)
         Updates.push_back({DominatorTree::Delete, Predecessor, BB});
-      new UnreachableInst(TI->getContext(), TI);
+      new UnreachableInst(TI->getContext(), TI->getIterator());
       TI->eraseFromParent();
       Changed = true;
     }
@@ -6493,16 +6580,17 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  Constant *DefaultConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                 DefaultValue, CmpOp1, true);
+  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  Constant *DefaultConst = ConstantFoldCompareInstOperands(
+      CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
     return;
 
   // Check if the compare with the case values is distinct from the default
   // compare result.
   for (auto ValuePair : Values) {
-    Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                ValuePair.second, CmpOp1, true);
+    Constant *CaseConst = ConstantFoldCompareInstOperands(
+        CmpInst->getPredicate(), ValuePair.second, CmpOp1, DL);
     if (!CaseConst || CaseConst == DefaultConst ||
         (CaseConst != TrueConst && CaseConst != FalseConst))
       return;
@@ -6526,7 +6614,7 @@ static void reuseTableCompare(
     // The compare yields the same result, just inverted. We can replace it.
     Value *InvertedTableCmp = BinaryOperator::CreateXor(
         RangeCmp, ConstantInt::get(RangeCmp->getType(), 1), "inverted.cmp",
-        RangeCheckBranch);
+        RangeCheckBranch->getIterator());
     CmpInst->replaceAllUsesWith(InvertedTableCmp);
     ++NumTableCmpReuses;
   }
@@ -6701,9 +6789,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
           return SwitchLookupTable::WouldFitInRegister(
               DL, UpperBound, KV.second /* ResultType */);
         })) {
+      // There may be some case index larger than the UpperBound (unreachable
+      // case), so make sure the table size does not get smaller.
+      TableSize = std::max(UpperBound, TableSize);
       // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
-      TableSize = UpperBound;
       DefaultIsReachable = false;
     }
   }
@@ -6898,18 +6988,17 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  auto *ShiftC = ConstantInt::get(Ty, Shift);
-  auto *Sub = Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
-  auto *LShr = Builder.CreateLShr(Sub, ShiftC);
-  auto *Shl = Builder.CreateShl(Sub, Ty->getBitWidth() - Shift);
-  auto *Rot = Builder.CreateOr(LShr, Shl);
+  Value *Sub =
+      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+  Value *Rot = Builder.CreateIntrinsic(
+      Ty, Intrinsic::fshl,
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
-    Case.setValue(
-        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;
 }
@@ -7078,14 +7167,14 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
 
   if (IBI->getNumDestinations() == 0) {
     // If the indirectbr has no successors, change it to unreachable.
-    new UnreachableInst(IBI->getContext(), IBI);
+    new UnreachableInst(IBI->getContext(), IBI->getIterator());
     EraseTerminatorAndDCECond(IBI);
     return true;
   }
 
   if (IBI->getNumDestinations() == 1) {
     // If the indirectbr has one successor, change it to a direct branch.
-    BranchInst::Create(IBI->getDestination(0), IBI);
+    BranchInst::Create(IBI->getDestination(0), IBI->getIterator());
     EraseTerminatorAndDCECond(IBI);
     return true;
   }
@@ -7387,10 +7476,33 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
       if (GEP->getPointerOperand() == I) {
-        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+        // The current base address is null, there are four cases to consider:
+        // getelementptr (TY, null, 0)                 -> null
+        // getelementptr (TY, null, not zero)          -> may be modified
+        // getelementptr inbounds (TY, null, 0)        -> null
+        // getelementptr inbounds (TY, null, not zero) -> poison iff null is
+        // undefined?
+        if (!GEP->hasAllZeroIndices() &&
+            (!GEP->isInBounds() ||
+             NullPointerIsDefined(GEP->getFunction(),
+                                  GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
+
+    // Look through return.
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(Use)) {
+      bool HasNoUndefAttr =
+          Ret->getFunction()->hasRetAttribute(Attribute::NoUndef);
+      // Return undefined to a noundef return value is undefined.
+      if (isa<UndefValue>(C) && HasNoUndefAttr)
+        return true;
+      // Return null to a nonnull+noundef return value is undefined.
+      if (C->isNullValue() && HasNoUndefAttr &&
+          Ret->getFunction()->hasRetAttribute(Attribute::NonNull)) {
+        return !PtrValueMayBeModified;
+      }
+    }
 
     // Look through bitcasts.
     if (BitCastInst *BC = dyn_cast<BitCastInst>(Use))
@@ -7408,6 +7520,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         return (!NullPointerIsDefined(SI->getFunction(),
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
+
+    // llvm.assume(false/undef) always triggers immediate UB.
+    if (auto *Assume = dyn_cast<AssumeInst>(Use)) {
+      // Ignore assume operand bundles.
+      if (I == Assume->getArgOperand(0))
+        return true;
+    }
 
     if (auto *CB = dyn_cast<CallBase>(Use)) {
       if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))

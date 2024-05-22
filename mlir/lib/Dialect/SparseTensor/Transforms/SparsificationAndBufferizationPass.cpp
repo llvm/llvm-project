@@ -24,6 +24,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -201,6 +202,12 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
     options.testAnalysisOnly = true;
     options.printConflicts = true;
   }
+  // Since this mini-pipeline may be used in alternative pipelines (viz.
+  // different from the default "sparsifier" pipeline) where unknown ops
+  // are handled by alternative bufferization methods that are downstream
+  // of this mini-pipeline, we allow unknown ops by default (failure to
+  // bufferize is eventually apparent by failing to convert to LLVM IR).
+  options.allowUnknownOps = true;
   return options;
 }
 

@@ -300,9 +300,8 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
   }
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type,
-                                                  EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, false);
 }
 
@@ -312,9 +311,8 @@ void Broadcaster::BroadcasterImpl::BroadcastEvent(
   PrivateBroadcastEvent(event_sp, false);
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
-    uint32_t event_type, EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, true);
 }
 
@@ -375,8 +373,8 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
     m_hijacking_masks.pop_back();
 }
 
-ConstString &Broadcaster::GetBroadcasterClass() const {
-  static ConstString class_name("lldb.anonymous");
+llvm::StringRef Broadcaster::GetBroadcasterClass() const {
+  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
   return class_name;
 }
 

@@ -1,0 +1,5 @@
+# RUN: cp -f %S/Inputs/stable_ir_values.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/stable_ir_values.ll.expected
+# Now test that we can reset all the names
+# RUN: %update_test_checks %t.ll --reset-variable-names
+# RUN: diff -u %t.ll %S/Inputs/stable_ir_values.ll.expected.reset

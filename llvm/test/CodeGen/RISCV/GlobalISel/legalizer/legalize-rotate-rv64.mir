@@ -2,7 +2,9 @@
 # RUN: llc -mtriple=riscv64 -run-pass=legalizer %s -o - \
 # RUN: | FileCheck %s --check-prefixes=CHECK,RV64I
 # RUN: llc -mtriple=riscv64 -mattr=+zbb -run-pass=legalizer %s -o - \
-# RUN: | FileCheck %s --check-prefixes=CHECK,RV64ZBB
+# RUN: | FileCheck %s --check-prefixes=CHECK,RV64ZBB_OR_RV64ZBKB
+# RUN: llc -mtriple=riscv64 -mattr=+zbkb -run-pass=legalizer %s -o - \
+# RUN: | FileCheck %s --check-prefixes=CHECK,RV64ZBB_OR_RV64ZBKB
 
 ---
 name:            rotl_i8
@@ -105,18 +107,18 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: rotl_i32
-    ; RV64ZBB: liveins: $x10, $x11
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; RV64ZBB-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[TRUNC]], [[AND]](s64)
-    ; RV64ZBB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTL]](s32)
-    ; RV64ZBB-NEXT: $x10 = COPY [[ANYEXT]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: rotl_i32
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[TRUNC]], [[AND]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTL]](s32)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %2(s64)
     %3:_(s64) = COPY $x11
@@ -149,14 +151,14 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: rotl_i64
-    ; RV64ZBB: liveins: $x10, $x11
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[ROTL:%[0-9]+]]:_(s64) = G_ROTL [[COPY]], [[COPY1]](s64)
-    ; RV64ZBB-NEXT: $x10 = COPY [[ROTL]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: rotl_i64
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTL:%[0-9]+]]:_(s64) = G_ROTL [[COPY]], [[COPY1]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ROTL]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
     %2:_(s64) = G_ROTL %0, %1(s64)
@@ -265,18 +267,18 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: rotr_i32
-    ; RV64ZBB: liveins: $x10, $x11
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; RV64ZBB-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[TRUNC]], [[AND]](s64)
-    ; RV64ZBB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTR]](s32)
-    ; RV64ZBB-NEXT: $x10 = COPY [[ANYEXT]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: rotr_i32
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[TRUNC]], [[AND]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTR]](s32)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %2(s64)
     %3:_(s64) = COPY $x11
@@ -309,14 +311,14 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: rotr_i64
-    ; RV64ZBB: liveins: $x10, $x11
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[COPY1]](s64)
-    ; RV64ZBB-NEXT: $x10 = COPY [[ROTR]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: rotr_i64
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[COPY1]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ROTR]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
     %2:_(s64) = G_ROTR %0, %1(s64)

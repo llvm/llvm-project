@@ -117,6 +117,54 @@ LogicalResult AttributesOp::verify() {
   return success();
 }
 
+LogicalResult BaseOp::verify() {
+  std::optional<StringRef> baseName = getBaseName();
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (baseName.has_value() == baseRef.has_value())
+    return emitOpError() << "the base type or attribute should be specified by "
+                            "either a name or a reference";
+
+  if (baseName &&
+      (baseName->empty() || ((*baseName)[0] != '!' && (*baseName)[0] != '#')))
+    return emitOpError() << "the base type or attribute name should start with "
+                            "'!' or '#'";
+
+  return success();
+}
+
+static LogicalResult
+checkSymbolIsTypeOrAttribute(SymbolTableCollection &symbolTable,
+                             Operation *source, SymbolRefAttr symbol) {
+  Operation *targetOp = symbolTable.lookupNearestSymbolFrom(source, symbol);
+  if (!targetOp)
+    return source->emitOpError() << "symbol '" << symbol << "' not found";
+
+  if (!isa<TypeOp, AttributeOp>(targetOp))
+    return source->emitOpError() << "symbol '" << symbol
+                                 << "' does not refer to a type or attribute "
+                                    "definition (refers to '"
+                                 << targetOp->getName() << "')";
+
+  return success();
+}
+
+LogicalResult BaseOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (!baseRef)
+    return success();
+
+  return checkSymbolIsTypeOrAttribute(symbolTable, *this, *baseRef);
+}
+
+LogicalResult
+ParametricOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  std::optional<SymbolRefAttr> baseRef = getBaseType();
+  if (!baseRef)
+    return success();
+
+  return checkSymbolIsTypeOrAttribute(symbolTable, *this, *baseRef);
+}
+
 /// Parse a value with its variadicity first. By default, the variadicity is
 /// single.
 ///

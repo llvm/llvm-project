@@ -20,14 +20,13 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
 #include <optional>
@@ -42,6 +41,7 @@ class FunctionLoweringInfo;
 class GlobalValue;
 class InstrItineraryData;
 class Instruction;
+class IRBuilderBase;
 class MachineBasicBlock;
 class MachineInstr;
 class SelectionDAG;
@@ -762,6 +762,10 @@ class VectorType;
         ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
         Value *Accumulator = nullptr) const override;
 
+    bool softPromoteHalfType() const override { return true; }
+
+    bool useFPRegsForHalfType() const override { return true; }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -939,12 +943,8 @@ class VectorType;
     /// for tail call optimization. Targets which want to do tail call
     /// optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-        bool isCalleeStructRet, bool isCallerStructRet,
-        const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG,
-        const bool isIndirect) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const;
 
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,

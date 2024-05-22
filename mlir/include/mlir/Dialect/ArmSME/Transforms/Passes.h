@@ -29,8 +29,12 @@ std::unique_ptr<Pass> createEnableArmStreamingPass(
     const ArmStreamingMode = ArmStreamingMode::Streaming,
     const ArmZaMode = ArmZaMode::Disabled, bool onlyIfRequiredByOps = false);
 
-/// Pass that allocates tile IDs to ArmSME operations.
-std::unique_ptr<Pass> createTileAllocationPass();
+/// Pass that fuses 'arm_sme.outerproduct' ops into 2-way or 4-way widening
+/// variants.
+std::unique_ptr<Pass> createOuterProductFusionPass();
+
+/// Pass that legalizes vectors so they can be lowered to ArmSME.
+std::unique_ptr<Pass> createVectorLegalizationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

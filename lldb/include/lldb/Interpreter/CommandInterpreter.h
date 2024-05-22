@@ -22,12 +22,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 #include <mutex>
 #include <optional>
 #include <stack>
+#include <unordered_map>
 
 namespace lldb_private {
 class CommandInterpreter;
@@ -254,9 +256,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -559,6 +561,9 @@ public:
   bool GetPromptOnQuit() const;
   void SetPromptOnQuit(bool enable);
 
+  bool GetSaveTranscript() const;
+  void SetSaveTranscript(bool enable);
+
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
@@ -640,6 +645,13 @@ public:
 
   Status PreprocessCommand(std::string &command);
   Status PreprocessToken(std::string &token);
+
+  void IncreaseCommandUsage(const CommandObject &cmd_obj) {
+    ++m_command_usages[cmd_obj.GetCommandName()];
+  }
+
+  llvm::json::Value GetStatistics();
+  const StructuredData::Array &GetTranscript() const;
 
 protected:
   friend class Debugger;
@@ -754,7 +766,24 @@ private:
   // If the driver is accepts custom exit codes for the 'quit' command.
   bool m_allow_exit_code = false;
 
+  /// Command usage statistics.
+  typedef llvm::StringMap<uint64_t> CommandUsageMap;
+  CommandUsageMap m_command_usages;
+
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this stream. Otherwise this stream is empty.
   StreamString m_transcript_stream;
+
+  /// Contains a list of handled commands and their details. Each element in
+  /// the list is a dictionary with the following keys/values:
+  /// - "command" (string): The command that was executed.
+  /// - "output" (string): The output of the command. Empty ("") if no output.
+  /// - "error" (string): The error of the command. Empty ("") if no error.
+  /// - "seconds" (float): The time it took to execute the command.
+  ///
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this list. Otherwise this list is empty.
+  StructuredData::Array m_transcript;
 };
 
 } // namespace lldb_private

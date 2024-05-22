@@ -520,9 +520,7 @@ struct GlobalMemrefOpLowering
         global, arrayTy, global.getConstant(), linkage, global.getSymName(),
         initialValue, alignment, *addressSpace);
     if (!global.isExternal() && global.isUninitialized()) {
-      Block *blk = new Block();
-      newGlobal.getInitializerRegion().push_back(blk);
-      rewriter.setInsertionPointToStart(blk);
+      rewriter.createBlock(&newGlobal.getInitializerRegion());
       Value undef[] = {
           rewriter.create<LLVM::UndefOp>(global.getLoc(), arrayTy)};
       rewriter.create<LLVM::ReturnOp>(global.getLoc(), undef);

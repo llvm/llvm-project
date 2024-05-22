@@ -1,11 +1,10 @@
 ; REQUIRES: x86
-; RUN: llvm-as -o %t.bc %s
-; RUN: rm -f %t.lto.o %t1.lto.o
-; RUN: ld.lld --lto-partitions=2 -save-temps -o %t %t.bc \
-; RUN:   -e foo --lto-O0
-; RUN: llvm-readobj --symbols --dyn-syms %t | FileCheck %s
-; RUN: llvm-nm %t.lto.o | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-nm %t1.lto.o | FileCheck --check-prefix=CHECK1 %s
+; RUN: rm -rf %t && mkdir %t && cd %t
+; RUN: llvm-as -o a.bc %s
+; RUN: ld.lld --lto-partitions=2 -save-temps -o out a.bc -e foo --lto-O0
+; RUN: llvm-readobj --symbols --dyn-syms out | FileCheck %s
+; RUN: llvm-nm out.lto.o | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-nm out.lto.1.o | FileCheck --check-prefix=CHECK1 %s
 
 ; CHECK:      Symbols [
 ; CHECK-NEXT:   Symbol {

@@ -248,7 +248,7 @@ void test_v128_store64_lane(uint64_t *ptr, v128_t vec) {
 
 // CHECK-LABEL: @test_i8x16_make(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[C0:%.*]], i64 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[C0:%.*]], i64 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 [[C1:%.*]], i64 1
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 [[C2:%.*]], i64 2
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 [[C3:%.*]], i64 3
@@ -273,7 +273,7 @@ v128_t test_i8x16_make(int8_t c0, int8_t c1, int8_t c2, int8_t c3, int8_t c4, in
 
 // CHECK-LABEL: @test_u8x16_make(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[C0:%.*]], i64 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[C0:%.*]], i64 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 [[C1:%.*]], i64 1
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 [[C2:%.*]], i64 2
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 [[C3:%.*]], i64 3
@@ -1572,7 +1572,7 @@ uint32_t test_i8x16_bitmask(v128_t a) {
 // CHECK-LABEL: @test_i8x16_popcnt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]]), !range [[RNG5:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i8 0, 9) <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]])
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //

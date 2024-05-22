@@ -36,7 +36,7 @@ namespace detail {
 // So, callers need to be careful which of these next functions they call!
 
 inline error_code capture_errno() {
-  _LIBCPP_ASSERT_UNCATEGORIZED(errno != 0, "Expected errno to be non-zero");
+  _LIBCPP_ASSERT_INTERNAL(errno != 0, "Expected errno to be non-zero");
   return error_code(errno, generic_category());
 }
 

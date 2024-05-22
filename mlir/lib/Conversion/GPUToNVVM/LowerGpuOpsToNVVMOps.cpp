@@ -72,13 +72,13 @@ convertReduxKind(gpu::AllReduceOperation mode) {
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MINUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MINF:
+  case gpu::AllReduceOperation::MINNUMF:
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MAXSI:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::MAXUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MAXF:
+  case gpu::AllReduceOperation::MAXNUMF:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::AND:
     return NVVM::ReduxKind::AND;
@@ -155,8 +155,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto valueTy = adaptor.getValue().getType();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     auto predTy = IntegerType::get(rewriter.getContext(), 1);
-    auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
-                                                     {valueTy, predTy});
 
     Value one = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 1);
     Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
@@ -176,14 +174,25 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
           rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.getWidth(), one);
     }
 
-    auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
+    bool predIsUsed = !op->getResult(1).use_empty();
+    UnitAttr returnValueAndIsValidAttr = nullptr;
+    Type resultTy = valueTy;
+    if (predIsUsed) {
+      returnValueAndIsValidAttr = rewriter.getUnitAttr();
+      resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                  {valueTy, predTy});
+    }
     Value shfl = rewriter.create<NVVM::ShflOp>(
         loc, resultTy, activeMask, adaptor.getValue(), adaptor.getOffset(),
         maskAndClamp, convertShflKind(op.getMode()), returnValueAndIsValidAttr);
-    Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
-    Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
-
-    rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    if (predIsUsed) {
+      Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
+      Value isActiveSrcLane =
+          rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
+      rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    } else {
+      rewriter.replaceOp(op, {shfl, nullptr});
+    }
     return success();
   }
 };
@@ -352,7 +361,9 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       /*workgroupAddrSpace=*/
       static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
       StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()));
+                      NVVM::NVVMDialect::getKernelFuncAttrName()),
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getMaxntidAttrName()));
 
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
@@ -365,6 +376,7 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
                                    "__nv_ceil");
   populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos");
+  populateOpPatterns<math::ErfOp>(converter, patterns, "__nv_erff", "__nv_erf");
   populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp");
   populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
                                    "__nv_exp2");

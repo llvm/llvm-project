@@ -29,9 +29,9 @@ Overview
 Within LLVM, FatLTO is supported by choosing the ``FatLTODefaultPipeline``.
 This pipeline will:
 
-#) Run the pre-link UnifiedLTO pipeline on the current module.
+#) Run the pre-link (Thin)LTO pipeline on the current module.
 #) Embed the pre-link bitcode in a special ``.llvm.lto`` section.
-#) Finish optimizing the module using the post-link ThinLTO pipeline.
+#) Finish optimizing the module using the ModuleOptimization pipeline.
 #) Emit the object file, including the new ``.llvm.lto`` section.
 
 .. NOTE
@@ -76,3 +76,40 @@ Supported File Formats
 The current implementation only supports ELF files. At time of writing, it is
 unclear if it will be useful to support other object file formats like ``COFF``
 or ``Mach-O``.
+
+Usage
+=====
+
+Clang users can specify ``-ffat-lto-objects`` with ``-flto`` or ``-flto=thin``.
+Without the ``-flto`` option, ``-ffat-lto-objects`` has no effect.
+
+Compile an object file using FatLTO:
+
+.. code-block:: console
+
+   $ clang -flto -ffat-lto-objects example.c -c -o example.o
+
+Link using the object code from the fat object without LTO. This turns
+``-ffat-lto-objects`` into a no-op, when ``-fno-lto`` is specified:
+
+.. code-block:: console
+
+   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld example.o
+
+Alternatively, you can omit any references to LTO with fat objects and retain standard linker behavior:
+
+.. code-block:: console
+
+   $ clang -fuse-ld=lld example.o
+
+Link using the LLVM bitcode from the fat object with Full LTO:
+
+.. code-block:: console
+
+   $ clang -flto -ffat-lto-objects -fuse-ld=lld example.o  # clang will pass --lto=full --fat-lto-objects to ld.lld
+
+Link using the LLVM bitcode from the fat object with Thin LTO:
+
+.. code-block:: console
+
+   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld example.o  # clang will pass --lto=thin --fat-lto-objects to ld.lld

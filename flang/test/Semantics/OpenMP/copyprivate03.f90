@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.4.2 copyprivate Clause
@@ -33,6 +35,13 @@ program omp_copyprivate
   !$omp end single copyprivate(a)
   !$omp end parallel
   !$omp end parallel sections
+
+  !The use of FIRSTPRIVATE with COPYPRIVATE is allowed
+  !$omp parallel firstprivate(a)
+  !$omp single
+  a = a + k
+  !$omp end single copyprivate(a)
+  !$omp end parallel
 
   print *, a, b
 

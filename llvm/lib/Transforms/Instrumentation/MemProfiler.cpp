@@ -59,7 +59,7 @@ extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
-constexpr uint64_t DefaultShadowGranularity = 64;
+constexpr uint64_t DefaultMemGranularity = 64;
 
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
@@ -120,7 +120,7 @@ static cl::opt<int> ClMappingScale("memprof-mapping-scale",
 static cl::opt<int>
     ClMappingGranularity("memprof-mapping-granularity",
                          cl::desc("granularity of memprof shadow mapping"),
-                         cl::Hidden, cl::init(DefaultShadowGranularity));
+                         cl::Hidden, cl::init(DefaultMemGranularity));
 
 static cl::opt<bool> ClStack("memprof-instrument-stack",
                              cl::desc("Instrument scalar stack variables"),
@@ -139,6 +139,15 @@ static cl::opt<int> ClDebugMin("memprof-debug-min", cl::desc("Debug min inst"),
 
 static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
+
+// By default disable matching of allocation profiles onto operator new that
+// already explicitly pass a hot/cold hint, since we don't currently
+// override these hints anyway.
+static cl::opt<bool> ClMemProfMatchHotColdNew(
+    "memprof-match-hot-cold-new",
+    cl::desc(
+        "Match allocation profiles onto existing hot/cold operator new calls"),
+    cl::Hidden, cl::init(false));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -171,7 +180,6 @@ struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
   Type *AccessTy;
-  uint64_t TypeSize;
   Value *MaybeMask = nullptr;
 };
 
@@ -194,7 +202,7 @@ public:
   void instrumentMop(Instruction *I, const DataLayout &DL,
                      InterestingMemoryAccess &Access);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
-                         Value *Addr, uint32_t TypeSize, bool IsWrite);
+                         Value *Addr, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                    Instruction *I, Value *Addr, Type *AccessTy,
                                    bool IsWrite);
@@ -215,7 +223,6 @@ private:
 
   // These arrays is indexed by AccessIsWrite
   FunctionCallee MemProfMemoryAccessCallback[2];
-  FunctionCallee MemProfMemoryAccessCallbackSized[2];
 
   FunctionCallee MemProfMemmove, MemProfMemcpy, MemProfMemset;
   Value *DynamicShadowOffset = nullptr;
@@ -374,8 +381,6 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       return std::nullopt;
   }
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
-  Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
 }
 
@@ -383,7 +388,6 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               Type *AccessTy, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(AccessTy);
-  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
@@ -408,8 +412,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     IRBuilder<> IRB(InsertBefore);
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-    instrumentAddress(I, InsertBefore, InstrumentedAddress, ElemTypeSize,
-                      IsWrite);
+    instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);
   }
 }
 
@@ -436,13 +439,13 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
     // Since the access counts will be accumulated across the entire allocation,
     // we only update the shadow access count for the first location and thus
     // don't need to worry about alignment and type size.
-    instrumentAddress(I, I, Access.Addr, Access.TypeSize, Access.IsWrite);
+    instrumentAddress(I, I, Access.Addr, Access.IsWrite);
   }
 }
 
 void MemProfiler::instrumentAddress(Instruction *OrigIns,
                                     Instruction *InsertBefore, Value *Addr,
-                                    uint32_t TypeSize, bool IsWrite) {
+                                    bool IsWrite) {
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
@@ -508,12 +511,7 @@ void MemProfiler::initializeCallbacks(Module &M) {
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
 
-    SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    MemProfMemoryAccessCallbackSized[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr + "N",
-                              FunctionType::get(IRB.getVoidTy(), Args2, false));
-
     MemProfMemoryAccessCallback[AccessIsWrite] =
         M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
                               FunctionType::get(IRB.getVoidTy(), Args1, false));
@@ -535,7 +533,7 @@ bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   // the shadow memory.
   // We cannot just ignore these methods, because they may call other
   // instrumented functions.
-  if (F.getName().find(" load]") != std::string::npos) {
+  if (F.getName().contains(" load]")) {
     FunctionCallee MemProfInitFunction =
         declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
@@ -670,6 +668,37 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   // Return true if we found and matched all stack ids from the call
   // instruction.
   return InlCallStackIter == InlinedCallStack.end();
+}
+
+static bool isNewWithHotColdVariant(Function *Callee,
+                                    const TargetLibraryInfo &TLI) {
+  if (!Callee)
+    return false;
+  LibFunc Func;
+  if (!TLI.getLibFunc(*Callee, Func))
+    return false;
+  switch (Func) {
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_ZnwmSt11align_val_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_ZnamSt11align_val_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    return true;
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    return ClMemProfMatchHotColdNew;
+  default:
+    return false;
+  }
 }
 
 static void readMemprof(Module &M, Function &F,
@@ -823,7 +852,7 @@ static void readMemprof(Module &M, Function &F,
       if (AllocInfoIter != LocHashToAllocInfo.end()) {
         // Only consider allocations via new, to reduce unnecessary metadata,
         // since those are the only allocations that will be targeted initially.
-        if (!isNewLikeFn(CI, &TLI))
+        if (!isNewWithHotColdVariant(CI->getCalledFunction(), TLI))
           continue;
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to

@@ -2409,15 +2409,15 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   if (!isGuaranteedNotToBeUndefOrPoison(BitPos)) {
     // BitMask may be computed from BitPos, Freeze BitPos so we can increase
     // it's use count.
-    Instruction *InsertPt = nullptr;
+    std::optional<BasicBlock::iterator> InsertPt = std::nullopt;
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
-      InsertPt = &**BitPosI->getInsertionPointAfterDef();
+      InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = &*DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =
-        new FreezeInst(BitPos, BitPos->getName() + ".fr", InsertPt);
+        new FreezeInst(BitPos, BitPos->getName() + ".fr", *InsertPt);
     BitPos->replaceUsesWithIf(BitPosFrozen, [BitPosFrozen](Use &U) {
       return U.getUser() != BitPosFrozen;
     });

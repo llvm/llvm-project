@@ -237,9 +237,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
 #ifndef NDEBUG
     assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
@@ -275,7 +273,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
       for (StringRef Value : A->getValues()) {
         if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
-            Value == "ndd" || Value == "ccmp" || Value == "cf") {
+            Value == "ndd" || Value == "ccmp" || Value == "nf" ||
+            Value == "cf") {
           Features.push_back(
               Args.MakeArgString((IsNegative ? "-" : "+") + Value));
           continue;

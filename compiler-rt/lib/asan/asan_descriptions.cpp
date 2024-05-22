@@ -245,11 +245,11 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
   InternalScopedString str;
   str.AppendF("    [%zd, %zd)", var.beg, var_end);
   // Render variable name.
-  str.AppendF(" '");
+  str.Append(" '");
   for (uptr i = 0; i < var.name_len; ++i) {
     str.AppendF("%c", var.name_pos[i]);
   }
-  str.AppendF("'");
+  str.Append("'");
   if (var.line > 0) {
     str.AppendF(" (line %zd)", var.line);
   }
@@ -260,7 +260,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
     str.AppendF("%s <== Memory access at offset %zd %s this variable%s\n",
                 d.Location(), addr, pos_descr, d.Default());
   } else {
-    str.AppendF("\n");
+    str.Append("\n");
   }
   Printf("%s", str.data());
 }

@@ -34,7 +34,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    li a5, 0
 ; CHECK-NEXT:    li a6, 0
 ; CHECK-NEXT:    li a7, 0
-; CHECK-NEXT:    call _Z3fooiiiiiiiiiiPi@plt
+; CHECK-NEXT:    call _Z3fooiiiiiiiiiiPi
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  # %bb.1: # %try.cont.unreachable
@@ -44,9 +44,9 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    bne a1, a2, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %catch
-; CHECK-NEXT:    call __cxa_begin_catch@plt
+; CHECK-NEXT:    call __cxa_begin_catch
 ; CHECK-NEXT:    lw s1, 0(a0)
-; CHECK-NEXT:    call __cxa_end_catch@plt
+; CHECK-NEXT:    call __cxa_end_catch
 ; CHECK-NEXT:    mv a0, s1
 ; CHECK-NEXT:    addi sp, s0, -32
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -55,7 +55,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4: # %ehcleanup
-; CHECK-NEXT:    call _Unwind_Resume@plt
+; CHECK-NEXT:    call _Unwind_Resume
 entry:
   invoke void @_Z3fooiiiiiiiiiiPi(i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 poison, i32 poison, i32 poison)
           to label %try.cont.unreachable unwind label %lpad

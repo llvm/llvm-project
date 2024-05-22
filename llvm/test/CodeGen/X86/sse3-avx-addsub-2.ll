@@ -439,7 +439,7 @@ define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm3 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm3, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm4
@@ -460,7 +460,7 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX-LABEL: test16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vsubss %xmm2, %xmm0, %xmm3
 ; AVX-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
 ; AVX-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]

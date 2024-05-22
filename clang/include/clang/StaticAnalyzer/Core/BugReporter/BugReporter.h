@@ -586,6 +586,9 @@ class BugReporter {
 private:
   BugReporterData& D;
 
+  /// The top-level entry point for the issue to be reported.
+  const Decl *AnalysisEntryPoint = nullptr;
+
   /// Generate and flush the diagnostics for the given bug report.
   void FlushReport(BugReportEquivClass& EQ);
 
@@ -622,6 +625,14 @@ public:
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
+
+  /// Get the top-level entry point for the issue to be reported.
+  const Decl *getAnalysisEntryPoint() const { return AnalysisEntryPoint; }
+
+  void setAnalysisEntryPoint(const Decl *EntryPoint) {
+    assert(EntryPoint);
+    AnalysisEntryPoint = EntryPoint;
+  }
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///
@@ -713,6 +724,7 @@ public:
   virtual ~BugReporterContext() = default;
 
   PathSensitiveBugReporter& getBugReporter() { return BR; }
+  const PathSensitiveBugReporter &getBugReporter() const { return BR; }
 
   ProgramStateManager& getStateManager() const {
     return BR.getStateManager();

@@ -23,18 +23,16 @@ union [[gsl::suppress("type.1")]] U {
   float f;
 };
 
+// This doesn't really suppress anything but why not?
 [[clang::suppress]];
-// expected-error@-1 {{'suppress' attribute only applies to variables and statements}}
 
 namespace N {
 [[clang::suppress("in-a-namespace")]];
-// expected-error@-1 {{'suppress' attribute only applies to variables and statements}}
 } // namespace N
 
 [[clang::suppress]] int global = 42;
 
 [[clang::suppress]] void foo() {
-  // expected-error@-1 {{'suppress' attribute only applies to variables and statements}}
   [[clang::suppress]] int *p;
 
   [[clang::suppress]] int a = 0;           // no-warning
@@ -56,7 +54,11 @@ namespace N {
 }
 
 class [[clang::suppress("type.1")]] V {
-  // expected-error@-1 {{'suppress' attribute only applies to variables and statements}}
   int i;
   float f;
+};
+
+// FIXME: There's no good reason why we shouldn't support this case.
+// But it doesn't look like clang generally supports such attributes yet.
+class W : [[clang::suppress]] public V { // expected-error{{'suppress' attribute cannot be applied to a base specifier}}
 };

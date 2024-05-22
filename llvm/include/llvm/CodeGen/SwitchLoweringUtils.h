@@ -293,6 +293,22 @@ public:
       MachineBasicBlock *Src, MachineBasicBlock *Dst,
       BranchProbability Prob = BranchProbability::getUnknown()) = 0;
 
+  /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
+  /// than each cluster in the range, its rank is 0.
+  unsigned caseClusterRank(const CaseCluster &CC, CaseClusterIt First,
+                           CaseClusterIt Last);
+
+  struct SplitWorkItemInfo {
+    CaseClusterIt LastLeft;
+    CaseClusterIt FirstRight;
+    BranchProbability LeftProb;
+    BranchProbability RightProb;
+  };
+  /// Compute information to balance the tree based on branch probabilities to
+  /// create a near-optimal (in terms of search time given key frequency) binary
+  /// search tree. See e.g. Kurt Mehlhorn "Nearly Optimal Binary Search Trees"
+  /// (1975).
+  SplitWorkItemInfo computeSplitWorkItemInfo(const SwitchWorkListItem &W);
   virtual ~SwitchLowering() = default;
 
 private:

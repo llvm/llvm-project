@@ -211,6 +211,10 @@ typedef enum kmp_mutex_impl_t {
  * definitions generated from spec
  *****************************************************************************/
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 typedef enum ompt_callbacks_t {
   ompt_callback_thread_begin             = 1,
   ompt_callback_thread_end               = 2,
@@ -1413,5 +1417,9 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (
 #define ompt_wait_id_none 0
 
 #define ompd_segment_none 0
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif
 
 #endif /* __OMPT__ */

@@ -203,7 +203,7 @@ void RVVType::initBuiltinStr() {
     }
     break;
   case ScalarTypeKind::BFloat:
-    BuiltinStr += "b";
+    BuiltinStr += "y";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");
@@ -1150,11 +1150,6 @@ void RVVIntrinsic::updateNamesAndPolicy(
     OverloadedName += suffix;
   };
 
-  // This follows the naming guideline under riscv-c-api-doc to add the
-  // `__riscv_` suffix for all RVV intrinsics.
-  Name = "__riscv_" + Name;
-  OverloadedName = "__riscv_" + OverloadedName;
-
   if (HasFRMRoundModeOp) {
     Name += "_rm";
     BuiltinName += "_rm";
@@ -1217,7 +1212,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << (int)Record.PrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << (int)Record.RequiredExtensions << ",";
+  OS << Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";

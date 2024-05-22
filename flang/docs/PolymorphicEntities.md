@@ -874,7 +874,7 @@ dynamic type of polymorphic entities.
   ```
 ---
 
-# Testing
+## Testing
 
 - Lowering part is tested with LIT tests in tree
 - Polymorphic entities involved a lot of runtime information so executable
@@ -882,7 +882,7 @@ dynamic type of polymorphic entities.
 
 ---
 
-# Current TODOs
+## Current TODOs
 Current list of TODOs in lowering:
 - `flang/lib/Lower/Bridge.cpp:448` not yet implemented: create polymorphic host associated copy
 - `flang/lib/Lower/CallInterface.cpp:795` not yet implemented: support for polymorphic types

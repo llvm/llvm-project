@@ -42,7 +42,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -1855,11 +1854,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
               dyn_cast<const XCOFFObjectFile>(&Obj))
         S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
 
-      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
-        const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
-        if (WasmSym.isTypeData() && !WasmSym.isUndefined())
-          S.Size = WasmSym.Info.DataRef.Size;
-      }
+      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj))
+        S.Size = WasmObj->getSymbolSize(Sym);
 
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
@@ -2405,7 +2401,6 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
 }
 
 int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   NmOptTable Tbl;

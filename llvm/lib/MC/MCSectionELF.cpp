@@ -90,8 +90,6 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'e';
   if (Flags & ELF::SHF_EXECINSTR)
     OS << 'x';
-  if (Flags & ELF::SHF_GROUP)
-    OS << 'G';
   if (Flags & ELF::SHF_WRITE)
     OS << 'w';
   if (Flags & ELF::SHF_MERGE)
@@ -102,6 +100,8 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'T';
   if (Flags & ELF::SHF_LINK_ORDER)
     OS << 'o';
+  if (Flags & ELF::SHF_GROUP)
+    OS << 'G';
   if (Flags & ELF::SHF_GNU_RETAIN)
     OS << 'R';
 
@@ -175,19 +175,11 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
   else
-    report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
-                       " for section " + getName());
+    OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);
     OS << "," << EntrySize;
-  }
-
-  if (Flags & ELF::SHF_GROUP) {
-    OS << ",";
-    printName(OS, Group.getPointer()->getName());
-    if (isComdat())
-      OS << ",comdat";
   }
 
   if (Flags & ELF::SHF_LINK_ORDER) {
@@ -196,6 +188,13 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       printName(OS, LinkedToSym->getName());
     else
       OS << '0';
+  }
+
+  if (Flags & ELF::SHF_GROUP) {
+    OS << ",";
+    printName(OS, Group.getPointer()->getName());
+    if (isComdat())
+      OS << ",comdat";
   }
 
   if (isUnique())

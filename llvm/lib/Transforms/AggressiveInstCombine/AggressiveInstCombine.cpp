@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -46,6 +48,11 @@ STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
     cl::desc("Max number of instructions to scan for aggressive instcombine."));
+
+static cl::opt<unsigned> StrNCmpInlineThreshold(
+    "strncmp-inline-threshold", cl::init(3), cl::Hidden,
+    cl::desc("The maximum length of a constant string for a builtin string cmp "
+             "call eligible for inlining. The default value is 3."));
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -73,7 +80,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
                      m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
                      m_LShr(m_Value(ShVal1),
                             m_Sub(m_SpecificInt(Width), m_Deferred(ShAmt))))))) {
-        return Intrinsic::fshl;
+      return Intrinsic::fshl;
     }
 
     // fshr(ShVal0, ShVal1, ShAmt)
@@ -82,7 +89,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
               m_OneUse(m_c_Or(m_Shl(m_Value(ShVal0), m_Sub(m_SpecificInt(Width),
                                                            m_Value(ShAmt))),
                               m_LShr(m_Value(ShVal1), m_Deferred(ShAmt)))))) {
-        return Intrinsic::fshr;
+      return Intrinsic::fshr;
     }
 
     return Intrinsic::not_intrinsic;
@@ -399,21 +406,11 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 /// Try to replace a mathlib call to sqrt with the LLVM intrinsic. This avoids
 /// pessimistic codegen that has to account for setting errno and can enable
 /// vectorization.
-static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
+static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
                      TargetLibraryInfo &TLI, AssumptionCache &AC,
                      DominatorTree &DT) {
-  // Match a call to sqrt mathlib function.
-  auto *Call = dyn_cast<CallInst>(&I);
-  if (!Call)
-    return false;
 
   Module *M = Call->getModule();
-  LibFunc Func;
-  if (!TLI.getLibFunc(*Call, Func) || !isLibFuncEmittable(M, &TLI, Func))
-    return false;
-
-  if (Func != LibFunc_sqrt && Func != LibFunc_sqrtf && Func != LibFunc_sqrtl)
-    return false;
 
   // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
   // (because NNAN or the operand arg must not be less than -0.0) and (2) we
@@ -425,19 +422,19 @@ static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
   Value *Arg = Call->getArgOperand(0);
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
-       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, &I,
-                                   &DT))) {
-    IRBuilder<> Builder(&I);
+       cannotBeOrderedLessThanZero(
+           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+    IRBuilder<> Builder(Call);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
 
     Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
     Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
-    I.replaceAllUsesWith(NewSqrt);
+    Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
     // trivially dead.
-    I.eraseFromParent();
+    Call->eraseFromParent();
     return true;
   }
 
@@ -808,8 +805,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreateGEP(Builder.getInt8Ty(), Load1Ptr,
-                                 Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
+                                    Builder.getInt32(Offset1.getZExtValue()));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
@@ -922,13 +919,233 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   return true;
 }
 
+namespace {
+class StrNCmpInliner {
+public:
+  StrNCmpInliner(CallInst *CI, LibFunc Func, DomTreeUpdater *DTU,
+                 const DataLayout &DL)
+      : CI(CI), Func(Func), DTU(DTU), DL(DL) {}
+
+  bool optimizeStrNCmp();
+
+private:
+  void inlineCompare(Value *LHS, StringRef RHS, uint64_t N, bool Swapped);
+
+  CallInst *CI;
+  LibFunc Func;
+  DomTreeUpdater *DTU;
+  const DataLayout &DL;
+};
+
+} // namespace
+
+/// First we normalize calls to strncmp/strcmp to the form of
+/// compare(s1, s2, N), which means comparing first N bytes of s1 and s2
+/// (without considering '\0').
+///
+/// Examples:
+///
+/// \code
+///   strncmp(s, "a", 3) -> compare(s, "a", 2)
+///   strncmp(s, "abc", 3) -> compare(s, "abc", 3)
+///   strncmp(s, "a\0b", 3) -> compare(s, "a\0b", 2)
+///   strcmp(s, "a") -> compare(s, "a", 2)
+///
+///   char s2[] = {'a'}
+///   strncmp(s, s2, 3) -> compare(s, s2, 3)
+///
+///   char s2[] = {'a', 'b', 'c', 'd'}
+///   strncmp(s, s2, 3) -> compare(s, s2, 3)
+/// \endcode
+///
+/// We only handle cases where N and exactly one of s1 and s2 are constant.
+/// Cases that s1 and s2 are both constant are already handled by the
+/// instcombine pass.
+///
+/// We do not handle cases where N > StrNCmpInlineThreshold.
+///
+/// We also do not handles cases where N < 2, which are already
+/// handled by the instcombine pass.
+///
+bool StrNCmpInliner::optimizeStrNCmp() {
+  if (StrNCmpInlineThreshold < 2)
+    return false;
+
+  if (!isOnlyUsedInZeroComparison(CI))
+    return false;
+
+  Value *Str1P = CI->getArgOperand(0);
+  Value *Str2P = CI->getArgOperand(1);
+  // Should be handled elsewhere.
+  if (Str1P == Str2P)
+    return false;
+
+  StringRef Str1, Str2;
+  bool HasStr1 = getConstantStringInfo(Str1P, Str1, /*TrimAtNul=*/false);
+  bool HasStr2 = getConstantStringInfo(Str2P, Str2, /*TrimAtNul=*/false);
+  if (HasStr1 == HasStr2)
+    return false;
+
+  // Note that '\0' and characters after it are not trimmed.
+  StringRef Str = HasStr1 ? Str1 : Str2;
+  Value *StrP = HasStr1 ? Str2P : Str1P;
+
+  size_t Idx = Str.find('\0');
+  uint64_t N = Idx == StringRef::npos ? UINT64_MAX : Idx + 1;
+  if (Func == LibFunc_strncmp) {
+    if (auto *ConstInt = dyn_cast<ConstantInt>(CI->getArgOperand(2)))
+      N = std::min(N, ConstInt->getZExtValue());
+    else
+      return false;
+  }
+  // Now N means how many bytes we need to compare at most.
+  if (N > Str.size() || N < 2 || N > StrNCmpInlineThreshold)
+    return false;
+
+  // Cases where StrP has two or more dereferenceable bytes might be better
+  // optimized elsewhere.
+  bool CanBeNull = false, CanBeFreed = false;
+  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
+    return false;
+  inlineCompare(StrP, Str, N, HasStr1);
+  return true;
+}
+
+/// Convert
+///
+/// \code
+///   ret = compare(s1, s2, N)
+/// \endcode
+///
+/// into
+///
+/// \code
+///   ret = (int)s1[0] - (int)s2[0]
+///   if (ret != 0)
+///     goto NE
+///   ...
+///   ret = (int)s1[N-2] - (int)s2[N-2]
+///   if (ret != 0)
+///     goto NE
+///   ret = (int)s1[N-1] - (int)s2[N-1]
+///   NE:
+/// \endcode
+///
+/// CFG before and after the transformation:
+///
+/// (before)
+/// BBCI
+///
+/// (after)
+/// BBCI -> BBSubs[0] (sub,icmp) --NE-> BBNE -> BBTail
+///                 |                    ^
+///                 E                    |
+///                 |                    |
+///        BBSubs[1] (sub,icmp) --NE-----+
+///                ...                   |
+///        BBSubs[N-1]    (sub) ---------+
+///
+void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
+                                   bool Swapped) {
+  auto &Ctx = CI->getContext();
+  IRBuilder<> B(Ctx);
+
+  BasicBlock *BBCI = CI->getParent();
+  BasicBlock *BBTail =
+      SplitBlock(BBCI, CI, DTU, nullptr, nullptr, BBCI->getName() + ".tail");
+
+  SmallVector<BasicBlock *> BBSubs;
+  for (uint64_t I = 0; I < N; ++I)
+    BBSubs.push_back(
+        BasicBlock::Create(Ctx, "sub_" + Twine(I), BBCI->getParent(), BBTail));
+  BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBTail);
+
+  cast<BranchInst>(BBCI->getTerminator())->setSuccessor(0, BBSubs[0]);
+
+  B.SetInsertPoint(BBNE);
+  PHINode *Phi = B.CreatePHI(CI->getType(), N);
+  B.CreateBr(BBTail);
+
+  Value *Base = LHS;
+  for (uint64_t i = 0; i < N; ++i) {
+    B.SetInsertPoint(BBSubs[i]);
+    Value *VL =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
+                                  B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
+                     CI->getType());
+    Value *VR =
+        ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
+    Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
+    if (i < N - 1)
+      B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
+                     BBNE, BBSubs[i + 1]);
+    else
+      B.CreateBr(BBNE);
+
+    Phi->addIncoming(Sub, BBSubs[i]);
+  }
+
+  CI->replaceAllUsesWith(Phi);
+  CI->eraseFromParent();
+
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    Updates.push_back({DominatorTree::Insert, BBCI, BBSubs[0]});
+    for (uint64_t i = 0; i < N; ++i) {
+      if (i < N - 1)
+        Updates.push_back({DominatorTree::Insert, BBSubs[i], BBSubs[i + 1]});
+      Updates.push_back({DominatorTree::Insert, BBSubs[i], BBNE});
+    }
+    Updates.push_back({DominatorTree::Insert, BBNE, BBTail});
+    Updates.push_back({DominatorTree::Delete, BBCI, BBTail});
+    DTU->applyUpdates(Updates);
+  }
+}
+
+static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
+                         TargetLibraryInfo &TLI, AssumptionCache &AC,
+                         DominatorTree &DT, const DataLayout &DL,
+                         bool &MadeCFGChange) {
+
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI || CI->isNoBuiltin())
+    return false;
+
+  Function *CalledFunc = CI->getCalledFunction();
+  if (!CalledFunc)
+    return false;
+
+  LibFunc LF;
+  if (!TLI.getLibFunc(*CalledFunc, LF) ||
+      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+    return false;
+
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  switch (LF) {
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+    return foldSqrt(CI, LF, TTI, TLI, AC, DT);
+  case LibFunc_strcmp:
+  case LibFunc_strncmp:
+    if (StrNCmpInliner(CI, LF, &DTU, DL).optimizeStrNCmp()) {
+      MadeCFGChange = true;
+      return true;
+    }
+    break;
+  default:;
+  }
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
                                 TargetLibraryInfo &TLI, AliasAnalysis &AA,
-                                AssumptionCache &AC) {
+                                AssumptionCache &AC, bool &MadeCFGChange) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
@@ -953,7 +1170,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
-      MadeChange |= foldSqrt(I, TTI, TLI, AC, DT);
+      MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
     }
   }
 
@@ -969,12 +1186,12 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 /// handled in the callers of this function.
 static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
                     TargetLibraryInfo &TLI, DominatorTree &DT,
-                    AliasAnalysis &AA) {
+                    AliasAnalysis &AA, bool &MadeCFGChange) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC, MadeCFGChange);
   return MadeChange;
 }
 
@@ -985,12 +1202,16 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  if (!runImpl(F, AC, TTI, TLI, DT, AA)) {
+  bool MadeCFGChange = false;
+  if (!runImpl(F, AC, TTI, TLI, DT, AA, MadeCFGChange)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  if (MadeCFGChange)
+    PA.preserve<DominatorTreeAnalysis>();
+  else
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }

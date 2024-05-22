@@ -110,6 +110,10 @@ BUILTIN(__builtin_ppc_fctiw, "dd", "")
 BUILTIN(__builtin_ppc_fctiwz, "dd", "")
 BUILTIN(__builtin_ppc_fctudz, "dd", "")
 BUILTIN(__builtin_ppc_fctuwz, "dd", "")
+
+// fence builtin prevents all instructions moved across it
+BUILTIN(__builtin_ppc_fence, "v", "")
+
 BUILTIN(__builtin_ppc_swdiv_nochk, "ddd", "")
 BUILTIN(__builtin_ppc_swdivs_nochk, "fff", "")
 BUILTIN(__builtin_ppc_alignx, "vIivC*", "nc")

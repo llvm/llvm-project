@@ -27,6 +27,12 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
+    Option<"forcedDataLayout", "datalayout", "std::string", /*default=*/"",
+           "Override module's data layout.">,
+    Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
+           "Override module's target CPU.">,
+    Option<"forcedTargetFeatures", "target-features", "std::string",
+           /*default=*/"", "Override module's target features.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
            "Attach TBAA tags to memory accessing operations.">
   ];
@@ -40,6 +46,10 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   let constructor = "::fir::createFirCodeGenRewritePass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+  ];
+  let options = [
+    Option<"preserveDeclare", "preserve-declare", "bool", /*default=*/"false",
+           "Preserve DeclareOp during pre codegen re-write.">
   ];
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
@@ -58,12 +68,19 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
+    Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
+           "Override module's target CPU.">,
+    Option<"forcedTargetFeatures", "target-features", "std::string",
+           /*default=*/"", "Override module's target features.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,
     Option<"noComplexConversion", "no-complex-conversion",
            "bool", /*default=*/"false",
-           "Disable target-specific conversion of COMPLEX.">
+           "Disable target-specific conversion of COMPLEX.">,
+    Option<"noStructConversion", "no-struct-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of derived type value.">
   ];
 }
 

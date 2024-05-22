@@ -10,6 +10,10 @@
 
 // Test that we can replace the operator by replacing `operator new(std::size_t)` (the throwing version).
 
+// This doesn't work when the shared library was built with exceptions disabled, because
+// we can't implement the non-throwing new from the throwing new in that case.
+// XFAIL: no-exceptions
+
 // UNSUPPORTED: sanitizer-new-delete
 // XFAIL: libcpp-no-vcruntime
 // XFAIL: LIBCXX-AIX-FIXME
@@ -41,7 +45,7 @@ void operator delete(void* p) TEST_NOEXCEPT {
 
 int main(int, char**) {
     new_called = delete_called = 0;
-    int* x = new (std::nothrow) int(3);
+    int* x = DoNotOptimize(new (std::nothrow) int(3));
     assert(x != nullptr);
     ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 

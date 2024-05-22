@@ -30,6 +30,7 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
@@ -42,6 +43,7 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 
 cl::opt<bool>
@@ -372,8 +374,10 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Create necessary metadata for the flow function
   for (FlowJump &Jump : Func.Jumps) {
-    Func.Blocks.at(Jump.Source).SuccJumps.push_back(&Jump);
-    Func.Blocks.at(Jump.Target).PredJumps.push_back(&Jump);
+    assert(Jump.Source < Func.Blocks.size());
+    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
+    assert(Jump.Target < Func.Blocks.size());
+    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
   }
   return Func;
 }
@@ -418,6 +422,7 @@ void matchWeightsByHashes(BinaryContext &BC,
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
+      const BinaryBasicBlock *BB = BlockOrder[MatchedBlock->Index - 1];
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
       LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
@@ -433,6 +438,8 @@ void matchWeightsByHashes(BinaryContext &BC,
       } else {
         LLVM_DEBUG(dbgs() << "  loose match\n");
       }
+      if (YamlBB.NumInstructions == BB->size())
+        ++BC.Stats.NumStaleBlocksWithEqualIcount;
     } else {
       LLVM_DEBUG(
           dbgs() << "Couldn't match yaml block (bid = " << YamlBB.Index << ")"
@@ -702,6 +709,13 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+
+  NamedRegionTimer T("inferStaleProfile", "stale profile inference", "rewrite",
+                     "Rewrite passes", opts::TimeRewrite);
+
+  if (!BF.hasCFG())
+    return false;
+
   LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
                     << "\"" << BF.getPrintName() << "\"\n");
 

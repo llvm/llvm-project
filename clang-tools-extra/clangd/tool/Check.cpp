@@ -226,7 +226,7 @@ public:
 
     // FIXME: Check that resource-dir/built-in-headers exist?
 
-    Style = getFormatStyleForFile(File, Inputs.Contents, TFS);
+    Style = getFormatStyleForFile(File, Inputs.Contents, TFS, false);
 
     return true;
   }
@@ -367,7 +367,13 @@ public:
     auto Hints = inlayHints(*AST, LineRange);
 
     for (const auto &Hint : Hints) {
-      vlog("  {0} {1} {2}", Hint.kind, Hint.position, Hint.label);
+      vlog("  {0} {1} [{2}]", Hint.kind, Hint.position, [&] {
+        return llvm::join(llvm::map_range(Hint.label,
+                                          [&](auto &L) {
+                                            return llvm::formatv("{{{0}}", L);
+                                          }),
+                          ", ");
+      }());
     }
   }
 

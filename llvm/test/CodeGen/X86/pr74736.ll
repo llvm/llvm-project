@@ -6,7 +6,7 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; SSE-LABEL: main:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,0,0,0]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [1,0,0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm4[1,0]
 ; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm1, %xmm1
@@ -39,7 +39,7 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,1,3,3,5,5,7]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,1,1,3,3,5,5,7]
 ; AVX-NEXT:    vpermd %ymm0, %ymm2, %ymm2
 ; AVX-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,3,3,3,7,7,7,7]

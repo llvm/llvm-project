@@ -47,11 +47,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
-static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
-    "canonicalize-icmp-predicates-to-unsigned", cl::init(true), cl::Hidden,
-    cl::desc("Enables canonicalization of signed relational predicates to "
-             "unsigned (e.g. sgt => ugt)"));
-
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -67,6 +62,7 @@ STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
 STATISTIC(NumAShrsRemoved, "Number of ashr removed");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
+STATISTIC(NumSIToFP,    "Number of sitofp converted to uitofp");
 STATISTIC(NumSICmps,    "Number of signed icmp preds simplified to unsigned");
 STATISTIC(NumAnd,       "Number of ands removed");
 STATISTIC(NumNW,        "Number of no-wrap deductions");
@@ -90,9 +86,36 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumSMinMax,
+          "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
-STATISTIC(NumZExt, "Number of non-negative deductions");
+STATISTIC(NumNNeg, "Number of zext/uitofp non-negative deductions");
+
+static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
+  if (Constant *C = LVI->getConstant(V, At))
+    return C;
+
+  // TODO: The following really should be sunk inside LVI's core algorithm, or
+  // at least the outer shims around such.
+  auto *C = dyn_cast<CmpInst>(V);
+  if (!C)
+    return nullptr;
+
+  Value *Op0 = C->getOperand(0);
+  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
+  if (!Op1)
+    return nullptr;
+
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
+  if (Result == LazyValueInfo::Unknown)
+    return nullptr;
+
+  return (Result == LazyValueInfo::True)
+             ? ConstantInt::getTrue(C->getContext())
+             : ConstantInt::getFalse(C->getContext());
+}
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
@@ -106,7 +129,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
       C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
                                  I->getParent(), I);
     else
-      C = LVI->getConstant(S->getCondition(), I);
+      C = getConstantAt(S->getCondition(), I, LVI);
 
     auto *CI = dyn_cast_or_null<ConstantInt>(C);
     if (!CI)
@@ -264,9 +287,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
-  if (!CanonicalizeICmpPredicatesToUnsigned)
-    return false;
-
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
@@ -478,7 +498,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
   if (Range.getSignedMax().isNonPositive()) {
     IRBuilder<> B(II);
-    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+    Value *NegX = B.CreateNeg(X, II->getName(),
                               /*HasNSW=*/IsIntMinPoison);
     ++NumAbs;
     II->replaceAllUsesWith(NegX);
@@ -503,17 +523,40 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.
+// If not, check whether we can canonicalize signed minmax into unsigned version
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
   CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
-    return false;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+  if (LHS_CR.icmp(Pred, RHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getLHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  if (RHS_CR.icmp(Pred, LHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getRHS());
+    MM->eraseFromParent();
+    return true;
+  }
 
-  ++NumMinMax;
-  MM->replaceAllUsesWith(MM->getOperand(!Result));
-  MM->eraseFromParent();
-  return true;
+  if (MM->isSigned() &&
+      ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LHS_CR,
+                                                               RHS_CR)) {
+    ++NumSMinMax;
+    IRBuilder<> B(MM);
+    MM->replaceAllUsesWith(B.CreateBinaryIntrinsic(
+        MM->getIntrinsicID() == Intrinsic::smin ? Intrinsic::umin
+                                                : Intrinsic::umax,
+        MM->getLHS(), MM->getRHS()));
+    MM->eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
@@ -548,7 +591,7 @@ static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   bool NSW = SI->isSigned();
   bool NUW = !SI->isSigned();
   BinaryOperator *BinOp = BinaryOperator::Create(
-      Opcode, SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+      Opcode, SI->getLHS(), SI->getRHS(), SI->getName(), SI->getIterator());
   BinOp->setDebugLoc(SI->getDebugLoc());
   setDeducedOverflowingFlags(BinOp, Opcode, NSW, NUW);
 
@@ -763,9 +806,12 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     Value *FrozenX = X;
     if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
-    auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
-    auto *Cmp =
-        B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+    Value *FrozenY = Y;
+    if (!isGuaranteedNotToBeUndef(Y))
+      FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
+    auto *AdjX = B.CreateNUWSub(FrozenX, FrozenY, Instr->getName() + ".urem");
+    auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, FrozenY,
+                             Instr->getName() + ".cmp");
     ExpandedOp = B.CreateSelect(Cmp, FrozenX, AdjX);
   } else {
     auto *Cmp =
@@ -863,21 +909,22 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
 
-  auto *URem =
-      BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  auto *URem = BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(),
+                                          SDI->getIterator());
   URem->setDebugLoc(SDI->getDebugLoc());
 
   auto *Res = URem;
 
   // If the divident was non-positive, we need to negate the result.
   if (Ops[0].D == Domain::NonPositive) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
@@ -924,22 +971,25 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
 
-  auto *UDiv =
-      BinaryOperator::CreateUDiv(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  auto *UDiv = BinaryOperator::CreateUDiv(Ops[0].V, Ops[1].V, SDI->getName(),
+                                          SDI->getIterator());
   UDiv->setDebugLoc(SDI->getDebugLoc());
   UDiv->setIsExact(SDI->isExact());
 
-  Value *Res = UDiv;
+  auto *Res = UDiv;
 
   // If the operands had two different domains, we need to negate the result.
-  if (Ops[0].D != Ops[1].D)
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+  if (Ops[0].D != Ops[1].D) {
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
@@ -995,7 +1045,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
 
   ++NumAShrsConverted;
   auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
-                                        "", SDI);
+                                        "", SDI->getIterator());
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
@@ -1015,7 +1065,8 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
     return false;
 
   ++NumSExt;
-  auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "", SDI);
+  auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "",
+                                             SDI->getIterator());
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
   ZExt->setNonNeg();
@@ -1025,20 +1076,49 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
-  if (ZExt->getType()->isVectorTy())
+static bool processPossibleNonNeg(PossiblyNonNegInst *I, LazyValueInfo *LVI) {
+  if (I->getType()->isVectorTy())
     return false;
 
-  if (ZExt->hasNonNeg())
+  if (I->hasNonNeg())
     return false;
 
-  const Use &Base = ZExt->getOperandUse(0);
+  const Use &Base = I->getOperandUse(0);
   if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
            .isAllNonNegative())
     return false;
 
-  ++NumZExt;
-  ZExt->setNonNeg();
+  ++NumNNeg;
+  I->setNonNeg();
+
+  return true;
+}
+
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  return processPossibleNonNeg(cast<PossiblyNonNegInst>(ZExt), LVI);
+}
+
+static bool processUIToFP(UIToFPInst *UIToFP, LazyValueInfo *LVI) {
+  return processPossibleNonNeg(cast<PossiblyNonNegInst>(UIToFP), LVI);
+}
+
+static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
+  if (SIToFP->getType()->isVectorTy())
+    return false;
+
+  const Use &Base = SIToFP->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
+    return false;
+
+  ++NumSIToFP;
+  auto *UIToFP = CastInst::Create(Instruction::UIToFP, Base, SIToFP->getType(),
+                                  "", SIToFP->getIterator());
+  UIToFP->takeName(SIToFP);
+  UIToFP->setDebugLoc(SIToFP->getDebugLoc());
+  UIToFP->setNonNeg();
+  SIToFP->replaceAllUsesWith(UIToFP);
+  SIToFP->eraseFromParent();
 
   return true;
 }
@@ -1055,13 +1135,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
     return false;
 
   Instruction::BinaryOps Opcode = BinOp->getOpcode();
-  Value *LHS = BinOp->getOperand(0);
-  Value *RHS = BinOp->getOperand(1);
-
-  ConstantRange LRange =
-      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
-  ConstantRange RRange =
-      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(0),
+                                                    /*UndefAllowed=*/false);
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(1),
+                                                    /*UndefAllowed=*/false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;
@@ -1107,30 +1184,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   return true;
 }
 
-
-static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
-  if (Constant *C = LVI->getConstant(V, At))
-    return C;
-
-  // TODO: The following really should be sunk inside LVI's core algorithm, or
-  // at least the outer shims around such.
-  auto *C = dyn_cast<CmpInst>(V);
-  if (!C) return nullptr;
-
-  Value *Op0 = C->getOperand(0);
-  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
-  if (!Op1) return nullptr;
-
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True) ?
-    ConstantInt::getTrue(C->getContext()) :
-    ConstantInt::getFalse(C->getContext());
-}
-
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
@@ -1173,6 +1226,12 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::ZExt:
         BBChanged |= processZExt(cast<ZExtInst>(&II), LVI);
+        break;
+      case Instruction::UIToFP:
+        BBChanged |= processUIToFP(cast<UIToFPInst>(&II), LVI);
+        break;
+      case Instruction::SIToFP:
+        BBChanged |= processSIToFP(cast<SIToFPInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:

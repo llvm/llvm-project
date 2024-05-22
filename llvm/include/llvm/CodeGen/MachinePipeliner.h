@@ -273,8 +273,8 @@ public:
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
-  unsigned getInstrBaseReg(SUnit *SU) {
-    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
+  unsigned getInstrBaseReg(SUnit *SU) const {
+    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::const_iterator It =
         InstrChanges.find(SU);
     if (It != InstrChanges.end())
       return It->second.first;
@@ -639,16 +639,20 @@ public:
   computeUnpipelineableNodes(SwingSchedulerDAG *SSD,
                              TargetInstrInfo::PipelinerLoopInfo *PLI);
 
+  std::deque<SUnit *>
+  reorderInstructions(const SwingSchedulerDAG *SSD,
+                      const std::deque<SUnit *> &Instrs) const;
+
   bool
   normalizeNonPipelinedInstructions(SwingSchedulerDAG *SSD,
                                     TargetInstrInfo::PipelinerLoopInfo *PLI);
   bool isValidSchedule(SwingSchedulerDAG *SSD);
   void finalizeSchedule(SwingSchedulerDAG *SSD);
-  void orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
-                       std::deque<SUnit *> &Insts);
-  bool isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi);
-  bool isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD, MachineInstr *Def,
-                             MachineOperand &MO);
+  void orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
+                       std::deque<SUnit *> &Insts) const;
+  bool isLoopCarried(const SwingSchedulerDAG *SSD, MachineInstr &Phi) const;
+  bool isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD, MachineInstr *Def,
+                             MachineOperand &MO) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };

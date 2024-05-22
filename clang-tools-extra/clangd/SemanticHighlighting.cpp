@@ -136,7 +136,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     return OMD->isClassMethod() ? HighlightingKind::StaticMethod
                                 : HighlightingKind::Method;
-  if (isa<FieldDecl, ObjCPropertyDecl>(D))
+  if (isa<FieldDecl, IndirectFieldDecl, ObjCPropertyDecl>(D))
     return HighlightingKind::Field;
   if (isa<EnumDecl>(D))
     return HighlightingKind::Enum;
@@ -265,7 +265,7 @@ bool isStatic(const Decl *D) {
 
 bool isAbstract(const Decl *D) {
   if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isPure();
+    return CMD->isPureVirtual();
   if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
     return CRD->hasDefinition() && CRD->isAbstract();
   return false;
@@ -693,17 +693,22 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
@@ -712,8 +717,6 @@ public:
       VarTemplatePartialSpecializationDecl *D) {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 

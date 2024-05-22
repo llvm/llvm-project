@@ -37,7 +37,7 @@ class XCOFFDumper {
   Error dumpAuxSyms(XCOFFYAML::Symbol &Sym, const XCOFFSymbolRef &SymbolEntRef);
   void dumpFuncAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
   void dumpExpAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
-  void dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
+  void dumpCsectAuxSym(XCOFFYAML::Symbol &Sym,
                        const object::XCOFFCsectAuxRef &AuxEntPtr);
 
 public:
@@ -95,6 +95,13 @@ Error XCOFFDumper::dumpSections(ArrayRef<Shdr> Sections) {
     YamlSec.FileOffsetToRelocations = S.FileOffsetToRelocationInfo;
     YamlSec.FileOffsetToLineNumbers = S.FileOffsetToLineNumberInfo;
     YamlSec.Flags = S.Flags;
+    if (YamlSec.Flags & XCOFF::STYP_DWARF) {
+      unsigned Mask = Obj.is64Bit()
+                          ? XCOFFSectionHeader64::SectionFlagsTypeMask
+                          : XCOFFSectionHeader32::SectionFlagsTypeMask;
+      YamlSec.SectionSubtype =
+          static_cast<XCOFF::DwarfSectionSubtypeFlags>(S.Flags & ~Mask);
+    }
 
     // Dump section data.
     if (S.FileOffsetToRawData) {
@@ -204,12 +211,14 @@ void XCOFFDumper::dumpExpAuxSym(XCOFFYAML::Symbol &Sym,
       std::make_unique<XCOFFYAML::ExcpetionAuxEnt>(ExceptAuxSym));
 }
 
-void XCOFFDumper::dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
+void XCOFFDumper::dumpCsectAuxSym(XCOFFYAML::Symbol &Sym,
                                   const object::XCOFFCsectAuxRef &AuxEntPtr) {
   XCOFFYAML::CsectAuxEnt CsectAuxSym;
   CsectAuxSym.ParameterHashIndex = AuxEntPtr.getParameterHashIndex();
   CsectAuxSym.TypeChkSectNum = AuxEntPtr.getTypeChkSectNum();
-  CsectAuxSym.SymbolAlignmentAndType = AuxEntPtr.getSymbolAlignmentAndType();
+  CsectAuxSym.SymbolAlignment = AuxEntPtr.getAlignmentLog2();
+  CsectAuxSym.SymbolType =
+      static_cast<XCOFF::SymbolType>(AuxEntPtr.getSymbolType());
   CsectAuxSym.StorageMappingClass = AuxEntPtr.getStorageMappingClass();
 
   if (Obj.is64Bit()) {
@@ -237,7 +246,7 @@ Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
   for (uint8_t I = 1; I <= Sym.NumberOfAuxEntries; ++I) {
 
     if (I == Sym.NumberOfAuxEntries && !Obj.is64Bit()) {
-      dumpCscetAuxSym(Sym, CsectAuxRef);
+      dumpCsectAuxSym(Sym, CsectAuxRef);
       return Error::success();
     }
 
@@ -247,7 +256,7 @@ Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
     if (Obj.is64Bit()) {
       XCOFF::SymbolAuxType Type = *Obj.getSymbolAuxType(AuxAddress);
       if (Type == XCOFF::SymbolAuxType::AUX_CSECT)
-        dumpCscetAuxSym(Sym, CsectAuxRef);
+        dumpCsectAuxSym(Sym, CsectAuxRef);
       else if (Type == XCOFF::SymbolAuxType::AUX_FCN)
         dumpFuncAuxSym(Sym, AuxAddress);
       else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT)

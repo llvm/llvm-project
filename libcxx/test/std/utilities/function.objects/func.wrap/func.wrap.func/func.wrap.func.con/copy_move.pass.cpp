@@ -64,12 +64,12 @@ int main(int, char**)
     {
     std::function<int(int)> f = A();
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f.target<A>());
     RTTI_ASSERT(f.target<int(*)(int)>() == 0);
     std::function<int(int)> f2 = f;
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f2.target<A>());
     RTTI_ASSERT(f2.target<int(*)(int)>() == 0);
     }
@@ -113,7 +113,7 @@ int main(int, char**)
     { // Test rvalue references
         std::function<int(int)> f = A();
         assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
         RTTI_ASSERT(f.target<A>());
         RTTI_ASSERT(f.target<int(*)(int)>() == 0);
         LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
@@ -122,7 +122,7 @@ int main(int, char**)
 #endif
         std::function<int(int)> f2 = std::move(f);
         assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
         RTTI_ASSERT(f2.target<A>());
         RTTI_ASSERT(f2.target<int(*)(int)>() == 0);
         RTTI_ASSERT(f.target<A>() == 0);

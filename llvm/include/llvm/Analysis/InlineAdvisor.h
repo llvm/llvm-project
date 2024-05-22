@@ -341,7 +341,7 @@ public:
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
 };
 
-/// Printer pass for the FunctionPropertiesAnalysis results.
+/// Printer pass for the InlineAdvisorAnalysis results.
 class InlineAdvisorAnalysisPrinterPass
     : public PassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
   raw_ostream &OS;
@@ -353,6 +353,7 @@ public:
 
   PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  static bool isRequired() { return true; }
 };
 
 std::unique_ptr<InlineAdvisor>

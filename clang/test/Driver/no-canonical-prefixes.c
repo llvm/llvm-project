@@ -26,7 +26,7 @@
 // RUN:     | FileCheck --check-prefix=NON-CANONICAL %s
 //
 // FIXME: This should really be '.real'.
-// CANONICAL: InstalledDir: {{.*}}.fake
+// CANONICAL: InstalledDir: {{.*}}bin
 // CANONICAL: {{[/|\\]*}}clang{{.*}}" -cc1
 //
 // NON-CANONICAL: InstalledDir: .{{$}}

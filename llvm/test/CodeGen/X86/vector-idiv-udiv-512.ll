@@ -89,7 +89,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpmuludq %zmm1, %zmm0, %zmm2
 ; AVX-NEXT:    vpshufd {{.*#+}} zmm3 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX-NEXT:    vpmuludq %zmm1, %zmm3, %zmm1
-; AVX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
 ; AVX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
 ; AVX-NEXT:    vpsubd %zmm3, %zmm0, %zmm0
 ; AVX-NEXT:    vpsrld $1, %zmm0, %zmm0
@@ -414,7 +414,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpmuludq %zmm1, %zmm0, %zmm2
 ; AVX-NEXT:    vpshufd {{.*#+}} zmm3 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX-NEXT:    vpmuludq %zmm1, %zmm3, %zmm1
-; AVX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
 ; AVX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
 ; AVX-NEXT:    vpsubd %zmm3, %zmm0, %zmm1
 ; AVX-NEXT:    vpsrld $1, %zmm1, %zmm1

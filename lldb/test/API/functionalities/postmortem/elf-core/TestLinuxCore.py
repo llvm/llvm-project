@@ -292,9 +292,7 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("AArch64")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49415"
-    )
+    # This test fails on FreeBSD 12 and earlier, see llvm.org/pr49415 for details.
     def test_aarch64_regs(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -377,9 +375,7 @@ class LinuxCoreTestCase(TestBase):
         self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("AArch64")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49415"
-    )
+    # This test fails on FreeBSD 12 and earlier, see llvm.org/pr49415 for details.
     def test_aarch64_sve_regs_fpsimd(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -632,6 +628,17 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
+
+    def test_get_core_file_api(self):
+        """
+        Test SBProcess::GetCoreFile() API can successfully get the core file.
+        """
+        core_file_name = "linux-x86_64.core"
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore(core_file_name)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
+        self.dbg.DeleteTarget(target)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

@@ -16,14 +16,6 @@ namespace clang::tidy::google::build {
 
 /// Finds anonymous namespaces in headers.
 ///
-/// The check supports these options:
-///   - `HeaderFileExtensions`: a semicolon-separated list of filename
-///     extensions of header files (The filename extensions should not contain
-///     "." prefix). ";h;hh;hpp;hxx" by default.
-///
-///     For extension-less header files, using an empty string or leaving an
-///     empty string between ";" if there are other filename extensions.
-///
 /// https://google.github.io/styleguide/cppguide.html#Namespaces
 ///
 /// Corresponding cpplint.py check name: 'build/namespaces'.
@@ -36,12 +28,10 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  StringRef RawStringHeaderFileExtensions;
   FileExtensionsSet HeaderFileExtensions;
 };
 

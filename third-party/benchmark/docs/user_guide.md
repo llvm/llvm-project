@@ -28,6 +28,8 @@
 
 [Templated Benchmarks](#templated-benchmarks)
 
+[Templated Benchmarks that take arguments](#templated-benchmarks-with-arguments)
+
 [Fixtures](#fixtures)
 
 [Custom Counters](#custom-counters)
@@ -50,14 +52,19 @@
 
 [Custom Statistics](#custom-statistics)
 
+[Memory Usage](#memory-usage)
+
 [Using RegisterBenchmark](#using-register-benchmark)
 
 [Exiting with an Error](#exiting-with-an-error)
 
-[A Faster KeepRunning Loop](#a-faster-keep-running-loop)
+[A Faster `KeepRunning` Loop](#a-faster-keep-running-loop)
+
+## Benchmarking Tips
 
 [Disabling CPU Frequency Scaling](#disabling-cpu-frequency-scaling)
 
+[Reducing Variance in Benchmarks](reducing_variance.md)
 
 <a name="output-formats" />
 
@@ -180,6 +187,12 @@ BM_memcpy/32          12 ns         12 ns   54687500
 BM_memcpy/32k       1834 ns       1837 ns     357143
 ```
 
+## Disabling Benchmarks
+
+It is possible to temporarily disable benchmarks by renaming the benchmark
+function to have the prefix "DISABLED_". This will cause the benchmark to
+be skipped at runtime.
+
 <a name="result-comparison" />
 
 ## Result comparison
@@ -232,6 +245,19 @@ iterations is at least one, not more than 1e9, until CPU time is greater than
 the minimum time, or the wallclock time is 5x minimum time. The minimum time is
 set per benchmark by calling `MinTime` on the registered benchmark object.
 
+Furthermore warming up a benchmark might be necessary in order to get
+stable results because of e.g caching effects of the code under benchmark.
+Warming up means running the benchmark a given amount of time, before
+results are actually taken into account. The amount of time for which
+the warmup should be run can be set per benchmark by calling
+`MinWarmUpTime` on the registered benchmark object or for all benchmarks
+using the `--benchmark_min_warmup_time` command-line option. Note that
+`MinWarmUpTime` will overwrite the value of `--benchmark_min_warmup_time`
+for the single benchmark. How many iterations the warmup run of each
+benchmark takes is determined the same way as described in the paragraph
+above. Per default the warmup phase is set to 0 seconds and is therefore
+disabled.
+
 Average timings are then reported over the iterations run. If multiple
 repetitions are requested using the `--benchmark_repetitions` command-line
 option, or at registration time, the benchmark function will be run several
@@ -247,10 +273,12 @@ information about the machine on which the benchmarks are run.
 Global setup/teardown specific to each benchmark can be done by
 passing a callback to Setup/Teardown:
 
-The setup/teardown callbacks will be invoked once for each benchmark.
-If the benchmark is multi-threaded (will run in k threads), they will be invoked exactly once before
-each run with k threads.
-If the benchmark uses different size groups of threads, the above will be true for each size group.
+The setup/teardown callbacks will be invoked once for each benchmark. If the
+benchmark is multi-threaded (will run in k threads), they will be invoked
+exactly once before each run with k threads.
+
+If the benchmark uses different size groups of threads, the above will be true
+for each size group.
 
 Eg.,
 
@@ -293,7 +321,7 @@ static void BM_memcpy(benchmark::State& state) {
   delete[] src;
   delete[] dst;
 }
-BENCHMARK(BM_memcpy)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10);
+BENCHMARK(BM_memcpy)->Arg(8)->Arg(64)->Arg(512)->Arg(4<<10)->Arg(8<<10);
 ```
 
 The preceding code is quite repetitive, and can be replaced with the following
@@ -322,7 +350,8 @@ the performance of `std::vector` initialization for uniformly increasing sizes.
 static void BM_DenseRange(benchmark::State& state) {
   for(auto _ : state) {
     std::vector<int> v(state.range(0), state.range(0));
-    benchmark::DoNotOptimize(v.data());
+    auto data = v.data();
+    benchmark::DoNotOptimize(data);
     benchmark::ClobberMemory();
   }
 }
@@ -362,17 +391,17 @@ short-hand. The following macro will pick a few appropriate arguments in the
 product of the two specified ranges and will generate a benchmark for each such
 pair.
 
-{% raw %}
+<!-- {% raw %} -->
 ```c++
 BENCHMARK(BM_SetInsert)->Ranges({{1<<10, 8<<10}, {128, 512}});
 ```
-{% endraw %}
+<!-- {% endraw %} -->
 
 Some benchmarks may require specific argument values that cannot be expressed
 with `Ranges`. In this case, `ArgsProduct` offers the ability to generate a
 benchmark input for each combination in the product of the supplied vectors.
 
-{% raw %}
+<!-- {% raw %} -->
 ```c++
 BENCHMARK(BM_SetInsert)
     ->ArgsProduct({{1<<10, 3<<10, 8<<10}, {20, 40, 60, 80}})
@@ -391,7 +420,7 @@ BENCHMARK(BM_SetInsert)
     ->Args({3<<10, 80})
     ->Args({8<<10, 80});
 ```
-{% endraw %}
+<!-- {% endraw %} -->
 
 For the most common scenarios, helper methods for creating a list of
 integers for a given sparse or dense range are provided.
@@ -434,13 +463,22 @@ The `test_case_name` is appended to the name of the benchmark and
 should describe the values passed.
 
 ```c++
-template <class ...ExtraArgs>
-void BM_takes_args(benchmark::State& state, ExtraArgs&&... extra_args) {
-  [...]
+template <class ...Args>
+void BM_takes_args(benchmark::State& state, Args&&... args) {
+  auto args_tuple = std::make_tuple(std::move(args)...);
+  for (auto _ : state) {
+    std::cout << std::get<0>(args_tuple) << ": " << std::get<1>(args_tuple)
+              << '\n';
+    [...]
+  }
 }
 // Registers a benchmark named "BM_takes_args/int_string_test" that passes
-// the specified values to `extra_args`.
+// the specified values to `args`.
 BENCHMARK_CAPTURE(BM_takes_args, int_string_test, 42, std::string("abc"));
+
+// Registers the same benchmark "BM_takes_args/int_test" that passes
+// the specified values to `args`.
+BENCHMARK_CAPTURE(BM_takes_args, int_test, 42, 43);
 ```
 
 Note that elements of `...args` may refer to global variables. Users should
@@ -459,7 +497,8 @@ static void BM_StringCompare(benchmark::State& state) {
   std::string s1(state.range(0), '-');
   std::string s2(state.range(0), '-');
   for (auto _ : state) {
-    benchmark::DoNotOptimize(s1.compare(s2));
+    auto comparison_result = s1.compare(s2);
+    benchmark::DoNotOptimize(comparison_result);
   }
   state.SetComplexityN(state.range(0));
 }
@@ -537,6 +576,30 @@ Three macros are provided for adding benchmark templates.
 #define BENCHMARK_TEMPLATE2(func, arg1, arg2)
 ```
 
+<a name="templated-benchmarks-with-arguments" />
+
+## Templated Benchmarks that take arguments
+
+Sometimes there is a need to template benchmarks, and provide arguments to them.
+
+```c++
+template <class Q> void BM_Sequential_With_Step(benchmark::State& state, int step) {
+  Q q;
+  typename Q::value_type v;
+  for (auto _ : state) {
+    for (int i = state.range(0); i-=step; )
+      q.push(v);
+    for (int e = state.range(0); e-=step; )
+      q.Wait(&v);
+  }
+  // actually messages, not bytes:
+  state.SetBytesProcessed(
+      static_cast<int64_t>(state.iterations())*state.range(0));
+}
+
+BENCHMARK_TEMPLATE1_CAPTURE(BM_Sequential, WaitQueue<int>, Step1, 1)->Range(1<<0, 1<<10);
+```
+
 <a name="fixtures" />
 
 ## Fixtures
@@ -554,10 +617,10 @@ For Example:
 ```c++
 class MyFixture : public benchmark::Fixture {
 public:
-  void SetUp(const ::benchmark::State& state) {
+  void SetUp(::benchmark::State& state) {
   }
 
-  void TearDown(const ::benchmark::State& state) {
+  void TearDown(::benchmark::State& state) {
   }
 };
 
@@ -668,7 +731,7 @@ is 1k a 1000 (default, `benchmark::Counter::OneK::kIs1000`), or 1024
 When you're compiling in C++11 mode or later you can use `insert()` with
 `std::initializer_list`:
 
-{% raw %}
+<!-- {% raw %} -->
 ```c++
   // With C++11, this can be done:
   state.counters.insert({{"Foo", numFoos}, {"Bar", numBars}, {"Baz", numBazs}});
@@ -677,7 +740,7 @@ When you're compiling in C++11 mode or later you can use `insert()` with
   state.counters["Bar"] = numBars;
   state.counters["Baz"] = numBazs;
 ```
-{% endraw %}
+<!-- {% endraw %} -->
 
 ### Counter Reporting
 
@@ -773,6 +836,16 @@ static void BM_MultiThreaded(benchmark::State& state) {
 BENCHMARK(BM_MultiThreaded)->Threads(2);
 ```
 
+To run the benchmark across a range of thread counts, instead of `Threads`, use
+`ThreadRange`. This takes two parameters (`min_threads` and `max_threads`) and
+runs the benchmark once for values in the inclusive range. For example:
+
+```c++
+BENCHMARK(BM_MultiThreaded)->ThreadRange(1, 8);
+```
+
+will run `BM_MultiThreaded` with thread counts 1, 2, 4, and 8.
+
 If the benchmarked code itself uses threads and you want to compare it to
 single-threaded code, you may want to use real-time ("wallclock") measurements
 for latency comparisons:
@@ -814,7 +887,7 @@ BENCHMARK(BM_OpenMP)->Range(8, 8<<10);
 
 // Measure the user-visible time, the wall clock (literally, the time that
 // has passed on the clock on the wall), use it to decide for how long to
-// run the benchmark loop. This will always be meaningful, an will match the
+// run the benchmark loop. This will always be meaningful, and will match the
 // time spent by the main thread in single-threaded case, in general decreasing
 // with the number of internal threads doing the work.
 BENCHMARK(BM_OpenMP)->Range(8, 8<<10)->UseRealTime();
@@ -836,7 +909,7 @@ is measured. But sometimes, it is necessary to do some work inside of
 that loop, every iteration, but without counting that time to the benchmark time.
 That is possible, although it is not recommended, since it has high overhead.
 
-{% raw %}
+<!-- {% raw %} -->
 ```c++
 static void BM_SetInsert_With_Timer_Control(benchmark::State& state) {
   std::set<int> data;
@@ -851,7 +924,7 @@ static void BM_SetInsert_With_Timer_Control(benchmark::State& state) {
 }
 BENCHMARK(BM_SetInsert_With_Timer_Control)->Ranges({{1<<10, 8<<10}, {128, 512}});
 ```
-{% endraw %}
+<!-- {% endraw %} -->
 
 <a name="manual-timing" />
 
@@ -906,6 +979,10 @@ order to manually set the time unit, you can specify it manually:
 BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 ```
 
+Additionally the default time unit can be set globally with the
+`--benchmark_time_unit={ns|us|ms|s}` command line argument. The argument only
+affects benchmarks where the time unit is not set explicitly.
+
 <a name="preventing-optimization" />
 
 ## Preventing Optimization
@@ -958,7 +1035,8 @@ static void BM_vector_push_back(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<int> v;
     v.reserve(1);
-    benchmark::DoNotOptimize(v.data()); // Allow v.data() to be clobbered.
+    auto data = v.data();           // Allow v.data() to be clobbered. Pass as non-const
+    benchmark::DoNotOptimize(data); // lvalue to avoid undesired compiler optimizations
     v.push_back(42);
     benchmark::ClobberMemory(); // Force 42 to be written to memory.
   }
@@ -1037,9 +1115,24 @@ void BM_spin_empty(benchmark::State& state) {
 BENCHMARK(BM_spin_empty)
   ->ComputeStatistics("ratio", [](const std::vector<double>& v) -> double {
     return std::begin(v) / std::end(v);
-  }, benchmark::StatisticUnit::Percentage)
+  }, benchmark::StatisticUnit::kPercentage)
   ->Arg(512);
 ```
+
+<a name="memory-usage" />
+
+## Memory Usage
+
+It's often useful to also track memory usage for benchmarks, alongside CPU
+performance. For this reason, benchmark offers the `RegisterMemoryManager`
+method that allows a custom `MemoryManager` to be injected.
+
+If set, the `MemoryManager::Start` and `MemoryManager::Stop` methods will be
+called at the start and end of benchmark runs to allow user code to fill out
+a report on the number of allocations, bytes used, etc.
+
+This data will then be reported alongside other performance data, currently
+only when using JSON output.
 
 <a name="using-register-benchmark" />
 
@@ -1077,7 +1170,7 @@ int main(int argc, char** argv) {
 
 When errors caused by external influences, such as file I/O and network
 communication, occur within a benchmark the
-`State::SkipWithError(const char* msg)` function can be used to skip that run
+`State::SkipWithError(const std::string& msg)` function can be used to skip that run
 of benchmark and report the error. Note that only future iterations of the
 `KeepRunning()` are skipped. For the ranged-for version of the benchmark loop
 Users must explicitly exit the loop, otherwise all iterations will be performed.
@@ -1188,13 +1281,12 @@ the benchmark loop should be preferred.
 If you see this error:
 
 ```
-***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may
+be noisy and will incur extra overhead.
 ```
 
-you might want to disable the CPU frequency scaling while running the benchmark:
+you might want to disable the CPU frequency scaling while running the
+benchmark, as well as consider other ways to stabilize the performance of
+your system while benchmarking.
 
-```bash
-sudo cpupower frequency-set --governor performance
-./mybench
-sudo cpupower frequency-set --governor powersave
-```
+See [Reducing Variance](reducing_variance.md) for more information.

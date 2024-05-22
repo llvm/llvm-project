@@ -335,9 +335,9 @@ func.func @vectorize_affine_apply(%arg0: tensor<5xf32>, %arg3: index) -> tensor<
 // CHECK-LABEL:  func.func @vectorize_affine_apply
 // CHECK-SAME: %arg0: tensor<5xf32>
 // CHECK-SAME: %[[ARG1:.*]]: index
-// CHECK:   %[[CST:.*]] = arith.constant dense<[123, 124, 125, 126, 127]> : vector<5xindex>
-// CHECK:   %[[CST_0:.*]] = arith.constant dense<1> : vector<5xindex>
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[CST:.*]] = arith.constant dense<[123, 124, 125, 126, 127]> : vector<5xindex>
+// CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<1> : vector<5xindex>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK:   %[[EMPTY:.*]] = tensor.empty() : tensor<5xi32>
 // CHECK:   %[[BCAST:.*]] = vector.broadcast %[[ARG1]] : index to vector<5xindex>
 // CHECK:   %[[ADDI_1:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<5xindex>
@@ -1710,10 +1710,12 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   @not_vectorizable
 func.func @not_vectorizable(%arg0: tensor<1x?xf32>, %arg1: index, %arg2: index, %arg3: index) -> tensor<1x128xf32> {
+  %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<1x128xf32>
   %1 = scf.for %arg5 = %arg2 to %arg1 step %arg3 iter_args(%arg6 = %0) -> (tensor<1x128xf32>) {
     %extracted_slice = tensor.extract_slice %arg6[0, 0] [1, %arg1] [1, 1] : tensor<1x128xf32> to tensor<?xf32>
-    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] : tensor<?xf32> into tensor<1x?xf32>
+    %sz0 = tensor.dim %extracted_slice, %c0 : tensor<?xf32>
+    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] output_shape [1, %sz0] : tensor<?xf32> into tensor<1x?xf32>
     %extracted_slice_0 = tensor.extract_slice %arg0[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %extracted_slice_1 = tensor.extract_slice %expanded[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %2 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%extracted_slice_0 : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) {

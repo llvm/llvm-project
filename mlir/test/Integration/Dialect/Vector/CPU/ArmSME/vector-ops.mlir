@@ -1,7 +1,5 @@
 // DEFINE: %{entry_point} = entry
-// DEFINE: %{compile} = mlir-opt %s -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -convert-arm-sme-to-llvm -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
@@ -14,12 +12,9 @@ func.func @entry() -> i32 {
   %c1_i8 = arith.constant 1 : i8
   %c1_index = arith.constant 1 : index
 
-  %c16 = arith.constant 16 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_b" the number of
   // 8-bit elements in a vector of SVL bits.
-  %svl_b = arith.muli %c16, %vscale : index
+  %svl_b = arm_sme.streaming_vl <byte>
 
   // Allocate memory and fill with ones.
   //

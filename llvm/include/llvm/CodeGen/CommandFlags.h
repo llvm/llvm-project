@@ -98,8 +98,6 @@ bool getUseCtors();
 
 bool getDisableIntegratedAS();
 
-bool getRelaxELFRelocations();
-
 bool getDataSections();
 std::optional<bool> getExplicitDataSections();
 
@@ -117,9 +115,14 @@ unsigned getTLSSize();
 bool getEmulatedTLS();
 std::optional<bool> getExplicitEmulatedTLS();
 
+bool getEnableTLSDESC();
+std::optional<bool> getExplicitEnableTLSDESC();
+
 bool getUniqueSectionNames();
 
 bool getUniqueBasicBlockSectionNames();
+
+bool getSeparateNamedSections();
 
 llvm::EABI getEABIVersion();
 
@@ -155,6 +158,8 @@ bool getXCOFFReadOnlyPointers();
 struct RegisterCodeGenFlags {
   RegisterCodeGenFlags();
 };
+
+bool getEnableBBAddrMap();
 
 llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
 

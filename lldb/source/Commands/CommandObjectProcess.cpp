@@ -126,30 +126,10 @@ public:
                          LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
 
-    CommandArgumentEntry arg;
-    CommandArgumentData run_args_arg;
-
-    // Define the first (and only) variant of this arg.
-    run_args_arg.arg_type = eArgTypeRunArgs;
-    run_args_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(run_args_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
   }
 
   ~CommandObjectProcessLaunch() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
   Options *GetOptions() override { return &m_all_options; }
 
@@ -646,9 +626,7 @@ protected:
           for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
-            size_t position = 0;
-            if (!with_locs.FindBreakpointID(tmp_id, &position)
-                && loc_sp->IsEnabled()) {
+            if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
               locs_disabled.push_back(tmp_id);
               loc_sp->SetEnabled(false);
             }
@@ -880,8 +858,7 @@ public:
       : CommandObjectParsed(interpreter, "process connect",
                             "Connect to a remote debug service.",
                             "process connect <remote-url>", 0) {
-    CommandArgumentData connect_arg{eArgTypeConnectURL, eArgRepeatPlain};
-    m_arguments.push_back({connect_arg});
+    AddSimpleArgumentList(eArgTypeConnectURL);
   }
 
   ~CommandObjectProcessConnect() override = default;
@@ -1006,8 +983,7 @@ public:
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlus};
-    m_arguments.push_back({file_arg});
+    AddSimpleArgumentList(eArgTypePath, eArgRepeatPlus);
   }
 
   ~CommandObjectProcessLoad() override = default;
@@ -1017,9 +993,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1082,8 +1056,7 @@ public:
             "process unload <index>",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentData load_idx_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({load_idx_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessUnload() override = default;
@@ -1143,19 +1116,7 @@ public:
             interpreter, "process signal",
             "Send a UNIX signal to the current target process.", nullptr,
             eCommandRequiresProcess | eCommandTryTargetAPILock) {
-    CommandArgumentEntry arg;
-    CommandArgumentData signal_arg;
-
-    // Define the first (and only) variant of this arg.
-    signal_arg.arg_type = eArgTypeUnixSignal;
-    signal_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(signal_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnixSignal);
   }
 
   ~CommandObjectProcessSignal() override = default;
@@ -1286,20 +1247,12 @@ public:
             "process save-core [-s corefile-style -p plugin-name] FILE",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched) {
-    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlain};
-    m_arguments.push_back({file_arg});
+    AddSimpleArgumentList(eArgTypePath);
   }
 
   ~CommandObjectProcessSaveCore() override = default;
 
   Options *GetOptions() override { return &m_options; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
   class CommandOptions : public Options {
   public:
@@ -1455,7 +1408,7 @@ protected:
     if (m_options.m_verbose) {
       addr_t code_mask = process->GetCodeAddressMask();
       addr_t data_mask = process->GetDataAddressMask();
-      if (code_mask != 0) {
+      if (code_mask != LLDB_INVALID_ADDRESS_MASK) {
         int bits = std::bitset<64>(~code_mask).count();
         result.AppendMessageWithFormat(
             "Addressable code address mask: 0x%" PRIx64 "\n", code_mask);
@@ -1578,40 +1531,12 @@ public:
                 "by passing the -t option."
                 "\nYou can also clear the target modification for a signal"
                 "by passing the -c option");
-    CommandArgumentEntry arg;
-    CommandArgumentData signal_arg;
-
-    signal_arg.arg_type = eArgTypeUnixSignal;
-    signal_arg.arg_repetition = eArgRepeatStar;
-
-    arg.push_back(signal_arg);
-
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnixSignal, eArgRepeatStar);
   }
 
   ~CommandObjectProcessHandle() override = default;
 
   Options *GetOptions() override { return &m_options; }
-
-  bool VerifyCommandOptionValue(const std::string &option, int &real_value) {
-    bool okay = true;
-    bool success = false;
-    bool tmp_value = OptionArgParser::ToBoolean(option, false, &success);
-
-    if (success && tmp_value)
-      real_value = 1;
-    else if (success && !tmp_value)
-      real_value = 0;
-    else {
-      // If the value isn't 'true' or 'false', it had better be 0 or 1.
-      if (!llvm::to_integer(option, real_value))
-        real_value = 3;
-      if (real_value != 0 && real_value != 1)
-        okay = false;
-    }
-
-    return okay;
-  }
 
   void PrintSignalHeader(Stream &str) {
     str.Printf("NAME         PASS   STOP   NOTIFY\n");
@@ -1668,33 +1593,52 @@ protected:
     // the user's options.
     ProcessSP process_sp = target.GetProcessSP();
 
-    int stop_action = -1;   // -1 means leave the current setting alone
-    int pass_action = -1;   // -1 means leave the current setting alone
-    int notify_action = -1; // -1 means leave the current setting alone
+    std::optional<bool> stop_action = {};
+    std::optional<bool> pass_action = {};
+    std::optional<bool> notify_action = {};
 
-    if (!m_options.stop.empty() &&
-        !VerifyCommandOptionValue(m_options.stop, stop_action)) {
-      result.AppendError("Invalid argument for command option --stop; must be "
-                         "true or false.\n");
-      return;
+    if (!m_options.stop.empty()) {
+      bool success = false;
+      bool value = OptionArgParser::ToBoolean(m_options.stop, false, &success);
+      if (!success) {
+        result.AppendError(
+            "Invalid argument for command option --stop; must be "
+            "true or false.\n");
+        return;
+      }
+
+      stop_action = value;
     }
 
-    if (!m_options.notify.empty() &&
-        !VerifyCommandOptionValue(m_options.notify, notify_action)) {
-      result.AppendError("Invalid argument for command option --notify; must "
-                         "be true or false.\n");
-      return;
+    if (!m_options.pass.empty()) {
+      bool success = false;
+      bool value = OptionArgParser::ToBoolean(m_options.pass, false, &success);
+      if (!success) {
+        result.AppendError(
+            "Invalid argument for command option --pass; must be "
+            "true or false.\n");
+        return;
+      }
+      pass_action = value;
     }
 
-    if (!m_options.pass.empty() &&
-        !VerifyCommandOptionValue(m_options.pass, pass_action)) {
-      result.AppendError("Invalid argument for command option --pass; must be "
-                         "true or false.\n");
-      return;
+    if (!m_options.notify.empty()) {
+      bool success = false;
+      bool value =
+          OptionArgParser::ToBoolean(m_options.notify, false, &success);
+      if (!success) {
+        result.AppendError("Invalid argument for command option --notify; must "
+                           "be true or false.\n");
+        return;
+      }
+      notify_action = value;
     }
 
-    bool no_actions = (stop_action == -1 && pass_action == -1
-        && notify_action == -1);
+    if (!m_options.notify.empty() && !notify_action.has_value()) {
+    }
+
+    bool no_actions = (!stop_action.has_value() && !pass_action.has_value() &&
+                       !notify_action.has_value());
     if (m_options.only_target_values && !no_actions) {
       result.AppendError("-t is for reporting, not setting, target values.");
       return;
@@ -1732,16 +1676,14 @@ protected:
         if (signals_sp) {
           int32_t signo = signals_sp->GetSignalNumberFromName(arg.c_str());
           if (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-            // Casting the actions as bools here should be okay, because
-            // VerifyCommandOptionValue guarantees the value is either 0 or 1.
-            if (stop_action != -1)
-              signals_sp->SetShouldStop(signo, stop_action);
-            if (pass_action != -1) {
-              bool suppress = !pass_action;
+            if (stop_action.has_value())
+              signals_sp->SetShouldStop(signo, *stop_action);
+            if (pass_action.has_value()) {
+              bool suppress = !*pass_action;
               signals_sp->SetShouldSuppress(signo, suppress);
             }
-            if (notify_action != -1)
-              signals_sp->SetShouldNotify(signo, notify_action);
+            if (notify_action.has_value())
+              signals_sp->SetShouldNotify(signo, *notify_action);
             ++num_signals_set;
           } else {
             result.AppendErrorWithFormat("Invalid signal name '%s'\n",
@@ -1761,21 +1703,15 @@ protected:
           }
          num_signals_set = num_args;
         }
-        auto set_lazy_bool = [] (int action) -> LazyBool {
-          LazyBool lazy;
-          if (action == -1)
-            lazy = eLazyBoolCalculate;
-          else if (action)
-            lazy = eLazyBoolYes;
-          else
-            lazy = eLazyBoolNo;
-          return lazy;
+        auto set_lazy_bool = [](std::optional<bool> action) -> LazyBool {
+          if (!action.has_value())
+            return eLazyBoolCalculate;
+          return (*action) ? eLazyBoolYes : eLazyBoolNo;
         };
 
         // If there were no actions, we're just listing, don't add the dummy:
         if (!no_actions)
-          target.AddDummySignal(arg.ref(),
-                                set_lazy_bool(pass_action),
+          target.AddDummySignal(arg.ref(), set_lazy_bool(pass_action),
                                 set_lazy_bool(notify_action),
                                 set_lazy_bool(stop_action));
       }
@@ -1783,18 +1719,19 @@ protected:
       // No signal specified, if any command options were specified, update ALL
       // signals.  But we can't do this without a process since we don't know
       // all the possible signals that might be valid for this target.
-      if (((notify_action != -1) || (stop_action != -1) || (pass_action != -1))
-          && process_sp) {
+      if ((notify_action.has_value() || stop_action.has_value() ||
+           pass_action.has_value()) &&
+          process_sp) {
         if (m_interpreter.Confirm(
                 "Do you really want to update all the signals?", false)) {
           int32_t signo = signals_sp->GetFirstSignalNumber();
           while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-            if (notify_action != -1)
-              signals_sp->SetShouldNotify(signo, notify_action);
-            if (stop_action != -1)
-              signals_sp->SetShouldStop(signo, stop_action);
-            if (pass_action != -1) {
-              bool suppress = !pass_action;
+            if (notify_action.has_value())
+              signals_sp->SetShouldNotify(signo, *notify_action);
+            if (stop_action.has_value())
+              signals_sp->SetShouldStop(signo, *stop_action);
+            if (pass_action.has_value()) {
+              bool suppress = !*pass_action;
               signals_sp->SetShouldSuppress(signo, suppress);
             }
             signo = signals_sp->GetNextSignalNumber(signo);

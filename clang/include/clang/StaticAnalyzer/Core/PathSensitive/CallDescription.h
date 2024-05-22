@@ -27,20 +27,48 @@ class IdentifierInfo;
 
 namespace clang {
 namespace ento {
-
-enum CallDescriptionFlags : unsigned {
-  CDF_None = 0,
-
-  /// Describes a C standard function that is sometimes implemented as a macro
-  /// that expands to a compiler builtin with some __builtin prefix.
-  /// The builtin may as well have a few extra arguments on top of the requested
-  /// number of arguments.
-  CDF_MaybeBuiltin = 1 << 0,
-};
-
-/// This class represents a description of a function call using the number of
-/// arguments and the name of the function.
+/// A `CallDescription` is a pattern that can be used to _match_ calls
+/// based on the qualified name and the argument/parameter counts.
 class CallDescription {
+public:
+  enum class Mode {
+    /// Match calls to functions from the C standard library. This also
+    /// recognizes builtin variants whose name is derived by adding
+    /// "__builtin", "__inline" or similar prefixes or suffixes; but only
+    /// matches functions than are externally visible and are declared either
+    /// directly within a TU or in the namespace 'std'.
+    /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
+    CLibrary,
+
+    /// An extended version of the `CLibrary` mode that also matches the
+    /// hardened variants like __FOO_chk() and __builtin__FOO_chk() that take
+    /// additional arguments compared to the "regular" function FOO().
+    /// This is not the default behavior of `CLibrary` because in this case the
+    /// checker code must be prepared to handle the different parametrization.
+    /// For the exact heuristics, see CheckerContext::isHardenedVariantOf().
+    CLibraryMaybeHardened,
+
+    /// Matches "simple" functions that are not methods. (Static methods are
+    /// methods.)
+    SimpleFunc,
+
+    /// Matches a C++ method (may be static, may be virtual, may be an
+    /// overloaded operator, a constructor or a destructor).
+    CXXMethod,
+
+    /// Match any CallEvent that is not an ObjCMethodCall. This should not be
+    /// used when the checker looks for a concrete function (and knows whether
+    /// it is a method); but GenericTaintChecker uses this mode to match
+    /// functions whose name was configured by the user.
+    Unspecified,
+
+    /// FIXME: Add support for ObjCMethodCall events (I'm not adding it because
+    /// I'm not familiar with Objective-C). Note that currently an early return
+    /// in `bool matches(const CallEvent &Call) const;` discards all
+    /// Objective-C method calls.
+  };
+
+private:
   friend class CallEvent;
   using MaybeCount = std::optional<unsigned>;
 
@@ -50,29 +78,28 @@ class CallDescription {
   std::vector<std::string> QualifiedName;
   MaybeCount RequiredArgs;
   MaybeCount RequiredParams;
-  int Flags;
+  Mode MatchAs;
 
 public:
   /// Constructs a CallDescription object.
+  ///
+  /// @param MatchAs Specifies the kind of the call that should be matched.
   ///
   /// @param QualifiedName The list of the name qualifiers of the function that
   /// will be matched. The user is allowed to skip any of the qualifiers.
   /// For example, {"std", "basic_string", "c_str"} would match both
   /// std::basic_string<...>::c_str() and std::__1::basic_string<...>::c_str().
   ///
-  /// @param RequiredArgs The number of arguments that is expected to match a
-  /// call. Omit this parameter to match every occurrence of call with a given
-  /// name regardless the number of arguments.
-  CallDescription(CallDescriptionFlags Flags, ArrayRef<StringRef> QualifiedName,
+  /// @param RequiredArgs The expected number of arguments that are passed to
+  /// the function. Omit this parameter (or pass std::nullopt) to match every
+  /// occurrence without checking the argument count in the call.
+  ///
+  /// @param RequiredParams The expected number of parameters in the function
+  /// definition that is called. Omit this parameter to match every occurrence
+  /// without checking the parameter count in the definition.
+  CallDescription(Mode MatchAs, ArrayRef<StringRef> QualifiedName,
                   MaybeCount RequiredArgs = std::nullopt,
                   MaybeCount RequiredParams = std::nullopt);
-
-  /// Construct a CallDescription with default flags.
-  CallDescription(ArrayRef<StringRef> QualifiedName,
-                  MaybeCount RequiredArgs = std::nullopt,
-                  MaybeCount RequiredParams = std::nullopt);
-
-  CallDescription(std::nullptr_t) = delete;
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
@@ -157,6 +184,9 @@ public:
 private:
   bool matchesImpl(const FunctionDecl *Callee, size_t ArgCount,
                    size_t ParamCount) const;
+
+  bool matchNameOnly(const NamedDecl *ND) const;
+  bool matchQualifiedNameParts(const Decl *D) const;
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
@@ -221,6 +251,10 @@ public:
     return nullptr;
   }
 };
+
+/// Enumerators of this enum class are used to construct CallDescription
+/// objects; in that context the fully qualified name is needlessly verbose.
+using CDM = CallDescription::Mode;
 
 /// An immutable set of CallDescriptions.
 /// Checkers can efficiently decide if a given CallEvent matches any

@@ -428,20 +428,22 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ppx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PPX %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NDD %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ccmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CCMP %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
 // EGPR: "-target-feature" "+egpr"
 // PUSH2POP2: "-target-feature" "+push2pop2"
 // PPX: "-target-feature" "+ppx"
 // NDD: "-target-feature" "+ndd"
 // CCMP: "-target-feature" "+ccmp"
+// NF: "-target-feature" "+nf"
 // CF: "-target-feature" "+cf"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s

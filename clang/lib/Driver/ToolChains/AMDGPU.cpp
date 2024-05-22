@@ -209,7 +209,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   }
 
   // Try to find relative to the compiler binary.
-  const char *InstallDir = D.getInstalledDir();
+  StringRef InstallDir = D.Dir;
 
   // Check both a normal Unix prefix position of the clang binary, as well as
   // the Windows-esque layout the ROCm packages use with the host architecture
@@ -486,10 +486,16 @@ void RocmInstallationDetector::detectHIPRuntime() {
       return newpath;
     };
     // If HIP version file can be found and parsed, use HIP version from there.
-    for (const auto &VersionFilePath :
-         {Append(SharePath, "hip", "version"),
-          Append(ParentSharePath, "hip", "version"),
-          Append(BinPath, ".hipVersion")}) {
+    std::vector<SmallString<0>> VersionFilePaths = {
+        Append(SharePath, "hip", "version"),
+        InstallPath != D.SysRoot + "/usr/local"
+            ? Append(ParentSharePath, "hip", "version")
+            : SmallString<0>(),
+        Append(BinPath, ".hipVersion")};
+
+    for (const auto &VersionFilePath : VersionFilePaths) {
+      if (VersionFilePath.empty())
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
           FS.getBufferForFile(VersionFilePath);
       if (!VersionFile)
@@ -545,26 +551,35 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
-    if (!hasHIPStdParLibrary()) {
-      D.Diag(diag::err_drv_no_hipstdpar_lib);
-      return;
-    }
-    if (!HasRocThrustLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/thrust")) {
+    StringRef Inc = getIncludePath();
+    auto &FS = D.getVFS();
+
+    if (!hasHIPStdParLibrary())
+      if (!HIPStdParPathArg.empty() ||
+          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+        D.Diag(diag::err_drv_no_hipstdpar_lib);
+        return;
+      }
+    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
     }
-    if (!HasRocPrimLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/rocprim")) {
+    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
       D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
       return;
     }
-
     const char *ThrustPath;
     if (HasRocThrustLibrary)
       ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
     else
-      ThrustPath = DriverArgs.MakeArgString(getIncludePath() + "/thrust");
+      ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
+
+    const char *HIPStdParPath;
+    if (hasHIPStdParLibrary())
+      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
+    else
+      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
+                                               "/system/hip/hipstdpar");
 
     const char *PrimPath;
     if (HasRocPrimLibrary)
@@ -573,8 +588,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
     CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg),
-                    "-include", "hipstdpar_lib.hpp"});
+                    "-idirafter", HIPStdParPath, "-include",
+                    "hipstdpar_lib.hpp"});
   };
 
   if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
@@ -602,14 +617,14 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO())
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
@@ -653,6 +668,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
+
+  if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
+                   options::OPT_mno_amdgpu_precise_memory_op, false))
+    Features.push_back("+precise-memory");
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
@@ -713,7 +732,7 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   checkTargetID(*DAL);
 
-  if (!Args.getLastArgValue(options::OPT_x).equals("cl"))
+  if (Args.getLastArgValue(options::OPT_x) != "cl")
     return DAL;
 
   // Phase 1 (.cl -> .bc)
@@ -812,6 +831,12 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+}
+
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
 }
 
 StringRef

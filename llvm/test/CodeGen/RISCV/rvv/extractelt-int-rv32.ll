@@ -8,7 +8,7 @@
 define signext i8 @extractelt_nxv1i8_0(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv1i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 0
@@ -40,7 +40,7 @@ define signext i8 @extractelt_nxv1i8_idx(<vscale x 1 x i8> %v, i32 %idx) {
 define signext i8 @extractelt_nxv2i8_0(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv2i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 0
@@ -72,7 +72,7 @@ define signext i8 @extractelt_nxv2i8_idx(<vscale x 2 x i8> %v, i32 %idx) {
 define signext i8 @extractelt_nxv4i8_0(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv4i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 0
@@ -232,7 +232,7 @@ define signext i8 @extractelt_nxv64i8_idx(<vscale x 64 x i8> %v, i32 %idx) {
 define signext i16 @extractelt_nxv1i16_0(<vscale x 1 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv1i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 0
@@ -264,7 +264,7 @@ define signext i16 @extractelt_nxv1i16_idx(<vscale x 1 x i16> %v, i32 %idx) {
 define signext i16 @extractelt_nxv2i16_0(<vscale x 2 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv2i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 0
@@ -424,7 +424,7 @@ define signext i16 @extractelt_nxv32i16_idx(<vscale x 32 x i16> %v, i32 %idx) {
 define i32 @extractelt_nxv1i32_0(<vscale x 1 x i32> %v) {
 ; CHECK-LABEL: extractelt_nxv1i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i32> %v, i32 0
@@ -753,9 +753,7 @@ define i32 @extractelt_add_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    addi a0, a0, 3
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = add <vscale x 4 x i32> %x, %splat
+  %bo = add <vscale x 4 x i32> %x, splat (i32 3)
   %ext = extractelement <vscale x 4 x i32> %bo, i32 2
   ret i32 %ext
 }
@@ -769,9 +767,7 @@ define i32 @extractelt_sub_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; CHECK-NEXT:    li a1, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = sub <vscale x 4 x i32> %splat, %x
+  %bo = sub <vscale x 4 x i32> splat (i32 3), %x
   %ext = extractelement <vscale x 4 x i32> %bo, i32 1
   ret i32 %ext
 }
@@ -795,9 +791,7 @@ define i32 @extractelt_mul_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV32M-NEXT:    slli a1, a0, 1
 ; RV32M-NEXT:    add a0, a1, a0
 ; RV32M-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = mul <vscale x 4 x i32> %x, %splat
+  %bo = mul <vscale x 4 x i32> %x, splat (i32 3)
   %ext = extractelement <vscale x 4 x i32> %bo, i32 3
   ret i32 %ext
 }
@@ -824,9 +818,7 @@ define i32 @extractelt_sdiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV32M-NEXT:    srli a1, a0, 31
 ; RV32M-NEXT:    add a0, a0, a1
 ; RV32M-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = sdiv <vscale x 4 x i32> %x, %splat
+  %bo = sdiv <vscale x 4 x i32> %x, splat (i32 3)
   %ext = extractelement <vscale x 4 x i32> %bo, i32 0
   ret i32 %ext
 }
@@ -853,9 +845,7 @@ define i32 @extractelt_udiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV32M-NEXT:    srli a1, a0, 31
 ; RV32M-NEXT:    add a0, a0, a1
 ; RV32M-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = sdiv <vscale x 4 x i32> %x, %splat
+  %bo = sdiv <vscale x 4 x i32> %x, splat (i32 3)
   %ext = extractelement <vscale x 4 x i32> %bo, i32 0
   ret i32 %ext
 }

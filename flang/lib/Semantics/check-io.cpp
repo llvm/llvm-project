@@ -795,10 +795,12 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   if (specifierSet_.test(IoSpecKind::Size)) {
     // F'2023 C1214 - allow with a warning
-    if (specifierSet_.test(IoSpecKind::Nml)) {
-      context_.Say("If NML appears, SIZE should not appear"_port_en_US);
-    } else if (flags_.test(Flag::StarFmt)) {
-      context_.Say("If FMT=* appears, SIZE should not appear"_port_en_US);
+    if (context_.ShouldWarn(common::LanguageFeature::ListDirectedSize)) {
+      if (specifierSet_.test(IoSpecKind::Nml)) {
+        context_.Say("If NML appears, SIZE should not appear"_port_en_US);
+      } else if (flags_.test(Flag::StarFmt)) {
+        context_.Say("If FMT=* appears, SIZE should not appear"_port_en_US);
+      }
     }
   }
   CheckForRequiredSpecifier(IoSpecKind::Eor,
@@ -918,7 +920,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},
       {IoSpecKind::Carriagecontrol, {"LIST", "FORTRAN", "NONE"}},
-      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
+      {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE", "SWAP"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
   auto upper{Normalize(value)};

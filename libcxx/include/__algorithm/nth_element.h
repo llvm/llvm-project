@@ -23,6 +23,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _RandomAccessIterator>
@@ -114,12 +117,12 @@ __nth_element(
         while (true) {
           while (!__comp(*__first, *__i)) {
             ++__i;
-            _LIBCPP_ASSERT_UNCATEGORIZED(
+            _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
                 __i != __last,
                 "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
           }
           do {
-            _LIBCPP_ASSERT_UNCATEGORIZED(
+            _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
                 __j != __first,
                 "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
             --__j;
@@ -150,13 +153,13 @@ __nth_element(
         // __m still guards upward moving __i
         while (__comp(*__i, *__m)) {
           ++__i;
-          _LIBCPP_ASSERT_UNCATEGORIZED(
+          _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               __i != __last,
               "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
         }
         // It is now known that a guard exists for downward moving __j
         do {
-          _LIBCPP_ASSERT_UNCATEGORIZED(
+          _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               __j != __first,
               "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
           --__j;
@@ -252,5 +255,7 @@ nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomA
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_NTH_ELEMENT_H

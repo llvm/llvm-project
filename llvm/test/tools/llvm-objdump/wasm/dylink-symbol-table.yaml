@@ -1,0 +1,70 @@
+# RUN: yaml2obj %s -o %t.so
+# RUN: llvm-objdump -t %t.so | FileCheck %s
+#
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: 00000001 g F CODE 00000003 my_func_export
+# CHECK-NEXT: 0000002a g O DATA 00000000 my_global_export
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            CUSTOM
+    Name:            dylink.0
+    MemorySize:      15
+    MemoryAlignment: 0
+    TableSize:       0
+    TableAlignment:  0
+    Needed:          []
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           foo
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           bar
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   true
+      - Module:          env
+        Field:           memory
+        Kind:            MEMORY
+        Memory:
+          Minimum:         0x1
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            GLOBAL
+    Globals:
+      - Index:           1
+        Mutable:         false
+        Type:            I32
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           42
+  - Type:            EXPORT
+    Exports:
+      - Name:            my_func_export
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            my_global_export
+        Kind:            GLOBAL
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           1
+        Locals:
+        Body:            00
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   0
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           0
+        Content:         ''

@@ -173,6 +173,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPPX = false;
   bool HasNDD = false;
   bool HasCCMP = false;
+  bool HasNF = false;
   bool HasCF = false;
 
 protected:
@@ -188,6 +189,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+    HasUnalignedAccess = true;
 
     bool IsWinCOFF =
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
@@ -217,8 +219,12 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("esp") || RegName.equals("rsp");
+    return RegName == "esp" || RegName == "rsp";
   }
+
+  bool supportsCpuSupports() const override { return true; }
+  bool supportsCpuIs() const override { return true; }
+  bool supportsCpuInit() const override { return true; }
 
   bool validateCpuSupports(StringRef FeatureStr) const override;
 
@@ -241,7 +247,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("esp") || RegName.equals("ebp")) {
+    if (RegName == "esp" || RegName == "ebp") {
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
@@ -668,6 +674,7 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
+    DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
                     "f64:32-f128:32-n8:16:32-a:0:32-S32");
@@ -772,6 +779,7 @@ public:
     case CC_Win64:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
@@ -795,7 +803,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // rsp and rbp are the only 64-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("rsp") || RegName.equals("rbp")) {
+    if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
       return true;
@@ -849,6 +857,7 @@ public:
     case CC_IntelOclBicc:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:

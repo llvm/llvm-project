@@ -1,5 +1,7 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
 
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
+
 ; namespace ns {
 ; inline __attribute__((always_inline))
 ; void foo() { int a = 4; }
@@ -37,8 +39,8 @@
 define dso_local void @_Z3goov() !dbg !4 {
 entry:
   %a.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.i, metadata !16, metadata !DIExpression()), !dbg !18
-  store i32 4, i32* %a.i, align 4, !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %a.i, metadata !16, metadata !DIExpression()), !dbg !18
+  store i32 4, ptr %a.i, align 4, !dbg !18
   ret void, !dbg !20
 }
 

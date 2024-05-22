@@ -17,7 +17,6 @@ namespace lld::elf {
 class InputFile;
 class OutputSection;
 void copySectionsIntoPartitions();
-template <class ELFT> void createSyntheticSections();
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.
@@ -57,7 +56,6 @@ bool isMipsN32Abi(const InputFile *f);
 bool isMicroMips();
 bool isMipsR6();
 
-bool canHaveMemtagGlobals();
 } // namespace lld::elf
 
 #endif

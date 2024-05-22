@@ -7,15 +7,13 @@
 #===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build & push both images using:
+# You can build both images using:
 #
 #   docker compose build
-#   docker compose push
 #
-# Or you can select a single image to build & push using:
+# Or you can select a single image to build
 #
 #  docker compose build buildkite-builder
-#  docker compose push buildkite-builder
 #
 # The final images can be found at
 #
@@ -23,7 +21,8 @@
 #  ghcr.io/libcxx/actions-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
-# Members of the github.com/libcxx/ organizations have permissions required to push new images.
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
+# This is done by GitHub actions in the https://github.com/libcxx/builders repo.
 #
 # ===----------------------------------------------------------------------===##
 #                     Running the buildkite image
@@ -65,35 +64,40 @@ RUN <<EOF
   echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
 EOF
 
+# Installing tzdata before other packages avoids the time zone prompts.
+# These prompts seem to ignore DEBIAN_FRONTEND=noninteractive.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
-        python3 \
-        python3-distutils \
-        python3-psutil \
-        git \
-        gdb \
-        ccache \
-        gpg \
-        wget \
+        tzdata
+
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
         bash \
+        ccache \
         curl \
-        python3 \
-        python3-dev \
-        libpython3-dev \
-        uuid-dev \
-        libncurses5-dev \
-        swig3.0 \
-        libxml2-dev \
-        libedit-dev \
+        gdb \
+        git \
+        gpg \
         language-pack-en \
         language-pack-fr \
         language-pack-ja \
         language-pack-ru \
         language-pack-zh-hans \
+        libedit-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxml2-dev \
         lsb-release \
-        wget \
-        unzip \
+        make \
+        python3 \
+        python3-dev \
+        python3-distutils \
+        python3-psutil \
         software-properties-common \
+        swig4.0 \
+        unzip \
+        uuid-dev \
+        wget \
     && sudo rm -rf /var/lib/apt/lists/*
 
 
@@ -151,17 +155,6 @@ RUN <<EOF
     # Install a recent CMake
     wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    # Install a newer CMake for modules
-    # TODO Remove the duplicated installation when all runtimes can be build with CMake 3.28.
-    wget https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc4/cmake-3.28.0-rc4-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo mkdir /opt/cmake-3.28
-    sudo bash /tmp/install-cmake.sh --prefix=/opt/cmake-3.28 --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
 

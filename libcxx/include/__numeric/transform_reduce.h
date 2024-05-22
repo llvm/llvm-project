@@ -18,6 +18,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
@@ -50,5 +53,7 @@ transform_reduce(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterat
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___NUMERIC_TRANSFORM_REDUCE_H

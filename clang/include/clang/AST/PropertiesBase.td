@@ -143,6 +143,7 @@ def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
+def TypeCoupledDeclRefInfo : PropertyType;
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];
@@ -806,6 +807,20 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   }
   def : Creator<[{
     return TemplateArgument(ctx, value, type, isDefaulted);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "StructuralValue"> in {
+  def : Property<"value", APValue> {
+    let Read = [{ node.getAsStructuralValue() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getStructuralValueType() }];
+  }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, type, value, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {

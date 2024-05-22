@@ -223,8 +223,8 @@ std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
 std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation BeginLoc = SM.getFileLoc(ND.getBeginLoc());
-  SourceLocation EndLoc = SM.getFileLoc(ND.getEndLoc());
+  SourceLocation BeginLoc = ND.getBeginLoc();
+  SourceLocation EndLoc = ND.getEndLoc();
   const auto SymbolRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!SymbolRange)

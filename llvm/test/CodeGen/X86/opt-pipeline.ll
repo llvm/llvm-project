@@ -131,6 +131,7 @@
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Tile Register Pre-configure
 ; CHECK-NEXT:       Detect Dead Lanes
+; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
@@ -196,8 +197,6 @@
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter
-; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 Byte/Word Instruction Fixup
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
@@ -205,7 +204,7 @@
 ; CHECK-NEXT:       X86 LEA Fixup
 ; CHECK-NEXT:       X86 Fixup Inst Tuning
 ; CHECK-NEXT:       X86 Fixup Vector Constants
-; CHECK-NEXT:       Compressing EVEX instrs to VEX encoding when possible
+; CHECK-NEXT:       Compressing EVEX instrs when possible
 ; CHECK-NEXT:       X86 Discriminate Memory Operands
 ; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction

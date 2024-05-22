@@ -28,6 +28,8 @@ public:
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   UnwindLibType
   GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;

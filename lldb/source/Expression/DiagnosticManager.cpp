@@ -31,33 +31,42 @@ void DiagnosticManager::Dump(Log *log) {
   log->PutCString(str.c_str());
 }
 
-static const char *StringForSeverity(DiagnosticSeverity severity) {
+static const char *StringForSeverity(lldb::Severity severity) {
   switch (severity) {
   // this should be exhaustive
-  case lldb_private::eDiagnosticSeverityError:
+  case lldb::eSeverityError:
     return "error: ";
-  case lldb_private::eDiagnosticSeverityWarning:
+  case lldb::eSeverityWarning:
     return "warning: ";
-  case lldb_private::eDiagnosticSeverityRemark:
+  case lldb::eSeverityInfo:
     return "";
   }
-  llvm_unreachable("switch needs another case for DiagnosticSeverity enum");
+  llvm_unreachable("switch needs another case for lldb::Severity enum");
 }
 
 std::string DiagnosticManager::GetString(char separator) {
   std::string ret;
+  llvm::raw_string_ostream stream(ret);
 
   for (const auto &diagnostic : Diagnostics()) {
-    ret.append(StringForSeverity(diagnostic->GetSeverity()));
-    ret.append(std::string(diagnostic->GetMessage()));
-    ret.push_back(separator);
+    llvm::StringRef severity = StringForSeverity(diagnostic->GetSeverity());
+    stream << severity;
+
+    llvm::StringRef message = diagnostic->GetMessage();
+    std::string searchable_message = message.lower();
+    auto severity_pos = message.find(severity);
+    stream << message.take_front(severity_pos);
+
+    if (severity_pos != llvm::StringRef::npos)
+      stream << message.drop_front(severity_pos + severity.size());
+    stream << separator;
   }
 
   return ret;
 }
 
-size_t DiagnosticManager::Printf(DiagnosticSeverity severity,
-                                 const char *format, ...) {
+size_t DiagnosticManager::Printf(lldb::Severity severity, const char *format,
+                                 ...) {
   StreamString ss;
 
   va_list args;
@@ -70,7 +79,7 @@ size_t DiagnosticManager::Printf(DiagnosticSeverity severity,
   return result;
 }
 
-void DiagnosticManager::PutString(DiagnosticSeverity severity,
+void DiagnosticManager::PutString(lldb::Severity severity,
                                   llvm::StringRef str) {
   if (str.empty())
     return;

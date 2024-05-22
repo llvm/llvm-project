@@ -27,7 +27,6 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
         deps = [
             "//libc:__support_fputil_basic_operations",
             "//libc:__support_fputil_fenv_impl",
-            "//libc:__support_fputil_float_properties",
             "//libc:__support_fputil_fp_bits",
             "//libc:__support_fputil_manipulation_functions",
             "//libc:__support_fputil_nearest_integer_operations",
@@ -35,6 +34,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_math_extras",
             "//libc:__support_uint128",
             "//libc/test/UnitTest:fp_test_helpers",
+            "//libc:hdr_math_macros",
         ] + deps,
         **kwargs
     )

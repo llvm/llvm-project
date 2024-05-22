@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace clang {
   class ASTContext;
@@ -309,6 +310,8 @@ public:
   static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
+  static const TST TST_typename_pack_indexing =
+      clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
 #include "clang/Basic/TransformTypeTraits.def"
@@ -344,43 +347,61 @@ public:
     // FIXME: Attributes should be included here.
   };
 
-  enum FriendSpecified : bool {
-    No,
-    Yes,
-  };
+  enum FriendSpecified : bool { No, Yes };
 
 private:
   // storage-class-specifier
-  /*SCS*/unsigned StorageClassSpec : 3;
-  /*TSCS*/unsigned ThreadStorageClassSpec : 2;
+  LLVM_PREFERRED_TYPE(SCS)
+  unsigned StorageClassSpec : 3;
+  LLVM_PREFERRED_TYPE(TSCS)
+  unsigned ThreadStorageClassSpec : 2;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SCS_extern_in_linkage_spec : 1;
 
   // type-specifier
-  /*TypeSpecifierWidth*/ unsigned TypeSpecWidth : 2;
-  /*TSC*/unsigned TypeSpecComplex : 2;
-  /*TSS*/unsigned TypeSpecSign : 2;
-  /*TST*/unsigned TypeSpecType : 7;
+  LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
+  unsigned TypeSpecWidth : 2;
+  LLVM_PREFERRED_TYPE(TSC)
+  unsigned TypeSpecComplex : 2;
+  LLVM_PREFERRED_TYPE(TypeSpecifierSign)
+  unsigned TypeSpecSign : 2;
+  LLVM_PREFERRED_TYPE(TST)
+  unsigned TypeSpecType : 7;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecVector : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecPixel : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecBool : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecOwned : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecPipe : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecSat : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
+  LLVM_PREFERRED_TYPE(TQ)
   unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
 
   // function-specifier
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_inline_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_forceinline_specified: 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_virtual_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_noreturn_specified : 1;
 
   // friend-specifier
-  unsigned Friend_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FriendSpecifiedFirst : 1;
 
   // constexpr-specifier
+  LLVM_PREFERRED_TYPE(ConstexprSpecKind)
   unsigned ConstexprSpecifier : 2;
 
   union {
@@ -389,6 +410,7 @@ private:
     Expr *ExprRep;
     TemplateIdAnnotation *TemplateIdRep;
   };
+  Expr *PackIndexingExpr = nullptr;
 
   /// ExplicitSpecifier - Store information about explicit spicifer.
   ExplicitSpecifier FS_explicit_specifier;
@@ -405,7 +427,7 @@ private:
 
   SourceLocation StorageClassSpecLoc, ThreadStorageClassSpecLoc;
   SourceRange TSWRange;
-  SourceLocation TSCLoc, TSSLoc, TSTLoc, AltiVecLoc, TSSatLoc;
+  SourceLocation TSCLoc, TSSLoc, TSTLoc, AltiVecLoc, TSSatLoc, EllipsisLoc;
   /// TSTNameLoc - If TypeSpecType is any of class, enum, struct, union,
   /// typename, then this is the location of the named type (if present);
   /// otherwise, it is the same as TSTLoc. Hence, the pair TSTLoc and
@@ -427,7 +449,8 @@ private:
 
   static bool isTypeRep(TST T) {
     return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
-           T == TST_typeof_unqualType || isTransformTypeTrait(T);
+           T == TST_typeof_unqualType || isTransformTypeTrait(T) ||
+           T == TST_typename_pack_indexing;
   }
   static bool isExprRep(TST T) {
     return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
@@ -466,7 +489,7 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
+        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -530,6 +553,13 @@ public:
     assert(isExprRep((TST) TypeSpecType) && "DeclSpec does not store an expr");
     return ExprRep;
   }
+
+  Expr *getPackIndexingExpr() const {
+    assert(TypeSpecType == TST_typename_pack_indexing &&
+           "DeclSpec is not a pack indexing expr");
+    return PackIndexingExpr;
+  }
+
   TemplateIdAnnotation *getRepAsTemplateId() const {
     assert(isTemplateIdRep((TST) TypeSpecType) &&
            "DeclSpec does not store a template id");
@@ -587,6 +617,7 @@ public:
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
   SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
+  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
 
   /// Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {
@@ -743,6 +774,9 @@ public:
                      const PrintingPolicy &Policy);
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
+
+  void SetPackIndexingExpr(SourceLocation EllipsisLoc, Expr *Pack);
+
   bool SetTypeSpecError();
   void UpdateDeclRep(Decl *Rep) {
     assert(isDeclRep((TST) TypeSpecType));
@@ -782,8 +816,10 @@ public:
                         const char *&PrevSpec, unsigned &DiagID);
 
   FriendSpecified isFriendSpecified() const {
-    return static_cast<FriendSpecified>(Friend_specified);
+    return static_cast<FriendSpecified>(FriendLoc.isValid());
   }
+
+  bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
 
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
@@ -1014,7 +1050,7 @@ public:
   union {
     /// When Kind == IK_Identifier, the parsed identifier, or when
     /// Kind == IK_UserLiteralId, the identifier suffix.
-    IdentifierInfo *Identifier;
+    const IdentifierInfo *Identifier;
 
     /// When Kind == IK_OperatorFunctionId, the overloaded operator
     /// that we parsed.
@@ -1076,7 +1112,7 @@ public:
   /// \param IdLoc the location of the parsed identifier.
   void setIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_Identifier;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = IdLoc;
   }
 
@@ -1119,9 +1155,9 @@ public:
   ///
   /// \param IdLoc the location of the identifier.
   void setLiteralOperatorId(const IdentifierInfo *Id, SourceLocation OpLoc,
-                              SourceLocation IdLoc) {
+                            SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_LiteralOperatorId;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = OpLoc;
     EndLocation = IdLoc;
   }
@@ -1190,7 +1226,7 @@ public:
   /// \param Id the identifier.
   void setImplicitSelfParam(const IdentifierInfo *Id) {
     Kind = UnqualifiedIdKind::IK_ImplicitSelfParam;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = SourceLocation();
   }
 
@@ -1231,6 +1267,7 @@ struct DeclaratorChunk {
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     /// The location of the const-qualifier, if any.
@@ -1264,12 +1301,15 @@ struct DeclaratorChunk {
   struct ArrayTypeInfo {
     /// The type qualifiers for the array:
     /// const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     /// True if this dimension included the 'static' keyword.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasStatic : 1;
 
     /// True if this dimension was [*].  In this case, NumElts is null.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isStar : 1;
 
     /// This is the size of the array, or null if [] or [*] was specified.
@@ -1288,7 +1328,7 @@ struct DeclaratorChunk {
   /// Parameter type lists will have type info (if the actions module provides
   /// it), but may have null identifier info: e.g. for 'void foo(int X, int)'.
   struct ParamInfo {
-    IdentifierInfo *Ident;
+    const IdentifierInfo *Ident;
     SourceLocation IdentLoc;
     Decl *Param;
 
@@ -1300,11 +1340,10 @@ struct DeclaratorChunk {
     std::unique_ptr<CachedTokens> DefaultArgTokens;
 
     ParamInfo() = default;
-    ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
-              Decl *param,
+    ParamInfo(const IdentifierInfo *ident, SourceLocation iloc, Decl *param,
               std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
-      : Ident(ident), IdentLoc(iloc), Param(param),
-        DefaultArgTokens(std::move(DefArgTokens)) {}
+        : Ident(ident), IdentLoc(iloc), Param(param),
+          DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
   struct TypeAndRange {
@@ -1316,28 +1355,35 @@ struct DeclaratorChunk {
     /// hasPrototype - This is true if the function had at least one typed
     /// parameter.  If the function is () or (a,b,c), then it has no prototype,
     /// and is treated as a K&R-style function.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasPrototype : 1;
 
     /// isVariadic - If this function has a prototype, and if that
     /// proto ends with ',...)', this is true. When true, EllipsisLoc
     /// contains the location of the ellipsis.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isVariadic : 1;
 
     /// Can this declaration be a constructor-style initializer?
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isAmbiguous : 1;
 
     /// Whether the ref-qualifier (if any) is an lvalue reference.
     /// Otherwise, it's an rvalue reference.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned RefQualifierIsLValueRef : 1;
 
     /// ExceptionSpecType - An ExceptionSpecificationType value.
+    LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
     unsigned ExceptionSpecType : 4;
 
     /// DeleteParams - If this is true, we need to delete[] Params.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DeleteParams : 1;
 
     /// HasTrailingReturnType - If this is true, a trailing return type was
     /// specified.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturnType : 1;
 
     /// The location of the left parenthesis in the source.
@@ -1552,6 +1598,7 @@ struct DeclaratorChunk {
   struct BlockPointerTypeInfo {
     /// For now, sema will catch these as invalid.
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     void destroy() {
@@ -1560,6 +1607,7 @@ struct DeclaratorChunk {
 
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
     /// Location of the '*' token.
     SourceLocation StarLoc;
@@ -1743,6 +1791,7 @@ public:
   struct Binding {
     IdentifierInfo *Name;
     SourceLocation NameLoc;
+    std::optional<ParsedAttributes> Attrs;
   };
 
 private:
@@ -1752,6 +1801,7 @@ private:
   /// The bindings.
   Binding *Bindings;
   unsigned NumBindings : 31;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DeleteBindings : 1;
 
   friend class Declarator;
@@ -1761,15 +1811,15 @@ public:
       : Bindings(nullptr), NumBindings(0), DeleteBindings(false) {}
   DecompositionDeclarator(const DecompositionDeclarator &G) = delete;
   DecompositionDeclarator &operator=(const DecompositionDeclarator &G) = delete;
-  ~DecompositionDeclarator() {
-    if (DeleteBindings)
-      delete[] Bindings;
-  }
+  ~DecompositionDeclarator() { clear(); }
 
   void clear() {
     LSquareLoc = RSquareLoc = SourceLocation();
     if (DeleteBindings)
       delete[] Bindings;
+    else
+      llvm::for_each(llvm::MutableArrayRef(Bindings, NumBindings),
+                     [](Binding &B) { B.Attrs.reset(); });
     Bindings = nullptr;
     NumBindings = 0;
     DeleteBindings = false;
@@ -1868,33 +1918,42 @@ private:
   SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InvalidType : 1;
 
   /// GroupingParens - Set by Parser::ParseParenDeclarator().
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GroupingParens : 1;
 
   /// FunctionDefinition - Is this Declarator for a function or member
   /// definition and, if so, what kind?
   ///
   /// Actually a FunctionDefinitionKind.
+  LLVM_PREFERRED_TYPE(FunctionDefinitionKind)
   unsigned FunctionDefinition : 2;
 
   /// Is this Declarator a redeclaration?
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Redeclaration : 1;
 
   /// true if the declaration is preceded by \c __extension__.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Extension : 1;
 
   /// Indicates whether this is an Objective-C instance variable.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ObjCIvar : 1;
 
   /// Indicates whether this is an Objective-C 'weak' property.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ObjCWeakProperty : 1;
 
   /// Indicates whether the InlineParams / InlineBindings storage has been used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InlineStorageUsed : 1;
 
   /// Indicates whether this declarator has an initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasInitializer : 1;
 
   /// Attributes attached to the declarator.
@@ -1938,6 +1997,8 @@ private:
   /// If provided, the source location of the ellipsis used to describe
   /// this declarator as a parameter pack.
   SourceLocation EllipsisLoc;
+
+  Expr *PackIndexingExpr;
 
   friend struct DeclaratorChunk;
 
@@ -2063,6 +2124,7 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
+    PackIndexingExpr = nullptr;
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2265,7 +2327,7 @@ public:
     return BindingGroup.isSet();
   }
 
-  IdentifierInfo *getIdentifier() const {
+  const IdentifierInfo *getIdentifier() const {
     if (Name.getKind() == UnqualifiedIdKind::IK_Identifier)
       return Name.Identifier;
 
@@ -2274,15 +2336,15 @@ public:
   SourceLocation getIdentifierLoc() const { return Name.StartLocation; }
 
   /// Set the name of this declarator to be the given identifier.
-  void SetIdentifier(IdentifierInfo *Id, SourceLocation IdLoc) {
+  void SetIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Name.setIdentifier(Id, IdLoc);
   }
 
   /// Set the decomposition bindings for this declarator.
-  void
-  setDecompositionBindings(SourceLocation LSquareLoc,
-                           ArrayRef<DecompositionDeclarator::Binding> Bindings,
-                           SourceLocation RSquareLoc);
+  void setDecompositionBindings(
+      SourceLocation LSquareLoc,
+      MutableArrayRef<DecompositionDeclarator::Binding> Bindings,
+      SourceLocation RSquareLoc);
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.
@@ -2299,9 +2361,25 @@ public:
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
+  /// EndLoc, which should be the last token of the chunk. This overload is for
+  /// copying a 'chunk' from another declarator, so it takes the pool that the
+  /// other Declarator owns so that it can 'take' the attributes from it.
+  void AddTypeInfo(const DeclaratorChunk &TI, AttributePool &OtherPool,
+                   SourceLocation EndLoc) {
+    DeclTypeInfo.push_back(TI);
+    getAttributePool().takeFrom(DeclTypeInfo.back().getAttrs(), OtherPool);
+
+    if (!EndLoc.isInvalid())
+      SetRangeEnd(EndLoc);
+  }
+
+  /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.
   void AddTypeInfo(const DeclaratorChunk &TI, SourceLocation EndLoc) {
     DeclTypeInfo.push_back(TI);
+
+    assert(TI.AttrList.empty() &&
+           "Cannot add a declarator chunk with attributes with this overload");
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
@@ -2647,6 +2725,10 @@ public:
   bool hasEllipsis() const { return EllipsisLoc.isValid(); }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
   void setEllipsisLoc(SourceLocation EL) { EllipsisLoc = EL; }
+
+  bool hasPackIndexing() const { return PackIndexingExpr != nullptr; }
+  Expr *getPackIndexingExpr() const { return PackIndexingExpr; }
+  void setPackIndexingExpr(Expr *PI) { PackIndexingExpr = PI; }
 
   void setFunctionDefinitionKind(FunctionDefinitionKind Val) {
     FunctionDefinition = static_cast<unsigned>(Val);

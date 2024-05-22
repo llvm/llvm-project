@@ -28,7 +28,7 @@ subroutine test1a
  !DEF: /test1a/foo (Function) Generic
  !DEF: /test1a/x ObjectEntity TYPE(foo)
  type(foo) :: x
- !DEF: /test1a/foo Use
+ !REF: /m1a/foo
  !REF: /m1b/bar
  print *, foo(1), foo()
 end subroutine
@@ -41,7 +41,7 @@ subroutine test1b
  !DEF: /test1b/foo (Function) Generic
  !DEF: /test1b/x ObjectEntity TYPE(foo)
  type(foo) :: x
- !DEF: /test1b/foo Use
+ !REF: /m1a/foo
  !REF: /m1b/bar
  print *, foo(1), foo()
 end subroutine

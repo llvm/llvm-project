@@ -16,7 +16,7 @@
 
 
 
-define arm_aapcs_vfpcc void @push_out_mul_gather(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+define arm_aapcs_vfpcc void @push_out_mul_gather(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: push_out_mul_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI0_0
@@ -45,11 +45,11 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %2 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %3 = bitcast i32* %2 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %3, align 4
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %2 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %3 = bitcast ptr %2 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %3, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %4 = icmp eq i32 %index.next, %n.vec
@@ -59,7 +59,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_add_gather(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+define arm_aapcs_vfpcc void @push_out_add_gather(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: push_out_add_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI1_0
@@ -88,11 +88,11 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = add <4 x i32> %vec.ind, <i32 6, i32 6, i32 6, i32 6>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %2 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %3 = bitcast i32* %2 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %3, align 4
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %2 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %3 = bitcast ptr %2 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %3, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %4 = icmp eq i32 %index.next, %n.vec
@@ -102,7 +102,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_mul_add_gather(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+define arm_aapcs_vfpcc void @push_out_mul_add_gather(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: push_out_mul_add_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI2_0
@@ -132,11 +132,11 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
   %1 = add <4 x i32> %0, <i32 6, i32 6, i32 6, i32 6>
-  %2 = getelementptr inbounds i32, i32* %data, <4 x i32> %1
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %3 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %data, <4 x i32> %1
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %3 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %4 = bitcast ptr %3 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %4, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %5 = icmp eq i32 %index.next, %n.vec
@@ -146,7 +146,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_mul_scatter(i32* noalias nocapture readonly %data,
+define arm_aapcs_vfpcc void @push_out_mul_scatter(ptr noalias nocapture readonly %data,
 ; CHECK-LABEL: push_out_mul_scatter:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r1, .LCPI3_0
@@ -166,7 +166,7 @@ define arm_aapcs_vfpcc void @push_out_mul_scatter(i32* noalias nocapture readonl
 ; CHECK-NEXT:    .long 4294967224 @ 0xffffffb8
 ; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
 ; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
-                                                  i32* noalias nocapture %dst, i32 %n.vec,
+                                                  ptr noalias nocapture %dst, i32 %n.vec,
                                                   <4 x i32> %to.store) {
 
 vector.ph:                                        ; preds = %for.body.preheader
@@ -176,8 +176,8 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %to.store, <4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %to.store, <4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %2 = icmp eq i32 %index.next, %n.vec
@@ -187,7 +187,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_add_scatter(i32* noalias nocapture readonly %data,
+define arm_aapcs_vfpcc void @push_out_add_scatter(ptr noalias nocapture readonly %data,
 ; CHECK-LABEL: push_out_add_scatter:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r1, .LCPI4_0
@@ -207,7 +207,7 @@ define arm_aapcs_vfpcc void @push_out_add_scatter(i32* noalias nocapture readonl
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 8 @ 0x8
 ; CHECK-NEXT:    .long 16 @ 0x10
-                                                  i32* noalias nocapture %dst, i32 %n.vec,
+                                                  ptr noalias nocapture %dst, i32 %n.vec,
                                                   <4 x i32> %to.store) {
 
 vector.ph:                                        ; preds = %for.body.preheader
@@ -217,8 +217,8 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = add <4 x i32> %vec.ind, <i32 6, i32 6, i32 6, i32 6>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %to.store, <4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %to.store, <4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %2 = icmp eq i32 %index.next, %n.vec
@@ -228,7 +228,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_mul_gather_scatter(i32* noalias nocapture readonly %data,
+define arm_aapcs_vfpcc void @push_out_mul_gather_scatter(ptr noalias nocapture readonly %data,
 ; CHECK-LABEL: push_out_mul_gather_scatter:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r1, .LCPI5_0
@@ -251,7 +251,7 @@ define arm_aapcs_vfpcc void @push_out_mul_gather_scatter(i32* noalias nocapture 
 ; CHECK-NEXT:    .long 6 @ 0x6
 ; CHECK-NEXT:    .long 12 @ 0xc
 ; CHECK-NEXT:    .long 18 @ 0x12
-                                                         i32* noalias nocapture %dst, i32 %n.vec) {
+                                                         ptr noalias nocapture %dst, i32 %n.vec) {
 
 vector.ph:                                        ; preds = %for.body.preheader
   br label %vector.body
@@ -260,9 +260,9 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %wide.masked.gather, <4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %wide.masked.gather, <4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %2 = icmp eq i32 %index.next, %n.vec
@@ -272,7 +272,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_add_sub_block(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+define arm_aapcs_vfpcc void @push_out_add_sub_block(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: push_out_add_sub_block:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI6_0
@@ -304,11 +304,11 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 lower.block:                             ; preds = %vector.body
   %0 = add <4 x i32> %vec.ind, <i32 6, i32 6, i32 6, i32 6>
-  %1 = getelementptr inbounds i32, i32* %data, <4 x i32> %0
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %2 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %3 = bitcast i32* %2 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %3, align 4
+  %1 = getelementptr inbounds i32, ptr %data, <4 x i32> %0
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %1, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %2 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %3 = bitcast ptr %2 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %3, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   br label %vector.body.end
@@ -321,7 +321,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @non_gatscat_use1(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec, <4 x i32>* %x) {
+define arm_aapcs_vfpcc void @non_gatscat_use1(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec, ptr %x) {
 ; CHECK-LABEL: non_gatscat_use1:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    .save {r4, lr}
@@ -365,13 +365,13 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
   %1 = add <4 x i32> %0, <i32 6, i32 6, i32 6, i32 6>
-  %2 = getelementptr inbounds i32, i32* %data, <4 x i32> %1
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %3 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %data, <4 x i32> %1
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %3 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %4 = bitcast ptr %3 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %4, align 4
   %non_gatscat_use = mul <4 x i32> %0, <i32 3, i32 3, i32 3, i32 3>
-  store <4 x i32> %non_gatscat_use, <4 x i32>* %x, align 4
+  store <4 x i32> %non_gatscat_use, ptr %x, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %5 = icmp eq i32 %index.next, %n.vec
@@ -381,7 +381,7 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @non_gatscat_use2(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec, <4 x i32>* %x) {
+define arm_aapcs_vfpcc void @non_gatscat_use2(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec, ptr %x) {
 ; CHECK-LABEL: non_gatscat_use2:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
@@ -428,13 +428,13 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %0 = mul <4 x i32> %vec.ind, <i32 3, i32 3, i32 3, i32 3>
   %1 = add <4 x i32> %0, <i32 6, i32 6, i32 6, i32 6>
-  %2 = getelementptr inbounds i32, i32* %data, <4 x i32> %1
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-  %3 = getelementptr inbounds i32, i32* %dst, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %wide.masked.gather, <4 x i32>* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %data, <4 x i32> %1
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %3 = getelementptr inbounds i32, ptr %dst, i32 %index
+  %4 = bitcast ptr %3 to ptr
+  store <4 x i32> %wide.masked.gather, ptr %4, align 4
   %non_gatscat_use = mul <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
-  store <4 x i32> %non_gatscat_use, <4 x i32>* %x, align 4
+  store <4 x i32> %non_gatscat_use, ptr %x, align 4
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
   %5 = icmp eq i32 %index.next, %n.vec
@@ -444,7 +444,7 @@ end:
   ret void;
 }
 
-define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32* noalias nocapture readonly %B, i32* noalias nocapture %C, i32 %n, i32 %m, i32 %l) local_unnamed_addr #0 {
+define dso_local void @arm_mat_mult_q31(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %n, i32 %m, i32 %l) local_unnamed_addr #0 {
 ; CHECK-LABEL: arm_mat_mult_q31:
 ; CHECK:       @ %bb.0: @ %for.cond8.preheader.us.us.preheader.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
@@ -568,12 +568,12 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %9, %vector.body ]
   %3 = add <4 x i32> %vec.ind, %broadcast.splat
-  %4 = getelementptr inbounds i32, i32* %A, <4 x i32> %3
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %4, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef), !tbaa !3
+  %4 = getelementptr inbounds i32, ptr %A, <4 x i32> %3
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %4, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef), !tbaa !3
   %5 = mul <4 x i32> %vec.ind, %broadcast.splat87
   %6 = add <4 x i32> %5, %broadcast.splat89
-  %7 = getelementptr inbounds i32, i32* %B, <4 x i32> %6
-  %wide.masked.gather90 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %7, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef), !tbaa !3
+  %7 = getelementptr inbounds i32, ptr %B, <4 x i32> %6
+  %wide.masked.gather90 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %7, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef), !tbaa !3
   %8 = mul nsw <4 x i32> %wide.masked.gather90, %wide.masked.gather
   %9 = add <4 x i32> %8, %vec.phi
   %index.next = add i32 %index, 4
@@ -585,8 +585,8 @@ middle.block:                                     ; preds = %vector.body
   %11 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
 ;for.cond8.for.cond.cleanup10_crit_edge.us.us:     ; preds = %for.body11.us.us, %middle.block
   %add19.us.us = add i32 %j.051.us.us, %mul18.us
-  %arrayidx20.us.us = getelementptr inbounds i32, i32* %C, i32 %add19.us.us
-  store i32 %11, i32* %arrayidx20.us.us, align 4, !tbaa !3
+  %arrayidx20.us.us = getelementptr inbounds i32, ptr %C, i32 %add19.us.us
+  store i32 %11, ptr %arrayidx20.us.us, align 4, !tbaa !3
   %inc.us.us = add nuw nsw i32 %j.051.us.us, 1
   %exitcond = icmp eq i32 %inc.us.us, %m
   br i1 %exitcond, label %for.cond4.for.cond.cleanup6_crit_edge.us, label %vector.ph
@@ -595,7 +595,7 @@ for.end25:                                        ; preds = %for.cond4.for.cond.
   ret void
 }
 
-define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16* noalias nocapture readonly %B, i16* noalias nocapture %C, i32 %n, i32 %m, i32 %l) local_unnamed_addr #0 {
+define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %n, i32 %m, i32 %l) local_unnamed_addr #0 {
 ; CHECK-LABEL: arm_mat_mult_q15:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -609,7 +609,6 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    strd r0, r2, [sp, #24] @ 8-byte Folded Spill
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    itt ne
 ; CHECK-NEXT:    ldrne r0, [sp, #136]
 ; CHECK-NEXT:    cmpne r0, #0
@@ -772,9 +771,9 @@ for.cond1.preheader.us:                           ; preds = %for.cond1.for.cond.
   br i1 %cmp642, label %for.cond5.preheader.us73.preheader, label %for.cond5.preheader.us.us
 
 for.cond5.preheader.us73.preheader:               ; preds = %for.cond1.preheader.us
-  %scevgep = getelementptr i16, i16* %C, i32 %1
-  %scevgep82 = bitcast i16* %scevgep to i8*
-  call void @llvm.memset.p0i8.i32(i8* align 2 %scevgep82, i8 0, i32 %0, i1 false)
+  %scevgep = getelementptr i16, ptr %C, i32 %1
+  %scevgep82 = bitcast ptr %scevgep to ptr
+  call void @llvm.memset.p0.i32(ptr align 2 %scevgep82, i8 0, i32 %0, i1 false)
   br label %for.cond1.for.cond.cleanup3_crit_edge.us
 
 for.cond1.for.cond.cleanup3_crit_edge.us:         ; preds = %for.cond5.for.cond.cleanup7_crit_edge.us.us, %for.cond5.preheader.us73.preheader
@@ -801,14 +800,14 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.ind = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %11, %vector.body ]
   %2 = add i32 %index, %mul.us
-  %3 = getelementptr inbounds i16, i16* %A, i32 %2
-  %4 = bitcast i16* %3 to <4 x i16>*
-  %wide.load = load <4 x i16>, <4 x i16>* %4, align 2, !tbaa !3
+  %3 = getelementptr inbounds i16, ptr %A, i32 %2
+  %4 = bitcast ptr %3 to ptr
+  %wide.load = load <4 x i16>, ptr %4, align 2, !tbaa !3
   %5 = sext <4 x i16> %wide.load to <4 x i32>
   %6 = mul <4 x i32> %vec.ind, %broadcast.splat
   %7 = add <4 x i32> %6, %broadcast.splat86
-  %8 = getelementptr inbounds i16, i16* %B, <4 x i32> %7
-  %wide.masked.gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> %8, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef), !tbaa !3
+  %8 = getelementptr inbounds i16, ptr %B, <4 x i32> %7
+  %wide.masked.gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %8, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef), !tbaa !3
   %9 = sext <4 x i16> %wide.masked.gather to <4 x i32>
   %10 = mul nsw <4 x i32> %9, %5
   %11 = add <4 x i32> %10, %vec.phi
@@ -825,8 +824,8 @@ for.cond5.for.cond.cleanup7_crit_edge.us.us:      ; preds = %for.body8.us.us, %m
   %add14.us.us.lcssa = phi i32 [ %13, %middle.block ], [ %add14.us.us, %for.body8.us.us ]
   %conv15.us.us = trunc i32 %add14.us.us.lcssa to i16
   %add17.us.us = add i32 %j.046.us.us, %1
-  %arrayidx18.us.us = getelementptr inbounds i16, i16* %C, i32 %add17.us.us
-  store i16 %conv15.us.us, i16* %arrayidx18.us.us, align 2, !tbaa !3
+  %arrayidx18.us.us = getelementptr inbounds i16, ptr %C, i32 %add17.us.us
+  store i16 %conv15.us.us, ptr %arrayidx18.us.us, align 2, !tbaa !3
   %inc20.us.us = add nuw nsw i32 %j.046.us.us, 1
   %exitcond83 = icmp eq i32 %inc20.us.us, %m
   br i1 %exitcond83, label %for.cond1.for.cond.cleanup3_crit_edge.us, label %for.cond5.preheader.us.us
@@ -835,13 +834,13 @@ for.body8.us.us:                                  ; preds = %for.body8.us.us.pre
   %k.044.us.us = phi i32 [ %inc.us.us, %for.body8.us.us ], [ %k.044.us.us.ph, %for.body8.us.us.preheader ]
   %sum.043.us.us = phi i32 [ %add14.us.us, %for.body8.us.us ], [ %sum.043.us.us.ph, %for.body8.us.us.preheader ]
   %add.us.us = add i32 %k.044.us.us, %mul.us
-  %arrayidx.us.us = getelementptr inbounds i16, i16* %A, i32 %add.us.us
-  %14 = load i16, i16* %arrayidx.us.us, align 2, !tbaa !3
+  %arrayidx.us.us = getelementptr inbounds i16, ptr %A, i32 %add.us.us
+  %14 = load i16, ptr %arrayidx.us.us, align 2, !tbaa !3
   %conv.us.us = sext i16 %14 to i32
   %mul9.us.us = mul i32 %k.044.us.us, %m
   %add10.us.us = add i32 %mul9.us.us, %j.046.us.us
-  %arrayidx11.us.us = getelementptr inbounds i16, i16* %B, i32 %add10.us.us
-  %15 = load i16, i16* %arrayidx11.us.us, align 2, !tbaa !3
+  %arrayidx11.us.us = getelementptr inbounds i16, ptr %B, i32 %add10.us.us
+  %15 = load i16, ptr %arrayidx11.us.us, align 2, !tbaa !3
   %conv12.us.us = sext i16 %15 to i32
   %mul13.us.us = mul nsw i32 %conv12.us.us, %conv.us.us
   %add14.us.us = add nsw i32 %mul13.us.us, %sum.043.us.us
@@ -853,7 +852,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
   ret void
 }
 
-define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(i8* nocapture readonly %input, i16 zeroext %input_x, i16 zeroext %input_y, i16 zeroext %input_ch, i8* nocapture readonly %kernel, i16 zeroext %output_ch, i16 zeroext %ch_mult, i16 zeroext %kernel_x, i16 zeroext %kernel_y, i16 zeroext %pad_x, i16 zeroext %pad_y, i16 zeroext %stride_x, i16 zeroext %stride_y, i32* nocapture readonly %bias, i8* nocapture %output, i32* nocapture readonly %output_shift, i32* nocapture readonly %output_mult, i16 zeroext %output_x, i16 zeroext %output_y, i32 %output_offset, i32 %input_offset, i32 %output_activation_min, i32 %output_activation_max, i16 zeroext %dilation_x, i16 zeroext %dilation_y, i16* nocapture readnone %buffer_a) local_unnamed_addr #0 {
+define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly %input, i16 zeroext %input_x, i16 zeroext %input_y, i16 zeroext %input_ch, ptr nocapture readonly %kernel, i16 zeroext %output_ch, i16 zeroext %ch_mult, i16 zeroext %kernel_x, i16 zeroext %kernel_y, i16 zeroext %pad_x, i16 zeroext %pad_y, i16 zeroext %stride_x, i16 zeroext %stride_y, ptr nocapture readonly %bias, ptr nocapture %output, ptr nocapture readonly %output_shift, ptr nocapture readonly %output_mult, i16 zeroext %output_x, i16 zeroext %output_y, i32 %output_offset, i32 %input_offset, i32 %output_activation_min, i32 %output_activation_max, i16 zeroext %dilation_x, i16 zeroext %dilation_y, ptr nocapture readnone %buffer_a) local_unnamed_addr #0 {
 ; CHECK-LABEL: arm_depthwise_conv_s8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -1074,12 +1073,12 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp79 = add nsw <4 x i32> %vec.ind, %broadcast.splat68
   %tmp80 = mul nsw <4 x i32> %broadcast.splat70, %tmp79
   %tmp81 = add nsw <4 x i32> %tmp80, %broadcast.splat72
-  %tmp82 = getelementptr inbounds i8, i8* %input, <4 x i32> %tmp78
-  %wide.masked.gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %tmp82, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+  %tmp82 = getelementptr inbounds i8, ptr %input, <4 x i32> %tmp78
+  %wide.masked.gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %tmp82, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
   %tmp83 = sext <4 x i8> %wide.masked.gather to <4 x i32>
   %tmp84 = add nsw <4 x i32> %broadcast.splat74, %tmp83
-  %tmp85 = getelementptr inbounds i8, i8* %kernel, <4 x i32> %tmp81
-  %wide.masked.gather75 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %tmp85, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+  %tmp85 = getelementptr inbounds i8, ptr %kernel, <4 x i32> %tmp81
+  %wide.masked.gather75 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %tmp85, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
   %tmp86 = sext <4 x i8> %wide.masked.gather75 to <4 x i32>
   %tmp87 = mul nsw <4 x i32> %tmp84, %tmp86
   %tmp88 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp87)
@@ -1104,11 +1103,11 @@ if.end:                                           ; preds = %for.cond.cleanup9.i
   ret i32 0
 }
 
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
-declare <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*>, i32, <4 x i1>, <4 x i16>)
-declare <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32 immarg, <4 x i1>, <4 x i8>) #3
+declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
+declare <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i16>)
+declare <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr>, i32 immarg, <4 x i1>, <4 x i8>) #3
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare void @llvm.memset.p0i8.i32(i8* align 2, i8, i32, i1)
+declare void @llvm.memset.p0.i32(ptr align 2, i8, i32, i1)
 
-declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32, <4 x i1>)

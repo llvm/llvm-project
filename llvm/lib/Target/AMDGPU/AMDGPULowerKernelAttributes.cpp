@@ -323,7 +323,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 // TargetPassConfig for subtarget.
 bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
   bool MadeChange = false;
-  bool IsV5OrAbove = AMDGPU::getCodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
+  bool IsV5OrAbove =
+      AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(M, IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.
@@ -356,7 +357,7 @@ ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
 PreservedAnalyses
 AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   bool IsV5OrAbove =
-      AMDGPU::getCodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
+      AMDGPU::getAMDHSACodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(*F.getParent(), IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.

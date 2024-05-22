@@ -45,6 +45,11 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
+def warn_next_larger_fp_type_same_size_than_fp : Warning<
+  "higher precision floating-point type size has the same size than "
+  "floating-point type size">,
+  InGroup<DiagGroup<"higher-precision-fp">>;
+
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {
@@ -70,6 +75,10 @@ def warn_pragma_debug_missing_argument : Warning<
 def warn_pragma_debug_unexpected_argument : Warning<
   "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
+def warn_fp_nan_inf_when_disabled : Warning<
+  "use of %select{infinity|NaN}0%select{| via a macro}1 is undefined behavior "
+  "due to the currently enabled floating-point options">,
+  InGroup<DiagGroup<"nan-infinity-disabled", [], NanInfDisabledDocs>>;
 }
 
 // Parse && Sema
@@ -225,6 +234,9 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
+def ext_cxx_bitint_suffix : Extension<
+  "'_BitInt' suffix for literals is a Clang extension">,
+  InGroup<BitIntExtension>;
 def ext_c23_bitint_suffix : ExtWarn<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
@@ -349,15 +361,20 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
+def warn_knl_knm_isa_support_removed : Warning<
+  "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
+  InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
+def err_target_unsupported_abi_with_fpu : Error<
+  "'%0' ABI is not supported with FPU">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
 def err_file_modified : Error<
   "file '%0' modified since it was first processed">, DefaultFatal;
 def err_file_too_large : Error<
-  "sorry, unsupported: file '%0' is too large for Clang to process">;
+  "file '%0' is too large for Clang to process">;
 def err_sloc_space_too_large : Error<
-  "sorry, the translation unit is too large for Clang to process: ran out of source locations">, DefaultFatal;
+  "translation unit is too large for Clang to process: ran out of source locations">, DefaultFatal;
 def err_unsupported_bom : Error<"%0 byte order mark detected in '%1', but "
   "encoding is not supported">, DefaultFatal;
 def err_unable_to_rename_temp : Error<

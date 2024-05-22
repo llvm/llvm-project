@@ -3,7 +3,7 @@
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-define void @same_step_and_size(ptr %a, i32* %b, i64 %n) {
+define void @same_step_and_size(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: @same_step_and_size(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i64

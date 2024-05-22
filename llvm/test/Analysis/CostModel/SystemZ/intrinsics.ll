@@ -3,6 +3,13 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z15 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z15
 
+define void @bswap_i128(i128 %arg) {
+; CHECK: function 'bswap_i128'
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp = tail call i128 @llvm.bswap.i128(i128 %arg)
+  %swp = tail call i128 @llvm.bswap.i128(i128 %arg)
+  ret void
+}
+
 define void @bswap_i64(i64 %arg, <2 x i64> %arg2) {
 ; CHECK: function 'bswap_i64'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp1 = tail call i64
@@ -185,6 +192,8 @@ define void @bswap_v8i16_mem(ptr %src, <8 x i16> %arg, ptr %dst) {
 
   ret void
 }
+
+declare i128 @llvm.bswap.i128(i128)
 
 declare i64 @llvm.bswap.i64(i64)
 declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)

@@ -47,6 +47,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -67,7 +70,7 @@ template <input_range _View, move_constructible _Fn>
 template <input_range _View, copy_constructible _Fn>
 #  endif
   requires __transform_view_constraints<_View, _Fn>
-class transform_view : public view_interface<transform_view<_View, _Fn>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS transform_view : public view_interface<transform_view<_View, _Fn>> {
   template <bool>
   class __iterator;
   template <bool>
@@ -415,5 +418,7 @@ inline constexpr auto transform = __transform::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_TRANSFORM_VIEW_H

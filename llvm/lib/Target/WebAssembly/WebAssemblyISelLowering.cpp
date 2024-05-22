@@ -906,6 +906,22 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
+  case Intrinsic::wasm_loadf16_f32:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::f16;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(2);
+    Info.flags = MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_storef16_f32:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::f16;
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = Align(2);
+    Info.flags = MachineMemOperand::MOStore;
+    return true;
   default:
     return false;
   }
@@ -1288,7 +1304,7 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     LLVMContext & /*Context*/) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
-  return Subtarget->hasMultivalue() || Outs.size() <= 1;
+  return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -1296,7 +1312,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert((Subtarget->hasMultivalue() || Outs.size() <= 1) &&
+  assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget) &&
          "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
@@ -1683,7 +1699,7 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   if (model == GlobalValue::LocalExecTLSModel ||
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
-       getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV))) {
+       getTargetMachine().shouldAssumeDSOLocal(GV))) {
     // For DSO-local TLS variables we use offset from __tls_base
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -1729,7 +1745,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
       !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
-    if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+    if (getTargetMachine().shouldAssumeDSOLocal(GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
       const char *BaseName;
@@ -1869,8 +1885,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     Ops[OpIdx++] = Op.getOperand(2);
     while (OpIdx < 18) {
       const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
-      if (MaskIdx.isUndef() ||
-          cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
+      if (MaskIdx.isUndef() || MaskIdx.getNode()->getAsZExtVal() >= 32) {
         bool isTarget = MaskIdx.getNode()->getOpcode() == ISD::TargetConstant;
         Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32, isTarget);
       } else {
@@ -1912,7 +1927,7 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   const SDNode *Index = Extract.getOperand(1).getNode();
   if (!isa<ConstantSDNode>(Index))
     return SDValue();
-  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
+  unsigned IndexVal = Index->getAsZExtVal();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
@@ -2335,7 +2350,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {
     // Ensure the index type is i32 to match the tablegen patterns
-    uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
+    uint64_t Idx = IdxNode->getAsZExtVal();
     SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
     Ops[Op.getNumOperands() - 1] =
         DAG.getConstant(Idx, SDLoc(IdxNode), MVT::i32);

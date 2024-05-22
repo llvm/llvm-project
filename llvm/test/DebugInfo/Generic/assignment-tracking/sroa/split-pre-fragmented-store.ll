@@ -1,5 +1,7 @@
 ; RUN: opt -S -passes=sroa -sroa-skip-mem2reg %s \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes=sroa -sroa-skip-mem2reg %s \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; IR hand-modified, originally generated from:
 ;; struct Pair { int a; int b; };

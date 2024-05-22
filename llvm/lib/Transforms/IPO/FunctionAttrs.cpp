@@ -76,6 +76,7 @@ STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
 STATISTIC(NumWriteOnlyArg, "Number of arguments marked writeonly");
 STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
+STATISTIC(NumNoUndefReturn, "Number of function returns marked noundef");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
@@ -1185,10 +1186,15 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     switch (RVI->getOpcode()) {
     // Extend the analysis by looking upwards.
     case Instruction::BitCast:
-    case Instruction::GetElementPtr:
     case Instruction::AddrSpaceCast:
       FlowsToReturn.insert(RVI->getOperand(0));
       continue;
+    case Instruction::GetElementPtr:
+      if (cast<GEPOperator>(RVI)->isInBounds()) {
+        FlowsToReturn.insert(RVI->getOperand(0));
+        continue;
+      }
+      return false;
     case Instruction::Select: {
       SelectInst *SI = cast<SelectInst>(RVI);
       FlowsToReturn.insert(SI->getTrueValue());
@@ -1274,6 +1280,66 @@ static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
       LLVM_DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
       F->addRetAttr(Attribute::NonNull);
       ++NumNonNullReturn;
+      Changed.insert(F);
+    }
+  }
+}
+
+/// Deduce noundef attributes for the SCC.
+static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
+                            SmallSet<Function *, 8> &Changed) {
+  // Check each function in turn, determining which functions return noundef
+  // values.
+  for (Function *F : SCCNodes) {
+    // Already noundef.
+    AttributeList Attrs = F->getAttributes();
+    if (Attrs.hasRetAttr(Attribute::NoUndef))
+      continue;
+
+    // We can infer and propagate function attributes only when we know that the
+    // definition we'll get at link time is *exactly* the definition we see now.
+    // For more details, see GlobalValue::mayBeDerefined.
+    if (!F->hasExactDefinition())
+      return;
+
+    // MemorySanitizer assumes that the definition and declaration of a
+    // function will be consistent. A function with sanitize_memory attribute
+    // should be skipped from inference.
+    if (F->hasFnAttribute(Attribute::SanitizeMemory))
+      continue;
+
+    if (F->getReturnType()->isVoidTy())
+      continue;
+
+    const DataLayout &DL = F->getParent()->getDataLayout();
+    if (all_of(*F, [&](BasicBlock &BB) {
+          if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
+            // TODO: perform context-sensitive analysis?
+            Value *RetVal = Ret->getReturnValue();
+            if (!isGuaranteedNotToBeUndefOrPoison(RetVal))
+              return false;
+
+            // We know the original return value is not poison now, but it
+            // could still be converted to poison by another return attribute.
+            // Try to explicitly re-prove the relevant attributes.
+            if (Attrs.hasRetAttr(Attribute::NonNull) &&
+                !isKnownNonZero(RetVal, DL))
+              return false;
+
+            if (MaybeAlign Align = Attrs.getRetAlignment())
+              if (RetVal->getPointerAlignment(DL) < *Align)
+                return false;
+
+            Attribute Attr = Attrs.getRetAttr(Attribute::Range);
+            if (Attr.isValid() &&
+                !Attr.getRange().contains(
+                    computeConstantRange(RetVal, /*ForSigned=*/false)))
+              return false;
+          }
+          return true;
+        })) {
+      F->addRetAttr(Attribute::NoUndef);
+      ++NumNoUndefReturn;
       Changed.insert(F);
     }
   }
@@ -1629,7 +1695,10 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
     for (auto &I : BB.instructionsWithoutDebug())
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F || !Callee->doesNotRecurse())
+        if (!Callee || Callee == F ||
+            (!Callee->doesNotRecurse() &&
+             !(Callee->isDeclaration() &&
+               Callee->hasFnAttribute(Attribute::NoCallback))))
           // Function calls a potentially recursive function.
           return;
       }
@@ -1785,6 +1854,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
+  addNoUndefAttrs(Nodes.SCCNodes, Changed);
 
   // If we have no external nodes participating in the SCC, we can deduce some
   // more precise attributes as well.

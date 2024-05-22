@@ -19,6 +19,7 @@
 #include <string>
 
 namespace Fortran::common {
+class LanguageFeatureControl;
 
 // Fortran has five kinds of intrinsic data types, plus the derived types.
 ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
@@ -85,7 +86,12 @@ static constexpr int maxRank{15};
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
-ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture)
+ENUM_CLASS(
+    CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture, Unified)
+
+// OpenACC device types
+ENUM_CLASS(
+    OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
 
 // OpenMP atomic_default_mem_order clause allowed values
 ENUM_CLASS(OmpAtomicDefaultMemOrderType, SeqCst, AcqRel, Relaxed)
@@ -101,16 +107,17 @@ ENUM_CLASS(IgnoreTKR,
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
     Managed, // M - don't check managed storage
-    Contiguous) // C - legacy; disabled NVFORTRAN's convention that leading
-                // dimension of assumed-shape was contiguous
+    Contiguous) // C - don't check for storage sequence association with a
+                // potentially non-contiguous object
 using IgnoreTKRSet = EnumSet<IgnoreTKR, 8>;
 // IGNORE_TKR(A) = IGNORE_TKR(TKRDM)
 static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
     IgnoreTKR::Rank, IgnoreTKR::Device, IgnoreTKR::Managed};
 std::string AsFortran(IgnoreTKRSet);
 
-bool AreCompatibleCUDADataAttrs(
-    std::optional<CUDADataAttr>, std::optional<CUDADataAttr>, IgnoreTKRSet);
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
+    std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
+    const LanguageFeatureControl *features = nullptr);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

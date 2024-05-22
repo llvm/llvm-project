@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck %s -check-prefix=GFX12 --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck %s -check-prefix=GFX12 --implicit-check-not=error: --strict-whitespace
 
 //===----------------------------------------------------------------------===//
 // A VOPD instruction can use only one literal.

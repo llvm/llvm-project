@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_VALUE
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG_VALUE
+
 ;; Check that sandwiching instructions between a linked store and dbg.assign
 ;; results in a dbg.value(prev_value) being inserted at the store, and a
 ;; dbg.value(deref) at the dbg.assign.

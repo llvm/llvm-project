@@ -108,6 +108,8 @@ class X86AsmParser : public MCTargetAsmParser {
 
   // Does this instruction use apx extended register?
   bool UseApxExtendedReg = false;
+  // Is this instruction explicitly required not to update flags?
+  bool ForcedNoFlag = false;
 
 private:
   SMLoc consumeToken() {
@@ -263,8 +265,7 @@ private:
         return 0;
 
       SmallVector<ICToken, 16> OperandStack;
-      for (unsigned i = 0, e = PostfixStack.size(); i != e; ++i) {
-        ICToken Op = PostfixStack[i];
+      for (const ICToken &Op : PostfixStack) {
         if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
           OperandStack.push_back(Op);
         } else if (isUnaryOperator(Op.first)) {
@@ -1121,6 +1122,7 @@ private:
   unsigned IdentifyMasmOperator(StringRef Name);
   bool ParseMasmOperator(unsigned OpKind, int64_t &Val);
   bool ParseRoundingModeOp(SMLoc Start, OperandVector &Operands);
+  bool parseCFlagsOp(OperandVector &Operands);
   bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM,
                                bool &ParseError, SMLoc &End);
   bool ParseMasmNamedOperator(StringRef Name, IntelExprStateMachine &SM,
@@ -1731,8 +1733,8 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
       OrigOperands.pop_back();
   }
   // OrigOperands.append(FinalOperands.begin(), FinalOperands.end());
-  for (unsigned int i = 0; i < FinalOperands.size(); ++i)
-    OrigOperands.push_back(std::move(FinalOperands[i]));
+  for (auto &Op : FinalOperands)
+    OrigOperands.push_back(std::move(Op));
 
   return false;
 }
@@ -1800,7 +1802,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
                                            bool &ParseError, SMLoc &End) {
   // A named operator should be either lower or upper case, but not a mix...
   // except in MASM, which uses full case-insensitivity.
-  if (Name.compare(Name.lower()) && Name.compare(Name.upper()) &&
+  if (Name != Name.lower() && Name != Name.upper() &&
       !getParser().isParsingMasm())
     return false;
   if (Name.equals_insensitive("not")) {
@@ -2294,7 +2296,7 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
     Operands.push_back(X86Operand::CreateImm(RndModeOp, Start, End));
     return false;
   }
-  if(Tok.getIdentifier().equals("sae")){
+  if (Tok.getIdentifier() == "sae") {
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
       return Error(Tok.getLoc(), "Expected } at this point");
@@ -2305,6 +2307,67 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
   return Error(Tok.getLoc(), "unknown token in expression");
 }
 
+/// Parse condtional flags for CCMP/CTEST, e.g {dfv=of,sf,zf,cf} right after
+/// mnemonic.
+bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  AsmToken Tok = Parser.getTok();
+  const SMLoc Start = Tok.getLoc();
+  if (!Tok.is(AsmToken::LCurly))
+    return Error(Tok.getLoc(), "Expected { at this point");
+  Parser.Lex(); // Eat "{"
+  Tok = Parser.getTok();
+  if (Tok.getIdentifier() != "dfv")
+    return Error(Tok.getLoc(), "Expected dfv at this point");
+  Parser.Lex(); // Eat "dfv"
+  Tok = Parser.getTok();
+  if (!Tok.is(AsmToken::Equal))
+    return Error(Tok.getLoc(), "Expected = at this point");
+  Parser.Lex(); // Eat "="
+
+  Tok = Parser.getTok();
+  SMLoc End;
+  if (Tok.is(AsmToken::RCurly)) {
+    End = Tok.getEndLoc();
+    Operands.push_back(X86Operand::CreateImm(
+        MCConstantExpr::create(0, Parser.getContext()), Start, End));
+    Parser.Lex(); // Eat "}"
+    return false;
+  }
+  unsigned CFlags = 0;
+  for (unsigned I = 0; I < 4; ++I) {
+    Tok = Parser.getTok();
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+                         .Case("of", 0x8)
+                         .Case("sf", 0x4)
+                         .Case("zf", 0x2)
+                         .Case("cf", 0x1)
+                         .Default(~0U);
+    if (CFlag == ~0U)
+      return Error(Tok.getLoc(), "Invalid conditional flags");
+
+    if (CFlags & CFlag)
+      return Error(Tok.getLoc(), "Duplicated conditional flag");
+    CFlags |= CFlag;
+
+    Parser.Lex(); // Eat one conditional flag
+    Tok = Parser.getTok();
+    if (Tok.is(AsmToken::RCurly)) {
+      End = Tok.getEndLoc();
+      Operands.push_back(X86Operand::CreateImm(
+          MCConstantExpr::create(CFlags, Parser.getContext()), Start, End));
+      Parser.Lex(); // Eat "}"
+      return false;
+    } else if (I == 3) {
+      return Error(Tok.getLoc(), "Expected } at this point");
+    } else if (Tok.isNot(AsmToken::Comma)) {
+      return Error(Tok.getLoc(), "Expected } or , at this point");
+    }
+    Parser.Lex(); // Eat ","
+  }
+  llvm_unreachable("Unexpected control flow");
+}
+
 /// Parse the '.' operator.
 bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
                                          SMLoc &End) {
@@ -2313,8 +2376,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
 
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
-  if (DotDispStr.starts_with("."))
-    DotDispStr = DotDispStr.drop_front(1);
+  DotDispStr.consume_front(".");
   StringRef TrailingDot;
 
   // .Imm gets lexed as a real.
@@ -2505,7 +2567,7 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Default(0);
   if (Size) {
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
-    if (!(Tok.getString().equals("PTR") || Tok.getString().equals("ptr")))
+    if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
@@ -3062,6 +3124,35 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
                                       ErrMsg))
     return Error(BaseLoc, ErrMsg);
 
+  // If the displacement is a constant, check overflows. For 64-bit addressing,
+  // gas requires isInt<32> and otherwise reports an error. For others, gas
+  // reports a warning and allows a wider range. E.g. gas allows
+  // [-0xffffffff,0xffffffff] for 32-bit addressing (e.g. Linux kernel uses
+  // `leal -__PAGE_OFFSET(%ecx),%esp` where __PAGE_OFFSET is 0xc0000000).
+  if (BaseReg || IndexReg) {
+    if (auto CE = dyn_cast<MCConstantExpr>(Disp)) {
+      auto Imm = CE->getValue();
+      bool Is64 = X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
+                  X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg);
+      bool Is16 = X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg);
+      if (Is64) {
+        if (!isInt<32>(Imm))
+          return Error(BaseLoc, "displacement " + Twine(Imm) +
+                                    " is not within [-2147483648, 2147483647]");
+      } else if (!Is16) {
+        if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+          Warning(BaseLoc, "displacement " + Twine(Imm) +
+                               " shortened to 32-bit signed " +
+                               Twine(static_cast<int32_t>(Imm)));
+        }
+      } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+        Warning(BaseLoc, "displacement " + Twine(Imm) +
+                             " shortened to 16-bit signed " +
+                             Twine(static_cast<int16_t>(Imm)));
+      }
+    }
+  }
+
   if (SegReg || BaseReg || IndexReg)
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
                                              BaseReg, IndexReg, Scale, StartLoc,
@@ -3098,6 +3189,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   ForcedVEXEncoding = VEXEncoding_Default;
   ForcedDispEncoding = DispEncoding_Default;
   UseApxExtendedReg = false;
+  ForcedNoFlag = false;
 
   // Parse pseudo prefixes.
   while (true) {
@@ -3122,6 +3214,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         ForcedDispEncoding = DispEncoding_Disp8;
       else if (Prefix == "disp32")
         ForcedDispEncoding = DispEncoding_Disp32;
+      else if (Prefix == "nf")
+        ForcedNoFlag = true;
       else
         return Error(NameLoc, "unknown prefix");
 
@@ -3193,6 +3287,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // FIXME: Hack to recognize setneb as setne.
   if (PatchedName.starts_with("set") && PatchedName.ends_with("b") &&
+      PatchedName != "setzub" && PatchedName != "setzunb" &&
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 
@@ -3428,6 +3523,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                                  getParser().getContext());
     Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
+
+  // Parse condtional flags after mnemonic.
+  if ((Name.starts_with("ccmp") || Name.starts_with("ctest")) &&
+      parseCFlagsOp(Operands))
+    return true;
 
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
@@ -3702,7 +3802,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     //    VFMULCPHZrr   Dest, Src1, Src2
     //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
     //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
-    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+    for (unsigned i = ((TSFlags & X86II::EVEX_K) ? 2 : 1);
          i < Inst.getNumOperands(); i++)
       if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
         return Warning(Ops[0]->getStartLoc(), "Destination register should be "
@@ -3968,6 +4068,8 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   const MCInstrDesc &MCID = MII.get(Opc);
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
+    return Match_Unsupported;
+  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&

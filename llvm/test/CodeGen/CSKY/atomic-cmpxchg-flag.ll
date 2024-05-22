@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=csky -verify-machineinstrs -csky-no-aliases -mattr=+2e3 < %s \
 ; RUN:   | FileCheck -check-prefix=CSKY %s
 
-define i1 @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 signext %cmp,
+define i1 @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 signext %cmp,
                                        i32 signext %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; CSKY:       # %bb.0: # %entry
@@ -26,7 +26,7 @@ define i1 @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 signext %cmp,
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
 entry:
-  %0 = cmpxchg i32* %ptr, i32 %cmp, i32 %val seq_cst seq_cst
+  %0 = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
   %1 = extractvalue { i32, i1 } %0, 1
   ret i1 %1
 }

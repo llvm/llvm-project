@@ -1,6 +1,42 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
+# ATT:   {nf}	bzhil	%ecx, %edx, %r10d
+# INTEL: {nf}	bzhi	r10d, edx, ecx
+0x62,0x72,0x74,0x0c,0xf5,0xd2
+
+# ATT:   bzhil	%ecx, %edx, %r10d
+# INTEL: bzhi	r10d, edx, ecx
+0x62,0x72,0x74,0x08,0xf5,0xd2
+
+# ATT:   {nf}	bzhil	%ecx, 123(%rax,%rbx,4), %edx
+# INTEL: {nf}	bzhi	edx, dword ptr [rax + 4*rbx + 123], ecx
+0x62,0xf2,0x74,0x0c,0xf5,0x54,0x98,0x7b
+
+# ATT:   bzhil	%ecx, 123(%rax,%rbx,4), %edx
+# INTEL: bzhi	edx, dword ptr [rax + 4*rbx + 123], ecx
+0x62,0xf2,0x74,0x08,0xf5,0x54,0x98,0x7b
+
+# ATT:   {nf}	bzhiq	%r9, %r15, %r11
+# INTEL: {nf}	bzhi	r11, r15, r9
+0x62,0x52,0xb4,0x0c,0xf5,0xdf
+
+# ATT:   bzhiq	%r9, %r15, %r11
+# INTEL: bzhi	r11, r15, r9
+0x62,0x52,0xb4,0x08,0xf5,0xdf
+
+# ATT:   {nf}	bzhiq	%r9, 123(%rax,%rbx,4), %r15
+# INTEL: {nf}	bzhi	r15, qword ptr [rax + 4*rbx + 123], r9
+0x62,0x72,0xb4,0x0c,0xf5,0x7c,0x98,0x7b
+
+# ATT:   bzhiq	%r9, 123(%rax,%rbx,4), %r15
+# INTEL: bzhi	r15, qword ptr [rax + 4*rbx + 123], r9
+0x62,0x72,0xb4,0x08,0xf5,0x7c,0x98,0x7b
+
+# ATT:   bzhiq	%r9, 123(%rax,%rbx,4), %r15
+# INTEL: bzhi	r15, qword ptr [rax + 4*rbx + 123], r9
+0x62,0x72,0xb4,0x08,0xf5,0xbc,0x98,0x7b,0x00,0x00,0x00
+
 # ATT:   bzhil	%r18d, %r22d, %r26d
 # INTEL: bzhi	r26d, r22d, r18d
 0x62,0x6a,0x6c,0x00,0xf5,0xd6

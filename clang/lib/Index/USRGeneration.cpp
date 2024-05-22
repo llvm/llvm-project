@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "llvm/Support/Path.h"
@@ -266,10 +267,13 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     Out << '>';
   }
 
+  QualType CanonicalType = D->getType().getCanonicalType();
   // Mangle in type information for the arguments.
-  for (auto *PD : D->parameters()) {
-    Out << '#';
-    VisitType(PD->getType());
+  if (const auto *FPT = CanonicalType->getAs<FunctionProtoType>()) {
+    for (QualType PT : FPT->param_types()) {
+      Out << '#';
+      VisitType(PT);
+    }
   }
   if (D->isVariadic())
     Out << '.';
@@ -1051,6 +1055,15 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
     VisitType(Arg.getIntegralType());
     Out << Arg.getAsIntegral();
     break;
+
+  case TemplateArgument::StructuralValue: {
+    Out << 'S';
+    VisitType(Arg.getStructuralValueType());
+    ODRHash Hash{};
+    Hash.AddStructuralValue(Arg.getAsStructuralValue());
+    Out << Hash.CalculateHash();
+    break;
+  }
   }
 }
 

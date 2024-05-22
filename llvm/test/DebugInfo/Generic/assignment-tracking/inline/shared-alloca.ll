@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -passes=inline -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=inline -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; The dbg.assign linked to the large alloca describes a variable sitting at
 ;; offset 0, size 64. Check:

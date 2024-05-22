@@ -1,0 +1,78 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+// RUN: clang-installapi -target arm64-apple-macos13.1 \
+// RUN: -I%t/usr/include -I%t/usr/local/include \
+// RUN: -install_name @rpath/lib/libfunctions.dylib --filetype=tbd-v4 \
+// RUN: %t/inputs.json -o %t/outputs.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/outputs.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: error: 
+// CHECK-NOT: warning: 
+
+//--- usr/include/functions.h
+inline int inlined_func(void) { return 1;}
+int public(int a);
+
+//--- usr/local/include/private_functions.h
+__attribute__((visibility("hidden")))
+void hidden(void);
+
+//--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/usr/include/functions.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/usr/local/include/private_functions.h",
+    "type" : "private"
+  }
+  ],
+  "version": "3"
+}
+
+//--- expected.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_public"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/lib/libfunctions.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

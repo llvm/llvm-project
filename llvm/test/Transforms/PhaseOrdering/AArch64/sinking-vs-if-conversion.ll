@@ -12,13 +12,13 @@ define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this
 ; CHECK-LABEL: define void @test_find_min(
 ; CHECK-SAME: ptr nocapture noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NUM_:%.*]] = getelementptr inbounds [[STRUCT_TREE:%.*]], ptr [[THIS]], i64 0, i32 2
+; CHECK-NEXT:    [[NUM_:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NUM_]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[THIS]], align 8
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[ARRAY_:%.*]] = getelementptr inbounds [[STRUCT_TREE]], ptr [[THIS]], i64 0, i32 1
+; CHECK-NEXT:    [[ARRAY_:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAY_]], align 8
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[TMP0]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -30,9 +30,9 @@ define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[MIN_010]], null
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END7]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[MIN_010]], i64 0, i32 1
+; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds i8, ptr [[MIN_010]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[KEY2]], align 4
-; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[TMP3]], i64 0, i32 1
+; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[KEY]], align 4
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], ptr [[TMP3]], ptr [[MIN_010]]

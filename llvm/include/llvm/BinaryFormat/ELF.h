@@ -356,11 +356,13 @@ enum {
   ELFOSABI_AROS = 15,          // AROS
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
+  ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
   ELFOSABI_AMDGPU_MESA3D = 66, // AMD GCN GPUs (GFX6+) for MESA runtime
   ELFOSABI_ARM = 97,           // ARM
+  ELFOSABI_ARM_FDPIC = 65,     // ARM FDPIC
   ELFOSABI_C6000_ELFABI = 64,  // Bare-metal TMS320C6000
   ELFOSABI_C6000_LINUX = 65,   // Linux TMS320C6000
   ELFOSABI_STANDALONE = 255,   // Standalone (embedded) application
@@ -374,7 +376,8 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V2 = 0,
   ELFABIVERSION_AMDGPU_HSA_V3 = 1,
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
-  ELFABIVERSION_AMDGPU_HSA_V5 = 3
+  ELFABIVERSION_AMDGPU_HSA_V5 = 3,
+  ELFABIVERSION_AMDGPU_HSA_V6 = 4,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -786,11 +789,20 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50 = 0x050,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC      = 0x051,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC   = 0x052,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
+  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1201,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -839,6 +851,12 @@ enum : unsigned {
   EF_AMDGPU_FEATURE_SRAMECC_OFF_V4 = 0x800,
   // SRAMECC is on.
   EF_AMDGPU_FEATURE_SRAMECC_ON_V4 = 0xc00,
+
+  // Generic target versioning. This is contained in the list byte of EFLAGS.
+  EF_AMDGPU_GENERIC_VERSION = 0xff000000,
+  EF_AMDGPU_GENERIC_VERSION_OFFSET = 24,
+  EF_AMDGPU_GENERIC_VERSION_MIN = 1,
+  EF_AMDGPU_GENERIC_VERSION_MAX = 0xff,
 };
 
 // ELF Relocation types for AMDGPU
@@ -1124,6 +1142,8 @@ enum : unsigned {
   SHT_RISCV_ATTRIBUTES = 0x70000003U,
 
   SHT_CSKY_ATTRIBUTES = 0x70000001U,
+
+  SHT_HEXAGON_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
@@ -1461,6 +1481,7 @@ enum {
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
   PT_OPENBSD_NOBTCFI = 0x65a3dbe8,   // Do not enforce branch target CFI.
+  PT_OPENBSD_SYSCALLS = 0x65a3dbe9,  // System call sites.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.
 
   // ARM program header types.
@@ -1693,11 +1714,6 @@ enum {
   NT_ANDROID_TYPE_MEMTAG = 4,
 };
 
-// ARM note types.
-enum {
-  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
-};
-
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
 enum {
   // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
@@ -1721,6 +1737,7 @@ enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+  GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
@@ -1737,6 +1754,26 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
   GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
+};
+
+// aarch64 PAuth platforms.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_INVALID = 0x0,
+  AARCH64_PAUTH_PLATFORM_BAREMETAL = 0x1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX = 0x10000002,
+};
+
+// Bit positions of version flags for AARCH64_PAUTH_PLATFORM_LLVM_LINUX.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS = 0,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS = 1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS = 2,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS = 3,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR = 4,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR = 5,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI = 6,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST =
+      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI,
 };
 
 // x86 processor feature bits.
@@ -1903,6 +1940,13 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a lowercase string identifier into an OSABI value.
+uint8_t convertNameToOSABI(StringRef Name);
+
+// Convert an OSABI value into a string that identifies the OS- or ABI-
+// specific ELF extension.
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

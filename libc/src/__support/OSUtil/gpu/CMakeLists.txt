@@ -4,7 +4,6 @@ add_object_library(
     quick_exit.cpp
     io.cpp
   HDRS
-    quick_exit.h
     io.h
   DEPENDS
     libc.src.__support.common

@@ -805,19 +805,25 @@ let Command = "script add" in {
   def script_add_function : Option<"function", "f">, Group<1>,
     Arg<"PythonFunction">,
     Desc<"Name of the Python function to bind to this command name.">;
-  def script_add_class : Option<"class", "c">, Group<2>, Arg<"PythonClass">,
-  Desc<"Name of the Python class to bind to this command name.">;
+  def script_add_class : Option<"class", "c">, Groups<[2,3]>,
+    Arg<"PythonClass">,
+    Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
-  Desc<"The help text to display for this command.">;
-  def script_add_overwrite : Option<"overwrite", "o">, Groups<[1,2]>,
-  Desc<"Overwrite an existing command at this node.">;
+    Desc<"The help text to display for this command.">;
+    def script_add_overwrite : Option<"overwrite", "o">,
+    Desc<"Overwrite an existing command at this node.">;
   def script_add_synchronicity : Option<"synchronicity", "s">,
     EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
-  def completion_type : Option<"completion-type", "C">,
-  EnumArg<"CompletionType">,
-  Desc<"Specify which completion type the command should use - if none is specified, the command won't use auto-completion.">;
+  def script_add_completion_type : Option<"completion-type", "C">,
+    Groups<[1,2]>, EnumArg<"CompletionType">,
+    Desc<"Specify which completion type the command should use - if none is "
+    "specified, the command won't use auto-completion.">;
+  def script_add_parsed_command : Option<"parsed", "p">, Group<3>,
+    Desc<"Make a parsed command. The command class will provide the command "
+    "definition by implementing get_options and get_arguments.">;
+
 }
 
 let Command = "container add" in {
@@ -930,8 +936,8 @@ let Command = "target modules list" in {
     OptionalArg<"Width">, Desc<"Display the modification time with optional "
     "width of the module.">;
   def target_modules_list_ref_count : Option<"ref-count", "r">, Group<1>,
-    OptionalArg<"Width">, Desc<"Display the reference count if the module is "
-    "still in the shared module cache.">;
+    OptionalArg<"Width">, Desc<"Display whether the module is still in the "
+    "the shared module cache (Y/N), and its shared pointer use_count.">;
   def target_modules_list_pointer : Option<"pointer", "p">, Group<1>,
     OptionalArg<"None">, Desc<"Display the module pointer.">;
   def target_modules_list_global : Option<"global", "g">, Group<1>,
@@ -1031,7 +1037,7 @@ let Command = "target stop hook add" in {
 
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (-1 for all)">;
+  Desc<"How many frames to display (0 for all)">;
   def thread_backtrace_start : Option<"start", "s">, Group<1>,
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
@@ -1412,4 +1418,11 @@ let Command = "trace schema" in {
 let Command = "statistics dump" in {
   def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
     Desc<"Include statistics for all targets.">;
+  def statistics_dump_summary: Option<"summary", "s">, Group<1>,
+    Desc<"Dump only high-level summary statistics. "
+         "Exclude targets, modules, breakpoints etc... details.">;
+  def statistics_dump_force: Option<"load-all-debug-info", "f">, Group<1>,
+    Desc<"Dump the total possible debug info statistics. "
+    "Force loading all the debug information if not yet loaded, and collect "
+    "statistics with those.">;
 }

@@ -9,12 +9,16 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/LogicalResult.h"
+
+#include <algorithm>
 
 using namespace mlir;
 
@@ -73,6 +77,14 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
 //===----------------------------------------------------------------------===//
 // Floating-point types.
 //===----------------------------------------------------------------------===//
+
+bool mlirTypeIsAFloat(MlirType type) {
+  return llvm::isa<FloatType>(unwrap(type));
+}
+
+unsigned mlirFloatTypeGetWidth(MlirType type) {
+  return llvm::cast<FloatType>(unwrap(type)).getWidth();
+}
 
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
@@ -299,11 +311,11 @@ MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
 }
 
 bool mlirVectorTypeIsScalable(MlirType type) {
-  return unwrap(type).cast<VectorType>().isScalable();
+  return cast<VectorType>(unwrap(type)).isScalable();
 }
 
 bool mlirVectorTypeIsDimScalable(MlirType type, intptr_t dim) {
-  return unwrap(type).cast<VectorType>().getScalableDims()[dim];
+  return cast<VectorType>(unwrap(type)).getScalableDims()[dim];
 }
 
 //===----------------------------------------------------------------------===//
@@ -424,6 +436,18 @@ MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type) {
 
 MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
+}
+
+MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
+                                                    int64_t *strides,
+                                                    int64_t *offset) {
+  MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
+  SmallVector<int64_t> strides_;
+  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+    return mlirLogicalResultFailure();
+
+  (void)std::copy(strides_.begin(), strides_.end(), strides);
+  return mlirLogicalResultSuccess();
 }
 
 MlirTypeID mlirUnrankedMemRefTypeGetTypeID() {

@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t1 | FileCheck --check-prefix=DISASM %s

@@ -30,8 +30,8 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 /// A result type used to indicate if a change happened. Boolean operations on
-/// ChangeResult behave as though `Change` is truthy.
-enum class ChangeResult {
+/// ChangeResult behave as though `Change` is truth.
+enum class [[nodiscard]] ChangeResult {
   NoChange,
   Change,
 };
@@ -240,6 +240,17 @@ public:
     if (it == analysisStates.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
+  }
+
+  /// Erase any analysis state associated with the given program point.
+  template <typename PointT>
+  void eraseState(PointT point) {
+    ProgramPoint pp(point);
+
+    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
+      if (it->first.first == pp)
+        analysisStates.erase(it);
+    }
   }
 
   /// Get a uniqued program point instance. If one is not present, it is

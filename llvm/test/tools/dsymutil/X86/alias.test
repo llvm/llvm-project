@@ -1,7 +1,7 @@
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/alias \
 # RUN: %p/../Inputs/alias/foobar -o - | llvm-dwarfdump - 2>&1 | FileCheck %s
 
-# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs/alias \
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/alias \
 # RUN: %p/../Inputs/alias/foobar -o - | llvm-dwarfdump - 2>&1 | FileCheck %s
 
 # CHECK-NOT: could not find symbol

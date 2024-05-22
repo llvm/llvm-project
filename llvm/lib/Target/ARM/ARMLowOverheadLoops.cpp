@@ -91,11 +91,11 @@ static bool isVectorPredicated(MachineInstr *MI) {
 }
 
 static bool isVectorPredicate(MachineInstr *MI) {
-  return MI->findRegisterDefOperandIdx(ARM::VPR) != -1;
+  return MI->findRegisterDefOperandIdx(ARM::VPR, /*TRI=*/nullptr) != -1;
 }
 
 static bool hasVPRUse(MachineInstr &MI) {
-  return MI.findRegisterUseOperandIdx(ARM::VPR) != -1;
+  return MI.findRegisterUseOperandIdx(ARM::VPR, /*TRI=*/nullptr) != -1;
 }
 
 static bool isDomainMVE(MachineInstr *MI) {
@@ -564,7 +564,8 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     SmallPtrSet<MachineInstr *, 2> ModifiedITs;
     SmallPtrSet<MachineInstr *, 2> RemoveITs;
     for (auto *Dead : Killed) {
-      if (MachineOperand *MO = Dead->findRegisterUseOperand(ARM::ITSTATE)) {
+      if (MachineOperand *MO =
+              Dead->findRegisterUseOperand(ARM::ITSTATE, /*TRI=*/nullptr)) {
         MachineInstr *IT = RDA.getMIOperand(Dead, *MO);
         RemoveITs.insert(IT);
         auto &CurrentBlock = ITBlocks[IT];
@@ -1806,12 +1807,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   PostOrderLoopTraversal DFS(LoLoop.ML, *MLI);
   DFS.ProcessLoop();
   const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
-  for (auto *MBB : PostOrder) {
-    recomputeLiveIns(*MBB);
-    // FIXME: For some reason, the live-in print order is non-deterministic for
-    // our tests and I can't out why... So just sort them.
-    MBB->sortUniqueLiveIns();
-  }
+  fullyRecomputeLiveIns(PostOrder);
 
   for (auto *MBB : reverse(PostOrder))
     recomputeLivenessFlags(*MBB);

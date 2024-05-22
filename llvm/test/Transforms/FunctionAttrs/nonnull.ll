@@ -32,14 +32,23 @@ define ptr @test2(ptr nonnull %p) {
 ; Given an SCC where one of the functions can not be marked nonnull,
 ; can we still mark the other one which is trivially nonnull
 define ptr @scc_binder(i1 %c) {
-; COMMON-LABEL: define ptr @scc_binder(
-; COMMON-SAME: i1 [[C:%.*]]) {
-; COMMON-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; COMMON:       rec:
-; COMMON-NEXT:    [[TMP1:%.*]] = call ptr @test3(i1 [[C]])
-; COMMON-NEXT:    br label [[END]]
-; COMMON:       end:
-; COMMON-NEXT:    ret ptr null
+; FNATTRS-LABEL: define noundef ptr @scc_binder(
+; FNATTRS-SAME: i1 [[C:%.*]]) {
+; FNATTRS-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; FNATTRS:       rec:
+; FNATTRS-NEXT:    [[TMP1:%.*]] = call ptr @test3(i1 [[C]])
+; FNATTRS-NEXT:    br label [[END]]
+; FNATTRS:       end:
+; FNATTRS-NEXT:    ret ptr null
+;
+; ATTRIBUTOR-LABEL: define ptr @scc_binder(
+; ATTRIBUTOR-SAME: i1 [[C:%.*]]) {
+; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; ATTRIBUTOR:       rec:
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test3(i1 [[C]])
+; ATTRIBUTOR-NEXT:    br label [[END]]
+; ATTRIBUTOR:       end:
+; ATTRIBUTOR-NEXT:    ret ptr null
 ;
   br i1 %c, label %rec, label %end
 rec:
@@ -97,7 +106,7 @@ define ptr @test4() {
 ; Given a mutual recursive set of functions which *can* return null
 ; make sure we haven't marked them as nonnull.
 define ptr @test5_helper(i1 %c) {
-; FNATTRS-LABEL: define noalias ptr @test5_helper(
+; FNATTRS-LABEL: define noalias noundef ptr @test5_helper(
 ; FNATTRS-SAME: i1 [[C:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; FNATTRS:       rec:
@@ -124,7 +133,7 @@ end:
 }
 
 define ptr @test5(i1 %c) {
-; FNATTRS-LABEL: define noalias ptr @test5(
+; FNATTRS-LABEL: define noalias noundef ptr @test5(
 ; FNATTRS-SAME: i1 [[C:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    [[RET:%.*]] = call ptr @test5_helper(i1 [[C]])
 ; FNATTRS-NEXT:    ret ptr [[RET]]
@@ -892,30 +901,30 @@ define i8 @parent7(ptr %a) {
 declare i32 @esfp(...)
 
 define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
-; FNATTRS-LABEL: define i1 @parent8(
+; FNATTRS-LABEL: define noundef i1 @parent8(
 ; FNATTRS-SAME: ptr nonnull [[A:%.*]], ptr nocapture readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    invoke void @use2nonnull(ptr [[A]], ptr [[B]])
-; FNATTRS-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; FNATTRS-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; FNATTRS:       cont:
 ; FNATTRS-NEXT:    [[NULL_CHECK:%.*]] = icmp eq ptr [[B]], null
 ; FNATTRS-NEXT:    ret i1 [[NULL_CHECK]]
 ; FNATTRS:       exc:
 ; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; FNATTRS-NEXT:    filter [0 x ptr] zeroinitializer
+; FNATTRS-NEXT:            filter [0 x ptr] zeroinitializer
 ; FNATTRS-NEXT:    unreachable
 ;
 ; ATTRIBUTOR-LABEL: define i1 @parent8(
 ; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR8]] personality ptr @esfp {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
-; ATTRIBUTOR-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; ATTRIBUTOR-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; ATTRIBUTOR:       cont:
 ; ATTRIBUTOR-NEXT:    [[NULL_CHECK:%.*]] = icmp eq ptr [[B]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[NULL_CHECK]]
 ; ATTRIBUTOR:       exc:
 ; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; ATTRIBUTOR-NEXT:    filter [0 x ptr] zeroinitializer
+; ATTRIBUTOR-NEXT:            filter [0 x ptr] zeroinitializer
 ; ATTRIBUTOR-NEXT:    unreachable
 ;
 
@@ -981,7 +990,7 @@ define ptr addrspace(3) @gep2(ptr addrspace(3) %p) {
 
 ; FIXME: We should propagate dereferenceable here but *not* nonnull
 define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
-; FNATTRS-LABEL: define ptr addrspace(3) @as(
+; FNATTRS-LABEL: define noundef ptr addrspace(3) @as(
 ; FNATTRS-SAME: ptr addrspace(3) readnone returned dereferenceable(4) [[P:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    ret ptr addrspace(3) [[P]]
 ;
@@ -993,7 +1002,7 @@ define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
 }
 
 define internal ptr @g2() {
-; FNATTRS-LABEL: define internal nonnull ptr @g2(
+; FNATTRS-LABEL: define internal noundef nonnull ptr @g2(
 ; FNATTRS-SAME: ) #[[ATTR0]] {
 ; FNATTRS-NEXT:    ret ptr inttoptr (i64 4 to ptr)
 ;
@@ -1005,7 +1014,7 @@ define internal ptr @g2() {
 }
 
 define  ptr @g1() {
-; FNATTRS-LABEL: define nonnull ptr @g1(
+; FNATTRS-LABEL: define noundef nonnull ptr @g1(
 ; FNATTRS-SAME: ) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[C:%.*]] = call ptr @g2()
 ; FNATTRS-NEXT:    ret ptr [[C]]
@@ -1404,6 +1413,21 @@ define void @PR43833_simple(ptr %0, i32 %1) {
   %10 = add nuw nsw i32 %9, 1
   %11 = icmp eq i32 %10, %1
   br i1 %11, label %7, label %8
+}
+
+define ptr @pr91177_non_inbounds_gep(ptr nonnull %arg) {
+; FNATTRS-LABEL: define ptr @pr91177_non_inbounds_gep(
+; FNATTRS-SAME: ptr nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
+; FNATTRS-NEXT:    ret ptr [[RES]]
+;
+; ATTRIBUTOR-LABEL: define ptr @pr91177_non_inbounds_gep(
+; ATTRIBUTOR-SAME: ptr nofree nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
+; ATTRIBUTOR-NEXT:    ret ptr [[RES]]
+;
+  %res = getelementptr i8, ptr %arg, i64 -8
+  ret ptr %res
 }
 
 attributes #0 = { null_pointer_is_valid }

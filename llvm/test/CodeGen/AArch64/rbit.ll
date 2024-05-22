@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-eabi %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 
 ; The llvm.aarch64.rbit intrinsic should be auto-upgraded to the
 ; target-independent bitreverse intrinsic.

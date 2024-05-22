@@ -31,7 +31,7 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
@@ -40,6 +40,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -394,5 +397,7 @@ inline constexpr auto iota = __iota::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_IOTA_VIEW_H

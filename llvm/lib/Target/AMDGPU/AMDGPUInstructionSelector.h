@@ -125,6 +125,7 @@ private:
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
   bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
+  bool selectPOPSExitingWaveID(MachineInstr &MI) const;
 
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
@@ -194,10 +195,23 @@ private:
   selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
-  selectDotIUVOP3PMods(MachineOperand &Root) const;
+  selectVOP3PModsNeg(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF32NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16Neg(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAVISrc(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex8(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex16(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
@@ -331,8 +345,8 @@ private:
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
-  void renderSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                    int OpIdx) const;
+  void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                               int OpIdx) const;
 
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
@@ -340,9 +354,7 @@ private:
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 
-  bool isInlineImmediate16(int64_t Imm) const;
-  bool isInlineImmediate32(int64_t Imm) const;
-  bool isInlineImmediate64(int64_t Imm) const;
+  bool isInlineImmediate(const APInt &Imm) const;
   bool isInlineImmediate(const APFloat &Imm) const;
 
   // Returns true if TargetOpcode::G_AND MachineInstr `MI`'s masking of the

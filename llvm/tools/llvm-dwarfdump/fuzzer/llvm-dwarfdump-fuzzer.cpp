@@ -20,8 +20,8 @@ using namespace llvm;
 using namespace object;
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(
-      StringRef((const char *)data, size), "", false);
+  std::string Payload(reinterpret_cast<const char *>(data), size);
+  std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(Payload);
 
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       ObjectFile::createObjectFile(Buff->getMemBufferRef());

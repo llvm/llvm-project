@@ -20,6 +20,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
@@ -145,6 +146,35 @@ public:
   }
 };
 
+/// BOLT-exclusive errors generated in core BOLT libraries, optionally holding a
+/// string message and whether it is fatal or not. In case it is fatal and if
+/// BOLT is running as a standalone process, the process might be killed as soon
+/// as the error is checked.
+class BOLTError : public ErrorInfo<BOLTError> {
+public:
+  static char ID;
+
+  BOLTError(bool IsFatal, const Twine &S = Twine());
+  void log(raw_ostream &OS) const override;
+  bool isFatal() const { return IsFatal; }
+
+  const std::string &getMessage() const { return Msg; }
+  std::error_code convertToErrorCode() const override;
+
+private:
+  bool IsFatal;
+  std::string Msg;
+};
+
+/// Streams used by BOLT to log regular or error events
+struct JournalingStreams {
+  raw_ostream &Out;
+  raw_ostream &Err;
+};
+
+Error createNonFatalBOLTError(const Twine &S);
+Error createFatalBOLTError(const Twine &S);
+
 class BinaryContext {
   BinaryContext() = delete;
 
@@ -236,8 +266,10 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx);
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
+                      std::unique_ptr<DWARFContext> DwCtx,
+                      JournalingStreams Logger);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -554,6 +586,9 @@ public:
   /// Huge page size to use.
   static constexpr unsigned HugePageSize = 0x200000;
 
+  /// Addresses reserved for kernel on x86_64 start at this location.
+  static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
@@ -602,6 +637,13 @@ public:
 
   std::unique_ptr<MCAsmBackend> MAB;
 
+  /// Allows BOLT to print to log whenever it is necessary (with or without
+  /// const references)
+  mutable JournalingStreams Logger;
+
+  /// Indicates if the binary is Linux kernel.
+  bool IsLinuxKernel{false};
+
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 
@@ -635,6 +677,9 @@ public:
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
 
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
+
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
 
@@ -665,6 +710,11 @@ public:
     uint64_t StaleSampleCount{0};
     ///   the count of matched samples
     uint64_t MatchedSampleCount{0};
+    ///   the number of stale functions that have matching number of blocks in
+    ///   the profile
+    uint64_t NumStaleFuncsWithEqualBlockCount{0};
+    ///   the number of blocks that have matching size but a differing hash
+    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Address of the first allocated segment.
@@ -679,6 +729,9 @@ public:
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
   uint64_t OldTextSectionSize{0};
+
+  /// Area in the input binary reserved for BOLT.
+  AddressRange BOLTReserved;
 
   /// Address of the code/function that is executed before any other code in
   /// the binary.
@@ -726,7 +779,8 @@ public:
                 std::unique_ptr<const MCInstrAnalysis> MIA,
                 std::unique_ptr<MCPlusBuilder> MIB,
                 std::unique_ptr<const MCRegisterInfo> MRI,
-                std::unique_ptr<MCDisassembler> DisAsm);
+                std::unique_ptr<MCDisassembler> DisAsm,
+                JournalingStreams Logger);
 
   ~BinaryContext();
 
@@ -949,6 +1003,10 @@ public:
 
   ErrorOr<BinarySection &> getGdbIndexSection() const {
     return getUniqueSectionByName(".gdb_index");
+  }
+
+  ErrorOr<BinarySection &> getDebugNamesSection() const {
+    return getUniqueSectionByName(".debug_names");
   }
 
   /// @}
@@ -1338,8 +1396,12 @@ public:
     return Offset;
   }
 
-  void exitWithBugReport(StringRef Message,
-                         const BinaryFunction &Function) const;
+  /// Log BOLT errors to journaling streams and quit process with non-zero error
+  /// code 1 if error is fatal.
+  void logBOLTErrorsAndQuitOnFatal(Error E);
+
+  std::string generateBugReportMessage(StringRef Message,
+                                       const BinaryFunction &Function) const;
 
   struct IndependentCodeEmitter {
     std::unique_ptr<MCObjectFileInfo> LocalMOFI;
@@ -1387,6 +1449,10 @@ public:
     assert(IOAddressMap && "Address map not set yet");
     return *IOAddressMap;
   }
+
+  raw_ostream &outs() const { return Logger.Out; }
+
+  raw_ostream &errs() const { return Logger.Err; }
 };
 
 template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>

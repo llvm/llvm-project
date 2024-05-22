@@ -3,7 +3,7 @@
 
 --- |
   ; Function Attrs: nofree norecurse nounwind
-  define dso_local void @test(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) local_unnamed_addr #0 {
+  define dso_local void @test(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) local_unnamed_addr #0 {
   bb:
     %tmp = icmp eq i32 %arg2, 0
     %tmp1 = add i32 %arg2, 3
@@ -21,32 +21,32 @@
     br label %bb9
 
   bb9:                                              ; preds = %bb9, %bb3
-    %lsr.iv2 = phi i32* [ %scevgep3, %bb9 ], [ %arg1, %bb3 ]
-    %lsr.iv = phi i32* [ %scevgep, %bb9 ], [ %arg, %bb3 ]
+    %lsr.iv2 = phi ptr [ %scevgep3, %bb9 ], [ %arg1, %bb3 ]
+    %lsr.iv = phi ptr [ %scevgep, %bb9 ], [ %arg, %bb3 ]
     %tmp7 = phi i32 [ %start, %bb3 ], [ %tmp12, %bb9 ]
     %tmp8 = phi i32 [ %arg2, %bb3 ], [ %tmp11, %bb9 ]
-    %lsr.iv24 = bitcast i32* %lsr.iv2 to <4 x i32>*
-    %lsr.iv1 = bitcast i32* %lsr.iv to <4 x i32>*
+    %lsr.iv24 = bitcast ptr %lsr.iv2 to ptr
+    %lsr.iv1 = bitcast ptr %lsr.iv to ptr
     %vctp = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp8)
     %and = and <4 x i1> %vctp, %invariant.mask
     %tmp11 = sub i32 %tmp8, 4
-    %tmp17 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv24, i32 4, <4 x i1> %and, <4 x i32> undef)
+    %tmp17 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %lsr.iv24, i32 4, <4 x i1> %and, <4 x i32> undef)
     %tmp18 = icmp ne <4 x i32> %tmp17, zeroinitializer
     %tmp20 = and <4 x i1> %tmp18, %vctp
-    %tmp22 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1, i32 4, <4 x i1> %tmp20, <4 x i32> undef)
+    %tmp22 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %lsr.iv1, i32 4, <4 x i1> %tmp20, <4 x i32> undef)
     %tmp23 = mul nsw <4 x i32> %tmp22, %tmp17
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp23, <4 x i32>* %lsr.iv1, i32 4, <4 x i1> %tmp20)
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %tmp23, ptr %lsr.iv1, i32 4, <4 x i1> %tmp20)
     %tmp12 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp7, i32 1)
     %tmp13 = icmp ne i32 %tmp12, 0
-    %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
-    %scevgep3 = getelementptr i32, i32* %lsr.iv2, i32 4
+    %scevgep = getelementptr i32, ptr %lsr.iv, i32 4
+    %scevgep3 = getelementptr i32, ptr %lsr.iv2, i32 4
     br i1 %tmp13, label %bb9, label %bb27
 
   bb27:                                             ; preds = %bb9, %bb
     ret void
   }
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)

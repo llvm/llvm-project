@@ -63,7 +63,7 @@ func.func @mul(%arg0: tensor<32x32xf32>,
 // CHECK:           %[[VAL_2:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64, #[[$remap]]> to tensor<1x2x2x2xf64, #[[$demap]]>
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.foreach in %[[VAL_2]] init(%[[VAL_1]])
 // CHECK:           ^bb0(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index, %[[VAL_8:.*]]: index, %[[VAL_9:.*]]: f64, %[[VAL_10:.*]]: tensor<1x2x2x2xf64, #[[$demap]]>
-// CHECK:             %[[VAL_11:.*]] = sparse_tensor.insert %[[VAL_9]] into %[[VAL_10]]{{\[}}%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]]] : tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:             %[[VAL_11:.*]] = tensor.insert %[[VAL_9]] into %[[VAL_10]]{{\[}}%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]]] : tensor<1x2x2x2xf64, #[[$demap]]>
 // CHECK:             sparse_tensor.yield %[[VAL_11]] : tensor<1x2x2x2xf64, #sparse{{[0-9]*}}>
 // CHECK:           }
 // CHECK:           %[[VAL_12:.*]] = sparse_tensor.reinterpret_map %[[VAL_4]] : tensor<1x2x2x2xf64, #[[$demap]]> to tensor<2x4xf64, #[[$remap]]>
@@ -79,4 +79,53 @@ func.func @sparse_foreach_reinterpret_map(%6 : tensor<2x4xf64, #BSR>) -> tensor<
   }
   %9 = sparse_tensor.load %8 hasInserts : tensor<2x4xf64, #BSR>
   return %9 : tensor<2x4xf64, #BSR>
+}
+
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+   map = ( i, j ) ->
+      ( i floordiv 2 : dense,
+        j floordiv 2 : compressed,
+        i mod 2      : dense,
+        j mod 2      : dense
+      )
+}>
+// CHECK-DAG: #[[$remap:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 floordiv 2 : dense, d1 floordiv 2 : compressed, d0 mod 2 : dense, d1 mod 2 : dense) }>
+// CHECK-DAG: #[[$demap:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2, d3) -> (d0 : dense, d1 : compressed, d2 : dense, d3 : dense) }>
+
+// CHECK-LABEL:   func.func @sparse_assemble_reinterpret_map(
+// CHECK-SAME:        %[[VAL_0:.*]]: tensor<?xf64>,
+// CHECK-SAME:        %[[VAL_1:.*]]: tensor<?xindex>,
+// CHECK-SAME:        %[[VAL_2:.*]]: tensor<?xindex>) -> tensor<2x4xf64, #[[$remap]]> {
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.assemble {{.*}} to tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.reinterpret_map %[[VAL_3]] : tensor<1x2x2x2xf64, #[[$demap]]> to tensor<2x4xf64, #[[$remap]]>
+// CHECK:           return %[[VAL_4]] : tensor<2x4xf64, #[[$remap]]>
+// CHECK:         }
+func.func @sparse_assemble_reinterpret_map(%val : tensor<?xf64>, %pos:tensor<?xindex>, %crd:tensor<?xindex>) -> tensor<2x4xf64, #BSR> {
+  %0 = sparse_tensor.assemble (%pos, %crd), %val
+     : (tensor<?xindex>, tensor<?xindex>), tensor<?xf64> to tensor<2x4xf64, #BSR>
+  return %0 : tensor<2x4xf64, #BSR>
+}
+
+// CHECK-LABEL:   func.func @sparse_disassemble_reinterpret_map(
+// CHECK-SAME:         %[[VAL_0:.*]]: tensor<2x4xf64, #[[$remap]]>,
+// CHECK-SAME:         %[[VAL_1:.*]]: tensor<?xf64>,
+// CHECK-SAME:         %[[VAL_2:.*]]: tensor<?xindex>,
+// CHECK-SAME:         %[[VAL_3:.*]]: tensor<?xindex>) -> (tensor<?xf64>, tensor<?xindex>, tensor<?xindex>) {
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64, #[[$remap]]> to tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           %{{.*}} = sparse_tensor.disassemble %[[VAL_4]] : tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           return
+// CHECK:         }
+func.func @sparse_disassemble_reinterpret_map(%sp : tensor<2x4xf64, #BSR>,
+                                              %od : tensor<?xf64>,
+                                              %op : tensor<?xindex>,
+                                              %oi : tensor<?xindex>)
+                                            -> (tensor<?xf64>, tensor<?xindex>, tensor<?xindex>) {
+  %rp, %ri, %rd, %dl, %pl, %il = sparse_tensor.disassemble %sp : tensor<2x4xf64, #BSR>
+                                 out_lvls(%op, %oi : tensor<?xindex>, tensor<?xindex>)
+                                 out_vals(%od : tensor<?xf64>)
+                                 -> (tensor<?xindex>, tensor<?xindex>), tensor<?xf64>, (index, index), index
+  return %rd, %rp, %ri : tensor<?xf64>, tensor<?xindex>, tensor<?xindex>
 }

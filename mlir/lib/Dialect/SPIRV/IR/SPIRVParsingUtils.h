@@ -20,34 +20,12 @@
 
 namespace mlir::spirv {
 namespace AttrNames {
-// TODO: generate these strings using ODS.
-inline constexpr char kAlignmentAttrName[] = "alignment";
-inline constexpr char kBranchWeightAttrName[] = "branch_weights";
-inline constexpr char kCallee[] = "callee";
-inline constexpr char kClusterSize[] = "cluster_size";
-inline constexpr char kControl[] = "control";
-inline constexpr char kDefaultValueAttrName[] = "default_value";
-inline constexpr char kEqualSemanticsAttrName[] = "equal_semantics";
-inline constexpr char kExecutionScopeAttrName[] = "execution_scope";
-inline constexpr char kFnNameAttrName[] = "fn";
-inline constexpr char kGroupOperationAttrName[] = "group_operation";
-inline constexpr char kIndicesAttrName[] = "indices";
-inline constexpr char kInitializerAttrName[] = "initializer";
-inline constexpr char kInterfaceAttrName[] = "interface";
-inline constexpr char kKhrCooperativeMatrixLayoutAttrName[] = "matrix_layout";
-inline constexpr char kMemoryAccessAttrName[] = "memory_access";
-inline constexpr char kMemoryOperandAttrName[] = "memory_operand";
-inline constexpr char kMemoryScopeAttrName[] = "memory_scope";
-inline constexpr char kPackedVectorFormatAttrName[] = "format";
-inline constexpr char kSemanticsAttrName[] = "semantics";
-inline constexpr char kSourceAlignmentAttrName[] = "source_alignment";
-inline constexpr char kSourceMemoryAccessAttrName[] = "source_memory_access";
-inline constexpr char kSpecIdAttrName[] = "spec_id";
-inline constexpr char kTypeAttrName[] = "type";
-inline constexpr char kUnequalSemanticsAttrName[] = "unequal_semantics";
-inline constexpr char kValueAttrName[] = "value";
-inline constexpr char kValuesAttrName[] = "values";
-inline constexpr char kCompositeSpecConstituentsName[] = "constituents";
+
+inline constexpr char kClusterSize[] = "cluster_size"; // no ODS generation
+inline constexpr char kControl[] = "control";          // no ODS generation
+inline constexpr char kFnNameAttrName[] = "fn";        // no ODS generation
+inline constexpr char kSpecIdAttrName[] = "spec_id";   // no ODS generation
+
 } // namespace AttrNames
 
 template <typename Ty>
@@ -142,16 +120,6 @@ parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
                      parser.getBuilder().getAttr<EnumAttrClass>(value));
   return success();
 }
-
-/// Parses optional memory access (a.k.a. memory operand) attributes attached to
-/// a memory access operand/pointer. Specifically, parses the following syntax:
-///     (`[` memory-access `]`)?
-/// where:
-///     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", `
-///         integer-literal | `"NonTemporal"`
-ParseResult parseMemoryAccessAttributes(
-    OpAsmParser &parser, OperationState &state,
-    StringRef attrName = AttrNames::kMemoryAccessAttrName);
 
 ParseResult parseVariableDecorations(OpAsmParser &parser,
                                      OperationState &state);

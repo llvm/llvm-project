@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMARMDesc
   CodeGenTypes
   MC
   MCDisassembler
+  Object
   Support
   TargetParser
 

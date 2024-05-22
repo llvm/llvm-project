@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 // constexpr atomic() noexcept;
 // constexpr atomic(floating-point-type) noexcept;

@@ -536,7 +536,7 @@ define i1 @arg_attribute(ptr nonnull %a) {
 ; CHECK-LABEL: @arg_attribute(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp = icmp eq i8* %a, null
+  %cmp = icmp eq ptr %a, null
   ret i1 %cmp
 }
 
@@ -546,7 +546,7 @@ define i1 @call_attribute() {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @return_nonnull()
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = call i8* @return_nonnull()
+  %a = call ptr @return_nonnull()
   %cmp = icmp eq ptr %a, null
   ret i1 %cmp
 }
@@ -870,6 +870,33 @@ out:
   ret i1 false
 }
 
+define i1 @clamp_high1_or(i32 noundef %a) {
+; CHECK-LABEL: @clamp_high1_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
+; CHECK:       a_guard:
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
+; CHECK-NEXT:    ret i1 false
+; CHECK:       out:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp eq i32 %a, 5
+  %add = or disjoint i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 5, i32 %add
+  %res = icmp eq i32 %sel, 6
+  ret i1 %res
+out:
+  ret i1 false
+}
+
 define i1 @clamp_high2(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high2(
 ; CHECK-NEXT:  entry:
@@ -896,6 +923,35 @@ a_guard:
 out:
   ret i1 false
 }
+
+
+define i1 @clamp_high2_or_disjoint(i32 noundef %a) {
+; CHECK-LABEL: @clamp_high2_or_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
+; CHECK:       a_guard:
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
+; CHECK-NEXT:    ret i1 false
+; CHECK:       out:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp ne i32 %a, 5
+  %add = or disjoint i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 %add, i32 5
+  %res = icmp eq i32 %sel, 6
+  ret i1 %res
+out:
+  ret i1 false
+}
+
 
 define i1 @clamp_high3(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high3(
@@ -1908,6 +1964,20 @@ guard:
 
 exit:
   ret i1 false
+}
+
+define i1 @binop_eval_order(i32 %x) {
+; CHECK-LABEL: @binop_eval_order(
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 true
+;
+  %a = add nuw nsw i32 %x, 1
+  %b = add nuw nsw i32 %a, 1
+  %c = add nuw nsw i32 %a, %b
+  %d = icmp ugt i32 %c, 2
+  ret i1 %d
 }
 
 declare i32 @llvm.uadd.sat.i32(i32, i32)

@@ -71,7 +71,7 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #include "clang/AST/DeclNodes.inc"
 
 void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         unsigned ID, std::size_t Extra) {
+                         GlobalDeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
   static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
@@ -85,7 +85,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
   PrefixPtr[0] = 0;
 
   // Store the global declaration ID in the second 4 bytes.
-  PrefixPtr[1] = ID;
+  PrefixPtr[1] = ID.get();
 
   return Result;
 }
@@ -402,7 +402,7 @@ bool Decl::isInAnonymousNamespace() const {
 
 bool Decl::isInStdNamespace() const {
   const DeclContext *DC = getDeclContext();
-  return DC && DC->isStdNamespace();
+  return DC && DC->getNonTransparentContext()->isStdNamespace();
 }
 
 bool Decl::isFileContextDecl() const {
@@ -666,12 +666,28 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
-    if (Message) {
-      Message->clear();
-      llvm::raw_string_ostream Out(*Message);
-      VersionTuple VTI(A->getIntroduced());
-      Out << "introduced in " << PrettyPlatformName << ' '
-          << VTI << HintMessage;
+    IdentifierInfo *IIEnv = A->getEnvironment();
+    StringRef TargetEnv =
+        Context.getTargetInfo().getTriple().getEnvironmentName();
+    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(TargetEnv);
+    // Matching environment or no environment on attribute
+    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        VersionTuple VTI(A->getIntroduced());
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
+            << EnvName << HintMessage;
+      }
+    }
+    // Non-matching environment or no environment on target
+    else {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        Out << "not available on " << PrettyPlatformName << " " << EnvName
+            << HintMessage;
+      }
     }
 
     return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
@@ -1002,20 +1018,14 @@ const AttrVec &Decl::getAttrs() const {
 
 Decl *Decl::castFromDeclContext (const DeclContext *D) {
   Decl::Kind DK = D->getDeclKind();
-  switch(DK) {
+  switch (DK) {
 #define DECL(NAME, BASE)
-#define DECL_CONTEXT(NAME) \
-    case Decl::NAME:       \
-      return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
-#define DECL_CONTEXT_BASE(NAME)
+#define DECL_CONTEXT(NAME)                                                     \
+  case Decl::NAME:                                                             \
+    return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
 #include "clang/AST/DeclNodes.inc"
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                  \
-      if (DK >= first##NAME && DK <= last##NAME) \
-        return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
-#include "clang/AST/DeclNodes.inc"
-      llvm_unreachable("a decl that inherits DeclContext isn't handled");
+  default:
+    llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
 }
 
@@ -1023,18 +1033,12 @@ DeclContext *Decl::castToDeclContext(const Decl *D) {
   Decl::Kind DK = D->getKind();
   switch(DK) {
 #define DECL(NAME, BASE)
-#define DECL_CONTEXT(NAME) \
-    case Decl::NAME:       \
-      return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
-#define DECL_CONTEXT_BASE(NAME)
+#define DECL_CONTEXT(NAME)                                                     \
+  case Decl::NAME:                                                             \
+    return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
 #include "clang/AST/DeclNodes.inc"
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                                   \
-      if (DK >= first##NAME && DK <= last##NAME)                  \
-        return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
-#include "clang/AST/DeclNodes.inc"
-      llvm_unreachable("a decl that inherits DeclContext isn't handled");
+  default:
+    llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
 }
 
@@ -1114,6 +1118,10 @@ bool Decl::isInAnotherModuleUnit() const {
   return M != getASTContext().getCurrentNamedModule();
 }
 
+bool Decl::isFromExplicitGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1123,7 +1131,9 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (isa<BindingDecl>(this))
+    return nullptr;
+  else if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
@@ -1201,20 +1211,14 @@ DeclContext::DeclContext(Decl::Kind K) {
 }
 
 bool DeclContext::classof(const Decl *D) {
-  switch (D->getKind()) {
+  Decl::Kind DK = D->getKind();
+  switch (DK) {
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT(NAME) case Decl::NAME:
-#define DECL_CONTEXT_BASE(NAME)
 #include "clang/AST/DeclNodes.inc"
-      return true;
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                 \
-      if (D->getKind() >= Decl::first##NAME &&  \
-          D->getKind() <= Decl::last##NAME)     \
-        return true;
-#include "clang/AST/DeclNodes.inc"
-      return false;
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -1370,6 +1374,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
   case Decl::Export:
+  case Decl::TopLevelStmt:
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
@@ -1860,9 +1865,9 @@ DeclContext::lookup(DeclarationName Name) const {
 
 DeclContext::lookup_result
 DeclContext::noload_lookup(DeclarationName Name) {
-  assert(getDeclKind() != Decl::LinkageSpec &&
-         getDeclKind() != Decl::Export &&
-         "should not perform lookups into transparent contexts");
+  // For transparent DeclContext, we should lookup in their enclosing context.
+  if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
+    return getParent()->noload_lookup(Name);
 
   DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)

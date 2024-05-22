@@ -143,6 +143,9 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder);
 static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
@@ -165,6 +168,9 @@ static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
+static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder);
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
@@ -738,6 +744,18 @@ static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPRorPNRRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Addr,
                                            const MCDisassembler *Decoder) {
@@ -884,6 +902,21 @@ static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Addr,
                                                const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createImm(64 - Imm));
+  return Success;
+}
+
+static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
+                                       uint64_t Addr,
+                                       const MCDisassembler *Decoder) {
+  // Immediate is encoded as the top 16-bits of an unsigned 18-bit negative
+  // PC-relative offset.
+  uint64_t ImmVal = Imm;
+  if (ImmVal > (1 << 16))
+    return Fail;
+  ImmVal = -ImmVal;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal << 2), Addr,
+                                         /*IsBranch=*/false, 0, 0, 4))
+    Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
 

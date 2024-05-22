@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "token-sequence.h"
+#include "flang/Parser/token-sequence.h"
+
 #include "prescan.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
@@ -136,7 +137,10 @@ void TokenSequence::Put(
 }
 
 void TokenSequence::Put(const CharBlock &t, Provenance provenance) {
-  Put(&t[0], t.size(), provenance);
+  // Avoid t[0] if t is empty: it would create a reference to nullptr,
+  // which is UB.
+  const char *addr{t.size() ? &t[0] : nullptr};
+  Put(addr, t.size(), provenance);
 }
 
 void TokenSequence::Put(const std::string &s, Provenance provenance) {

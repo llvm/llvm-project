@@ -44,6 +44,11 @@ def err_pch_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the PCH file">;
 def err_pch_modulecache_mismatch : Error<"PCH was compiled with module cache "
   "path '%0', but the path is currently '%1'">;
+def warn_pch_vfsoverlay_mismatch : Warning<
+  "PCH was compiled with different VFS overlay files than are currently in use">,
+  InGroup<DiagGroup<"pch-vfs-diff">>;
+def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has the following VFS overlays:\n%1">;
+def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
 def err_pch_version_too_old : Error<
     "PCH file uses an older PCH format that is no longer supported">;
@@ -129,10 +134,8 @@ def warn_module_system_bit_conflict : Warning<
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
 
-def warn_reading_std_cxx_module_by_implicit_paths : Warning<
-  "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "
-  "consider to specify the dependencies explicitly">,
-  InGroup<DiagGroup<"read-modules-implicitly">>;
+def err_failed_to_find_module_file : Error<
+  "failed to find module file for module '%0'">;
 } // let CategoryName
 
 let CategoryName = "AST Serialization Issue" in {

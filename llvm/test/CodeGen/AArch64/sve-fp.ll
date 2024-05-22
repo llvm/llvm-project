@@ -510,15 +510,15 @@ define void @scalar_to_vector(ptr %outval, <vscale x 2 x i1> %pred, <vscale x 2 
   ret void
 }
 
-define void @float_copy(<vscale x 4 x float>* %P1, <vscale x 4 x float>* %P2) {
+define void @float_copy(ptr %P1, ptr %P2) {
 ; CHECK-LABEL: float_copy:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %A = load <vscale x 4 x float>, <vscale x 4 x float>* %P1, align 16
-  store <vscale x 4 x float> %A, <vscale x 4 x float>* %P2, align 16
+  %A = load <vscale x 4 x float>, ptr %P1, align 16
+  store <vscale x 4 x float> %A, ptr %P2, align 16
   ret void
 }
 

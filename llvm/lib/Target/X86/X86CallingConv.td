@@ -1056,6 +1056,25 @@ def CC_Intel_OCL_BI : CallingConv<[
   CCDelegateTo<CC_X86_32_C>
 ]>;
 
+def CC_X86_64_Preserve_None : CallingConv<[
+  // We don't preserve general registers, so all of them can be used to pass
+  // arguments except
+  //   - RBP        frame pointer
+  //   - R10        'nest' parameter
+  //   - RBX        base pointer
+  //   - R16 - R31  these are not available everywhere
+  // Use non-volatile registers first, so functions using this convention can
+  // call "normal" functions without saving and restoring incoming values:
+  CCIfType<[i32], CCAssignToReg<[R12D, R13D, R14D, R15D, EDI, ESI,
+                                 EDX, ECX, R8D, R9D, R11D, EAX]>>,
+
+  CCIfType<[i64], CCAssignToReg<[R12, R13, R14, R15, RDI, RSI,
+                                 RDX, RCX, R8, R9, R11, RAX]>>,
+
+  // Otherwise it's the same as the regular C calling convention.
+  CCDelegateTo<CC_X86_64_C>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -1095,6 +1114,7 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
 
   // Mingw64 and native Win64 use Win64 CC
@@ -1184,6 +1204,7 @@ def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                       (sequence "ZMM%u", 0, 31),
                                                       (sequence "K%u", 0, 7)),
                                                  (sequence "XMM%u", 0, 15))>;
+def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,

@@ -40,7 +40,8 @@ struct SMEABI : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
 private:
-  bool updateNewZAFunctions(Module *M, Function *F, IRBuilder<> &Builder);
+  bool updateNewStateFunctions(Module *M, Function *F, IRBuilder<> &Builder,
+                               SMEAttrs FnAttrs);
 };
 } // end anonymous namespace
 
@@ -59,10 +60,8 @@ FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
   auto *TPIDR2SaveTy =
       FunctionType::get(Builder.getVoidTy(), {}, /*IsVarArgs=*/false);
-  auto Attrs =
-      AttributeList()
-          .addFnAttribute(M->getContext(), "aarch64_pstate_sm_compatible")
-          .addFnAttribute(M->getContext(), "aarch64_pstate_za_preserved");
+  auto Attrs = AttributeList().addFnAttribute(M->getContext(),
+                                              "aarch64_pstate_sm_compatible");
   FunctionCallee Callee =
       M->getOrInsertFunction("__arm_tpidr2_save", TPIDR2SaveTy, Attrs);
   CallInst *Call = Builder.CreateCall(Callee);
@@ -76,56 +75,87 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
                      Builder.getInt64(0));
 }
 
-/// This function generates code to commit a lazy save at the beginning of a
-/// function marked with `aarch64_pstate_za_new`. If the value read from
-/// TPIDR2_EL0 is not null on entry to the function then the lazy-saving scheme
-/// is active and we should call __arm_tpidr2_save to commit the lazy save.
-/// Additionally, PSTATE.ZA should be enabled at the beginning of the function
-/// and disabled before returning.
-bool SMEABI::updateNewZAFunctions(Module *M, Function *F,
-                                  IRBuilder<> &Builder) {
+/// This function generates code at the beginning and end of a function marked
+/// with either `aarch64_new_za` or `aarch64_new_zt0`.
+/// At the beginning of the function, the following code is generated:
+///  - Commit lazy-save if active   [Private-ZA Interface*]
+///  - Enable PSTATE.ZA             [Private-ZA Interface]
+///  - Zero ZA                      [Has New ZA State]
+///  - Zero ZT0                     [Has New ZT0 State]
+///
+/// * A function with new ZT0 state will not change ZA, so committing the
+/// lazy-save is not strictly necessary. However, the lazy-save mechanism
+/// may be active on entry to the function, with PSTATE.ZA set to 1. If
+/// the new ZT0 function calls a function that does not share ZT0, we will
+/// need to conditionally SMSTOP ZA before the call, setting PSTATE.ZA to 0.
+/// For this reason, it's easier to always commit the lazy-save at the
+/// beginning of the function regardless of whether it has ZA state.
+///
+/// At the end of the function, PSTATE.ZA is disabled if the function has a
+/// Private-ZA Interface. A function is considered to have a Private-ZA
+/// interface if it does not share ZA or ZT0.
+///
+bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
+                                     IRBuilder<> &Builder, SMEAttrs FnAttrs) {
   LLVMContext &Context = F->getContext();
   BasicBlock *OrigBB = &F->getEntryBlock();
-
-  // Create the new blocks for reading TPIDR2_EL0 & enabling ZA state.
-  auto *SaveBB = OrigBB->splitBasicBlock(OrigBB->begin(), "save.za", true);
-  auto *PreludeBB = BasicBlock::Create(Context, "prelude", F, SaveBB);
-
-  // Read TPIDR2_EL0 in PreludeBB & branch to SaveBB if not 0.
-  Builder.SetInsertPoint(PreludeBB);
-  Function *TPIDR2Intr =
-      Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_get_tpidr2);
-  auto *TPIDR2 = Builder.CreateCall(TPIDR2Intr->getFunctionType(), TPIDR2Intr,
-                                    {}, "tpidr2");
-  auto *Cmp =
-      Builder.CreateCmp(ICmpInst::ICMP_NE, TPIDR2, Builder.getInt64(0), "cmp");
-  Builder.CreateCondBr(Cmp, SaveBB, OrigBB);
-
-  // Create a call __arm_tpidr2_save, which commits the lazy save.
-  Builder.SetInsertPoint(&SaveBB->back());
-  emitTPIDR2Save(M, Builder);
-
-  // Enable pstate.za at the start of the function.
   Builder.SetInsertPoint(&OrigBB->front());
-  Function *EnableZAIntr =
-      Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_enable);
-  Builder.CreateCall(EnableZAIntr->getFunctionType(), EnableZAIntr);
 
-  // ZA state must be zeroed upon entry to a function with NewZA
-  Function *ZeroIntr =
-      Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero);
-  Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
-                     Builder.getInt32(0xff));
+  // Commit any active lazy-saves if this is a Private-ZA function. If the
+  // value read from TPIDR2_EL0 is not null on entry to the function then
+  // the lazy-saving scheme is active and we should call __arm_tpidr2_save
+  // to commit the lazy save.
+  if (FnAttrs.hasPrivateZAInterface()) {
+    // Create the new blocks for reading TPIDR2_EL0 & enabling ZA state.
+    auto *SaveBB = OrigBB->splitBasicBlock(OrigBB->begin(), "save.za", true);
+    auto *PreludeBB = BasicBlock::Create(Context, "prelude", F, SaveBB);
 
-  // Before returning, disable pstate.za
-  for (BasicBlock &BB : *F) {
-    Instruction *T = BB.getTerminator();
-    if (!T || !isa<ReturnInst>(T))
-      continue;
-    Builder.SetInsertPoint(T);
-    Function *DisableZAIntr =
-        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_disable);
-    Builder.CreateCall(DisableZAIntr->getFunctionType(), DisableZAIntr);
+    // Read TPIDR2_EL0 in PreludeBB & branch to SaveBB if not 0.
+    Builder.SetInsertPoint(PreludeBB);
+    Function *TPIDR2Intr =
+        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_get_tpidr2);
+    auto *TPIDR2 = Builder.CreateCall(TPIDR2Intr->getFunctionType(), TPIDR2Intr,
+                                      {}, "tpidr2");
+    auto *Cmp = Builder.CreateCmp(ICmpInst::ICMP_NE, TPIDR2,
+                                  Builder.getInt64(0), "cmp");
+    Builder.CreateCondBr(Cmp, SaveBB, OrigBB);
+
+    // Create a call __arm_tpidr2_save, which commits the lazy save.
+    Builder.SetInsertPoint(&SaveBB->back());
+    emitTPIDR2Save(M, Builder);
+
+    // Enable pstate.za at the start of the function.
+    Builder.SetInsertPoint(&OrigBB->front());
+    Function *EnableZAIntr =
+        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_enable);
+    Builder.CreateCall(EnableZAIntr->getFunctionType(), EnableZAIntr);
+  }
+
+  if (FnAttrs.isNewZA()) {
+    Function *ZeroIntr =
+        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero);
+    Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
+                       Builder.getInt32(0xff));
+  }
+
+  if (FnAttrs.isNewZT0()) {
+    Function *ClearZT0Intr =
+        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero_zt);
+    Builder.CreateCall(ClearZT0Intr->getFunctionType(), ClearZT0Intr,
+                       {Builder.getInt32(0)});
+  }
+
+  if (FnAttrs.hasPrivateZAInterface()) {
+    // Before returning, disable pstate.za
+    for (BasicBlock &BB : *F) {
+      Instruction *T = BB.getTerminator();
+      if (!T || !isa<ReturnInst>(T))
+        continue;
+      Builder.SetInsertPoint(T);
+      Function *DisableZAIntr =
+          Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_disable);
+      Builder.CreateCall(DisableZAIntr->getFunctionType(), DisableZAIntr);
+    }
   }
 
   F->addFnAttr("aarch64_expanded_pstate_za");
@@ -142,8 +172,8 @@ bool SMEABI::runOnFunction(Function &F) {
 
   bool Changed = false;
   SMEAttrs FnAttrs(F);
-  if (FnAttrs.hasNewZABody())
-    Changed |= updateNewZAFunctions(M, &F, Builder);
+  if (FnAttrs.isNewZA() || FnAttrs.isNewZT0())
+    Changed |= updateNewStateFunctions(M, &F, Builder, FnAttrs);
 
   return Changed;
 }

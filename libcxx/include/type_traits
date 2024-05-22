@@ -416,9 +416,9 @@ namespace std
 }
 
 */
-#include <__assert> // all public C++ headers provide the assertion handler
+
 #include <__config>
-#include <__fwd/hash.h> // This is https://llvm.org/PR56938
+#include <__fwd/functional.h> // This is https://llvm.org/PR56938
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_lvalue_reference.h>
@@ -428,7 +428,6 @@ namespace std
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/aligned_union.h>
 #include <__type_traits/alignment_of.h>
-#include <__type_traits/apply_cv.h>
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
@@ -458,9 +457,6 @@ namespace std
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_assignable.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_destructible.h>
 #include <__type_traits/is_empty.h>
 #include <__type_traits/is_enum.h>
@@ -474,17 +470,10 @@ namespace std
 #include <__type_traits/is_member_function_pointer.h>
 #include <__type_traits/is_member_object_pointer.h>
 #include <__type_traits/is_member_pointer.h>
-#include <__type_traits/is_move_assignable.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_nothrow_convertible.h>
-#include <__type_traits/is_nothrow_copy_assignable.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
 #include <__type_traits/is_nothrow_destructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
 #include <__type_traits/is_null_pointer.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_pod.h>
@@ -503,13 +492,8 @@ namespace std
 #include <__type_traits/is_trivial.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_copy_assignable.h>
-#include <__type_traits/is_trivially_copy_constructible.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/is_trivially_default_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_move_assignable.h>
-#include <__type_traits/is_trivially_move_constructible.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_union.h>
 #include <__type_traits/is_unsigned.h>

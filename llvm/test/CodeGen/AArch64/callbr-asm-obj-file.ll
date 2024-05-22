@@ -40,7 +40,7 @@ declare dso_local i32 @g(...) local_unnamed_addr
 declare dso_local i32 @i(...) local_unnamed_addr
 
 ; CHECK-LABEL: <test2>:
-; CHECK:         bl {{.*}} <test2+0x18>
+; CHECK:         b {{.*}} <test2+0x1c>
 ; CHECK-LABEL: <$d.5>:
 ; CHECK-LABEL: <$x.6>:
 ; CHECK-NEXT:    b {{.*}} <test2+0x18>

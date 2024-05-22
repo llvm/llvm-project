@@ -1,5 +1,7 @@
 ; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 -o /dev/null
+; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 -o /dev/null --try-experimental-debuginfo-iterators
 
 ; struct NTCopy {
 ;   NTCopy();

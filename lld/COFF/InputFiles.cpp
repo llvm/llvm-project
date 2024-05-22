@@ -828,7 +828,7 @@ static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
   // on Windows, so we can assume type server paths are Windows style.
   sys::path::append(path,
                     sys::path::filename(tSPath, sys::path::Style::windows));
-  return std::string(path.str());
+  return std::string(path);
 }
 
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
@@ -944,18 +944,20 @@ ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
 void ImportFile::parse() {
-  const char *buf = mb.getBufferStart();
-  const auto *hdr = reinterpret_cast<const coff_import_header *>(buf);
+  const auto *hdr =
+      reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
 
   // Check if the total size is valid.
-  if (mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
+  if (mb.getBufferSize() < sizeof(*hdr) ||
+      mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
     fatal("broken import library");
 
   // Read names and create an __imp_ symbol.
-  StringRef name = saver().save(StringRef(buf + sizeof(*hdr)));
+  StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
+  StringRef name = saver().save(buf.split('\0').first);
   StringRef impName = saver().save("__imp_" + name);
-  const char *nameStart = buf + sizeof(coff_import_header) + name.size() + 1;
-  dllName = std::string(StringRef(nameStart));
+  buf = buf.substr(name.size() + 1);
+  dllName = buf.split('\0').first;
   StringRef extName;
   switch (hdr->getNameType()) {
   case IMPORT_ORDINAL:
@@ -970,6 +972,9 @@ void ImportFile::parse() {
   case IMPORT_NAME_UNDECORATE:
     extName = ltrim1(name, "?@_");
     extName = extName.substr(0, extName.find('@'));
+    break;
+  case IMPORT_NAME_EXPORTAS:
+    extName = buf.substr(dllName.size() + 1).split('\0').first;
     break;
   }
 
@@ -1081,7 +1086,7 @@ void BitcodeFile::parse() {
     if (objSym.isUsed())
       ctx.config.gcroot.push_back(sym);
   }
-  directives = obj->getCOFFLinkerOpts();
+  directives = saver.save(obj->getCOFFLinkerOpts());
 }
 
 void BitcodeFile::parseLazy() {
