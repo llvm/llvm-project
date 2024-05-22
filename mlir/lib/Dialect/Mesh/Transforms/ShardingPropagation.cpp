@@ -148,8 +148,6 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
   return allShardingAttrs;
 }
 
-// From all the sharding options return the one that is most compatible with
-// the sharding annotations of operands and results of the operation.
 // The order of preference is form highest to lowest:
 // 1. No resharding is required (all existing annotations are compatible).
 // 2. No resharding for operands/results that have annotation specifically
@@ -160,11 +158,6 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
 //     `annotate_for_users`.
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
-// size_t preferredShardingOption(Operation *op, const
-// SmallVector<ShardingOption>& shardingOptions) {
-
-// }
-
 ReshardingRquirementKind getReshardingRquirementKind(
     Operation *op,
     const SmallVector<MeshShardingAttr> &operandAndResultShardings) {
@@ -217,6 +210,13 @@ ReshardingRquirementKind getReshardingRquirementKind(
   return res;
 }
 
+// From all the operand and result sharding combinations,
+// return the one that is most desirable.
+// The order of preference is:
+// 1. No resharding with respect to existing sharding annotations.
+// 2. Resharding for values that have already annotations that do not target
+//    this op.
+// 3. Resharding of existing explicit sharding annotations for this op.
 static FailureOr<ShardingOption> selectShardingOption(
     ShardingInterface shardingOp,
     ArrayRef<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs,
