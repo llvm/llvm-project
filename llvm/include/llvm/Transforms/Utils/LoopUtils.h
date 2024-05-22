@@ -468,6 +468,12 @@ int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                           ReplaceExitVal ReplaceExitValue,
                           SmallVector<WeakTrackingVH, 16> &DeadInsts);
 
+/// Assign exit values to variables that use this loop variable during the loop.
+void addDebugValuesToIncomingValue(BasicBlock *Successor, Value *IndVar,
+                                   PHINode *PN);
+void addDebugValuesToLoopVariable(BasicBlock *Successor, Value *ExitValue,
+                                  PHINode *PN);
+
 /// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
 /// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p
 /// UnrolledLoop and \p RemainderLoop. \p UnrolledLoop receives weights that

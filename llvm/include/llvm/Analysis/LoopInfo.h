@@ -17,7 +17,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericLoopInfo.h"
 #include <algorithm>
@@ -392,6 +394,22 @@ public:
     return "<unnamed loop>";
   }
 
+  /// Preserve the induction variable exit value and its debug users by the
+  /// 'indvars' pass if the loop can deleted. Those debug users will be used
+  /// by the 'loop-delete' pass.
+  void preserveDebugInductionVariableInfo(
+      Value *FinalValue,
+      const SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
+    IndVarFinalValue = FinalValue;
+    for (auto &DebugUser : DbgUsers)
+      IndVarDebugUsers.push_back(DebugUser);
+  }
+
+  Value *getDebugInductionVariableFinalValue() { return IndVarFinalValue; }
+  SmallVector<WeakVH> &getDebugInductionVariableDebugUsers() {
+    return IndVarDebugUsers;
+  }
+
 private:
   Loop() = default;
 
@@ -399,6 +417,13 @@ private:
   friend class LoopBase<BasicBlock, Loop>;
   explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
+
+  // Induction variable exit value and its debug users, preserved by the
+  // 'indvars' pass, when it detects that the loop can be deleted and the
+  // there are no PHIs to be rewritten.
+  // For now, we only preserve single induction variables.
+  Value *IndVarFinalValue = nullptr;
+  SmallVector<WeakVH> IndVarDebugUsers;
 };
 
 // Implementation in Support/GenericLoopInfoImpl.h
