@@ -71,48 +71,45 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS
 template <class _Delim, class _CharT = char, class _Traits = char_traits<_CharT>>
 class ostream_joiner {
 public:
+  typedef _CharT char_type;
+  typedef _Traits traits_type;
+  typedef basic_ostream<char_type, traits_type> ostream_type;
+  typedef output_iterator_tag iterator_category;
+  typedef void value_type;
+  typedef void difference_type;
+  typedef void pointer;
+  typedef void reference;
 
-    typedef _CharT                               char_type;
-    typedef _Traits                              traits_type;
-    typedef basic_ostream<char_type,traits_type> ostream_type;
-    typedef output_iterator_tag                  iterator_category;
-    typedef void                                 value_type;
-    typedef void                                 difference_type;
-    typedef void                                 pointer;
-    typedef void                                 reference;
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, _Delim&& __d)
+      : __output_iter_(std::addressof(__os)), __delim_(std::move(__d)), __first_(true) {}
 
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, _Delim&& __d)
-        : __output_iter_(std::addressof(__os)), __delim_(std::move(__d)), __first_(true) {}
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, const _Delim& __d)
+      : __output_iter_(std::addressof(__os)), __delim_(__d), __first_(true) {}
 
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, const _Delim& __d)
-        : __output_iter_(std::addressof(__os)), __delim_(__d), __first_(true) {}
+  template <typename _Tp>
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator=(const _Tp& __v) {
+    if (!__first_)
+      *__output_iter_ << __delim_;
+    __first_ = false;
+    *__output_iter_ << __v;
+    return *this;
+  }
 
-
-    template<typename _Tp>
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator=(const _Tp& __v)
-    {
-        if (!__first_)
-            *__output_iter_ << __delim_;
-        __first_ = false;
-        *__output_iter_ << __v;
-        return *this;
-    }
-
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator*()     _NOEXCEPT { return *this; }
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++()    _NOEXCEPT { return *this; }
-    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++(int) _NOEXCEPT { return *this; }
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator*() _NOEXCEPT { return *this; }
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++() _NOEXCEPT { return *this; }
+  _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++(int) _NOEXCEPT { return *this; }
 
 private:
-    ostream_type*   __output_iter_;
-    _Delim          __delim_;
-    bool            __first_;
+  ostream_type* __output_iter_;
+  _Delim __delim_;
+  bool __first_;
 };
-
 
 template <class _CharT, class _Traits, class _Delim>
 _LIBCPP_HIDE_FROM_ABI ostream_joiner<__decay_t<_Delim>, _CharT, _Traits>
-make_ostream_joiner(basic_ostream<_CharT, _Traits>& __os, _Delim && __d)
-{ return ostream_joiner<__decay_t<_Delim>, _CharT, _Traits>(__os, std::forward<_Delim>(__d)); }
+make_ostream_joiner(basic_ostream<_CharT, _Traits>& __os, _Delim&& __d) {
+  return ostream_joiner<__decay_t<_Delim>, _CharT, _Traits>(__os, std::forward<_Delim>(__d));
+}
 
 _LIBCPP_END_NAMESPACE_LFTS
 

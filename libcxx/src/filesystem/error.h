@@ -23,9 +23,9 @@
 #include "format_string.h"
 
 #if defined(_LIBCPP_WIN32API)
-# define WIN32_LEAN_AND_MEAN
-# define NOMINMAX
-# include <windows.h> // ERROR_* macros
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <windows.h> // ERROR_* macros
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -82,8 +82,7 @@ struct ErrorHandler {
   const path* p1_ = nullptr;
   const path* p2_ = nullptr;
 
-  ErrorHandler(const char* fname, error_code* ec, const path* p1 = nullptr,
-               const path* p2 = nullptr)
+  ErrorHandler(const char* fname, error_code* ec, const path* p1 = nullptr, const path* p2 = nullptr)
       : func_name_(fname), ec_(ec), p1_(p1), p2_(p2) {
     if (ec_)
       ec_->clear();
@@ -112,8 +111,7 @@ struct ErrorHandler {
       *ec_ = ec;
       return;
     }
-    string what =
-        string("in ") + func_name_ + ": " + detail::vformat_string(msg, ap);
+    string what = string("in ") + func_name_ + ": " + detail::vformat_string(msg, ap);
     switch (bool(p1_) + bool(p2_)) {
     case 0:
       __throw_filesystem_error(what, ec);
@@ -143,9 +141,7 @@ struct ErrorHandler {
     return error_value<T>();
   }
 
-  T report(errc const& err) const {
-    return report(make_error_code(err));
-  }
+  T report(errc const& err) const { return report(make_error_code(err)); }
 
   _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4)
   T report(errc const& err, const char* msg, ...) const {
@@ -166,7 +162,7 @@ struct ErrorHandler {
   }
 
 private:
-  ErrorHandler(ErrorHandler const&) = delete;
+  ErrorHandler(ErrorHandler const&)            = delete;
   ErrorHandler& operator=(ErrorHandler const&) = delete;
 };
 

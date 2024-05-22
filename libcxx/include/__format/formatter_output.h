@@ -102,8 +102,7 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
-  } else if constexpr (std::same_as<decltype(__out_it),
-                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+  } else if constexpr (std::same_as<decltype(__out_it), typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
     __out_it.__buffer_->__copy(__str);
     return __out_it;
   } else {
@@ -134,16 +133,13 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto
-__transform(_Iterator __first,
-            _Iterator __last,
-            output_iterator<const _OutCharT&> auto __out_it,
-            _UnaryOperation __operation) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __transform(
+    _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
+    -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
-  } else if constexpr (std::same_as<decltype(__out_it),
-                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+  } else if constexpr (std::same_as<decltype(__out_it), typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
     __out_it.__buffer_->__transform(__first, __last, std::move(__operation));
     return __out_it;
   } else {
@@ -271,10 +267,12 @@ template <contiguous_iterator _Iterator,
           class _CharT = typename iterator_traits<_Iterator>::value_type,
           class _ParserCharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __write_transformed(_Iterator __first, _Iterator __last,
-                                               output_iterator<const _CharT&> auto __out_it,
-                                               __format_spec::__parsed_specifications<_ParserCharT> __specs,
-                                               _UnaryOperation __op) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __write_transformed(
+    _Iterator __first,
+    _Iterator __last,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_ParserCharT> __specs,
+    _UnaryOperation __op) -> decltype(__out_it) {
   _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
 
   ptrdiff_t __size = __last - __first;
