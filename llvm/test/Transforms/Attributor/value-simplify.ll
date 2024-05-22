@@ -1396,11 +1396,6 @@ define internal void @not_called2() {
   ret void
 }
 define internal void @not_called3() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; TUNIT-LABEL: define {{[^@]+}}@not_called3
-; TUNIT-SAME: () #[[ATTR2]] {
-; TUNIT-NEXT:    ret void
-;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@not_called3
 ; CGSCC-SAME: () #[[ATTR1]] {
@@ -1422,7 +1417,7 @@ define i1 @user_of_not_called() {
 ; CHECK-LABEL: define {{[^@]+}}@user_of_not_called() {
 ; CHECK-NEXT:    call void @useFnDecl(ptr addrspace(42) noundef nonnull addrspacecast (ptr @not_called1 to ptr addrspace(42)))
 ; CHECK-NEXT:    call void @useFnDef(ptr addrspace(42) noundef nonnull addrspacecast (ptr @not_called2 to ptr addrspace(42)))
-; CHECK-NEXT:    ret i1 icmp eq (ptr addrspace(42) addrspacecast (ptr @not_called3 to ptr addrspace(42)), ptr addrspace(42) null)
+; CHECK-NEXT:    ret i1 false
 ;
   call void @useFnDecl(ptr addrspace(42) addrspacecast (ptr @not_called1 to ptr addrspace(42)))
   call void @useFnDef(ptr addrspace(42) addrspacecast (ptr @not_called2 to ptr addrspace(42)))

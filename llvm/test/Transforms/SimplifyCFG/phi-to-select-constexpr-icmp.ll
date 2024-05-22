@@ -8,7 +8,7 @@
 define i1 @test(i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i1 false, i1 icmp ugt (ptr inttoptr (i64 -40 to ptr), ptr @glob)
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i1 false, i1 icmp ult (ptr @glob, ptr inttoptr (i64 -40 to ptr))
 ; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
 ;
 entry:
