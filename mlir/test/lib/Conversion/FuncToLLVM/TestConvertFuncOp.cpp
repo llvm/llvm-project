@@ -40,6 +40,19 @@ struct FuncOpConversion : public ConvertOpToLLVMPattern<func::FuncOp> {
   }
 };
 
+struct ReturnOpConversion : public ConvertOpToLLVMPattern<func::ReturnOp> {
+  ReturnOpConversion(const LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern(converter) {}
+
+  LogicalResult
+  matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnOp,
+                                                returnOp->getOperands());
+    return success();
+  }
+};
+
 struct TestConvertFuncOp
     : public PassWrapper<TestConvertFuncOp, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConvertFuncOp)
@@ -63,9 +76,8 @@ struct TestConvertFuncOp
     LLVMTypeConverter typeConverter(ctx, options);
 
     RewritePatternSet patterns(ctx);
-    patterns.add<FuncOpConversion>(ctx);
-
-    populateFuncToLLVMConversionPatterns(typeConverter, patterns, nullptr);
+    patterns.add<FuncOpConversion>(typeConverter);
+    patterns.add<ReturnOpConversion>(typeConverter);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(getOperation(), target,
