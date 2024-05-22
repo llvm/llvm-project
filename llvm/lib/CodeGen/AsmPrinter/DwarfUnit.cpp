@@ -633,21 +633,26 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 
 void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
                                         const DIType *Ty, const DIE &TyDIE) {
-  if (!Ty->getName().empty() && !Ty->isForwardDecl()) {
-    bool IsImplementation = false;
-    if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
-      // A runtime language of 0 actually means C/C++ and that any
-      // non-negative value is some version of Objective-C/C++.
-      IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
-    }
-    unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
-    DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
-                     Flags);
+  if (Ty->getName().empty())
+    return;
+  if (Ty->isForwardDecl())
+    return;
 
-    if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
-        isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
-      addGlobalType(Ty, TyDIE, Context);
+  // add temporary record for this type to be added later
+
+  bool IsImplementation = false;
+  if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
+    // A runtime language of 0 actually means C/C++ and that any
+    // non-negative value is some version of Objective-C/C++.
+    IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
   }
+  unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
+  DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
+                   Flags);
+
+  if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
+      isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
+    addGlobalType(Ty, TyDIE, Context);
 }
 
 void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
