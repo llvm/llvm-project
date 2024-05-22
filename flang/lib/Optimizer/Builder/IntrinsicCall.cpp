@@ -555,7 +555,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"selected_logical_kind",
      &I::genSelectedLogicalKind,
-     {{{"scalar", asAddr}}},
+     {{{"bits", asAddr}}},
      /*isElemental=*/false},
     {"selected_real_kind",
      &I::genSelectedRealKind,
