@@ -107,7 +107,12 @@ public:
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
-  uint64_t fetchParentAddress(uint64_t Address) const;
+  uint64_t fetchParentAddress(uint64_t Address) const {
+    auto Iter = ColdPartSource.find(Address);
+    if (Iter == ColdPartSource.end())
+      return 0;
+    return Iter->second;
+  }
 
   /// True if the input binary has a translation table we can use to convert
   /// addresses when aggregating profile
