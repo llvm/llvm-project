@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(lldbtest.TestBase):
     @swiftTest
+    @skipUnlessFoundation
     def test(self):
         """Check that ClangImporter options can be overridden."""
         self.build()
