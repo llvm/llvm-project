@@ -1,8 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin8 -misched-print-dags -o - 2>&1 > /dev/null | FileCheck %s
 ; REQUIRES: asserts
 
-target datalayout = "e-p:64:64:64-i8:8:8-i32:32:32"
-
 @sc = common global i8 0
 @uc = common global i8 0
 @ui = common global i32 0
