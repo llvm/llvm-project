@@ -1462,4 +1462,6 @@ typedef __char32_t char32_t;
 
 #endif // __cplusplus
 
+#include <__config_epilogue>
+
 #endif // _LIBCPP___CONFIG
