@@ -430,8 +430,8 @@ bool InductiveRangeCheck::reassociateSubLHS(
   auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
                                      const SCEV *LHS,
                                      const SCEV *RHS) -> const SCEV * {
-    SCEVUse (ScalarEvolution:: *Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                           unsigned);
+    SCEVUse (ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
+                                          unsigned);
     switch (BinOp) {
     default:
       llvm_unreachable("Unsupported binary op");

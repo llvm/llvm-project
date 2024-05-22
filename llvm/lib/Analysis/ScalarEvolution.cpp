@@ -1274,8 +1274,8 @@ static SCEVUse getUnsignedOverflowLimitForStep(SCEVUse Step,
 namespace {
 
 struct ExtendOpTraitsBase {
-  typedef SCEVUse (ScalarEvolution:: *GetExtendExprTy)(SCEVUse, Type *,
-                                                       unsigned);
+  typedef SCEVUse (ScalarEvolution::*GetExtendExprTy)(SCEVUse, Type *,
+                                                      unsigned);
 };
 
 // Used to make code generic over signed and unsigned overflow.
@@ -2309,8 +2309,8 @@ static bool CollectAddOperandsWithScales(DenseMap<SCEVUse, APInt> &M,
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       SCEVUse LHS, SCEVUse RHS,
                                       const Instruction *CtxI) {
-  SCEVUse (ScalarEvolution:: *Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                         unsigned);
+  SCEVUse (ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
+                                        unsigned);
   switch (BinOp) {
   default:
     llvm_unreachable("Unsupported binary op");
@@ -2325,7 +2325,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     break;
   }
 
-  SCEVUse (ScalarEvolution:: *Extension)(SCEVUse, Type *, unsigned) =
+  SCEVUse (ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
              : &ScalarEvolution::getZeroExtendExpr;
 
@@ -10628,8 +10628,8 @@ ScalarEvolution::getPredecessorWithUniqueSuccessorForBB(const BasicBlock *BB)
 /// guarding a loop, it can be useful to be a little more general, since a
 /// front-end may have replicated the controlling expression.
 static bool HasSameValue(SCEVUse A, SCEVUse B) {
-  // Quick check to see if they are the same SCEV.
-  if (A == B) return true;
+  // Quick check to see if they are the same SCEV, ignoring use-specific flags.
+  if (A.getPointer() == B.getPointer()) return true;
 
   auto ComputesEqualValues = [](const Instruction *A, const Instruction *B) {
     // Not all instructions that are "identical" compute the same value.  For
