@@ -7450,10 +7450,12 @@ static InstructionCost computeCostForReplicatorRegion(
   VPValue *Cond = BOM->getOperand(0);
 
   // Check if Cond is a uniform compare or a header mask.
+  VPValue *Op;
   bool IsHeaderMaskOrUniformCond =
-      vputils::isUniformCompare(Cond) ||
+      (vputils::isUniformCompare(Cond)) ||
       match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
-      match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) ||
+      (match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue(Op))) &&
+       Op == Region->getPlan()->getOrCreateBackedgeTakenCount()) ||
       isa<VPActiveLaneMaskPHIRecipe>(Cond);
   if (IsHeaderMaskOrUniformCond || VF.isScalable())
     return RegionCost;
@@ -7529,8 +7531,8 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
 
       if (!SkipCostComputation.insert(I).second)
         continue;
-      dbgs() << "Cost of " << ReductionCost << " for VF " << VF
-             << ":\n in-loop reduction " << *I << "\n";
+      LLVM_DEBUG(dbgs() << "Cost of " << ReductionCost << " for VF " << VF
+                        << ":\n in-loop reduction " << *I << "\n");
       Cost += *ReductionCost;
     }
   }
