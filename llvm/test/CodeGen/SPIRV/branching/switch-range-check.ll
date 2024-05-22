@@ -1,10 +1,13 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK: OpFunction
 ; CHECK: %[[#Var:]] = OpPhi
 ; CHECK: OpSwitch %[[#Var]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]]
 ; CHECK-COUNT-11: OpBranch
 ; CHECK-NOT: OpBranch
+; CHECK: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 
 define spir_func void @foo(i64 noundef %addr, i64 noundef %as) {
 entry:

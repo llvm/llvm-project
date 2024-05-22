@@ -24,9 +24,9 @@ static bool operator==(const FormatToken &LHS,
 
 namespace {
 
-class TokenAnnotatorTest : public ::testing::Test {
+class TokenAnnotatorTest : public testing::Test {
 protected:
-  TokenList annotate(llvm::StringRef Code,
+  TokenList annotate(StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
     return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
@@ -2097,7 +2097,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCProperty) {
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
-  auto Annotate = [this](llvm::StringRef Code) {
+  auto Annotate = [this](StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
   };
   // Test that unary operators get labeled as such and that operators like '++'
@@ -2279,9 +2279,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
 
   TestLexer Lexer(Allocator, Buffers, Style);
   AdditionalKeywords Keywords(Lexer.IdentTable);
-  auto Annotate = [&Lexer](llvm::StringRef Code) {
-    return Lexer.annotate(Code);
-  };
+  auto Annotate = [&Lexer](StringRef Code) { return Lexer.annotate(Code); };
 
   // Additional keywords representation test.
   auto Tokens = Annotate("def foo : Bar<1>;");
@@ -2357,7 +2355,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("!cond");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
 
-  auto AnnotateValue = [this, &Style](llvm::StringRef Code) {
+  auto AnnotateValue = [this, &Style](StringRef Code) {
     // Values are annotated only in specific context.
     auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
     return decltype(Result){Result.begin() + 6, Result.end() - 3};
@@ -2581,15 +2579,28 @@ TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   auto Tokens = annotate("{ x: break; }");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+
   Tokens = annotate("{ case x: break; }");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+
   Tokens = annotate("{ x: { break; } }");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+
   Tokens = annotate("{ case x: { break; } }");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+
+  Tokens = annotate("#define FOO label:");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_GotoLabelColon);
+
+  Tokens = annotate("#define FOO \\\n"
+                    "label: \\\n"
+                    "  break;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_GotoLabelColon);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsNestedBlocks) {
@@ -2649,7 +2660,7 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
-  auto Annotate = [this](llvm::StringRef Code) {
+  auto Annotate = [this](StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_JavaScript));
   };
 
@@ -2902,6 +2913,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("struct Foo<int> : Base {};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
 
   Tokens = annotate("struct Foo final {};");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;

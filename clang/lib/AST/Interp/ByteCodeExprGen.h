@@ -90,6 +90,7 @@ public:
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
+  bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
   bool VisitCharacterLiteral(const CharacterLiteral *E);
   bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
   bool VisitFloatCompoundAssignOperator(const CompoundAssignOperator *E);
@@ -122,6 +123,9 @@ public:
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
   bool VisitRecoveryExpr(const RecoveryExpr *E);
+  bool VisitAddrLabelExpr(const AddrLabelExpr *E);
+  bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+  bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
