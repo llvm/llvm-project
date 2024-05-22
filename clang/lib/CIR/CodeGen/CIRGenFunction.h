@@ -885,6 +885,15 @@ public:
   RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
   RValue buildCoroutineFrame();
 
+  enum class MSVCIntrin;
+
+  mlir::Value buildARMMVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                     ReturnValueSlot ReturnValue,
+                                     llvm::Triple::ArchType Arch);
+  mlir::Value buildARMCDEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                     ReturnValueSlot ReturnValue,
+                                     llvm::Triple::ArchType Arch);
+
   /// Build a debug stoppoint if we are emitting debug info.
   void buildStopPoint(const Stmt *S);
 
@@ -1228,7 +1237,10 @@ public:
 
   // Target specific builtin emission
   mlir::Value buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                      ReturnValueSlot ReturnValue,
                                       llvm::Triple::ArchType Arch);
+  mlir::Value buildAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  mlir::Value buildAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   mlir::Value buildX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   /// Given an expression with a pointer type, emit the value and compute our
