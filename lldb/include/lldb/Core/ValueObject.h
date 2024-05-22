@@ -645,20 +645,28 @@ public:
   /// Return the target load address associated with this value object.
   lldb::addr_t GetLoadAddress();
 
-  lldb::ValueObjectSP CastDerivedToBaseType(CompilerType type,
-                                            const std::vector<uint32_t> &idx);
+  /// Take a ValueObject whose type is an inherited class, and cast it to
+  /// 'type', which should be one of its base classes. 'base_type_indices'
+  /// contains the indices of direct base classes on the path from the
+  /// ValueObject's current type to 'type'
+  llvm::Expected<lldb::ValueObjectSP>
+  CastDerivedToBaseType(CompilerType type,
+                        const llvm::ArrayRef<uint32_t> &base_type_indices);
 
-  lldb::ValueObjectSP CastBaseToDerivedType(CompilerType type, uint64_t offset);
+  /// Take a ValueObject whose type is a base class, and cast it to 'type',
+  /// which should be one of its derived classes. 'base_type_indices'
+  /// contains the indices of direct base classes on the path from the
+  /// ValueObject's current type to 'type'
+  llvm::Expected<lldb::ValueObjectSP> CastBaseToDerivedType(CompilerType type,
+                                                            uint64_t offset);
 
-  lldb::ValueObjectSP CastScalarToBasicType(CompilerType type, Status &error);
+  // Take a ValueObject that contains a scalar, enum or pointer type, and
+  // cast it to a "basic" type (integer, float or boolean).
+  lldb::ValueObjectSP CastToBasicType(CompilerType type);
 
-  lldb::ValueObjectSP CastEnumToBasicType(CompilerType type);
-
-  lldb::ValueObjectSP CastPointerToBasicType(CompilerType type);
-
-  lldb::ValueObjectSP CastIntegerOrEnumToEnumType(CompilerType type);
-
-  lldb::ValueObjectSP CastFloatToEnumType(CompilerType type, Status &error);
+  // Take a ValueObject that contain an integer, float or enum, and cast it
+  // to an enum.
+  lldb::ValueObjectSP CastToEnumType(CompilerType type);
 
   /// If this object represents a C++ class with a vtable, return an object
   /// that represents the virtual function table. If the object isn't a class
