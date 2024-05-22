@@ -600,10 +600,6 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   const auto &BuildVector = cast<GBuildVector>(MI);
   Register Dst = BuildVector.getReg(0);
   LLT DstTy = MRI.getType(Dst);
-  if (!isConstantOrConstantVector(MI, MRI, /* AllowFP */ true)) {
-    return false;
-  }
-
   MachineFunction &MF = MIRBuilder.getMF();
   LLVMContext &Ctx = MF.getFunction().getContext();
   uint64_t DstTySize = DstTy.getScalarSizeInBits();
@@ -624,9 +620,11 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
       continue;
     }
 
-    assert(getOpcodeDef<GImplicitDef>(BuildVector.getSourceReg(i), MRI) &&
-           "Unexpected constant in G_BUILD_VECTOR of constants");
-    CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
+    if (getOpcodeDef<GImplicitDef>(Source, MRI)) {
+      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
+      continue;
+    }
+    return false;
   }
 
   Constant *ConstVal = ConstantVector::get(CstIdxs);

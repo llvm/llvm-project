@@ -590,7 +590,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
     unsigned char OpFlag = STI.classifyLocalReference(nullptr);
     unsigned PICBase = 0;
     if (OpFlag == X86II::MO_GOTOFF)
-      PICBase = STI.getInstrInfo()->getGlobalBaseReg(&MF);
+      PICBase = TII.getGlobalBaseReg(&MF);
     else if (STI.is64Bit())
       PICBase = X86::RIP;
 
