@@ -312,8 +312,8 @@ void PPCMergeStringPool::replaceUsesWithGEP(GlobalVariable *GlobalToReplace,
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), 0));
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), ElementIndex));
 
-  Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
-      PooledStructType, GPool, Indices);
+  Constant *ConstGEP =
+      ConstantExpr::getInBoundsGetElementPtr(PooledStructType, GPool, Indices);
   LLVM_DEBUG(dbgs() << "Replacing this global:\n");
   LLVM_DEBUG(GlobalToReplace->dump());
   LLVM_DEBUG(dbgs() << "with this:\n");
