@@ -3302,6 +3302,9 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 }
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
   switch (OpDesc.getOpcode()) {
   case AMDGPU::V_MUL_LO_U32_e64:
   case AMDGPU::V_MUL_LO_U32_e64_dpp:
@@ -3315,8 +3318,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
   case AMDGPU::V_MAD_U32_e64:
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
-    return ST.hasFeature(AMDGPU::FeatureGFX12_10Insts) &&
-           ST.hasFeature(AMDGPU::FeatureDPALU_DPP);
+    return ST.hasFeature(AMDGPU::FeatureGFX12_10Insts);
   default:
     return hasAny64BitVGPROperands(OpDesc);
   }
