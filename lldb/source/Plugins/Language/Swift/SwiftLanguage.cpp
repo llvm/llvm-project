@@ -143,7 +143,7 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   // breakpoints on accessor blocks by name.
   //
   // By default, the name `A.B` is treated as a fully qualified name, where `B`
-  // is the basename. However, some names can be interpretted in two ways, for
+  // is the basename. However, some names can be interpreted in two ways, for
   // example `A.get`. First, it can refer to the name `get` (in module `A`, or
   // in type `A`). Second, it can refer the *getter* block for property `A`.
   // LLDB's baseline behavior handles the first case. The second case is
