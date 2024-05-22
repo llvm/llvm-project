@@ -2997,7 +2997,7 @@ def int_amdgcn_permute_pair_2src_rotate_group_b32 :
       llvm_i32_ty, // %src1
       llvm_i32_ty  // %aux_data
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<2>>]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]
   >;
 
 def int_amdgcn_bpermute_b32 :
@@ -3008,7 +3008,7 @@ def int_amdgcn_bpermute_b32 :
       llvm_i32_ty, // %src0
       llvm_i32_ty  // %src1
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+    [IntrNoMem, IntrConvergent]
   >;
 
 def int_amdgcn_permute_pair_gensgpr_b32 :
@@ -3019,7 +3019,7 @@ def int_amdgcn_permute_pair_gensgpr_b32 :
       llvm_i32_ty, // %src0
       llvm_i64_ty, // %src1
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+    [IntrNoMem, IntrConvergent]
   >;
 
 def int_amdgcn_permute_pair_bcast_b32 :
@@ -3030,7 +3030,7 @@ def int_amdgcn_permute_pair_bcast_b32 :
       llvm_i32_ty, // %src0
       llvm_i32_ty  // %aux_data
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>]
   >;
 
 class AMDGPUPermuteAuxDataTwoDest :
@@ -3044,7 +3044,7 @@ class AMDGPUPermuteAuxDataTwoDest :
       llvm_i32_ty, // %src1
       llvm_i32_ty  // %aux_data
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<2>>]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]
   >;
 
 def int_amdgcn_permute_pair_2src_interleave_b64 : AMDGPUPermuteAuxDataTwoDest;
