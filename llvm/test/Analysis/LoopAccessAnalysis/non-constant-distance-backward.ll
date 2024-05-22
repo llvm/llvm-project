@@ -14,6 +14,10 @@ define void @backward_min_distance_8(ptr %A, i64 %N) {
 ; COMMON-NEXT:    loop:
 ; COMMON-NEXT:      Memory dependences are safe with run-time checks
 ; COMMON-NEXT:      Dependences:
+; COMMON-NEXT:       Unknown:
+; COMMON-NEXT:        %l = load i8, ptr %gep, align 4 ->
+; COMMON-NEXT:        store i8 %add, ptr %gep.off.iv, align 4
+; COMMON-EMPTY:
 ; COMMON-NEXT:      Run-time memory checks:
 ; COMMON-NEXT:      Check 0:
 ; COMMON-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
@@ -76,6 +80,10 @@ define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; COMMON-NEXT:    loop:
 ; COMMON-NEXT:      Memory dependences are safe with run-time checks
 ; COMMON-NEXT:      Dependences:
+; COMMON-NEXT:       Unknown:
+; COMMON-NEXT:        %l = load i8, ptr %gep, align 4 ->
+; COMMON-NEXT:        store i8 %add, ptr %gep.off.iv, align 4
+; COMMON-EMPTY:
 ; COMMON-NEXT:      Run-time memory checks:
 ; COMMON-NEXT:      Check 0:
 ; COMMON-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
@@ -138,6 +146,10 @@ define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; COMMON-NEXT:    loop:
 ; COMMON-NEXT:      Memory dependences are safe with run-time checks
 ; COMMON-NEXT:      Dependences:
+; COMMON-NEXT:       Unknown:
+; COMMON-NEXT:        %l = load i8, ptr %gep, align 4 ->
+; COMMON-NEXT:        store i8 %add, ptr %gep.off.iv, align 4
+; COMMON-EMPTY:
 ; COMMON-NEXT:      Run-time memory checks:
 ; COMMON-NEXT:      Check 0:
 ; COMMON-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
@@ -200,6 +212,10 @@ define void @backward_min_distance_256(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:    loop:
 ; MAXLEN-NEXT:      Memory dependences are safe with run-time checks
 ; MAXLEN-NEXT:      Dependences:
+; MAXLEN-NEXT:       Unknown:
+; MAXLEN-NEXT:        %l = load i8, ptr %gep, align 4 ->
+; MAXLEN-NEXT:        store i8 %add, ptr %gep.off.iv, align 4
+; MAXLEN-EMPTY:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
 ; MAXLEN-NEXT:        Comparing group ([[GRP17:0x[0-9a-f]+]]):

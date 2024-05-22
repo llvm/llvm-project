@@ -53,6 +53,10 @@ define void @offset_i32_known_positive_via_assume_forward_dep_1(ptr %A, i64 %off
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i8, ptr %gep.off, align 4 ->
+; CHECK-NEXT:            store i8 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
@@ -144,6 +148,10 @@ define void @offset_may_be_negative_via_assume_unknown_dep(ptr %A, i64 %offset, 
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
@@ -191,6 +199,10 @@ define void @offset_no_assumes(ptr %A, i64 %offset, i64 %N) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i32, ptr %gep.off, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
