@@ -1097,7 +1097,8 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
       return Param;
     }
 
-    Param->setDefaultArgument(DefaultTInfo);
+    Param->setDefaultArgument(
+        Context, TemplateArgumentLoc(DefaultTInfo->getType(), DefaultTInfo));
   }
 
   return Param;
@@ -1865,7 +1866,8 @@ DeclResult Sema::CheckClassTemplate(
     TemplateParameterList **OuterTemplateParamLists, SkipBodyInfo *SkipBody) {
   assert(TemplateParams && TemplateParams->size() > 0 &&
          "No template parameters");
-  assert(TUK != TUK_Reference && "Can only declare or define class templates");
+  assert(TUK != TagUseKind::Reference &&
+         "Can only declare or define class templates");
   bool Invalid = false;
 
   // Check that we can declare a template here.
@@ -1887,8 +1889,9 @@ DeclResult Sema::CheckClassTemplate(
   // C++11 [basic.lookup.elab]p2).
   DeclContext *SemanticContext;
   LookupResult Previous(*this, Name, NameLoc,
-                        (SS.isEmpty() && TUK == TUK_Friend)
-                          ? LookupTagName : LookupOrdinaryName,
+                        (SS.isEmpty() && TUK == TagUseKind::Friend)
+                            ? LookupTagName
+                            : LookupOrdinaryName,
                         forRedeclarationInCurContext());
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
@@ -1896,11 +1899,11 @@ DeclResult Sema::CheckClassTemplate(
       // FIXME: Horrible, horrible hack! We can't currently represent this
       // in the AST, and historically we have just ignored such friend
       // class templates, so don't complain here.
-      Diag(NameLoc, TUK == TUK_Friend
+      Diag(NameLoc, TUK == TagUseKind::Friend
                         ? diag::warn_template_qualified_friend_ignored
                         : diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return TUK != TUK_Friend;
+      return TUK != TagUseKind::Friend;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -1915,7 +1918,7 @@ DeclResult Sema::CheckClassTemplate(
         Invalid = true;
     }
 
-    if (TUK != TUK_Friend && TUK != TUK_Reference)
+    if (TUK != TagUseKind::Friend && TUK != TagUseKind::Reference)
       diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
                                    /*TemplateId-*/ nullptr,
                                    /*IsMemberSpecialization*/ false);
@@ -1928,7 +1931,7 @@ DeclResult Sema::CheckClassTemplate(
     //   If T is the name of a class, then each of the following shall have a
     //   name different from T:
     //    -- every member template of class T
-    if (TUK != TUK_Friend &&
+    if (TUK != TagUseKind::Friend &&
         DiagnoseClassNameShadow(SemanticContext,
                                 DeclarationNameInfo(Name, NameLoc)))
       return true;
@@ -1970,7 +1973,7 @@ DeclResult Sema::CheckClassTemplate(
     }
   }
 
-  if (TUK == TUK_Friend) {
+  if (TUK == TagUseKind::Friend) {
     // C++ [namespace.memdef]p3:
     //   [...] When looking for a prior declaration of a class or a function
     //   declared as a friend, and when the name of the friend class or
@@ -2007,9 +2010,8 @@ DeclResult Sema::CheckClassTemplate(
           PrevDecl = (*Previous.begin())->getUnderlyingDecl();
       }
     }
-  } else if (PrevDecl &&
-             !isDeclInScope(Previous.getRepresentativeDecl(), SemanticContext,
-                            S, SS.isValid()))
+  } else if (PrevDecl && !isDeclInScope(Previous.getRepresentativeDecl(),
+                                        SemanticContext, S, SS.isValid()))
     PrevDecl = PrevClassTemplate = nullptr;
 
   if (auto *Shadow = dyn_cast_or_null<UsingShadowDecl>(
@@ -2031,7 +2033,7 @@ DeclResult Sema::CheckClassTemplate(
     // Ensure that the template parameter lists are compatible. Skip this check
     // for a friend in a dependent context: the template parameter list itself
     // could be dependent.
-    if (!(TUK == TUK_Friend && CurContext->isDependentContext()) &&
+    if (!(TUK == TagUseKind::Friend && CurContext->isDependentContext()) &&
         !TemplateParameterListsAreEqual(
             TemplateCompareNewDeclInfo(SemanticContext ? SemanticContext
                                                        : CurContext,
@@ -2047,8 +2049,8 @@ DeclResult Sema::CheckClassTemplate(
     //   the class-key shall agree in kind with the original class
     //   template declaration (7.1.5.3).
     RecordDecl *PrevRecordDecl = PrevClassTemplate->getTemplatedDecl();
-    if (!isAcceptableTagRedeclaration(PrevRecordDecl, Kind,
-                                      TUK == TUK_Definition,  KWLoc, Name)) {
+    if (!isAcceptableTagRedeclaration(
+            PrevRecordDecl, Kind, TUK == TagUseKind::Definition, KWLoc, Name)) {
       Diag(KWLoc, diag::err_use_with_wrong_tag)
         << Name
         << FixItHint::CreateReplacement(KWLoc, PrevRecordDecl->getKindName());
@@ -2057,7 +2059,7 @@ DeclResult Sema::CheckClassTemplate(
     }
 
     // Check for redefinition of this class template.
-    if (TUK == TUK_Definition) {
+    if (TUK == TagUseKind::Definition) {
       if (TagDecl *Def = PrevRecordDecl->getDefinition()) {
         // If we have a prior definition that is not visible, treat this as
         // simply making that previous definition visible.
@@ -2094,7 +2096,7 @@ DeclResult Sema::CheckClassTemplate(
   // merging in the template parameter list from the previous class
   // template declaration. Skip this check for a friend in a dependent
   // context, because the template parameter list might be dependent.
-  if (!(TUK == TUK_Friend && CurContext->isDependentContext()) &&
+  if (!(TUK == TagUseKind::Friend && CurContext->isDependentContext()) &&
       CheckTemplateParameterList(
           TemplateParams,
           PrevClassTemplate ? GetTemplateParameterList(PrevClassTemplate)
@@ -2102,8 +2104,8 @@ DeclResult Sema::CheckClassTemplate(
           (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
            SemanticContext->isDependentContext())
               ? TPC_ClassTemplateMember
-          : TUK == TUK_Friend ? TPC_FriendClassTemplate
-                              : TPC_ClassTemplate,
+          : TUK == TagUseKind::Friend ? TPC_FriendClassTemplate
+                                      : TPC_ClassTemplate,
           SkipBody))
     Invalid = true;
 
@@ -2111,9 +2113,10 @@ DeclResult Sema::CheckClassTemplate(
     // If the name of the template was qualified, we must be defining the
     // template out-of-line.
     if (!SS.isInvalid() && !Invalid && !PrevClassTemplate) {
-      Diag(NameLoc, TUK == TUK_Friend ? diag::err_friend_decl_does_not_match
-                                      : diag::err_member_decl_does_not_match)
-        << Name << SemanticContext << /*IsDefinition*/true << SS.getRange();
+      Diag(NameLoc, TUK == TagUseKind::Friend
+                        ? diag::err_friend_decl_does_not_match
+                        : diag::err_member_decl_does_not_match)
+          << Name << SemanticContext << /*IsDefinition*/ true << SS.getRange();
       Invalid = true;
     }
   }
@@ -2123,8 +2126,8 @@ DeclResult Sema::CheckClassTemplate(
   // recent declaration tricking the template instantiator to make substitutions
   // there.
   // FIXME: Figure out how to combine with shouldLinkDependentDeclWithPrevious
-  bool ShouldAddRedecl
-    = !(TUK == TUK_Friend && CurContext->isDependentContext());
+  bool ShouldAddRedecl =
+      !(TUK == TagUseKind::Friend && CurContext->isDependentContext());
 
   CXXRecordDecl *NewClass =
     CXXRecordDecl::Create(Context, Kind, SemanticContext, KWLoc, NameLoc, Name,
@@ -2139,7 +2142,7 @@ DeclResult Sema::CheckClassTemplate(
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
-  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
     AddAlignmentAttributesForRecord(NewClass);
     AddMsStructLayoutForRecord(NewClass);
   }
@@ -2170,14 +2173,15 @@ DeclResult Sema::CheckClassTemplate(
     PrevClassTemplate->setMemberSpecialization();
 
   // Set the access specifier.
-  if (!Invalid && TUK != TUK_Friend && NewTemplate->getDeclContext()->isRecord())
+  if (!Invalid && TUK != TagUseKind::Friend &&
+      NewTemplate->getDeclContext()->isRecord())
     SetMemberAccessSpecifier(NewTemplate, PrevClassTemplate, AS);
 
   // Set the lexical context of these templates
   NewClass->setLexicalDeclContext(CurContext);
   NewTemplate->setLexicalDeclContext(CurContext);
 
-  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip))
+  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
     NewClass->startDefinition();
 
   ProcessDeclAttributeList(S, NewClass, Attr);
@@ -2190,7 +2194,7 @@ DeclResult Sema::CheckClassTemplate(
   inferGslOwnerPointerAttribute(NewClass);
   inferNullableClassAttribute(NewClass);
 
-  if (TUK != TUK_Friend) {
+  if (TUK != TagUseKind::Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.
     Scope *Outer = S;
     while ((Outer->getFlags() & Scope::TemplateParamScope) != 0)
@@ -2344,11 +2348,11 @@ transformTemplateTypeParam(Sema &SemaRef, DeclContext *DC,
     SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
                                 /*EvaluateConstraint=*/true);
   if (TTP->hasDefaultArgument()) {
-    TypeSourceInfo *InstantiatedDefaultArg =
-        SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,
-                          TTP->getDefaultArgumentLoc(), TTP->getDeclName());
-    if (InstantiatedDefaultArg)
-      NewTTP->setDefaultArgument(InstantiatedDefaultArg);
+    TemplateArgumentLoc InstantiatedDefaultArg;
+    if (!SemaRef.SubstTemplateArgument(
+            TTP->getDefaultArgument(), Args, InstantiatedDefaultArg,
+            TTP->getDefaultArgumentLoc(), TTP->getDeclName()))
+      NewTTP->setDefaultArgument(SemaRef.Context, InstantiatedDefaultArg);
   }
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(TTP, NewTTP);
   return NewTTP;
@@ -3601,10 +3605,9 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
           = dyn_cast<TemplateTypeParmDecl>(*NewParam)) {
       // Check the presence of a default argument here.
       if (NewTypeParm->hasDefaultArgument() &&
-          DiagnoseDefaultTemplateArgument(*this, TPC,
-                                          NewTypeParm->getLocation(),
-               NewTypeParm->getDefaultArgumentInfo()->getTypeLoc()
-                                                       .getSourceRange()))
+          DiagnoseDefaultTemplateArgument(
+              *this, TPC, NewTypeParm->getLocation(),
+              NewTypeParm->getDefaultArgument().getSourceRange()))
         NewTypeParm->removeDefaultArgument();
 
       // Merge default arguments for template type parameters.
@@ -5041,7 +5044,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     IdentifierInfo *Id = D->getIdentifier();
     assert(Id && "templated class must have an identifier");
 
-    if (!isAcceptableTagRedeclaration(D, TagKind, TUK == TUK_Definition,
+    if (!isAcceptableTagRedeclaration(D, TagKind, TUK == TagUseKind::Definition,
                                       TagLoc, Id)) {
       Diag(TagLoc, diag::err_use_with_wrong_tag)
         << Result
@@ -6084,22 +6087,26 @@ bool Sema::CheckTemplateTypeArgument(
 ///
 /// \param Converted the list of template arguments provided for template
 /// parameters that precede \p Param in the template parameter list.
-/// \returns the substituted template argument, or NULL if an error occurred.
-static TypeSourceInfo *SubstDefaultTemplateArgument(
+///
+/// \param Output the resulting substituted template argument.
+///
+/// \returns true if an error occurred.
+static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, TemplateTypeParmDecl *Param,
     ArrayRef<TemplateArgument> SugaredConverted,
-    ArrayRef<TemplateArgument> CanonicalConverted) {
-  TypeSourceInfo *ArgType = Param->getDefaultArgumentInfo();
+    ArrayRef<TemplateArgument> CanonicalConverted,
+    TemplateArgumentLoc &Output) {
+  Output = Param->getDefaultArgument();
 
   // If the argument type is dependent, instantiate it now based
   // on the previously-computed template arguments.
-  if (ArgType->getType()->isInstantiationDependentType()) {
+  if (Output.getArgument().isInstantiationDependent()) {
     Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Param, Template,
                                      SugaredConverted,
                                      SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
-      return nullptr;
+      return true;
 
     // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists(Template, SugaredConverted,
@@ -6112,12 +6119,14 @@ static TypeSourceInfo *SubstDefaultTemplateArgument(
       ForLambdaCallOperator = Rec->isLambda();
     Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext(),
                                    !ForLambdaCallOperator);
-    ArgType =
-        SemaRef.SubstType(ArgType, TemplateArgLists,
-                          Param->getDefaultArgumentLoc(), Param->getDeclName());
+
+    if (SemaRef.SubstTemplateArgument(Output, TemplateArgLists, Output,
+                                      Param->getDefaultArgumentLoc(),
+                                      Param->getDeclName()))
+      return true;
   }
 
-  return ArgType;
+  return false;
 }
 
 /// Substitute template arguments into the default template argument for
@@ -6240,13 +6249,12 @@ TemplateArgumentLoc Sema::SubstDefaultTemplateArgumentIfAvailable(
       return TemplateArgumentLoc();
 
     HasDefaultArg = true;
-    TypeSourceInfo *DI = SubstDefaultTemplateArgument(
-        *this, Template, TemplateLoc, RAngleLoc, TypeParm, SugaredConverted,
-        CanonicalConverted);
-    if (DI)
-      return TemplateArgumentLoc(TemplateArgument(DI->getType()), DI);
-
-    return TemplateArgumentLoc();
+    TemplateArgumentLoc Output;
+    if (SubstDefaultTemplateArgument(*this, Template, TemplateLoc, RAngleLoc,
+                                     TypeParm, SugaredConverted,
+                                     CanonicalConverted, Output))
+      return TemplateArgumentLoc();
+    return Output;
   }
 
   if (NonTypeTemplateParmDecl *NonTypeParm
@@ -6829,14 +6837,10 @@ bool Sema::CheckTemplateArgumentList(
         return diagnoseMissingArgument(*this, TemplateLoc, Template, TTP,
                                        NewArgs);
 
-      TypeSourceInfo *ArgType = SubstDefaultTemplateArgument(
-          *this, Template, TemplateLoc, RAngleLoc, TTP, SugaredConverted,
-          CanonicalConverted);
-      if (!ArgType)
+      if (SubstDefaultTemplateArgument(*this, Template, TemplateLoc, RAngleLoc,
+                                       TTP, SugaredConverted,
+                                       CanonicalConverted, Arg))
         return true;
-
-      Arg = TemplateArgumentLoc(TemplateArgument(ArgType->getType()),
-                                ArgType);
     } else if (NonTypeTemplateParmDecl *NTTP
                  = dyn_cast<NonTypeTemplateParmDecl>(*Param)) {
       if (!hasReachableDefaultArgument(NTTP))
@@ -9495,7 +9499,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     SourceLocation ModulePrivateLoc, CXXScopeSpec &SS,
     TemplateIdAnnotation &TemplateId, const ParsedAttributesView &Attr,
     MultiTemplateParamsArg TemplateParameterLists, SkipBodyInfo *SkipBody) {
-  assert(TUK != TUK_Reference && "References are not specializations");
+  assert(TUK != TagUseKind::Reference && "References are not specializations");
 
   SourceLocation TemplateNameLoc = TemplateId.TemplateNameLoc;
   SourceLocation LAngleLoc = TemplateId.LAngleLoc;
@@ -9517,7 +9521,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   bool isPartialSpecialization = false;
 
   if (SS.isSet()) {
-    if (TUK != TUK_Reference && TUK != TUK_Friend &&
+    if (TUK != TagUseKind::Reference && TUK != TagUseKind::Friend &&
         diagnoseQualifiedDeclaration(SS, ClassTemplate->getDeclContext(),
                                      ClassTemplate->getDeclName(),
                                      TemplateNameLoc, &TemplateId,
@@ -9532,9 +9536,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   bool Invalid = false;
   TemplateParameterList *TemplateParams =
       MatchTemplateParametersToScopeSpecifier(
-          KWLoc, TemplateNameLoc, SS, &TemplateId,
-          TemplateParameterLists, TUK == TUK_Friend, isMemberSpecialization,
-          Invalid);
+          KWLoc, TemplateNameLoc, SS, &TemplateId, TemplateParameterLists,
+          TUK == TagUseKind::Friend, isMemberSpecialization, Invalid);
   if (Invalid)
     return true;
 
@@ -9545,7 +9548,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   if (TemplateParams && TemplateParams->size() > 0) {
     isPartialSpecialization = true;
 
-    if (TUK == TUK_Friend) {
+    if (TUK == TagUseKind::Friend) {
       Diag(KWLoc, diag::err_partial_specialization_friend)
         << SourceRange(LAngleLoc, RAngleLoc);
       return true;
@@ -9581,14 +9584,15 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       }
     }
   } else if (TemplateParams) {
-    if (TUK == TUK_Friend)
+    if (TUK == TagUseKind::Friend)
       Diag(KWLoc, diag::err_template_spec_friend)
         << FixItHint::CreateRemoval(
                                 SourceRange(TemplateParams->getTemplateLoc(),
                                             TemplateParams->getRAngleLoc()))
         << SourceRange(LAngleLoc, RAngleLoc);
   } else {
-    assert(TUK == TUK_Friend && "should have a 'template<>' for this decl");
+    assert(TUK == TagUseKind::Friend &&
+           "should have a 'template<>' for this decl");
   }
 
   // Check that the specialization uses the same tag kind as the
@@ -9596,8 +9600,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
   assert(Kind != TagTypeKind::Enum &&
          "Invalid enum tag in class template spec!");
-  if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(),
-                                    Kind, TUK == TUK_Definition, KWLoc,
+  if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(), Kind,
+                                    TUK == TagUseKind::Definition, KWLoc,
                                     ClassTemplate->getIdentifier())) {
     Diag(KWLoc, diag::err_use_with_wrong_tag)
       << ClassTemplate
@@ -9661,7 +9665,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   // Check whether we can declare a class template specialization in
   // the current scope.
-  if (TUK != TUK_Friend &&
+  if (TUK != TagUseKind::Friend &&
       CheckTemplateSpecializationScope(*this, ClassTemplate, PrevDecl,
                                        TemplateNameLoc,
                                        isPartialSpecialization))
@@ -9688,8 +9692,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       // This rule has since been removed, because it's redundant given DR1495,
       // but we keep it because it produces better diagnostics and recovery.
       Diag(TemplateNameLoc, diag::err_partial_spec_args_match_primary_template)
-        << /*class template*/0 << (TUK == TUK_Definition)
-        << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
+          << /*class template*/ 0 << (TUK == TagUseKind::Definition)
+          << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
       return CheckClassTemplate(S, TagSpec, TUK, KWLoc, SS,
                                 ClassTemplate->getIdentifier(),
                                 TemplateNameLoc,
@@ -9781,11 +9785,11 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   }
 
   // If this is not a friend, note that this is an explicit specialization.
-  if (TUK != TUK_Friend)
+  if (TUK != TagUseKind::Friend)
     Specialization->setSpecializationKind(TSK_ExplicitSpecialization);
 
   // Check that this isn't a redefinition of this specialization.
-  if (TUK == TUK_Definition) {
+  if (TUK == TagUseKind::Definition) {
     RecordDecl *Def = Specialization->getDefinition();
     NamedDecl *Hidden = nullptr;
     if (Def && SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
@@ -9806,7 +9810,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
-  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
     AddAlignmentAttributesForRecord(Specialization);
     AddMsStructLayoutForRecord(Specialization);
   }
@@ -9827,10 +9831,10 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   Specialization->setLexicalDeclContext(CurContext);
 
   // We may be starting the definition of this specialization.
-  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip))
+  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
     Specialization->startDefinition();
 
-  if (TUK == TUK_Friend) {
+  if (TUK == TagUseKind::Friend) {
     // Build the fully-sugared type for this class template
     // specialization as the user wrote in the specialization
     // itself. This means that we'll pretty-print the type retrieved
@@ -11199,11 +11203,13 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
 
   bool Owned = false;
   bool IsDependent = false;
-  Decl *TagD = ActOnTag(S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name,
-               NameLoc, Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
+  Decl *TagD =
+      ActOnTag(S, TagSpec, TagUseKind::Reference, KWLoc, SS, Name, NameLoc,
+               Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside).get();
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside)
+          .get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
@@ -11733,9 +11739,9 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
-  if (TUK == TUK_Declaration || TUK == TUK_Definition) {
+  if (TUK == TagUseKind::Declaration || TUK == TagUseKind::Definition) {
     Diag(NameLoc, diag::err_dependent_tag_decl)
-        << (TUK == TUK_Definition) << llvm::to_underlying(Kind)
+        << (TUK == TagUseKind::Definition) << llvm::to_underlying(Kind)
         << SS.getRange();
     return true;
   }
