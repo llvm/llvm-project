@@ -7966,6 +7966,10 @@ void BoUpSLP::transformNodes() {
     TreeEntry &E = *TE.get();
     switch (E.getOpcode()) {
     case Instruction::Load: {
+      // No need to reorder masked gather loads, just reorder the scalar
+      // operands.
+      if (E.State != TreeEntry::Vectorize)
+        break;
       Type *ScalarTy = E.getMainOp()->getType();
       auto *VecTy = FixedVectorType::get(ScalarTy, E.Scalars.size());
       Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
