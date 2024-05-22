@@ -349,6 +349,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .widenScalarToNextPow2(0);
   }
 
+  // TODO: Use libcall for sDoubleXLen.
+  getActionDefinitionsBuilder({G_UDIVREM, G_SDIVREM}).lower();
+
   auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
   if (ST.hasStdExtZbb())
     AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
