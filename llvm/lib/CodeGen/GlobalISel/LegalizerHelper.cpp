@@ -7975,9 +7975,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
   auto [Dst, Src] = MI.getFirst2Regs();
   const LLT Ty = MRI.getType(Src);
-  // FIXME: It should be getScalarSizeInBits. Please fix this when vector
-  // support is complete.
-  unsigned Size = Ty.getSizeInBits();
+  unsigned Size = Ty.getScalarSizeInBits();
 
   if (Size >= 8) {
     MachineInstrBuilder BSWAP =
