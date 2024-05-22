@@ -398,9 +398,10 @@ public:
   /// 'indvars' pass if the loop can deleted. Those debug users will be used
   /// by the 'loop-delete' pass.
   void preserveDebugInductionVariableInfo(
-      Value *FinalValue, SmallVector<DbgVariableIntrinsic *> DbgUsers) {
+      Value *FinalValue,
+      const SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
     IndVarFinalValue = FinalValue;
-    for (DbgVariableIntrinsic *DebugUser : DbgUsers)
+    for (auto &DebugUser : DbgUsers)
       IndVarDebugUsers.push_back(DebugUser);
   }
 
