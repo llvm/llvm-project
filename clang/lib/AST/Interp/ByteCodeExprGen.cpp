@@ -1061,6 +1061,10 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
              R->getField(InitIndex)->Decl->isUnnamedBitField())
         ++InitIndex;
 
+      // Potentially skip ahead. This is especially relevant in unions.
+      if (const auto *D = dyn_cast<CXXDefaultInitExpr>(Init))
+        InitIndex = D->getField()->getFieldIndex();
+
       if (!this->emitDupPtr(E))
         return false;
 
