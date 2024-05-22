@@ -906,9 +906,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   }
 
   // (X * 0.0) * constant => X * 0.0
-  Constant *C1;
-  if (match(Op0, m_FMul(m_Value(X), m_Constant(C1))) &&
-      match(C1, m_AnyZeroFP()) && match(Op1, m_Constant(C))) {
+  if (match(Op0, m_FMul(m_Value(X), m_AnyZeroFP())) &&
+      match(Op1, m_Constant(C))) {
+    Constant *C1 = cast<Constant>(cast<Instruction>(Op0)->getOperand(1));
     if (Constant *CC1 =
             ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
       return BinaryOperator::CreateFMulFMF(X, CC1, I.getFastMathFlags());
