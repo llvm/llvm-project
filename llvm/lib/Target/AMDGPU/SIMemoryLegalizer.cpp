@@ -683,7 +683,6 @@ public:
 static const StringMap<SIAtomicAddrSpace> ASNames = {{
     {"global", SIAtomicAddrSpace::GLOBAL},
     {"local", SIAtomicAddrSpace::LDS},
-    {"image", SIAtomicAddrSpace::SCRATCH},
 }};
 
 void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {

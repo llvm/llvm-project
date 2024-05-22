@@ -74,40 +74,38 @@ void test_global() {
 // CHECK-LABEL: define dso_local void @_Z10test_imagev(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5:![0-9]+]]
-// CHECK-NEXT:    fence syncscope("agent") acquire, !mmra [[META5]]
-// CHECK-NEXT:    fence seq_cst, !mmra [[META5]]
-// CHECK-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META5]]
-// CHECK-NEXT:    fence syncscope("workgroup") release, !mmra [[META5]]
+// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3]]
+// CHECK-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
+// CHECK-NEXT:    fence seq_cst, !mmra [[META3]]
+// CHECK-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
+// CHECK-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
 // CHECK-NEXT:    ret void
 //
 void test_image() {
-  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image");
+  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local");
 
-  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent", "image");
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent", "local");
 
-  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "", "image");
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "", "local");
 
-  __builtin_amdgcn_fence(4, "agent", "image");
+  __builtin_amdgcn_fence(4, "agent", "local");
 
-  __builtin_amdgcn_fence(3, "workgroup", "image");
+  __builtin_amdgcn_fence(3, "workgroup", "local");
 }
 
 // CHECK-LABEL: define dso_local void @_Z10test_mixedv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META6:![0-9]+]]
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META7:![0-9]+]]
+// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5:![0-9]+]]
+// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5]]
 // CHECK-NEXT:    ret void
 //
 void test_mixed() {
-  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image", "global");
-  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image", "local", "global", "image", "image");
+  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "global");
+  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "local", "global", "local", "local");
 }
 //.
 // CHECK: [[META3]] = !{!"amdgpu-as", !"local"}
 // CHECK: [[META4]] = !{!"amdgpu-as", !"global"}
-// CHECK: [[META5]] = !{!"amdgpu-as", !"image"}
-// CHECK: [[META6]] = !{[[META4]], [[META5]]}
-// CHECK: [[META7]] = !{[[META4]], [[META5]], [[META3]]}
+// CHECK: [[META5]] = !{[[META4]], [[META3]]}
 //.

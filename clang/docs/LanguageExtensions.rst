@@ -4425,11 +4425,10 @@ __builtin_amdgcn_fence
 * ``const char *`` synchronization scope, e.g. ``workgroup``
 * Zero or more ``const char *`` address spaces names.
 
-The address spaces arguments must be string literals with known values, such as:
+The address spaces arguments must be one of the following string literals:
 
 * ``"local"``
 * ``"global"``
-* ``"image"``
 
 If one or more address space name are provided, the code generator will attempt
 to emit potentially faster instructions that order access to at least those
