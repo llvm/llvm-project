@@ -571,18 +571,19 @@ namespace UnspecifiedRelations {
   // [expr.rel]p3: Pointers to void can be compared [...] if both pointers
   // represent the same address or are both the null pointer [...]; otherwise
   // the result is unspecified.
+  // Same address restriction removed by CWG2749
   struct S { int a, b; } s;
   constexpr void *null = 0;
   constexpr void *pv = (void*)&s.a;
   constexpr void *qv = (void*)&s.b;
   constexpr bool v1 = null < (int*)0;
   constexpr bool v2 = null < pv; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
-  constexpr bool v3 = null == pv; // ok
-  constexpr bool v4 = qv == pv; // ok
-  constexpr bool v5 = qv >= pv; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
+  constexpr bool v3 = null == pv;
+  constexpr bool v4 = qv == pv;
+  constexpr bool v5 = qv >= pv;
   constexpr bool v6 = qv > null; // expected-error {{constant expression}} expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
-  constexpr bool v7 = qv <= (void*)&s.b; // ok
-  constexpr bool v8 = qv > (void*)&s.a; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
+  constexpr bool v7 = qv <= (void*)&s.b;
+  constexpr bool v8 = qv > (void*)&s.a;
 }
 
 // - an assignment or a compound assignment (5.17); or

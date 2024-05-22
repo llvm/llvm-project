@@ -148,8 +148,6 @@ def note_constexpr_var_init_weak : Note<
 def note_constexpr_typeid_polymorphic : Note<
   "typeid applied to expression of polymorphic type %0 is "
   "not allowed in a constant expression in C++ standards before C++20">;
-def note_constexpr_void_comparison : Note<
-  "comparison between unequal pointers to void has unspecified result">;
 def note_constexpr_temporary_here : Note<"temporary created here">;
 def note_constexpr_dynamic_alloc_here : Note<"heap allocation performed here">;
 def note_constexpr_conditional_never_const : Note<

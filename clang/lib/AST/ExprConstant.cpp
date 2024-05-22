@@ -13627,16 +13627,6 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
     SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
 
-    // C++11 [expr.rel]p3:
-    //   Pointers to void (after pointer conversions) can be compared, with a
-    //   result defined as follows: If both pointers represent the same
-    //   address or are both the null pointer value, the result is true if the
-    //   operator is <= or >= and false otherwise; otherwise the result is
-    //   unspecified.
-    // We interpret this as applying to pointers to *cv* void.
-    if (LHSTy->isVoidPointerType() && LHSOffset != RHSOffset && IsRelational)
-      Info.CCEDiag(E, diag::note_constexpr_void_comparison);
-
     // C++11 [expr.rel]p2:
     // - If two pointers point to non-static data members of the same object,
     //   or to subobjects or array elements fo such members, recursively, the

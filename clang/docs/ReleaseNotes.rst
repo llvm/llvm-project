@@ -237,6 +237,10 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
+- Clang now allows comparing unequal object pointers that have been cast to ``void *``
+  in constant expressions. These comparisons always worked in non-constant expressions.
+  (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
+
 C Language Changes
 ------------------
 

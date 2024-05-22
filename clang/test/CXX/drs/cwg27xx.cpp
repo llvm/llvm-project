@@ -1,10 +1,22 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -Wgnu-folding-constant -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -verify=expected,since-cxx23 %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify=expected,since-cxx23,since-cxx26 %s
+
+namespace std {
+#if __cplusplus >= 202002L
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less{-1},
+      strong_ordering::equal{0}, strong_ordering::greater{1};
+#endif
+}
 
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
@@ -17,6 +29,38 @@ void f(B b) {
 
 struct D : B {};
 } // namespace cwg2718
+
+namespace cwg2749 { // cwg2749: 19
+
+extern int x[2];
+struct Y {
+  int i;
+  int j;
+};
+extern Y y[2];
+
+#if __cplusplus >= 201103L
+static_assert(static_cast<void*>(x + 0) < static_cast<void*>(x + 1), "");
+static_assert(static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j), "");
+static_assert(static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i), "");
+#else
+enum X {
+  a = static_cast<void*>(x + 0) < static_cast<void*>(x + 1),
+// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
+  b = static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j),
+// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
+  c = static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i)
+// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
+};
+#endif
+
+#if __cplusplus >= 202002L
+static_assert((static_cast<void*>(x + 0) <=> static_cast<void*>(x + 1)) == std::strong_ordering::less);
+static_assert((static_cast<void*>(&y[0].i) <=> static_cast<void*>(&y[0].j)) == std::strong_ordering::less);
+static_assert((static_cast<void*>(&y[0].j) <=> static_cast<void*>(&y[1].i)) == std::strong_ordering::less);
+#endif
+
+} // namespace cwg2749
 
 namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L
