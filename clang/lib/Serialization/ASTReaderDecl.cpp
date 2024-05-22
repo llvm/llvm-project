@@ -2697,7 +2697,8 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (Record.readInt())
-    D->setDefaultArgument(readTypeSourceInfo());
+    D->setDefaultArgument(Reader.getContext(),
+                          Record.readTemplateArgumentLoc());
 }
 
 void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
