@@ -25,7 +25,7 @@ class TestSwiftGenericFunction(lldbtest.TestBase):
         stream = lldb.SBStream()
         bkpt.GetLocationAtIndex(0).GetDescription(stream, 1)
         desc = stream.GetData()
-        self.assertIn("C.f<T>(T, U) -> ()", desc)
+        self.assertIn("C.f<T>(_:_:)", desc)
 
         # Demangling only:
         fs = target.FindFunctions("f")
