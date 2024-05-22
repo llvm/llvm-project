@@ -174,12 +174,6 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.pathconf
 )
 
-add_object_library(
-  pathconf_utils
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.pathconf_utils
-)
 
 add_entrypoint_object(
   pipe

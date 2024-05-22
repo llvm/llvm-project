@@ -13,10 +13,10 @@
 
 namespace LIBC_NAMESPACE {
 
-LIBC_INLINE long filesizebits(const struct statfs &s);
-LIBC_INLINE long link_max(const struct statfs &s);
-LIBC_INLINE long _2_symlinks(const struct statfs &s);
-LIBC_INLINE long pathconfig(const struct fstatfs &s, int name);
+long filesizebits(const struct statfs &s);
+long link_max(const struct statfs &s);
+long _2_symlinks(const struct statfs &s);
+long pathconfig(const struct fstatfs &s, int name);
 
 } // namespace LIBC_NAMESPACE
 

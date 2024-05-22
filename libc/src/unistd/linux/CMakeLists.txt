@@ -290,7 +290,7 @@ add_entrypoint_object(
 add_entrypoint_object(
   pathconf
   SRCS
-  pathconf.cpp
+    pathconf.cpp
   HDRS
     ../pathconf.h
   DEPENDS
@@ -301,10 +301,10 @@ add_entrypoint_object(
     libc.src.unistd.pathconf_utils
 )
 
-add_header_library(
+add_object_library(
   pathconf_utils
   SRCS
-  pathconf_utils.cpp
+    pathconf_utils.cpp
   HDRS
     ../pathconf_utils.h
   DEPENDS
