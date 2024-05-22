@@ -149,6 +149,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -431,7 +437,8 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
-   FeatureMinimum3Maximum3F32
+   FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3PKF16
    ]
 >;
 
@@ -2035,6 +2042,10 @@ def HasMinimum3Maximum3F32 :
 def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
 
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
