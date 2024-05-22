@@ -1252,9 +1252,25 @@ private:
     serialiseString(toString(C));
   }
 
+  void serialiseConstantNullPtr(ConstantPointerNull *NP) {
+    // `Const` discriminator:
+    OutStreamer.emitInt8(ConstKindVal);
+    // ty_idx:
+    OutStreamer.emitSizeT(typeIndex(NP->getType()));
+    // num_bytes:
+    DataLayout DL(&M);
+    assert(DL.getPointerSize(NP->getType()->getAddressSpace()) ==
+           sizeof(size_t));
+    OutStreamer.emitSizeT(sizeof(size_t));
+    // bytes:
+    OutStreamer.emitSizeT(0);
+  }
+
   void serialiseConstant(Constant *C) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
       serialiseConstantInt(CI);
+    } else if (ConstantPointerNull *NP = dyn_cast<ConstantPointerNull>(C)) {
+      serialiseConstantNullPtr(NP);
     } else {
       serialiseUnimplementedConstant(C);
     }
