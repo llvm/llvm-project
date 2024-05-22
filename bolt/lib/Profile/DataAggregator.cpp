@@ -613,8 +613,6 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    PrintProgramStats PPS(BAT);
-    BC.logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(BC));
   }
 
   return Error::success();
