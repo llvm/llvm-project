@@ -93,10 +93,10 @@ class BitstreamWriter {
 
   /// If the related file stream supports reading, seeking and writing, flush
   /// the buffer if its size is above a threshold.
-  void FlushToFile() {
-    if (!FS)
+  void FlushToFile(bool OnClosing = false) {
+    if (!FS || Out.empty())
       return;
-    if (Out.size() < FlushThreshold)
+    if (!OnClosing && Out.size() < FlushThreshold)
       return;
     FS->write((char *)&Out.front(), Out.size());
     Out.clear();
@@ -104,20 +104,28 @@ class BitstreamWriter {
 
 public:
   /// Create a BitstreamWriter that writes to Buffer \p O.
+  /// The buffer is flushed incrementally to a raw_fd_stream \p FS, if provided.
   ///
-  /// \p FS is the file stream that \p O flushes to incrementally. If \p FS is
-  /// null, \p O does not flush incrementially, but writes to disk at the end.
+  /// Flushing to FS happens:
+  ///  - at \ref ExitBlock, and only if \O.size() >= \p FlushThreshold (MB)
+  ///  - unconditionally at the BitstreamWriter destruction.
   ///
-  /// \p FlushThreshold is the threshold (unit M) to flush \p O if \p FS is
-  /// valid. Flushing only occurs at (sub)block boundaries.
+  /// NOTES:
+  ///  - \p FlushThreshold's unit is MB.
+  ///  - The provided buffer will always be resized as needed. Its initial size
+  ///    has no bearing on flushing behavior (if \p FS is provided).
+  ///  - \p FS is expected to support seek, tell, and read (besides write).
+  ///   The BitstreamWriter makes no attempt to pre-validate FS, meaning errors
+  ///   stemming from an unsupported \p FS will happen during writing.
   BitstreamWriter(SmallVectorImpl<char> &O, raw_fd_stream *FS = nullptr,
                   uint32_t FlushThreshold = 512)
-      : Out(O), FS(FS), FlushThreshold(uint64_t(FlushThreshold) << 20), CurBit(0),
-        CurValue(0), CurCodeSize(2) {}
+      : Out(O), FS(FS), FlushThreshold(uint64_t(FlushThreshold) << 20),
+        CurBit(0), CurValue(0), CurCodeSize(2) {}
 
   ~BitstreamWriter() {
-    assert(CurBit == 0 && "Unflushed data remaining");
+    FlushToWord();
     assert(BlockScope.empty() && CurAbbrevs.empty() && "Block imbalance");
+    FlushToFile(/*OnClosing=*/true);
   }
 
   /// Retrieve the current position in the stream, in bits.
