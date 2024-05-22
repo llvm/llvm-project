@@ -2982,12 +2982,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
       bool IsStore = isa<GStore>(I);
       unsigned NewOpc;
-      if (ValTy.isScalableVector()) {
+      if (ValTy.isScalableVector())
         NewOpc = selectLoadStoreSVEOp(I.getOpcode(),
                                       ValTy.getElementType().getSizeInBits());
-      } else {
+      else
         NewOpc = selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
-      }
+
       if (NewOpc == I.getOpcode())
         return nullptr;
 
