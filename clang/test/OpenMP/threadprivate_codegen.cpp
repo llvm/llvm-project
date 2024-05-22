@@ -3648,24 +3648,26 @@ int foobar() {
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTWN6Static1sE
 // CHECK-TLS1-SAME: () #[[ATTR5]] comdat {
-// CHECK-TLS1-NEXT:    br i1 icmp ne (ptr @_ZTHN6Static1sE, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS1:       1:
-// CHECK-TLS1-NEXT:    call void @_ZTHN6Static1sE()
-// CHECK-TLS1-NEXT:    br label [[TMP2]]
+// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTHN6Static1sE, null
+// CHECK-TLS1-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS1:       2:
-// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
-// CHECK-TLS1-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS1-NEXT:    call void @_ZTHN6Static1sE()
+// CHECK-TLS1-NEXT:    br label [[TMP3]]
+// CHECK-TLS1:       3:
+// CHECK-TLS1-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
+// CHECK-TLS1-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTW3gs3
 // CHECK-TLS1-SAME: () #[[ATTR5]] comdat {
-// CHECK-TLS1-NEXT:    br i1 icmp ne (ptr @_ZTH3gs3, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS1:       1:
-// CHECK-TLS1-NEXT:    call void @_ZTH3gs3()
-// CHECK-TLS1-NEXT:    br label [[TMP2]]
+// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTH3gs3, null
+// CHECK-TLS1-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS1:       2:
-// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
-// CHECK-TLS1-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS1-NEXT:    call void @_ZTH3gs3()
+// CHECK-TLS1-NEXT:    br label [[TMP3]]
+// CHECK-TLS1:       3:
+// CHECK-TLS1-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
+// CHECK-TLS1-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTW5arr_x
@@ -3950,24 +3952,26 @@ int foobar() {
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTWN6Static1sE
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
-// CHECK-TLS2-NEXT:    br i1 icmp ne (ptr @_ZTHN6Static1sE, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS2:       1:
-// CHECK-TLS2-NEXT:    call void @_ZTHN6Static1sE()
-// CHECK-TLS2-NEXT:    br label [[TMP2]]
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTHN6Static1sE, null
+// CHECK-TLS2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS2:       2:
-// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
-// CHECK-TLS2-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS2-NEXT:    call void @_ZTHN6Static1sE()
+// CHECK-TLS2-NEXT:    br label [[TMP3]]
+// CHECK-TLS2:       3:
+// CHECK-TLS2-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
+// CHECK-TLS2-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTW3gs3
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
-// CHECK-TLS2-NEXT:    br i1 icmp ne (ptr @_ZTH3gs3, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS2:       1:
-// CHECK-TLS2-NEXT:    call void @_ZTH3gs3()
-// CHECK-TLS2-NEXT:    br label [[TMP2]]
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTH3gs3, null
+// CHECK-TLS2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS2:       2:
-// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
-// CHECK-TLS2-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS2-NEXT:    call void @_ZTH3gs3()
+// CHECK-TLS2-NEXT:    br label [[TMP3]]
+// CHECK-TLS2:       3:
+// CHECK-TLS2-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
+// CHECK-TLS2-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTW5arr_x
@@ -4723,24 +4727,26 @@ int foobar() {
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTWN6Static1sE
 // CHECK-TLS3-SAME: () #[[ATTR6]] comdat {
-// CHECK-TLS3-NEXT:    br i1 icmp ne (ptr @_ZTHN6Static1sE, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS3:       1:
-// CHECK-TLS3-NEXT:    call void @_ZTHN6Static1sE()
-// CHECK-TLS3-NEXT:    br label [[TMP2]]
+// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTHN6Static1sE, null
+// CHECK-TLS3-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS3:       2:
-// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
-// CHECK-TLS3-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS3-NEXT:    call void @_ZTHN6Static1sE()
+// CHECK-TLS3-NEXT:    br label [[TMP3]]
+// CHECK-TLS3:       3:
+// CHECK-TLS3-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
+// CHECK-TLS3-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTW3gs3
 // CHECK-TLS3-SAME: () #[[ATTR6]] comdat {
-// CHECK-TLS3-NEXT:    br i1 icmp ne (ptr @_ZTH3gs3, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS3:       1:
-// CHECK-TLS3-NEXT:    call void @_ZTH3gs3()
-// CHECK-TLS3-NEXT:    br label [[TMP2]]
+// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTH3gs3, null
+// CHECK-TLS3-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS3:       2:
-// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
-// CHECK-TLS3-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS3-NEXT:    call void @_ZTH3gs3()
+// CHECK-TLS3-NEXT:    br label [[TMP3]]
+// CHECK-TLS3:       3:
+// CHECK-TLS3-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
+// CHECK-TLS3-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTW5arr_x
@@ -5039,24 +5045,26 @@ int foobar() {
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTWN6Static1sE
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
-// CHECK-TLS4-NEXT:    br i1 icmp ne (ptr @_ZTHN6Static1sE, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS4:       1:
-// CHECK-TLS4-NEXT:    call void @_ZTHN6Static1sE()
-// CHECK-TLS4-NEXT:    br label [[TMP2]]
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTHN6Static1sE, null
+// CHECK-TLS4-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS4:       2:
-// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
-// CHECK-TLS4-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS4-NEXT:    call void @_ZTHN6Static1sE()
+// CHECK-TLS4-NEXT:    br label [[TMP3]]
+// CHECK-TLS4:       3:
+// CHECK-TLS4-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN6Static1sE)
+// CHECK-TLS4-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTW3gs3
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
-// CHECK-TLS4-NEXT:    br i1 icmp ne (ptr @_ZTH3gs3, ptr null), label [[TMP1:%.*]], label [[TMP2:%.*]]
-// CHECK-TLS4:       1:
-// CHECK-TLS4-NEXT:    call void @_ZTH3gs3()
-// CHECK-TLS4-NEXT:    br label [[TMP2]]
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = icmp ne ptr @_ZTH3gs3, null
+// CHECK-TLS4-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 // CHECK-TLS4:       2:
-// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
-// CHECK-TLS4-NEXT:    ret ptr [[TMP3]]
+// CHECK-TLS4-NEXT:    call void @_ZTH3gs3()
+// CHECK-TLS4-NEXT:    br label [[TMP3]]
+// CHECK-TLS4:       3:
+// CHECK-TLS4-NEXT:    [[TMP4:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @gs3)
+// CHECK-TLS4-NEXT:    ret ptr [[TMP4]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTW5arr_x
