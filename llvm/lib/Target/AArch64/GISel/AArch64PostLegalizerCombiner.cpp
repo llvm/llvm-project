@@ -309,7 +309,9 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!Store.isSimple())
     return false;
   LLT ValTy = MRI.getType(Store.getValueReg());
-  if (!ValTy.isVector() || ValTy.getSizeInBits().getKnownMinValue() != 128)
+  if (ValTy.isScalableVector())
+    return false;
+  if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
   if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
     return false; // Don't split truncating stores.
