@@ -11,6 +11,13 @@ int nl_var [[clang::nonblocking]]; // expected-warning {{'nonblocking' only appl
 struct nl_struct {} [[clang::nonblocking]]; // expected-warning {{attribute 'nonblocking' is ignored, place it after "struct" to apply attribute to type declaration}}
 struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'nonblocking' attribute cannot be applied to a declaration}}
 
+// Positive case
+typedef void (*fo)() [[clang::nonblocking]];
+void (*read_me_and_weep(
+  int val, void (*func)(int) [[clang::nonblocking]])
+  [[clang::nonblocking]]) (int)
+  [[clang::nonblocking]];
+
 // --- ATTRIBUTE SYNTAX: ARGUMENT COUNT ---
 void nargs_1() [[clang::nonblocking(1, 2)]];  // expected-error {{'nonblocking' attribute takes no more than 1 argument}}
 void nargs_2() [[clang::nonallocating(1, 2)]]; // expected-error {{'nonallocating' attribute takes no more than 1 argument}}
