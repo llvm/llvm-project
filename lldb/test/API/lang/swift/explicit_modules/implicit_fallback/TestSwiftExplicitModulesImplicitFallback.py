@@ -7,7 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(lldbtest.TestBase):
     @swiftTest
-    @skipIf(oslist=["linux"], bugnumber="rdar://124691219")
     def test_missing_explicit_modules(self):
         """Test missing explicit Swift modules and fallback to implicit modules."""
         self.build()
