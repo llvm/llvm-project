@@ -474,33 +474,19 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
 
 namespace {
 
-struct FuncOpConversionBase : public ConvertOpToLLVMPattern<func::FuncOp> {
-protected:
-  using ConvertOpToLLVMPattern<func::FuncOp>::ConvertOpToLLVMPattern;
-
-  // Convert input FuncOp to LLVMFuncOp by using the LLVMTypeConverter provided
-  // to this legalization pattern.
-  FailureOr<LLVM::LLVMFuncOp>
-  convertFuncOpToLLVMFuncOp(func::FuncOp funcOp,
-                            ConversionPatternRewriter &rewriter) const {
-    return mlir::convertFuncOpToLLVMFuncOp(
-        cast<FunctionOpInterface>(funcOp.getOperation()), rewriter,
-        *getTypeConverter());
-  }
-};
-
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
-struct FuncOpConversion : public FuncOpConversionBase {
+struct FuncOpConversion : public ConvertOpToLLVMPattern<func::FuncOp> {
   FuncOpConversion(const LLVMTypeConverter &converter)
-      : FuncOpConversionBase(converter) {}
+      : ConvertOpToLLVMPattern(converter) {}
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    FailureOr<LLVM::LLVMFuncOp> newFuncOp =
-        convertFuncOpToLLVMFuncOp(funcOp, rewriter);
+    FailureOr<LLVM::LLVMFuncOp> newFuncOp = mlir::convertFuncOpToLLVMFuncOp(
+        cast<FunctionOpInterface>(funcOp.getOperation()), rewriter,
+        *getTypeConverter());
     if (failed(newFuncOp))
       return rewriter.notifyMatchFailure(funcOp, "Could not convert funcop");
 

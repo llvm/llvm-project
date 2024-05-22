@@ -9,14 +9,36 @@
 #include "TestDialect.h"
 
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
+
+/// Test helper Conversion Pattern to directly call `convertFuncOpToLLVMFuncOp`
+/// to verify this utility function includes all functionalities of conversion
+struct FuncOpConversion : public ConvertOpToLLVMPattern<func::FuncOp> {
+  FuncOpConversion(const LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern(converter) {}
+
+  LogicalResult
+  matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    FailureOr<LLVM::LLVMFuncOp> newFuncOp = mlir::convertFuncOpToLLVMFuncOp(
+        cast<FunctionOpInterface>(funcOp.getOperation()), rewriter,
+        *getTypeConverter());
+    if (failed(newFuncOp))
+      return rewriter.notifyMatchFailure(funcOp, "Could not convert funcop");
+
+    rewriter.eraseOp(funcOp);
+    return success();
+  }
+};
 
 struct TestConvertFuncOp
     : public PassWrapper<TestConvertFuncOp, OperationPass<ModuleOp>> {
@@ -25,32 +47,31 @@ struct TestConvertFuncOp
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<LLVM::LLVMDialect>();
   }
+
   [[nodiscard]] StringRef getArgument() const final {
     return "test-convert-func-op";
   }
+
   [[nodiscard]] StringRef getDescription() const final {
     return "Tests conversion of `func.func` to `llvm.func` for different "
            "attributes";
   }
 
   void runOnOperation() override {
-    ModuleOp m = getOperation();
+    MLIRContext *ctx = &getContext();
 
-    LowerToLLVMOptions options(m.getContext());
-
+    LowerToLLVMOptions options(ctx);
     // Populate type conversions.
-    LLVMTypeConverter typeConverter(m.getContext(), options);
+    LLVMTypeConverter typeConverter(ctx, options);
 
-    // Populate patterns.
-    RewritePatternSet patterns(m.getContext());
-    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+    RewritePatternSet patterns(ctx);
+    patterns.add<FuncOpConversion>(ctx);
 
-    // Set target.
-    ConversionTarget target(getContext());
-    target.addLegalDialect<LLVM::LLVMDialect>();
-    target.addIllegalDialect<func::FuncDialect>();
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns, nullptr);
 
-    if (failed(applyPartialConversion(m, target, std::move(patterns))))
+    LLVMConversionTarget target(getContext());
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
