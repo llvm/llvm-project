@@ -54,6 +54,16 @@ def main():
         default=False,
         help="Reduce scrubbing shuffles with memory operands",
     )
+    parser.add_argument(
+        "--tool",
+        default=None,
+        help="Treat the given tool name as an llc-like tool for which check lines should be generated",
+    )
+    parser.add_argument(
+        "--march",
+        default=None,
+        help="Set a default -march for when neither triple nor arch are found in a RUN line",
+    )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
 
@@ -89,7 +99,7 @@ def main():
             if m:
                 triple_in_cmd = m.groups()[0]
 
-            march_in_cmd = None
+            march_in_cmd = ti.args.march
             m = common.MARCH_ARG_RE.search(llc_cmd)
             if m:
                 march_in_cmd = m.groups()[0]
@@ -101,7 +111,8 @@ def main():
                 from UpdateTestChecks import asm as output_type
 
             common.verify_filecheck_prefixes(filecheck_cmd)
-            if llc_tool not in LLC_LIKE_TOOLS:
+            if llc_tool not in LLC_LIKE_TOOLS and \
+               (not ti.args.tool or llc_tool != ti.args.tool):
                 common.warn("Skipping non-llc RUN line: " + l)
                 continue
 
