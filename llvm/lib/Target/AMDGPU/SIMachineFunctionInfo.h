@@ -390,6 +390,20 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
+constexpr unsigned FirstVGPRBlock = AMDGPU::
+    VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7_VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15_VGPR16_VGPR17_VGPR18_VGPR19_VGPR20_VGPR21_VGPR22_VGPR23_VGPR24_VGPR25_VGPR26_VGPR27_VGPR28_VGPR29_VGPR30_VGPR31;
+constexpr unsigned LastVGPRBlock = AMDGPU::
+    VGPR224_VGPR225_VGPR226_VGPR227_VGPR228_VGPR229_VGPR230_VGPR231_VGPR232_VGPR233_VGPR234_VGPR235_VGPR236_VGPR237_VGPR238_VGPR239_VGPR240_VGPR241_VGPR242_VGPR243_VGPR244_VGPR245_VGPR246_VGPR247_VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255;
+
+struct VGPRBlock2IndexFunctor {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
+    assert(Reg.isPhysical() && Reg >= FirstVGPRBlock && Reg <= LastVGPRBlock &&
+           "Expecting a VGPR block");
+    return Reg - FirstVGPRBlock;
+  }
+};
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
@@ -566,6 +580,13 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
+  // Map each VGPR CSR to the mask needed to save and restore it using block
+  // load/store instructions. Only used if the subtarget feature for VGPR block
+  // load/store is enabled.
+  // This is only useful during prolog/epilog insertion, so it doesn't need to
+  // be serialized.
+  IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -585,6 +606,15 @@ public:
   }
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
+
+  void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
+    MaskForVGPRBlockOps.grow(RegisterBlock);
+    MaskForVGPRBlockOps[RegisterBlock] = Mask;
+  }
+
+  uint32_t getMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps[RegisterBlock];
+  }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
@@ -616,6 +646,10 @@ public:
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  bool isWWMReservedRegister(Register Reg) const {
+    return WWMReservedRegs.contains(Reg);
+  }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(
