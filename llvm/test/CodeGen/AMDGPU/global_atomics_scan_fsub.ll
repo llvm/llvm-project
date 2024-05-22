@@ -1156,8 +1156,8 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX7LESS-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1203,7 +1203,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX7LESS-NEXT:  .LBB2_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1245,7 +1245,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX9-NEXT:  .LBB2_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1285,7 +1285,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1064-NEXT:  .LBB2_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1324,7 +1324,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1032-NEXT:  .LBB2_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -1367,7 +1367,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1164-NEXT:  .LBB2_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1407,7 +1407,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1132-NEXT:  .LBB2_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1449,7 +1449,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX9-DPP-NEXT:  .LBB2_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1489,7 +1489,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1064-DPP-NEXT:  .LBB2_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -1528,7 +1528,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1032-DPP-NEXT:  .LBB2_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -1571,7 +1571,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1164-DPP-NEXT:  .LBB2_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1615,8 +1615,8 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 }
 
 
-define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -1666,7 +1666,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -1732,7 +1732,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX9-NEXT:  .LBB3_5:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -1798,7 +1798,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1064-NEXT:  .LBB3_5:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -1863,7 +1863,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1032-NEXT:  .LBB3_5:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s14, s8
@@ -1924,7 +1924,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:  .LBB3_5:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-NEXT:    v_mov_b32_e32 v31, v0
@@ -1984,7 +1984,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1132-NEXT:  .LBB3_5:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -2068,7 +2068,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX9-DPP-NEXT:  .LBB3_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -2150,7 +2150,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1064-DPP-NEXT:  .LBB3_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -2226,7 +2226,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1032-DPP-NEXT:  .LBB3_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s8
@@ -2308,7 +2308,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1164-DPP-NEXT:  .LBB3_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v31, v0
@@ -3617,8 +3617,8 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 }
 
 
-define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -3668,7 +3668,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -3734,7 +3734,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX9-NEXT:  .LBB6_5:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -3800,7 +3800,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1064-NEXT:  .LBB6_5:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -3865,7 +3865,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1032-NEXT:  .LBB6_5:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s14, s8
@@ -3926,7 +3926,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:  .LBB6_5:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-NEXT:    v_mov_b32_e32 v31, v0
@@ -3986,7 +3986,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:  .LBB6_5:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4070,7 +4070,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX9-DPP-NEXT:  .LBB6_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4152,7 +4152,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1064-DPP-NEXT:  .LBB6_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4228,7 +4228,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1032-DPP-NEXT:  .LBB6_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s8
@@ -4310,7 +4310,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:  .LBB6_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v31, v0
@@ -7201,8 +7201,8 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GFX7LESS-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
@@ -7251,7 +7251,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX7LESS-NEXT:  .LBB11_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7294,7 +7294,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX9-NEXT:  .LBB11_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7335,7 +7335,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1064-NEXT:  .LBB11_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7375,7 +7375,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1032-NEXT:  .LBB11_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -7419,7 +7419,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1164-NEXT:  .LBB11_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7459,7 +7459,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1132-NEXT:  .LBB11_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7502,7 +7502,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX9-DPP-NEXT:  .LBB11_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7543,7 +7543,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1064-DPP-NEXT:  .LBB11_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -7583,7 +7583,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1032-DPP-NEXT:  .LBB11_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -7627,7 +7627,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
 ; GFX1164-DPP-NEXT:  .LBB11_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_uni_value_one_as_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7669,8 +7669,8 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_uni_value_one_a
   %result = atomicrmw fsub ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") monotonic
   ret void
 }
-define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -7723,7 +7723,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -7769,7 +7769,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -7815,7 +7815,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1064-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -7861,7 +7861,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1032-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b32 s14, s8
 ; GFX1164-NEXT:    s_add_u32 s8, s2, 44
@@ -7898,7 +7898,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1164-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_add_u32 s8, s2, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s3, 0
@@ -7933,7 +7933,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1132-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -7979,7 +7979,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX9-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -8025,7 +8025,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1064-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -8071,7 +8071,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1032-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s8
 ; GFX1164-DPP-NEXT:    s_add_u32 s8, s2, 44
@@ -8108,7 +8108,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_one_a
 ; GFX1164-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_one_as_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s2, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s3, 0
@@ -9094,8 +9094,8 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr) #1 {
-; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr) #1 {
+; GFX7LESS-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -9148,7 +9148,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX9-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9194,7 +9194,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1064-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9240,7 +9240,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1064-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1032-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9286,7 +9286,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1032-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1164-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b32 s14, s8
 ; GFX1164-NEXT:    s_add_u32 s8, s2, 44
@@ -9323,7 +9323,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1164-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1132-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_add_u32 s8, s2, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s3, 0
@@ -9358,7 +9358,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1132-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX9-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9404,7 +9404,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX9-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1064-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9450,7 +9450,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1064-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1032-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -9496,7 +9496,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1032-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1164-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s8
 ; GFX1164-DPP-NEXT:    s_add_u32 s8, s2, 44
@@ -9533,7 +9533,7 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_agent
 ; GFX1164-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_structfp:
+; GFX1132-DPP-LABEL: global_atomic_fsub_double_uni_address_div_value_agent_scope_unsafe_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s2, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s3, 0
