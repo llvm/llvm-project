@@ -626,7 +626,10 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX13-SDAG-NEXT:    buffer_load_b64 v[0:1], off, s[8:11], null
 ; GFX13-SDAG-NEXT:    s_mov_b32 s5, s1
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX13-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
@@ -2286,7 +2289,10 @@ define amdgpu_ps float @fptrunc_f32_f32_to_v2f16(float %a, float %b) {
 ;
 ; GFX13-SDAG-LABEL: fptrunc_f32_f32_to_v2f16:
 ; GFX13-SDAG:       ; %bb.0: ; %entry
-; GFX13-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-LABEL: fptrunc_f32_f32_to_v2f16:
@@ -2381,7 +2387,10 @@ define amdgpu_ps float @fptrunc_f32_f32_to_v2f16_mods(float %a, float %b) {
 ;
 ; GFX13-SDAG-LABEL: fptrunc_f32_f32_to_v2f16_mods:
 ; GFX13-SDAG:       ; %bb.0: ; %entry
-; GFX13-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, -v0, |v1|
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX13-SDAG-NEXT:    v_cvt_f16_f32_e64 v1, |v1|
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-LABEL: fptrunc_f32_f32_to_v2f16_mods:
