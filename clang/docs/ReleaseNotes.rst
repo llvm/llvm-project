@@ -69,7 +69,7 @@ C++ Specific Potentially Breaking Changes
     4 |     ++this;
       |     ^ ~~~~
 
-  To fix this, update libstdc++ to a newer version, such as 14.1.1 or 14.2.
+  To fix this, update libstdc++ to version 14.1.1 or greater.
 
 ABI Changes in This Version
 ---------------------------
