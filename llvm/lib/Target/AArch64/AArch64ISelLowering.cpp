@@ -150,7 +150,7 @@ static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
 // with some instructions.
 // See [AArch64TargetLowering::fallbackToDAGISel] for implementation details.
 static cl::opt<bool> EnableSVEGISel(
-    "aarch64-enable-sve-gisel", cl::Hidden,
+    "aarch64-enable-gisel-sve", cl::Hidden,
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
