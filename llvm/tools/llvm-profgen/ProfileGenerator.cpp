@@ -766,8 +766,8 @@ void ProfileGeneratorBase::calculateBodySamplesAndSize(
   // head samples instead to estimate the body count.
   for (const auto &CallsiteSamples : FSamples.getCallsiteSamples())
     for (const auto &Callee : CallsiteSamples.second) {
-      // This is used for caluculating the binary-level density, so the
-      // inlinees' samples and size should be included in the calculation.
+      // For binary-level density, the inlinees' samples and size should be
+      // included in the calculation.
       calculateBodySamplesAndSize(Callee.second, TotalBodySamples,
                                   FuncBodySize);
       TotalBodySamples += Callee.second.getHeadSamplesEstimate();
