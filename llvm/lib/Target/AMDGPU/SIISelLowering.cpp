@@ -7593,8 +7593,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
                           ? (ReqRetNumElts + 1) / 2
                           : ReqRetNumElts;
 
-  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    DMaskPop : (DMaskPop + 1) / 2;
+  int MaskPopDwords = (!IsD16 || Unpacked) ? DMaskPop : (DMaskPop + 1) / 2;
 
   MVT DataDwordVT = NumDataDwords == 1 ?
     MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
