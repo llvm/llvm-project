@@ -87,7 +87,7 @@ static VDSOArray symbol_table;
 
 void *get_symbol(VDSOSym sym) {
   // if sym is invalid, return nullptr
-  const size_t index = static_cast<size_t>(sym);
+  const auto index = static_cast<size_t>(sym);
   if (index >= symbol_table.size())
     return nullptr;
 
