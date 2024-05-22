@@ -254,7 +254,6 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 }
 
 InstructionCost VPRecipeBase::computeCost(ElementCount VF, VPCostContext &Ctx) {
-  Instruction *UI = nullptr;
   if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
     if (auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue()))
       return Ctx.getLegacyCost(UI, VF);

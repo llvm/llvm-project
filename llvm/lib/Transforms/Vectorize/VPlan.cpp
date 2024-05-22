@@ -778,10 +778,12 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
   VPValue *Cond = BOM->getOperand(0);
 
   // Check if Cond is a uniform compare or a header mask.
+  VPValue *Op;
   bool IsHeaderMaskOrUniformCond =
       vputils::isUniformCompare(Cond) ||
       match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
-      match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) ||
+       (match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue(Op))) &&
+        Op == getPlan()->getOrCreateBackedgeTakenCount()) ||
       isa<VPActiveLaneMaskPHIRecipe>(Cond);
   if (IsHeaderMaskOrUniformCond || VF.isScalable())
     return Cost;
