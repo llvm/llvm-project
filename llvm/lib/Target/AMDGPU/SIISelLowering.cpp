@@ -1233,13 +1233,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
       switch (IntrID) {
       default:
+        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
         // XXX - Should this be volatile without known ordering?
         Info.flags |= MachineMemOperand::MOVolatile;
         break;
