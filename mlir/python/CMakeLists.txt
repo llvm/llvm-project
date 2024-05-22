@@ -162,13 +162,21 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS)
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformPDLExtensionOps.td
   SOURCES
     dialects/transform/pdl.py
   DIALECT_NAME transform
   EXTENSION_NAME transform_pdl_extension)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/Polynomial.td
+  SOURCES
+    dialects/polynomial.py
+  DIALECT_NAME polynomial)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -535,6 +543,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Polynomial.Pybind
+  MODULE_NAME _mlirDialectsPolynomial
+  ADD_TO_PARENT MLIRPythonSources.Dialects.polynomial
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectPolynomial.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIPolynomial
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
