@@ -1836,6 +1836,7 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // TODO: Can we merge this fold with the one below?
       // Try shrinking the operation as long as the shift amount will still be
       // in range.
       if (ShAmt < DemandedBits.getActiveBits() && !VT.isVector() &&
