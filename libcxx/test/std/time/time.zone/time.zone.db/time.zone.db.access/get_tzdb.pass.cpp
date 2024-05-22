@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -34,6 +34,9 @@ int main(int, const char**) {
   assert(!db.links.empty());
   assert(std::ranges::is_sorted(db.links));
   assert(std::ranges::adjacent_find(db.links) == db.links.end()); // is unique?
+
+  assert(!db.leap_seconds.empty());
+  assert(std::ranges::is_sorted(db.leap_seconds));
 
   return 0;
 }

@@ -9,12 +9,23 @@
 #include "Boolean.h"
 #include "Interp.h"
 #include "PrimType.h"
+#include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 namespace interp {
+
+static unsigned callArgSize(const InterpState &S, const CallExpr *C) {
+  unsigned O = 0;
+
+  for (const Expr *E : C->arguments()) {
+    O += align(primSize(*S.getContext().classify(E)));
+  }
+
+  return O;
+}
 
 template <typename T>
 static T getParam(const InterpFrame *Frame, unsigned Index) {
@@ -816,9 +827,10 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   unsigned BuiltinOp = Func->getBuiltinID();
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
   // When the argument is 0, the result of GCC builtins is undefined, whereas
   // for Microsoft intrinsics, the result is the bit-width of the argument.
@@ -826,8 +838,19 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                          BuiltinOp != Builtin::BI__lzcnt &&
                          BuiltinOp != Builtin::BI__lzcnt64;
 
-  if (ZeroIsUndefined && Val == 0)
-    return false;
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_clzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
+
+    if (ZeroIsUndefined)
+      return false;
+  }
 
   pushInteger(S, Val.countl_zero(), Call->getType());
   return true;
@@ -836,11 +859,21 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
-  if (Val == 0)
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_ctzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
     return false;
+  }
 
   pushInteger(S, Val.countr_zero(), Call->getType());
   return true;
@@ -942,6 +975,128 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
   Result.atIndex(1).initialize();
   Result.initialize();
 
+  return true;
+}
+
+/// __builtin_is_aligned()
+/// __builtin_align_up()
+/// __builtin_align_down()
+/// The first parameter is either an integer or a pointer.
+/// The second parameter is the requested alignment as an integer.
+static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
+                                               const InterpFrame *Frame,
+                                               const Function *Func,
+                                               const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  unsigned CallSize = callArgSize(S, Call);
+
+  PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
+  const APSInt &Alignment = peekToAPSInt(S.Stk, AlignmentT);
+
+  if (Alignment < 0 || !Alignment.isPowerOf2()) {
+    S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
+    return false;
+  }
+  unsigned SrcWidth = S.getCtx().getIntWidth(Call->getArg(0)->getType());
+  APSInt MaxValue(APInt::getOneBitSet(SrcWidth, SrcWidth - 1));
+  if (APSInt::compareValues(Alignment, MaxValue) > 0) {
+    S.FFDiag(Call, diag::note_constexpr_alignment_too_big)
+        << MaxValue << Call->getArg(0)->getType() << Alignment;
+    return false;
+  }
+
+  // The first parameter is either an integer or a pointer (but not a function
+  // pointer).
+  PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
+
+  if (isIntegralType(FirstArgT)) {
+    const APSInt &Src = peekToAPSInt(S.Stk, FirstArgT, CallSize);
+    APSInt Align = Alignment.extOrTrunc(Src.getBitWidth());
+    if (BuiltinOp == Builtin::BI__builtin_align_up) {
+      APSInt AlignedVal =
+          APSInt((Src + (Align - 1)) & ~(Align - 1), Src.isUnsigned());
+      pushInteger(S, AlignedVal, Call->getType());
+    } else if (BuiltinOp == Builtin::BI__builtin_align_down) {
+      APSInt AlignedVal = APSInt(Src & ~(Align - 1), Src.isUnsigned());
+      pushInteger(S, AlignedVal, Call->getType());
+    } else {
+      assert(*S.Ctx.classify(Call->getType()) == PT_Bool);
+      S.Stk.push<Boolean>((Src & (Align - 1)) == 0);
+    }
+    return true;
+  }
+
+  assert(FirstArgT == PT_Ptr);
+  const Pointer &Ptr = S.Stk.peek<Pointer>(CallSize);
+
+  unsigned PtrOffset = Ptr.getByteOffset();
+  PtrOffset = Ptr.getIndex();
+  CharUnits BaseAlignment =
+      S.getCtx().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
+  CharUnits PtrAlign =
+      BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
+
+  if (BuiltinOp == Builtin::BI__builtin_is_aligned) {
+    if (PtrAlign.getQuantity() >= Alignment) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
+    // If the alignment is not known to be sufficient, some cases could still
+    // be aligned at run time. However, if the requested alignment is less or
+    // equal to the base alignment and the offset is not aligned, we know that
+    // the run-time value can never be aligned.
+    if (BaseAlignment.getQuantity() >= Alignment &&
+        PtrAlign.getQuantity() < Alignment) {
+      S.Stk.push<Boolean>(false);
+      return true;
+    }
+
+    S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
+        << Alignment;
+    return false;
+  }
+
+  assert(BuiltinOp == Builtin::BI__builtin_align_down ||
+         BuiltinOp == Builtin::BI__builtin_align_up);
+
+  // For align_up/align_down, we can return the same value if the alignment
+  // is known to be greater or equal to the requested value.
+  if (PtrAlign.getQuantity() >= Alignment) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  // The alignment could be greater than the minimum at run-time, so we cannot
+  // infer much about the resulting pointer value. One case is possible:
+  // For `_Alignas(32) char buf[N]; __builtin_align_down(&buf[idx], 32)` we
+  // can infer the correct index if the requested alignment is smaller than
+  // the base alignment so we can perform the computation on the offset.
+  if (BaseAlignment.getQuantity() >= Alignment) {
+    assert(Alignment.getBitWidth() <= 64 &&
+           "Cannot handle > 64-bit address-space");
+    uint64_t Alignment64 = Alignment.getZExtValue();
+    CharUnits NewOffset =
+        CharUnits::fromQuantity(BuiltinOp == Builtin::BI__builtin_align_down
+                                    ? llvm::alignDown(PtrOffset, Alignment64)
+                                    : llvm::alignTo(PtrOffset, Alignment64));
+
+    S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
+    return true;
+  }
+
+  // Otherwise, we cannot constant-evaluate the result.
+  S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_adjust) << Alignment;
+  return false;
+}
+
+static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
+                                                      CodePtr OpPC,
+                                                      const InterpFrame *Frame,
+                                                      const Function *Func,
+                                                      const CallExpr *Call) {
+  analyze_os_log::OSLogBufferLayout Layout;
+  analyze_os_log::computeOSLogBufferLayout(S.getCtx(), Call, Layout);
+  pushInteger(S, Layout.size().getQuantity(), Call->getType());
   return true;
 }
 
@@ -1223,6 +1378,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64:
@@ -1234,6 +1390,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctzg:
     if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -1254,6 +1411,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_complex:
     if (!interp__builtin_complex(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_is_aligned:
+  case Builtin::BI__builtin_align_up:
+  case Builtin::BI__builtin_align_down:
+    if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_os_log_format_buffer_size:
+    if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
       return false;
     break;
 

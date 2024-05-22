@@ -840,6 +840,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   case Type::Adjusted:
   case Type::Decayed:
+  case Type::ArrayParameter:
     if (!IsStructurallyEquivalent(Context,
                                   cast<AdjustedType>(T1)->getOriginalType(),
                                   cast<AdjustedType>(T2)->getOriginalType()))

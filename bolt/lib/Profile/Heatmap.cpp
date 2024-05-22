@@ -10,7 +10,6 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"

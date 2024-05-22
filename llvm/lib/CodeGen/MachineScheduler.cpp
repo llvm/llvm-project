@@ -1664,7 +1664,8 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
     if (ShouldTrackPressure) {
       // Update top scheduled pressure.
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks,
+                       /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
         SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -1698,7 +1699,8 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
     }
     if (ShouldTrackPressure) {
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks,
+                       /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
         SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -3263,14 +3265,10 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   // are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
   if (!Top.HazardRec) {
-    Top.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   if (!Bot.HazardRec) {
-    Bot.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
@@ -3285,14 +3283,16 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
 
   // Avoid setting up the register pressure tracker for small regions to save
   // compile time. As a rough heuristic, only track pressure when the number of
-  // schedulable instructions exceeds half the integer register file.
+  // schedulable instructions exceeds half the allocatable integer register file
+  // that is the largest legal integer regiser type.
   RegionPolicy.ShouldTrackPressure = true;
-  for (unsigned VT = MVT::i32; VT > (unsigned)MVT::i1; --VT) {
+  for (unsigned VT = MVT::i64; VT > (unsigned)MVT::i1; --VT) {
     MVT::SimpleValueType LegalIntVT = (MVT::SimpleValueType)VT;
     if (TLI->isTypeLegal(LegalIntVT)) {
       unsigned NIntRegs = Context->RegClassInfo->getNumAllocatableRegs(
         TLI->getRegClassFor(LegalIntVT));
       RegionPolicy.ShouldTrackPressure = NumRegionInstrs > (NIntRegs / 2);
+      break;
     }
   }
 
@@ -3877,14 +3877,10 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   // or are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
   if (!Top.HazardRec) {
-    Top.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   if (!Bot.HazardRec) {
-    Bot.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
 }
 

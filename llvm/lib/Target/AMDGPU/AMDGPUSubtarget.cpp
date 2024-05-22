@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -163,6 +164,15 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                     << TargetID.getSramEccSetting() << '\n');
 
   return *this;
+}
+
+void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
+  LLVMContext &Ctx = F.getContext();
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+      hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
 }
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
@@ -642,6 +652,17 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  if (isWave32()) {
+    // Fix implicit $vcc operands after MIParser has verified that they match
+    // the instruction definitions.
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB)
+        InstrInfo.fixImplicitOperands(MI);
+    }
+  }
+}
+
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
@@ -653,29 +674,8 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  if (getGeneration() >= AMDGPUSubtarget::GFX10)
-    return getMaxWavesPerEU();
-
-  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    if (SGPRs <= 80)
-      return 10;
-    if (SGPRs <= 88)
-      return 9;
-    if (SGPRs <= 100)
-      return 8;
-    return 7;
-  }
-  if (SGPRs <= 48)
-    return 10;
-  if (SGPRs <= 56)
-    return 9;
-  if (SGPRs <= 64)
-    return 8;
-  if (SGPRs <= 72)
-    return 7;
-  if (SGPRs <= 80)
-    return 6;
-  return 5;
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
+                                                   getGeneration());
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
@@ -849,8 +849,9 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
 }
 
-void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                         int UseOpIdx, SDep &Dep) const {
+void GCNSubtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
       !Def->isInstr() || !Use->isInstr())
     return;

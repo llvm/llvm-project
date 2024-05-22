@@ -1237,6 +1237,10 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
     return failure();
 
+  auto isUnitDim = [](VectorType type, int dim) {
+    return type.getDimSize(dim) == 1 && !type.getScalableDims()[dim];
+  };
+
   // According to vector.transfer_read/write semantics, the vector can be a
   // slice. Thus, we have to offset the check index with `rankDiff` in
   // `srcStrides` and source dim sizes.
@@ -1247,8 +1251,7 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
     // It can be folded only if they are 1 and the stride is 1.
     int dim = vectorType.getRank() - i - 1;
     if (srcStrides[dim + rankDiff] != 1 ||
-        srcType.getDimSize(dim + rankDiff) != 1 ||
-        vectorType.getDimSize(dim) != 1)
+        srcType.getDimSize(dim + rankDiff) != 1 || !isUnitDim(vectorType, dim))
       break;
     result++;
   }
@@ -1292,7 +1295,8 @@ class DropInnerMostUnitDimsTransferRead
 
     auto resultTargetVecType =
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
-                        targetType.getElementType());
+                        targetType.getElementType(),
+                        targetType.getScalableDims().drop_back(dimsToDrop));
 
     auto loc = readOp.getLoc();
     SmallVector<OpFoldResult> sizes =
@@ -1378,7 +1382,8 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto resultTargetVecType =
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
-                        targetType.getElementType());
+                        targetType.getElementType(),
+                        targetType.getScalableDims().drop_back(dimsToDrop));
 
     Location loc = writeOp.getLoc();
     SmallVector<OpFoldResult> sizes =
@@ -1643,10 +1648,12 @@ struct DropUnitDimFromElementwiseOps final
     if (!resultVectorType)
       return failure();
 
-    // Check the pre-conditions. For `Elementwise` Ops all operands are
-    // guaranteed to have identical shapes and it suffices to only check the
-    // first one.
-    auto sourceVectorType = cast<VectorType>(op->getOperands()[0].getType());
+    // Check the operand pre-conditions. For `Elementwise` ops all operands are
+    // guaranteed to have identical shapes (with some exceptions such as
+    // `arith.select`) and it suffices to only check one of them.
+    auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
+    if (!sourceVectorType)
+      return failure();
     if (sourceVectorType.getRank() < 2)
       return failure();
 

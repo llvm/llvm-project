@@ -18,7 +18,7 @@ set -o pipefail
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
-rm -rf ${BUILD_DIR}
+rm -rf "${BUILD_DIR}"
 
 ccache --zero-stats
 
@@ -37,8 +37,8 @@ projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
-pip install -q -r ${MONOREPO_ROOT}/mlir/python/requirements.txt
-cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
+pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
+cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
       -D CMAKE_BUILD_TYPE=Release \
@@ -48,7 +48,6 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
-      -D BOLT_CLANG_EXE=/usr/bin/clang \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON
 

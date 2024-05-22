@@ -5638,479 +5638,247 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 }
 
 define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigger.ptr, ptr %val.ptr, ptr %dst) nounwind {
-; SSE2-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
-; SSE2:       ## %bb.0:
-; SSE2-NEXT:    movdqa (%rdi), %xmm6
-; SSE2-NEXT:    movdqa 32(%rdi), %xmm7
-; SSE2-NEXT:    movdqa 64(%rdi), %xmm8
-; SSE2-NEXT:    movl 80(%rsi), %eax
-; SSE2-NEXT:    movl 64(%rsi), %r8d
-; SSE2-NEXT:    movl 48(%rsi), %r9d
-; SSE2-NEXT:    movl 32(%rsi), %r10d
-; SSE2-NEXT:    movl 16(%rsi), %r11d
-; SSE2-NEXT:    movdqa 80(%rsi), %xmm0
-; SSE2-NEXT:    movdqa 64(%rsi), %xmm1
-; SSE2-NEXT:    movdqa 48(%rsi), %xmm2
-; SSE2-NEXT:    movdqa 32(%rsi), %xmm3
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm4
-; SSE2-NEXT:    movdqa (%rsi), %xmm5
-; SSE2-NEXT:    packssdw 48(%rdi), %xmm7
-; SSE2-NEXT:    packssdw 16(%rdi), %xmm6
-; SSE2-NEXT:    packsswb %xmm7, %xmm6
-; SSE2-NEXT:    packssdw 80(%rdi), %xmm8
-; SSE2-NEXT:    packsswb %xmm8, %xmm8
-; SSE2-NEXT:    pmovmskb %xmm6, %edi
-; SSE2-NEXT:    andl $21845, %edi ## imm = 0x5555
-; SSE2-NEXT:    pmovmskb %xmm8, %ecx
-; SSE2-NEXT:    andl $85, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    orl %edi, %ecx
-; SSE2-NEXT:    testb $1, %cl
-; SSE2-NEXT:    jne LBB31_1
-; SSE2-NEXT:  ## %bb.2: ## %else
-; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    jne LBB31_3
-; SSE2-NEXT:  LBB31_4: ## %else2
-; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    jne LBB31_5
-; SSE2-NEXT:  LBB31_6: ## %else4
-; SSE2-NEXT:    testb $8, %cl
-; SSE2-NEXT:    jne LBB31_7
-; SSE2-NEXT:  LBB31_8: ## %else6
-; SSE2-NEXT:    testb $16, %cl
-; SSE2-NEXT:    jne LBB31_9
-; SSE2-NEXT:  LBB31_10: ## %else8
-; SSE2-NEXT:    testb $32, %cl
-; SSE2-NEXT:    jne LBB31_11
-; SSE2-NEXT:  LBB31_12: ## %else10
-; SSE2-NEXT:    testb $64, %cl
-; SSE2-NEXT:    jne LBB31_13
-; SSE2-NEXT:  LBB31_14: ## %else12
-; SSE2-NEXT:    testb %cl, %cl
-; SSE2-NEXT:    js LBB31_15
-; SSE2-NEXT:  LBB31_16: ## %else14
-; SSE2-NEXT:    testl $256, %ecx ## imm = 0x100
-; SSE2-NEXT:    jne LBB31_17
-; SSE2-NEXT:  LBB31_18: ## %else16
-; SSE2-NEXT:    testl $512, %ecx ## imm = 0x200
-; SSE2-NEXT:    jne LBB31_19
-; SSE2-NEXT:  LBB31_20: ## %else18
-; SSE2-NEXT:    testl $1024, %ecx ## imm = 0x400
-; SSE2-NEXT:    jne LBB31_21
-; SSE2-NEXT:  LBB31_22: ## %else20
-; SSE2-NEXT:    testl $2048, %ecx ## imm = 0x800
-; SSE2-NEXT:    jne LBB31_23
-; SSE2-NEXT:  LBB31_24: ## %else22
-; SSE2-NEXT:    testl $4096, %ecx ## imm = 0x1000
-; SSE2-NEXT:    jne LBB31_25
-; SSE2-NEXT:  LBB31_26: ## %else24
-; SSE2-NEXT:    testl $8192, %ecx ## imm = 0x2000
-; SSE2-NEXT:    jne LBB31_27
-; SSE2-NEXT:  LBB31_28: ## %else26
-; SSE2-NEXT:    testl $16384, %ecx ## imm = 0x4000
-; SSE2-NEXT:    jne LBB31_29
-; SSE2-NEXT:  LBB31_30: ## %else28
-; SSE2-NEXT:    testw %cx, %cx
-; SSE2-NEXT:    js LBB31_31
-; SSE2-NEXT:  LBB31_32: ## %else30
-; SSE2-NEXT:    testl $65536, %ecx ## imm = 0x10000
-; SSE2-NEXT:    jne LBB31_33
-; SSE2-NEXT:  LBB31_34: ## %else32
-; SSE2-NEXT:    testl $131072, %ecx ## imm = 0x20000
-; SSE2-NEXT:    jne LBB31_35
-; SSE2-NEXT:  LBB31_36: ## %else34
-; SSE2-NEXT:    testl $262144, %ecx ## imm = 0x40000
-; SSE2-NEXT:    jne LBB31_37
-; SSE2-NEXT:  LBB31_38: ## %else36
-; SSE2-NEXT:    testl $524288, %ecx ## imm = 0x80000
-; SSE2-NEXT:    jne LBB31_39
-; SSE2-NEXT:  LBB31_40: ## %else38
-; SSE2-NEXT:    testl $1048576, %ecx ## imm = 0x100000
-; SSE2-NEXT:    jne LBB31_41
-; SSE2-NEXT:  LBB31_42: ## %else40
-; SSE2-NEXT:    testl $2097152, %ecx ## imm = 0x200000
-; SSE2-NEXT:    jne LBB31_43
-; SSE2-NEXT:  LBB31_44: ## %else42
-; SSE2-NEXT:    testl $4194304, %ecx ## imm = 0x400000
-; SSE2-NEXT:    je LBB31_46
-; SSE2-NEXT:  LBB31_45: ## %cond.store43
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movl %eax, 88(%rdx)
-; SSE2-NEXT:  LBB31_46: ## %else44
-; SSE2-NEXT:    movb $1, %al
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne LBB31_48
-; SSE2-NEXT:  ## %bb.47: ## %cond.store45
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    movl %eax, 92(%rdx)
-; SSE2-NEXT:  LBB31_48: ## %else46
-; SSE2-NEXT:    retq
-; SSE2-NEXT:  LBB31_1: ## %cond.store
-; SSE2-NEXT:    movl (%rsi), %esi
-; SSE2-NEXT:    movl %esi, (%rdx)
-; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    je LBB31_4
-; SSE2-NEXT:  LBB31_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,1,1,1]
-; SSE2-NEXT:    movd %xmm6, %esi
-; SSE2-NEXT:    movl %esi, 4(%rdx)
-; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    je LBB31_6
-; SSE2-NEXT:  LBB31_5: ## %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[2,3,2,3]
-; SSE2-NEXT:    movd %xmm6, %esi
-; SSE2-NEXT:    movl %esi, 8(%rdx)
-; SSE2-NEXT:    testb $8, %cl
-; SSE2-NEXT:    je LBB31_8
-; SSE2-NEXT:  LBB31_7: ## %cond.store5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[3,3,3,3]
-; SSE2-NEXT:    movd %xmm5, %esi
-; SSE2-NEXT:    movl %esi, 12(%rdx)
-; SSE2-NEXT:    testb $16, %cl
-; SSE2-NEXT:    je LBB31_10
-; SSE2-NEXT:  LBB31_9: ## %cond.store7
-; SSE2-NEXT:    movl %r11d, 16(%rdx)
-; SSE2-NEXT:    testb $32, %cl
-; SSE2-NEXT:    je LBB31_12
-; SSE2-NEXT:  LBB31_11: ## %cond.store9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,1,1,1]
-; SSE2-NEXT:    movd %xmm5, %esi
-; SSE2-NEXT:    movl %esi, 20(%rdx)
-; SSE2-NEXT:    testb $64, %cl
-; SSE2-NEXT:    je LBB31_14
-; SSE2-NEXT:  LBB31_13: ## %cond.store11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; SSE2-NEXT:    movd %xmm5, %esi
-; SSE2-NEXT:    movl %esi, 24(%rdx)
-; SSE2-NEXT:    testb %cl, %cl
-; SSE2-NEXT:    jns LBB31_16
-; SSE2-NEXT:  LBB31_15: ## %cond.store13
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[3,3,3,3]
-; SSE2-NEXT:    movd %xmm4, %esi
-; SSE2-NEXT:    movl %esi, 28(%rdx)
-; SSE2-NEXT:    testl $256, %ecx ## imm = 0x100
-; SSE2-NEXT:    je LBB31_18
-; SSE2-NEXT:  LBB31_17: ## %cond.store15
-; SSE2-NEXT:    movl %r10d, 32(%rdx)
-; SSE2-NEXT:    testl $512, %ecx ## imm = 0x200
-; SSE2-NEXT:    je LBB31_20
-; SSE2-NEXT:  LBB31_19: ## %cond.store17
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
-; SSE2-NEXT:    movd %xmm4, %esi
-; SSE2-NEXT:    movl %esi, 36(%rdx)
-; SSE2-NEXT:    testl $1024, %ecx ## imm = 0x400
-; SSE2-NEXT:    je LBB31_22
-; SSE2-NEXT:  LBB31_21: ## %cond.store19
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
-; SSE2-NEXT:    movd %xmm4, %esi
-; SSE2-NEXT:    movl %esi, 40(%rdx)
-; SSE2-NEXT:    testl $2048, %ecx ## imm = 0x800
-; SSE2-NEXT:    je LBB31_24
-; SSE2-NEXT:  LBB31_23: ## %cond.store21
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSE2-NEXT:    movd %xmm3, %esi
-; SSE2-NEXT:    movl %esi, 44(%rdx)
-; SSE2-NEXT:    testl $4096, %ecx ## imm = 0x1000
-; SSE2-NEXT:    je LBB31_26
-; SSE2-NEXT:  LBB31_25: ## %cond.store23
-; SSE2-NEXT:    movl %r9d, 48(%rdx)
-; SSE2-NEXT:    testl $8192, %ecx ## imm = 0x2000
-; SSE2-NEXT:    je LBB31_28
-; SSE2-NEXT:  LBB31_27: ## %cond.store25
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,1,1]
-; SSE2-NEXT:    movd %xmm3, %esi
-; SSE2-NEXT:    movl %esi, 52(%rdx)
-; SSE2-NEXT:    testl $16384, %ecx ## imm = 0x4000
-; SSE2-NEXT:    je LBB31_30
-; SSE2-NEXT:  LBB31_29: ## %cond.store27
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; SSE2-NEXT:    movd %xmm3, %esi
-; SSE2-NEXT:    movl %esi, 56(%rdx)
-; SSE2-NEXT:    testw %cx, %cx
-; SSE2-NEXT:    jns LBB31_32
-; SSE2-NEXT:  LBB31_31: ## %cond.store29
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %esi
-; SSE2-NEXT:    movl %esi, 60(%rdx)
-; SSE2-NEXT:    testl $65536, %ecx ## imm = 0x10000
-; SSE2-NEXT:    je LBB31_34
-; SSE2-NEXT:  LBB31_33: ## %cond.store31
-; SSE2-NEXT:    movl %r8d, 64(%rdx)
-; SSE2-NEXT:    testl $131072, %ecx ## imm = 0x20000
-; SSE2-NEXT:    je LBB31_36
-; SSE2-NEXT:  LBB31_35: ## %cond.store33
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm2, %esi
-; SSE2-NEXT:    movl %esi, 68(%rdx)
-; SSE2-NEXT:    testl $262144, %ecx ## imm = 0x40000
-; SSE2-NEXT:    je LBB31_38
-; SSE2-NEXT:  LBB31_37: ## %cond.store35
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm2, %esi
-; SSE2-NEXT:    movl %esi, 72(%rdx)
-; SSE2-NEXT:    testl $524288, %ecx ## imm = 0x80000
-; SSE2-NEXT:    je LBB31_40
-; SSE2-NEXT:  LBB31_39: ## %cond.store37
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm1, %esi
-; SSE2-NEXT:    movl %esi, 76(%rdx)
-; SSE2-NEXT:    testl $1048576, %ecx ## imm = 0x100000
-; SSE2-NEXT:    je LBB31_42
-; SSE2-NEXT:  LBB31_41: ## %cond.store39
-; SSE2-NEXT:    movl %eax, 80(%rdx)
-; SSE2-NEXT:    testl $2097152, %ecx ## imm = 0x200000
-; SSE2-NEXT:    je LBB31_44
-; SSE2-NEXT:  LBB31_43: ## %cond.store41
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movl %eax, 84(%rdx)
-; SSE2-NEXT:    testl $4194304, %ecx ## imm = 0x400000
-; SSE2-NEXT:    jne LBB31_45
-; SSE2-NEXT:    jmp LBB31_46
-;
-; SSE4-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
-; SSE4:       ## %bb.0:
-; SSE4-NEXT:    pushq %rbp
-; SSE4-NEXT:    pushq %r15
-; SSE4-NEXT:    pushq %r14
-; SSE4-NEXT:    pushq %r13
-; SSE4-NEXT:    pushq %r12
-; SSE4-NEXT:    pushq %rbx
-; SSE4-NEXT:    movdqa (%rdi), %xmm1
-; SSE4-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE4-NEXT:    movdqa 64(%rdi), %xmm0
-; SSE4-NEXT:    movl 92(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 88(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 84(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 80(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 76(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 72(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 68(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 64(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 60(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 56(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    movl 52(%rsi), %eax
-; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    packssdw 48(%rdi), %xmm2
-; SSE4-NEXT:    packssdw 16(%rdi), %xmm1
-; SSE4-NEXT:    packsswb %xmm2, %xmm1
-; SSE4-NEXT:    packssdw 80(%rdi), %xmm0
-; SSE4-NEXT:    packsswb %xmm0, %xmm0
-; SSE4-NEXT:    pmovmskb %xmm1, %eax
-; SSE4-NEXT:    andl $21845, %eax ## imm = 0x5555
-; SSE4-NEXT:    pmovmskb %xmm0, %edi
-; SSE4-NEXT:    andl $85, %edi
-; SSE4-NEXT:    shll $16, %edi
-; SSE4-NEXT:    orl %eax, %edi
-; SSE4-NEXT:    movl 48(%rsi), %r13d
-; SSE4-NEXT:    testb $1, %dil
-; SSE4-NEXT:    movl 44(%rsi), %eax
-; SSE4-NEXT:    movl 40(%rsi), %ecx
-; SSE4-NEXT:    movl 36(%rsi), %r8d
-; SSE4-NEXT:    movl 32(%rsi), %r9d
-; SSE4-NEXT:    movl 28(%rsi), %r10d
-; SSE4-NEXT:    movl 24(%rsi), %r11d
-; SSE4-NEXT:    movl 20(%rsi), %ebx
-; SSE4-NEXT:    movl 16(%rsi), %ebp
-; SSE4-NEXT:    movl 12(%rsi), %r14d
-; SSE4-NEXT:    movl 8(%rsi), %r15d
-; SSE4-NEXT:    movl 4(%rsi), %r12d
-; SSE4-NEXT:    jne LBB31_1
-; SSE4-NEXT:  ## %bb.2: ## %else
-; SSE4-NEXT:    testb $2, %dil
-; SSE4-NEXT:    jne LBB31_3
-; SSE4-NEXT:  LBB31_4: ## %else2
-; SSE4-NEXT:    testb $4, %dil
-; SSE4-NEXT:    jne LBB31_5
-; SSE4-NEXT:  LBB31_6: ## %else4
-; SSE4-NEXT:    testb $8, %dil
-; SSE4-NEXT:    jne LBB31_7
-; SSE4-NEXT:  LBB31_8: ## %else6
-; SSE4-NEXT:    testb $16, %dil
-; SSE4-NEXT:    jne LBB31_9
-; SSE4-NEXT:  LBB31_10: ## %else8
-; SSE4-NEXT:    testb $32, %dil
-; SSE4-NEXT:    jne LBB31_11
-; SSE4-NEXT:  LBB31_12: ## %else10
-; SSE4-NEXT:    testb $64, %dil
-; SSE4-NEXT:    jne LBB31_13
-; SSE4-NEXT:  LBB31_14: ## %else12
-; SSE4-NEXT:    testb %dil, %dil
-; SSE4-NEXT:    js LBB31_15
-; SSE4-NEXT:  LBB31_16: ## %else14
-; SSE4-NEXT:    testl $256, %edi ## imm = 0x100
-; SSE4-NEXT:    jne LBB31_17
-; SSE4-NEXT:  LBB31_18: ## %else16
-; SSE4-NEXT:    testl $512, %edi ## imm = 0x200
-; SSE4-NEXT:    jne LBB31_19
-; SSE4-NEXT:  LBB31_20: ## %else18
-; SSE4-NEXT:    testl $1024, %edi ## imm = 0x400
-; SSE4-NEXT:    jne LBB31_21
-; SSE4-NEXT:  LBB31_22: ## %else20
-; SSE4-NEXT:    testl $2048, %edi ## imm = 0x800
-; SSE4-NEXT:    jne LBB31_23
-; SSE4-NEXT:  LBB31_24: ## %else22
-; SSE4-NEXT:    testl $4096, %edi ## imm = 0x1000
-; SSE4-NEXT:    jne LBB31_25
-; SSE4-NEXT:  LBB31_26: ## %else24
-; SSE4-NEXT:    testl $8192, %edi ## imm = 0x2000
-; SSE4-NEXT:    jne LBB31_27
-; SSE4-NEXT:  LBB31_28: ## %else26
-; SSE4-NEXT:    testl $16384, %edi ## imm = 0x4000
-; SSE4-NEXT:    jne LBB31_29
-; SSE4-NEXT:  LBB31_30: ## %else28
-; SSE4-NEXT:    testw %di, %di
-; SSE4-NEXT:    js LBB31_31
-; SSE4-NEXT:  LBB31_32: ## %else30
-; SSE4-NEXT:    testl $65536, %edi ## imm = 0x10000
-; SSE4-NEXT:    jne LBB31_33
-; SSE4-NEXT:  LBB31_34: ## %else32
-; SSE4-NEXT:    testl $131072, %edi ## imm = 0x20000
-; SSE4-NEXT:    jne LBB31_35
-; SSE4-NEXT:  LBB31_36: ## %else34
-; SSE4-NEXT:    testl $262144, %edi ## imm = 0x40000
-; SSE4-NEXT:    jne LBB31_37
-; SSE4-NEXT:  LBB31_38: ## %else36
-; SSE4-NEXT:    testl $524288, %edi ## imm = 0x80000
-; SSE4-NEXT:    jne LBB31_39
-; SSE4-NEXT:  LBB31_40: ## %else38
-; SSE4-NEXT:    testl $1048576, %edi ## imm = 0x100000
-; SSE4-NEXT:    jne LBB31_41
-; SSE4-NEXT:  LBB31_42: ## %else40
-; SSE4-NEXT:    testl $2097152, %edi ## imm = 0x200000
-; SSE4-NEXT:    jne LBB31_43
-; SSE4-NEXT:  LBB31_44: ## %else42
-; SSE4-NEXT:    testl $4194304, %edi ## imm = 0x400000
-; SSE4-NEXT:    je LBB31_46
-; SSE4-NEXT:  LBB31_45: ## %cond.store43
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 88(%rdx)
-; SSE4-NEXT:  LBB31_46: ## %else44
-; SSE4-NEXT:    movb $1, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    jne LBB31_48
-; SSE4-NEXT:  ## %bb.47: ## %cond.store45
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 92(%rdx)
-; SSE4-NEXT:  LBB31_48: ## %else46
-; SSE4-NEXT:    popq %rbx
-; SSE4-NEXT:    popq %r12
-; SSE4-NEXT:    popq %r13
-; SSE4-NEXT:    popq %r14
-; SSE4-NEXT:    popq %r15
-; SSE4-NEXT:    popq %rbp
-; SSE4-NEXT:    retq
-; SSE4-NEXT:  LBB31_1: ## %cond.store
-; SSE4-NEXT:    movl (%rsi), %esi
-; SSE4-NEXT:    movl %esi, (%rdx)
-; SSE4-NEXT:    testb $2, %dil
-; SSE4-NEXT:    je LBB31_4
-; SSE4-NEXT:  LBB31_3: ## %cond.store1
-; SSE4-NEXT:    movl %r12d, 4(%rdx)
-; SSE4-NEXT:    testb $4, %dil
-; SSE4-NEXT:    je LBB31_6
-; SSE4-NEXT:  LBB31_5: ## %cond.store3
-; SSE4-NEXT:    movl %r15d, 8(%rdx)
-; SSE4-NEXT:    testb $8, %dil
-; SSE4-NEXT:    je LBB31_8
-; SSE4-NEXT:  LBB31_7: ## %cond.store5
-; SSE4-NEXT:    movl %r14d, 12(%rdx)
-; SSE4-NEXT:    testb $16, %dil
-; SSE4-NEXT:    je LBB31_10
-; SSE4-NEXT:  LBB31_9: ## %cond.store7
-; SSE4-NEXT:    movl %ebp, 16(%rdx)
-; SSE4-NEXT:    testb $32, %dil
-; SSE4-NEXT:    je LBB31_12
-; SSE4-NEXT:  LBB31_11: ## %cond.store9
-; SSE4-NEXT:    movl %ebx, 20(%rdx)
-; SSE4-NEXT:    testb $64, %dil
-; SSE4-NEXT:    je LBB31_14
-; SSE4-NEXT:  LBB31_13: ## %cond.store11
-; SSE4-NEXT:    movl %r11d, 24(%rdx)
-; SSE4-NEXT:    testb %dil, %dil
-; SSE4-NEXT:    jns LBB31_16
-; SSE4-NEXT:  LBB31_15: ## %cond.store13
-; SSE4-NEXT:    movl %r10d, 28(%rdx)
-; SSE4-NEXT:    testl $256, %edi ## imm = 0x100
-; SSE4-NEXT:    je LBB31_18
-; SSE4-NEXT:  LBB31_17: ## %cond.store15
-; SSE4-NEXT:    movl %r9d, 32(%rdx)
-; SSE4-NEXT:    testl $512, %edi ## imm = 0x200
-; SSE4-NEXT:    je LBB31_20
-; SSE4-NEXT:  LBB31_19: ## %cond.store17
-; SSE4-NEXT:    movl %r8d, 36(%rdx)
-; SSE4-NEXT:    testl $1024, %edi ## imm = 0x400
-; SSE4-NEXT:    je LBB31_22
-; SSE4-NEXT:  LBB31_21: ## %cond.store19
-; SSE4-NEXT:    movl %ecx, 40(%rdx)
-; SSE4-NEXT:    testl $2048, %edi ## imm = 0x800
-; SSE4-NEXT:    je LBB31_24
-; SSE4-NEXT:  LBB31_23: ## %cond.store21
-; SSE4-NEXT:    movl %eax, 44(%rdx)
-; SSE4-NEXT:    testl $4096, %edi ## imm = 0x1000
-; SSE4-NEXT:    je LBB31_26
-; SSE4-NEXT:  LBB31_25: ## %cond.store23
-; SSE4-NEXT:    movl %r13d, 48(%rdx)
-; SSE4-NEXT:    testl $8192, %edi ## imm = 0x2000
-; SSE4-NEXT:    je LBB31_28
-; SSE4-NEXT:  LBB31_27: ## %cond.store25
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 52(%rdx)
-; SSE4-NEXT:    testl $16384, %edi ## imm = 0x4000
-; SSE4-NEXT:    je LBB31_30
-; SSE4-NEXT:  LBB31_29: ## %cond.store27
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 56(%rdx)
-; SSE4-NEXT:    testw %di, %di
-; SSE4-NEXT:    jns LBB31_32
-; SSE4-NEXT:  LBB31_31: ## %cond.store29
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 60(%rdx)
-; SSE4-NEXT:    testl $65536, %edi ## imm = 0x10000
-; SSE4-NEXT:    je LBB31_34
-; SSE4-NEXT:  LBB31_33: ## %cond.store31
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 64(%rdx)
-; SSE4-NEXT:    testl $131072, %edi ## imm = 0x20000
-; SSE4-NEXT:    je LBB31_36
-; SSE4-NEXT:  LBB31_35: ## %cond.store33
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 68(%rdx)
-; SSE4-NEXT:    testl $262144, %edi ## imm = 0x40000
-; SSE4-NEXT:    je LBB31_38
-; SSE4-NEXT:  LBB31_37: ## %cond.store35
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 72(%rdx)
-; SSE4-NEXT:    testl $524288, %edi ## imm = 0x80000
-; SSE4-NEXT:    je LBB31_40
-; SSE4-NEXT:  LBB31_39: ## %cond.store37
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 76(%rdx)
-; SSE4-NEXT:    testl $1048576, %edi ## imm = 0x100000
-; SSE4-NEXT:    je LBB31_42
-; SSE4-NEXT:  LBB31_41: ## %cond.store39
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 80(%rdx)
-; SSE4-NEXT:    testl $2097152, %edi ## imm = 0x200000
-; SSE4-NEXT:    je LBB31_44
-; SSE4-NEXT:  LBB31_43: ## %cond.store41
-; SSE4-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
-; SSE4-NEXT:    movl %eax, 84(%rdx)
-; SSE4-NEXT:    testl $4194304, %edi ## imm = 0x400000
-; SSE4-NEXT:    jne LBB31_45
-; SSE4-NEXT:    jmp LBB31_46
+; SSE-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    pushq %rbp
+; SSE-NEXT:    pushq %r15
+; SSE-NEXT:    pushq %r14
+; SSE-NEXT:    pushq %r13
+; SSE-NEXT:    pushq %r12
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE-NEXT:    movdqa 64(%rdi), %xmm0
+; SSE-NEXT:    movl 92(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 88(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 84(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 80(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 76(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 72(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 68(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 64(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 60(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 56(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    movl 52(%rsi), %eax
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; SSE-NEXT:    packssdw 48(%rdi), %xmm2
+; SSE-NEXT:    packssdw 16(%rdi), %xmm1
+; SSE-NEXT:    packsswb %xmm2, %xmm1
+; SSE-NEXT:    packssdw 80(%rdi), %xmm0
+; SSE-NEXT:    packsswb %xmm0, %xmm0
+; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    andl $21845, %eax ## imm = 0x5555
+; SSE-NEXT:    pmovmskb %xmm0, %edi
+; SSE-NEXT:    andl $85, %edi
+; SSE-NEXT:    shll $16, %edi
+; SSE-NEXT:    orl %eax, %edi
+; SSE-NEXT:    movl 48(%rsi), %r13d
+; SSE-NEXT:    testb $1, %dil
+; SSE-NEXT:    movl 44(%rsi), %eax
+; SSE-NEXT:    movl 40(%rsi), %ecx
+; SSE-NEXT:    movl 36(%rsi), %r8d
+; SSE-NEXT:    movl 32(%rsi), %r9d
+; SSE-NEXT:    movl 28(%rsi), %r10d
+; SSE-NEXT:    movl 24(%rsi), %r11d
+; SSE-NEXT:    movl 20(%rsi), %ebx
+; SSE-NEXT:    movl 16(%rsi), %ebp
+; SSE-NEXT:    movl 12(%rsi), %r14d
+; SSE-NEXT:    movl 8(%rsi), %r15d
+; SSE-NEXT:    movl 4(%rsi), %r12d
+; SSE-NEXT:    jne LBB31_1
+; SSE-NEXT:  ## %bb.2: ## %else
+; SSE-NEXT:    testb $2, %dil
+; SSE-NEXT:    jne LBB31_3
+; SSE-NEXT:  LBB31_4: ## %else2
+; SSE-NEXT:    testb $4, %dil
+; SSE-NEXT:    jne LBB31_5
+; SSE-NEXT:  LBB31_6: ## %else4
+; SSE-NEXT:    testb $8, %dil
+; SSE-NEXT:    jne LBB31_7
+; SSE-NEXT:  LBB31_8: ## %else6
+; SSE-NEXT:    testb $16, %dil
+; SSE-NEXT:    jne LBB31_9
+; SSE-NEXT:  LBB31_10: ## %else8
+; SSE-NEXT:    testb $32, %dil
+; SSE-NEXT:    jne LBB31_11
+; SSE-NEXT:  LBB31_12: ## %else10
+; SSE-NEXT:    testb $64, %dil
+; SSE-NEXT:    jne LBB31_13
+; SSE-NEXT:  LBB31_14: ## %else12
+; SSE-NEXT:    testb %dil, %dil
+; SSE-NEXT:    js LBB31_15
+; SSE-NEXT:  LBB31_16: ## %else14
+; SSE-NEXT:    testl $256, %edi ## imm = 0x100
+; SSE-NEXT:    jne LBB31_17
+; SSE-NEXT:  LBB31_18: ## %else16
+; SSE-NEXT:    testl $512, %edi ## imm = 0x200
+; SSE-NEXT:    jne LBB31_19
+; SSE-NEXT:  LBB31_20: ## %else18
+; SSE-NEXT:    testl $1024, %edi ## imm = 0x400
+; SSE-NEXT:    jne LBB31_21
+; SSE-NEXT:  LBB31_22: ## %else20
+; SSE-NEXT:    testl $2048, %edi ## imm = 0x800
+; SSE-NEXT:    jne LBB31_23
+; SSE-NEXT:  LBB31_24: ## %else22
+; SSE-NEXT:    testl $4096, %edi ## imm = 0x1000
+; SSE-NEXT:    jne LBB31_25
+; SSE-NEXT:  LBB31_26: ## %else24
+; SSE-NEXT:    testl $8192, %edi ## imm = 0x2000
+; SSE-NEXT:    jne LBB31_27
+; SSE-NEXT:  LBB31_28: ## %else26
+; SSE-NEXT:    testl $16384, %edi ## imm = 0x4000
+; SSE-NEXT:    jne LBB31_29
+; SSE-NEXT:  LBB31_30: ## %else28
+; SSE-NEXT:    testw %di, %di
+; SSE-NEXT:    js LBB31_31
+; SSE-NEXT:  LBB31_32: ## %else30
+; SSE-NEXT:    testl $65536, %edi ## imm = 0x10000
+; SSE-NEXT:    jne LBB31_33
+; SSE-NEXT:  LBB31_34: ## %else32
+; SSE-NEXT:    testl $131072, %edi ## imm = 0x20000
+; SSE-NEXT:    jne LBB31_35
+; SSE-NEXT:  LBB31_36: ## %else34
+; SSE-NEXT:    testl $262144, %edi ## imm = 0x40000
+; SSE-NEXT:    jne LBB31_37
+; SSE-NEXT:  LBB31_38: ## %else36
+; SSE-NEXT:    testl $524288, %edi ## imm = 0x80000
+; SSE-NEXT:    jne LBB31_39
+; SSE-NEXT:  LBB31_40: ## %else38
+; SSE-NEXT:    testl $1048576, %edi ## imm = 0x100000
+; SSE-NEXT:    jne LBB31_41
+; SSE-NEXT:  LBB31_42: ## %else40
+; SSE-NEXT:    testl $2097152, %edi ## imm = 0x200000
+; SSE-NEXT:    jne LBB31_43
+; SSE-NEXT:  LBB31_44: ## %else42
+; SSE-NEXT:    testl $4194304, %edi ## imm = 0x400000
+; SSE-NEXT:    je LBB31_46
+; SSE-NEXT:  LBB31_45: ## %cond.store43
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 88(%rdx)
+; SSE-NEXT:  LBB31_46: ## %else44
+; SSE-NEXT:    movb $1, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    jne LBB31_48
+; SSE-NEXT:  ## %bb.47: ## %cond.store45
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 92(%rdx)
+; SSE-NEXT:  LBB31_48: ## %else46
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    popq %r12
+; SSE-NEXT:    popq %r13
+; SSE-NEXT:    popq %r14
+; SSE-NEXT:    popq %r15
+; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    retq
+; SSE-NEXT:  LBB31_1: ## %cond.store
+; SSE-NEXT:    movl (%rsi), %esi
+; SSE-NEXT:    movl %esi, (%rdx)
+; SSE-NEXT:    testb $2, %dil
+; SSE-NEXT:    je LBB31_4
+; SSE-NEXT:  LBB31_3: ## %cond.store1
+; SSE-NEXT:    movl %r12d, 4(%rdx)
+; SSE-NEXT:    testb $4, %dil
+; SSE-NEXT:    je LBB31_6
+; SSE-NEXT:  LBB31_5: ## %cond.store3
+; SSE-NEXT:    movl %r15d, 8(%rdx)
+; SSE-NEXT:    testb $8, %dil
+; SSE-NEXT:    je LBB31_8
+; SSE-NEXT:  LBB31_7: ## %cond.store5
+; SSE-NEXT:    movl %r14d, 12(%rdx)
+; SSE-NEXT:    testb $16, %dil
+; SSE-NEXT:    je LBB31_10
+; SSE-NEXT:  LBB31_9: ## %cond.store7
+; SSE-NEXT:    movl %ebp, 16(%rdx)
+; SSE-NEXT:    testb $32, %dil
+; SSE-NEXT:    je LBB31_12
+; SSE-NEXT:  LBB31_11: ## %cond.store9
+; SSE-NEXT:    movl %ebx, 20(%rdx)
+; SSE-NEXT:    testb $64, %dil
+; SSE-NEXT:    je LBB31_14
+; SSE-NEXT:  LBB31_13: ## %cond.store11
+; SSE-NEXT:    movl %r11d, 24(%rdx)
+; SSE-NEXT:    testb %dil, %dil
+; SSE-NEXT:    jns LBB31_16
+; SSE-NEXT:  LBB31_15: ## %cond.store13
+; SSE-NEXT:    movl %r10d, 28(%rdx)
+; SSE-NEXT:    testl $256, %edi ## imm = 0x100
+; SSE-NEXT:    je LBB31_18
+; SSE-NEXT:  LBB31_17: ## %cond.store15
+; SSE-NEXT:    movl %r9d, 32(%rdx)
+; SSE-NEXT:    testl $512, %edi ## imm = 0x200
+; SSE-NEXT:    je LBB31_20
+; SSE-NEXT:  LBB31_19: ## %cond.store17
+; SSE-NEXT:    movl %r8d, 36(%rdx)
+; SSE-NEXT:    testl $1024, %edi ## imm = 0x400
+; SSE-NEXT:    je LBB31_22
+; SSE-NEXT:  LBB31_21: ## %cond.store19
+; SSE-NEXT:    movl %ecx, 40(%rdx)
+; SSE-NEXT:    testl $2048, %edi ## imm = 0x800
+; SSE-NEXT:    je LBB31_24
+; SSE-NEXT:  LBB31_23: ## %cond.store21
+; SSE-NEXT:    movl %eax, 44(%rdx)
+; SSE-NEXT:    testl $4096, %edi ## imm = 0x1000
+; SSE-NEXT:    je LBB31_26
+; SSE-NEXT:  LBB31_25: ## %cond.store23
+; SSE-NEXT:    movl %r13d, 48(%rdx)
+; SSE-NEXT:    testl $8192, %edi ## imm = 0x2000
+; SSE-NEXT:    je LBB31_28
+; SSE-NEXT:  LBB31_27: ## %cond.store25
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 52(%rdx)
+; SSE-NEXT:    testl $16384, %edi ## imm = 0x4000
+; SSE-NEXT:    je LBB31_30
+; SSE-NEXT:  LBB31_29: ## %cond.store27
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 56(%rdx)
+; SSE-NEXT:    testw %di, %di
+; SSE-NEXT:    jns LBB31_32
+; SSE-NEXT:  LBB31_31: ## %cond.store29
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 60(%rdx)
+; SSE-NEXT:    testl $65536, %edi ## imm = 0x10000
+; SSE-NEXT:    je LBB31_34
+; SSE-NEXT:  LBB31_33: ## %cond.store31
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 64(%rdx)
+; SSE-NEXT:    testl $131072, %edi ## imm = 0x20000
+; SSE-NEXT:    je LBB31_36
+; SSE-NEXT:  LBB31_35: ## %cond.store33
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 68(%rdx)
+; SSE-NEXT:    testl $262144, %edi ## imm = 0x40000
+; SSE-NEXT:    je LBB31_38
+; SSE-NEXT:  LBB31_37: ## %cond.store35
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 72(%rdx)
+; SSE-NEXT:    testl $524288, %edi ## imm = 0x80000
+; SSE-NEXT:    je LBB31_40
+; SSE-NEXT:  LBB31_39: ## %cond.store37
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 76(%rdx)
+; SSE-NEXT:    testl $1048576, %edi ## imm = 0x100000
+; SSE-NEXT:    je LBB31_42
+; SSE-NEXT:  LBB31_41: ## %cond.store39
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 80(%rdx)
+; SSE-NEXT:    testl $2097152, %edi ## imm = 0x200000
+; SSE-NEXT:    je LBB31_44
+; SSE-NEXT:  LBB31_43: ## %cond.store41
+; SSE-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax ## 4-byte Reload
+; SSE-NEXT:    movl %eax, 84(%rdx)
+; SSE-NEXT:    testl $4194304, %edi ## imm = 0x400000
+; SSE-NEXT:    jne LBB31_45
+; SSE-NEXT:    jmp LBB31_46
 ;
 ; AVX1-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
 ; AVX1:       ## %bb.0:

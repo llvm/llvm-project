@@ -523,6 +523,9 @@ enum Rounding {
 // Bit position of rounding mode bits in FPCR.
 const unsigned RoundingBitsPos = 22;
 
+// Reserved bits should be preserved when modifying FPCR.
+const uint64_t ReservedFPControlBits = 0xfffffffff80040f8;
+
 // Registers used to pass function arguments.
 ArrayRef<MCPhysReg> getGPRArgRegs();
 ArrayRef<MCPhysReg> getFPRArgRegs();
@@ -998,15 +1001,22 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
+#ifndef NDEBUG
+  void verifyTargetSDNode(const SDNode *N) const override;
+#endif
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
 
+  llvm::BumpPtrAllocator BumpAlloc;
+  llvm::StringSaver Saver{BumpAlloc};
+
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
   void addTypeForNEON(MVT VT);
-  void addTypeForFixedLengthSVE(MVT VT, bool StreamingSVE);
+  void addTypeForFixedLengthSVE(MVT VT);
   void addDRTypeForNEON(MVT VT);
   void addQRTypeForNEON(MVT VT);
 
@@ -1121,6 +1131,9 @@ private:
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -1136,6 +1149,7 @@ private:
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -1152,6 +1166,7 @@ private:
   SDValue LowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVectorXRINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;

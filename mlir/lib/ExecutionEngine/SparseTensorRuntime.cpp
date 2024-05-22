@@ -311,6 +311,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_SPARSEVALUES)
     assert(v);                                                                 \
     aliasIntoMemref(v->size(), v->data(), *ref);                               \
   }
+
 #define IMPL_SPARSEPOSITIONS(PNAME, P)                                         \
   IMPL_GETOVERHEAD(sparsePositions##PNAME, P, getPositions)
 MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEPOSITIONS)
@@ -320,6 +321,12 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEPOSITIONS)
   IMPL_GETOVERHEAD(sparseCoordinates##CNAME, C, getCoordinates)
 MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
 #undef IMPL_SPARSECOORDINATES
+
+#define IMPL_SPARSECOORDINATESBUFFER(CNAME, C)                                 \
+  IMPL_GETOVERHEAD(sparseCoordinatesBuffer##CNAME, C, getCoordinatesBuffer)
+MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATESBUFFER)
+#undef IMPL_SPARSECOORDINATESBUFFER
+
 #undef IMPL_GETOVERHEAD
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \

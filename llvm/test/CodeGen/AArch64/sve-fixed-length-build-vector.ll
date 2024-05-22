@@ -7,8 +7,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @build_vector_7_inc1_v32i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_7_inc1_v32i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    index z0.b, #7, #1
+; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <32 x i8> <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38>, ptr %a, align 1
@@ -18,8 +18,8 @@ define void @build_vector_7_inc1_v32i8(ptr %a) #0 {
 define void @build_vector_0_inc2_v16i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_0_inc2_v16i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    index z0.h, #0, #2
+; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <16 x i16> <i16 0, i16 2, i16 4, i16 6, i16 8, i16 10, i16 12, i16 14, i16 16, i16 18, i16 20, i16 22, i16 24, i16 26, i16 28, i16 30>, ptr %a, align 2
@@ -30,8 +30,8 @@ define void @build_vector_0_inc2_v16i16(ptr %a) #0 {
 define void @build_vector_0_dec3_v8i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_0_dec3_v8i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    index z0.s, #0, #-3
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <8 x i32> <i32 0, i32 -3, i32 -6, i32 -9, i32 -12, i32 -15, i32 -18, i32 -21>, ptr %a, align 4
@@ -42,8 +42,8 @@ define void @build_vector_0_dec3_v8i32(ptr %a) #0 {
 define void @build_vector_minus2_dec32_v4i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_minus2_dec32_v4i64:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    mov x8, #-32
 ; VBITS_GE_256-NEXT:    index z0.d, #-2, x8
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
@@ -53,11 +53,6 @@ define void @build_vector_minus2_dec32_v4i64(ptr %a) #0 {
 
 ; Constant but not a sequence.
 define void @build_vector_no_stride_v4i64(ptr %a) #0 {
-; VBITS_GE_256-LABEL:  .LCPI4_0:
-; VBITS_GE_256:         .xword  0
-; VBITS_GE_256-NEXT:    .xword  4
-; VBITS_GE_256-NEXT:    .xword  1
-; VBITS_GE_256-NEXT:    .xword  8
 ; VBITS_GE_256-LABEL: build_vector_no_stride_v4i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4

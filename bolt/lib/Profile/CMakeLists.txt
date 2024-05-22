@@ -3,7 +3,6 @@ add_llvm_library(LLVMBOLTProfile
   DataAggregator.cpp
   DataReader.cpp
   Heatmap.cpp
-  ProfileReaderBase.cpp
   StaleProfileMatching.cpp
   YAMLProfileReader.cpp
   YAMLProfileWriter.cpp

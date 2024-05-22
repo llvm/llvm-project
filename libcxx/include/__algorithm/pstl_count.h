@@ -11,14 +11,15 @@
 
 #include <__algorithm/count.h>
 #include <__algorithm/for_each.h>
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__numeric/pstl_transform_reduce.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -70,6 +71,8 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
 count_if(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardIterator, "count_if(first, last, pred) requires [first, last) to be ForwardIterators");
   auto __res = std::__count_if(__policy, std::move(__first), std::move(__last), std::move(__pred));
   if (!__res)
     std::__throw_bad_alloc();
@@ -106,6 +109,8 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
 count(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardIterator, "count(first, last, val) requires [first, last) to be ForwardIterators");
   auto __res = std::__count(__policy, std::move(__first), std::move(__last), __value);
   if (!__res)
     std::__throw_bad_alloc();

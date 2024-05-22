@@ -190,6 +190,12 @@ func.func @func_powff64(%a : f64, %b : f64) {
   return
 }
 
+func.func @func_powff32(%a : f32, %b : f32) {
+  %r = math.powf %a, %b : f32
+  vector.print %r : f32
+  return
+}
+
 func.func @powf() {
   // CHECK-NEXT: 16
   %a   = arith.constant 4.0 : f64
@@ -230,7 +236,17 @@ func.func @powf() {
   %j   = arith.constant 29385.0 : f64
   %j_p = arith.constant 23598.0 : f64
   call @func_powff64(%j, %j_p) : (f64, f64) -> ()
-  return
+
+  // CHECK-NEXT: -nan
+  %k = arith.constant 1.0 : f64
+  %k_p = arith.constant 0xfff0000001000000 : f64
+  call @func_powff64(%k, %k_p) : (f64, f64) -> ()  
+
+  // CHECK-NEXT: -nan
+  %l = arith.constant 1.0 : f32
+  %l_p = arith.constant 0xffffffff : f32
+  call @func_powff32(%l, %l_p) : (f32, f32) -> ()  
+  return  
 }
 
 // -------------------------------------------------------------------------- //
@@ -701,6 +717,162 @@ func.func @tanh() {
  return
 }
 
+// -------------------------------------------------------------------------- //
+// Asinh.
+// -------------------------------------------------------------------------- //
+
+func.func @asinh_f32(%a : f32) {
+  %r = math.asinh %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @asinh_3xf32(%a : vector<3xf32>) {
+  %r = math.asinh %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @asinh() {
+  // CHECK: 0
+  %zero = arith.constant 0.0 : f32
+  call @asinh_f32(%zero) : (f32) -> ()
+
+  // CHECK: 0.881374
+  %cst1 = arith.constant 1.0 : f32
+  call @asinh_f32(%cst1) : (f32) -> ()
+
+  // CHECK: -0.881374
+  %cst2 = arith.constant -1.0 : f32
+  call @asinh_f32(%cst2) : (f32) -> ()
+
+  // CHECK: 1.81845
+  %cst3 = arith.constant 3.0 : f32
+  call @asinh_f32(%cst3) : (f32) -> ()
+
+  // CHECK: 0.247466, 0.790169, 1.44364
+  %vec_x = arith.constant dense<[0.25, 0.875, 2.0]> : vector<3xf32>
+  call @asinh_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// Acosh.
+// -------------------------------------------------------------------------- //
+
+func.func @acosh_f32(%a : f32) {
+  %r = math.acosh %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @acosh_3xf32(%a : vector<3xf32>) {
+  %r = math.acosh %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @acosh() {
+  // CHECK: 0
+  %zero = arith.constant 1.0 : f32
+  call @acosh_f32(%zero) : (f32) -> ()
+
+  // CHECK: 1.31696
+  %cst1 = arith.constant 2.0 : f32
+  call @acosh_f32(%cst1) : (f32) -> ()
+
+  // CHECK: 2.99322
+  %cst2 = arith.constant 10.0 : f32
+  call @acosh_f32(%cst2) : (f32) -> ()
+
+  // CHECK: 0.962424, 1.76275, 2.47789
+  %vec_x = arith.constant dense<[1.5, 3.0, 6.0]> : vector<3xf32>
+  call @acosh_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// Atanh.
+// -------------------------------------------------------------------------- //
+
+func.func @atanh_f32(%a : f32) {
+  %r = math.atanh %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @atanh_3xf32(%a : vector<3xf32>) {
+  %r = math.atanh %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @atanh() {
+  // CHECK: 0
+  %zero = arith.constant 0.0 : f32
+  call @atanh_f32(%zero) : (f32) -> ()
+
+  // CHECK: 0.549306
+  %cst1 = arith.constant 0.5 : f32
+  call @atanh_f32(%cst1) : (f32) -> ()
+
+  // CHECK: -0.549306
+  %cst2 = arith.constant -0.5 : f32
+  call @atanh_f32(%cst2) : (f32) -> ()
+
+  // CHECK: inf
+  %cst3 = arith.constant 1.0 : f32
+  call @atanh_f32(%cst3) : (f32) -> ()
+
+  // CHECK: 0.255413, 0.394229, 2.99448
+  %vec_x = arith.constant dense<[0.25, 0.375, 0.995]> : vector<3xf32>
+  call @atanh_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// Rsqrt.
+// -------------------------------------------------------------------------- //
+
+func.func @rsqrt_f32(%a : f32) {
+  %r = math.rsqrt %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @rsqrt_3xf32(%a : vector<3xf32>) {
+  %r = math.rsqrt %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @rsqrt() {
+  // CHECK: 1
+  %zero = arith.constant 1.0 : f32
+  call @rsqrt_f32(%zero) : (f32) -> ()
+
+  // CHECK: 0.707107
+  %cst1 = arith.constant 2.0 : f32
+  call @rsqrt_f32(%cst1) : (f32) -> ()
+
+  // CHECK: inf
+  %cst2 = arith.constant 0.0 : f32
+  call @rsqrt_f32(%cst2) : (f32) -> ()
+
+  // CHECK: nan
+  %cst3 = arith.constant -1.0 : f32
+  call @rsqrt_f32(%cst3) : (f32) -> ()
+
+  // CHECK: 0.5, 1.41421, 0.57735
+  %vec_x = arith.constant dense<[4.0, 0.5, 3.0]> : vector<3xf32>
+  call @rsqrt_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
@@ -709,5 +881,9 @@ func.func @main() {
   call @sinh() : () -> ()
   call @cosh() : () -> ()
   call @tanh() : () -> ()
+  call @asinh() : () -> ()
+  call @acosh() : () -> ()
+  call @atanh() : () -> ()
+  call @rsqrt() : () -> ()
   return
 }

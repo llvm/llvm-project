@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zimop < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zimop < %s 2>&1 | FileCheck %s
 
 # Too few operands
 mop.r.0 t0 # CHECK: :[[@LINE]]:1: error: too few operands for instruction

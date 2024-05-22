@@ -1,6 +1,7 @@
 add_object_library(
   baremetal_util
   SRCS
+    io.cpp
     quick_exit.cpp
   HDRS
     io.h

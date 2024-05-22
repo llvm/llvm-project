@@ -54,7 +54,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                        Objective-C: .m .mm
                                        Proto: .proto .protodevel
                                        TableGen: .td
-                                       TextProto: .textpb .pb.txt .textproto .asciipb
+                                       TextProto: .txtpb .textpb .pb.txt .textproto .asciipb
                                        Verilog: .sv .svh .v .vh
     --cursor=<uint>                - The position of the cursor when invoking
                                      clang-format from an editor integration

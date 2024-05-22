@@ -122,6 +122,7 @@ write_cmake_config("config") {
     "HOST_LINK_VERSION=",
     "LIBPFM_HAS_FIELD_CYCLES=",
     "LLVM_TARGET_TRIPLE_ENV=",
+    "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
     "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",

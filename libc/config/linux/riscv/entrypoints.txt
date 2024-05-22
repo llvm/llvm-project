@@ -22,6 +22,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fcntl.h entrypoints
     libc.src.fcntl.creat
+    libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
@@ -327,10 +328,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
@@ -338,6 +341,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.copysign
@@ -404,6 +408,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
+    libc.src.math.fromfp
+    libc.src.math.fromfpf
+    libc.src.math.fromfpl
+    libc.src.math.fromfpx
+    libc.src.math.fromfpxf
+    libc.src.math.fromfpxl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -486,6 +496,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+    libc.src.math.ufromfp
+    libc.src.math.ufromfpf
+    libc.src.math.ufromfpl
+    libc.src.math.ufromfpx
+    libc.src.math.ufromfpxf
+    libc.src.math.ufromfpxl
 )
 
 if(LIBC_TYPES_HAS_FLOAT128)
@@ -508,6 +524,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminimum_mag_numf128
     libc.src.math.fmodf128
     libc.src.math.frexpf128
+    libc.src.math.fromfpf128
+    libc.src.math.fromfpxf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -518,13 +536,17 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lroundf128
     libc.src.math.modff128
     libc.src.math.nanf128
+    libc.src.math.nearbyintf128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.rintf128
     libc.src.math.roundf128
+    libc.src.math.scalbnf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
+    libc.src.math.ufromfpf128
+    libc.src.math.ufromfpxf128
   )
 endif()
 
@@ -705,6 +727,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.time
 
     # unistd.h entrypoints
+    libc.src.unistd._exit
     libc.src.unistd.environ
     libc.src.unistd.execv
     libc.src.unistd.fork

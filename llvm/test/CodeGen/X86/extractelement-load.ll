@@ -10,20 +10,13 @@ define i32 @t(ptr %val) nounwind  {
 ; X86-SSE2-LABEL: t:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    movl 8(%eax), %eax
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-SSSE3-LABEL: t:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm0, %eax
-; X64-SSSE3-NEXT:    retq
-;
-; X64-AVX-LABEL: t:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movl 8(%rdi), %eax
-; X64-AVX-NEXT:    retq
+; X64-LABEL: t:
+; X64:       # %bb.0:
+; X64-NEXT:    movl 8(%rdi), %eax
+; X64-NEXT:    retq
   %tmp2 = load <2 x i64>, ptr %val, align 16		; <<2 x i64>> [#uses=1]
   %tmp3 = bitcast <2 x i64> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
   %tmp4 = extractelement <4 x i32> %tmp3, i32 2		; <i32> [#uses=1]
@@ -83,11 +76,9 @@ bb:
 define i64 @t4(ptr %a) {
 ; X86-SSE2-LABEL: t4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movdqa (%eax), %xmm0
-; X86-SSE2-NEXT:    movd %xmm0, %eax
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm0, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movl (%ecx), %eax
+; X86-SSE2-NEXT:    movl 4(%ecx), %edx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: t4:
@@ -286,35 +277,25 @@ entry:
 define i32 @PR85419(ptr %p0) {
 ; X86-SSE2-LABEL: PR85419:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movdqa (%eax), %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm1, %ecx
-; X86-SSE2-NEXT:    xorl %edx, %edx
-; X86-SSE2-NEXT:    orl (%eax), %ecx
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X86-SSE2-NEXT:    movd %xmm0, %eax
-; X86-SSE2-NEXT:    cmovel %edx, %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movl (%ecx), %edx
+; X86-SSE2-NEXT:    xorl %eax, %eax
+; X86-SSE2-NEXT:    orl 4(%ecx), %edx
+; X86-SSE2-NEXT:    je .LBB8_2
+; X86-SSE2-NEXT:  # %bb.1:
+; X86-SSE2-NEXT:    movl 8(%ecx), %eax
+; X86-SSE2-NEXT:  .LBB8_2:
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-SSSE3-LABEL: PR85419:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    xorl %ecx, %ecx
-; X64-SSSE3-NEXT:    cmpq $0, (%rdi)
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm0, %eax
-; X64-SSSE3-NEXT:    cmovel %ecx, %eax
-; X64-SSSE3-NEXT:    retq
-;
-; X64-AVX-LABEL: PR85419:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %eax, %eax
-; X64-AVX-NEXT:    cmpq $0, (%rdi)
-; X64-AVX-NEXT:    je .LBB8_2
-; X64-AVX-NEXT:  # %bb.1:
-; X64-AVX-NEXT:    movl 8(%rdi), %eax
-; X64-AVX-NEXT:  .LBB8_2:
-; X64-AVX-NEXT:    retq
+; X64-LABEL: PR85419:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpq $0, (%rdi)
+; X64-NEXT:    je .LBB8_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    movl 8(%rdi), %eax
+; X64-NEXT:  .LBB8_2:
+; X64-NEXT:    retq
   %load = load <2 x i64>, ptr %p0, align 16
   %vecext.i = extractelement <2 x i64> %load, i64 0
   %cmp = icmp eq i64 %vecext.i, 0
@@ -443,35 +424,35 @@ define i32 @main() nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-32, %esp
 ; X86-SSE2-NEXT:    subl $64, %esp
-; X86-SSE2-NEXT:    movdqa zero, %xmm0
-; X86-SSE2-NEXT:    movaps n1+16, %xmm1
-; X86-SSE2-NEXT:    movaps n1, %xmm2
-; X86-SSE2-NEXT:    movaps %xmm2, zero
-; X86-SSE2-NEXT:    movaps %xmm1, zero+16
-; X86-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
-; X86-SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movaps %xmm1, (%esp)
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm1
-; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X86-SSE2-NEXT:    movd %xmm2, %eax
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; X86-SSE2-NEXT:    movd %xmm2, %ecx
-; X86-SSE2-NEXT:    xorl %edx, %edx
-; X86-SSE2-NEXT:    divl %ecx
-; X86-SSE2-NEXT:    movl %eax, %ecx
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm0, %eax
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm0, %esi
+; X86-SSE2-NEXT:    movaps n1+16, %xmm0
+; X86-SSE2-NEXT:    movaps n1, %xmm1
+; X86-SSE2-NEXT:    movl zero+4, %ecx
+; X86-SSE2-NEXT:    movl zero+8, %eax
+; X86-SSE2-NEXT:    movaps %xmm1, zero
+; X86-SSE2-NEXT:    movaps %xmm0, zero+16
+; X86-SSE2-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2]
+; X86-SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movaps %xmm0, (%esp)
+; X86-SSE2-NEXT:    movdqa (%esp), %xmm0
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm1, %esi
 ; X86-SSE2-NEXT:    xorl %edx, %edx
 ; X86-SSE2-NEXT:    divl %esi
-; X86-SSE2-NEXT:    addl %ecx, %eax
-; X86-SSE2-NEXT:    leal -4(%ebp), %esp
+; X86-SSE2-NEXT:    movl %eax, %esi
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, %edi
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    xorl %edx, %edx
+; X86-SSE2-NEXT:    divl %edi
+; X86-SSE2-NEXT:    addl %esi, %eax
+; X86-SSE2-NEXT:    leal -8(%ebp), %esp
 ; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -481,31 +462,29 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    movq %rsp, %rbp
 ; X64-SSSE3-NEXT:    andq $-32, %rsp
 ; X64-SSSE3-NEXT:    subq $64, %rsp
-; X64-SSSE3-NEXT:    movdqa zero(%rip), %xmm0
 ; X64-SSSE3-NEXT:    movq n1@GOTPCREL(%rip), %rax
-; X64-SSSE3-NEXT:    movaps (%rax), %xmm1
-; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm2
-; X64-SSSE3-NEXT:    movaps %xmm1, zero(%rip)
-; X64-SSSE3-NEXT:    movaps %xmm2, zero+16(%rip)
-; X64-SSSE3-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
-; X64-SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    movaps %xmm1, (%rsp)
-; X64-SSSE3-NEXT:    movdqa (%rsp), %xmm1
-; X64-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm2, %eax
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm2, %ecx
-; X64-SSSE3-NEXT:    xorl %edx, %edx
-; X64-SSSE3-NEXT:    divl %ecx
-; X64-SSSE3-NEXT:    movl %eax, %ecx
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-SSSE3-NEXT:    movd %xmm0, %eax
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X64-SSSE3-NEXT:    movd %xmm0, %esi
+; X64-SSSE3-NEXT:    movaps (%rax), %xmm0
+; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm1
+; X64-SSSE3-NEXT:    movl zero+4(%rip), %ecx
+; X64-SSSE3-NEXT:    movl zero+8(%rip), %eax
+; X64-SSSE3-NEXT:    movaps %xmm0, zero(%rip)
+; X64-SSSE3-NEXT:    movaps %xmm1, zero+16(%rip)
+; X64-SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2]
+; X64-SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; X64-SSSE3-NEXT:    movaps %xmm0, (%rsp)
+; X64-SSSE3-NEXT:    movdqa (%rsp), %xmm0
+; X64-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSSE3-NEXT:    movd %xmm1, %esi
 ; X64-SSSE3-NEXT:    xorl %edx, %edx
 ; X64-SSSE3-NEXT:    divl %esi
-; X64-SSSE3-NEXT:    addl %ecx, %eax
+; X64-SSSE3-NEXT:    movl %eax, %esi
+; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-SSSE3-NEXT:    movd %xmm0, %edi
+; X64-SSSE3-NEXT:    movl %ecx, %eax
+; X64-SSSE3-NEXT:    xorl %edx, %edx
+; X64-SSSE3-NEXT:    divl %edi
+; X64-SSSE3-NEXT:    addl %esi, %eax
 ; X64-SSSE3-NEXT:    movq %rbp, %rsp
 ; X64-SSSE3-NEXT:    popq %rbp
 ; X64-SSSE3-NEXT:    retq

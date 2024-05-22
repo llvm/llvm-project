@@ -36,6 +36,7 @@
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

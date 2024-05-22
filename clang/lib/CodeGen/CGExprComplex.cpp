@@ -289,7 +289,7 @@ public:
                                         const BinOpInfo &Op);
 
   QualType GetHigherPrecisionFPType(QualType ElementType) {
-    const auto *CurrentBT = dyn_cast<BuiltinType>(ElementType);
+    const auto *CurrentBT = cast<BuiltinType>(ElementType);
     switch (CurrentBT->getKind()) {
     case BuiltinType::Kind::Float16:
       return CGF.getContext().FloatTy;
@@ -319,12 +319,12 @@ public:
     // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      FPHasBeenPromoted = true;
       return CGF.getContext().getComplexType(HigherElementType);
     } else {
-      FPHasBeenPromoted = true;
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
       Diags.Report(diag::warn_next_larger_fp_type_same_size_than_fp);
-      return CGF.getContext().getComplexType(ElementType);
+      return QualType();
     }
   }
 
@@ -434,7 +434,7 @@ ComplexPairTy ComplexExprEmitter::EmitLoadOfLValue(LValue lvalue,
   if (lvalue.getType()->isAtomicType())
     return CGF.EmitAtomicLoad(lvalue, loc).getComplexVal();
 
-  Address SrcPtr = lvalue.getAddress(CGF);
+  Address SrcPtr = lvalue.getAddress();
   bool isVolatile = lvalue.isVolatileQualified();
 
   llvm::Value *Real = nullptr, *Imag = nullptr;
@@ -460,7 +460,7 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
       (!isInit && CGF.LValueIsSuitableForInlineAtomic(lvalue)))
     return CGF.EmitAtomicStore(RValue::getComplex(Val), lvalue, isInit);
 
-  Address Ptr = lvalue.getAddress(CGF);
+  Address Ptr = lvalue.getAddress();
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
@@ -551,14 +551,14 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
   case CK_LValueBitCast: {
     LValue origLV = CGF.EmitLValue(Op);
-    Address V = origLV.getAddress(CGF).withElementType(CGF.ConvertType(DestTy));
+    Address V = origLV.getAddress().withElementType(CGF.ConvertType(DestTy));
     return EmitLoadOfLValue(CGF.MakeAddrLValue(V, DestTy), Op->getExprLoc());
   }
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(Op);
-    Address Addr = SourceLVal.getAddress(CGF).withElementType(
-        CGF.ConvertTypeForMem(DestTy));
+    Address Addr =
+        SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, Op->getExprLoc());
@@ -616,6 +616,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
@@ -1036,7 +1037,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
-         FPHasBeenPromoted))
+         !FPHasBeenPromoted))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)

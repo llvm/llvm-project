@@ -53,7 +53,7 @@ jobs:
 
       - name: Setup Environment
         run: |
-          pip install -r ./llvm/utils/git/requirements.txt
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
           ./llvm/utils/git/github-automation.py --token ${{ github.token }} setup-llvmbot-git
 
       - name: Backport Commits

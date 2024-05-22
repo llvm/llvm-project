@@ -78,6 +78,22 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind);
 
+  /// \name EVL Support for predicated vectorization.
+  /// Whether the target supports the %evl parameter of VP intrinsic efficiently
+  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
+  /// Reference - "Vector Predication Intrinsics",
+  /// https://llvm.org/docs/LangRef.html#vector-predication-intrinsics and
+  /// "IR-level VP intrinsics",
+  /// https://llvm.org/docs/Proposals/VectorPredication.html#ir-level-vp-intrinsics).
+  /// \param Opcode the opcode of the instruction checked for predicated version
+  /// support.
+  /// \param DataType the type of the instruction with the \p Opcode checked for
+  /// prediction support.
+  /// \param Alignment the alignment for memory access operation checked for
+  /// predicated version support.
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const;
+
   TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
   bool shouldExpandReduction(const IntrinsicInst *II) const;
@@ -130,7 +146,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
@@ -193,7 +210,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr);
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
@@ -211,7 +228,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
+    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -236,7 +253,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
+    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);

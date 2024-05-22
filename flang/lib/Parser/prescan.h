@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "token-sequence.h"
 #include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Parser/token-sequence.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -43,6 +43,7 @@ public:
   Messages &messages() { return messages_; }
   const Preprocessor &preprocessor() const { return preprocessor_; }
   Preprocessor &preprocessor() { return preprocessor_; }
+  common::LanguageFeatureControl &features() { return features_; }
 
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
@@ -197,6 +198,7 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};

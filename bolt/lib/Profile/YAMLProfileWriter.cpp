@@ -9,6 +9,8 @@
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
+#include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
@@ -25,8 +27,34 @@ extern llvm::cl::opt<bool> ProfileUseDFS;
 namespace llvm {
 namespace bolt {
 
+const BinaryFunction *YAMLProfileWriter::setCSIDestination(
+    const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+    uint32_t Offset) {
+  CSI.DestId = 0; // designated for unknown functions
+  CSI.EntryDiscriminator = 0;
+
+  if (Symbol) {
+    uint64_t EntryID = 0;
+    if (const BinaryFunction *Callee =
+            BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
+      else if (const BinaryBasicBlock *BB =
+                   Callee->getBasicBlockContainingOffset(Offset))
+        BC.getFunctionForSymbol(Callee->getSecondaryEntryPointSymbol(*BB),
+                                &EntryID);
+      CSI.DestId = Callee->getFunctionNumber();
+      CSI.EntryDiscriminator = EntryID;
+      return Callee;
+    }
+  }
+  return nullptr;
+}
+
 yaml::bolt::BinaryFunctionProfile
-YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
+YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
 
@@ -36,7 +64,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
   BF.computeHash(UseDFS);
   BF.computeBlockHashes();
 
-  YamlBF.Name = BF.getPrintName();
+  YamlBF.Name = DataAggregator::getLocationName(BF, BAT);
   YamlBF.Id = BF.getFunctionNumber();
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
@@ -79,31 +107,21 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
           StringRef TargetName = "";
-          CSI.DestId = 0; // designated for unknown functions
-          CSI.EntryDiscriminator = 0;
-          if (CSP.Symbol) {
-            const BinaryFunction *Callee = BC.getFunctionForSymbol(CSP.Symbol);
-            if (Callee) {
-              CSI.DestId = Callee->getFunctionNumber();
-              TargetName = Callee->getOneName();
-            }
-          }
+          const BinaryFunction *Callee =
+              setCSIDestination(BC, CSI, CSP.Symbol, BAT);
+          if (Callee)
+            TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
           CSTargets.emplace_back(TargetName, CSI);
         }
       } else { // direct call or a tail call
-        uint64_t EntryID = 0;
-        CSI.DestId = 0;
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
-            BC.getFunctionForSymbol(CalleeSymbol, &EntryID);
-        if (Callee) {
-          CSI.DestId = Callee->getFunctionNumber();
-          CSI.EntryDiscriminator = EntryID;
+            setCSIDestination(BC, CSI, CalleeSymbol, BAT);
+        if (Callee)
           TargetName = Callee->getOneName();
-        }
 
         auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
           return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);

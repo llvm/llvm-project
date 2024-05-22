@@ -13,7 +13,7 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
@@ -247,8 +247,22 @@ round_using_current_rounding_mode(T x) {
 template <bool IsSigned, typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 fromfp(T x, int rnd, unsigned int width) {
-  if (width == 0U)
+  using StorageType = typename FPBits<T>::StorageType;
+
+  constexpr StorageType EXPLICIT_BIT =
+      FPBits<T>::SIG_MASK - FPBits<T>::FRACTION_MASK;
+
+  if (width == 0U) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
+  FPBits<T> bits(x);
+
+  if (bits.is_inf_or_nan()) {
+    raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
 
   T rounded_value = round_using_specific_rounding_mode(x, rnd);
 
@@ -256,18 +270,46 @@ fromfp(T x, int rnd, unsigned int width) {
     // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
     if (width - 1 > FPBits<T>::EXP_BIAS)
       return rounded_value;
-    if (rounded_value < -T(1U << (width - 1U)))
+
+    StorageType range_exp = width - 1U + FPBits<T>::EXP_BIAS;
+    // rounded_value < -2^(width - 1)
+    T range_min =
+        FPBits<T>::create_value(Sign::NEG, range_exp, EXPLICIT_BIT).get_val();
+    if (rounded_value < range_min) {
+      raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
-    if (rounded_value > T((1U << (width - 1U)) - 1U))
+    }
+    // rounded_value > 2^(width - 1) - 1
+    T range_max =
+        FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+        T(1.0);
+    if (rounded_value > range_max) {
+      raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
+    }
+
     return rounded_value;
   }
 
-  if (rounded_value < T(0.0))
+  if (rounded_value < T(0.0)) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
   // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
-  if (width <= FPBits<T>::EXP_BIAS && rounded_value > T(1U << width) - 1U)
+  if (width > FPBits<T>::EXP_BIAS)
+    return rounded_value;
+
+  StorageType range_exp = width + FPBits<T>::EXP_BIAS;
+  // rounded_value > 2^width - 1
+  T range_max =
+      FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+      T(1.0);
+  if (rounded_value > range_max) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
   return rounded_value;
 }
 
