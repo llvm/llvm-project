@@ -2383,7 +2383,7 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
   Type *DestType = Shuf.getType();
   Value *X;
   if (!match(Shuf.getOperand(0), m_BitCast(m_Value(X))) ||
-      !match(Shuf.getOperand(1), m_Undef()) || !DestType->isIntOrIntVectorTy())
+      !match(Shuf.getOperand(1), m_Poison()) || !DestType->isIntOrIntVectorTy())
     return nullptr;
 
   // The source type must have the same number of elements as the shuffle,
@@ -2755,17 +2755,17 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
 // BinOp's operands are the result of a first element splat can be simplified to
 // splatting the first element of the result of the BinOp
 Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
-  if (!match(SVI.getOperand(1), m_Undef()) ||
+  if (!match(SVI.getOperand(1), m_Poison()) ||
       !match(SVI.getShuffleMask(), m_ZeroMask()) ||
       !SVI.getOperand(0)->hasOneUse())
     return nullptr;
 
   Value *Op0 = SVI.getOperand(0);
   Value *X, *Y;
-  if (!match(Op0, m_BinOp(m_Shuffle(m_Value(X), m_Undef(), m_ZeroMask()),
+  if (!match(Op0, m_BinOp(m_Shuffle(m_Value(X), m_Poison(), m_ZeroMask()),
                           m_Value(Y))) &&
       !match(Op0, m_BinOp(m_Value(X),
-                          m_Shuffle(m_Value(Y), m_Undef(), m_ZeroMask()))))
+                          m_Shuffle(m_Value(Y), m_Poison(), m_ZeroMask()))))
     return nullptr;
   if (X->getType() != Y->getType())
     return nullptr;
