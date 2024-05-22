@@ -13,9 +13,8 @@ function(add_benchmark benchmark_name)
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
-  add_libc_hermetic_test(
+  add_libc_hermetic(
     ${benchmark_name}
-    IS_BENCHMARK
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
