@@ -2416,13 +2416,13 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
 }
 
 /// Match a shuffle-select-shuffle pattern where the shuffles are widening and
-/// narrowing (concatenating with undef and extracting back to the original
+/// narrowing (concatenating with poison and extracting back to the original
 /// length). This allows replacing the wide select with a narrow select.
 static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
                                        InstCombiner::BuilderTy &Builder) {
   // This must be a narrowing identity shuffle. It extracts the 1st N elements
   // of the 1st vector operand of a shuffle.
-  if (!match(Shuf.getOperand(1), m_Undef()) || !Shuf.isIdentityWithExtract())
+  if (!match(Shuf.getOperand(1), m_Poison()) || !Shuf.isIdentityWithExtract())
     return nullptr;
 
   // The vector being shuffled must be a vector select that we can eliminate.
@@ -2432,19 +2432,20 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
              m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y)))))
     return nullptr;
 
-  // We need a narrow condition value. It must be extended with undef elements
+  // We need a narrow condition value. It must be extended with poison elements
   // and have the same number of elements as this shuffle.
   unsigned NarrowNumElts =
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   Value *NarrowCond;
-  if (!match(Cond, m_OneUse(m_Shuffle(m_Value(NarrowCond), m_Undef()))) ||
+  if (!match(Cond, m_OneUse(m_Shuffle(m_Value(NarrowCond), m_Poison()))) ||
       cast<FixedVectorType>(NarrowCond->getType())->getNumElements() !=
           NarrowNumElts ||
       !cast<ShuffleVectorInst>(Cond)->isIdentityWithPadding())
     return nullptr;
 
-  // shuf (sel (shuf NarrowCond, undef, WideMask), X, Y), undef, NarrowMask) -->
-  // sel NarrowCond, (shuf X, undef, NarrowMask), (shuf Y, undef, NarrowMask)
+  // shuf (sel (shuf NarrowCond, poison, WideMask), X, Y), poison, NarrowMask)
+  // -->
+  // sel NarrowCond, (shuf X, poison, NarrowMask), (shuf Y, poison, NarrowMask)
   Value *NarrowX = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
   Value *NarrowY = Builder.CreateShuffleVector(Y, Shuf.getShuffleMask());
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
