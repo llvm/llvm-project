@@ -1696,14 +1696,14 @@ def APlusBMinusCPlusA : GICombineRule<
    (apply (G_SUB $root, $B, $C))>;
 
 def integer_reassoc_combines: GICombineGroup<[
-ZeroMinusAPlusB,
-APlusZeroMinusB,
-APlusBMinusB,
-BMinusAPlusA,
-AMinusBPlusCMinusA,
-AMinusBPlusBMinusC,
-APlusBMinusAplusC,
-APlusBMinusCPlusA
+  ZeroMinusAPlusB,
+  APlusZeroMinusB,
+  APlusBMinusB,
+  BMinusAPlusA,
+  AMinusBPlusCMinusA,
+  AMinusBPlusBMinusC,
+  APlusBMinusAplusC,
+  APlusBMinusCPlusA
 ]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
