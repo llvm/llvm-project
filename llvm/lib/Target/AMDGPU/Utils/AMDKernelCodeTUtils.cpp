@@ -192,10 +192,11 @@ static ArrayRef<bool> hasMCExprVersionTable() {
   return ArrayRef(Table);
 }
 
-static ArrayRef<std::reference_wrapper<const MCExpr *>>
-getMCExprIndexTable(AMDGPUMCKernelCodeT &C) {
-  static std::reference_wrapper<const MCExpr *> Table[] = {
-#define RECORD(name, altName, print, parse) GetMember##name::Get(C)
+using RetrieveFx = const MCExpr *&(*)(AMDGPUMCKernelCodeT &);
+
+static ArrayRef<RetrieveFx> getMCExprIndexTable() {
+  static const RetrieveFx Table[] = {
+#define RECORD(name, altName, print, parse) GetMember##name::Get
 #include "Utils/AMDKernelCodeTInfo.h"
 #undef RECORD
   };
@@ -471,8 +472,8 @@ void AMDGPUMCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
 }
 
 const MCExpr *&AMDGPUMCKernelCodeT::getMCExprForIndex(int Index) {
-  auto IndexTable = getMCExprIndexTable(*this);
-  return IndexTable[Index].get();
+  static const auto IndexTable = getMCExprIndexTable();
+  return IndexTable[Index](*this);
 }
 
 bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
