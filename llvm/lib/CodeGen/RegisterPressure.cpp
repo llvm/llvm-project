@@ -873,7 +873,7 @@ void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
 
   const MachineInstr &MI = *CurrPos;
   RegisterOperands RegOpers;
-  RegOpers.collect(MI, *TRI, *MRI, TrackLaneMasks, false);
+  RegOpers.collect(MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/false);
   if (TrackLaneMasks) {
     SlotIndex SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
@@ -1290,7 +1290,7 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
-  RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, false);
+  RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/false);
   if (TrackLaneMasks)
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
 
