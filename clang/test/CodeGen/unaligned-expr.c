@@ -187,7 +187,7 @@ void test20(void) {
 
 void test21(void) {
   // CHECK: {{%.*}} = alloca %struct.S1, align 1
-  // CHECK: {{%.*}} = getelementptr inbounds %struct.S1, ptr {{%.*}}, i32 0, i32 1
+  // CHECK: {{%.*}} = getelementptr inbounds nuw %struct.S1, ptr {{%.*}}, i32 0, i32 1
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 1
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 1
   __unaligned S1 s1_2;
@@ -209,7 +209,7 @@ void test22(void) {
 
 void test23(void) {
   // CHECK: {{%.*}} = alloca %struct.S2, align 1
-  // CHECK: {{%.*}} = getelementptr inbounds %struct.S2, ptr {{%.*}}, i32 0, i32 1
+  // CHECK: {{%.*}} = getelementptr inbounds nuw %struct.S2, ptr {{%.*}}, i32 0, i32 1
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 1
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 1
   __unaligned S2 s2_2;

@@ -130,7 +130,7 @@ void test_indirect_arg_private(void) {
 // AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelOneMember
 // AMDGCN-SAME:  (<2 x i32> %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.StructOneMember, align 8, addrspace(5)
-// AMDGCN:  %[[coerce_dive:.*]] = getelementptr inbounds %struct.StructOneMember, ptr addrspace(5) %[[u]], i32 0, i32 0
+// AMDGCN:  %[[coerce_dive:.*]] = getelementptr inbounds nuw %struct.StructOneMember, ptr addrspace(5) %[[u]], i32 0, i32 0
 // AMDGCN:  store <2 x i32> %[[u_coerce]], ptr addrspace(5) %[[coerce_dive]]
 // AMDGCN:  call void @FuncOneMember(<2 x i32>
 kernel void KernelOneMember(struct StructOneMember u) {

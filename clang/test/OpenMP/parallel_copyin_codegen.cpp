@@ -500,7 +500,7 @@ void foo() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP1]], align 128
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to float
@@ -526,7 +526,7 @@ void foo() {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK1-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr [[TMP2]], align 128
@@ -726,7 +726,7 @@ void foo() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP1]], align 128
 // CHECK1-NEXT:    store i32 [[TMP2]], ptr [[F]], align 4
@@ -751,7 +751,7 @@ void foo() {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK1-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr [[TMP2]], align 128
@@ -985,9 +985,9 @@ void foo() {
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK5-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK5-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK5-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK5-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
+// CHECK5-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 0, ptr [[B]], align 4
 // CHECK5-NEXT:    ret void
 //
@@ -1242,7 +1242,7 @@ void foo() {
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK11-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr [[TMP0]], align 128
 // CHECK11-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
@@ -1267,7 +1267,7 @@ void foo() {
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK11-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP1]], align 128
@@ -1431,7 +1431,7 @@ void foo() {
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK11-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr [[TMP0]], align 128
 // CHECK11-NEXT:    store i32 [[TMP1]], ptr [[F]], align 4
@@ -1455,7 +1455,7 @@ void foo() {
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK11-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP1]], align 128
@@ -1676,9 +1676,9 @@ void foo() {
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK15-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK15-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK15-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK15-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
+// CHECK15-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 0, ptr [[B]], align 4
 // CHECK15-NEXT:    ret void
 //
