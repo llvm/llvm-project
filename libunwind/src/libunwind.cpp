@@ -347,8 +347,7 @@ void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
 }
 
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-#endif // !defined(__USING_SJLJ_EXCEPTIONS__) &&
-       // !defined(__wasm__)
+#endif // !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
 #ifdef __APPLE__
 
