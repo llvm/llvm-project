@@ -2482,6 +2482,11 @@ class AMDGPUGlobalLoadLDS :
      "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 
+// Use read/write of inaccessible memory to model the fact that this reads a
+// volatile value.
+def int_amdgcn_pops_exiting_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
+
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
