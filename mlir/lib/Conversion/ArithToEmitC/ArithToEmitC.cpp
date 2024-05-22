@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Tools/PDLL/AST/Types.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -133,6 +134,23 @@ public:
     Type operandType = adaptor.getIn().getType();
     if (!isa_and_nonnull<IntegerType>(operandType))
       return rewriter.notifyMatchFailure(op, "expected integer operand type");
+
+    // Signed (sign-extending) casts from i1 are not supported.
+    if(operandType.isInteger(1) && !castToUnsigned)
+      return rewriter.notifyMatchFailure(op, "operation not supported on i1 type");
+
+    // to-i1 conversions: arith semantics want truncation, whereas (bool)(v) is
+    // equivalent to (v != 0). Implementing as (bool)(v & 0x01) gives
+    // truncation.
+    if (opReturnType.isInteger(1)) {
+      auto constOne = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), operandType, rewriter.getIntegerAttr(operandType, 1));
+      auto oneAndOperand = rewriter.create<emitc::BitwiseAndOp>(
+          op.getLoc(), operandType, adaptor.getIn(), constOne);
+      rewriter.replaceOpWithNewOp<emitc::CastOp>(op, opReturnType,
+                                                 oneAndOperand);
+      return success();
+    }
 
     bool isTruncation = operandType.getIntOrFloatBitWidth() >
                         opReturnType.getIntOrFloatBitWidth();
