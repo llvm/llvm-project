@@ -2879,7 +2879,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
-        AA->getPriority());
+        AA->getPriority(), AA->getEnvironment());
   else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
   else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))

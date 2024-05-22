@@ -1112,6 +1112,8 @@ def err_zero_version : Error<
   "version number must have non-zero major, minor, or sub-minor version">;
 def err_availability_expected_platform : Error<
   "expected a platform name, e.g., 'macos'">;
+def err_availability_expected_environment : Error<
+  "expected an environment name, e.g., 'compute'">;
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<

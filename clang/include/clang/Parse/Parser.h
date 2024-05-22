@@ -153,6 +153,9 @@ class Parser : public CodeCompletionHandler {
   /// Identifier for "replacement".
   IdentifierInfo *Ident_replacement;
 
+  /// Identifier for "environment".
+  IdentifierInfo *Ident_environment;
+
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
       *Ident_generated_declaration, *Ident_USR;
