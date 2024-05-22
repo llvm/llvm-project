@@ -2282,13 +2282,9 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
     if (LabelDecl *LD = dyn_cast<LabelDecl>(D))
       CheckPoppedLabel(LD, *this, addDiag);
 
-    // Partial translation units that are created in incremental processing must
-    // not clean up the IdResolver because PTUs should take into account the
-    // declarations that came from previous PTUs.
-    if (!PP.isIncrementalProcessingEnabled())
-      IdResolver.RemoveDecl(D);
-
-    // Warn on it if we are shadowing a declaration.
+    // Remove this name from our lexical scope, and warn on it if we haven't
+    // already.
+    IdResolver.RemoveDecl(D);
     auto ShadowI = ShadowingDecls.find(D);
     if (ShadowI != ShadowingDecls.end()) {
       if (const auto *FD = dyn_cast<FieldDecl>(ShadowI->second)) {
