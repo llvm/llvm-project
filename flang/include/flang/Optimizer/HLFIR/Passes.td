@@ -23,9 +23,8 @@ def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let constructor = "hlfir::createBufferizeHLFIRPass()";
 }
 
-def OptimizedBufferization : Pass<"opt-bufferization", "::mlir::func::FuncOp"> {
+def OptimizedBufferization : Pass<"opt-bufferization"> {
   let summary = "Special cases for hlfir.expr bufferization where we can avoid a temporary which would be created by the generic bufferization pass";
-  let constructor = "hlfir::createOptimizedBufferizationPass()";
 }
 
 def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {

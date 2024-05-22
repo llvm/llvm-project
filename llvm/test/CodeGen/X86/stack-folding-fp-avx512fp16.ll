@@ -146,8 +146,16 @@ define i32 @stack_fold_fpclassph_mask(<32 x half> %a0, <32 x i1>* %p) {
 }
 
 define i8 @stack_fold_fpclasssh(<8 x half> %a0) {
-  ;CHECK-LABEl: stack_fold_fpclasssh:
-  ;CHECK:       vfpclasssh $4, {{-?[0-9]*}}(%rsp), {{%k[0-7]}} {{.*#+}} 16-byte Folded Reload
+; CHECK-LABEL: stack_fold_fpclasssh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vfpclasssh $4, {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 16-byte Folded Reload
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call i8 @llvm.x86.avx512fp16.mask.fpclass.sh(<8 x half> %a0, i32 4, i8 -1)
   ret i8 %2
