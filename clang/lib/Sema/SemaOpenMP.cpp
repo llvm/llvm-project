@@ -9958,10 +9958,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             // Search for pre-init declared variables that need to be captured
             // to be referenceable inside the directive.
             SmallVector<Stmt *> Constituents;
-            if (auto *CS = dyn_cast<CompoundStmt>(DependentPreInits))
-              llvm::append_range(Constituents, CS->body());
-            else
-              Constituents.push_back(DependentPreInits);
+            appendFlattendedStmtList(Constituents, DependentPreInits);
             for (Stmt *S : Constituents) {
               if (auto *DC = dyn_cast<DeclStmt>(S)) {
                 for (Decl *C : DC->decls()) {
@@ -15196,7 +15193,7 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
         LoopStmts[Cnt] = CurStmt;
         return false;
       });
-  assert(llvm::all_of(LoopStmts, [](Stmt *LoopStmt) { return LoopStmt; }) &&
+  assert(!is_contained(LoopStmts, nullptr) &&
          "Expecting a loop statement for each affected loop");
 }
 
