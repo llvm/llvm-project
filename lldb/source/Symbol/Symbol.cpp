@@ -170,8 +170,8 @@ bool Symbol::ValueIsAddress() const {
   return (bool)m_addr_range.GetBaseAddress().GetSection();
 }
 
-ConstString Symbol::GetDisplayName() const {
-  return GetMangled().GetDisplayDemangledName();
+ConstString Symbol::GetDisplayName(const SymbolContext *sc) const {
+  return GetMangled().GetDisplayDemangledName(sc);
 }
 
 ConstString Symbol::GetReExportedSymbolName() const {

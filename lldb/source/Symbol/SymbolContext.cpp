@@ -95,7 +95,7 @@ bool SymbolContext::DumpStopContext(
       if (!show_function_arguments)
         name = function->GetNameNoArguments(this);
       if (!name && show_function_display_name)
-        name = function->GetDisplayName();
+        name = function->GetDisplayName(this);
       if (!name)
         name = function->GetName(this);
       if (name)
@@ -170,7 +170,7 @@ bool SymbolContext::DumpStopContext(
         s->PutCString("symbol stub for: ");
       ConstString name;
       if (show_function_display_name)
-        name = symbol->GetDisplayName();
+        name = symbol->GetDisplayName(this);
       if (!name)
         name = symbol->GetName();
       s->PutCStringColorHighlighted(name.GetStringRef(), settings);
