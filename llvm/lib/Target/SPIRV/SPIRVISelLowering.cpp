@@ -91,7 +91,9 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return std::make_pair(0u, RC);
 
   if (VT.isFloatingPoint())
-    RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::fID64RegClass
+                                                        : &SPIRV::fIDRegClass);
   else if (VT.isInteger())
     RC = VT.isVector() ? &SPIRV::vIDRegClass
                        : (VT.getScalarSizeInBits() > 32 ? &SPIRV::ID64RegClass

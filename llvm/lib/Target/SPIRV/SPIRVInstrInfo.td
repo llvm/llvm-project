@@ -20,6 +20,7 @@ let isCodeGenOnly=1 in {
   def GET_ID: Pseudo<(outs ID:$dst_id), (ins ANYID:$src)>;
   def GET_ID64: Pseudo<(outs ID64:$dst_id), (ins ANYID:$src)>;
   def GET_fID: Pseudo<(outs fID:$dst_id), (ins ANYID:$src)>;
+  def GET_fID64: Pseudo<(outs fID64:$dst_id), (ins ANYID:$src)>;
   def GET_pID32: Pseudo<(outs pID32:$dst_id), (ins ANYID:$src)>;
   def GET_pID64: Pseudo<(outs pID64:$dst_id), (ins ANYID:$src)>;
   def GET_vID: Pseudo<(outs vID:$dst_id), (ins ANYID:$src)>;
