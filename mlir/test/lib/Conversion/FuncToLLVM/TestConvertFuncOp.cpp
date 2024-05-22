@@ -1,4 +1,4 @@
-//===- TestConvertCallOp.cpp - Test LLVM Conversion of Func CallOp --------===//
+//===- TestConvertFuncOp.cpp - Test LLVM Conversion of Func FuncOp --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "TestOps.h"
-#include "TestTypes.h"
+
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -26,10 +25,12 @@ struct TestConvertFuncOp
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<LLVM::LLVMDialect>();
   }
-  [[nodiscard]] StringRef getArgument() const final { return "test-convert-func-op"; }
+  [[nodiscard]] StringRef getArgument() const final {
+    return "test-convert-func-op";
+  }
   [[nodiscard]] StringRef getDescription() const final {
-    return "Tests conversion of `func.func` to `llvm.func` for different attributes"
-           ;
+    return "Tests conversion of `func.func` to `llvm.func` for different "
+           "attributes";
   }
 
   void runOnOperation() override {
@@ -55,7 +56,6 @@ struct TestConvertFuncOp
 };
 
 } // namespace
-
 
 namespace mlir::test {
 void registerConvertFuncOpPass() { PassRegistration<TestConvertFuncOp>(); }
