@@ -11335,10 +11335,10 @@ def err_omp_reduction_vla_unsupported : Error<
 def err_omp_linear_distribute_var_non_loop_iteration : Error<
   "only loop iteration variables are allowed in 'linear' clause in distribute directives">;
 def warn_omp_non_trivial_type_mapped : Warning<
-  "Type %0 is not trivially copyable and not guaranteed to be mapped correctly">,
+  "type %0 is not trivially copyable and not guaranteed to be mapped correctly">,
   InGroup<OpenMPMapping>;
 def err_omp_requires_clause_redeclaration : Error <
-  "Only one %0 clause can appear on a requires directive in a single translation unit">;
+  "only one %0 clause can appear on a requires directive in a single translation unit">;
 def note_omp_requires_previous_clause : Note <
   "%0 clause previously used here">;
 def err_omp_directive_before_requires : Error <
@@ -11346,7 +11346,7 @@ def err_omp_directive_before_requires : Error <
 def note_omp_requires_encountered_directive : Note <
   "'%0' previously encountered here">;
 def err_omp_device_ancestor_without_requires_reverse_offload : Error <
-  "Device clause with ancestor device-modifier used without specifying 'requires reverse_offload'">;
+  "device clause with ancestor device-modifier used without specifying 'requires reverse_offload'">;
 def err_omp_invalid_scope : Error <
   "'#pragma omp %0' directive must appear only in file scope">;
 def note_omp_invalid_length_on_this_ptr_mapping : Note <
