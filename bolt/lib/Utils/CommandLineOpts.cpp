@@ -180,8 +180,8 @@ cl::opt<bool> TimeOpts("time-opts",
                        cl::cat(BoltOptCategory));
 
 cl::opt<bool> TimeRewrite("time-rewrite",
-                cl::desc("print time spent in rewriting passes"), cl::Hidden,
-                cl::cat(BoltCategory));
+                          cl::desc("print time spent in rewriting passes"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> UseOldText(
     "use-old-text",
