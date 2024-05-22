@@ -21,7 +21,6 @@ def CortexA510Model : SchedMachineModel {
   let LoadLatency = 3;        // Cycles for loads to access the cache.
                               // Most loads have a latency of 2, but some have higher latencies.
                               // 3 seems to be a good tradeoff
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
   let CompleteModel = 0;      // Covers instructions applicable to Cortex-A510.
 
   // FIXME: Remove when all errors have been fixed.
