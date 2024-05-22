@@ -137,9 +137,8 @@ static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
 }
 
 static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
-                      bool IsActive, const Descriptor *D,
+                      bool IsActive, bool IsUnion, const Descriptor *D,
                       unsigned FieldOffset) {
-  bool IsUnion = false; // FIXME
   auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
   Desc->Offset = FieldOffset;
   Desc->Desc = D;
@@ -174,7 +173,7 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
     initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
              V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
-    initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, F.Desc,
+    initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, IsUnion, F.Desc,
               F.Offset);
 
   // If this is initializing a virtual base, we do NOT want to consider its
@@ -193,7 +192,7 @@ static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   for (const auto &V : D->ElemRecord->bases())
     initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
-    initField(B, Ptr, IsConst, IsMutable, IsActive, F.Desc, F.Offset);
+    initField(B, Ptr, IsConst, IsMutable, IsActive, D->ElemRecord->isUnion(), F.Desc, F.Offset);
   for (const auto &V : D->ElemRecord->virtual_bases())
     initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, true);
 }
