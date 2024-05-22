@@ -275,9 +275,9 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
-  auto ComparisonInCall =
-      allOf(hasParent(callExpr()),
-            has(binaryOperator(hasAnyOperatorName("==", "!="))));
+  auto ComparisonInCall = allOf(
+      hasParent(callExpr()),
+      hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
 
   Finder->addMatcher(
       traverse(TK_AsIs,
