@@ -13,8 +13,7 @@ target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
 target_include_directories(omptarget.rtl.amdgpu PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 
-option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ON)
-if(hsa-runtime64_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
   target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
