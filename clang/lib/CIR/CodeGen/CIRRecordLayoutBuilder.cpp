@@ -1,5 +1,4 @@
 
-#include "CIRDataLayout.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
@@ -10,6 +9,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Address.h"
-#include "CIRDataLayout.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -25,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"

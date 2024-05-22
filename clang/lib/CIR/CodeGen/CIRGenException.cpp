@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRDataLayout.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
@@ -19,6 +18,7 @@
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"

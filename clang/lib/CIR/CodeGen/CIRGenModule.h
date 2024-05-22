@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
-#include "CIRDataLayout.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -222,10 +222,10 @@ public:
   mlir::cir::GlobalOp getOrInsertGlobal(mlir::Location loc, StringRef Name,
                                         mlir::Type Ty);
 
-  static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM,
-                                            mlir::Location loc, StringRef name,
-                                            mlir::Type t, bool isCst = false,
-                                            mlir::Operation *insertPoint = nullptr);
+  static mlir::cir::GlobalOp
+  createGlobalOp(CIRGenModule &CGM, mlir::Location loc, StringRef name,
+                 mlir::Type t, bool isCst = false,
+                 mlir::Operation *insertPoint = nullptr);
 
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority = 65535);
