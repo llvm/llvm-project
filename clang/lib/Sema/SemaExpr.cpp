@@ -54,6 +54,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -5240,8 +5241,20 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
         << ResultType << BaseExpr->getSourceRange();
       return ExprError();
     }
-  } else if (const VectorType *VTy = LHSTy->getAs<VectorType>()) {
-    BaseExpr = LHSExp;    // vectors: V[123]
+  } else if (LHSTy->isSubscriptableVectorType()) {
+    if (LHSTy->isBuiltinType() &&
+        LHSTy->getAs<BuiltinType>()->isSveVLSBuiltinType()) {
+      const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
+      if (BTy->isSVEBool())
+        return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
+                         << LHSExp->getSourceRange()
+                         << RHSExp->getSourceRange());
+      ResultType = BTy->getSveEltType(Context);
+    } else {
+      const VectorType *VTy = LHSTy->getAs<VectorType>();
+      ResultType = VTy->getElementType();
+    }
+    BaseExpr = LHSExp; // vectors: V[123]
     IndexExpr = RHSExp;
     // We apply C++ DR1213 to vector subscripting too.
     if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
@@ -5253,34 +5266,6 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     VK = LHSExp->getValueKind();
     if (VK != VK_PRValue)
       OK = OK_VectorComponent;
-
-    ResultType = VTy->getElementType();
-    QualType BaseType = BaseExpr->getType();
-    Qualifiers BaseQuals = BaseType.getQualifiers();
-    Qualifiers MemberQuals = ResultType.getQualifiers();
-    Qualifiers Combined = BaseQuals + MemberQuals;
-    if (Combined != MemberQuals)
-      ResultType = Context.getQualifiedType(ResultType, Combined);
-  } else if (LHSTy->isBuiltinType() &&
-             LHSTy->getAs<BuiltinType>()->isSveVLSBuiltinType()) {
-    const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
-    if (BTy->isSVEBool())
-      return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
-                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
-
-    BaseExpr = LHSExp;
-    IndexExpr = RHSExp;
-    if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
-      ExprResult Materialized = TemporaryMaterializationConversion(LHSExp);
-      if (Materialized.isInvalid())
-        return ExprError();
-      LHSExp = Materialized.get();
-    }
-    VK = LHSExp->getValueKind();
-    if (VK != VK_PRValue)
-      OK = OK_VectorComponent;
-
-    ResultType = BTy->getSveEltType(Context);
 
     QualType BaseType = BaseExpr->getType();
     Qualifiers BaseQuals = BaseType.getQualifiers();
@@ -15239,7 +15224,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   LHSExpr = LHS.get();
   RHSExpr = RHS.get();
 
-  // We want to end up calling one of checkPseudoObjectAssignment
+  // We want to end up calling one of SemaPseudoObject::checkAssignment
   // (if the LHS is a pseudo-object), BuildOverloadedBinOp (if
   // both expressions are overloadable or either is type-dependent),
   // or CreateBuiltinBinOp (in any other case).  We also want to get
@@ -15250,7 +15235,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     // Assignments with a pseudo-object l-value need special analysis.
     if (pty->getKind() == BuiltinType::PseudoObject &&
         BinaryOperator::isAssignmentOp(Opc))
-      return checkPseudoObjectAssignment(S, OpLoc, Opc, LHSExpr, RHSExpr);
+      return PseudoObject().checkAssignment(S, OpLoc, Opc, LHSExpr, RHSExpr);
 
     // Don't resolve overloads if the other type is overloadable.
     if (getLangOpts().CPlusPlus && pty->getKind() == BuiltinType::Overload) {
@@ -15673,7 +15658,7 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
     // Increment and decrement of pseudo-object references.
     if (pty->getKind() == BuiltinType::PseudoObject &&
         UnaryOperator::isIncrementDecrementOp(Opc))
-      return checkPseudoObjectIncDec(S, OpLoc, Opc, Input);
+      return PseudoObject().checkIncDec(S, OpLoc, Opc, Input);
 
     // extension is always a builtin operator.
     if (Opc == UO_Extension)
@@ -20890,7 +20875,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   // Pseudo-objects.
   case BuiltinType::PseudoObject:
-    return checkPseudoObjectRValue(E);
+    return PseudoObject().checkRValue(E);
 
   case BuiltinType::BuiltinFn: {
     // Accept __noop without parens by implicitly converting it to a call expr.

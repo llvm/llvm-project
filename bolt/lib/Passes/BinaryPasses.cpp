@@ -1390,9 +1390,19 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (Function.isPLTFunction())
       continue;
 
+    // Adjustment for BAT mode: the profile for BOLT split fragments is combined
+    // so only count the hot fragment.
+    const uint64_t Address = Function.getAddress();
+    bool IsHotParentOfBOLTSplitFunction = !Function.getFragments().empty() &&
+                                          BAT && BAT->isBATFunction(Address) &&
+                                          !BAT->fetchParentAddress(Address);
+
     ++NumRegularFunctions;
 
-    if (!Function.isSimple()) {
+    // In BOLTed binaries split functions are non-simple (due to non-relocation
+    // mode), but the original function is known to be simple and we have a
+    // valid profile for it.
+    if (!Function.isSimple() && !IsHotParentOfBOLTSplitFunction) {
       if (Function.hasProfile())
         ++NumNonSimpleProfiledFunctions;
       continue;

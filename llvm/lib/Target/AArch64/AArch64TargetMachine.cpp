@@ -187,6 +187,11 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
+static cl::opt<bool> ForceStreamingCompatible(
+    "force-streaming-compatible",
+    cl::desc("Force the use of streaming-compatible code for all functions"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
@@ -408,10 +413,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
   bool HasMinSize = F.hasMinSize();
 
-  bool StreamingSVEMode = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
-                          F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool StreamingCompatibleSVEMode =
-      F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool IsStreaming = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
+                     F.hasFnAttribute("aarch64_pstate_sm_body");
+  bool IsStreamingCompatible =
+      F.hasFnAttribute("aarch64_pstate_sm_compatible") ||
+      ForceStreamingCompatible;
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -439,10 +445,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   SmallString<512> Key;
   raw_svector_ostream(Key) << "SVEMin" << MinSVEVectorSize << "SVEMax"
-                           << MaxSVEVectorSize
-                           << "StreamingSVEMode=" << StreamingSVEMode
-                           << "StreamingCompatibleSVEMode="
-                           << StreamingCompatibleSVEMode << CPU << TuneCPU << FS
+                           << MaxSVEVectorSize << "IsStreaming=" << IsStreaming
+                           << "IsStreamingCompatible=" << IsStreamingCompatible
+                           << CPU << TuneCPU << FS
                            << "HasMinSize=" << HasMinSize;
 
   auto &I = SubtargetMap[Key];
@@ -453,12 +458,10 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, StreamingSVEMode, StreamingCompatibleSVEMode,
-        HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
   }
 
-  assert((!StreamingSVEMode || I->hasSME()) &&
-         "Expected SME to be available");
+  assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
 
   return I.get();
 }

@@ -103,7 +103,7 @@ public:
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return Fold(ConstantExpr::getCompare(P, LC, RC));
+      return ConstantFoldCompareInstOperands(P, LC, RC, DL);
     return nullptr;
   }
 

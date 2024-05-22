@@ -174,6 +174,7 @@ class SemaHLSL;
 class SemaObjC;
 class SemaOpenACC;
 class SemaOpenMP;
+class SemaPseudoObject;
 class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
@@ -446,6 +447,13 @@ enum class CheckedConversionKind {
   ForBuiltinOverloadedOp
 };
 
+enum class TagUseKind {
+  Reference,   // Reference to a tag:  'struct foo *X;'
+  Declaration, // Fwd decl of a tag:   'struct foo;'
+  Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
+  Friend       // Friend declaration:  'friend struct foo;'
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -471,20 +479,19 @@ class Sema final : public SemaBase {
   // 18. Name Lookup (SemaLookup.cpp)
   // 19. Modules (SemaModule.cpp)
   // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Pseudo-Object (SemaPseudoObject.cpp)
-  // 22. Statements (SemaStmt.cpp)
-  // 23. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 24. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 25. C++ Templates (SemaTemplate.cpp)
-  // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 21. Statements (SemaStmt.cpp)
+  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 24. C++ Templates (SemaTemplate.cpp)
+  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 27. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
-  // 33. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
+  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 29. Constraints and Concepts (SemaConcept.cpp)
+  // 30. Types (SemaType.cpp)
+  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 32. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1015,6 +1022,11 @@ public:
     return *OpenMPPtr;
   }
 
+  SemaPseudoObject &PseudoObject() {
+    assert(PseudoObjectPtr);
+    return *PseudoObjectPtr;
+  }
+
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
@@ -1056,6 +1068,7 @@ private:
   std::unique_ptr<SemaObjC> ObjCPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
+  std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
@@ -3161,13 +3174,6 @@ public:
   bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
-
-  enum TagUseKind {
-    TUK_Reference,   // Reference to a tag:  'struct foo *X;'
-    TUK_Declaration, // Fwd decl of a tag:   'struct foo;'
-    TUK_Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
-    TUK_Friend       // Friend declaration:  'friend struct foo;'
-  };
 
   enum OffsetOfKind {
     // Not parsing a type within __builtin_offsetof.
@@ -6369,6 +6375,8 @@ public:
   llvm::SmallVector<std::pair<SourceLocation, const BlockDecl *>, 1>
       ImplicitlyRetainedSelfLocs;
 
+  void maybeExtendBlockObject(ExprResult &E);
+
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
 
@@ -8367,29 +8375,6 @@ public:
   //
   //
 
-  /// \name Pseudo-Object
-  /// Implementations are in SemaPseudoObject.cpp
-  ///@{
-
-public:
-  void maybeExtendBlockObject(ExprResult &E);
-
-  ExprResult checkPseudoObjectIncDec(Scope *S, SourceLocation OpLoc,
-                                     UnaryOperatorKind Opcode, Expr *Op);
-  ExprResult checkPseudoObjectAssignment(Scope *S, SourceLocation OpLoc,
-                                         BinaryOperatorKind Opcode, Expr *LHS,
-                                         Expr *RHS);
-  ExprResult checkPseudoObjectRValue(Expr *E);
-  Expr *recreateSyntacticForm(PseudoObjectExpr *E);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
   /// \name Statements
   /// Implementations are in SemaStmt.cpp
   ///@{
@@ -10082,7 +10067,9 @@ public:
 
   bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
                              const MultiLevelTemplateArgumentList &TemplateArgs,
-                             TemplateArgumentLoc &Output);
+                             TemplateArgumentLoc &Output,
+                             SourceLocation Loc = {},
+                             const DeclarationName &Entity = {});
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
