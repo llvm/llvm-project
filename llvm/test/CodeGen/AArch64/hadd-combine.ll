@@ -955,16 +955,14 @@ define <8 x i16> @urhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %r0
 }
 
-; TODO - unnecessary sign_extend_inreg after shadd
+; Remove unnecessary sign_extend_inreg after shadd
 define <2 x i32> @shadd_signbits_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
 ; CHECK-LABEL: shadd_signbits_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
 ; CHECK-NEXT:    sshr v1.2s, v1.2s, #17
-; CHECK-NEXT:    shadd v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    shl v0.2s, v1.2s, #17
-; CHECK-NEXT:    str d1, [x0]
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-NEXT:    shadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %x0 = ashr <2 x i32> %a0, <i32 17, i32 17>
   %x1 = ashr <2 x i32> %a1, <i32 17, i32 17>
@@ -978,16 +976,14 @@ define <2 x i32> @shadd_signbits_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
   ret <2 x i32> %avg2
 }
 
-; TODO - unnecessary sign_extend_inreg after srhadd
+; Remove unnecessary sign_extend_inreg after srhadd
 define <2 x i32> @srhadd_signbits_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) {
 ; CHECK-LABEL: srhadd_signbits_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
 ; CHECK-NEXT:    sshr v1.2s, v1.2s, #17
-; CHECK-NEXT:    srhadd v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    shl v0.2s, v1.2s, #17
-; CHECK-NEXT:    str d1, [x0]
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-NEXT:    srhadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %x0 = ashr <2 x i32> %a0, <i32 17, i32 17>
   %x1 = ashr <2 x i32> %a1, <i32 17, i32 17>
