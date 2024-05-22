@@ -9265,32 +9265,36 @@ multiclass avx512_fp28_s<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
   }
 }
 
-multiclass avx512_fp28_s_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {
-  let ExeDomain = _.ExeDomain, hasNoSchedulingInfo = 1 in {
+multiclass avx512_fp28_s_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
+                             X86FoldableSchedWrite sched> {
+  let ExeDomain = _.ExeDomain, Uses = [MXCSR], hasSideEffects = 0 in {
   defm r : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                            (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
                            "$src2, $src1", "$src1, $src2",
-                           (null_frag)>, Sched<[WriteMove]>;
+                           (null_frag)>, Sched<[sched]>, SIMD_EXC;
   defm rb : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                             (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
                             "{sae}, $src2, $src1", "$src1, $src2, {sae}",
-                            (null_frag)>, Sched<[WriteMove]>, EVEX_B;
+                            (null_frag)>, EVEX_B, Sched<[sched]>;
+  let mayLoad = 1 in
   defm m : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.IntScalarMemOp:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
-                         (null_frag)>, Sched<[WriteMove]>;
+                         (null_frag)>,
+                         Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
   }
 }
 
-multiclass avx512_eri_s_ass<bits<8> opc, string OpcodeStr> {
-  defm SSZ : avx512_fp28_s_ass<opc, OpcodeStr#"ss", f32x_info>,
+multiclass avx512_eri_s_ass<bits<8> opc, string OpcodeStr,
+                            X86FoldableSchedWrite sched> {
+  defm SSZ : avx512_fp28_s_ass<opc, OpcodeStr#"ss", f32x_info, sched>,
              EVEX_CD8<32, CD8VT1>, VEX_LIG, T8, PD, EVEX, VVVV;
-  defm SDZ : avx512_fp28_s_ass<opc, OpcodeStr#"sd", f64x_info>,
+  defm SDZ : avx512_fp28_s_ass<opc, OpcodeStr#"sd", f64x_info, sched>,
              EVEX_CD8<64, CD8VT1>, VEX_LIG, REX_W, T8, PD, EVEX, VVVV;
 }
 
-defm VRCP28   : avx512_eri_s_ass<0xCB, "vrcp28">;
-defm VRSQRT28 : avx512_eri_s_ass<0xCD, "vrsqrt28">;
+defm VRCP28   : avx512_eri_s_ass<0xCB, "vrcp28", SchedWriteFRcp.Scl>;
+defm VRSQRT28 : avx512_eri_s_ass<0xCD, "vrsqrt28", SchedWriteFRsqrt.Scl>;
 
 multiclass avx512_eri_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                         SDNode OpNodeSAE, X86FoldableSchedWrite sched> {
@@ -9345,42 +9349,48 @@ multiclass avx512_fp28_p_sae<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                         EVEX_B, Sched<[sched]>;
 }
 
-multiclass avx512_fp28_p_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {
-  let ExeDomain = _.ExeDomain, hasNoSchedulingInfo = 1 in {
+multiclass avx512_fp28_p_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
+                             X86FoldableSchedWrite sched> {
+  let ExeDomain = _.ExeDomain, Uses = [MXCSR], mayRaiseFPException = 1,
+    hasSideEffects = 0 in {
   defm r : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src), OpcodeStr, "$src", "$src",
-                         (null_frag)>, Sched<[WriteMove]>;
-
+                         (null_frag)>, Sched<[sched]>;
+  let mayLoad = 1 in
   defm m : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                          (ins _.MemOp:$src), OpcodeStr, "$src", "$src",
-                         (null_frag)>, Sched<[WriteMove]>;
-
+                         (null_frag)>,
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
+  let mayLoad = 1 in
   defm mb : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                          (ins _.ScalarMemOp:$src), OpcodeStr,
                          "${src}"#_.BroadcastStr, "${src}"#_.BroadcastStr,
-                         (null_frag)>, Sched<[WriteMove]>, EVEX_B;
+                         (null_frag)>,
+                         EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
-multiclass avx512_fp28_p_sae_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {
-  let ExeDomain = _.ExeDomain, Uses = [MXCSR] in
+multiclass avx512_fp28_p_sae_ass<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
+                                X86FoldableSchedWrite sched> {
+  let ExeDomain = _.ExeDomain, Uses = [MXCSR], hasSideEffects = 0 in
   defm rb : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                         (ins _.RC:$src), OpcodeStr,
                         "{sae}, $src", "$src, {sae}",
-                        (null_frag)>, Sched<[WriteMove]>, EVEX_B;
+                        (null_frag)>, Sched<[sched]>, EVEX_B;
 }
 
-multiclass  avx512_eri_ass<bits<8> opc, string OpcodeStr> {
-   defm PSZ : avx512_fp28_p_ass<opc, OpcodeStr#"ps", v16f32_info>,
-              avx512_fp28_p_sae_ass<opc, OpcodeStr#"ps", v16f32_info>,
+multiclass  avx512_eri_ass<bits<8> opc, string OpcodeStr,
+                           X86SchedWriteWidths sched> {
+   defm PSZ : avx512_fp28_p_ass<opc, OpcodeStr#"ps", v16f32_info, sched.ZMM>,
+              avx512_fp28_p_sae_ass<opc, OpcodeStr#"ps", v16f32_info, sched.ZMM>,
               T8, PD, EVEX_V512, EVEX_CD8<32, CD8VF>;
-   defm PDZ : avx512_fp28_p_ass<opc, OpcodeStr#"pd", v8f64_info>,
-              avx512_fp28_p_sae_ass<opc, OpcodeStr#"pd", v8f64_info>,
+   defm PDZ : avx512_fp28_p_ass<opc, OpcodeStr#"pd", v8f64_info, sched.ZMM>,
+              avx512_fp28_p_sae_ass<opc, OpcodeStr#"pd", v8f64_info, sched.ZMM>,
               T8, PD, EVEX_V512, REX_W, EVEX_CD8<64, CD8VF>;
 }
 
-defm VRSQRT28 : avx512_eri_ass<0xCC, "vrsqrt28">, EVEX;
-defm VRCP28   : avx512_eri_ass<0xCA, "vrcp28">, EVEX;
-defm VEXP2    : avx512_eri_ass<0xC8, "vexp2">, EVEX;
+defm VRSQRT28 : avx512_eri_ass<0xCC, "vrsqrt28", SchedWriteFRsqrt>, EVEX;
+defm VRCP28   : avx512_eri_ass<0xCA, "vrcp28", SchedWriteFRcp>, EVEX;
+defm VEXP2    : avx512_eri_ass<0xC8, "vexp2", SchedWriteFAdd>, EVEX;
 
 multiclass  avx512_eri<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        SDNode OpNodeSAE, X86SchedWriteWidths sched> {

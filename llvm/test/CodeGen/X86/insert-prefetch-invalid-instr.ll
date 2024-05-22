@@ -14,7 +14,7 @@ entry:
 ; Function Attrs: inaccessiblemem_or_argmemonly nounwind
 declare void @llvm.prefetch(ptr nocapture readonly, i32, i32, i32) #1
 
-attributes #0 = {"target-cpu"="x86-64" "target-features"="+avx512pf,+sse4.2,+ssse3"}
+attributes #0 = {"target-cpu"="x86-64" "target-features"="+sse4.2,+ssse3"}
 attributes #1 = { inaccessiblemem_or_argmemonly nounwind }
 attributes #2 = { argmemonly nounwind }
 
