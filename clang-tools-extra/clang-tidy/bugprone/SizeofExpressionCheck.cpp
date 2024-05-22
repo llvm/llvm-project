@@ -147,9 +147,6 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
     const auto PointerToArrayExpr = ignoringParenImpCasts(
         hasType(hasCanonicalType(pointerType(pointee(arrayType())))));
 
-    const auto StructAddrOfExpr = unaryOperator(
-        hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
-                                  hasType(hasCanonicalType(recordType())))));
     const auto PointerToStructType =
         hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
     const auto PointerToStructExpr = ignoringParenImpCasts(expr(
@@ -171,9 +168,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                            has(ArrayOfPointersExpr)))))))),
              sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
 
-    Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(anyOf(
-                                      ArrayCastExpr, PointerToArrayExpr,
-                                      StructAddrOfExpr, PointerToStructExpr)))),
+    Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(
+                                      anyOf(ArrayCastExpr, PointerToArrayExpr,
+                                            PointerToStructExpr)))),
                                   sizeOfExpr(has(PointerToStructType))),
                             unless(ArrayLengthExprDenom))
                            .bind("sizeof-pointer-to-aggregate"),
