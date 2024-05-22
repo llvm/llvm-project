@@ -50,6 +50,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
@@ -8926,8 +8927,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
-                        CallerFeatureMap);
+    RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
+                                CallerFeatureMap);
   }
 }
 
