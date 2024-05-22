@@ -1117,6 +1117,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
     }
     break;
+  case SPIRV::OpReadClockKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_shader_clock))
+      report_fatal_error("OpReadClockKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_shader_clock",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_shader_clock);
+    Reqs.addCapability(SPIRV::Capability::ShaderClockKHR);
+    break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
