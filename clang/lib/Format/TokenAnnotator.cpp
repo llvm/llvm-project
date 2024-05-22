@@ -6205,6 +6205,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
   }
 
+  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
+      Right.is(TT_TrailingAnnotation) &&
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    return false;
+  }
+
   // Allow breaking after a trailing annotation, e.g. after a method
   // declaration.
   if (Left.is(TT_TrailingAnnotation)) {
