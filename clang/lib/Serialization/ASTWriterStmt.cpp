@@ -473,7 +473,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      Record.AddStmt(const_cast<Expr *>(DetailRecord.first));
+      Record.writeStmtRef(DetailRecord.first);
       auto *E = DetailRecord.second.dyn_cast<Expr *>();
       Record.push_back(E == nullptr);
       if (E)
@@ -2157,11 +2157,11 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TransformedExpressions);
+  Record.push_back(E->ExpandedToEmptyPack);
   Record.AddSourceLocation(E->getEllipsisLoc());
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());
   Record.AddStmt(E->getIndexExpr());
-  Record.push_back(E->TransformedExpressions);
   for (Expr *Sub : E->getExpressions())
     Record.AddStmt(Sub);
   Code = serialization::EXPR_PACK_INDEXING;

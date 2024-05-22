@@ -519,18 +519,14 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
   switch (A->getKind()) {
   case Decl::TemplateTypeParm: {
     auto *T = cast<TemplateTypeParmDecl>(A);
-    // FIXME: A TemplateTypeParmDecl's DefaultArgument can't hold a full
-    // TemplateArgument, so there is currently no way to specify a pack as a
-    // default argument for these.
-    if (T->isParameterPack())
-      return A;
     auto *R = TemplateTypeParmDecl::Create(
         S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
         T->getDepth(), T->getIndex(), T->getIdentifier(),
-        T->wasDeclaredWithTypename(), /*ParameterPack=*/false,
+        T->wasDeclaredWithTypename(), T->isParameterPack(),
         T->hasTypeConstraint());
     R->setDefaultArgument(
-        S.Context.getTrivialTypeSourceInfo(Default.getAsType()));
+        S.Context,
+        S.getTrivialTemplateArgumentLoc(Default, QualType(), SourceLocation()));
     if (R->hasTypeConstraint()) {
       auto *C = R->getTypeConstraint();
       R->setTypeConstraint(C->getConceptReference(),
@@ -5638,7 +5634,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
 /// function templates.
 ///
 /// \param NumCallArguments1 The number of arguments in the call to FT1, used
-/// only when \c TPOC is \c TPOC_Call.
+/// only when \c TPOC is \c TPOC_Call. Does not include the object argument when
+/// calling a member function.
 ///
 /// \param RawObj1Ty The type of the object parameter of FT1 if a member
 /// function only used if \c TPOC is \c TPOC_Call and FT1 is a Function
@@ -5707,7 +5704,11 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
                                               IsRValRef1);
       Args2.push_back(Obj2Ty);
     }
-    size_t NumComparedArguments = NumCallArguments1 + ShouldConvert1;
+    size_t NumComparedArguments = NumCallArguments1;
+    // Either added an argument above or the prototype includes an explicit
+    // object argument we need to count
+    if (Method1)
+      ++NumComparedArguments;
 
     Args1.insert(Args1.end(), Proto1->param_type_begin(),
                  Proto1->param_type_end());

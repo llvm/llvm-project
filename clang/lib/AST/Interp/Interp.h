@@ -1245,6 +1245,8 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
     return false;
 

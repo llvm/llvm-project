@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -199,7 +200,7 @@ static llvm::BasicBlock *convertOmpOpRegions(
 
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
-  SetVector<Block *> blocks = getTopologicallySortedBlocks(region);
+  SetVector<Block *> blocks = getBlocksSortedByDominance(region);
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
     // Retarget the branch of the entry block to the entry block of the
@@ -938,10 +939,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionVarsByref());
   assert(isByRef.size() == wsloopOp.getNumReductionVars());
-
-  // TODO: this should be in the op verifier instead.
-  if (loopOp.getLowerBound().empty())
-    return failure();
 
   // Static is the default.
   auto schedule =
@@ -2157,40 +2154,38 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
   llvm::SmallVector<size_t> indices(shape[0]);
   std::iota(indices.begin(), indices.end(), 0);
 
-  llvm::sort(
-      indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
-        auto indexValues = indexAttr.getValues<int32_t>();
-        for (int i = 0;
-             i < shape[1];
-             ++i) {
-          int aIndex = indexValues[a * shape[1] + i];
-          int bIndex = indexValues[b * shape[1] + i];
+  llvm::sort(indices.begin(), indices.end(),
+             [&](const size_t a, const size_t b) {
+               auto indexValues = indexAttr.getValues<int32_t>();
+               for (int i = 0; i < shape[1]; ++i) {
+                 int aIndex = indexValues[a * shape[1] + i];
+                 int bIndex = indexValues[b * shape[1] + i];
 
-          if (aIndex == bIndex)
-            continue;
+                 if (aIndex == bIndex)
+                   continue;
 
-          if (aIndex != -1 && bIndex == -1)
-            return false;
+                 if (aIndex != -1 && bIndex == -1)
+                   return false;
 
-          if (aIndex == -1 && bIndex != -1)
-            return true;
+                 if (aIndex == -1 && bIndex != -1)
+                   return true;
 
-          // A is earlier in the record type layout than B
-          if (aIndex < bIndex)
-            return first;
+                 // A is earlier in the record type layout than B
+                 if (aIndex < bIndex)
+                   return first;
 
-          if (bIndex < aIndex)
-            return !first;
-        }
+                 if (bIndex < aIndex)
+                   return !first;
+               }
 
-        // Iterated the entire list and couldn't make a decision, all elements
-        // were likely the same. Return false, since the sort comparator should
-        // return false for equal elements.
-        return false;
-      });
+               // Iterated the entire list and couldn't make a decision, all
+               // elements were likely the same. Return false, since the sort
+               // comparator should return false for equal elements.
+               return false;
+             });
 
-    return llvm::cast<mlir::omp::MapInfoOp>(
-          mapInfo.getMembers()[indices.front()].getDefiningOp());
+  return llvm::cast<mlir::omp::MapInfoOp>(
+      mapInfo.getMembers()[indices.front()].getDefiningOp());
 }
 
 /// This function calculates the array/pointer offset for map data provided
