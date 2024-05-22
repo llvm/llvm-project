@@ -2214,19 +2214,19 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
   uint64_t IndexC;
 
   // Match a shuffle that is a splat to a non-zero element.
-  if (!match(Op0, m_OneUse(m_InsertElt(m_Undef(), m_Value(X),
+  if (!match(Op0, m_OneUse(m_InsertElt(m_Poison(), m_Value(X),
                                        m_ConstantInt(IndexC)))) ||
-      !match(Op1, m_Undef()) || match(Mask, m_ZeroMask()) || IndexC == 0)
+      !match(Op1, m_Poison()) || match(Mask, m_ZeroMask()) || IndexC == 0)
     return nullptr;
 
   // Insert into element 0 of a poison vector.
   PoisonValue *PoisonVec = PoisonValue::get(Shuf.getType());
   Value *NewIns = Builder.CreateInsertElement(PoisonVec, X, (uint64_t)0);
 
-  // Splat from element 0. Any mask element that is undefined remains undefined.
+  // Splat from element 0. Any mask element that is poison remains poison.
   // For example:
-  // shuf (inselt undef, X, 2), _, <2,2,undef>
-  //   --> shuf (inselt undef, X, 0), poison, <0,0,undef>
+  // shuf (inselt poison, X, 2), _, <2,2,undef>
+  //   --> shuf (inselt poison, X, 0), poison, <0,0,undef>
   unsigned NumMaskElts =
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
