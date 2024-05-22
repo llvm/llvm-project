@@ -13530,11 +13530,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                       DAG.getConstant(NumElts, dl, MVT::i64));
 
       if (Even && !Odd)
-        return DAG.getNode(AArch64ISD::UZP1, dl, DAG.getVTList(VT, VT), LHS,
-                           RHS);
+        return DAG.getNode(AArch64ISD::UZP1, dl, VT, LHS, RHS);
       if (Odd && !Even)
-        return DAG.getNode(AArch64ISD::UZP2, dl, DAG.getVTList(VT, VT), LHS,
-                           RHS);
+        return DAG.getNode(AArch64ISD::UZP2, dl, VT, LHS, RHS);
     }
   }
 
