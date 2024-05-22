@@ -48,26 +48,30 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   return result;
 }
 
-std::optional<DIERef>
-DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) const {
+DWARFUnit *
+DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
   // Look for a DWARF unit offset (CU offset or local TU offset) as they are
   // both offsets into the .debug_info section.
   std::optional<uint64_t> unit_offset = entry.getCUOffset();
   if (!unit_offset) {
     unit_offset = entry.getLocalTUOffset();
     if (!unit_offset)
-      return std::nullopt;
+      return nullptr;
   }
 
   DWARFUnit *cu =
       m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
-  if (!cu)
-    return std::nullopt;
+  return cu ? &cu->GetNonSkeletonUnit() : nullptr;
+}
 
-  cu = &cu->GetNonSkeletonUnit();
+std::optional<DIERef>
+DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) const {
+  DWARFUnit *unit = GetNonSkeletonUnit(entry);
+  if (!unit)
+    return std::nullopt;
   if (std::optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(cu->GetSymbolFileDWARF().GetFileIndex(),
-                  DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
+    return DIERef(unit->GetSymbolFileDWARF().GetFileIndex(),
+                  DIERef::Section::DebugInfo, unit->GetOffset() + *die_offset);
 
   return std::nullopt;
 }
@@ -306,10 +310,10 @@ bool DebugNamesDWARFIndex::SameParentChain(
     auto maybe_dieoffset = entry.getDIEUnitOffset();
     if (!maybe_dieoffset)
       return false;
-    auto die_ref = ToDIERef(entry);
-    if (!die_ref)
+    DWARFUnit *unit = GetNonSkeletonUnit(entry);
+    if (!unit)
       return false;
-    return name == m_debug_info.PeekDIEName(*die_ref);
+    return name == unit->PeekDIEName(unit->GetOffset() + *maybe_dieoffset);
   };
 
   // If the AT_name of any parent fails to match the expected name, we don't
