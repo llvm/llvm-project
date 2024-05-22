@@ -1322,7 +1322,9 @@ void BinaryContext::processInterproceduralReferences() {
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
     uint64_t Address = It.second;
-    if (!Address || Function.isIgnored())
+    // Process interprocedural references from ignored functions in BAT mode
+    // (non-simple in non-relocation mode) to properly register entry points
+    if (!Address || (Function.isIgnored() && !HasBATSection))
       continue;
 
     BinaryFunction *TargetFunction =

@@ -677,6 +677,9 @@ public:
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
 
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
+
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
 

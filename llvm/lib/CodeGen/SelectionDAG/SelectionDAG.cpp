@@ -1540,6 +1540,25 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
 }
 
+SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
+                                           SDValue EVL, const SDLoc &DL,
+                                           EVT VT) {
+  EVT OpVT = Op.getValueType();
+  assert(VT.isInteger() && OpVT.isInteger() &&
+         "Cannot getVPZeroExtendInReg FP types");
+  assert(VT.isVector() && OpVT.isVector() &&
+         "getVPZeroExtendInReg type and operand type should be vector!");
+  assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
+         "Vector element counts must match in getZeroExtendInReg");
+  assert(VT.bitsLE(OpVT) && "Not extending!");
+  if (OpVT == VT)
+    return Op;
+  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
+                                   VT.getScalarSizeInBits());
+  return getNode(ISD::VP_AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT), Mask,
+                 EVL);
+}
+
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
   // Only unsigned pointer semantics are supported right now. In the future this
   // might delegate to TLI to check pointer signedness.
