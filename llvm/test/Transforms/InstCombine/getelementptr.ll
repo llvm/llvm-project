@@ -537,8 +537,7 @@ define i32 @test21() {
 
 define i1 @test22() {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @A, i64 4), getelementptr (i8, ptr @B, i64 8)
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 icmp ult (ptr getelementptr inbounds (i8, ptr @A, i64 4), ptr getelementptr (i8, ptr @B, i64 8))
 ;
   %C = icmp ult ptr getelementptr (i32, ptr @A, i64 1),
   getelementptr (i32, ptr @B, i64 2)
