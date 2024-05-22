@@ -1608,20 +1608,19 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 };
 
 FailureOr<VectorType> dropNonScalableUnitDimType(VectorType VT) {
-  VectorType newVT = VT;
   int removed = 0;
   auto shape = VT.getShape();
-  auto builder = VectorType::Builder(newVT);
+  auto builder = VectorType::Builder(VT);
   for (unsigned i = 0; i < shape.size(); i++) {
     if (shape[i] == 1 && !VT.getScalableDims()[i]) {
-      newVT = builder.dropDim(i - removed);
+      builder.dropDim(i - removed);
       removed++;
     }
   }
 
   if (removed == 0)
     return failure();
-  return newVT;
+  return VectorType(builder);
 }
 
 /// For vectors with at least an unit dim, replaces:
