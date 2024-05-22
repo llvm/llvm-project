@@ -12,7 +12,7 @@ class TestCase(lldbtest.TestBase):
         self.build()
 
         log = self.getBuildArtifact("lldb.log")
-        self.runCmd(f"log enable lldb expr -f '{log}'")
+        self.runCmd(f"log enable lldb types -f '{log}'")
         self.runCmd("settings set target.swift-clang-override-options x-DDELETEME=1")
 
         lldbutil.run_to_name_breakpoint(self, "main", bkpt_module="a.out")
