@@ -449,6 +449,26 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                                        "region types conversion failed");
   }
 
+  if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
+    if (funcOp->getAttrOfType<UnitAttr>(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+      if (newFuncOp.isVarArg())
+        return funcOp.emitError("C interface for variadic functions is not "
+                                "supported yet.");
+
+      if (newFuncOp.isExternal())
+        wrapExternalFunction(rewriter, funcOp->getLoc(), converter, funcOp,
+                             newFuncOp);
+      else
+        wrapForExternalCallers(rewriter, funcOp->getLoc(), converter, funcOp,
+                               newFuncOp);
+    }
+  } else {
+    modifyFuncOpToUseBarePtrCallingConv(
+        rewriter, funcOp->getLoc(), converter, newFuncOp,
+        llvm::cast<FunctionType>(funcOp.getFunctionType()).getInputs());
+  }
+
   return newFuncOp;
 }
 
@@ -483,26 +503,6 @@ struct FuncOpConversion : public FuncOpConversionBase {
         convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (failed(newFuncOp))
       return rewriter.notifyMatchFailure(funcOp, "Could not convert funcop");
-
-    if (!shouldUseBarePtrCallConv(funcOp, this->getTypeConverter())) {
-      if (funcOp->getAttrOfType<UnitAttr>(
-              LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
-        if (newFuncOp->isVarArg())
-          return funcOp->emitError("C interface for variadic functions is not "
-                                   "supported yet.");
-
-        if (newFuncOp->isExternal())
-          wrapExternalFunction(rewriter, funcOp->getLoc(), *getTypeConverter(),
-                               funcOp, *newFuncOp);
-        else
-          wrapForExternalCallers(rewriter, funcOp->getLoc(),
-                                 *getTypeConverter(), funcOp, *newFuncOp);
-      }
-    } else {
-      modifyFuncOpToUseBarePtrCallingConv(rewriter, funcOp->getLoc(),
-                                          *getTypeConverter(), *newFuncOp,
-                                          funcOp.getFunctionType().getInputs());
-    }
 
     rewriter.eraseOp(funcOp);
     return success();
