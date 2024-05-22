@@ -90,11 +90,6 @@ PrintAfterLowering("print-after-lowering",
   cl::desc("print function after instruction lowering"),
   cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool> PrintEstimateEdgeCounts(
-    "print-estimate-edge-counts",
-    cl::desc("print function after edge counts are set for no-LBR profile"),
-    cl::Hidden, cl::cat(BoltOptCategory));
-
 cl::opt<bool>
 PrintFinalized("print-finalized",
   cl::desc("print function after CFG is finalized"),
@@ -262,10 +257,6 @@ static cl::opt<bool> CMOVConversionFlag("cmov-conversion",
                                         cl::ReallyHidden,
                                         cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    DisableFunctionReorder("disable-function-reorder-pass",
-                           cl::desc("Disable the function reorder pass"),
-                           cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     ShortenInstructions("shorten-instructions",
