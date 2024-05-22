@@ -100,7 +100,7 @@ using CT = C<int>;
 // CHECK: | `-NonTypeTemplateParmDecl {{.*}} 'X' depth 1 index 1
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 2 U
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'type-parameter-0-2' depth 0 index 3 V
-// CHECK: | `-TemplateArgument expr
+// CHECK: | `-TemplateArgument {{.*}} expr
 // CHECK: |   `-IntegerLiteral {{.*}} 'int' 0
 // CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>'
 // CHECK: | |-ParmVarDecl {{.*}} 'A'
@@ -139,7 +139,7 @@ using DT = D<int, int>;
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 ... T
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U1
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 2 U2
-// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (B<type-parameter-0-1, type-parameter-0-2> *) -> D<T...>'  
+// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (B<type-parameter-0-1, type-parameter-0-2> *) -> D<T...>'
 // CHECK:   `-ParmVarDecl {{.*}} 'B<type-parameter-0-1, type-parameter-0-2> *'
 // CHECK: FunctionProtoType {{.*}} 'auto (B<type-parameter-0-1, type-parameter-0-2> *) -> D<T...>' dependent trailing_return
 // CHECK: |-InjectedClassNameType {{.*}} 'D<T...>' dependent
@@ -222,7 +222,7 @@ F s(0);
 // CHECK-LABEL: Dumping <deduction guide for F>:
 // CHECK: FunctionTemplateDecl
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'char' depth 0 index 0
-// CHECK:   `-TemplateArgument expr
+// CHECK:   `-TemplateArgument {{.*}} expr
 // CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} '' 'char'
 // CHECK: |   `-CharacterLiteral {{.*}} 'char' 120
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U

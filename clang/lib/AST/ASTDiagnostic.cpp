@@ -1238,7 +1238,7 @@ class TemplateDiff {
           E = Iter->getAsExpr();
       }
     } else if (!Default->isParameterPack()) {
-      E = Default->getDefaultArgument();
+      E = Default->getDefaultArgument().getArgument().getAsExpr();
     }
 
     if (!Iter.hasDesugaredTA()) return;
