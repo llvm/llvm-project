@@ -273,7 +273,7 @@ private:
                            int32_t NewOffset) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
-  std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
+  int32_t extractConstOffset(const MachineOperand &Op) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
   /// tries to use a base from the nearby instructions that allows it to have
@@ -1968,18 +1968,18 @@ void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
-std::optional<int32_t>
+int32_t
 SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
   if (Op.isImm())
     return Op.getImm();
 
   if (!Op.isReg())
-    return std::nullopt;
+    return 0;
 
   MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
   if (!Def || Def->getOpcode() != AMDGPU::S_MOV_B32 ||
       !Def->getOperand(1).isImm())
-    return std::nullopt;
+    return 0;
 
   return Def->getOperand(1).getImm();
 }
@@ -2019,13 +2019,15 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
   const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
 
+  // If we are unable to find an offset by looking through BaseLo, then default
+  // to 0 offset with BaseLo as the base.
+  BaseLo = Def->getOperand(1);
   auto Offset0P = extractConstOffset(*Src0);
   if (Offset0P)
     BaseLo = *Src1;
   else {
-    if (!(Offset0P = extractConstOffset(*Src1)))
-      return;
-    BaseLo = *Src0;
+    if ((Offset0P = extractConstOffset(*Src1)))
+      BaseLo = *Src0;
   }
 
   Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);
@@ -2034,17 +2036,20 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (Src0->isImm())
     std::swap(Src0, Src1);
 
-  if (!Src1->isImm())
-    return;
-
-  uint64_t Offset1 = Src1->getImm();
-  BaseHi = *Src0;
+  // If w,e are unable to find an offset by looking through BaseHi, then default
+  // to 0 offset with BaseHi as the base.
+  int64_t Offset1 = 0;
+  BaseHi = Def->getOperand(3);
+  if (Src1->isImm()) {
+    Offset1 = Src1->getImm();
+    BaseHi = *Src0;
+  }
 
   Addr.Base.LoReg = BaseLo.getReg();
   Addr.Base.HiReg = BaseHi.getReg();
   Addr.Base.LoSubReg = BaseLo.getSubReg();
   Addr.Base.HiSubReg = BaseHi.getSubReg();
-  Addr.Offset = (*Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
+  Addr.Offset = (Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
 }
 
 bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
@@ -2081,12 +2086,6 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     Visited[&MI] = MAddr;
   } else
     MAddr = Visited[&MI];
-
-  if (MAddr.Offset == 0) {
-    LLVM_DEBUG(dbgs() << "  Failed to extract constant-offset or there are no"
-                         " constant offsets that can be promoted.\n";);
-    return false;
-  }
 
   LLVM_DEBUG(dbgs() << "  BASE: {" << MAddr.Base.HiReg << ", "
              << MAddr.Base.LoReg << "} Offset: " << MAddr.Offset << "\n\n";);
