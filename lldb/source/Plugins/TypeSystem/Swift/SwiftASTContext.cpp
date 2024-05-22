@@ -1691,8 +1691,8 @@ static void applyOverrideOptions(std::vector<std::string> &args,
   for (const std::string &arg : args)
     raw_args.push_back(arg.data());
 
-  // LLVM stream backed by a callback. This is used to redirect
-  // applyOverrideOptions logging to LLDB.
+  /// LLVM stream backed by a callback. This is used to redirect
+  /// applyOverrideOptions logging to LLDB.
   struct CallbackStream : public llvm::raw_ostream {
     using callback_t = std::function<void(const char *, size_t)>;
     callback_t m_callback;
@@ -1711,7 +1711,7 @@ static void applyOverrideOptions(std::vector<std::string> &args,
 
   // Perform the override operations.
   llvm::StringSet<> savedStrings;
-  auto *log = GetLog(LLDBLog::Expressions);
+  auto *log = GetLog(LLDBLog::Types);
   CallbackStream log_stream{[log](const char *Ptr, size_t Size) {
     if (!log)
       return;
