@@ -308,9 +308,8 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   // is set. If the intrinsic has rounding control(bits 1:0), make sure its only
   // combined with ROUND_NO_EXC. If the intrinsic does not have rounding
   // control, allow ROUND_NO_EXC and ROUND_CUR_DIRECTION together.
-  if (Result == 4/*ROUND_CUR_DIRECTION*/ ||
-      Result == 8/*ROUND_NO_EXC*/ ||
-      (!HasRC && Result == 12/*ROUND_CUR_DIRECTION|ROUND_NO_EXC*/) ||
+  if (Result == 4 /*ROUND_CUR_DIRECTION*/ || Result == 8 /*ROUND_NO_EXC*/ ||
+      (!HasRC && Result == 12 /*ROUND_CUR_DIRECTION|ROUND_NO_EXC*/) ||
       (HasRC && Result.getZExtValue() >= 8 && Result.getZExtValue() <= 11))
     return false;
 
@@ -426,7 +425,8 @@ enum { TileRegLow = 0, TileRegHigh = 7 };
 bool SemaX86::CheckBuiltinTileArgumentsRange(CallExpr *TheCall,
                                              ArrayRef<int> ArgNums) {
   for (int ArgNum : ArgNums) {
-    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh))
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, TileRegLow,
+                                        TileRegHigh))
       return true;
   }
   return false;
@@ -534,7 +534,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_extracti64x2_256_mask:
   case X86::BI__builtin_ia32_extractf32x4_256_mask:
   case X86::BI__builtin_ia32_extracti32x4_256_mask:
-    i = 1; l = 0; u = 1;
+    i = 1;
+    l = 0;
+    u = 1;
     break;
   case X86::BI__builtin_ia32_vec_set_v2di:
   case X86::BI__builtin_ia32_vinsertf128_pd256:
@@ -549,7 +551,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_inserti64x2_256:
   case X86::BI__builtin_ia32_insertf32x4_256:
   case X86::BI__builtin_ia32_inserti32x4_256:
-    i = 2; l = 0; u = 1;
+    i = 2;
+    l = 0;
+    u = 1;
     break;
   case X86::BI__builtin_ia32_vpermilpd:
   case X86::BI__builtin_ia32_vec_ext_v4hi:
@@ -560,12 +564,16 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_extracti32x4_mask:
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
   case X86::BI__builtin_ia32_extracti64x2_512_mask:
-    i = 1; l = 0; u = 3;
+    i = 1;
+    l = 0;
+    u = 3;
     break;
   case X86::BI_mm_prefetch:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
   case X86::BI__builtin_ia32_vec_ext_v8si:
-    i = 1; l = 0; u = 7;
+    i = 1;
+    l = 0;
+    u = 7;
     break;
   case X86::BI__builtin_ia32_sha1rnds4:
   case X86::BI__builtin_ia32_blendpd:
@@ -581,13 +589,17 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_inserti64x2_512:
   case X86::BI__builtin_ia32_insertf32x4:
   case X86::BI__builtin_ia32_inserti32x4:
-    i = 2; l = 0; u = 3;
+    i = 2;
+    l = 0;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_vpermil2pd:
   case X86::BI__builtin_ia32_vpermil2pd256:
   case X86::BI__builtin_ia32_vpermil2ps:
   case X86::BI__builtin_ia32_vpermil2ps256:
-    i = 3; l = 0; u = 3;
+    i = 3;
+    l = 0;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
@@ -623,7 +635,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpcomq:
   case X86::BI__builtin_ia32_vec_set_v8hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
-    i = 2; l = 0; u = 7;
+    i = 2;
+    l = 0;
+    u = 7;
     break;
   case X86::BI__builtin_ia32_vpermilpd256:
   case X86::BI__builtin_ia32_roundps:
@@ -641,7 +655,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_getmantph512_mask:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v16hi:
-    i = 1; l = 0; u = 15;
+    i = 1;
+    l = 0;
+    u = 15;
     break;
   case X86::BI__builtin_ia32_pblendd128:
   case X86::BI__builtin_ia32_blendps:
@@ -660,10 +676,14 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_getmantsh_round_mask:
   case X86::BI__builtin_ia32_vec_set_v16qi:
   case X86::BI__builtin_ia32_vec_set_v16hi:
-    i = 2; l = 0; u = 15;
+    i = 2;
+    l = 0;
+    u = 15;
     break;
   case X86::BI__builtin_ia32_vec_ext_v32qi:
-    i = 1; l = 0; u = 31;
+    i = 1;
+    l = 0;
+    u = 31;
     break;
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
@@ -680,7 +700,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpsd_mask:
   case X86::BI__builtin_ia32_cmpss_mask:
   case X86::BI__builtin_ia32_vec_set_v32qi:
-    i = 2; l = 0; u = 31;
+    i = 2;
+    l = 0;
+    u = 31;
     break;
   case X86::BI__builtin_ia32_permdf256:
   case X86::BI__builtin_ia32_permdi256:
@@ -758,7 +780,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_kshiftrihi:
   case X86::BI__builtin_ia32_kshiftrisi:
   case X86::BI__builtin_ia32_kshiftridi:
-    i = 1; l = 0; u = 255;
+    i = 1;
+    l = 0;
+    u = 255;
     break;
   case X86::BI__builtin_ia32_vperm2f128_pd256:
   case X86::BI__builtin_ia32_vperm2f128_ps256:
@@ -808,7 +832,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
-    i = 2; l = 0; u = 255;
+    i = 2;
+    l = 0;
+    u = 255;
     break;
   case X86::BI__builtin_ia32_fixupimmpd512_mask:
   case X86::BI__builtin_ia32_fixupimmpd512_maskz:
@@ -839,7 +865,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_pternlogq256_mask:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
   case X86::BI__builtin_ia32_vsm3rnds2:
-    i = 3; l = 0; u = 255;
+    i = 3;
+    l = 0;
+    u = 255;
     break;
   case X86::BI__builtin_ia32_gatherpfdpd:
   case X86::BI__builtin_ia32_gatherpfdps:
@@ -849,7 +877,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_scatterpfdps:
   case X86::BI__builtin_ia32_scatterpfqpd:
   case X86::BI__builtin_ia32_scatterpfqps:
-    i = 4; l = 2; u = 3;
+    i = 4;
+    l = 2;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_reducesd_mask:
   case X86::BI__builtin_ia32_reducess_mask:
@@ -857,11 +887,15 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_rndscaless_round_mask:
   case X86::BI__builtin_ia32_rndscalesh_round_mask:
   case X86::BI__builtin_ia32_reducesh_mask:
-    i = 4; l = 0; u = 255;
+    i = 4;
+    l = 0;
+    u = 255;
     break;
   case X86::BI__builtin_ia32_cmpccxadd32:
   case X86::BI__builtin_ia32_cmpccxadd64:
-    i = 3; l = 0; u = 15;
+    i = 3;
+    l = 0;
+    u = 15;
     break;
   }
 
@@ -869,7 +903,8 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   // template-generated or macro-generated dead code to potentially have out-of-
   // range values. These need to code generate, but don't need to necessarily
   // make any sense. We use a warning that defaults to an error.
-  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u, /*RangeIsError*/ false);
+  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u,
+                                         /*RangeIsError*/ false);
 }
 
 } // namespace clang
