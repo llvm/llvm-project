@@ -4180,7 +4180,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
   // If the base is a vector type, then we are forming a vector element lvalue
   // with this subscript.
-  if (E->getBase()->getType()->isVectorType() &&
+  if (E->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(E->getBase())) {
     // Emit the vector as an lvalue to get its address.
     LValue LHS = EmitLValue(E->getBase());
