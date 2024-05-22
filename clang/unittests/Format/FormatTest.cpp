@@ -17340,12 +17340,14 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
+  verifyFormat("xor = foo;");
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);
   verifyFormat("a or_eq 8;", Spaces);
+  verifyFormat("xor= foo;", Spaces);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {

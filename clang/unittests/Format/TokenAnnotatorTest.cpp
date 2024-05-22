@@ -3015,6 +3015,60 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
+TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
+  auto Tokens = annotate("a = b and c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("a = b and_eq c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::ampequal, TT_BinaryOperator);
+
+  Tokens = annotate("a = b bitand c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("a = b bitor c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::pipe, TT_BinaryOperator);
+
+  Tokens = annotate("a = b compl c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::tilde, TT_UnaryOperator);
+
+  Tokens = annotate("a = b not c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::exclaim, TT_UnaryOperator);
+
+  Tokens = annotate("a = b not_eq c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::exclaimequal, TT_BinaryOperator);
+
+  Tokens = annotate("a = b or c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::pipepipe, TT_BinaryOperator);
+
+  Tokens = annotate("a = b or_eq c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::pipeequal, TT_BinaryOperator);
+
+  Tokens = annotate("a = b xor c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::caret, TT_BinaryOperator);
+
+  Tokens = annotate("a = b xor_eq c;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
+
+  Tokens = annotate("xor = foo;");
+  ASSERT_EQ(Tokens.size(), 5u);
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+
+  Tokens = annotate("int xor = foo;");
+  ASSERT_EQ(Tokens.size(), 6u);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
