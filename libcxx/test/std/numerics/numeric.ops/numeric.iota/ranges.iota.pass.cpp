@@ -78,14 +78,10 @@ struct DangerousCopyAssign {
   This class has a "mischievous" non-const overload of copy-assignment
   operator that modifies the object being assigned from. `ranges::iota`
   should not be invoking this overload thanks to the `std::as_const` in its
-  implementation. If for some reason it does invoke it, the values written
-  by ranges::iota will increment by 2 rather than 1.
+  implementation. If for some reason it does invoke it, there will be a compiler
+  error.
   */
-  constexpr DangerousCopyAssign& operator=(DangerousCopyAssign& a) {
-    ++a.val;
-    this->val = a.val;
-    return *this;
-  }
+  constexpr DangerousCopyAssign& operator=(DangerousCopyAssign& a) = delete;
 
   // safe copy assignment std::as_const inside ranges::iota should ensure this
   // overload gets called
@@ -187,7 +183,7 @@ constexpr void test_user_defined_type() {
   assert(std::ranges::equal(a, expected, std::ranges::equal_to{}, proj_val, proj_val));
 }
 
-constexpr void test_danderous_copy_assign() {
+constexpr void test_dangerous_copy_assign() {
   using A = DangerousCopyAssign;
 
   // If the dangerous non-const copy assignment is called, the final values in
@@ -208,11 +204,12 @@ constexpr bool test_results() {
 
   // Tests on non-fundamental types
   test_user_defined_type();
-  test_danderous_copy_assign();
+  test_dangerous_copy_assign();
   return true;
 }
 
 int main(int, char**) {
+  test_results();
   static_assert(test_results());
   return 0;
 }

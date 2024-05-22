@@ -52,7 +52,7 @@ struct NonStandardLayoutTypeBase {
 struct NonStandardLayoutType : public NonStandardLayoutTypeBase {};
 
 //
-constexpr void test_constraints() {
+constexpr bool test_constraints() {
   // requires convertible_to<const _OutIter1&, _OutIter2> && convertible_to<const _ValType1&, _ValType2>
   static_assert(std::is_constructible_v<out_value_result<int*, int>, out_value_result<int*, int>>);
 
@@ -84,6 +84,8 @@ constexpr void test_constraints() {
   // check standard layout
   static_assert(std::is_standard_layout_v<out_value_result<int, int>>);
   static_assert(!std::is_standard_layout_v<out_value_result<NonStandardLayoutType, int>>);
+
+  return true;
 }
 
 // Test results
@@ -132,6 +134,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test_constraints();
+  static_assert(test_constraints());
   test();
   static_assert(test());
   return 0;
