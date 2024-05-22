@@ -903,7 +903,8 @@ private:
   }
 
   // get child
-  CompilerType GetChildType(uint32_t i, std::string &name, uint32_t &size) {
+  llvm::Expected<CompilerType> GetChildType(uint32_t i, std::string &name,
+                                            uint32_t &size) {
     // GetChild constant inputs
     const bool transparent_pointers = false;
     const bool omit_empty_base_classes = true;
