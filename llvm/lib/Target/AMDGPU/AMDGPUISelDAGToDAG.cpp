@@ -2530,7 +2530,7 @@ void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
   // TODO: Select this with a tablegen pattern. This is tricky because the
   // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
   // mayLoad/mayStore and tablegen complains about the mismatch.
-  SDNode *Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
+  SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
   CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), Reg);
 }
 
