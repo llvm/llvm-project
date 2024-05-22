@@ -1908,11 +1908,6 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op1 = Op.getOperand(1);
     EVT ShiftVT = Op1.getValueType();
 
-    // Try to match AVG patterns.
-    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
-                                        DemandedElts, Depth + 1))
-      return TLO.CombineTo(Op, AVG);
-
     KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
       unsigned ShAmt = KnownSA.getConstant().getZExtValue();
@@ -1994,6 +1989,12 @@ bool TargetLowering::SimplifyDemandedBits(
       // shift amounts.
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     }
+
+    // Try to match AVG patterns (after shift simplification).
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
+                                        DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
+
     break;
   }
   case ISD::SRA: {
@@ -2014,11 +2015,6 @@ bool TargetLowering::SimplifyDemandedBits(
     // the shift amount is >= the size of the datatype, which is undefined.
     if (DemandedBits.isOne())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl, VT, Op0, Op1));
-
-    // Try to match AVG patterns.
-    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
-                                        DemandedElts, Depth + 1))
-      return TLO.CombineTo(Op, AVG);
 
     KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
@@ -2106,6 +2102,12 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
     }
+
+    // Try to match AVG patterns (after shift simplification).
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
+                                        DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
+
     break;
   }
   case ISD::FSHL:
