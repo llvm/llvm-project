@@ -1,3 +1,4 @@
+; RUN: opt -passes="default<O0>" -S < %s | FileCheck -check-prefix=PRELTO %s
 ; RUN: opt -passes="default<O1>" -S < %s | FileCheck -check-prefix=PRELTO %s
 ; RUN: opt -passes="thinlto-pre-link<O0>,thinlto<O0>" -S < %s | FileCheck -check-prefix=PRELTO %s
 ; RUN: opt -passes="thinlto-pre-link<O2>" -S < %s | FileCheck -check-prefix=PRELTO %s
