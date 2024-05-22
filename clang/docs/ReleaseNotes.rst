@@ -155,6 +155,11 @@ C++17 Feature Support
   files because they may not be stable across multiple TUs (the values may vary
   based on compiler version as well as CPU tuning). #GH60174
 
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -742,6 +747,13 @@ Bug Fixes to C++ Support
 - Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 - Fix a bug where the last argument was not considered when considering the most viable function for
   explicit object argument member functions. Fixes (#GH92188).
+- Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
+  the ``constexpr`` specifier. Fixes (#GH61004).
+- Clang no longer transforms dependent qualified names into implicit class member access expressions
+  until it can be determined whether the name is that of a non-static member.
+- Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
+- Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
+  as implicitly ``const`` in language modes after C++11.
 - Fixed a crash when trying to emit captures in a lambda call operator with an explicit object
   parameter that is called on a derived type of the lambda.
   Fixes (#GH87210), (GH89541).
@@ -757,6 +769,7 @@ Miscellaneous Bug Fixes
 
 - Fixed an infinite recursion in ASTImporter, on return type declared inside
   body of C++11 lambda without trailing return (#GH68775).
+- Fixed declaration name source location of instantiated function definitions (GH71161).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

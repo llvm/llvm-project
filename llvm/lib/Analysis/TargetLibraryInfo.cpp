@@ -882,6 +882,9 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
+  if (T.isOSAIX())
+    TLI.setUnavailable(LibFunc_memrchr);
+
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 

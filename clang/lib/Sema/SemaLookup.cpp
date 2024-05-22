@@ -34,6 +34,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -945,13 +946,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
-      if (DeclareRISCVVBuiltins || DeclareRISCVSiFiveVectorBuiltins) {
-        if (!RVIntrinsicManager)
-          RVIntrinsicManager = CreateRISCVIntrinsicManager(*this);
+      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins) {
+        if (!RISCV().IntrinsicManager)
+          RISCV().IntrinsicManager = CreateRISCVIntrinsicManager(*this);
 
-        RVIntrinsicManager->InitIntrinsicList();
+        RISCV().IntrinsicManager->InitIntrinsicList();
 
-        if (RVIntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
+        if (RISCV().IntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
           return true;
       }
 
@@ -2771,9 +2772,6 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
-    if (NestedNameSpecifier *NNS = SS->getScopeRep();
-        NNS->getKind() == NestedNameSpecifier::Super)
-      return LookupInSuper(R, NNS->getAsRecordDecl());
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so long into the context associated with the prior nested-name-specifier.
     if ((DC = computeDeclContext(*SS, EnteringContext))) {
@@ -2781,6 +2779,12 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
       R.setContextRange(SS->getRange());
+      // FIXME: '__super' lookup semantics could be implemented by a
+      // LookupResult::isSuperLookup flag which skips the initial search of
+      // the lookup context in LookupQualified.
+      if (NestedNameSpecifier *NNS = SS->getScopeRep();
+          NNS->getKind() == NestedNameSpecifier::Super)
+        return LookupInSuper(R, NNS->getAsRecordDecl());
     }
     IsDependent = !DC && isDependentScopeSpecifier(*SS);
   } else {
