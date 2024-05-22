@@ -1624,7 +1624,8 @@ inline size_t constexpr offsetOf(T1 T2::*Member) {
 // native endianness if necessary.
 static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
   using namespace ::support;
-  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer + Offset);
+  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
+                                                                     Offset);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
