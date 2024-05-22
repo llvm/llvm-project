@@ -293,7 +293,8 @@ bool PWMAFunction::isEqual(const PWMAFunction &other) const {
 
 void PWMAFunction::addPiece(const Piece &piece) {
   assert(piece.isConsistent() && "Piece should be consistent");
-  assert(piece.domain.intersect(getDomain()).isIntegerEmpty() &&
+  assert(piece.domain.intersect(getDomain())
+             .isEmpty(SolverKind::IntegerExactSimplex) &&
          "Piece should be disjoint from the function");
   pieces.push_back(piece);
 }

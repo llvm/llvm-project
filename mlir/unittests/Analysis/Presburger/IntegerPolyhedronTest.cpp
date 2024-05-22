@@ -93,7 +93,7 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
     }
     break;
   case TestFunction::Empty:
-    EXPECT_EQ(!hasSample, poly.isIntegerEmpty());
+    EXPECT_EQ(!hasSample, poly.isEmpty(SolverKind::IntegerExactSimplex));
     break;
   }
 }
@@ -443,35 +443,35 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
 TEST(IntegerPolyhedronTest, IsIntegerEmptyTest) {
   // 1 <= 5x and 5x <= 4 (no solution).
   EXPECT_TRUE(parseIntegerPolyhedron("(x) : (5 * x - 1 >= 0, -5 * x + 4 >= 0)")
-                  .isIntegerEmpty());
+                  .isEmpty(SolverKind::IntegerExactSimplex));
   // 1 <= 5x and 5x <= 9 (solution: x = 1).
   EXPECT_FALSE(parseIntegerPolyhedron("(x) : (5 * x - 1 >= 0, -5 * x + 9 >= 0)")
-                   .isIntegerEmpty());
+                   .isEmpty(SolverKind::IntegerExactSimplex));
 
   // Unbounded sets.
   EXPECT_TRUE(
       parseIntegerPolyhedron("(x,y,z) : (2 * y - 1 >= 0, -2 * y + 1 >= 0, "
                              "2 * z - 1 >= 0, 2 * x - 1 == 0)")
-          .isIntegerEmpty());
+          .isEmpty(SolverKind::IntegerExactSimplex));
 
   EXPECT_FALSE(parseIntegerPolyhedron(
                    "(x,y,z) : (2 * x - 1 >= 0, -3 * x + 3 >= 0, "
                    "5 * z - 6 >= 0, -7 * z + 17 >= 0, 3 * y - 2 >= 0)")
-                   .isIntegerEmpty());
+                   .isEmpty(SolverKind::IntegerExactSimplex));
 
   EXPECT_FALSE(parseIntegerPolyhedron(
                    "(x,y,z) : (2 * x - 1 >= 0, x - y - 1 == 0, y - z == 0)")
-                   .isIntegerEmpty());
+                   .isEmpty(SolverKind::IntegerExactSimplex));
 
-  // IntegerPolyhedron::isEmpty() does not detect the following sets to be
-  // empty.
+  // IntegerPolyhedron::isEmpty(SolverKind::RationalExactFourierMotzkin) does
+  // not detect the following sets to be empty.
 
   // 3x + 7y = 1 and 0 <= x, y <= 10.
   // Since x and y are non-negative, 3x + 7y can never be 1.
   EXPECT_TRUE(parseIntegerPolyhedron(
                   "(x,y) : (x >= 0, -x + 10 >= 0, y >= 0, -y + 10 >= 0, "
                   "3 * x + 7 * y - 1 == 0)")
-                  .isIntegerEmpty());
+                  .isEmpty(SolverKind::IntegerExactSimplex));
 
   // 2x = 3y and y = x - 1 and x + y = 6z + 2 and 0 <= x, y <= 100.
   // Substituting y = x - 1 in 3y = 2x, we obtain x = 3 and hence y = 2.
@@ -479,7 +479,7 @@ TEST(IntegerPolyhedronTest, IsIntegerEmptyTest) {
   EXPECT_TRUE(parseIntegerPolyhedron(
                   "(x,y,z) : (x >= 0, -x + 100 >= 0, y >= 0, -y + 100 >= 0, "
                   "2 * x - 3 * y == 0, x - y - 1 == 0, x + y - 6 * z - 2 == 0)")
-                  .isIntegerEmpty());
+                  .isEmpty(SolverKind::IntegerExactSimplex));
 
   // 2x = 3y and y = x - 1 + 6z and x + y = 6q + 2 and 0 <= x, y <= 100.
   // 2x = 3y implies x is a multiple of 3 and y is even.
@@ -490,11 +490,11 @@ TEST(IntegerPolyhedronTest, IsIntegerEmptyTest) {
       parseIntegerPolyhedron(
           "(x,y,z,q) : (x >= 0, -x + 100 >= 0, y >= 0, -y + 100 >= 0, "
           "2 * x - 3 * y == 0, x - y + 6 * z - 1 == 0, x + y - 6 * q - 2 == 0)")
-          .isIntegerEmpty());
+          .isEmpty(SolverKind::IntegerExactSimplex));
 
   // Set with symbols.
   EXPECT_FALSE(parseIntegerPolyhedron("(x)[s] : (x + s >= 0, x - s == 0)")
-                   .isIntegerEmpty());
+                   .isEmpty(SolverKind::IntegerExactSimplex));
 }
 
 TEST(IntegerPolyhedronTest, removeRedundantConstraintsTest) {
@@ -823,7 +823,7 @@ TEST(IntegerPolyhedronTest, simplifyLocalsTest) {
   poly.addEquality({2, 1, -1});
   poly.addEquality({0, 1, -2});
 
-  EXPECT_TRUE(poly.isEmpty());
+  EXPECT_TRUE(poly.isEmpty(SolverKind::RationalExactFourierMotzkin));
 
   // (x) : (exists y, z, w: 3x + y = 1 and 2y = z and 3y = w and z = w).
   IntegerPolyhedron poly2(PresburgerSpace::getSetSpace(1, 0, 3));
@@ -832,7 +832,7 @@ TEST(IntegerPolyhedronTest, simplifyLocalsTest) {
   poly2.addEquality({0, 3, 0, -1, 0});
   poly2.addEquality({0, 0, 1, -1, 0});
 
-  EXPECT_TRUE(poly2.isEmpty());
+  EXPECT_TRUE(poly2.isEmpty(SolverKind::RationalExactFourierMotzkin));
 
   // (x) : (exists y: x >= y + 1 and 2x + y = 0 and y >= -1).
   IntegerPolyhedron poly3(PresburgerSpace::getSetSpace(1, 0, 1));
@@ -840,7 +840,7 @@ TEST(IntegerPolyhedronTest, simplifyLocalsTest) {
   poly3.addInequality({0, 1, 1});
   poly3.addEquality({2, 1, 0});
 
-  EXPECT_TRUE(poly3.isEmpty());
+  EXPECT_TRUE(poly3.isEmpty(SolverKind::RationalExactFourierMotzkin));
 }
 
 TEST(IntegerPolyhedronTest, mergeDivisionsSimple) {
@@ -1201,14 +1201,16 @@ void expectSymbolicIntegerLexMin(
   SymbolicLexOpt result = poly.findSymbolicIntegerLexMin();
 
   if (expectedLexminRepr.empty()) {
-    EXPECT_TRUE(result.lexopt.getDomain().isIntegerEmpty());
+    EXPECT_TRUE(
+        result.lexopt.getDomain().isEmpty(SolverKind::IntegerExactSimplex));
   } else {
     PWMAFunction expectedLexmin = parsePWMAF(expectedLexminRepr);
     EXPECT_TRUE(result.lexopt.isEqual(expectedLexmin));
   }
 
   if (expectedUnboundedDomainRepr.empty()) {
-    EXPECT_TRUE(result.unboundedDomain.isIntegerEmpty());
+    EXPECT_TRUE(
+        result.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   } else {
     PresburgerSet expectedUnboundedDomain =
         parsePresburgerSet(expectedUnboundedDomainRepr);

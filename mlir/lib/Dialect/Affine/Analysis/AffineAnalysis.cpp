@@ -668,7 +668,7 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   addOrderingConstraints(srcDomain, dstDomain, loopDepth, &dependenceDomain);
 
   // Return 'NoDependence' if the solution space is empty: no dependence.
-  if (dependenceDomain.isEmpty())
+  if (dependenceDomain.isEmpty(SolverKind::RationalExactFourierMotzkin))
     return DependenceResult::NoDependence;
 
   // Compute dependence direction vector and return true.

@@ -94,11 +94,11 @@ void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
   if (isObviouslyEqual(set))
     return;
 
-  if (isObviouslyEmpty()) {
+  if (isEmpty(SolverKind::FastHeuristics)) {
     disjuncts = set.disjuncts;
     return;
   }
-  if (set.isObviouslyEmpty())
+  if (set.isEmpty(SolverKind::FastHeuristics))
     return;
 
   if (isObviouslyUniverse())
@@ -152,17 +152,17 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
 
   // If the set is empty or the other set is universe,
   // directly return the set
-  if (isObviouslyEmpty() || set.isObviouslyUniverse())
+  if (isEmpty(SolverKind::FastHeuristics) || set.isObviouslyUniverse())
     return *this;
 
-  if (set.isObviouslyEmpty() || isObviouslyUniverse())
+  if (set.isEmpty(SolverKind::FastHeuristics) || isObviouslyUniverse())
     return set;
 
   PresburgerRelation result(getSpace());
   for (const IntegerRelation &csA : disjuncts) {
     for (const IntegerRelation &csB : set.disjuncts) {
       IntegerRelation intersection = csA.intersect(csB);
-      if (!intersection.isEmpty())
+      if (!intersection.isEmpty(SolverKind::IntegerExactSimplex))
         result.unionInPlace(intersection);
     }
   }
@@ -224,7 +224,7 @@ void PresburgerRelation::compose(const PresburgerRelation &rel) {
     for (const IntegerRelation &csB : rel.disjuncts) {
       IntegerRelation composition = csA;
       composition.compose(csB);
-      if (!composition.isEmpty())
+      if (!composition.isEmpty(SolverKind::IntegerExactSimplex))
         result.unionInPlace(composition);
     }
   }
@@ -347,7 +347,7 @@ PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
 static PresburgerRelation getSetDifference(IntegerRelation b,
                                            const PresburgerRelation &s) {
   assert(b.getSpace().isCompatible(s.getSpace()) && "Spaces should match");
-  if (b.isEmptyByGCDTest())
+  if (b.isEmpty(SolverKind::FastHeuristics))
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
 
   if (!s.hasOnlyDivLocals())
@@ -617,7 +617,7 @@ PresburgerRelation::subtract(const PresburgerRelation &set) const {
 /// point then this is a point that is contained in T but not S, and
 /// if T contains a point that is not in S, this also lies in T \ S.
 bool PresburgerRelation::isSubsetOf(const PresburgerRelation &set) const {
-  return this->subtract(set).isIntegerEmpty();
+  return this->subtract(set).isEmpty(SolverKind::IntegerExactSimplex);
 }
 
 /// Two sets are equal iff they are subsets of each other.
@@ -658,16 +658,11 @@ bool PresburgerRelation::isConvexNoLocals() const {
   return getNumDisjuncts() == 1 && getSpace().getNumLocalVars() == 0;
 }
 
-/// Return true if there is no disjunct, false otherwise.
-bool PresburgerRelation::isObviouslyEmpty() const {
-  return getNumDisjuncts() == 0;
-}
-
-/// Return true if all the sets in the union are known to be integer empty,
-/// false otherwise.
-bool PresburgerRelation::isIntegerEmpty() const {
-  // The set is empty iff all of the disjuncts are empty.
-  return llvm::all_of(disjuncts, std::mem_fn(&IntegerRelation::isIntegerEmpty));
+bool PresburgerRelation::isEmpty(SolverKind kind) const {
+  auto disjunctCheck = [&kind](const IntegerRelation &disjunct) {
+    return disjunct.isEmpty(kind);
+  };
+  return llvm::all_of(disjuncts, disjunctCheck);
 }
 
 bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
@@ -1035,7 +1030,7 @@ PresburgerRelation PresburgerRelation::simplify() const {
   PresburgerRelation result = PresburgerRelation(getSpace());
   for (IntegerRelation &disjunct : origin.disjuncts) {
     disjunct.simplify();
-    if (!disjunct.isObviouslyEmpty())
+    if (!disjunct.isEmpty(SolverKind::FastHeuristics))
       result.unionInPlace(disjunct);
   }
   return result;

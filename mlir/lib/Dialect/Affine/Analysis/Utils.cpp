@@ -875,7 +875,7 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   PresburgerSet sliceSet(sliceConstraints);
   PresburgerSet diffSet = sliceSet.subtract(srcSet);
 
-  if (!diffSet.isIntegerEmpty()) {
+  if (!diffSet.isEmpty(SolverKind::IntegerExactSimplex)) {
     LLVM_DEBUG(llvm::dbgs() << "Incorrect slice\n");
     return false;
   }
@@ -932,7 +932,7 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
   PresburgerSet srcSet(srcConstraints);
   PresburgerSet sliceSet(sliceConstraints);
   PresburgerSet diffSet = srcSet.subtract(sliceSet);
-  return diffSet.isIntegerEmpty();
+  return diffSet.isEmpty(SolverKind::IntegerExactSimplex);
 }
 
 unsigned MemRefRegion::getRank() const {
@@ -1294,7 +1294,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for overflow: d_i >= memref dim size.
     ucst.addBound(BoundType::LB, r, dimSize);
-    outOfBounds = !ucst.isEmpty();
+    outOfBounds = !ucst.isEmpty(SolverKind::RationalExactFourierMotzkin);
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
           << "memref out of upper bound access along dimension #" << (r + 1);
@@ -1305,7 +1305,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
     std::fill(ineq.begin(), ineq.end(), 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
-    outOfBounds = !lcst.isEmpty();
+    outOfBounds = !lcst.isEmpty(SolverKind::RationalExactFourierMotzkin);
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
           << "memref out of lower bound access along dimension #" << (r + 1);
@@ -1979,7 +1979,7 @@ void mlir::affine::getSequentialLoops(
 
 IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
   FlatAffineValueConstraints fac(set);
-  if (fac.isEmpty())
+  if (fac.isEmpty(SolverKind::RationalExactFourierMotzkin))
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
                                    set.getContext());
   fac.removeTrivialRedundancy();
@@ -2108,7 +2108,7 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
 
   // If the constraint system is empty, there is an inconsistency. (E.g., this
   // can happen if loop lb > ub.)
-  if (constraints.isEmpty())
+  if (constraints.isEmpty(SolverKind::RationalExactFourierMotzkin))
     return failure();
 
   // In the case of `isMin` (`!isMin` is inversed):
@@ -2141,7 +2141,7 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
     ineq[i] = isMin ? -1 : 1;
     ineq[newConstr.getNumCols() - 1] = -1;
     newConstr.addInequality(ineq);
-    if (!newConstr.isEmpty())
+    if (!newConstr.isEmpty(SolverKind::RationalExactFourierMotzkin))
       return failure();
   }
 

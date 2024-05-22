@@ -175,9 +175,9 @@ TEST(PresburgerRelationTest, symbolicLexOpt) {
        "(x)[N, M] -> (M)"},
   });
 
-  EXPECT_TRUE(lexmin1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin1.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmin1.lexopt.isEqual(expectedLexMin1));
-  EXPECT_TRUE(lexmax1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax1.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmax1.lexopt.isEqual(expectedLexMax1));
 
   PresburgerRelation rel2 = parsePresburgerRelationFromPresburgerSet(
@@ -208,9 +208,9 @@ TEST(PresburgerRelationTest, symbolicLexOpt) {
   PWMAFunction expectedLexMax2 =
       parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (1, 1)"}});
 
-  EXPECT_TRUE(lexmin2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin2.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmin2.lexopt.isEqual(expectedLexMin2));
-  EXPECT_TRUE(lexmax2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax2.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexMax2));
 
   PresburgerRelation rel3 = parsePresburgerRelationFromPresburgerSet(
@@ -245,9 +245,9 @@ TEST(PresburgerRelationTest, symbolicLexOpt) {
   PWMAFunction expectedLexMax3 =
       parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (1, 1, x)"}});
 
-  EXPECT_TRUE(lexmin3.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin3.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmin3.lexopt.isEqual(expectedLexMin3));
-  EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax3.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexMax3));
 }
 

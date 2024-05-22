@@ -34,6 +34,20 @@ struct SymbolicLexOpt;
 /// The type of bound: equal, lower bound or upper bound.
 enum class BoundType { EQ, LB, UB };
 
+/// The kind of solver to use for emptiness check.
+/// TODO: We should have some docs to explain the user what kind of solver
+/// should fit best for their use case.
+enum class SolverKind {
+  // Integer Exact algorithm.
+  IntegerSimplex,
+  // Rational Exact algorithm.
+  RationalSimplex,
+  // Rationly Exact algorithm.
+  FourierMotzkin,
+  // Fast heuristic based algorithm (no guarantees).
+  FastHeuristics
+};
+
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
 /// or equalities in the form:
@@ -366,26 +380,9 @@ public:
                                SmallVectorImpl<unsigned> *eqIndices = nullptr,
                                unsigned offset = 0, unsigned num = 0) const;
 
-  /// Checks for emptiness by performing variable elimination on all
-  /// variables, running the GCD test on each equality constraint, and
-  /// checking for invalid constraints. Returns true if the GCD test fails for
-  /// any equality, or if any invalid constraints are discovered on any row.
-  /// Returns false otherwise.
-  bool isEmpty() const;
-
-  /// Performs GCD checks and invalid constraint checks.
-  bool isObviouslyEmpty() const;
-
-  /// Runs the GCD test on all equality constraints. Returns true if this test
-  /// fails on any equality. Returns false otherwise.
-  /// This test can be used to disprove the existence of a solution. If it
-  /// returns true, no integer solution to the equality constraints can exist.
-  bool isEmptyByGCDTest() const;
-
-  /// Returns true if the set of constraints is found to have no solution,
-  /// false if a solution exists. Uses the same algorithm as
-  /// `findIntegerSample`.
-  bool isIntegerEmpty() const;
+  /// Check if the given relation/polyhedron is empty. The emptiness guarantees
+  /// depend on the solver used.
+  bool isEmpty(SolverKind kind) const;
 
   /// Returns a matrix where each row is a vector along which the polytope is
   /// bounded. The span of the returned vectors is guaranteed to contain all
@@ -753,6 +750,30 @@ protected:
   std::optional<int64_t> computeConstantLowerOrUpperBound64(unsigned pos) {
     return computeConstantLowerOrUpperBound<isLower>(pos).map(int64FromMPInt);
   }
+
+  /// Checks for emptiness by performing variable elimination on all
+  /// variables, running the GCD test on each equality constraint, and
+  /// checking for invalid constraints. Returns true if the GCD test fails for
+  /// any equality, or if any invalid constraints are discovered on any row.
+  /// Returns false otherwise.
+  bool isEmptyByFMTest() const;
+
+  /// Performs GCD checks and invalid constraint checks.
+  bool isObviouslyEmpty() const;
+
+  /// Runs the GCD test on all equality constraints. Returns true if this test
+  /// fails on any equality. Returns false otherwise.
+  /// This test can be used to disprove the existence of a solution. If it
+  /// returns true, no integer solution to the equality constraints can exist.
+  bool isEmptyByGCDTest() const;
+
+  /// Returns true if the set of constraints is found to have no integer
+  /// solution, false if a solution exists.
+  bool isIntegerEmpty() const;
+
+  /// Returns true if the set of constraints is found to have no rational
+  /// solution, false if a solution exists.
+  bool isRationalEmpty() const;
 
   /// Eliminates a single variable at `position` from equality and inequality
   /// constraints. Returns `success` if the variable was eliminated, and

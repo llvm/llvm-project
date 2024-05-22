@@ -419,7 +419,9 @@ void expectEqual(const IntegerPolyhedron &s, const IntegerPolyhedron &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
-void expectEmpty(const PresburgerSet &s) { EXPECT_TRUE(s.isIntegerEmpty()); }
+void expectEmpty(const PresburgerSet &s) {
+  EXPECT_TRUE(s.isEmpty(SolverKind::IntegerExactSimplex));
+}
 
 TEST(SetTest, divisions) {
   // evens = {x : exists q, x = 2q}.
@@ -872,7 +874,7 @@ TEST(SetTest, subtractOutputSizeRegression) {
   EXPECT_EQ(result.getNumDisjuncts(), 1u);
 
   PresburgerSet subtractSelf = set1.subtract(set1);
-  EXPECT_TRUE(subtractSelf.isIntegerEmpty());
+  EXPECT_TRUE(subtractSelf.isEmpty(SolverKind::IntegerExactSimplex));
   // Previously, the subtraction result was producing several unnecessary empty
   // sets, which is correct, but bad for output size.
   EXPECT_EQ(subtractSelf.getNumDisjuncts(), 0u);
