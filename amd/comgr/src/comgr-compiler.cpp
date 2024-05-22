@@ -668,7 +668,8 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
-  Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(), "", Diags);
+  Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(),
+                   llvm::sys::getDefaultTargetTriple(), Diags);
   TheDriver.setTitle("AMDGPU Code Object Manager");
   TheDriver.setCheckInputsExist(false);
 
@@ -1052,8 +1053,6 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
     Args.push_back("-std=c++11");
-    Args.push_back("-target");
-    Args.push_back("x86_64-unknown-linux-gnu");
     Args.push_back("--cuda-device-only");
     Args.push_back("-isystem");
     Args.push_back(ROCMIncludePath.c_str());
