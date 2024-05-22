@@ -18,6 +18,8 @@
 #include "arm/vdso.h"
 #elif defined(LIBC_TARGET_ARCH_IS_RISCV)
 #include "riscv/vdso.h"
+#else
+#error "unknown arch"
 #endif
 
 namespace LIBC_NAMESPACE {
