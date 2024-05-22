@@ -1599,7 +1599,9 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     if (DiagnoseUnexpandedParameterPack(Default, UPPC_DefaultArgument))
       return Param;
 
-    Param->setDefaultArgument(Default);
+    Param->setDefaultArgument(
+        Context, getTrivialTemplateArgumentLoc(TemplateArgument(Default),
+                                               QualType(), SourceLocation()));
   }
 
   return Param;
@@ -3630,9 +3632,9 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
 
       // Check the presence of a default argument here.
       if (NewNonTypeParm->hasDefaultArgument() &&
-          DiagnoseDefaultTemplateArgument(*this, TPC,
-                                          NewNonTypeParm->getLocation(),
-                    NewNonTypeParm->getDefaultArgument()->getSourceRange())) {
+          DiagnoseDefaultTemplateArgument(
+              *this, TPC, NewNonTypeParm->getLocation(),
+              NewNonTypeParm->getDefaultArgument().getSourceRange())) {
         NewNonTypeParm->removeDefaultArgument();
       }
 
@@ -6107,16 +6109,17 @@ static bool SubstDefaultTemplateArgument(
 /// parameters that precede \p Param in the template parameter list.
 ///
 /// \returns the substituted template argument, or NULL if an error occurred.
-static ExprResult SubstDefaultTemplateArgument(
+static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, NonTypeTemplateParmDecl *Param,
     ArrayRef<TemplateArgument> SugaredConverted,
-    ArrayRef<TemplateArgument> CanonicalConverted) {
+    ArrayRef<TemplateArgument> CanonicalConverted,
+    TemplateArgumentLoc &Output) {
   Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Param, Template,
                                    SugaredConverted,
                                    SourceRange(TemplateLoc, RAngleLoc));
   if (Inst.isInvalid())
-    return ExprError();
+    return true;
 
   // Only substitute for the innermost template argument list.
   MultiLevelTemplateArgumentList TemplateArgLists(Template, SugaredConverted,
@@ -6127,7 +6130,8 @@ static ExprResult SubstDefaultTemplateArgument(
   Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
   EnterExpressionEvaluationContext ConstantEvaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  return SemaRef.SubstExpr(Param->getDefaultArgument(), TemplateArgLists);
+  return SemaRef.SubstTemplateArgument(Param->getDefaultArgument(),
+                                       TemplateArgLists, Output);
 }
 
 /// Substitute template arguments into the default template argument for
@@ -6219,14 +6223,12 @@ TemplateArgumentLoc Sema::SubstDefaultTemplateArgumentIfAvailable(
       return TemplateArgumentLoc();
 
     HasDefaultArg = true;
-    ExprResult Arg = SubstDefaultTemplateArgument(
-        *this, Template, TemplateLoc, RAngleLoc, NonTypeParm, SugaredConverted,
-        CanonicalConverted);
-    if (Arg.isInvalid())
+    TemplateArgumentLoc Output;
+    if (SubstDefaultTemplateArgument(*this, Template, TemplateLoc, RAngleLoc,
+                                     NonTypeParm, SugaredConverted,
+                                     CanonicalConverted, Output))
       return TemplateArgumentLoc();
-
-    Expr *ArgE = Arg.getAs<Expr>();
-    return TemplateArgumentLoc(TemplateArgument(ArgE), ArgE);
+    return Output;
   }
 
   TemplateTemplateParmDecl *TempTempParm
@@ -6803,14 +6805,10 @@ bool Sema::CheckTemplateArgumentList(
         return diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP,
                                        NewArgs);
 
-      ExprResult E = SubstDefaultTemplateArgument(
-          *this, Template, TemplateLoc, RAngleLoc, NTTP, SugaredConverted,
-          CanonicalConverted);
-      if (E.isInvalid())
+      if (SubstDefaultTemplateArgument(*this, Template, TemplateLoc, RAngleLoc,
+                                       NTTP, SugaredConverted,
+                                       CanonicalConverted, Arg))
         return true;
-
-      Expr *Ex = E.getAs<Expr>();
-      Arg = TemplateArgumentLoc(TemplateArgument(Ex), Ex);
     } else {
       TemplateTemplateParmDecl *TempParm
         = cast<TemplateTemplateParmDecl>(*Param);
@@ -9523,10 +9521,10 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
         }
       } else if (NonTypeTemplateParmDecl *NTTP
                    = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-        if (Expr *DefArg = NTTP->getDefaultArgument()) {
+        if (NTTP->hasDefaultArgument()) {
           Diag(NTTP->getDefaultArgumentLoc(),
                diag::err_default_arg_in_partial_spec)
-            << DefArg->getSourceRange();
+              << NTTP->getDefaultArgument().getSourceRange();
           NTTP->removeDefaultArgument();
         }
       } else {
