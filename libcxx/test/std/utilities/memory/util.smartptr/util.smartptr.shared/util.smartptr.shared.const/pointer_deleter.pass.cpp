@@ -76,6 +76,19 @@ static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter>
 static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>>::value, "");
 #endif
 
+int f() { return 5; }
+
+// https://cplusplus.github.io/LWG/issue3018
+// LWG 3018. shared_ptr of function type
+void test_function_type() {
+  bool deleter_called = false;
+  {
+    std::shared_ptr<int()> p(&f, [&deleter_called](int (*)()) { deleter_called = true; });
+    assert((*p)() == 5);
+  }
+  assert(deleter_called);
+}
+
 int main(int, char**)
 {
     {
