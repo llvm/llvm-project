@@ -4,10 +4,22 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: LLVM ERROR: requires the following SPIR-V extension: SPV_INTEL_inline_assembly
 
-; CHECK: Capability AsmINTEL
-; CHECK: Extension "SPV_INTEL_inline_assembly"
-; CHECK: Decorate SideEffectsINTEL
-; CHECK: AsmTargetINTEL "spir64-unknown-unknown"
+; CHECK: OpCapability AsmINTEL
+; CHECK: OpExtension "SPV_INTEL_inline_assembly"
+; CHECK-COUNT-8: OpDecorate %[[#]] SideEffectsINTEL
+; CHECK: %[[#Dialect:]] = OpAsmTargetINTEL "spir64-unknown-unknown"
+; CHECK: %25 = OpAsmINTEL %[[#RetTy1:]] %[[#FunTy1:]] %[[#Dialect]] "" ""
+; CHECK: %26 = OpAsmINTEL %6 %13 %[[#Dialect]] "nop" ""
+; CHECK: %27 = OpAsmINTEL %6 %13 %[[#Dialect]] "" "~{cc},~{memory}"
+; CHECK: %28 = OpAsmINTEL %2 %14 %[[#Dialect]] "clobber_out $0" "=&r"
+; CHECK: %29 = OpAsmINTEL %2 %15 %[[#Dialect]] "icmd $0 $1" "=r,r"
+; CHECK: %30 = OpAsmINTEL %3 %16 %[[#Dialect]] "fcmd $0 $1" "=r,r"
+; CHECK: %31 = OpAsmINTEL %4 %17 %[[#Dialect]] "fcmdext $0 $1 $2" "=r,r,r"
+; CHECK: %32 = OpAsmINTEL %11 %18 %[[#Dialect]] "cmdext $0 $3 $1 $2" "=r,r,r,r"
+; CHECK: %33 = OpAsmINTEL %5 %19 %[[#Dialect]] "icmdext $0 $3 $1 $2" "=r,r,r,r"
+; CHECK: %34 = OpAsmINTEL %6 %20 %[[#Dialect]] "constcmd $0 $1" "r,r"
+; CHECK: %35 = OpAsmINTEL %6 %20 %[[#Dialect]] "constcmd $0 $1" "i,i"
+
 ; CHECK: AsmINTEL
 ; CHECK: OpFunction
 ; CHECK: AsmCallINTEL
@@ -16,7 +28,6 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 target triple = "spir64-unknown-unknown"
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
-  call void asm sideeffect "constcmd $0 $1", "r,r"(i32 123, double 42.0)
   %i1 = load i32, ptr addrspace(1) %_arg_int
   %i2 = load i8, ptr addrspace(1) %_arg_int
   %f1 = load float, ptr addrspace(1) %_arg_float
@@ -29,7 +40,7 @@ define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_
 ;;  store half %r_struct2, ptr addrspace(1) %_arg_half
   ; inline asm
   call void asm sideeffect "", ""()
-  call void asm sideeffect "undefined\0A", ""()
+  call void asm sideeffect "nop", ""()
   call void asm sideeffect "", "~{cc},~{memory}"()
   %res_i0 = call i32 asm "clobber_out $0", "=&r"()
   store i32 %res_i0, ptr addrspace(1) %_arg_int
@@ -48,7 +59,7 @@ define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_
   %res_i2 = call i64 asm sideeffect "icmdext $0 $3 $1 $2", "=r,r,r,r"(i64 %_lng, i32 %i1, i8 %i2)
   store i64 %res_i2, ptr addrspace(1) %_arg_int
   ; inline asm: constant arguments
-  call void asm sideeffect "constcmd $0 $1", "r,r"(i32 123, double 42.0)
-;  call void asm sideeffect "constcmd $0 $1", "i,i"(i32 123, double 42.0)
+  call void asm "constcmd $0 $1", "r,r"(i32 123, double 42.0)
+  call void asm "constcmd $0 $1", "i,i"(i32 123, double 42.0)
   ret void
 }

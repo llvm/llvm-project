@@ -659,6 +659,8 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
                               MDString::get(Ctx, IA->getConstraintString())};
   SmallVector<Value *> Args = {
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))};
+  for (unsigned OpIdx = 0; OpIdx < Call.arg_size(); OpIdx++)
+    Args.push_back(Call.getArgOperand(OpIdx));
 
   IRBuilder<> B(Call.getParent());
   B.SetInsertPoint(&Call);

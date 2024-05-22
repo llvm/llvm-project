@@ -568,6 +568,7 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       auto AsmTargetMIB =
           MIRBuilder.buildInstr(SPIRV::OpAsmTargetINTEL).addDef(AsmTargetReg);
       addStringImm(ST.getTargetTripleAsStr(), AsmTargetMIB);
+      GR->add(AsmTargetMIB.getInstr(), &MF, AsmTargetReg);
     }
 
     // create types
@@ -592,10 +593,9 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     const MDOperand &AsmStrMO = IAMD->getOperand(1);
     const MDOperand &ConstrMO = IAMD->getOperand(2);
     assert(isa<MDString>(AsmStrMO) && isa<MDString>(ConstrMO));
-    StringRef AsmStr = cast<MDString>(AsmStrMO)->getString();
-    addStringImm(AsmStr, AsmMIB);
-    StringRef Constr = cast<MDString>(ConstrMO)->getString();
-    addStringImm(Constr, AsmMIB);
+    addStringImm(cast<MDString>(AsmStrMO)->getString(), AsmMIB);
+    addStringImm(cast<MDString>(ConstrMO)->getString(), AsmMIB);
+    GR->add(AsmMIB.getInstr(), &MF, AsmReg);
 
     // calls the inline assembly instruction
     unsigned ExtraInfo = I2->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
@@ -634,10 +634,19 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         .addDef(DefReg)
         .addUse(GR->getSPIRVTypeID(RetType))
         .addUse(AsmReg);
-    for (unsigned Idx : Ops)
-      AsmCall.add(I2->getOperand(Idx));
-    for (auto It = Ops.rbegin(), End = Ops.rend(); It != End; ++It)
-      I2->removeOperand(*It);
+    //for (unsigned Idx : Ops)
+    //  AsmCall.add(I2->getOperand(Idx));
+    //for (auto It = Ops.rbegin(), End = Ops.rend(); It != End; ++It)
+    //  I2->removeOperand(*It);
+    unsigned IntrIdx = 1;
+    for (unsigned Idx : Ops) {
+      ++IntrIdx;
+      const MachineOperand& MO = I2->getOperand(Idx);
+      if (MO.isReg())
+        AsmCall.addUse(MO.getReg());
+      else
+        AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+    }
   }
   for (MachineInstr *MI : ToProcess)
     MI->eraseFromParent();

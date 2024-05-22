@@ -861,6 +861,6 @@ def OpGroupLogicalXorKHR: Op<6408, (outs ID:$res), (ins TYPE:$type, ID:$scope, i
 def OpAsmTargetINTEL: Op<5609, (outs ID:$res), (ins StringImm:$str), "$res = OpAsmTargetINTEL $str">;
 def OpAsmINTEL: Op<5610, (outs ID:$res), (ins TYPE:$type, TYPE:$asm_type, ID:$target,
                                           StringImm:$asm, StringImm:$constraints),
-                  "$res = OpAsmINTEL $type $asm_type $target $asm $constraints">;
+                  "$res = OpAsmINTEL $type $asm_type $target $asm">;
 def OpAsmCallINTEL: Op<5611, (outs ID:$res), (ins TYPE:$type, ID:$asm, variable_ops),
                   "$res = OpAsmCallINTEL $type $asm">;

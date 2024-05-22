@@ -440,8 +440,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, &*F);
-        } else if (OpCode == SPIRV::OpTypeForwardPointer ||
-                   TII->isInlineAsmDefInstr(MI)) {
+        } else if (OpCode == SPIRV::OpTypeForwardPointer/* ||
+                   TII->isInlineAsmDefInstr(MI)*/) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
       }
@@ -1150,6 +1150,14 @@ void addInstrRequirements(const MachineInstr &MI,
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
       Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
+    }
+    break;
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
+  case SPIRV::OpAsmCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_inline_assembly);
+      Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
   default:
