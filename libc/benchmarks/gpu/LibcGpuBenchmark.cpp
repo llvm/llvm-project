@@ -6,22 +6,16 @@
 namespace LIBC_NAMESPACE {
 namespace libc_gpu_benchmarks {
 
-Benchmark *Benchmark::start = nullptr;
-Benchmark *Benchmark::end = nullptr;
+FixedVector<Benchmark *, 64> benchmarks_to_run;
 
 void Benchmark::add_benchmark(Benchmark *benchmark) {
-  if (end == nullptr) {
-    start = benchmark;
-    end = benchmark;
-    return;
-  }
-  end->next = benchmark;
-  end = benchmark;
+  benchmarks_to_run.push_back(benchmark);
 }
 
 int Benchmark::run_benchmarks() {
-  for (Benchmark *b = start; b != nullptr; b = b->next)
-    b->run();
+  for (auto it = benchmarks_to_run.rbegin(), e = benchmarks_to_run.rend();
+       it != e; ++it)
+    (*it)->run();
   return 0;
 }
 

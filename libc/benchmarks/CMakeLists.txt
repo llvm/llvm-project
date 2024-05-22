@@ -1,14 +1,14 @@
 if(LIBC_TARGET_OS_IS_GPU)
-	add_subdirectory(gpu)
-	return()
+  add_subdirectory(gpu)
+  return()
 endif()
 
 find_package(Threads)
 
 set(LLVM_LINK_COMPONENTS
-	Support
-	TargetParser
-	)
+  Support
+  TargetParser
+)
 
 #==============================================================================
 # Add Unit Testing Support
@@ -16,35 +16,37 @@ set(LLVM_LINK_COMPONENTS
 
 function(add_libc_benchmark_unittest target_name)
 	if(NOT LLVM_INCLUDE_TESTS)
-	return()
+    return()
 	endif()
 
-	cmake_parse_arguments(
-	"LIBC_BENCHMARKS_UNITTEST"
-	"" # No optional arguments
-	"SUITE" # Single value arguments
-	"SRCS;DEPENDS" # Multi-value arguments
-	${ARGN}
+	cmake_parse_arguments(if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(gpu)
+  return()
+    "LIBC_BENCHMARKS_UNITTEST"
+    "" # No optional arguments
+    "SUITE" # Single value arguments
+    "SRCS;DEPENDS" # Multi-value arguments
+    ${ARGN}
 	)
 
-	add_executable(${target_name}
-	EXCLUDE_FROM_ALL
-	${LIBC_BENCHMARKS_UNITTEST_SRCS}
-	)
-	target_link_libraries(${target_name}
-	PRIVATE
-	llvm_gtest_main
-	llvm_gtest
-	${LIBC_BENCHMARKS_UNITTEST_DEPENDS}
-	)
-	llvm_update_compile_flags(${target_name})
+  add_executable(${target_name}
+    EXCLUDE_FROM_ALL
+    ${LIBC_BENCHMARKS_UNITTEST_SRCS}
+  )
+  target_link_libraries(${target_name}
+    PRIVATE
+    llvm_gtest_main
+    llvm_gtest
+    ${LIBC_BENCHMARKS_UNITTEST_DEPENDS}
+  )
+  llvm_update_compile_flags(${target_name})
 
-	add_custom_command(
-	TARGET ${target_name}
-	POST_BUILD
-	COMMAND $<TARGET_FILE:${target_name}>
-	)
-	add_dependencies(libc-benchmark-util-tests ${target_name})
+  add_custom_command(
+    TARGET ${target_name}
+    POST_BUILD
+    COMMAND $<TARGET_FILE:${target_name}>
+  )
+  add_dependencies(libc-benchmark-util-tests ${target_name})
 endfunction()
 
 #==============================================================================
@@ -53,32 +55,32 @@ endfunction()
 
 include(ExternalProject)
 ExternalProject_Add(google-benchmark-libc
-	EXCLUDE_FROM_ALL ON
-	PREFIX google-benchmark-libc
-	SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
-	INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark-libc
-	CMAKE_CACHE_ARGS
-		-DBENCHMARK_ENABLE_EXCEPTIONS:BOOL=OFF
-		-DBENCHMARK_ENABLE_LTO:BOOL=OFF
-		-DBENCHMARK_ENABLE_TESTING:BOOL=OFF
-		-DBENCHMARK_ENABLE_WERROR:BOOL=${LLVM_ENABLE_WERROR}
-		-DBENCHMARK_FORCE_WERROR:BOOL=OFF
-		-DBENCHMARK_USE_LIBCXX:BOOL=OFF
-		-DCMAKE_BUILD_TYPE:STRING=Release
+  EXCLUDE_FROM_ALL ON
+  PREFIX google-benchmark-libc
+  SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
+  INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark-libc
+  CMAKE_CACHE_ARGS
+    -DBENCHMARK_ENABLE_EXCEPTIONS:BOOL=OFF
+    -DBENCHMARK_ENABLE_LTO:BOOL=OFF
+    -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
+    -DBENCHMARK_ENABLE_WERROR:BOOL=${LLVM_ENABLE_WERROR}
+    -DBENCHMARK_FORCE_WERROR:BOOL=OFF
+    -DBENCHMARK_USE_LIBCXX:BOOL=OFF
+    -DCMAKE_BUILD_TYPE:STRING=Release
 
-		-DCMAKE_SYSTEM_NAME:STRING=${CMAKE_SYSTEM_NAME}
-		-DCMAKE_SYSTEM_PROCESSOR:STRING=${CMAKE_SYSTEM_PROCESSOR}
-		-DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
-		-DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
-		-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
-		-DCMAKE_FIND_ROOT_PATH:STRING=${CMAKE_FIND_ROOT_PATH}
+    -DCMAKE_SYSTEM_NAME:STRING=${CMAKE_SYSTEM_NAME}
+    -DCMAKE_SYSTEM_PROCESSOR:STRING=${CMAKE_SYSTEM_PROCESSOR}
+    -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+    -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
+    -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+    -DCMAKE_FIND_ROOT_PATH:STRING=${CMAKE_FIND_ROOT_PATH}
 
-		-DBUILD_SHARED_LIBS:BOOL=OFF
-		-DCMAKE_EXE_LINKER_FLAGS:STRING=-static
+    -DBUILD_SHARED_LIBS:BOOL=OFF
+    -DCMAKE_EXE_LINKER_FLAGS:STRING=-static
 
-		-DCMAKE_CXX_STANDARD:STRING=14
-		-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-	)
+    -DCMAKE_CXX_STANDARD:STRING=14
+    -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+  )
 
 add_custom_target(libc-benchmark-util-tests)
 

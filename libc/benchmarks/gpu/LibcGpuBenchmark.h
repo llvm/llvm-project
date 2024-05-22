@@ -6,6 +6,7 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/fixedvector.h"
 #include "src/time/clock.h"
 
 #include <stddef.h>
@@ -92,9 +93,6 @@ protected:
 private:
   virtual void run() = 0;
   virtual const cpp::string_view get_name() const = 0;
-
-  static Benchmark *start;
-  static Benchmark *end;
 };
 
 class WrapperBenchmark : public Benchmark {
