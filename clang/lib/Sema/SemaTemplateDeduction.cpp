@@ -536,14 +536,14 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
   }
   case Decl::NonTypeTemplateParm: {
     auto *T = cast<NonTypeTemplateParmDecl>(A);
-    // FIXME: Ditto, as above for TemplateTypeParm case.
-    if (T->isParameterPack())
-      return A;
     auto *R = NonTypeTemplateParmDecl::Create(
         S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
         T->getDepth(), T->getIndex(), T->getIdentifier(), T->getType(),
-        /*ParameterPack=*/false, T->getTypeSourceInfo());
-    R->setDefaultArgument(Default.getAsExpr());
+        T->isParameterPack(), T->getTypeSourceInfo());
+    R->setDefaultArgument(S.Context,
+                          S.getTrivialTemplateArgumentLoc(
+                              Default, Default.getNonTypeTemplateArgumentType(),
+                              SourceLocation()));
     if (auto *PTC = T->getPlaceholderTypeConstraint())
       R->setPlaceholderTypeConstraint(PTC);
     return R;
