@@ -83,6 +83,7 @@ public:
            TargetTriple.getArch() == Triple::spirv64;
   }
   bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
+  const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
   bool isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const;

@@ -143,6 +143,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
+   * - ``SPV_INTEL_inline_assembly``
+     - Allows to use inline assembly.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_subgroups``

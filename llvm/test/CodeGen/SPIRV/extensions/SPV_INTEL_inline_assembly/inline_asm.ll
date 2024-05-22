@@ -16,6 +16,7 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 target triple = "spir64-unknown-unknown"
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
+  call void asm sideeffect "constcmd $0 $1", "r,r"(i32 123, double 42.0)
   %i1 = load i32, ptr addrspace(1) %_arg_int
   %i2 = load i8, ptr addrspace(1) %_arg_int
   %f1 = load float, ptr addrspace(1) %_arg_float
@@ -40,13 +41,14 @@ define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_
   store float %res_f1, ptr addrspace(1) %_arg_float
   ; inline asm: mixed floats
   %res_f2 = call half asm sideeffect "fcmdext $0 $1 $2", "=r,r,r"(float 2.0, float %f1)
-  store float %res_f1, ptr addrspace(1) %_arg_half
+  store half %res_f2, ptr addrspace(1) %_arg_half
   ; inline asm: mixed operands of different types
   call i8 asm sideeffect "cmdext $0 $3 $1 $2", "=r,r,r,r"(float %f1, i32 123, i8 %i2)
   ; inline asm: mixed integers
   %res_i2 = call i64 asm sideeffect "icmdext $0 $3 $1 $2", "=r,r,r,r"(i64 %_lng, i32 %i1, i8 %i2)
   store i64 %res_i2, ptr addrspace(1) %_arg_int
   ; inline asm: constant arguments
-  call void asm sideeffect "constcmd $0 $1", "i,i"(i32 123, double 42.0)
+  call void asm sideeffect "constcmd $0 $1", "r,r"(i32 123, double 42.0)
+;  call void asm sideeffect "constcmd $0 $1", "i,i"(i32 123, double 42.0)
   ret void
 }

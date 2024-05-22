@@ -440,7 +440,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, &*F);
-        } else if (OpCode == SPIRV::OpTypeForwardPointer) {
+        } else if (OpCode == SPIRV::OpTypeForwardPointer ||
+                   TII->isInlineAsmDefInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
       }
