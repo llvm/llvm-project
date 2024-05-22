@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 
 using namespace mlir;
 
