@@ -324,7 +324,8 @@ inline void createHLFIRToFIRPassPipeline(
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
-    pm.addPass(hlfir::createOptimizedBufferizationPass());
+    addNestedPassToAllTopLevelOperations(
+        pm, hlfir::createOptimizedBufferization);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignmentsPass());
   pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());

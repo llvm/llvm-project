@@ -43,9 +43,9 @@
 ; CHECK: @mul = global ptr null
 ; CHECK: @xor = global ptr @A
 ; CHECK: @B = external global %Ty
-; CHECK: @icmp_ult1 = global i1 icmp ugt (ptr getelementptr inbounds (i64, ptr @A, i64 1), ptr @A)
+; CHECK: @icmp_ult1 = global i1 icmp ult (ptr @A, ptr getelementptr inbounds (i64, ptr @A, i64 1))
 ; CHECK: @icmp_slt = global i1 false
-; CHECK: @icmp_ult2 = global i1 icmp ugt (ptr getelementptr inbounds (%Ty, ptr @B, i64 0, i32 1), ptr @B)
+; CHECK: @icmp_ult2 = global i1 icmp ult (ptr @B, ptr getelementptr inbounds (%Ty, ptr @B, i64 0, i32 1))
 ; CHECK: @cons = weak global i32 0, align 8
 ; CHECK: @gep1 = global <2 x ptr> undef
 ; CHECK: @gep2 = global <2 x ptr> undef

@@ -175,6 +175,7 @@ class SemaObjC;
 class SemaOpenACC;
 class SemaOpenMP;
 class SemaPseudoObject;
+class SemaRISCV;
 class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
@@ -447,6 +448,13 @@ enum class CheckedConversionKind {
   ForBuiltinOverloadedOp
 };
 
+enum class TagUseKind {
+  Reference,   // Reference to a tag:  'struct foo *X;'
+  Declaration, // Fwd decl of a tag:   'struct foo;'
+  Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
+  Friend       // Friend declaration:  'friend struct foo;'
+};
+
 /// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
 enum class FunctionEffectMode : uint8_t {
   None,     // effect is not present.
@@ -541,7 +549,6 @@ class Sema final : public SemaBase {
   // 29. Constraints and Concepts (SemaConcept.cpp)
   // 30. Types (SemaType.cpp)
   // 31. FixIt Helpers (SemaFixItUtils.cpp)
-  // 32. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1094,6 +1101,11 @@ public:
     return *PseudoObjectPtr;
   }
 
+  SemaRISCV &RISCV() {
+    assert(RISCVPtr);
+    return *RISCVPtr;
+  }
+
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
@@ -1136,6 +1148,7 @@ private:
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
+  std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
@@ -2111,6 +2124,23 @@ public:
 
   void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
 
+  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
+  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
+                               bool RangeIsError = true);
+  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+                                  unsigned Multiple);
+  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
+  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+                                     unsigned ArgBits);
+  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+                                           unsigned ArgBits);
+
+  bool checkArgCountAtLeast(CallExpr *Call, unsigned MinArgCount);
+  bool checkArgCountAtMost(CallExpr *Call, unsigned MaxArgCount);
+  bool checkArgCountRange(CallExpr *Call, unsigned MinArgCount,
+                          unsigned MaxArgCount);
+  bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
@@ -2179,11 +2209,7 @@ private:
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
-  bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                     CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
-                           const llvm::StringMap<bool> &FeatureMap);
+
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
@@ -2213,16 +2239,6 @@ private:
   ExprResult BuiltinNontemporalOverloaded(ExprResult TheCallResult);
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
-  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
-  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
-                               bool RangeIsError = true);
-  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
-                                  unsigned Multiple);
-  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
-  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
-                                     unsigned ArgBits);
-  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
-                                           unsigned ArgBits);
   bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -3241,13 +3257,6 @@ public:
   bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
-
-  enum TagUseKind {
-    TUK_Reference,   // Reference to a tag:  'struct foo *X;'
-    TUK_Declaration, // Fwd decl of a tag:   'struct foo;'
-    TUK_Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
-    TUK_Friend       // Friend declaration:  'friend struct foo;'
-  };
 
   enum OffsetOfKind {
     // Not parsing a type within __builtin_offsetof.
@@ -5964,7 +5973,6 @@ public:
                                        SourceLocation Loc, bool IsCompAssign);
 
   bool isValidSveBitcast(QualType srcType, QualType destType);
-  bool isValidRVVBitcast(QualType srcType, QualType destType);
 
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
 
@@ -10141,7 +10149,9 @@ public:
 
   bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
                              const MultiLevelTemplateArgumentList &TemplateArgs,
-                             TemplateArgumentLoc &Output);
+                             TemplateArgumentLoc &Output,
+                             SourceLocation Loc = {},
+                             const DeclarationName &Entity = {});
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -11759,27 +11769,6 @@ public:
   void ProcessAPINotes(Decl *D);
 
   ///@}
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Name Lookup for RISC-V Vector Intrinsic
-  /// Implementations are in SemaRISCVVectorLookup.cpp
-  ///@{
-
-public:
-  /// Indicate RISC-V vector builtin functions enabled or not.
-  bool DeclareRISCVVBuiltins = false;
-
-  /// Indicate RISC-V SiFive vector builtin functions enabled or not.
-  bool DeclareRISCVSiFiveVectorBuiltins = false;
-
-private:
-  std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
-
-  ///@}
 };
 
 DeductionFailureInfo
@@ -11801,9 +11790,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-std::unique_ptr<sema::RISCVIntrinsicManager>
-CreateRISCVIntrinsicManager(Sema &S);
 } // end namespace clang
 
 #endif

@@ -6496,7 +6496,8 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
       return false;
 
-    return hasSameType(TTPX->getDefaultArgument(), TTPY->getDefaultArgument());
+    return hasSameType(TTPX->getDefaultArgument().getArgument().getAsType(),
+                       TTPY->getDefaultArgument().getArgument().getAsType());
   }
 
   if (auto *NTTPX = dyn_cast<NonTypeTemplateParmDecl>(X)) {

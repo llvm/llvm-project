@@ -76,18 +76,15 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     } else {
       S.FFDiag(E);
     }
-  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getType().isConstQualified()) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return false;
-    }
-
-    // const, but no initializer.
-    if (!VD->getAnyInitializer()) {
-      diagnoseMissingInitializer(S, OpPC, VD);
-      return false;
-    }
+    return false;
   }
+
+  if (!D->getType().isConstQualified())
+    diagnoseNonConstVariable(S, OpPC, D);
+  else if (const auto *VD = dyn_cast<VarDecl>(D);
+           VD && !VD->getAnyInitializer())
+    diagnoseMissingInitializer(S, OpPC, VD);
+
   return false;
 }
 

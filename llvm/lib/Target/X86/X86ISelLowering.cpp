@@ -3292,7 +3292,7 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
@@ -43694,14 +43694,14 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     return combinevXi1ConstantToInteger(N0, DAG);
   }
 
-  if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() &&
-      VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      isa<ConstantSDNode>(N0)) {
-    auto *C = cast<ConstantSDNode>(N0);
-    if (C->isAllOnes())
-      return DAG.getConstant(1, SDLoc(N0), VT);
-    if (C->isZero())
-      return DAG.getConstant(0, SDLoc(N0), VT);
+  if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i1) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N0)) {
+      if (C->isAllOnes())
+        return DAG.getConstant(1, SDLoc(N0), VT);
+      if (C->isZero())
+        return DAG.getConstant(0, SDLoc(N0), VT);
+    }
   }
 
   // Look for MOVMSK that is maybe truncated and then bitcasted to vXi1.

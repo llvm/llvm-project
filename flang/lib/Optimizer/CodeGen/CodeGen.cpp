@@ -2716,6 +2716,18 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalOp global, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+
+    mlir::LLVM::DIGlobalVariableExpressionAttr dbgExpr;
+
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(global.getLoc())) {
+      if (auto gvAttr =
+              mlir::dyn_cast_or_null<mlir::LLVM::DIGlobalVariableAttr>(
+                  fusedLoc.getMetadata())) {
+        dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr());
+      }
+    }
+
     auto tyAttr = convertType(global.getType());
     if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(global.getType()))
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
@@ -2724,8 +2736,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
+    mlir::SymbolRefAttr comdat;
+    llvm::ArrayRef<mlir::NamedAttribute> attrs;
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
-        loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
+        loc, tyAttr, isConst, linkage, global.getSymName(), initAttr, 0, 0,
+        false, false, comdat, attrs, dbgExpr);
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
     // Add comdat if necessary
