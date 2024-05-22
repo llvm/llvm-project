@@ -2523,4 +2523,3 @@ func.func @dim_out_of_bounds() -> vector<7xi32> {
     %16 = affine.vector_load %alloc_21[%c1, %c1, %dim] : memref<?x26x2xi32>, vector<7xi32>
     return %16 : vector<7xi32>
 }
-
