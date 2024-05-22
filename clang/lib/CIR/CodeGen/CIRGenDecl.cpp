@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRDataLayout.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
@@ -24,6 +23,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -824,7 +824,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     return;
 
   case Decl::NamespaceAlias:
-  case Decl::Using: // using X; [C++]
+  case Decl::Using:          // using X; [C++]
   case Decl::UsingEnum:      // using enum X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
     assert(!UnimplementedFeature::generateDebugInfo());

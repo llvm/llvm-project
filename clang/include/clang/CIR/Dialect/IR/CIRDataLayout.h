@@ -9,10 +9,9 @@
 // it easier to port some of LLVM codegen layout logic to CIR.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_CIRDATALAYOUT_H
-#define LLVM_CLANG_LIB_CIR_CIRDATALAYOUT_H
+#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
+#define LLVM_CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
 
-#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
