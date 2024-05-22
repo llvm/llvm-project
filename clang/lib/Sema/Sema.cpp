@@ -43,6 +43,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -206,6 +207,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
+      ConceptPtr(std::make_unique<SemaConcept>(*this)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
@@ -230,7 +232,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context) {
+      ArgumentPackSubstitutionIndex(-1) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -492,14 +494,6 @@ Sema::~Sema() {
   if (ExternalSemaSource *ExternalSema
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
-
-  // Delete cached satisfactions.
-  std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(SatisfactionCache.size());
-  for (auto &Node : SatisfactionCache)
-    Satisfactions.push_back(&Node);
-  for (auto *Node : Satisfactions)
-    delete Node;
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
 

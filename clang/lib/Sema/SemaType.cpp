@@ -34,6 +34,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -3089,7 +3090,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       }
 
       if (!Invalid) {
-        S.AttachTypeConstraint(
+        S.Concept().AttachTypeConstraint(
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
@@ -3122,7 +3123,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             TemplateId->Template.get().getAsUsingShadowDecl();
         auto *CD =
             cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl());
-        S.AttachTypeConstraint(
+        S.Concept().AttachTypeConstraint(
             D.getDeclSpec().getTypeSpecScope().getWithLocInContext(S.Context),
             DeclarationNameInfo(DeclarationName(TemplateId->Name),
                                 TemplateId->TemplateNameLoc),
@@ -6393,7 +6394,7 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
   }
 
   if (const AutoType *AutoT = T->getAs<AutoType>())
-    CheckConstrainedAuto(
+    SemaRef.Concept().CheckConstrainedAuto(
         AutoT,
         TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
 

@@ -43,6 +43,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -4135,39 +4136,6 @@ void Sema::ActOnStartCXXInClassMemberInitializer() {
   PushFunctionScope();
 }
 
-void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
-  if (!D.isFunctionDeclarator())
-    return;
-  auto &FTI = D.getFunctionTypeInfo();
-  if (!FTI.Params)
-    return;
-  for (auto &Param : ArrayRef<DeclaratorChunk::ParamInfo>(FTI.Params,
-                                                          FTI.NumParams)) {
-    auto *ParamDecl = cast<NamedDecl>(Param.Param);
-    if (ParamDecl->getDeclName())
-      PushOnScopeChains(ParamDecl, S, /*AddToContext=*/false);
-  }
-}
-
-ExprResult Sema::ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr) {
-  return ActOnRequiresClause(ConstraintExpr);
-}
-
-ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
-  ConstraintExpr = CorrectDelayedTyposInExpr(ConstraintExpr);
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr.get(),
-                                      UPPC_RequiresClause))
-    return ExprError();
-
-  return ConstraintExpr;
-}
-
 ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     Expr *InitExpr,
                                                     SourceLocation InitLoc) {
@@ -7407,7 +7375,7 @@ static bool specialMemberIsConstexpr(
   // Suppress duplicate constraint checking here, in case a constraint check
   // caused us to decide to do this.  Any truely recursive checks will get
   // caught during these checks anyway.
-  Sema::SatisfactionStackResetRAII SSRAII{S};
+  SemaConcept::SatisfactionStackResetRAII SSRAII{S};
 
   // If we're inheriting a constructor, see if we need to call it for this base
   // class.
@@ -17526,8 +17494,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
             << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
         ConstraintSatisfaction Satisfaction;
-        if (!CheckConstraintSatisfaction(InnerCond, Satisfaction))
-          DiagnoseUnsatisfiedConstraint(Satisfaction);
+        if (!Concept().CheckConstraintSatisfaction(InnerCond, Satisfaction))
+          Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond)
                            && !isa<IntegerLiteral>(InnerCond)) {
         Diag(InnerCond->getBeginLoc(),

@@ -169,6 +169,7 @@ class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
 class SemaCodeCompletion;
+class SemaConcept;
 class SemaCUDA;
 class SemaHLSL;
 class SemaObjC;
@@ -183,6 +184,7 @@ class SwitchStmt;
 class TemplateArgument;
 class TemplateArgumentList;
 class TemplateArgumentLoc;
+class TemplateCompareNewDeclInfo;
 class TemplateDecl;
 class TemplateInstantiationCallback;
 class TemplateParameterList;
@@ -997,6 +999,11 @@ public:
     return *CodeCompletionPtr;
   }
 
+  SemaConcept &Concept() {
+    assert(ConceptPtr);
+    return *ConceptPtr;
+  }
+
   SemaCUDA &CUDA() {
     assert(CUDAPtr);
     return *CUDAPtr;
@@ -1063,6 +1070,7 @@ private:
   mutable IdentifierInfo *Ident_super;
 
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
+  std::unique_ptr<SemaConcept> ConceptPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
@@ -2041,8 +2049,6 @@ public:
 
   void CheckTCBEnforcement(const SourceLocation CallExprLoc,
                            const NamedDecl *Callee);
-
-  void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -4734,9 +4740,6 @@ public:
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
                            StringLiteral *DeletedMessage = nullptr);
-  void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
-  ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
-  ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
 
   NamedDecl *
   ActOnDecompositionDeclarator(Scope *S, Declarator &D,
@@ -6818,45 +6821,6 @@ public:
                                               bool IsIfExists, CXXScopeSpec &SS,
                                               UnqualifiedId &Name);
 
-  RequiresExprBodyDecl *
-  ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
-                         ArrayRef<ParmVarDecl *> LocalParameters,
-                         Scope *BodyScope);
-  void ActOnFinishRequiresExpr();
-  concepts::Requirement *ActOnSimpleRequirement(Expr *E);
-  concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
-                                              CXXScopeSpec &SS,
-                                              SourceLocation NameLoc,
-                                              const IdentifierInfo *TypeName,
-                                              TemplateIdAnnotation *TemplateId);
-  concepts::Requirement *ActOnCompoundRequirement(Expr *E,
-                                                  SourceLocation NoexceptLoc);
-  concepts::Requirement *ActOnCompoundRequirement(
-      Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
-      TemplateIdAnnotation *TypeConstraint, unsigned Depth);
-  concepts::Requirement *ActOnNestedRequirement(Expr *Constraint);
-  concepts::ExprRequirement *BuildExprRequirement(
-      Expr *E, bool IsSatisfied, SourceLocation NoexceptLoc,
-      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
-  concepts::ExprRequirement *BuildExprRequirement(
-      concepts::Requirement::SubstitutionDiagnostic *ExprSubstDiag,
-      bool IsSatisfied, SourceLocation NoexceptLoc,
-      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
-  concepts::TypeRequirement *BuildTypeRequirement(TypeSourceInfo *Type);
-  concepts::TypeRequirement *BuildTypeRequirement(
-      concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
-  concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
-  concepts::NestedRequirement *
-  BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                         const ASTConstraintSatisfaction &Satisfaction);
-  ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
-                               RequiresExprBodyDecl *Body,
-                               SourceLocation LParenLoc,
-                               ArrayRef<ParmVarDecl *> LocalParameters,
-                               SourceLocation RParenLoc,
-                               ArrayRef<concepts::Requirement *> Requirements,
-                               SourceLocation ClosingBraceLoc);
-
 private:
   ExprResult BuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
                                                 bool IsDelete);
@@ -8831,30 +8795,6 @@ public:
                                 unsigned Position, SourceLocation EqualLoc,
                                 ParsedType DefaultArg, bool HasTypeConstraint);
 
-  bool CheckTypeConstraint(TemplateIdAnnotation *TypeConstraint);
-
-  bool ActOnTypeConstraint(const CXXScopeSpec &SS,
-                           TemplateIdAnnotation *TypeConstraint,
-                           TemplateTypeParmDecl *ConstrainedParameter,
-                           SourceLocation EllipsisLoc);
-  bool BuildTypeConstraint(const CXXScopeSpec &SS,
-                           TemplateIdAnnotation *TypeConstraint,
-                           TemplateTypeParmDecl *ConstrainedParameter,
-                           SourceLocation EllipsisLoc,
-                           bool AllowUnexpandedPack);
-
-  bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
-                            DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
-                            const TemplateArgumentListInfo *TemplateArgs,
-                            TemplateTypeParmDecl *ConstrainedParameter,
-                            SourceLocation EllipsisLoc);
-
-  bool AttachTypeConstraint(AutoTypeLoc TL,
-                            NonTypeTemplateParmDecl *NewConstrainedParm,
-                            NonTypeTemplateParmDecl *OrigConstrainedParm,
-                            SourceLocation EllipsisLoc);
-
   bool RequireStructuralType(QualType T, SourceLocation Loc);
 
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
@@ -8957,12 +8897,6 @@ public:
                                 VarTemplateDecl *Template, NamedDecl *FoundD,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
-
-  ExprResult
-  CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                         const DeclarationNameInfo &ConceptNameInfo,
-                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-                         const TemplateArgumentListInfo *TemplateArgs);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
 
@@ -9183,46 +9117,6 @@ public:
     TPL_TemplateParamsEquivalent,
   };
 
-  // A struct to represent the 'new' declaration, which is either itself just
-  // the named decl, or the important information we need about it in order to
-  // do constraint comparisons.
-  class TemplateCompareNewDeclInfo {
-    const NamedDecl *ND = nullptr;
-    const DeclContext *DC = nullptr;
-    const DeclContext *LexicalDC = nullptr;
-    SourceLocation Loc;
-
-  public:
-    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
-    TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
-                               const DeclContext *LexicalDeclCtx,
-                               SourceLocation Loc)
-
-        : DC(DeclCtx), LexicalDC(LexicalDeclCtx), Loc(Loc) {
-      assert(DC && LexicalDC &&
-             "Constructor only for cases where we have the information to put "
-             "in here");
-    }
-
-    // If this was constructed with no information, we cannot do substitution
-    // for constraint comparison, so make sure we can check that.
-    bool isInvalid() const { return !ND && !DC; }
-
-    const NamedDecl *getDecl() const { return ND; }
-
-    bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
-
-    const DeclContext *getLexicalDeclContext() const {
-      return ND ? ND->getLexicalDeclContext() : LexicalDC;
-    }
-
-    const DeclContext *getDeclContext() const {
-      return ND ? ND->getDeclContext() : DC;
-    }
-
-    SourceLocation getLocation() const { return ND ? ND->getLocation() : Loc; }
-  };
-
   bool TemplateParameterListsAreEqual(
       const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
       const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
@@ -9346,15 +9240,6 @@ public:
 
   void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
-  Decl *ActOnConceptDefinition(Scope *S,
-                               MultiTemplateParamsArg TemplateParameterLists,
-                               const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr,
-                               const ParsedAttributesView &Attrs);
-
-  void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
-                                bool &AddToScope);
-
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                const CXXScopeSpec &SS,
                                const IdentifierInfo *Name,
@@ -9370,6 +9255,9 @@ public:
   /// and partial specializations are visible/reachable, and diagnose if not.
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
   void checkSpecializationReachability(SourceLocation Loc, NamedDecl *Spec);
+
+  TemplateArgumentListInfo
+  makeTemplateArgumentListInfo(TemplateIdAnnotation &TemplateId);
 
   ///@}
 
@@ -9637,9 +9525,6 @@ public:
                      const PartialDiagnostic &AmbigDiag,
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
-
-  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
-                                           FunctionDecl *FD2);
 
   ///@}
 
@@ -10389,6 +10274,14 @@ public:
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
   }
 
+private:
+  /// Introduce the instantiated captures of the lambda into the local
+  /// instantiation scope.
+  bool addInstantiatedCapturesToScope(
+      FunctionDecl *Function, const FunctionDecl *PatternDecl,
+      LocalInstantiationScope &Scope,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
+
   ///@}
 
   //
@@ -10625,12 +10518,6 @@ public:
       const DeclContext *Pattern,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
-private:
-  /// Introduce the instantiated local variables into the local
-  /// instantiation scope.
-  void addInstantiatedLocalVarsToScope(FunctionDecl *Function,
-                                       const FunctionDecl *PatternDecl,
-                                       LocalInstantiationScope &Scope);
   /// Introduce the instantiated function parameters into the local
   /// instantiation scope, and set the parameter names to those used
   /// in the template.
@@ -10638,6 +10525,13 @@ private:
       FunctionDecl *Function, const FunctionDecl *PatternDecl,
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
+
+private:
+  /// Introduce the instantiated local variables into the local
+  /// instantiation scope.
+  void addInstantiatedLocalVarsToScope(FunctionDecl *Function,
+                                       const FunctionDecl *PatternDecl,
+                                       LocalInstantiationScope &Scope);
 
   int ParsingClassDepth = 0;
 
@@ -11070,255 +10964,6 @@ public:
                               std::optional<unsigned> NumExpansions);
   ExprResult BuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                    BinaryOperatorKind Operator);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Constraints and Concepts
-  /// Implementations are in SemaConcept.cpp
-  ///@{
-
-public:
-  void PushSatisfactionStackEntry(const NamedDecl *D,
-                                  const llvm::FoldingSetNodeID &ID) {
-    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
-    SatisfactionStack.emplace_back(Can, ID);
-  }
-
-  void PopSatisfactionStackEntry() { SatisfactionStack.pop_back(); }
-
-  bool SatisfactionStackContains(const NamedDecl *D,
-                                 const llvm::FoldingSetNodeID &ID) const {
-    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
-    return llvm::find(SatisfactionStack, SatisfactionStackEntryTy{Can, ID}) !=
-           SatisfactionStack.end();
-  }
-
-  using SatisfactionStackEntryTy =
-      std::pair<const NamedDecl *, llvm::FoldingSetNodeID>;
-
-  // Resets the current SatisfactionStack for cases where we are instantiating
-  // constraints as a 'side effect' of normal instantiation in a way that is not
-  // indicative of recursive definition.
-  class SatisfactionStackResetRAII {
-    llvm::SmallVector<SatisfactionStackEntryTy, 10> BackupSatisfactionStack;
-    Sema &SemaRef;
-
-  public:
-    SatisfactionStackResetRAII(Sema &S) : SemaRef(S) {
-      SemaRef.SwapSatisfactionStack(BackupSatisfactionStack);
-    }
-
-    ~SatisfactionStackResetRAII() {
-      SemaRef.SwapSatisfactionStack(BackupSatisfactionStack);
-    }
-  };
-
-  void SwapSatisfactionStack(
-      llvm::SmallVectorImpl<SatisfactionStackEntryTy> &NewSS) {
-    SatisfactionStack.swap(NewSS);
-  }
-
-  /// Check whether the given expression is a valid constraint expression.
-  /// A diagnostic is emitted if it is not, false is returned, and
-  /// PossibleNonPrimary will be set to true if the failure might be due to a
-  /// non-primary expression being used as an atomic constraint.
-  bool CheckConstraintExpression(const Expr *CE, Token NextToken = Token(),
-                                 bool *PossibleNonPrimary = nullptr,
-                                 bool IsTrailingRequiresClause = false);
-
-  /// \brief Check whether the given list of constraint expressions are
-  /// satisfied (as if in a 'conjunction') given template arguments.
-  /// \param Template the template-like entity that triggered the constraints
-  /// check (either a concept or a constrained entity).
-  /// \param ConstraintExprs a list of constraint expressions, treated as if
-  /// they were 'AND'ed together.
-  /// \param TemplateArgLists the list of template arguments to substitute into
-  /// the constraint expression.
-  /// \param TemplateIDRange The source range of the template id that
-  /// caused the constraints check.
-  /// \param Satisfaction if true is returned, will contain details of the
-  /// satisfaction, with enough information to diagnose an unsatisfied
-  /// expression.
-  /// \returns true if an error occurred and satisfaction could not be checked,
-  /// false otherwise.
-  bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
-      const MultiLevelTemplateArgumentList &TemplateArgLists,
-      SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
-    llvm::SmallVector<Expr *, 4> Converted;
-    return CheckConstraintSatisfaction(Template, ConstraintExprs, Converted,
-                                       TemplateArgLists, TemplateIDRange,
-                                       Satisfaction);
-  }
-
-  /// \brief Check whether the given list of constraint expressions are
-  /// satisfied (as if in a 'conjunction') given template arguments.
-  /// Additionally, takes an empty list of Expressions which is populated with
-  /// the instantiated versions of the ConstraintExprs.
-  /// \param Template the template-like entity that triggered the constraints
-  /// check (either a concept or a constrained entity).
-  /// \param ConstraintExprs a list of constraint expressions, treated as if
-  /// they were 'AND'ed together.
-  /// \param ConvertedConstraints a out parameter that will get populated with
-  /// the instantiated version of the ConstraintExprs if we successfully checked
-  /// satisfaction.
-  /// \param TemplateArgList the multi-level list of template arguments to
-  /// substitute into the constraint expression. This should be relative to the
-  /// top-level (hence multi-level), since we need to instantiate fully at the
-  /// time of checking.
-  /// \param TemplateIDRange The source range of the template id that
-  /// caused the constraints check.
-  /// \param Satisfaction if true is returned, will contain details of the
-  /// satisfaction, with enough information to diagnose an unsatisfied
-  /// expression.
-  /// \returns true if an error occurred and satisfaction could not be checked,
-  /// false otherwise.
-  bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
-      llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
-      const MultiLevelTemplateArgumentList &TemplateArgList,
-      SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
-
-  /// \brief Check whether the given non-dependent constraint expression is
-  /// satisfied. Returns false and updates Satisfaction with the satisfaction
-  /// verdict if successful, emits a diagnostic and returns true if an error
-  /// occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool CheckConstraintSatisfaction(const Expr *ConstraintExpr,
-                                   ConstraintSatisfaction &Satisfaction);
-
-  /// Check whether the given function decl's trailing requires clause is
-  /// satisfied, if any. Returns false and updates Satisfaction with the
-  /// satisfaction verdict if successful, emits a diagnostic and returns true if
-  /// an error occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool CheckFunctionConstraints(const FunctionDecl *FD,
-                                ConstraintSatisfaction &Satisfaction,
-                                SourceLocation UsageLoc = SourceLocation(),
-                                bool ForOverloadResolution = false);
-
-  // Calculates whether two constraint expressions are equal irrespective of a
-  // difference in 'depth'. This takes a pair of optional 'NamedDecl's 'Old' and
-  // 'New', which are the "source" of the constraint, since this is necessary
-  // for figuring out the relative 'depth' of the constraint. The depth of the
-  // 'primary template' and the 'instantiated from' templates aren't necessarily
-  // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
-                                     const Expr *OldConstr,
-                                     const TemplateCompareNewDeclInfo &New,
-                                     const Expr *NewConstr);
-
-  // Calculates whether the friend function depends on an enclosing template for
-  // the purposes of [temp.friend] p9.
-  bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
-
-  /// \brief Ensure that the given template arguments satisfy the constraints
-  /// associated with the given template, emitting a diagnostic if they do not.
-  ///
-  /// \param Template The template to which the template arguments are being
-  /// provided.
-  ///
-  /// \param TemplateArgs The converted, canonicalized template arguments.
-  ///
-  /// \param TemplateIDRange The source range of the template id that
-  /// caused the constraints check.
-  ///
-  /// \returns true if the constrains are not satisfied or could not be checked
-  /// for satisfaction, false if the constraints are satisfied.
-  bool EnsureTemplateArgumentListConstraints(
-      TemplateDecl *Template,
-      const MultiLevelTemplateArgumentList &TemplateArgs,
-      SourceRange TemplateIDRange);
-
-  bool CheckInstantiatedFunctionTemplateConstraints(
-      SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
-      ConstraintSatisfaction &Satisfaction);
-
-  /// \brief Emit diagnostics explaining why a constraint expression was deemed
-  /// unsatisfied.
-  /// \param First whether this is the first time an unsatisfied constraint is
-  /// diagnosed for this error.
-  void DiagnoseUnsatisfiedConstraint(const ConstraintSatisfaction &Satisfaction,
-                                     bool First = true);
-
-  /// \brief Emit diagnostics explaining why a constraint expression was deemed
-  /// unsatisfied.
-  void
-  DiagnoseUnsatisfiedConstraint(const ASTConstraintSatisfaction &Satisfaction,
-                                bool First = true);
-
-  const NormalizedConstraint *getNormalizedAssociatedConstraints(
-      NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints);
-
-  /// \brief Check whether the given declaration's associated constraints are
-  /// at least as constrained than another declaration's according to the
-  /// partial ordering of constraints.
-  ///
-  /// \param Result If no error occurred, receives the result of true if D1 is
-  /// at least constrained than D2, and false otherwise.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool IsAtLeastAsConstrained(NamedDecl *D1, MutableArrayRef<const Expr *> AC1,
-                              NamedDecl *D2, MutableArrayRef<const Expr *> AC2,
-                              bool &Result);
-
-  /// If D1 was not at least as constrained as D2, but would've been if a pair
-  /// of atomic constraints involved had been declared in a concept and not
-  /// repeated in two separate places in code.
-  /// \returns true if such a diagnostic was emitted, false otherwise.
-  bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-      NamedDecl *D1, ArrayRef<const Expr *> AC1, NamedDecl *D2,
-      ArrayRef<const Expr *> AC2);
-
-private:
-  /// Caches pairs of template-like decls whose associated constraints were
-  /// checked for subsumption and whether or not the first's constraints did in
-  /// fact subsume the second's.
-  llvm::DenseMap<std::pair<NamedDecl *, NamedDecl *>, bool> SubsumptionCache;
-  /// Caches the normalized associated constraints of declarations (concepts or
-  /// constrained declarations). If an error occurred while normalizing the
-  /// associated constraints of the template or concept, nullptr will be cached
-  /// here.
-  llvm::DenseMap<NamedDecl *, NormalizedConstraint *> NormalizationCache;
-
-  llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
-      SatisfactionCache;
-
-  // The current stack of constraint satisfactions, so we can exit-early.
-  llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
-
-  /// Introduce the instantiated captures of the lambda into the local
-  /// instantiation scope.
-  bool addInstantiatedCapturesToScope(
-      FunctionDecl *Function, const FunctionDecl *PatternDecl,
-      LocalInstantiationScope &Scope,
-      const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
-  /// the case of lambdas) set up the LocalInstantiationScope of the current
-  /// function.
-  bool
-  SetupConstraintScope(FunctionDecl *FD,
-                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-                       const MultiLevelTemplateArgumentList &MLTAL,
-                       LocalInstantiationScope &Scope);
-
-  /// Used during constraint checking, sets up the constraint template argument
-  /// lists, and calls SetupConstraintScope to set up the
-  /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
-  std::optional<MultiLevelTemplateArgumentList>
-  SetupConstraintCheckingTemplateArgumentsAndScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      LocalInstantiationScope &Scope);
 
   ///@}
 

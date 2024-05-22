@@ -27,6 +27,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -3110,8 +3111,9 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
       // Note: We attach the uninstantiated constriant here, so that it can be
       // instantiated relative to the top level, like all our other
       // constraints.
-      if (SemaRef.AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/Param,
-                                       /*OrigConstrainedParm=*/D, EllipsisLoc))
+      if (SemaRef.Concept().AttachTypeConstraint(
+              AutoLoc, /*NewConstrainedParm=*/Param,
+              /*OrigConstrainedParm=*/D, EllipsisLoc))
         Invalid = true;
     }
 

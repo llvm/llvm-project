@@ -50,6 +50,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -295,8 +296,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     // definition.
     if (!SkipTrailingRequiresClause && FD->getTrailingRequiresClause()) {
       ConstraintSatisfaction Satisfaction;
-      if (CheckFunctionConstraints(FD, Satisfaction, Loc,
-                                   /*ForOverloadResolution*/ true))
+      if (Concept().CheckFunctionConstraints(FD, Satisfaction, Loc,
+                                             /*ForOverloadResolution*/ true))
         // A diagnostic will have already been generated (non-constant
         // constraint expression, for example)
         return true;
@@ -304,7 +305,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         Diag(Loc,
              diag::err_reference_to_function_with_unsatisfied_constraints)
             << D;
-        DiagnoseUnsatisfiedConstraint(Satisfaction);
+        Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
         return true;
       }
     }
