@@ -148,6 +148,7 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
+The sections remain uncompressed if compressed content would be larger.
 .Cm value
 may be
 .Pp
@@ -163,6 +164,7 @@ Use the default compression level in zstd.
 .Pp
 .It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
 Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The matched sections remain uncompressed if compressed content would be larger.
 The compression level is
 .Cm level
 (if specified) or a default speed-focused level.
@@ -420,9 +422,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging. If
-.Fl -compress-debug-sections
-is given, compress debug sections at compression level 6 instead of 1.
+Enable string tail merging.
 .El
 .Pp
 .Fl O Ns Cm 1

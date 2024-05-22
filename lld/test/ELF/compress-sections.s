@@ -25,8 +25,8 @@
 # CHECK2-NEXT: foo1       PROGBITS [[#%x,FOO1:]]    [[#%x,]] [[#%x,]] 00 A    0   0  8
 # CHECK2-NEXT: .text      PROGBITS [[#%x,TEXT:]]    [[#%x,]] [[#%x,]] 00 AX   0   0  4
 # CHECK2:      nonalloc0  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00 C    0   0  1
-# CHECK2-NEXT: nonalloc1  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
-# CHECK2-NEXT: smallc0    PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00 C    0   0  1
+# CHECK2-NEXT: nonalloc1  PROGBITS 0000000000000000 [[#%x,]] 000088   00      0   0  8
+# CHECK2-NEXT: smallc0    PROGBITS 0000000000000000 [[#%x,]] 00000c   00      0   0  1
 # CHECK2-NEXT: .debug_str PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MSC  0   0  1
 
 # CHECK2: 0000000000000090  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
