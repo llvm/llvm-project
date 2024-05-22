@@ -730,6 +730,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString(
   case eSimplified:
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
     options.ShowAsyncResumePartial = false;
+    options.ShowClosureSignature = false;
     break;
   case eTypeName:
     options.DisplayModuleNames = true;
@@ -747,6 +748,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString(
     options.DisplayLocalNameContexts = false;
     options.DisplayDebuggerGeneratedModule = false;
     options.ShowFunctionArgumentTypes = true;
+    options.ShowClosureSignature = false;
     break;
   }
 
