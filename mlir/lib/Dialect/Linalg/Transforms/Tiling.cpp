@@ -692,17 +692,13 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
         op, "reduction dimension must be mapped to threads");
 
   // 1. Create the inital tensor value.
-  SmallVector<Value> initTensors;
-  initTensors.reserve(op->getNumResults());
-  for (int idx : llvm::seq<int>(0, op->getNumResults())) {
-    FailureOr<Value> initValue = op.generateInitialTensorForPartialReduction(
-        b, loc, idx, numThreads, reductionDim);
-    if (failed(initValue))
-      return b.notifyMatchFailure(
-          op, "cannot create a tensor of identity value for result " +
-                  std::to_string(idx));
-    initTensors.push_back(initValue.value());
-  }
+  FailureOr<SmallVector<Value>> maybeInitTensors =
+      op.generateInitialTensorForPartialReduction(b, loc, numThreads,
+                                                  reductionDim);
+  if (failed(maybeInitTensors))
+    return b.notifyMatchFailure(
+        op, "Failed to create inital tensors for partial reduction");
+  SmallVector<Value> &initTensors = maybeInitTensors.value();
 
   // Gather destination tensors.
   SmallVector<Value> dest;

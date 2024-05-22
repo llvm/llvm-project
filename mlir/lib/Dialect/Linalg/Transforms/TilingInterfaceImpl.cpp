@@ -250,59 +250,66 @@ template <typename LinalgOpTy>
 struct LinalgOpPartialReductionInterface
     : public PartialReductionOpInterface::ExternalModel<
           LinalgOpPartialReductionInterface<LinalgOpTy>, LinalgOpTy> {
-  FailureOr<Value> generateInitialTensorForPartialReduction(
-      Operation *op, OpBuilder &b, Location loc, int64_t resultNumber,
-      ArrayRef<OpFoldResult> sizes, ArrayRef<int> reductionDims) const {
+  FailureOr<SmallVector<Value>> generateInitialTensorForPartialReduction(
+      Operation *op, OpBuilder &b, Location loc, ArrayRef<OpFoldResult> sizes,
+      ArrayRef<int> reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
     OpBuilder::InsertionGuard guard(b);
 
     if (linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
-    // Insert the new parallel dimension based on the index of the reduction
-    // loops. This could be controlled by user for more flexibility.
 
-    SmallVector<Operation *, 4> combinerOps;
-    if (!matchReduction(linalgOp.getRegionOutputArgs(), resultNumber,
-                        combinerOps) ||
-        combinerOps.size() != 1)
-      return op->emitOpError("Failed to anaysis the reduction operation.");
+    SmallVector<Value> inits;
+    for (int initIdx = 0, e = linalgOp.getNumDpsInits(); initIdx < e;
+         ++initIdx) {
+      // Insert the new parallel dimension based on the index of the reduction
+      // loops. This could be controlled by user for more flexibility.
+      SmallVector<Operation *, 4> combinerOps;
+      if (!matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
+                          combinerOps) ||
+          combinerOps.size() != 1)
+        return op->emitOpError("Failed to anaysis the reduction operation.");
 
-    Operation *reductionOp = combinerOps[0];
-    std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
-    if (!identity.has_value())
-      return op->emitOpError(
-          "Failed to get an identity value for the reduction operation.");
+      Operation *reductionOp = combinerOps[0];
+      std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
+      if (!identity.has_value())
+        return op->emitOpError(
+            "Failed to get an identity value for the reduction operation.");
 
-    ArrayRef<int64_t> oldShape =
-        linalgOp.getShape(linalgOp.getDpsInitOperand(resultNumber));
+      ArrayRef<int64_t> oldShape =
+          linalgOp.getShape(linalgOp.getDpsInitOperand(initIdx));
 
-    // Calculate the new shape, we insert the new dimensions based on the index
-    // of the reduction dimensions.
-    SmallVector<int64_t> newOutputShape;
-    SmallVector<Value> dynamicDims;
-    int64_t currReductionDims = 0;
-    DenseSet<int> reductionDimsSet(reductionDims.begin(), reductionDims.end());
-    for (int64_t idx :
-         llvm::seq<int64_t>(0, oldShape.size() + reductionDims.size())) {
-      if (reductionDimsSet.contains(idx)) {
-        dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape);
-        currReductionDims++;
-        continue;
+      // Calculate the new shape, we insert the new dimensions based on the
+      // index of the reduction dimensions.
+      SmallVector<int64_t> newOutputShape;
+      SmallVector<Value> dynamicDims;
+      int64_t currReductionDims = 0;
+      DenseSet<int> reductionDimsSet(reductionDims.begin(),
+                                     reductionDims.end());
+      for (int64_t idx :
+           llvm::seq<int64_t>(0, oldShape.size() + reductionDims.size())) {
+        if (reductionDimsSet.contains(idx)) {
+          dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape);
+          currReductionDims++;
+          continue;
+        }
+        int64_t oldIdx = idx - currReductionDims;
+        int64_t dim = oldShape[oldIdx];
+        newOutputShape.push_back(dim);
+        if (ShapedType::isDynamic(dim))
+          dynamicDims.push_back(b.create<tensor::DimOp>(
+              loc, linalgOp.getDpsInitOperand(initIdx)->get(), oldIdx));
       }
-      int64_t oldIdx = idx - currReductionDims;
-      int64_t dim = oldShape[oldIdx];
-      newOutputShape.push_back(dim);
-      if (ShapedType::isDynamic(dim))
-        dynamicDims.push_back(b.create<tensor::DimOp>(
-            loc, linalgOp.getDpsInitOperand(resultNumber)->get(), oldIdx));
+      Value emptyTensor = b.create<tensor::EmptyOp>(
+          loc, newOutputShape,
+          linalgOp.getRegionOutputArgs()[initIdx].getType(), dynamicDims);
+      Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
+      auto identityTensor =
+          b.create<linalg::FillOp>(loc, constantOp, emptyTensor);
+      inits.push_back(identityTensor.getResult(0));
     }
-    Value emptyTensor = b.create<tensor::EmptyOp>(
-        loc, newOutputShape,
-        linalgOp.getRegionOutputArgs()[resultNumber].getType(), dynamicDims);
-    Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
-    auto identityTensor =
-        b.create<linalg::FillOp>(loc, constantOp, emptyTensor);
-    return identityTensor.getResult(0);
+
+    return inits;
   }
 
   Operation *tileToPartialReduction(Operation *op, OpBuilder &b, Location loc,

@@ -156,9 +156,9 @@ static Value createDestinationPassingStyleInitOperand(
     PartialReductionOpInterface partialReductionIface =
         llvm::cast<PartialReductionOpInterface>(op.getOperation());
     assert(op->getNumResults() == 1 && "Multiple results not supported.");
-    FailureOr<Value> reductionNeutralTensor =
+    FailureOr<SmallVector<Value>> reductionNeutralTensor =
         partialReductionIface.generateInitialTensorForPartialReduction(
-            builder, builder.getLoc(), 0, shape, {});
+            builder, builder.getLoc(), shape, {});
     assert(succeeded(reductionNeutralTensor));
     builder.create<scf::YieldOp>(reductionNeutralTensor.value());
   }

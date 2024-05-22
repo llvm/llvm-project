@@ -708,18 +708,13 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   }
 
   // 2. create the inital tensor value.
-  SmallVector<Value> initTensors;
-  initTensors.reserve(op->getNumResults());
-  for (int idx : llvm::seq<int>(0, op->getNumResults())) {
-    FailureOr<Value> initTensor = op.generateInitialTensorForPartialReduction(
-        b, loc, idx, tileSizesVector, reductionDims);
-    if (failed(initTensor)) {
-      return b.notifyMatchFailure(
-          op, "cannot create a tensor of identity value for result: " +
-                  std::to_string(idx));
-    }
-    initTensors.push_back(initTensor.value());
+  FailureOr<SmallVector<Value>> maybeInitTensors =
+      op.generateInitialTensorForPartialReduction(b, loc, tileSizesVector,
+                                                  reductionDims);
+  if (failed(maybeInitTensors)) {
+    return b.notifyMatchFailure(op, "Failed to create initial tensors.");
   }
+  SmallVector<Value> &initTensors = maybeInitTensors.value();
 
   // 3. Define the callback to use for generating the inner most tile loop body.
   Operation *parallelOp = nullptr;
