@@ -500,19 +500,23 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (Initializer->isValueDependent())
       return NK_Dependent_Narrowing;
 
-    std::optional<llvm::APSInt> OptInitializerValue;
-    if (!(OptInitializerValue = Initializer->getIntegerConstantExpr(Ctx))) {
+    std::optional<llvm::APSInt> OptInitializerValue =
+        Initializer->getIntegerConstantExpr(Ctx);
+    if (!OptInitializerValue) {
       // Check for bit-field whose width means that this would not be narrowing
       // (This check is after checking for constant expressions because
       // a constant expression that fits is never narrowing but a non-constant
       // expression that comes from a bit-field is only not narrowing before
       // C++23 as an extension)
       if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
-        if (BitField->getBitWidth()->isValueDependent()) {
+        if (BitField->getBitWidth()->isValueDependent())
           return NK_Dependent_Narrowing;
-        }
+
         BitFieldWidth = BitField->getBitWidthValue(Ctx);
         if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth)) {
+          assert(BitFieldWidth < FromWidth &&
+                 "Oversized bit-field can represent all but smaller field type "
+                 "couldn't?");
           return NK_BitField_Not_Narrowing;
         }
       }
