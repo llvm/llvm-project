@@ -9,10 +9,12 @@
 #ifndef BOLT_PASSES_MCF_H
 #define BOLT_PASSES_MCF_H
 
+#include "bolt/Passes/BinaryPasses.h"
+#include "llvm/Support/CommandLine.h"
+
 namespace llvm {
 namespace bolt {
 
-class BinaryFunction;
 class DataflowInfoManager;
 
 /// Implement the idea in "SamplePGO - The Power of Profile Guided Optimizations
@@ -23,7 +25,18 @@ void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF);
 
 /// Fill edge counts based on the basic block count. Used in nonLBR mode when
 /// we only have bb count.
-void estimateEdgeCounts(BinaryFunction &BF);
+class EstimateEdgeCounts : public BinaryFunctionPass {
+  void runOnFunction(BinaryFunction &BF);
+
+public:
+  explicit EstimateEdgeCounts(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
+
+  const char *getName() const override { return "estimate-edge-counts"; }
+
+  /// Pass entry point
+  Error runOnFunctions(BinaryContext &BC) override;
+};
 
 } // end namespace bolt
 } // end namespace llvm
