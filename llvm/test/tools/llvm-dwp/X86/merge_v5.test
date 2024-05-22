@@ -6,38 +6,29 @@ RUN: llvm-dwp a.dwo b.dwo -o ab.dwp
 RUN: llvm-dwp c.dwo ab.dwp -o merged.dwp
 RUN: llvm-dwarfdump -v merged.dwp | FileCheck --check-prefix=CHECK %s
 
-CHECK-LABEL: .debug_abbrev.dwo contents:
-CHECK-LABEL: Abbrev table for offset:
-CHECK: 0x0000[[CAOFF:.*]]
-CHECK-LABEL: Abbrev table for offset:
-CHECK: 0x0000[[AAOFF:.*]]
-CHECK-LABEL: Abbrev table for offset:
-CHECK: 0x0000[[BAOFF:.*]]
-
-CHECK: .debug_info.dwo contents:
-CHECK: 0x[[#%.8x,COFF:]]:
-CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
-CHECK:         0x[[CAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOC:.*]] (next unit at 0x[[#%.8x,BOFF:]])
-CHECK: [[#BOFF]]:
-CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
-CHECK:         0x[[BAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOB:.*]] (next unit at 0x[[#%.8x,AOFF:]])
-CHECK: [[#AOFF]]:
-CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
-CHECK:         0x[[AAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOA:.*]] (next unit at 0x[[#%.8x,XOFF:]])
-
-CHECK-LABEL: .debug_cu_index contents:
-CHECK:    Index Signature          INFO                                     ABBREV                                  STR_OFFSETS 
-CHECK-DAG:       [[DWOC]]  [0x00000000[[#COFF]], 0x00000000[[#BOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000024) 
-CHECK-DAG:       [[DWOB]]  [0x00000000[[#BOFF]], 0x00000000[[#AOFF]]) [0x0000[[BAOFF]],  
-CHECK-DAG:       [[DWOA]]  [0x00000000[[#AOFF]], 0x00000000[[#XOFF]]) [0x0000[[AAOFF]], 
 
 CHECK-LABEL: .debug_str_offsets.dwo contents:
 CHECK: Contribution size = 32, Format = DWARF32, Version = 5
+CHECK: 0x00000008: 00000000 "_Z1cv"
+CHECK: 0x0000000c: 00000006 "c"
+CHECK: 0x00000010: 00000008 "int"
+CHECK: 0x00000014: 0000000c "baz"
+CHECK: 0x00000018: 00000010 ""
+CHECK: 0x0000001c: 00000011 "c.cpp"
+CHECK: 0x00000020: 00000017 "c.dwo"
 CHECK: Contribution size = 24, Format = DWARF32, Version = 5
+CHECK: 0x0000002c: 0000001d "a"
+CHECK: 0x00000030: 0000001f "foo"
+CHECK: 0x00000034: 00000010 ""
+CHECK: 0x00000038: 00000023 "a.cpp"
+CHECK: 0x0000003c: 00000029 "a.dwo"
 CHECK: Contribution size = 28, Format = DWARF32, Version = 5
-
-DWP from a DWO (c.dwo) and a DWP (ab.dwp, created from a.dwo and b.dwo)
-Make sure the entries for A and B are updated correctly when read/processed from ab.dwp
+CHECK: 0x00000048: 0000002f "_Z1b3bar"
+CHECK: 0x0000004c: 00000038 "b"
+CHECK: 0x00000050: 0000003a "bar"
+CHECK: 0x00000054: 00000010 ""
+CHECK: 0x00000058: 0000003e "b.cpp"
+CHECK: 0x0000005c: 00000044 "b.dwo"
 ;--- a.cpp
   struct foo { };
   foo a;
@@ -50,11 +41,11 @@ Make sure the entries for A and B are updated correctly when read/processed from
   baz c() {
   }
 ;--- gen
-clang-18  --target=x86_64-linux  -g3 -gsplit-dwarf -S -emit-llvm -gsplit-dwarf  a.cpp -o -
+clang  --target=x86_64-linux  -g3 -S -emit-llvm -gsplit-dwarf  a.cpp -o -
 echo '#--- b.ll'
-clang-18  --target=x86_64-linux  -g3 -gsplit-dwarf -S -emit-llvm -gsplit-dwarf  b.cpp -o -
+clang  --target=x86_64-linux  -g3 -S -emit-llvm -gsplit-dwarf  b.cpp -o -
 echo '#--- c.ll'
-clang-18  --target=x86_64-linux  -g3 -gsplit-dwarf -S -emit-llvm -gsplit-dwarf  c.cpp -o -
+clang  --target=x86_64-linux  -g3 -S -emit-llvm -gsplit-dwarf  c.cpp -o -
 ;--- a.ll
 ; ModuleID = 'a.cpp'
 source_filename = "a.cpp"
