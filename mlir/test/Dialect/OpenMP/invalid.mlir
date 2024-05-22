@@ -639,6 +639,87 @@ cleanup {
 
 // -----
 
+func.func @foo(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+
+  // expected-error @below {{expected symbol reference @foo to point to a reduction declaration}}
+  omp.wsloop reduction(@foo %0 -> %prv : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      %2 = arith.constant 2.0 : f32
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @foo(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+
+  // expected-error @below {{accumulator variable used more than once}}
+  omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr, @add_f32 %0 -> %prv1 : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      %2 = arith.constant 2.0 : f32
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+
+func.func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
+  %c1 = arith.constant 1 : i32
+
+  // expected-error @below {{expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
+  omp.wsloop reduction(@add_f32 %mem -> %prv : memref<1xf32>) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      %2 = arith.constant 2.0 : f32
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_critical2() -> () {
   // expected-error @below {{expected symbol reference @excl to point to a critical declaration}}
   omp.critical(@excl) {
