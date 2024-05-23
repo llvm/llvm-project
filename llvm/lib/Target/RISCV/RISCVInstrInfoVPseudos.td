@@ -2249,13 +2249,13 @@ multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, string Constraint = "", int sew = 0
                                        UsesVXRM=0>;
 }
 
-multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
+multiclass VPseudoVGTR_EI16_VV<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach sew = EEWList in {
       defvar dataEMULOctuple = m.octuple;
-      // emul = lmul * eew / sew
-      defvar idxEMULOctuple = !srl(!mul(dataEMULOctuple, eew), !logtwo(sew));
+      // emul = lmul * 16 / sew
+      defvar idxEMULOctuple = !srl(!mul(dataEMULOctuple, 16), !logtwo(sew));
       if !and(!ge(idxEMULOctuple, 1), !le(idxEMULOctuple, 64)) then {
         defvar emulMX = octuple_to_str<idxEMULOctuple>.ret;
         defvar emul = !cast<LMULInfo>("V_" # emulMX);
@@ -2264,8 +2264,8 @@ multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
           defm _VV
               : VPseudoBinaryEmul<m.vrclass, m.vrclass, emul.vrclass, m, emul,
                                   Constraint, e>,
-                SchedBinary<"WriteVRGatherVV", "ReadVRGatherVV_data",
-                            "ReadVRGatherVV_index", mx, e, forceMergeOpRead=true>;
+                SchedBinary<"WriteVRGatherEI16VV", "ReadVRGatherEI16VV_data",
+                            "ReadVRGatherEI16VV_index", mx, e, forceMergeOpRead=true>;
         }
       }
     }
@@ -3380,14 +3380,16 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, bit slidesUp = false,
+                             string Constraint = ""> {
+  defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
-              SchedTernary<"WriteVISlideX", "ReadVISlideV", "ReadVISlideV",
+              SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
     defm "" : VPseudoVSLDV_VI<ImmType, m, Constraint>,
-              SchedBinary<"WriteVISlideI", "ReadVISlideV", "ReadVISlideV", mx>;
+              SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
 
@@ -6861,8 +6863,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, "@earlyclobber $rd">;
-  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5>;
+  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/false>;
   defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]
@@ -6877,8 +6879,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
 defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<uimm5, "@earlyclobber $rd">;
-defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
-                                             Constraint="@earlyclobber $rd">;
+defm PseudoVRGATHEREI16 : VPseudoVGTR_EI16_VV<Constraint = "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
 // 16.5. Vector Compress Instruction

@@ -355,7 +355,9 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
     std::vector<BinaryBasicBlock *> Successors(BB.succ_size());
     llvm::transform(BB.successors(), Successors.begin(),
                     [&InlinedBBMap](const BinaryBasicBlock *BB) {
-                      return InlinedBBMap.at(BB);
+                      auto It = InlinedBBMap.find(BB);
+                      assert(It != InlinedBBMap.end());
+                      return It->second;
                     });
 
     if (CallerFunction.hasValidProfile() && Callee.hasValidProfile())

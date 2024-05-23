@@ -1,17 +1,10 @@
-if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  message(STATUS "Not building CUDA NextGen offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
-  return()
-endif()
-
-message(STATUS "Building CUDA NextGen offloading plugin.")
-
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.cuda CUDA)
 
 target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
 
-option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" OFF)
-if(LIBOMPTARGET_DEP_CUDA_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
+find_package(CUDAToolkit QUIET)
+if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
 else()

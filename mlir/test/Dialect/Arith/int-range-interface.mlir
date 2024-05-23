@@ -758,11 +758,144 @@ func.func private @callee(%arg0: memref<?xindex, 4>) {
 }
 
 // CHECK-LABEL: func @test_i8_bounds
-// CHECK: test.reflect_bounds {smax = 127 : i8, smin = -128 : i8, umax = -1 : i8, umin = 0 : i8}
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 255 : ui8, umin = 0 : ui8}
 func.func @test_i8_bounds() -> i8 {
   %cst1 = arith.constant 1 : i8
   %0 = test.with_bounds { umin = 0 : i8, umax = 255 : i8, smin = -128 : i8, smax = 127 : i8 } : i8
   %1 = arith.addi %0, %cst1 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_add_1
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 255 : ui8, umin = 0 : ui8}
+func.func @test_add_1() -> i8 {
+  %cst1 = arith.constant 1 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 255 : i8, smin = -128 : i8, smax = 127 : i8 } : i8
+  %1 = arith.addi %0, %cst1 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// Tests below check inference with overflow flags.
+
+// CHECK-LABEL: func @test_add_i8_wrap1
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 128 : ui8, umin = 1 : ui8}
+func.func @test_add_i8_wrap1() -> i8 {
+  %cst1 = arith.constant 1 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8
+  // smax overflow
+  %1 = arith.addi %0, %cst1 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_add_i8_wrap2
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 128 : ui8, umin = 1 : ui8}
+func.func @test_add_i8_wrap2() -> i8 {
+  %cst1 = arith.constant 1 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8
+  // smax overflow
+  %1 = arith.addi %0, %cst1 overflow<nuw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_add_i8_nowrap
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = 1 : si8, umax = 127 : ui8, umin = 1 : ui8}
+func.func @test_add_i8_nowrap() -> i8 {
+  %cst1 = arith.constant 1 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8
+  // nsw flag stops smax from overflowing
+  %1 = arith.addi %0, %cst1 overflow<nsw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_sub_i8_wrap1
+// CHECK: test.reflect_bounds {smax = 5 : si8, smin = -10 : si8, umax = 255 : ui8, umin = 0 : ui8} %1 : i8
+func.func @test_sub_i8_wrap1() -> i8 {
+  %cst10 = arith.constant 10 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 15 : i8, smin = 0 : i8, smax = 15 : i8 } : i8
+  // umin underflows
+  %1 = arith.subi %0, %cst10 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_sub_i8_wrap2
+// CHECK: test.reflect_bounds {smax = 5 : si8, smin = -10 : si8, umax = 255 : ui8, umin = 0 : ui8} %1 : i8
+func.func @test_sub_i8_wrap2() -> i8 {
+  %cst10 = arith.constant 10 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 15 : i8, smin = 0 : i8, smax = 15 : i8 } : i8
+  // umin underflows
+  %1 = arith.subi %0, %cst10 overflow<nsw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_sub_i8_nowrap
+// CHECK: test.reflect_bounds {smax = 5 : si8, smin = 0 : si8, umax = 5 : ui8, umin = 0 : ui8}
+func.func @test_sub_i8_nowrap() -> i8 {
+  %cst10 = arith.constant 10 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 15 : i8, smin = 0 : i8, smax = 15 : i8 } : i8
+  // nuw flag stops umin from underflowing
+  %1 = arith.subi %0, %cst10 overflow<nuw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_mul_i8_wrap
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 200 : ui8, umin = 100 : ui8}
+func.func @test_mul_i8_wrap() -> i8 {
+  %cst10 = arith.constant 10 : i8
+  %0 = test.with_bounds { umin = 10 : i8, umax = 20 : i8, smin = 10 : i8, smax = 20 : i8 } : i8
+  // smax overflows
+  %1 = arith.muli %0, %cst10 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_mul_i8_nowrap
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = 100 : si8, umax = 127 : ui8, umin = 100 : ui8}
+func.func @test_mul_i8_nowrap() -> i8 {
+  %cst10 = arith.constant 10 : i8
+  %0 = test.with_bounds { umin = 10 : i8, umax = 20 : i8, smin = 10 : i8, smax = 20 : i8 } : i8
+  // nsw stops overflow
+  %1 = arith.muli %0, %cst10 overflow<nsw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_shl_i8_wrap1
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 160 : ui8, umin = 80 : ui8}
+func.func @test_shl_i8_wrap1() -> i8 {
+  %cst3 = arith.constant 3 : i8
+  %0 = test.with_bounds { umin = 10 : i8, umax = 20 : i8, smin = 10 : i8, smax = 20 : i8 } : i8
+  // smax overflows
+  %1 = arith.shli %0, %cst3 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_shl_i8_wrap2
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 160 : ui8, umin = 80 : ui8}
+func.func @test_shl_i8_wrap2() -> i8 {
+  %cst3 = arith.constant 3 : i8
+  %0 = test.with_bounds { umin = 10 : i8, umax = 20 : i8, smin = 10 : i8, smax = 20 : i8 } : i8
+  // smax overflows
+  %1 = arith.shli %0, %cst3 overflow<nuw> : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
+
+// CHECK-LABEL: func @test_shl_i8_nowrap
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = 80 : si8, umax = 127 : ui8, umin = 80 : ui8}
+func.func @test_shl_i8_nowrap() -> i8 {
+  %cst3 = arith.constant 3 : i8
+  %0 = test.with_bounds { umin = 10 : i8, umax = 20 : ui8, smin = 10 : i8, smax = 20 : i8 } : i8
+  // nsw stops smax overflow
+  %1 = arith.shli %0, %cst3 overflow<nsw> : i8
   %2 = test.reflect_bounds %1 : i8
   return %2: i8
 }

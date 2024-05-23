@@ -90,7 +90,7 @@ public:
   std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
-  void dump(raw_ostream &OS);
+  void dump(raw_ostream &OS) const;
 
   /// If the maps are loaded in memory, perform the lookup to translate LBR
   /// addresses in function located at \p FuncAddress.
@@ -107,7 +107,12 @@ public:
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
-  uint64_t fetchParentAddress(uint64_t Address) const;
+  uint64_t fetchParentAddress(uint64_t Address) const {
+    auto Iter = ColdPartSource.find(Address);
+    if (Iter == ColdPartSource.end())
+      return 0;
+    return Iter->second;
+  }
 
   /// True if the input binary has a translation table we can use to convert
   /// addresses when aggregating profile
@@ -132,7 +137,8 @@ private:
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncInputAddress, uint64_t FuncOutputAddress);
+                         uint64_t FuncInputAddress,
+                         uint64_t FuncOutputAddress) const;
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
@@ -147,7 +153,7 @@ private:
 
   /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
   /// entries in function address translation map.
-  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
+  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems) const;
 
   /// Calculate the number of equal offsets (output = input - skew) in the
   /// beginning of the function.
@@ -178,14 +184,9 @@ private:
 public:
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
-    class EntryTy {
+    struct EntryTy {
       unsigned Index;
       size_t Hash;
-
-    public:
-      unsigned getBBIndex() const { return Index; }
-      size_t getBBHash() const { return Hash; }
-      EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
     };
 
     std::map<uint32_t, EntryTy> Map;
@@ -201,15 +202,15 @@ public:
     }
 
     unsigned getBBIndex(uint32_t BBInputOffset) const {
-      return getEntry(BBInputOffset).getBBIndex();
+      return getEntry(BBInputOffset).Index;
     }
 
     size_t getBBHash(uint32_t BBInputOffset) const {
-      return getEntry(BBInputOffset).getBBHash();
+      return getEntry(BBInputOffset).Hash;
     }
 
     void addEntry(uint32_t BBInputOffset, unsigned BBIndex, size_t BBHash) {
-      Map.emplace(BBInputOffset, EntryTy(BBIndex, BBHash));
+      Map.emplace(BBInputOffset, EntryTy{BBIndex, BBHash});
     }
 
     size_t getNumBasicBlocks() const { return Map.size(); }
@@ -221,14 +222,9 @@ public:
 
   /// Map function output address to its hash and basic blocks hash map.
   class FuncHashesTy {
-    class EntryTy {
+    struct EntryTy {
       size_t Hash;
       BBHashMapTy BBHashMap;
-
-    public:
-      size_t getBFHash() const { return Hash; }
-      const BBHashMapTy &getBBHashMap() const { return BBHashMap; }
-      EntryTy(size_t Hash) : Hash(Hash) {}
     };
 
     std::unordered_map<uint64_t, EntryTy> Map;
@@ -240,15 +236,15 @@ public:
 
   public:
     size_t getBFHash(uint64_t FuncOutputAddress) const {
-      return getEntry(FuncOutputAddress).getBFHash();
+      return getEntry(FuncOutputAddress).Hash;
     }
 
     const BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) const {
-      return getEntry(FuncOutputAddress).getBBHashMap();
+      return getEntry(FuncOutputAddress).BBHashMap;
     }
 
     void addEntry(uint64_t FuncOutputAddress, size_t BFHash) {
-      Map.emplace(FuncOutputAddress, EntryTy(BFHash));
+      Map.emplace(FuncOutputAddress, EntryTy{BFHash, BBHashMapTy()});
     }
 
     size_t getNumFunctions() const { return Map.size(); };
@@ -256,7 +252,7 @@ public:
     size_t getNumBasicBlocks() const {
       size_t NumBasicBlocks{0};
       for (auto &I : Map)
-        NumBasicBlocks += I.second.getBBHashMap().getNumBasicBlocks();
+        NumBasicBlocks += I.second.BBHashMap.getNumBasicBlocks();
       return NumBasicBlocks;
     }
   };
@@ -278,7 +274,9 @@ public:
 
   /// Returns the number of basic blocks in a function.
   size_t getNumBasicBlocks(uint64_t OutputAddress) const {
-    return NumBasicBlocksMap.at(OutputAddress);
+    auto It = NumBasicBlocksMap.find(OutputAddress);
+    assert(It != NumBasicBlocksMap.end());
+    return It->second;
   }
 
 private:

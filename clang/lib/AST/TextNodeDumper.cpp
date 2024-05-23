@@ -457,6 +457,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
           });
       OS << ")";
       break;
+    case OpenACCClauseKind::Reduction:
+      OS << " clause Operator: "
+         << cast<OpenACCReductionClause>(C)->getReductionOp();
+      break;
     default:
       // Nothing to do here.
       break;

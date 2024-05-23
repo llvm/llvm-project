@@ -6227,7 +6227,7 @@ void DeclarationVisitor::CheckEquivalenceSets() {
     }
     for (const parser::EquivalenceObject &object : *set) {
       const auto &designator{object.v.value()};
-      // The designator was not resolved when it was encountered so do it now.
+      // The designator was not resolved when it was encountered, so do it now.
       // AnalyzeExpr causes array sections to be changed to substrings as needed
       Walk(designator);
       if (AnalyzeExpr(context(), designator)) {
@@ -7846,28 +7846,31 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
   if (name.symbol) {
     ApplyImplicitRules(*name.symbol, true);
   }
-  Symbol *hostSymbol;
-  Scope *host{GetHostProcedure()};
-  if (!host || isImplicitNoneType(*host)) {
-    return false;
+  if (Scope * host{GetHostProcedure()}; host && !isImplicitNoneType(*host)) {
+    Symbol *hostSymbol{nullptr};
+    if (!name.symbol) {
+      if (currScope().CanImport(name.source)) {
+        hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
+        ConvertToObjectEntity(*hostSymbol);
+        ApplyImplicitRules(*hostSymbol);
+        hostSymbol->set(Symbol::Flag::ImplicitOrError);
+      }
+    } else if (name.symbol->test(Symbol::Flag::ImplicitOrError)) {
+      hostSymbol = name.symbol;
+    }
+    if (hostSymbol) {
+      Symbol &symbol{MakeHostAssocSymbol(name, *hostSymbol)};
+      if (auto *assoc{symbol.detailsIf<HostAssocDetails>()}) {
+        if (isImplicitNoneType()) {
+          assoc->implicitOrExplicitTypeError = true;
+        } else {
+          assoc->implicitOrSpecExprError = true;
+        }
+        return true;
+      }
+    }
   }
-  if (!name.symbol) {
-    hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
-    ConvertToObjectEntity(*hostSymbol);
-    ApplyImplicitRules(*hostSymbol);
-    hostSymbol->set(Symbol::Flag::ImplicitOrError);
-  } else if (name.symbol->test(Symbol::Flag::ImplicitOrError)) {
-    hostSymbol = name.symbol;
-  } else {
-    return false;
-  }
-  Symbol &symbol{MakeHostAssocSymbol(name, *hostSymbol)};
-  if (isImplicitNoneType()) {
-    symbol.get<HostAssocDetails>().implicitOrExplicitTypeError = true;
-  } else {
-    symbol.get<HostAssocDetails>().implicitOrSpecExprError = true;
-  }
-  return true;
+  return false;
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {

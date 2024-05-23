@@ -999,11 +999,11 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
             DeclarationFragments::FragmentKind::GenericParameter);
 
       if (TemplateParam->hasDefaultArgument()) {
-        DeclarationFragments After;
+        const auto Default = TemplateParam->getDefaultArgument();
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
-            .append(getFragmentsForType(TemplateParam->getDefaultArgument(),
-                                        TemplateParam->getASTContext(), After));
-        Fragments.append(std::move(After));
+            .append(getFragmentsForTemplateArguments(
+                {Default.getArgument()}, TemplateParam->getASTContext(),
+                {Default}));
       }
     } else if (const auto *NTP =
                    dyn_cast<NonTypeTemplateParmDecl>(ParameterArray[i])) {
@@ -1023,8 +1023,9 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
       if (NTP->hasDefaultArgument()) {
         SmallString<8> ExprStr;
         raw_svector_ostream Output(ExprStr);
-        NTP->getDefaultArgument()->printPretty(
-            Output, nullptr, NTP->getASTContext().getPrintingPolicy());
+        NTP->getDefaultArgument().getArgument().print(
+            NTP->getASTContext().getPrintingPolicy(), Output,
+            /*IncludeType=*/false);
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
             .append(ExprStr, DeclarationFragments::FragmentKind::Text);
       }
