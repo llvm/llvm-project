@@ -3361,6 +3361,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_bfmlslt : SME2_BFMLS_Intrinsic;
   def int_aarch64_sve_bfmlslt_lane : SME2_BFMLS_Lane_Intrinsic;
 
+  // Multi-vector zeroing
+
+  foreach vg = ["vg1x2", "vg1x4", "vg2x1", "vg2x2", "vg2x4", "vg4x1", "vg4x2", "vg4x4"] in {
+    def int_aarch64_sme_zero_za64_ # vg : DefaultAttrsIntrinsic<[], [llvm_i32_ty],  [IntrNoMem, IntrHasSideEffects]>;
+  }
+  
   // Multi-vector signed saturating doubling multiply high
 
   def int_aarch64_sve_sqdmulh_single_vgx2 : SME2_VG2_Multi_Single_Intrinsic;
