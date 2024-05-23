@@ -30,7 +30,7 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 }
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
-  int fd = open("/dev/null", O_RDWR);
+  int fd = open("./testdata/test_data.txt", O_RDWR);
   int data;
   int res = LIBC_NAMESPACE::ioctl(fd, FS_IOC_GETFLAGS, &data);
   EXPECT_THAT(res, Succeeds());
