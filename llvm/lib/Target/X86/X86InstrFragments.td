@@ -607,8 +607,14 @@ def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),
                            (X86fcmp node:$lhs, node:$rhs)]>;
 
+// PREFETCHWT1 is supported we want to use it for everything but T0.
 def PrefetchWLevel : PatFrag<(ops), (i32 timm), [{
-  return N->getSExtValue() <= 3;
+  return N->getSExtValue() == 3 || !Subtarget->hasPREFETCHWT1();
+}]>;
+
+// Use PREFETCHWT1 for NTA, T2, T1.
+def PrefetchWT1Level : TImmLeaf<i32, [{
+  return Imm < 3;
 }]>;
 
 def X86lock_add_nocf : PatFrag<(ops node:$lhs, node:$rhs),
