@@ -554,6 +554,12 @@ static Decomposition decompose(Value *V,
     V = Op0;
   }
 
+  if (match(V, m_SExt(m_Value(Op0)))) {
+    V = Op0;
+    Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
+                               ConstantInt::get(Op0->getType(), 0));
+  }
+
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
