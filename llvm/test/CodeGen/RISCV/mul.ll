@@ -1843,3 +1843,152 @@ define i8 @mulsub_demand_2(i8 %x, i8 %y) nounwind {
   %r = or i8 %a, 240
   ret i8 %r
 }
+
+define i64 @muland_demand(i64 %x) nounwind {
+; RV32I-LABEL: muland_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    andi a0, a0, -8
+; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    srli a1, a1, 2
+; RV32I-NEXT:    li a2, 12
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __muldi3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: muland_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    andi a0, a0, -8
+; RV32IM-NEXT:    li a2, 12
+; RV32IM-NEXT:    mul a1, a1, a2
+; RV32IM-NEXT:    mulhu a3, a0, a2
+; RV32IM-NEXT:    add a1, a3, a1
+; RV32IM-NEXT:    mul a0, a0, a2
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: muland_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -29
+; RV64I-NEXT:    srli a1, a1, 2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    li a1, 12
+; RV64I-NEXT:    tail __muldi3
+;
+; RV64IM-LABEL: muland_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    andi a0, a0, -8
+; RV64IM-NEXT:    li a1, 12
+; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    ret
+  %and = and i64 %x, 4611686018427387896
+  %mul = mul i64 %and, 12
+  ret i64 %mul
+}
+
+define i64 @mulzext_demand(i32 signext %x) nounwind {
+; RV32I-LABEL: mulzext_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    li a3, 3
+; RV32I-NEXT:    li a2, 0
+; RV32I-NEXT:    call __muldi3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: mulzext_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slli a1, a0, 1
+; RV32IM-NEXT:    add a1, a1, a0
+; RV32IM-NEXT:    li a0, 0
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mulzext_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    tail __muldi3
+;
+; RV64IM-LABEL: mulzext_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a1, 3
+; RV64IM-NEXT:    slli a1, a1, 32
+; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    ret
+  %ext = zext i32 %x to i64
+  %mul = mul i64 %ext, 12884901888
+  ret i64 %mul
+}
+
+define i32 @mulfshl_demand(i32 signext %x) nounwind {
+; RV32I-LABEL: mulfshl_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 11
+; RV32I-NEXT:    lui a1, 92808
+; RV32I-NEXT:    tail __mulsi3
+;
+; RV32IM-LABEL: mulfshl_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    srli a0, a0, 11
+; RV32IM-NEXT:    lui a1, 92808
+; RV32IM-NEXT:    mul a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mulfshl_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    srliw a0, a0, 11
+; RV64I-NEXT:    lui a1, 92808
+; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: mulfshl_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    srliw a0, a0, 11
+; RV64IM-NEXT:    lui a1, 92808
+; RV64IM-NEXT:    mulw a0, a0, a1
+; RV64IM-NEXT:    ret
+  %fshl = tail call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 21)
+  %mul = mul i32 %fshl, 380141568
+  ret i32 %mul
+}
+
+define i32 @mulor_demand(i32 signext %x, i32 signext %y) nounwind {
+; RV32I-LABEL: mulor_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 92808
+; RV32I-NEXT:    tail __mulsi3
+;
+; RV32IM-LABEL: mulor_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    lui a1, 92808
+; RV32IM-NEXT:    mul a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mulor_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a1, 92808
+; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: mulor_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    lui a1, 92808
+; RV64IM-NEXT:    mulw a0, a0, a1
+; RV64IM-NEXT:    ret
+  %mul1 = mul i32 %y, 10485760
+  %or = or disjoint i32 %mul1, %x
+  %mul2 = mul i32 %or, 380141568
+  ret i32 %mul2
+}
