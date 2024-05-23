@@ -20120,12 +20120,11 @@ SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   return Res;
 }
 
-static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerAVXExtend(SDValue Op, const SDLoc &dl, SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
-  SDLoc dl(Op);
   unsigned Opc = Op.getOpcode();
 
   assert(VT.isVector() && InVT.isVector() && "Expected vector type");
@@ -20196,14 +20195,13 @@ static SDValue SplitAndExtendv16i1(unsigned ExtOpc, MVT VT, SDValue In,
   return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
 }
 
-static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
-                                      const X86Subtarget &Subtarget,
-                                      SelectionDAG &DAG) {
+static SDValue LowerZERO_EXTEND_Mask(SDValue Op, const SDLoc &DL,
+                                     const X86Subtarget &Subtarget,
+                                     SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
   SDValue In = Op->getOperand(0);
   MVT InVT = In.getSimpleValueType();
   assert(InVT.getVectorElementType() == MVT::i1 && "Unexpected input type!");
-  SDLoc DL(Op);
   unsigned NumElts = VT.getVectorNumElements();
 
   // For all vectors, but vXi8 we can just emit a sign_extend and a shift. This
@@ -20258,12 +20256,13 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
   SDValue In = Op.getOperand(0);
   MVT SVT = In.getSimpleValueType();
+  SDLoc DL(Op);
 
   if (SVT.getVectorElementType() == MVT::i1)
-    return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
+    return LowerZERO_EXTEND_Mask(Op, DL, Subtarget, DAG);
 
   assert(Subtarget.hasAVX() && "Expected AVX support");
-  return LowerAVXExtend(Op, DAG, Subtarget);
+  return LowerAVXExtend(Op, DL, DAG, Subtarget);
 }
 
 /// Helper to recursively truncate vector elements in half with PACKSS/PACKUS.
@@ -24310,7 +24309,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(X86ISD::CMOV, DL, Op.getValueType(), Ops, Op->getFlags());
 }
 
-static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
+static SDValue LowerSIGN_EXTEND_Mask(SDValue Op, const SDLoc &dl,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
@@ -24318,8 +24317,6 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
   MVT InVT = In.getSimpleValueType();
   assert(InVT.getVectorElementType() == MVT::i1 && "Unexpected input type!");
   MVT VTElt = VT.getVectorElementType();
-  SDLoc dl(Op);
-
   unsigned NumElts = VT.getVectorNumElements();
 
   // Extend VT if the scalar type is i8/i16 and BWI is not supported.
@@ -24371,12 +24368,13 @@ static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   SDValue In = Op->getOperand(0);
   MVT InVT = In.getSimpleValueType();
+  SDLoc DL(Op);
 
   if (InVT.getVectorElementType() == MVT::i1)
-    return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
+    return LowerSIGN_EXTEND_Mask(Op, DL, Subtarget, DAG);
 
   assert(Subtarget.hasAVX() && "Expected AVX support");
-  return LowerAVXExtend(Op, DAG, Subtarget);
+  return LowerAVXExtend(Op, DL, DAG, Subtarget);
 }
 
 // Lowering for SIGN_EXTEND_VECTOR_INREG and ZERO_EXTEND_VECTOR_INREG.
@@ -24514,7 +24512,7 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
 
   if (InVT.getVectorElementType() == MVT::i1)
-    return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
+    return LowerSIGN_EXTEND_Mask(Op, dl, Subtarget, DAG);
 
   assert(VT.isVector() && InVT.isVector() && "Expected vector type");
   assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
