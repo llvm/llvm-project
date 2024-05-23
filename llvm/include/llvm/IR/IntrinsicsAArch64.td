@@ -3121,6 +3121,11 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_nxv8bf16_ty],
                             [llvm_nxv4f32_ty, llvm_nxv4f32_ty],
                             [IntrNoMem]>;
+  
+  class SME2_CVT_WIDENING_VG2_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                            [LLVMSubdivide2VectorType<0>], [IntrNoMem]>;
+  
 
   class SME2_CVT_VG4_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide4VectorType<0>],
@@ -3412,6 +3417,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_suvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
   def int_aarch64_sme_usvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
 
+
+  //
+  //Multi-vector floating-point convert from half-precision to deinterleaved single-precision.
+  //
+  
+  def int_aarch64_sve_fcvtl_widen_x2  : SME2_CVT_WIDENING_VG2_Intrinsic;
+
   //
   // Multi-vector floating-point CVT from single-precision to interleaved half-precision/BFloat16
   //
@@ -3431,7 +3443,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fcvtzu_x4 : SME2_CVT_X4_Intrinsic;
   def int_aarch64_sve_scvtf_x4  : SME2_CVT_X4_Intrinsic;
   def int_aarch64_sve_ucvtf_x4  : SME2_CVT_X4_Intrinsic;
-
+  def int_aarch64_sve_fcvt_widen_x2 : SME2_CVT_WIDENING_VG2_Intrinsic;
   //
   // Multi-vector saturating extract narrow
   //
