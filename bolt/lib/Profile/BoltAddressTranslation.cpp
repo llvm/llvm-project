@@ -547,13 +547,6 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
   return Res;
 }
 
-uint64_t BoltAddressTranslation::fetchParentAddress(uint64_t Address) const {
-  auto Iter = ColdPartSource.find(Address);
-  if (Iter == ColdPartSource.end())
-    return 0;
-  return Iter->second;
-}
-
 bool BoltAddressTranslation::enabledFor(
     llvm::object::ELFObjectFileBase *InputFile) const {
   for (const SectionRef &Section : InputFile->sections()) {
