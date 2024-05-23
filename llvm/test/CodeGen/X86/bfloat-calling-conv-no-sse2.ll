@@ -4,7 +4,7 @@
 
 ; Make sure no assert without SSE2 and bfloat. Issue 92899
 
-define bfloat @return_arg_bf16(bfloat %x) {
+define bfloat @return_arg_bf16(bfloat %x) #0 {
 ; CHECK-LABEL: return_arg_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
@@ -12,7 +12,7 @@ define bfloat @return_arg_bf16(bfloat %x) {
   ret bfloat %x
 }
 
-define <2 x bfloat> @return_arg_v2bf16(<2 x bfloat> %x) {
+define <2 x bfloat> @return_arg_v2bf16(<2 x bfloat> %x) #0 {
 ; CHECK-LABEL: return_arg_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
@@ -21,17 +21,12 @@ define <2 x bfloat> @return_arg_v2bf16(<2 x bfloat> %x) {
   ret <2 x bfloat> %x
 }
 
-define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) {
+define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ; NOSSE-LABEL: return_arg_v3bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %eax
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
-; NOSSE-NEXT:    .cfi_offset %esi, -12
-; NOSSE-NEXT:    .cfi_offset %edi, -8
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -51,23 +46,15 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) {
 ; NOSSE-NEXT:    movl %edi, (%esi)
 ; NOSSE-NEXT:    movl %esi, %eax
 ; NOSSE-NEXT:    addl $4, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: return_arg_v3bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %eax
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    .cfi_offset %esi, -12
-; SSE-NEXT:    .cfi_offset %edi, -8
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -87,32 +74,20 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) {
 ; SSE-NEXT:    movl %edi, (%esi)
 ; SSE-NEXT:    movl %esi, %eax
 ; SSE-NEXT:    addl $4, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl $4
   ret <3 x bfloat> %x
 }
 
-define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) {
+define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) #0 {
 ; NOSSE-LABEL: return_arg_v4bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    subl $12, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 32
-; NOSSE-NEXT:    .cfi_offset %esi, -20
-; NOSSE-NEXT:    .cfi_offset %edi, -16
-; NOSSE-NEXT:    .cfi_offset %ebx, -12
-; NOSSE-NEXT:    .cfi_offset %ebp, -8
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -135,33 +110,19 @@ define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) {
 ; NOSSE-NEXT:    movw %si, (%ebp)
 ; NOSSE-NEXT:    movl %ebp, %eax
 ; NOSSE-NEXT:    addl $12, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: return_arg_v4bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    subl $12, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    .cfi_offset %esi, -20
-; SSE-NEXT:    .cfi_offset %edi, -16
-; SSE-NEXT:    .cfi_offset %ebx, -12
-; SSE-NEXT:    .cfi_offset %ebp, -8
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -184,36 +145,22 @@ define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) {
 ; SSE-NEXT:    movw %si, (%ebp)
 ; SSE-NEXT:    movl %ebp, %eax
 ; SSE-NEXT:    addl $12, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl $4
   ret <4 x bfloat> %x
 }
 
-define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) {
+define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; NOSSE-LABEL: return_arg_v8bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    subl $12, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 32
-; NOSSE-NEXT:    .cfi_offset %esi, -20
-; NOSSE-NEXT:    .cfi_offset %edi, -16
-; NOSSE-NEXT:    .cfi_offset %ebx, -12
-; NOSSE-NEXT:    .cfi_offset %ebp, -8
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -260,33 +207,19 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) {
 ; NOSSE-NEXT:    movw %ax, (%ebp)
 ; NOSSE-NEXT:    movl %ebp, %eax
 ; NOSSE-NEXT:    addl $12, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: return_arg_v8bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    subl $12, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    .cfi_offset %esi, -20
-; SSE-NEXT:    .cfi_offset %edi, -16
-; SSE-NEXT:    .cfi_offset %ebx, -12
-; SSE-NEXT:    .cfi_offset %ebp, -8
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -333,36 +266,22 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) {
 ; SSE-NEXT:    movw %ax, (%ebp)
 ; SSE-NEXT:    movl %ebp, %eax
 ; SSE-NEXT:    addl $12, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl $4
   ret <8 x bfloat> %x
 }
 
-define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) {
+define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; NOSSE-LABEL: return_arg_v16bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    subl $28, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 48
-; NOSSE-NEXT:    .cfi_offset %esi, -20
-; NOSSE-NEXT:    .cfi_offset %edi, -16
-; NOSSE-NEXT:    .cfi_offset %ebx, -12
-; NOSSE-NEXT:    .cfi_offset %ebp, -8
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -457,33 +376,19 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) {
 ; NOSSE-NEXT:    movw %ax, (%edi)
 ; NOSSE-NEXT:    movl %edi, %eax
 ; NOSSE-NEXT:    addl $28, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: return_arg_v16bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    subl $28, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %esi, -20
-; SSE-NEXT:    .cfi_offset %edi, -16
-; SSE-NEXT:    .cfi_offset %ebx, -12
-; SSE-NEXT:    .cfi_offset %ebp, -8
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -578,15 +483,10 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) {
 ; SSE-NEXT:    movw %ax, (%edi)
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    addl $28, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl $4
   ret <16 x bfloat> %x
 }
@@ -598,14 +498,11 @@ declare <4 x bfloat> @returns_v4bf16(<4 x bfloat>)
 declare <8 x bfloat> @returns_v8bf16(<8 x bfloat>)
 declare <16 x bfloat> @returns_v16bf16(<16 x bfloat>)
 
-define void @call_ret_bf16(ptr %ptr) {
+define void @call_ret_bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    subl $8, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
-; NOSSE-NEXT:    .cfi_offset %esi, -8
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; NOSSE-NEXT:    movzwl (%esi), %eax
 ; NOSSE-NEXT:    shll $16, %eax
@@ -617,18 +514,13 @@ define void @call_ret_bf16(ptr %ptr) {
 ; NOSSE-NEXT:    calll __truncsfbf2
 ; NOSSE-NEXT:    movw %ax, (%esi)
 ; NOSSE-NEXT:    addl $8, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    subl $8, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    .cfi_offset %esi, -8
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SSE-NEXT:    movzwl (%esi), %eax
 ; SSE-NEXT:    shll $16, %eax
@@ -640,9 +532,7 @@ define void @call_ret_bf16(ptr %ptr) {
 ; SSE-NEXT:    calll __truncsfbf2
 ; SSE-NEXT:    movw %ax, (%esi)
 ; SSE-NEXT:    addl $8, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl
   %val = load bfloat, ptr %ptr
   %bf16 = call bfloat @returns_bf16(bfloat %val)
@@ -650,17 +540,12 @@ define void @call_ret_bf16(ptr %ptr) {
   ret void
 }
 
-define void @call_ret_v2bf16(ptr %ptr) {
+define void @call_ret_v2bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v2bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    subl $20, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 32
-; NOSSE-NEXT:    .cfi_offset %esi, -12
-; NOSSE-NEXT:    .cfi_offset %edi, -8
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; NOSSE-NEXT:    movzwl 2(%edi), %eax
 ; NOSSE-NEXT:    shll $16, %eax
@@ -684,23 +569,15 @@ define void @call_ret_v2bf16(ptr %ptr) {
 ; NOSSE-NEXT:    movw %ax, 2(%edi)
 ; NOSSE-NEXT:    movw %si, (%edi)
 ; NOSSE-NEXT:    addl $20, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v2bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    subl $36, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %esi, -12
-; SSE-NEXT:    .cfi_offset %edi, -8
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; SSE-NEXT:    movzwl 2(%edi), %eax
 ; SSE-NEXT:    shll $16, %eax
@@ -724,11 +601,8 @@ define void @call_ret_v2bf16(ptr %ptr) {
 ; SSE-NEXT:    movw %ax, 2(%edi)
 ; SSE-NEXT:    movw %si, (%edi)
 ; SSE-NEXT:    addl $36, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl
   %val = load <2 x bfloat>, ptr %ptr
   %bf16 = call <2 x bfloat> @returns_v2bf16(<2 x bfloat> %val)
@@ -736,14 +610,11 @@ define void @call_ret_v2bf16(ptr %ptr) {
   ret void
 }
 
-define void @call_ret_v3bf16(ptr %ptr) {
+define void @call_ret_v3bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v3bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    subl $40, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 48
-; NOSSE-NEXT:    .cfi_offset %esi, -8
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; NOSSE-NEXT:    movl (%esi), %eax
 ; NOSSE-NEXT:    movl 4(%esi), %ecx
@@ -769,18 +640,13 @@ define void @call_ret_v3bf16(ptr %ptr) {
 ; NOSSE-NEXT:    movw %cx, 4(%esi)
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $40, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v3bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    subl $40, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %esi, -8
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SSE-NEXT:    movl (%esi), %eax
 ; SSE-NEXT:    movl 4(%esi), %ecx
@@ -806,9 +672,7 @@ define void @call_ret_v3bf16(ptr %ptr) {
 ; SSE-NEXT:    movw %cx, 4(%esi)
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $40, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl
   %val = load <3 x bfloat>, ptr %ptr
   %bf16 = call <3 x bfloat> @returns_v3bf16(<3 x bfloat> %val)
@@ -816,20 +680,13 @@ define void @call_ret_v3bf16(ptr %ptr) {
   ret void
 }
 
-define void @call_ret_v4bf16(ptr %ptr) {
+define void @call_ret_v4bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v4bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    subl $48, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 64
-; NOSSE-NEXT:    .cfi_offset %esi, -16
-; NOSSE-NEXT:    .cfi_offset %edi, -12
-; NOSSE-NEXT:    .cfi_offset %ebx, -8
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; NOSSE-NEXT:    movzwl 2(%esi), %ecx
 ; NOSSE-NEXT:    movl (%esi), %eax
@@ -862,28 +719,17 @@ define void @call_ret_v4bf16(ptr %ptr) {
 ; NOSSE-NEXT:    movw %cx, 4(%esi)
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $48, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v4bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    subl $48, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 64
-; SSE-NEXT:    .cfi_offset %esi, -16
-; SSE-NEXT:    .cfi_offset %edi, -12
-; SSE-NEXT:    .cfi_offset %ebx, -8
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SSE-NEXT:    movzwl 2(%esi), %ecx
 ; SSE-NEXT:    movl (%esi), %eax
@@ -916,13 +762,9 @@ define void @call_ret_v4bf16(ptr %ptr) {
 ; SSE-NEXT:    movw %cx, 4(%esi)
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $48, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl
   %val = load <4 x bfloat>, ptr %ptr
   %bf16 = call <4 x bfloat> @returns_v4bf16(<4 x bfloat> %val)
@@ -930,23 +772,14 @@ define void @call_ret_v4bf16(ptr %ptr) {
   ret void
 }
 
-define void @call_ret_v8bf16(ptr %ptr) {
+define void @call_ret_v8bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v8bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    pushl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    pushl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    subl $108, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 128
-; NOSSE-NEXT:    .cfi_offset %esi, -20
-; NOSSE-NEXT:    .cfi_offset %edi, -16
-; NOSSE-NEXT:    .cfi_offset %ebx, -12
-; NOSSE-NEXT:    .cfi_offset %ebp, -8
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; NOSSE-NEXT:    movzwl 2(%esi), %eax
 ; NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1015,33 +848,19 @@ define void @call_ret_v8bf16(ptr %ptr) {
 ; NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $108, %esp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 20
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; NOSSE-NEXT:    popl %edi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; NOSSE-NEXT:    popl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v8bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    pushl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    pushl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    subl $108, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 128
-; SSE-NEXT:    .cfi_offset %esi, -20
-; SSE-NEXT:    .cfi_offset %edi, -16
-; SSE-NEXT:    .cfi_offset %ebx, -12
-; SSE-NEXT:    .cfi_offset %ebp, -8
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SSE-NEXT:    movzwl 2(%esi), %eax
 ; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1110,15 +929,10 @@ define void @call_ret_v8bf16(ptr %ptr) {
 ; SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $108, %esp
-; SSE-NEXT:    .cfi_def_cfa_offset 20
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popl %edi
-; SSE-NEXT:    .cfi_def_cfa_offset 12
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    popl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-NEXT:    retl
   %val = load <8 x bfloat>, ptr %ptr
   %bf16 = call <8 x bfloat> @returns_v8bf16(<8 x bfloat> %val)
@@ -1126,22 +940,16 @@ define void @call_ret_v8bf16(ptr %ptr) {
   ret void
 }
 
-define void @call_ret_v16bf16(ptr %ptr) {
+define void @call_ret_v16bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v16bf16:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    pushl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; NOSSE-NEXT:    .cfi_offset %ebp, -8
 ; NOSSE-NEXT:    movl %esp, %ebp
-; NOSSE-NEXT:    .cfi_def_cfa_register %ebp
 ; NOSSE-NEXT:    pushl %ebx
 ; NOSSE-NEXT:    pushl %edi
 ; NOSSE-NEXT:    pushl %esi
 ; NOSSE-NEXT:    andl $-32, %esp
 ; NOSSE-NEXT:    subl $256, %esp # imm = 0x100
-; NOSSE-NEXT:    .cfi_offset %esi, -20
-; NOSSE-NEXT:    .cfi_offset %edi, -16
-; NOSSE-NEXT:    .cfi_offset %ebx, -12
 ; NOSSE-NEXT:    movl 8(%ebp), %esi
 ; NOSSE-NEXT:    movzwl 2(%esi), %eax
 ; NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1278,24 +1086,17 @@ define void @call_ret_v16bf16(ptr %ptr) {
 ; NOSSE-NEXT:    popl %edi
 ; NOSSE-NEXT:    popl %ebx
 ; NOSSE-NEXT:    popl %ebp
-; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v16bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushl %ebp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
-; SSE-NEXT:    .cfi_offset %ebp, -8
 ; SSE-NEXT:    movl %esp, %ebp
-; SSE-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-NEXT:    pushl %ebx
 ; SSE-NEXT:    pushl %edi
 ; SSE-NEXT:    pushl %esi
 ; SSE-NEXT:    andl $-32, %esp
 ; SSE-NEXT:    subl $256, %esp # imm = 0x100
-; SSE-NEXT:    .cfi_offset %esi, -20
-; SSE-NEXT:    .cfi_offset %edi, -16
-; SSE-NEXT:    .cfi_offset %ebx, -12
 ; SSE-NEXT:    movl 8(%ebp), %esi
 ; SSE-NEXT:    movzwl 2(%esi), %eax
 ; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1432,10 +1233,11 @@ define void @call_ret_v16bf16(ptr %ptr) {
 ; SSE-NEXT:    popl %edi
 ; SSE-NEXT:    popl %ebx
 ; SSE-NEXT:    popl %ebp
-; SSE-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE-NEXT:    retl
   %val = load <16 x bfloat>, ptr %ptr
   %bf16 = call <16 x bfloat> @returns_v16bf16(<16 x bfloat> %val)
   store <16 x bfloat> %bf16, ptr %ptr
   ret void
 }
+
+attributes #0 = { nounwind }
