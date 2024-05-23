@@ -9,10 +9,6 @@
 #include "src/__support/common.h"
 #include "src/setjmp/setjmp_impl.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_ARM)
-#error "Invalid file include"
-#endif
-
 namespace LIBC_NAMESPACE {
 
 [[gnu::naked]]

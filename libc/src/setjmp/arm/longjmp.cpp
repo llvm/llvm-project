@@ -9,11 +9,6 @@
 
 #include "src/setjmp/longjmp.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/properties/architectures.h"
-
-#if !defined(LIBC_TARGET_ARCH_IS_ARM)
-#error "Invalid file include"
-#endif
 
 namespace LIBC_NAMESPACE {
 
