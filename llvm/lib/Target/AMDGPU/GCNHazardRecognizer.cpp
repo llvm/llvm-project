@@ -14,7 +14,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1109,7 +1109,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixWMMAHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   fixVALUReadSGPRHazard(MI);
 #endif /* LLPC_BUILD_GFX12 */
 }
@@ -1257,7 +1257,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         // DsCnt corresponds to LGKMCnt here.
         return (Decoded.DsCnt == 0);
       }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
       case AMDGPU::S_WAIT_STORECNT:
       case AMDGPU::S_WAIT_STORECNT_DSCNT:
       case AMDGPU::S_WAIT_LOADCNT:
@@ -1651,7 +1651,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
       .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
 #else /* LLPC_BUILD_GFX12 */
       .addImm(0x0fff);
@@ -1705,7 +1705,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
         SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
          AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
 #else /* LLPC_BUILD_GFX12 */
          I.getOperand(0).getImm() == 0x0fff))
@@ -1953,7 +1953,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAITCNT_EXPCNT:
     case AMDGPU::S_WAITCNT_LGKMCNT:
     case AMDGPU::S_WAIT_IDLE:
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case AMDGPU::S_WAIT_LOADCNT:
     case AMDGPU::S_WAIT_LOADCNT_DSCNT:
     case AMDGPU::S_WAIT_SAMPLECNT:
@@ -2798,7 +2798,7 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   return false;
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 // Adjust global offsets for instructions bundled with S_GETPC_B64 after
 // insertion of a new instruction.
 static void updateGetPCBundle(MachineInstr *NewMI) {
@@ -2947,7 +2947,7 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   auto NextMI = std::next(MI->getIterator());
 
   // Add s_waitcnt_depctr sa_sdst(0) after SALU write.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   auto NewMI = BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
                        TII.get(AMDGPU::S_WAITCNT_DEPCTR))
                    .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
@@ -2958,7 +2958,7 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
 #endif /* LLPC_BUILD_GFX12 */
 
   // SALU write may be s_getpc in a bundle.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   updateGetPCBundle(NewMI);
 
   return true;
@@ -3038,13 +3038,13 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
           Operand.setOffset(Operand.getOffset() + 4);
 #endif /* LLPC_BUILD_GFX12 */
       }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 #else /* LLPC_BUILD_GFX12 */
       NextMI++;
 #endif /* LLPC_BUILD_GFX12 */
     }
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 }
 
 bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {

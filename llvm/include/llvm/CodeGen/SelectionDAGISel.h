@@ -310,7 +310,7 @@ public:
   };
 
   enum {
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
     OPFL_Chain = 1,      // Node has a chain input.
     OPFL_GlueInput = 2,  // Node has a glue input.
@@ -339,7 +339,7 @@ public:
     OPFL_Variadic6  = 7<<4,  // Node is variadic, root has 6 fixed inputs.
 #endif /* LLPC_BUILD_GFX12 */
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
 #else /* LLPC_BUILD_GFX12 */
     OPFL_VariadicInfo = OPFL_Variadic6

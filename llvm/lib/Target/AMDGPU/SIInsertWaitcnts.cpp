@@ -53,7 +53,7 @@ static cl::opt<bool> ForceEmitZeroFlag(
   cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
   cl::init(false), cl::Hidden);
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 static cl::opt<bool> SoftwareHazardModeFlag(
     "amdgpu-software-hazard-mode",
     cl::desc("Enable expert scheduling mode 2 for all kernel functions (GFX12+ "
@@ -76,7 +76,7 @@ enum InstCounterType {
   BVH_CNT,                           // gfx12+ only.
   KM_CNT,                            // gfx12+ only.
   NUM_EXTENDED_INST_CNTS,
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
   NUM_EXPERT_INST_CNTS,
@@ -111,7 +111,7 @@ struct HardwareLimits {
   unsigned SamplecntMax; // gfx12+ only.
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   unsigned VaVdstMax;    // gfx12+ expert mode only.
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 #endif /* LLPC_BUILD_GFX12 */
@@ -141,7 +141,7 @@ enum WaitEventType {
   EXP_PARAM_ACCESS,         // write to export parameter
   VMW_GPR_LOCK,             // vector-memory write holding on its data src
   EXP_LDS_ACCESS,           // read by ldsdir counting as export
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   VGPR_DEST_WRITE,          // write VGPR destinations in VALU instructions
   VGPR_SOURCES_VMEM_READ,   // read VGPR sources in VMEM instructions
 #endif /* LLPC_BUILD_GFX12 */
@@ -185,7 +185,7 @@ enum VmemType {
 
 // Maps values of InstCounterType to the instruction that waits on that
 // counter. Only used if GCNSubtarget::hasExtendedWaitCounts()
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 // returns true, and does not cover VA_VDST or VM_VSRC.
 #else /* LLPC_BUILD_GFX12 */
 // returns true.
@@ -206,7 +206,7 @@ static bool isNormalMode(InstCounterType MaxCounter) {
 }
 #endif // NDEBUG
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 static bool isExpertMode(InstCounterType MaxCounter) {
   return MaxCounter == NUM_EXPERT_INST_CNTS;
 }
@@ -244,7 +244,7 @@ unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
     return Wait.BvhCnt;
   case KM_CNT:
     return Wait.KmCnt;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case VA_VDST:
     return Wait.VaVdst;
   case VM_VSRC:
@@ -311,7 +311,7 @@ public:
       return Limits.BvhcntMax;
     case KM_CNT:
       return Limits.KmcntMax;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case VA_VDST:
       return Limits.VaVdstMax;
     case VM_VSRC:
@@ -354,7 +354,7 @@ public:
   bool counterOutOfOrder(InstCounterType T) const;
   void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   void clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait);
 #endif /* LLPC_BUILD_GFX12 */
   void determineWait(InstCounterType T, int RegNo, AMDGPU::Waitcnt &Wait) const;
@@ -583,7 +583,7 @@ public:
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         0,
         0,
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
         0,
         0,
 #endif /* LLPC_BUILD_GFX12 */
@@ -622,7 +622,7 @@ public:
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
         eventMask({SMEM_ACCESS, SQ_MESSAGE}),
         eventMask({VGPR_DEST_WRITE}),
         eventMask({VGPR_SOURCES_VMEM_READ})};
@@ -742,7 +742,7 @@ public:
       ForceEmitWaitcnt[SAMPLE_CNT] = false;
       ForceEmitWaitcnt[BVH_CNT] = false;
     }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 
     ForceEmitWaitcnt[VA_VDST] = false;
     ForceEmitWaitcnt[VM_VSRC] = false;
@@ -789,7 +789,7 @@ public:
                                WaitcntBrackets *ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   void setSchedulingMode(MachineBasicBlock &MBB, MachineInstr &MI,
                          bool ExpertMode) const;
 #endif /* LLPC_BUILD_GFX12 */
@@ -856,7 +856,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(WaitEventMaskForInst, E);
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   assert((T != VA_VDST && T != VM_VSRC) || isExpertMode(MaxCounter));
 
 #endif /* LLPC_BUILD_GFX12 */
@@ -971,19 +971,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         }
       }
     }
-#if 0 // TODO: check if this is handled by MUBUF code above.
-  } else if (Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORD ||
-       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX2 ||
-       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
-    MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
-    unsigned OpNo;//TODO: find the OpNo for this operand;
-    RegInterval Interval = getRegInterval(&Inst, MRI, TRI, OpNo);
-    for (int RegNo = Interval.first; RegNo < Interval.second;
-    ++RegNo) {
-      setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
-    }
-#endif
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Match the score to the VGPR destination or source registers as
     // appropriate
@@ -1096,7 +1084,7 @@ void WaitcntBrackets::print(raw_ostream &OS) {
     case KM_CNT:
       OS << "    KM_CNT(" << SR << "): ";
       break;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case VA_VDST:
       OS << "    VA_VDST(" << SR << "): ";
       break;
@@ -1150,7 +1138,7 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
   simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
   simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   simplifyWaitcnt(VA_VDST, Wait.VaVdst);
   simplifyWaitcnt(VM_VSRC, Wait.VmVsrc);
 #endif /* LLPC_BUILD_GFX12 */
@@ -1165,7 +1153,7 @@ void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
     Count = ~0u;
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 /// Waiting for some counters implies waiting for VM_VSRC, since an
 /// instruction that decrements a counter on completion would have
 /// decremented VM_VSRC once its VGPR operands had been read. Don't wait
@@ -1222,7 +1210,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
   applyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   applyWaitcnt(BVH_CNT, Wait.BvhCnt);
   applyWaitcnt(KM_CNT, Wait.KmCnt);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   applyWaitcnt(VA_VDST, Wait.VaVdst);
   applyWaitcnt(VM_VSRC, Wait.VmVsrc);
 #endif /* LLPC_BUILD_GFX12 */
@@ -1457,11 +1445,10 @@ WaitcntGeneratorPreGFX12::getAllZeroWaitcnt(bool IncludeVSCnt) const {
 
 AMDGPU::Waitcnt
 WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
-#ifdef LLPC_BUILD_GFX12
-  return isExpertMode(MaxCounter)
-             ? AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0, 0, 0)
-             : AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0, ~0u,
-                               ~0u);
+#if LLPC_BUILD_GFX12
+  unsigned ExpertVal = isExpertMode(MaxCounter) ? 0 : ~0u;
+  return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0, ExpertVal,
+                         ExpertVal);
 #else /* LLPC_BUILD_GFX12 */
   return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0);
 #endif /* LLPC_BUILD_GFX12 */
@@ -1480,7 +1467,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   bool Modified = false;
   MachineInstr *CombinedLoadDsCntInstr = nullptr;
   MachineInstr *CombinedStoreDsCntInstr = nullptr;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   MachineInstr *WaitcntDepctrInstr = nullptr;
 #endif /* LLPC_BUILD_GFX12 */
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
@@ -1519,7 +1506,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
@@ -1545,7 +1532,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // Merge consecutive waitcnt of the same type by erasing multiples.
     if (!*UpdatableInstr) {
       *UpdatableInstr = &II;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
       // S_WAITCNT_DEPCTR requires special care. Don't remove a
       // duplicate if it is waiting on things other than VA_VDST or
@@ -1579,7 +1566,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // createNewWaitcnt(). As a side effect, resetting the wait counts will
     // cause any redundant S_WAIT_LOADCNT or S_WAIT_DSCNT to be removed by
     // the loop below that deals with single counter instructions.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     //
     // A wait for LOAD_CNT or DS_CNT implies a wait for VM_VSRC, since
     // instructions that have decremented LOAD_CNT or DS_CNT on completion
@@ -1693,7 +1680,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   if (WaitcntDepctrInstr) {
     // Get the encoded Depctr immediate and override the VA_VDST and VM_VSRC
     // subfields with the new required values.
@@ -1792,7 +1779,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   if (Wait.hasWaitDepctr()) {
     assert(isExpertMode(MaxCounter));
     unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc);
@@ -1888,7 +1875,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // * we are not in Dynamic VGPR mode
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
         !ST->isDynamicVGPREnabled() && !WCG->isOptNone() &&
 #else /* LLPC_BUILD_GFX12 */
@@ -1906,59 +1893,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
             AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
     Wait.LoadCnt = 0;
   }
-#if 0 // TODO: the following blocks of logic when we have fence.
-  else if (MI.getOpcode() == SC_FENCE) {
-    const unsigned int group_size =
-      context->shader_info->GetMaxThreadGroupSize();
-    // group_size == 0 means thread group size is unknown at compile time
-    const bool group_is_multi_wave =
-      (group_size == 0 || group_size > target_info->GetWaveFrontSize());
-    const bool fence_is_global = !((SCInstInternalMisc*)Inst)->IsGroupFence();
-
-    for (unsigned int i = 0; i < Inst->NumSrcOperands(); i++) {
-      SCRegType src_type = Inst->GetSrcType(i);
-      switch (src_type) {
-        case SCMEM_LDS:
-          if (group_is_multi_wave ||
-            context->OptFlagIsOn(OPT_R1100_LDSMEM_FENCE_CHICKEN_BIT)) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(DS_CNT,
-                               ScoreBrackets->getScoreUB(DS_CNT));
-            // LDS may have to wait for VMcnt after buffer load to LDS
-            if (target_info->HasBufferLoadToLDS()) {
-              EmitWaitcnt |= ScoreBrackets->updateByWait(LOAD_CNT,
-                                 ScoreBrackets->getScoreUB(LOAD_CNT));
-            }
-          }
-          break;
-
-        case SCMEM_GDS:
-          if (group_is_multi_wave || fence_is_global) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-              ScoreBrackets->getScoreUB(EXP_CNT));
-            EmitWaitcnt |= ScoreBrackets->updateByWait(DS_CNT,
-              ScoreBrackets->getScoreUB(DS_CNT));
-          }
-          break;
-
-        case SCMEM_UAV:
-        case SCMEM_TFBUF:
-        case SCMEM_RING:
-        case SCMEM_SCATTER:
-          if (group_is_multi_wave || fence_is_global) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-              ScoreBrackets->getScoreUB(EXP_CNT));
-            EmitWaitcnt |= ScoreBrackets->updateByWait(LOAD_CNT,
-              ScoreBrackets->getScoreUB(LOAD_CNT));
-          }
-          break;
-
-        case SCMEM_SCRATCH:
-        default:
-          break;
-      }
-    }
-  }
-#endif
 
   // Export & GDS instructions do not read the EXEC mask until after the export
   // is granted (which can occur well after the instruction is issued).
@@ -2073,7 +2007,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (IsVGPR) {
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
             ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
             if (Op.isDef())
               ScoreBrackets.determineWait(VM_VSRC, RegNo, Wait);
@@ -2124,7 +2058,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   // It is only necessary insert an S_WAITCNT_DEPCTR instruction that
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
@@ -2152,7 +2086,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait.BvhCnt = 0;
   if (ForceEmitWaitcnt[KM_CNT])
     Wait.KmCnt = 0;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   // Only force emit VA_VDST and VM_VSRC if expert mode is enabled.
   if (isExpertMode(MaxCounter)) {
     if (ForceEmitWaitcnt[VA_VDST])
@@ -2309,7 +2243,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // bracket and the destination operand scores.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   if (isExpertMode(MaxCounter)) {
     if (TII->isVMEM(Inst) || TII->isDS(Inst) || TII->isVIMAGE(Inst) ||
         TII->isVSAMPLE(Inst) || TII->isFLAT(Inst))
@@ -2483,7 +2417,7 @@ static bool isWaitInstr(MachineInstr &Inst) {
          counterTypeForInstr(Opcode).has_value();
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
                                          MachineInstr &MI,
                                          bool ExpertMode) const {
@@ -2530,7 +2464,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     if (isWaitInstr(Inst) || (isExpertMode(MaxCounter) &&
                               Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
 #else /* LLPC_BUILD_GFX12 */
@@ -2596,17 +2530,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
-
-#if 0 // TODO: implement resource type check controlled by options with ub = LB.
-    // If this instruction generates a S_SETVSKIP because it is an
-    // indexed resource, and we are on Tahiti, then it will also force
-    // an S_WAITCNT vmcnt(0)
-    if (RequireCheckResourceType(Inst, context)) {
-      // Force the score to as if an S_WAITCNT vmcnt(0) is emitted.
-      ScoreBrackets->setScoreLB(LOAD_CNT,
-      ScoreBrackets->getScoreUB(LOAD_CNT));
-    }
-#endif
 
     if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
       AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
@@ -2769,7 +2692,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
   if (ST->hasExtendedWaitCounts()) {
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     if (ST->hasSoftwareHazardMode() &&
         (MF.getFunction()
              .getFnAttribute("amdgpu-software-hazard-mode")
@@ -2810,7 +2733,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Limits.SamplecntMax = AMDGPU::getSamplecntBitMask(IV);
   Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
   Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 #endif /* LLPC_BUILD_GFX12 */
@@ -2856,7 +2779,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
                 TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
       }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
       if (isExpertMode(MaxCounter)) {
         unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0);
         Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, 0);
@@ -2874,7 +2797,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     Modified = true;
   } else if (isExpertMode(MaxCounter)) {
     for (MachineBasicBlock::iterator E = EntryBB.end();

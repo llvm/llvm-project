@@ -175,7 +175,7 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
 #endif /* LLPC_BUILD_GFX12 */
@@ -236,6 +236,9 @@ protected:
   bool HasForceStoreSC0SC1 = false;
 
   bool RequiresCOV6 = false;
+#if LLPC_BUILD_GFX12
+  bool UseBlockVGPROpsForCSR = false;
+#endif /* LLPC_BUILD_GFX12 */
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1205,9 +1208,13 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+#if LLPC_BUILD_GFX12
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
+#endif /* LLPC_BUILD_GFX12 */
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
 #endif /* LLPC_BUILD_GFX12 */
@@ -1252,7 +1259,7 @@ public:
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
@@ -1551,7 +1558,7 @@ public:
     // the nop.
     return true;
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 #endif /* LLPC_BUILD_GFX12 */

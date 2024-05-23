@@ -45,7 +45,7 @@ private:
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   void printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printGlobalSReg64(const MCInst *MI, unsigned OpNo,

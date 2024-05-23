@@ -4168,7 +4168,7 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
 
   auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
   auto Extend = B.buildAnyExt(S32, {Src}).getReg(0u);
-  auto Shift = B.buildLShr(S32, {Extend}, ShiftAmt);
+  auto Shift = B.buildShl(S32, Extend, ShiftAmt);
   auto Ctlz = B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {S32}, {Shift});
   B.buildTrunc(Dst, Ctlz);
   MI.eraseFromParent();
@@ -6795,7 +6795,7 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B) const {
 #else /* LLPC_BUILD_GFX12 */
@@ -6937,7 +6937,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
                  .addDef(DstReg)
                  .addImm(Opcode);
@@ -6951,7 +6951,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     MIB.addUse(R);
   }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   MIB.addUse(TDescr);
 
   MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
@@ -7403,7 +7403,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_ds_fmax:
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     return legalizeBVHIntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray:

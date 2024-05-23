@@ -53,6 +53,7 @@ Implemented Papers
 - P2387R3 - Pipe support for user-defined range adaptors
 - P2713R1 - Escaping improvements in ``std::format``
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
+- P0019R8 - ``std::atomic_ref``
 
 Improvements and New Features
 -----------------------------

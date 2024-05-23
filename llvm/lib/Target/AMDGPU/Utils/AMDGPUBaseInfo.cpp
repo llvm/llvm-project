@@ -11,6 +11,7 @@
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
@@ -1089,7 +1090,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   if (STI->getFeatureBits().test(FeatureDynamicVGPR))
     return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
 
@@ -1135,7 +1136,7 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   if (STI->getFeatureBits().test(FeatureDynamicVGPR))
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
     return 8 * getVGPRAllocGranule(STI);
@@ -1234,39 +1235,37 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
 }
 } // end namespace IsaInfo
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
                                const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  memset(&Header, 0, sizeof(Header));
-
-  Header.amd_kernel_code_version_major = 1;
-  Header.amd_kernel_code_version_minor = 2;
-  Header.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
-  Header.amd_machine_version_major = Version.Major;
-  Header.amd_machine_version_minor = Version.Minor;
-  Header.amd_machine_version_stepping = Version.Stepping;
-  Header.kernel_code_entry_byte_offset = sizeof(Header);
-  Header.wavefront_size = 6;
+  KernelCode.amd_kernel_code_version_major = 1;
+  KernelCode.amd_kernel_code_version_minor = 2;
+  KernelCode.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
+  KernelCode.amd_machine_version_major = Version.Major;
+  KernelCode.amd_machine_version_minor = Version.Minor;
+  KernelCode.amd_machine_version_stepping = Version.Stepping;
+  KernelCode.kernel_code_entry_byte_offset = sizeof(amd_kernel_code_t);
+  if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
+    KernelCode.wavefront_size = 5;
+    KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  } else {
+    KernelCode.wavefront_size = 6;
+  }
 
   // If the code object does not support indirect functions, then the value must
   // be 0xffffffff.
-  Header.call_convention = -1;
+  KernelCode.call_convention = -1;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
-  Header.kernarg_segment_alignment = 4;
-  Header.group_segment_alignment = 4;
-  Header.private_segment_alignment = 4;
+  KernelCode.kernarg_segment_alignment = 4;
+  KernelCode.group_segment_alignment = 4;
+  KernelCode.private_segment_alignment = 4;
 
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
-      Header.wavefront_size = 5;
-      Header.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-    }
-    Header.compute_pgm_resource_registers |=
-      S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-      S_00B848_MEM_ORDERED(1);
+    KernelCode.compute_pgm_resource_registers |=
+        S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
+        S_00B848_MEM_ORDERED(1);
   }
 }
 
@@ -1655,7 +1654,7 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
 }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 
 unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
 

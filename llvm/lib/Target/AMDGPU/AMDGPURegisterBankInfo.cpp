@@ -3180,7 +3180,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingImage(B, MI, OpdMapper, RSrcIntrin->RsrcArg);
     return;
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
@@ -3194,7 +3194,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     unsigned N = MI.getNumExplicitOperands() - 2;
 #endif /* LLPC_BUILD_GFX12 */
     applyDefaultMapping(OpdMapper);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     executeInWaterfallLoop(B, MI, {LastRegOpIdx});
 #else /* LLPC_BUILD_GFX12 */
     executeInWaterfallLoop(B, MI, {N});
@@ -3277,7 +3277,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 8); // M0
       return;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case Intrinsic::amdgcn_s_mov_from_global:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 3); // M0
@@ -4877,7 +4877,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     assert(RSrcIntrin->IsImage);
     return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
@@ -4913,7 +4913,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     } else {
       // NSA form
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
       unsigned FirstSrcOpIdx = IsDualOrBVH8 ? 4 : 2;
       for (unsigned I = FirstSrcOpIdx; I < LastRegOpIdx; ++I) {
 #else /* LLPC_BUILD_GFX12 */
@@ -5186,7 +5186,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
     case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
@@ -5206,7 +5206,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI); // %data1
       break;
     }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     case Intrinsic::amdgcn_s_mov_from_global:
       OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);

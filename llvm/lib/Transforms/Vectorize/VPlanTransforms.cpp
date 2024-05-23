@@ -941,8 +941,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // recipes to be visited during simplification.
   VPValue *X, *Y, *X1, *Y1;
   if (match(&R,
-            m_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                       m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
+            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
       X == X1 && Y == Y1) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
     return;

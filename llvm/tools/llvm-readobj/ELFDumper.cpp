@@ -1571,7 +1571,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
 };
 
 // clang-format off
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
   ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                       \
   ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),                                  \

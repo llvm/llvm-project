@@ -48,7 +48,7 @@ private:
   const SIRegisterInfo &TRI;
   TargetSchedModel TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   BitVector VALUReadHazardSGPRs;
 #endif /* LLPC_BUILD_GFX12 */
 
@@ -110,7 +110,7 @@ private:
   bool fixWMMAHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   void computeVALUHazardSGPRs(MachineFunction *MMF);
   bool fixVALUReadSGPRHazard(MachineInstr *MI);
 #endif /* LLPC_BUILD_GFX12 */

@@ -30,7 +30,7 @@ private:
   const SIInstrInfo *TII = nullptr;
   MachineDominatorTree *MDT = nullptr;
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   void expandChainCall(MachineInstr &MI, const GCNSubtarget &ST,
                        bool DynamicVGPR);
 #else /* LLPC_BUILD_GFX12 */
@@ -122,7 +122,7 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->getBase().applyUpdates(DTUpdates);
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 void SILateBranchLowering::expandChainCall(MachineInstr &MI,
                                            const GCNSubtarget &ST,
                                            bool DynamicVGPR) {
@@ -131,7 +131,7 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
 #endif /* LLPC_BUILD_GFX12 */
   // This is a tail call that needs to be expanded into at least
   // 2 instructions, one for setting EXEC and one for the actual tail call.
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   unsigned ExecIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::exec);
   if (DynamicVGPR) {
@@ -163,7 +163,7 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
   constexpr unsigned ExecIdx = 3;
 #endif /* LLPC_BUILD_GFX12 */
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   for (unsigned OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx;
        --OpIdx)
     MI.removeOperand(OpIdx);
@@ -220,7 +220,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::SI_CS_CHAIN_TC_W32:
       case AMDGPU::SI_CS_CHAIN_TC_W64:
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
         expandChainCall(MI, ST, /*DynamicVGPR*/ false);
         MadeChange = true;
         break;

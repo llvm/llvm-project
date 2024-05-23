@@ -957,6 +957,11 @@ const GCNSubtarget *SITargetLowering::getSubtarget() const {
   return Subtarget;
 }
 
+ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
+  return RCRegs;
+}
+
 //===----------------------------------------------------------------------===//
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
@@ -1235,13 +1240,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
       switch (IntrID) {
       default:
+        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
         // XXX - Should this be volatile without known ordering?
         Info.flags |= MachineMemOperand::MOVolatile;
         break;
@@ -1323,7 +1328,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
@@ -1331,7 +1336,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
 #endif /* LLPC_BUILD_GFX12 */
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     Info.memVT =
         MVT::getVT(IntrID == Intrinsic::amdgcn_image_bvh_intersect_ray
                        ? CI.getType()
@@ -1413,7 +1418,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
@@ -1437,7 +1442,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case Intrinsic::amdgcn_s_mov_from_global:
   case Intrinsic::amdgcn_s_mov_to_global:
   case Intrinsic::amdgcn_s_swap_to_global: {
@@ -3039,12 +3044,20 @@ SDValue SITargetLowering::LowerFormalArguments(
                                    DL, Elts);
           }
 
-          SDValue CMemVT;
-          if (VT.isScalarInteger() && VT.bitsLT(NewArg.getSimpleValueType()))
-            CMemVT = DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewArg);
-          else
-            CMemVT = DAG.getBitcast(MemVT, NewArg);
-          NewArg = convertArgType(DAG, VT, MemVT, DL, CMemVT,
+          // If the argument was preloaded to multiple consecutive 32-bit
+          // registers because of misalignment between addressable SGPR tuples
+          // and the argument size, we can still assume that because of kernarg
+          // segment alignment restrictions that NewArg's size is the same as
+          // MemVT and just do a bitcast. If MemVT is less than 32-bits we add a
+          // truncate since we cannot preload to less than a single SGPR and the
+          // MemVT may be smaller.
+          EVT MemVTInt =
+              EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+          if (MemVT.bitsLT(NewArg.getSimpleValueType()))
+            NewArg = DAG.getNode(ISD::TRUNCATE, DL, MemVTInt, NewArg);
+
+          NewArg = DAG.getBitcast(MemVT, NewArg);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, NewArg,
                                   Ins[i].Flags.isSExt(), &Ins[i]);
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
@@ -3652,7 +3665,7 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 namespace {
 // Chain calls have special arguments that we need to handle. These are
 // tagging along at the end of the arguments list(s), after the SGPR and VGPR
@@ -3675,7 +3688,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SelectionDAG &DAG = CLI.DAG;
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   const SDLoc &DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
@@ -3689,7 +3702,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(RequestedExec.Node && "No node for EXEC");
 #endif /* LLPC_BUILD_GFX12 */
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   llvm::SmallVector<SDValue, 6> ChainCallSpecialArgs;
   if (IsChainCallConv) {
     // The last arguments should be the value that we need to put in EXEC,
@@ -3717,7 +3730,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 #endif /* LLPC_BUILD_GFX12 */
       return lowerUnhandledCall(CLI, InVals, "Invalid value for EXEC");
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     // Convert constants into TargetConstants, so they become immediate operands
     // instead of being selected into S_MOV.
     auto PushNodeOrTargetConstant = [&](TargetLowering::ArgListEntry Arg) {
@@ -3754,7 +3767,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 #endif /* LLPC_BUILD_GFX12 */
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
     }
@@ -3764,14 +3777,14 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 #endif /* LLPC_BUILD_GFX12 */
   }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 #else /* LLPC_BUILD_GFX12 */
   const SDLoc &DL = CLI.DL;
 #endif /* LLPC_BUILD_GFX12 */
   SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
   SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 #else /* LLPC_BUILD_GFX12 */
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
@@ -4017,7 +4030,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsChainCallConv)
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
     Ops.insert(Ops.end(), ChainCallSpecialArgs.begin(),
                ChainCallSpecialArgs.end());
 #else /* LLPC_BUILD_GFX12 */
@@ -7758,8 +7771,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
                           ? (ReqRetNumElts + 1) / 2
                           : ReqRetNumElts;
 
-  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    DMaskPop : (DMaskPop + 1) / 2;
+  int MaskPopDwords = (!IsD16 || Unpacked) ? DMaskPop : (DMaskPop + 1) / 2;
 
   MVT DataDwordVT = NumDataDwords == 1 ?
     MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
@@ -9326,7 +9338,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   }
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
@@ -12314,11 +12326,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
     auto VecIdx = IdxOp->getZExtValue();
     auto ScalarSize = Op.getScalarValueSizeInBits();
-    if (ScalarSize != 32) {
+    if (ScalarSize < 32)
       Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
-    }
-
-    return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
+    return calculateSrcByte(ScalarSize >= 32 ? Op : Op.getOperand(0),
                             StartingIndex, Index);
   }
 

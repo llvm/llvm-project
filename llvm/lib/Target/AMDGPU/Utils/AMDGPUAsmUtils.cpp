@@ -194,7 +194,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   {{"HW_REG_SCHED_MODE"},    ID_SCHED_MODE,  isGFX12Plus},
 #else /* LLPC_BUILD_GFX12 */
   {{""}},

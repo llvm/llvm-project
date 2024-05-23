@@ -624,7 +624,7 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   }
 
   // Check the case where we might introduce a second constant operand to a
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   // scalar instruction.
   //
   // S_MOV_TO_GLOBAL has an immediate operand that is always encoded in sdst

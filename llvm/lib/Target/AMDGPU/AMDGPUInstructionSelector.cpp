@@ -2067,7 +2067,7 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   Register Data1 = MI.getOperand(5).getReg();
   unsigned Offset = MI.getOperand(6).getImm();
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   unsigned Opc;
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
@@ -2136,7 +2136,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     }
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
@@ -3415,7 +3415,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
 bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
     MachineInstr &MI) const {
   unsigned OpcodeOpIdx =
@@ -3428,7 +3428,7 @@ bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
   MI.removeOperand(1);
 #endif /* LLPC_BUILD_GFX12 */
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 #else /* LLPC_BUILD_GFX12 */
   return true;
@@ -3680,7 +3680,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:

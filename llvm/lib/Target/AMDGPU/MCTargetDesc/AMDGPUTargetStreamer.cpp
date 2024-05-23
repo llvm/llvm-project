@@ -13,7 +13,6 @@
 #include "AMDGPUTargetStreamer.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
-#include "AMDKernelCodeT.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
@@ -114,7 +113,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103: AK = GK_GFX1103; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
 #endif /* LLPC_BUILD_GFX12 */
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
@@ -199,7 +198,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1103: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103;
   case GK_GFX1150: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150;
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
 #endif /* LLPC_BUILD_GFX12 */
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
@@ -246,10 +245,9 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
   OS << "\t.amdhsa_code_object_version " << COV << '\n';
 }
 
-void
-AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
+void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  dumpAmdKernelCode(&Header, OS, "\t\t");
+  Header.EmitKernelCodeT(OS, getContext());
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -795,12 +793,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
 
-void
-AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
-
+void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   MCStreamer &OS = getStreamer();
   OS.pushSection();
-  OS.emitBytes(StringRef((const char*)&Header, sizeof(Header)));
+  Header.EmitKernelCodeT(OS, getContext());
   OS.popSection();
 }
 

@@ -622,7 +622,7 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   // TODO-GFX12: We might need to introduce a GLOBAL_WB upon release.
   // bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
   //                    SIAtomicAddrSpace AddrSpace, bool

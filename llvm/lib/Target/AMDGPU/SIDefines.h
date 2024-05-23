@@ -523,7 +523,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
-#ifdef LLPC_BUILD_GFX12
+#if LLPC_BUILD_GFX12
   ID_SCHED_MODE = 26,
 #endif /* LLPC_BUILD_GFX12 */
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
@@ -1114,7 +1114,7 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 #define   C_00B84C_LDS_SIZE                                           0xFF007FFF
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
-#define   C_00B84C_EXCP_EN
+#define   C_00B84C_EXCP_EN                                            0x80FFFFFF
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0
