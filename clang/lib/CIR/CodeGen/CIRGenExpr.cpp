@@ -927,7 +927,11 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   // DeclRefExprs we see should be implicitly treated as if they also refer to
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
-    llvm_unreachable("NYI");
+    if (E->refersToEnclosingVariableOrCapture()) {
+      auto *FD = LambdaCaptureFields.lookup(BD);
+      return buildCapturedFieldLValue(*this, FD, CXXABIThisValue);
+    }
+    return buildLValue(BD->getBinding());
   }
 
   // We can form DeclRefExprs naming GUID declarations when reconstituting
