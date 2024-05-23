@@ -1,4 +1,4 @@
-//===--- VirtualArithmeticCheck.cpp - clang-tidy---------------------------===//
+//===--- PointerArithmeticOnPolymorphicObjectCheck.cpp - clang-tidy--------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "VirtualArithmeticCheck.h"
+#include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -14,7 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-void VirtualArithmeticCheck::registerMatchers(MatchFinder *Finder) {
+void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
+    MatchFinder *Finder) {
   const auto PointerExprWithVirtualMethod =
       expr(hasType(pointerType(pointee(hasDeclaration(
                cxxRecordDecl(hasMethod(isVirtualAsWritten())))))))
@@ -35,14 +36,15 @@ void VirtualArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(ArraySubscript, BinaryOperators, UnaryOperators)), this);
 }
 
-void VirtualArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
+void PointerArithmeticOnPolymorphicObjectCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *PointerExpr = Result.Nodes.getNodeAs<Expr>("pointer");
   const CXXRecordDecl *PointeeType =
       PointerExpr->getType()->getPointeeType()->getAsCXXRecordDecl();
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on class '%0' that declares a virtual function, "
-       "undefined behavior if the pointee is a different class")
+       "pointer arithmetic on polymorphic class '%0' that declares a virtual "
+       "function, undefined behavior if the pointee is a different class")
       << PointeeType->getName();
 }
 

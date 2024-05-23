@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-virtual-arithmetic
+.. title:: clang-tidy - bugprone-pointer-arithmetic-on-polymorphic-object
 
-bugprone-virtual-arithmetic
-===========================
+bugprone-pointer-arithmetic-on-polymorphic-object
+=================================================
 
 Warn if pointer arithmetic is performed on a class that declares a
 virtual function.
@@ -10,8 +10,6 @@ Pointer arithmetic on polymorphic objects where the pointer's static type is
 different from its dynamic type is undefined behavior.
 Finding pointers where the static type contains a virtual member function is a
 good heuristic, as the pointer is likely to point to a different, derived class.
-
-This check corresponds to the SEI Cert rule `CTR56-CPP: Do not use pointer arithmetic on polymorphic objects <https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.
 
 Example:
 
@@ -48,3 +46,5 @@ as they make up the majority of false positives.
 
     delete[] d;
   }
+
+This check corresponds to the SEI Cert rule `CTR56-CPP: Do not use pointer arithmetic on polymorphic objects <https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.

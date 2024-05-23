@@ -1,4 +1,4 @@
-//===--- VirtualArithmeticCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===--- PointerArithmeticOnPolymorphicObjectCheck.h ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_ARITHMETIC_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_ARITHMETIC_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_POINTERARITHMETICONPOLYMORPHICOBJECTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_POINTERARITHMETICONPOLYMORPHICOBJECTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,10 +16,11 @@ namespace clang::tidy::bugprone {
 /// Finds pointer arithmetic on classes that declare a virtual function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/virtual-arithmetic.html
-class VirtualArithmeticCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object.html
+class PointerArithmeticOnPolymorphicObjectCheck : public ClangTidyCheck {
 public:
-  VirtualArithmeticCheck(StringRef Name, ClangTidyContext *Context)
+  PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
+                                            ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -27,4 +28,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_ARITHMETIC_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_POINTERARITHMETICONPOLYMORPHICOBJECTCHECK_H

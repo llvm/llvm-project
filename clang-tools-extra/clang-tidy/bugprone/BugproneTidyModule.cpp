@@ -51,6 +51,7 @@
 #include "NotNullTerminatedResultCheck.h"
 #include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
+#include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
@@ -91,7 +92,6 @@
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
 #include "UseAfterMoveCheck.h"
-#include "VirtualArithmeticCheck.h"
 #include "VirtualNearMissCheck.h"
 
 namespace clang::tidy {
@@ -172,6 +172,8 @@ public:
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(
         "bugprone-optional-value-conversion");
+    CheckFactories.registerCheck<PointerArithmeticOnPolymorphicObjectCheck>(
+        "bugprone-pointer-arithmetic-on-polymorphic-object");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
@@ -255,8 +257,6 @@ public:
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "bugprone-unused-return-value");
     CheckFactories.registerCheck<UseAfterMoveCheck>("bugprone-use-after-move");
-    CheckFactories.registerCheck<VirtualArithmeticCheck>(
-        "bugprone-virtual-arithmetic");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "bugprone-virtual-near-miss");
   }
