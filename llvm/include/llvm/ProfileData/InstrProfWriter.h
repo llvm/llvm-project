@@ -218,6 +218,9 @@ private:
   // back patching.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
                        const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes compressed vtable names to profiles.
+  Error writeVTableNames(ProfOStream &OS);
 };
 
 } // end namespace llvm

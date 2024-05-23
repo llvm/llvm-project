@@ -184,6 +184,7 @@ define i32 @clpeak_imad_pat_i32(i32 %x, i32 %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
@@ -200,6 +201,7 @@ define i32 @clpeak_imad_pat_i32(i32 %x, i32 %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u32 v2, v0, v1
@@ -374,6 +376,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
@@ -388,6 +391,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v2, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -588,6 +592,7 @@ define <2 x i16> @clpeak_imad_pat_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v2, v0, v1
@@ -917,6 +922,7 @@ define <3 x i16> @clpeak_imad_pat_v3i16(<3 x i16> %x, <3 x i16> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v1, v1, 1
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -946,6 +952,7 @@ define <3 x i16> @clpeak_imad_pat_v3i16(<3 x i16> %x, <3 x i16> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v1, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1372,6 +1379,7 @@ define <4 x i16> @clpeak_imad_pat_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1401,6 +1409,7 @@ define <4 x i16> @clpeak_imad_pat_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1581,6 +1590,7 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
@@ -1595,6 +1605,7 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v2, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1795,6 +1806,7 @@ define <2 x i16> @clpeak_umad_pat_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v2, v0, v1
@@ -2124,6 +2136,7 @@ define <3 x i16> @clpeak_umad_pat_v3i16(<3 x i16> %x, <3 x i16> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v1, v1, 1
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2153,6 +2166,7 @@ define <3 x i16> @clpeak_umad_pat_v3i16(<3 x i16> %x, <3 x i16> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v1, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2579,6 +2593,7 @@ define <4 x i16> @clpeak_umad_pat_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2608,6 +2623,7 @@ define <4 x i16> @clpeak_umad_pat_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2896,6 +2912,7 @@ define <2 x i32> @clpeak_imad_pat_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u32 v4, v0, v2
@@ -2918,6 +2935,7 @@ define <2 x i32> @clpeak_imad_pat_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u32 v4, v0, v2
@@ -3295,6 +3313,7 @@ define <3 x i32> @clpeak_imad_pat_v3i32(<3 x i32> %x, <3 x i32> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u32 v6, v0, v3
@@ -3327,6 +3346,7 @@ define <3 x i32> @clpeak_imad_pat_v3i32(<3 x i32> %x, <3 x i32> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u32 v6, v0, v3
@@ -3768,6 +3788,7 @@ define <4 x i32> @clpeak_imad_pat_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-SDAG-NEXT:    v_dual_add_nc_u32 v2, 1, v2 :: v_dual_add_nc_u32 v3, 1, v3
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
@@ -3804,6 +3825,7 @@ define <4 x i32> @clpeak_imad_pat_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v2, 1, v2 :: v_dual_add_nc_u32 v3, 1, v3
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
@@ -4033,6 +4055,7 @@ define i32 @clpeak_imad_pat_i24(i32 %x, i32 %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX1210-SDAG-NEXT:    v_bfe_i32 v1, v1, 0, 24
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4051,6 +4074,7 @@ define i32 @clpeak_imad_pat_i24(i32 %x, i32 %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX1210-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 24
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4265,6 +4289,7 @@ define i32 @clpeak_imad_pat_u24(i32 %x, i32 %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_and_b32_e32 v0, 0xffffff, v0
 ; GFX1210-SDAG-NEXT:    v_and_b32_e32 v1, 0xffffff, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4283,6 +4308,7 @@ define i32 @clpeak_imad_pat_u24(i32 %x, i32 %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_and_b32_e32 v0, 0xffffff, v0
 ; GFX1210-GISEL-NEXT:    v_and_b32_e32 v1, 0xffffff, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4462,6 +4488,7 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
@@ -4476,6 +4503,7 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v2, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4756,6 +4784,7 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u16 v1, v1, 1
 ; GFX1210-SDAG-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
@@ -4783,6 +4812,7 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v1, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -5235,6 +5265,7 @@ define i64 @clpeak_imad_pat_i64(i64 %x, i64 %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mul_u64_e32 v[4:5], v[0:1], v[2:3]
@@ -5257,6 +5288,7 @@ define i64 @clpeak_imad_pat_i64(i64 %x, i64 %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_mul_u64_e32 v[4:5], v[0:1], v[2:3]
@@ -6041,6 +6073,7 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[2:3]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -6077,6 +6110,7 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[2:3]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -6338,6 +6372,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-SDAG:       ; %bb.0: ; %bb
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_add_nc_u32 v0, 1, v0
 ; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6355,6 +6390,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6362,6 +6398,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-GISEL:       ; %bb.0: ; %bb
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_mov_b32 v2, v3
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6379,6 +6416,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
@@ -6596,6 +6634,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-SDAG:       ; %bb.0: ; %bb
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_add_nc_u32 v0, 1, v0
 ; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6611,6 +6650,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v1
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6618,6 +6658,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-GISEL:       ; %bb.0: ; %bb
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_mov_b32 v2, v3
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6633,6 +6674,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v1
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
@@ -6909,6 +6951,7 @@ define i32 @clpeak_imad_pat_i32_x2(i32 %x, i32 %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
@@ -6934,6 +6977,7 @@ define i32 @clpeak_imad_pat_i32_x2(i32 %x, i32 %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u32 v2, v0, v1
@@ -7431,6 +7475,7 @@ define <2 x i32> @clpeak_imad_pat_v2i32_x2(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u32 v4, v0, v2
@@ -7470,6 +7515,7 @@ define <2 x i32> @clpeak_imad_pat_v2i32_x2(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u32 v4, v0, v2
@@ -7760,6 +7806,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
@@ -7780,6 +7827,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v2, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -8052,6 +8100,7 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
@@ -8072,6 +8121,7 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v0, 1
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v2, v1, 1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -8409,6 +8459,7 @@ define <2 x i16> @clpeak_imad_pat_v2i16_x2(<2 x i16> %x, <2 x i16> %y) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v2, v0, v1
@@ -8746,6 +8797,7 @@ define <2 x i16> @clpeak_umad_pat_v2i16_x2(<2 x i16> %x, <2 x i16> %y) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v2, v0, v1
@@ -8837,6 +8889,7 @@ define <2 x i32> @multi_use_mul_mad_i32_var(i32 %x, i32 %y, i32 %z0, i32 %z1) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_mul_lo_u32 v1, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_add_nc_u32 v0, v1, v2 :: v_dual_add_nc_u32 v1, v1, v3
@@ -8949,6 +9002,7 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v2, v0, v1, v2
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v3
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -8960,6 +9014,7 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v1, v0, v2
@@ -9031,6 +9086,7 @@ define i32 @other_use_mul_mad_i32_var(i32 %x, i32 %y, i32 %z, ptr addrspace(3) %
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_mul_lo_u32 v1, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_nc_u32_e32 v0, v1, v2
@@ -9130,6 +9186,7 @@ define i16 @other_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z, ptr addrspace(3) %
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mul_lo_u16 v4, v0, v1
 ; GFX1210-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX1210-SDAG-NEXT:    ds_store_b16 v3, v4
@@ -9141,6 +9198,7 @@ define i16 @other_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z, ptr addrspace(3) %
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_mul_lo_u16 v1, v0, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_add_nc_u16 v0, v1, v2
@@ -9257,6 +9315,7 @@ define <4 x i16> @multi_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_add_u16 v0, v1, v2
@@ -9383,6 +9442,7 @@ define <2 x i16> @other_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_add_u16 v0, v1, v2
@@ -9468,6 +9528,7 @@ define i64 @mul_u24_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, v[2:3]
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -9476,6 +9537,7 @@ define i64 @mul_u24_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_mul_hi_u32_u24_e32 v5, v0, v1
 ; GFX1210-GISEL-NEXT:    v_mul_u32_u24_e32 v4, v0, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -9533,6 +9595,7 @@ define i64 @mul_u24_zext_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX12-NEXT:    v_mul_u32_u24_e32 v4, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)

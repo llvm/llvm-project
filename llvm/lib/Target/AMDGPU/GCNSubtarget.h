@@ -252,6 +252,7 @@ protected:
   bool HasConsumePowerInst = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1259,6 +1260,8 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
@@ -1334,6 +1337,10 @@ public:
   bool hasConsumePowerInst() const { return HasConsumePowerInst; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
+
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1210.
+  bool hasWaitXCnt() const { return GFX12_10Insts; }
 
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }

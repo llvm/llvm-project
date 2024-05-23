@@ -12,6 +12,7 @@ define float @test_cvt_f16_bf8_byte0(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e32 v0, v0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -27,6 +28,7 @@ define float @test_cvt_f16_bf8_byte1(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -42,6 +44,7 @@ define float @test_cvt_f16_bf8_byte2(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:2
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -57,6 +60,7 @@ define float @test_cvt_f16_bf8_byte3(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -72,6 +76,7 @@ define float @test_cvt_f16_fp8_byte0(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e32 v0, v0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -87,6 +92,7 @@ define float @test_cvt_f16_fp8_byte1(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -102,6 +108,7 @@ define float @test_cvt_f16_fp8_byte2(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:2
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -117,6 +124,7 @@ define float @test_cvt_f16_fp8_byte3(i32 %a) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_f32_f16_e32 v0, v0

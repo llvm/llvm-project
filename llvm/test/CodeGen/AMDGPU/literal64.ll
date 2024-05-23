@@ -84,6 +84,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX1210-NEXT:    s_mov_b32 s0, 0
 ; GFX1210-NEXT:  .LBB6_1: ; %atomicrmw.start
@@ -93,6 +94,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1210-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_or_b32 s0, vcc_lo, s0
@@ -111,6 +113,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX1300-NEXT:    s_mov_b32 s0, 0
 ; GFX1300-NEXT:  .LBB6_1: ; %atomicrmw.start
@@ -121,6 +124,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX1300-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -138,8 +142,10 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
 ; GFX1210-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -150,8 +156,10 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
 ; GFX1300-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw add ptr addrspace(1) %ptr, i64 64729929336 monotonic
   ret void
@@ -162,8 +170,10 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -174,8 +184,10 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
 ; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   store double 153.1, ptr addrspace(1) %ptr
   ret void
@@ -186,6 +198,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
@@ -198,6 +211,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX1210-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -217,6 +231,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1300-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1300-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX1300-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
@@ -230,6 +245,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1300-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX1300-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
@@ -248,6 +264,7 @@ define double @rsq_f64() {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_rsq_f64_e32 v[0:1], 0x4063233333333333
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -259,6 +276,7 @@ define double @rsq_f64() {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_rsq_f64_e32 v[0:1], 0x4063233333333333
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = call double @llvm.amdgcn.rsq.f64(double 153.1) nounwind readnone
