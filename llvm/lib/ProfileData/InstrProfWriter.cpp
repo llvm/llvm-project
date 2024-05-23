@@ -682,7 +682,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the header.
   IndexedInstrProf::Header Header;
-  Header.Magic = IndexedInstrProf::Magic;
   Header.Version = WritePrevVersion
                        ? IndexedInstrProf::ProfVersion::Version11
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
@@ -705,14 +704,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     Header.Version |= VARIANT_MASK_MEMPROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     Header.Version |= VARIANT_MASK_TEMPORAL_PROF;
-
-  Header.Unused = 0;
-  Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
-  Header.HashOffset = 0;
-  Header.MemProfOffset = 0;
-  Header.BinaryIdOffset = 0;
-  Header.TemporalProfTracesOffset = 0;
-  Header.VTableNamesOffset = 0;
 
   const uint64_t BackPatchStartOffset =
       writeHeader(Header, WritePrevVersion, OS);
