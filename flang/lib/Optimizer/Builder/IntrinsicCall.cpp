@@ -549,6 +549,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_char_kind",
+     &I::genSelectedCharKind,
+     {{{"name", asAddr}}},
+     /*isElemental=*/false},
     {"selected_int_kind",
      &I::genSelectedIntKind,
      {{{"scalar", asAddr}}},
@@ -5875,6 +5879,18 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SELECTED_CHAR_KIND
+fir::ExtendedValue
+IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedCharKind(builder, loc, fir::getBase(args[0]),
+                                        fir::getLen(args[0])));
 }
 
 // SELECTED_INT_KIND
