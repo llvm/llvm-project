@@ -465,15 +465,15 @@ namespace {
 
     std::string SynthesizeByrefCopyDestroyHelper(VarDecl *VD, int flag);
     std::string SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockFunc(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockImpl(BlockExpr *CE,
-                                    std::string Tag, std::string Desc);
-    std::string SynthesizeBlockDescriptor(std::string DescTag,
-                                          std::string ImplTag,
-                                          int i, StringRef funcName,
-                                          unsigned hasCopy);
+                                           StringRef funcName,
+                                           const std::string &Tag);
+    std::string SynthesizeBlockFunc(BlockExpr *CE, int i, StringRef funcName,
+                                    const std::string &Tag);
+    std::string SynthesizeBlockImpl(BlockExpr *CE, const std::string &Tag,
+                                    const std::string &Desc);
+    std::string SynthesizeBlockDescriptor(const std::string &DescTag,
+                                          const std::string &ImplTag, int i,
+                                          StringRef funcName, unsigned hasCopy);
     Stmt *SynthesizeBlockCall(CallExpr *Exp, const Expr* BlockExp);
     void SynthesizeBlockLiterals(SourceLocation FunLocStart,
                                  StringRef FunName);
@@ -4037,7 +4037,7 @@ static bool HasLocalVariableExternalStorage(ValueDecl *VD) {
 
 std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
                                                    StringRef funcName,
-                                                   std::string Tag) {
+                                                   const std::string &Tag) {
   const FunctionType *AFT = CE->getFunctionType();
   QualType RT = AFT->getReturnType();
   std::string StructRef = "struct " + Tag;
@@ -4131,9 +4131,8 @@ std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                                   StringRef funcName,
-                                                   std::string Tag) {
+std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(
+    BlockExpr *CE, int i, StringRef funcName, const std::string &Tag) {
   std::string StructRef = "struct " + Tag;
   std::string S = "static void __";
 
@@ -4175,8 +4174,9 @@ std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
-                                             std::string Desc) {
+std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
+                                                   const std::string &Tag,
+                                                   const std::string &Desc) {
   std::string S = "\nstruct " + Tag;
   std::string Constructor = "  " + Tag;
 
@@ -4290,10 +4290,9 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Ta
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockDescriptor(std::string DescTag,
-                                                   std::string ImplTag, int i,
-                                                   StringRef FunName,
-                                                   unsigned hasCopy) {
+std::string RewriteModernObjC::SynthesizeBlockDescriptor(
+    const std::string &DescTag, const std::string &ImplTag, int i,
+    StringRef FunName, unsigned hasCopy) {
   std::string S = "\nstatic struct " + DescTag;
 
   S += " {\n  size_t reserved;\n";
