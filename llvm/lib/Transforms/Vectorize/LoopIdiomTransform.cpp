@@ -1,4 +1,4 @@
-//===- AArch64LoopIdiomTransform.cpp - Loop idiom recognition -------------===//
+//===-------- LoopIdiomTransform.cpp - Loop idiom recognition -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64LoopIdiomTransform.h"
+#include "llvm/Transforms/Vectorize/LoopIdiomTransform.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -44,47 +45,46 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "aarch64-loop-idiom-transform"
+#define DEBUG_TYPE "loop-idiom-transform"
+
+static cl::opt<bool> DisableAll("disable-loop-idiom-transform-all", cl::Hidden,
+                                cl::init(false),
+                                cl::desc("Disable Loop Idiom Transform Pass."));
 
 static cl::opt<bool>
-    DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(false),
-               cl::desc("Disable AArch64 Loop Idiom Transform Pass."));
+    DisableByteCmp("disable-loop-idiom-transform-bytecmp", cl::Hidden,
+                   cl::init(false),
+                   cl::desc("Proceed with Loop Idiom Transform Pass, but do "
+                            "not convert byte-compare loop(s)."));
 
-static cl::opt<bool> DisableByteCmp(
-    "disable-aarch64-lit-bytecmp", cl::Hidden, cl::init(false),
-    cl::desc("Proceed with AArch64 Loop Idiom Transform Pass, but do "
-             "not convert byte-compare loop(s)."));
-
-static cl::opt<bool> VerifyLoops(
-    "aarch64-lit-verify", cl::Hidden, cl::init(false),
-    cl::desc("Verify loops generated AArch64 Loop Idiom Transform Pass."));
-
-namespace llvm {
-
-void initializeAArch64LoopIdiomTransformLegacyPassPass(PassRegistry &);
-Pass *createAArch64LoopIdiomTransformPass();
-
-} // end namespace llvm
+static cl::opt<bool>
+    VerifyLoops("verify-loop-idiom-transform", cl::Hidden, cl::init(false),
+                cl::desc("Verify loops generated Loop Idiom Transform Pass."));
 
 namespace {
-
-class AArch64LoopIdiomTransform {
+class LoopIdiomTransform {
   Loop *CurLoop = nullptr;
   DominatorTree *DT;
   LoopInfo *LI;
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
 
+  // Blocks that will be used for inserting vectorized code.
+  BasicBlock *EndBlock = nullptr;
+  BasicBlock *VectorLoopPreheaderBlock = nullptr;
+  BasicBlock *VectorLoopStartBlock = nullptr;
+  BasicBlock *VectorLoopMismatchBlock = nullptr;
+  BasicBlock *VectorLoopIncBlock = nullptr;
+
 public:
-  explicit AArch64LoopIdiomTransform(DominatorTree *DT, LoopInfo *LI,
-                                     const TargetTransformInfo *TTI,
-                                     const DataLayout *DL)
+  explicit LoopIdiomTransform(DominatorTree *DT, LoopInfo *LI,
+                              const TargetTransformInfo *TTI,
+                              const DataLayout *DL)
       : DT(DT), LI(LI), TTI(TTI), DL(DL) {}
 
   bool run(Loop *L);
@@ -98,83 +98,32 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   bool recognizeByteCompare();
+
   Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,
                             GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
                             Instruction *Index, Value *Start, Value *MaxLen);
+
+  Value *createMaskedFindMismatch(IRBuilder<> &Builder, GetElementPtrInst *GEPA,
+                                  GetElementPtrInst *GEPB, Value *ExtStart,
+                                  Value *ExtEnd);
+
   void transformByteCompare(GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
                             PHINode *IndPhi, Value *MaxLen, Instruction *Index,
                             Value *Start, bool IncIdx, BasicBlock *FoundBB,
                             BasicBlock *EndBB);
   /// @}
 };
+} // anonymous namespace
 
-class AArch64LoopIdiomTransformLegacyPass : public LoopPass {
-public:
-  static char ID;
-
-  explicit AArch64LoopIdiomTransformLegacyPass() : LoopPass(ID) {
-    initializeAArch64LoopIdiomTransformLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override {
-    return "Transform AArch64-specific loop idioms";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-};
-
-bool AArch64LoopIdiomTransformLegacyPass::runOnLoop(Loop *L,
-                                                    LPPassManager &LPM) {
-
-  if (skipLoop(L))
-    return false;
-
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-      *L->getHeader()->getParent());
-  return AArch64LoopIdiomTransform(
-             DT, LI, &TTI, &L->getHeader()->getModule()->getDataLayout())
-      .run(L);
-}
-
-} // end anonymous namespace
-
-char AArch64LoopIdiomTransformLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(
-    AArch64LoopIdiomTransformLegacyPass, "aarch64-lit",
-    "Transform specific loop idioms into optimized vector forms", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(
-    AArch64LoopIdiomTransformLegacyPass, "aarch64-lit",
-    "Transform specific loop idioms into optimized vector forms", false, false)
-
-Pass *llvm::createAArch64LoopIdiomTransformPass() {
-  return new AArch64LoopIdiomTransformLegacyPass();
-}
-
-PreservedAnalyses
-AArch64LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
-                                   LoopStandardAnalysisResults &AR,
-                                   LPMUpdater &) {
+PreservedAnalyses LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
+                                              LoopStandardAnalysisResults &AR,
+                                              LPMUpdater &) {
   if (DisableAll)
     return PreservedAnalyses::all();
 
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
-  AArch64LoopIdiomTransform LIT(&AR.DT, &AR.LI, &AR.TTI, DL);
+  LoopIdiomTransform LIT(&AR.DT, &AR.LI, &AR.TTI, DL);
   if (!LIT.run(&L))
     return PreservedAnalyses::all();
 
@@ -183,11 +132,11 @@ AArch64LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 
 //===----------------------------------------------------------------------===//
 //
-//          Implementation of AArch64LoopIdiomTransform
+//          Implementation of LoopIdiomTransform
 //
 //===----------------------------------------------------------------------===//
 
-bool AArch64LoopIdiomTransform::run(Loop *L) {
+bool LoopIdiomTransform::run(Loop *L) {
   CurLoop = L;
 
   Function &F = *L->getHeader()->getParent();
@@ -211,7 +160,7 @@ bool AArch64LoopIdiomTransform::run(Loop *L) {
   return recognizeByteCompare();
 }
 
-bool AArch64LoopIdiomTransform::recognizeByteCompare() {
+bool LoopIdiomTransform::recognizeByteCompare() {
   // Currently the transformation only works on scalable vector types, although
   // there is no fundamental reason why it cannot be made to work for fixed
   // width too.
@@ -224,7 +173,7 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
 
   BasicBlock *Header = CurLoop->getHeader();
 
-  // In AArch64LoopIdiomTransform::run we have already checked that the loop
+  // In LoopIdiomTransform::run we have already checked that the loop
   // has a preheader so we can assume it's in a canonical form.
   if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 2)
     return false;
@@ -242,8 +191,7 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   //   %cmp.not = icmp eq i32 %inc, %n
   //   br i1 %cmp.not, label %while.end, label %while.body
   //
-  auto CondBBInsts = LoopBlocks[0]->instructionsWithoutDebug();
-  if (std::distance(CondBBInsts.begin(), CondBBInsts.end()) > 4)
+  if (LoopBlocks[0]->sizeWithoutDebug() > 4)
     return false;
 
   // The second block should contain 7 instructions, e.g.
@@ -257,8 +205,7 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   //   %cmp.not.ld = icmp eq i8 %load.a, %load.b
   //   br i1 %cmp.not.ld, label %while.cond, label %while.end
   //
-  auto LoopBBInsts = LoopBlocks[1]->instructionsWithoutDebug();
-  if (std::distance(LoopBBInsts.begin(), LoopBBInsts.end()) > 7)
+  if (LoopBlocks[1]->sizeWithoutDebug() > 7)
     return false;
 
   // The incoming value to the PHI node from the loop should be an add of 1.
@@ -393,7 +340,107 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   return true;
 }
 
-Value *AArch64LoopIdiomTransform::expandFindMismatch(
+Value *LoopIdiomTransform::createMaskedFindMismatch(IRBuilder<> &Builder,
+                                                    GetElementPtrInst *GEPA,
+                                                    GetElementPtrInst *GEPB,
+                                                    Value *ExtStart,
+                                                    Value *ExtEnd) {
+  Type *I64Type = Builder.getInt64Ty();
+  Type *ResType = Builder.getInt32Ty();
+  Type *LoadType = Builder.getInt8Ty();
+  Value *PtrA = GEPA->getPointerOperand();
+  Value *PtrB = GEPB->getPointerOperand();
+
+  // At this point we know two things must be true:
+  //  1. Start <= End
+  //  2. ExtMaxLen <= MinPageSize due to the page checks.
+  // Therefore, we know that we can use a 64-bit induction variable that
+  // starts from 0 -> ExtMaxLen and it will not overflow.
+  ScalableVectorType *PredVTy =
+      ScalableVectorType::get(Builder.getInt1Ty(), 16);
+
+  Value *InitialPred = Builder.CreateIntrinsic(
+      Intrinsic::get_active_lane_mask, {PredVTy, I64Type}, {ExtStart, ExtEnd});
+
+  Value *VecLen = Builder.CreateIntrinsic(Intrinsic::vscale, {I64Type}, {});
+  VecLen = Builder.CreateMul(VecLen, ConstantInt::get(I64Type, 16), "",
+                             /*HasNUW=*/true, /*HasNSW=*/true);
+
+  Value *PFalse = Builder.CreateVectorSplat(PredVTy->getElementCount(),
+                                            Builder.getInt1(false));
+
+  BranchInst *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
+  Builder.Insert(JumpToVectorLoop);
+
+  // Set up the first vector loop block by creating the PHIs, doing the vector
+  // loads and comparing the vectors.
+  Builder.SetInsertPoint(VectorLoopStartBlock);
+  PHINode *LoopPred = Builder.CreatePHI(PredVTy, 2, "mismatch_vec_loop_pred");
+  LoopPred->addIncoming(InitialPred, VectorLoopPreheaderBlock);
+  PHINode *VectorIndexPhi = Builder.CreatePHI(I64Type, 2, "mismatch_vec_index");
+  VectorIndexPhi->addIncoming(ExtStart, VectorLoopPreheaderBlock);
+  Type *VectorLoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
+  Value *Passthru = ConstantInt::getNullValue(VectorLoadType);
+
+  Value *VectorLhsGep =
+      Builder.CreateGEP(LoadType, PtrA, VectorIndexPhi, "", GEPA->isInBounds());
+  Value *VectorLhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorLhsGep,
+                                                  Align(1), LoopPred, Passthru);
+
+  Value *VectorRhsGep =
+      Builder.CreateGEP(LoadType, PtrB, VectorIndexPhi, "", GEPB->isInBounds());
+  Value *VectorRhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorRhsGep,
+                                                  Align(1), LoopPred, Passthru);
+
+  Value *VectorMatchCmp = Builder.CreateICmpNE(VectorLhsLoad, VectorRhsLoad);
+  VectorMatchCmp = Builder.CreateSelect(LoopPred, VectorMatchCmp, PFalse);
+  Value *VectorMatchHasActiveLanes = Builder.CreateOrReduce(VectorMatchCmp);
+  BranchInst *VectorEarlyExit = BranchInst::Create(
+      VectorLoopMismatchBlock, VectorLoopIncBlock, VectorMatchHasActiveLanes);
+  Builder.Insert(VectorEarlyExit);
+
+  // Increment the index counter and calculate the predicate for the next
+  // iteration of the loop. We branch back to the start of the loop if there
+  // is at least one active lane.
+  Builder.SetInsertPoint(VectorLoopIncBlock);
+  Value *NewVectorIndexPhi =
+      Builder.CreateAdd(VectorIndexPhi, VecLen, "",
+                        /*HasNUW=*/true, /*HasNSW=*/true);
+  VectorIndexPhi->addIncoming(NewVectorIndexPhi, VectorLoopIncBlock);
+  Value *NewPred =
+      Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                              {PredVTy, I64Type}, {NewVectorIndexPhi, ExtEnd});
+  LoopPred->addIncoming(NewPred, VectorLoopIncBlock);
+
+  Value *PredHasActiveLanes =
+      Builder.CreateExtractElement(NewPred, uint64_t(0));
+  BranchInst *VectorLoopBranchBack =
+      BranchInst::Create(VectorLoopStartBlock, EndBlock, PredHasActiveLanes);
+  Builder.Insert(VectorLoopBranchBack);
+
+  // If we found a mismatch then we need to calculate which lane in the vector
+  // had a mismatch and add that on to the current loop index.
+  Builder.SetInsertPoint(VectorLoopMismatchBlock);
+  PHINode *FoundPred = Builder.CreatePHI(PredVTy, 1, "mismatch_vec_found_pred");
+  FoundPred->addIncoming(VectorMatchCmp, VectorLoopStartBlock);
+  PHINode *LastLoopPred =
+      Builder.CreatePHI(PredVTy, 1, "mismatch_vec_last_loop_pred");
+  LastLoopPred->addIncoming(LoopPred, VectorLoopStartBlock);
+  PHINode *VectorFoundIndex =
+      Builder.CreatePHI(I64Type, 1, "mismatch_vec_found_index");
+  VectorFoundIndex->addIncoming(VectorIndexPhi, VectorLoopStartBlock);
+
+  Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
+  Value *Ctz = Builder.CreateIntrinsic(
+      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
+      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
+  Ctz = Builder.CreateZExt(Ctz, I64Type);
+  Value *VectorLoopRes64 = Builder.CreateAdd(VectorFoundIndex, Ctz, "",
+                                             /*HasNUW=*/true, /*HasNSW=*/true);
+  return Builder.CreateTrunc(VectorLoopRes64, ResType);
+}
+
+Value *LoopIdiomTransform::expandFindMismatch(
     IRBuilder<> &Builder, DomTreeUpdater &DTU, GetElementPtrInst *GEPA,
     GetElementPtrInst *GEPB, Instruction *Index, Value *Start, Value *MaxLen) {
   Value *PtrA = GEPA->getPointerOperand();
@@ -407,17 +454,16 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   Type *ResType = Builder.getInt32Ty();
 
   // Split block in the original loop preheader.
-  BasicBlock *EndBlock =
-      SplitBlock(Preheader, PHBranch, DT, LI, nullptr, "mismatch_end");
+  EndBlock = SplitBlock(Preheader, PHBranch, DT, LI, nullptr, "mismatch_end");
 
   // Create the blocks that we're going to need:
   //  1. A block for checking the zero-extended length exceeds 0
   //  2. A block to check that the start and end addresses of a given array
   //     lie on the same page.
-  //  3. The SVE loop preheader.
-  //  4. The first SVE loop block.
-  //  5. The SVE loop increment block.
-  //  6. A block we can jump to from the SVE loop when a mismatch is found.
+  //  3. The vector loop preheader.
+  //  4. The first vector loop block.
+  //  5. The vector loop increment block.
+  //  6. A block we can jump to from the vector loop when a mismatch is found.
   //  7. The first block of the scalar loop itself, containing PHIs , loads
   //  and cmp.
   //  8. A scalar loop increment block to increment the PHIs and go back
@@ -432,17 +478,17 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   BasicBlock *MemCheckBlock = BasicBlock::Create(
       Ctx, "mismatch_mem_check", EndBlock->getParent(), EndBlock);
 
-  BasicBlock *SVELoopPreheaderBlock = BasicBlock::Create(
-      Ctx, "mismatch_sve_loop_preheader", EndBlock->getParent(), EndBlock);
+  VectorLoopPreheaderBlock = BasicBlock::Create(
+      Ctx, "mismatch_vec_loop_preheader", EndBlock->getParent(), EndBlock);
 
-  BasicBlock *SVELoopStartBlock = BasicBlock::Create(
-      Ctx, "mismatch_sve_loop", EndBlock->getParent(), EndBlock);
+  VectorLoopStartBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop",
+                                            EndBlock->getParent(), EndBlock);
 
-  BasicBlock *SVELoopIncBlock = BasicBlock::Create(
-      Ctx, "mismatch_sve_loop_inc", EndBlock->getParent(), EndBlock);
+  VectorLoopIncBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop_inc",
+                                          EndBlock->getParent(), EndBlock);
 
-  BasicBlock *SVELoopMismatchBlock = BasicBlock::Create(
-      Ctx, "mismatch_sve_loop_found", EndBlock->getParent(), EndBlock);
+  VectorLoopMismatchBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop_found",
+                                               EndBlock->getParent(), EndBlock);
 
   BasicBlock *LoopPreHeaderBlock = BasicBlock::Create(
       Ctx, "mismatch_loop_pre", EndBlock->getParent(), EndBlock);
@@ -456,26 +502,27 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   DTU.applyUpdates({{DominatorTree::Insert, Preheader, MinItCheckBlock},
                     {DominatorTree::Delete, Preheader, EndBlock}});
 
-  // Update LoopInfo with the new SVE & scalar loops.
-  auto SVELoop = LI->AllocateLoop();
+  // Update LoopInfo with the new vector & scalar loops.
+  auto VectorLoop = LI->AllocateLoop();
   auto ScalarLoop = LI->AllocateLoop();
 
   if (CurLoop->getParentLoop()) {
     CurLoop->getParentLoop()->addBasicBlockToLoop(MinItCheckBlock, *LI);
     CurLoop->getParentLoop()->addBasicBlockToLoop(MemCheckBlock, *LI);
-    CurLoop->getParentLoop()->addBasicBlockToLoop(SVELoopPreheaderBlock, *LI);
-    CurLoop->getParentLoop()->addChildLoop(SVELoop);
-    CurLoop->getParentLoop()->addBasicBlockToLoop(SVELoopMismatchBlock, *LI);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(VectorLoopPreheaderBlock,
+                                                  *LI);
+    CurLoop->getParentLoop()->addChildLoop(VectorLoop);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(VectorLoopMismatchBlock, *LI);
     CurLoop->getParentLoop()->addBasicBlockToLoop(LoopPreHeaderBlock, *LI);
     CurLoop->getParentLoop()->addChildLoop(ScalarLoop);
   } else {
-    LI->addTopLevelLoop(SVELoop);
+    LI->addTopLevelLoop(VectorLoop);
     LI->addTopLevelLoop(ScalarLoop);
   }
 
   // Add the new basic blocks to their associated loops.
-  SVELoop->addBasicBlockToLoop(SVELoopStartBlock, *LI);
-  SVELoop->addBasicBlockToLoop(SVELoopIncBlock, *LI);
+  VectorLoop->addBasicBlockToLoop(VectorLoopStartBlock, *LI);
+  VectorLoop->addBasicBlockToLoop(VectorLoopIncBlock, *LI);
 
   ScalarLoop->addBasicBlockToLoop(LoopStartBlock, *LI);
   ScalarLoop->addBasicBlockToLoop(LoopIncBlock, *LI);
@@ -496,10 +543,6 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
       LLVMContext::MD_prof,
       MDBuilder(MinItCheckBr->getContext()).createBranchWeights(99, 1));
   Builder.Insert(MinItCheckBr);
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, MinItCheckBlock, MemCheckBlock},
-       {DominatorTree::Insert, MinItCheckBlock, LoopPreHeaderBlock}});
 
   // For each of the arrays, check the start/end addresses are on the same
   // page.
@@ -537,128 +580,25 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
 
   Value *CombinedPageCmp = Builder.CreateOr(LhsPageCmp, RhsPageCmp);
   BranchInst *CombinedPageCmpCmpBr = BranchInst::Create(
-      LoopPreHeaderBlock, SVELoopPreheaderBlock, CombinedPageCmp);
+      LoopPreHeaderBlock, VectorLoopPreheaderBlock, CombinedPageCmp);
   CombinedPageCmpCmpBr->setMetadata(
       LLVMContext::MD_prof, MDBuilder(CombinedPageCmpCmpBr->getContext())
                                 .createBranchWeights(10, 90));
   Builder.Insert(CombinedPageCmpCmpBr);
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, MemCheckBlock, LoopPreHeaderBlock},
-       {DominatorTree::Insert, MemCheckBlock, SVELoopPreheaderBlock}});
-
-  // Set up the SVE loop preheader, i.e. calculate initial loop predicate,
+  // Set up the vector loop preheader, i.e. calculate initial loop predicate,
   // zero-extend MaxLen to 64-bits, determine the number of vector elements
   // processed in each iteration, etc.
-  Builder.SetInsertPoint(SVELoopPreheaderBlock);
+  Builder.SetInsertPoint(VectorLoopPreheaderBlock);
 
-  // At this point we know two things must be true:
-  //  1. Start <= End
-  //  2. ExtMaxLen <= MinPageSize due to the page checks.
-  // Therefore, we know that we can use a 64-bit induction variable that
-  // starts from 0 -> ExtMaxLen and it will not overflow.
-  ScalableVectorType *PredVTy =
-      ScalableVectorType::get(Builder.getInt1Ty(), 16);
-
-  Value *InitialPred = Builder.CreateIntrinsic(
-      Intrinsic::get_active_lane_mask, {PredVTy, I64Type}, {ExtStart, ExtEnd});
-
-  Value *VecLen = Builder.CreateIntrinsic(Intrinsic::vscale, {I64Type}, {});
-  VecLen = Builder.CreateMul(VecLen, ConstantInt::get(I64Type, 16), "",
-                             /*HasNUW=*/true, /*HasNSW=*/true);
-
-  Value *PFalse = Builder.CreateVectorSplat(PredVTy->getElementCount(),
-                                            Builder.getInt1(false));
-
-  BranchInst *JumpToSVELoop = BranchInst::Create(SVELoopStartBlock);
-  Builder.Insert(JumpToSVELoop);
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, SVELoopPreheaderBlock, SVELoopStartBlock}});
-
-  // Set up the first SVE loop block by creating the PHIs, doing the vector
-  // loads and comparing the vectors.
-  Builder.SetInsertPoint(SVELoopStartBlock);
-  PHINode *LoopPred = Builder.CreatePHI(PredVTy, 2, "mismatch_sve_loop_pred");
-  LoopPred->addIncoming(InitialPred, SVELoopPreheaderBlock);
-  PHINode *SVEIndexPhi = Builder.CreatePHI(I64Type, 2, "mismatch_sve_index");
-  SVEIndexPhi->addIncoming(ExtStart, SVELoopPreheaderBlock);
-  Type *SVELoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
-  Value *Passthru = ConstantInt::getNullValue(SVELoadType);
-
-  Value *SVELhsGep =
-      Builder.CreateGEP(LoadType, PtrA, SVEIndexPhi, "", GEPA->isInBounds());
-  Value *SVELhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVELhsGep, Align(1),
-                                               LoopPred, Passthru);
-
-  Value *SVERhsGep =
-      Builder.CreateGEP(LoadType, PtrB, SVEIndexPhi, "", GEPB->isInBounds());
-  Value *SVERhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVERhsGep, Align(1),
-                                               LoopPred, Passthru);
-
-  Value *SVEMatchCmp = Builder.CreateICmpNE(SVELhsLoad, SVERhsLoad);
-  SVEMatchCmp = Builder.CreateSelect(LoopPred, SVEMatchCmp, PFalse);
-  Value *SVEMatchHasActiveLanes = Builder.CreateOrReduce(SVEMatchCmp);
-  BranchInst *SVEEarlyExit = BranchInst::Create(
-      SVELoopMismatchBlock, SVELoopIncBlock, SVEMatchHasActiveLanes);
-  Builder.Insert(SVEEarlyExit);
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, SVELoopStartBlock, SVELoopMismatchBlock},
-       {DominatorTree::Insert, SVELoopStartBlock, SVELoopIncBlock}});
-
-  // Increment the index counter and calculate the predicate for the next
-  // iteration of the loop. We branch back to the start of the loop if there
-  // is at least one active lane.
-  Builder.SetInsertPoint(SVELoopIncBlock);
-  Value *NewSVEIndexPhi = Builder.CreateAdd(SVEIndexPhi, VecLen, "",
-                                            /*HasNUW=*/true, /*HasNSW=*/true);
-  SVEIndexPhi->addIncoming(NewSVEIndexPhi, SVELoopIncBlock);
-  Value *NewPred =
-      Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
-                              {PredVTy, I64Type}, {NewSVEIndexPhi, ExtEnd});
-  LoopPred->addIncoming(NewPred, SVELoopIncBlock);
-
-  Value *PredHasActiveLanes =
-      Builder.CreateExtractElement(NewPred, uint64_t(0));
-  BranchInst *SVELoopBranchBack =
-      BranchInst::Create(SVELoopStartBlock, EndBlock, PredHasActiveLanes);
-  Builder.Insert(SVELoopBranchBack);
-
-  DTU.applyUpdates({{DominatorTree::Insert, SVELoopIncBlock, SVELoopStartBlock},
-                    {DominatorTree::Insert, SVELoopIncBlock, EndBlock}});
-
-  // If we found a mismatch then we need to calculate which lane in the vector
-  // had a mismatch and add that on to the current loop index.
-  Builder.SetInsertPoint(SVELoopMismatchBlock);
-  PHINode *FoundPred = Builder.CreatePHI(PredVTy, 1, "mismatch_sve_found_pred");
-  FoundPred->addIncoming(SVEMatchCmp, SVELoopStartBlock);
-  PHINode *LastLoopPred =
-      Builder.CreatePHI(PredVTy, 1, "mismatch_sve_last_loop_pred");
-  LastLoopPred->addIncoming(LoopPred, SVELoopStartBlock);
-  PHINode *SVEFoundIndex =
-      Builder.CreatePHI(I64Type, 1, "mismatch_sve_found_index");
-  SVEFoundIndex->addIncoming(SVEIndexPhi, SVELoopStartBlock);
-
-  Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
-  Value *Ctz = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
-      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
-  Ctz = Builder.CreateZExt(Ctz, I64Type);
-  Value *SVELoopRes64 = Builder.CreateAdd(SVEFoundIndex, Ctz, "",
-                                          /*HasNUW=*/true, /*HasNSW=*/true);
-  Value *SVELoopRes = Builder.CreateTrunc(SVELoopRes64, ResType);
+  Value *VectorLoopRes =
+      createMaskedFindMismatch(Builder, GEPA, GEPB, ExtStart, ExtEnd);
 
   Builder.Insert(BranchInst::Create(EndBlock));
-
-  DTU.applyUpdates({{DominatorTree::Insert, SVELoopMismatchBlock, EndBlock}});
 
   // Generate code for scalar loop.
   Builder.SetInsertPoint(LoopPreHeaderBlock);
   Builder.Insert(BranchInst::Create(LoopStartBlock));
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, LoopPreHeaderBlock, LoopStartBlock}});
 
   Builder.SetInsertPoint(LoopStartBlock);
   PHINode *IndexPhi = Builder.CreatePHI(ResType, 2, "mismatch_index");
@@ -681,9 +621,6 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   BranchInst *MatchCmpBr = BranchInst::Create(LoopIncBlock, EndBlock, MatchCmp);
   Builder.Insert(MatchCmpBr);
 
-  DTU.applyUpdates({{DominatorTree::Insert, LoopStartBlock, LoopIncBlock},
-                    {DominatorTree::Insert, LoopStartBlock, EndBlock}});
-
   // Have we reached the maximum permitted length for the loop?
   Builder.SetInsertPoint(LoopIncBlock);
   Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1), "",
@@ -694,29 +631,26 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
   Builder.Insert(IVCmpBr);
 
-  DTU.applyUpdates({{DominatorTree::Insert, LoopIncBlock, EndBlock},
-                    {DominatorTree::Insert, LoopIncBlock, LoopStartBlock}});
-
   // In the end block we need to insert a PHI node to deal with three cases:
   //  1. We didn't find a mismatch in the scalar loop, so we return MaxLen.
   //  2. We exitted the scalar loop early due to a mismatch and need to return
   //  the index that we found.
-  //  3. We didn't find a mismatch in the SVE loop, so we return MaxLen.
-  //  4. We exitted the SVE loop early due to a mismatch and need to return
+  //  3. We didn't find a mismatch in the vector loop, so we return MaxLen.
+  //  4. We exitted the vector loop early due to a mismatch and need to return
   //  the index that we found.
   Builder.SetInsertPoint(EndBlock, EndBlock->getFirstInsertionPt());
   PHINode *ResPhi = Builder.CreatePHI(ResType, 4, "mismatch_result");
   ResPhi->addIncoming(MaxLen, LoopIncBlock);
   ResPhi->addIncoming(IndexPhi, LoopStartBlock);
-  ResPhi->addIncoming(MaxLen, SVELoopIncBlock);
-  ResPhi->addIncoming(SVELoopRes, SVELoopMismatchBlock);
+  ResPhi->addIncoming(MaxLen, VectorLoopIncBlock);
+  ResPhi->addIncoming(VectorLoopRes, VectorLoopMismatchBlock);
 
   Value *FinalRes = Builder.CreateTrunc(ResPhi, ResType);
 
   if (VerifyLoops) {
     ScalarLoop->verifyLoop();
-    SVELoop->verifyLoop();
-    if (!SVELoop->isRecursivelyLCSSAForm(*DT, *LI))
+    VectorLoop->verifyLoop();
+    if (!VectorLoop->isRecursivelyLCSSAForm(*DT, *LI))
       report_fatal_error("Loops must remain in LCSSA form!");
     if (!ScalarLoop->isRecursivelyLCSSAForm(*DT, *LI))
       report_fatal_error("Loops must remain in LCSSA form!");
@@ -725,10 +659,12 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   return FinalRes;
 }
 
-void AArch64LoopIdiomTransform::transformByteCompare(
-    GetElementPtrInst *GEPA, GetElementPtrInst *GEPB, PHINode *IndPhi,
-    Value *MaxLen, Instruction *Index, Value *Start, bool IncIdx,
-    BasicBlock *FoundBB, BasicBlock *EndBB) {
+void LoopIdiomTransform::transformByteCompare(GetElementPtrInst *GEPA,
+                                              GetElementPtrInst *GEPB,
+                                              PHINode *IndPhi, Value *MaxLen,
+                                              Instruction *Index, Value *Start,
+                                              bool IncIdx, BasicBlock *FoundBB,
+                                              BasicBlock *EndBB) {
 
   // Insert the byte compare code at the end of the preheader block
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
@@ -737,6 +673,11 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   IRBuilder<> Builder(PHBranch);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
+
+  // Safeguard to check if we build the correct DomTree with DTU.
+  auto CheckDTU = llvm::make_scope_exit([&]() {
+    assert(DTU.getDomTree().verify() && "Ill-formed DomTree built by DTU");
+  });
 
   // Increment the pointer if this was done before the loads in the loop.
   if (IncIdx)
@@ -773,12 +714,8 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   if (FoundBB != EndBB) {
     Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
     Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
-    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB},
-                      {DominatorTree::Insert, CmpBB, EndBB}});
-
   } else {
     Builder.CreateBr(FoundBB);
-    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB}});
   }
 
   auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
