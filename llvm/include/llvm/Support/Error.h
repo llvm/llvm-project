@@ -1269,6 +1269,11 @@ inline Error createStringError(std::error_code EC, const Twine &S) {
   return createStringError(EC, S.str().c_str());
 }
 
+/// Create a StringError with an inconvertible error code.
+inline Error createStringError(const Twine &S) {
+  return createStringError(llvm::inconvertibleErrorCode(), S);
+}
+
 template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
                                const Ts &... Vals) {
