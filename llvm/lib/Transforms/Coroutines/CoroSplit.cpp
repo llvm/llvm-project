@@ -227,7 +227,6 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
     FunctionType *ResumeTy = FunctionType::get(
         Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false);
     auto *ResumeCall = Builder.CreateCall(ResumeTy, ResumeAddr, {NewCall});
-    ResumeCall->setCallingConv(CallingConv::Fast);
 
     // We can't insert the 'ret' instruction and adjust the cc until the
     // function has been split, so remember this for later.
@@ -1089,6 +1088,7 @@ void CoroCloner::create() {
   // Turn symmetric transfers into musttail calls.
   for (CallInst *ResumeCall : Shape.SymmetricTransfers) {
     ResumeCall = cast<CallInst>(VMap[ResumeCall]);
+    ResumeCall->setCallingConv(NewF->getCallingConv());
     if (TTI.supportsTailCallFor(ResumeCall)) {
       // FIXME: Could we support symmetric transfer effectively without
       // musttail?
