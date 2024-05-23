@@ -144,7 +144,7 @@ public:
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes);
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       CompilerType type, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
       std::string &child_name, uint32_t &child_byte_size,

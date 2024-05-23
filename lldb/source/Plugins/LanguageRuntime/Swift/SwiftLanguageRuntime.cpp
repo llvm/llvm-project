@@ -1670,12 +1670,17 @@ public:
       uint32_t child_bitfield_bit_offset;
       uint64_t language_flags;
 
-      type = parent_type.GetChildCompilerTypeAtIndex(
+      auto type_or_err = parent_type.GetChildCompilerTypeAtIndex(
           exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
           ignore_array_bounds, child_name, child_byte_size, byte_offset,
           child_bitfield_bit_size, child_bitfield_bit_offset,
           child_is_base_class, child_is_deref_of_parent, valobj,
           language_flags);
+      if (!type_or_err)
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), type_or_err.takeError(),
+                       "could not find child #{1}: {0}", idx);
+      else
+        type = *type_or_err;
 
       if (child_is_base_class)
         type.Clear(); // invalidate - base classes are dealt with outside of the
@@ -2445,7 +2450,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
           omit_empty_base_classes, child_indexes);
 }
 
-CompilerType SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     CompilerType type, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
     std::string &child_name, uint32_t &child_byte_size,

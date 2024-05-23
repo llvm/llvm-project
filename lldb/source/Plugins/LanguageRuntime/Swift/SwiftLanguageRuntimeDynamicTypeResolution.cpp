@@ -53,6 +53,14 @@ using namespace lldb_private;
 
 namespace lldb_private {
 
+std::string toString(const swift::reflection::TypeRef *tr) {
+  if (!tr)
+    return "null typeref";
+  std::stringstream s;
+  tr->dump(s);
+  return s.str();
+}
+
 static lldb::addr_t
 MaskMaybeBridgedPointer(Process &process, lldb::addr_t addr,
                         lldb::addr_t *masked_bits = nullptr) {
@@ -686,11 +694,11 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
 
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
-    return llvm::make_error<llvm::StringError>("no Swift typesystem",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no Swift typesystem");
   if (!type)
-    return llvm::make_error<llvm::StringError>("invalid type",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid type");
 
   // Deal with the LLDB-only SILPackType variant.
   if (auto pack_type = ts->IsSILPackType(type))
@@ -718,10 +726,10 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
   if (!ti)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
         "could not get Swift runtime type info for type " +
-            type.GetMangledTypeName().GetString(),
-        llvm::inconvertibleErrorCode());
+            type.GetMangledTypeName().GetString());
   if (llvm::isa<swift::reflection::BuiltinTypeInfo>(ti)) {
     // This logic handles Swift Builtin types. By handling them now, the cost of
     // unnecessarily loading ASTContexts can be avoided. Builtin types are
@@ -734,10 +742,10 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
              "{0}: unrecognized builtin type info or this is a Clang type "
              "without DWARF debug info",
              type.GetMangledTypeName());
-    return llvm::make_error<llvm::StringError>(
-        "missing debug info for Clang type \"" +
-            type.GetDisplayTypeName().GetString() + "\"",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "missing debug info for Clang type \"" +
+                                       type.GetDisplayTypeName().GetString() +
+                                       "\"");
   }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
@@ -782,9 +790,9 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     }
 
     if (!tr)
-      return llvm::make_error<llvm::StringError>(
-          "could not typeref for " + type.GetMangledTypeName().GetString(),
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "could not typeref for " +
+                                         type.GetMangledTypeName().GetString());
 
     // Existentials.
     if (size_t n = GetExistentialSyntheticChildren(ts, tr, ti).size())
@@ -792,8 +800,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
-      return llvm::make_error<llvm::StringError>(
-          "no reflection context", llvm::inconvertibleErrorCode());
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "no reflection context");
 
     LLDBTypeInfoProvider tip(*this, exe_scope);
     auto *cti = reflection_ctx->GetClassInstanceTypeInfo(
@@ -810,18 +818,15 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
         return rti->getNumFields() + 1;
       return rti->getNumFields();
     }
-    return llvm::make_error<llvm::StringError>(
-        "No Swift runtime type info for " +
-            type.GetMangledTypeName().GetString(),
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No Swift runtime type info for " +
+                                       type.GetMangledTypeName().GetString());
   }
 
   LogUnimplementedTypeKind(__FUNCTION__, type);
-  return llvm::make_error<llvm::StringError>(
-      "GetNumChildren unimplemented for type " +
-          type.GetMangledTypeName().GetString(),
-      llvm::inconvertibleErrorCode());
-  {};
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "GetNumChildren unimplemented for type " +
+                                     type.GetMangledTypeName().GetString());
 }
 
 std::optional<unsigned>
@@ -1097,7 +1102,8 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
   }
 }
 
-CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType>
+SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     CompilerType type, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
     std::string &child_name, uint32_t &child_byte_size,
@@ -1107,7 +1113,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     uint64_t &language_flags) {
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no type system");
 
   lldb::addr_t pointer = LLDB_INVALID_ADDRESS;
   ExecutionContext exe_ctx;
@@ -1192,16 +1199,16 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   auto *ti = GetSwiftRuntimeTypeInfo(
       type, exe_ctx.GetBestExecutionContextScope(), &tr);
   if (!ti)
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "could not get runtime type info for" +
+                                       toString(tr));
+
   // Structs and Tuples.
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
     auto fields = rti->getFields();
 
     // Handle tuples.
-    if (idx >= rti->getNumFields())
-      LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
-                rti->getNumFields());
     std::optional<TypeSystemSwift::TupleElement> tuple;
     if (rti->getRecordKind() == swift::reflection::RecordKind::Tuple)
       tuple = ts->GetTupleElement(type.GetOpaqueQualType(), idx);
@@ -1220,6 +1227,11 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         language_flags = 0;
         return ts->GetRawPointerType();
       }
+      if (idx - 3 >= fields.size())
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       llvm::Twine("index") + llvm::Twine(idx) +
+                                           "is out of bounds (" +
+                                           llvm::Twine(fields.size()) + ")");
       return get_from_field_info(fields[idx - 3], tuple, false);
     }
     if (rti->getRecordKind() ==
@@ -1239,6 +1251,11 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
           return protocol_child.get_type();
         }
     }
+    if (idx >= fields.size())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     llvm::Twine("index") + llvm::Twine(idx) +
+                                         "is out of bounds (" +
+                                         llvm::Twine(fields.size()) + ")");
     return get_from_field_info(fields[idx], tuple, true);
   }
   // Enums.
@@ -1251,9 +1268,10 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       if (i++ == idx)
         return get_from_field_info(enum_case, {}, true);
     }
-    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
-             eti->getNumPayloadCases());
-    return {};
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::Twine("index") + llvm::Twine(idx) + "is out of bounds (" +
+            llvm::Twine(eti->getNumPayloadCases()) + ")");
   }
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
@@ -1272,9 +1290,10 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         return protocol_child.get_type();
       }
     if (i) {
-      LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
-               i - 1);
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     llvm::Twine("index") + llvm::Twine(idx) +
+                                         "is out of bounds (" +
+                                         llvm::Twine(i - 1) + ")");
     }
 
     // Objects.
@@ -1303,7 +1322,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
 
     // Try the instance type metadata.
     if (!valobj)
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "object has no address");
+
     bool found_start = false;
     using namespace swift::Demangle;
     Demangler dem;
@@ -1314,12 +1335,16 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "no reflection context");
+
     CompilerType instance_type = valobj->GetCompilerType();
     auto instance_ts =
         instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!instance_ts)
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "no typesystem");
+
     // LLDBTypeInfoProvider needs to be kept alive while supers gets accessed.
     llvm::SmallVector<SuperClassType, 2> supers;
     auto superclass_finder = [&](SuperClassType sc) -> bool {
@@ -1371,7 +1396,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
           return get_from_field_info(fields[idx], tuple, true);
         }
       }
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     llvm::Twine("index") + llvm::Twine(idx) +
+                                         "is out of bounds");
     }
 
     // Handle the artificial base class fields.
@@ -1387,7 +1414,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
           // field in the base class.
           if (!type_ref) {
             child_name = "<base class>";
-            return {};
+            return CompilerType();
           }
           CompilerType super_type = GetTypeFromTypeRef(*ts, type_ref);
           child_name = super_type.GetTypeName().GetStringRef().str();
@@ -1411,24 +1438,27 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     // Handle the "real" fields.
     auto *object = supers[0].get_record_type_info();
     if (!object)
-      return {};
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "no record type info");
     for (auto &field : object->getFields())
       if (i++ == idx)
         return get_from_field_info(field, {}, true);
 
-    LLDB_LOG(GetLog(LLDBLog::Types), "index {0} is out of bounds ({1})", idx,
-             i - 1);
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   llvm::Twine("index") + llvm::Twine(idx) +
+                                       "is out of bounds (" +
+                                       llvm::Twine(i - 1) + ")");
   }
   if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
     // Clang enums have an artificial rawValue property. We could
     // consider handling them here, but
     // TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex can also
     // handle them and without a Process.
-    return {};
+    return CompilerType();
   }
   LogUnimplementedTypeKind(__FUNCTION__, type);
-  return {};
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "not implemented");
 }
 
 bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
