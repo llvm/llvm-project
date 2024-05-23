@@ -24,8 +24,7 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
       "movs r0, r1\n\t"
       "it eq\n\t"
       "moveq r0, 1\n\t"
-      "bx lr"
-  );
+      "bx lr");
 }
 
 } // namespace LIBC_NAMESPACE
