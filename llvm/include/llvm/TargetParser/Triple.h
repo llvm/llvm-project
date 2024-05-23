@@ -84,6 +84,7 @@ public:
     thumbeb,        // Thumb (big endian): thumbeb
     x86,            // X86: i[3-9]86
     x86_64,         // X86-64: amd64, x86_64
+    may.            // May
     xcore,          // XCore: xcore
     xtensa,         // Tensilica: Xtensa
     nvptx,          // NVPTX: 32-bit
