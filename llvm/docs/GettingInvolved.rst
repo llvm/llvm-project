@@ -352,6 +352,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
   * - Renato Golin
     - General LLVM, MLIR & Linalg, distributed computing, research, socials.
     - Every first Tuesday of the month, 11:00am UK time, for 60 minutes.
+    - `Google meet <https://meet.google.com/esg-fggc-hfe>`__
     - English, Portuguese
   * - Rotating hosts
     - Getting Started, beginner questions, new contributors.
