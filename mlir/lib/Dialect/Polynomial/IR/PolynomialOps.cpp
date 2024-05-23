@@ -165,9 +165,10 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
     APInt cmod = ring.getCoefficientModulus().getValue();
     if (!isPrimitiveNthRootOfUnity(rootValue, rootDegree, cmod)) {
       return op->emitOpError()
-             << "provided root " << rootValue.getZExtValue() << " is not a primitive root "
-             << "of unity mod " << cmod.getZExtValue() << ", with the specified degree "
-             << rootDegree.getZExtValue();
+             << "provided root " << rootValue.getZExtValue()
+             << " is not a primitive root "
+             << "of unity mod " << cmod.getZExtValue()
+             << ", with the specified degree " << rootDegree.getZExtValue();
     }
   }
 
