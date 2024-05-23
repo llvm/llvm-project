@@ -486,6 +486,7 @@ set(LLVM_ALL_TARGETS
   VE
   WebAssembly
   X86
+  May
   XCore
   )
 
