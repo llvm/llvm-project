@@ -448,10 +448,21 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
                    memref.getDefiningOp())) {
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
+      // Avoid pulling in rebox that performs reshaping.
+      // There is no way to represent box reshaping with array_coor.
+      if (boxedShape && !mlir::isa<fir::ShiftType>(boxedShape.getType()))
+        return mlir::failure();
       boxedSlice = reboxOp.getSlice();
     } else {
       return mlir::failure();
     }
+
+    bool boxedShapeIsShift =
+        boxedShape && mlir::isa<fir::ShiftType>(boxedShape.getType());
+    bool boxedShapeIsShape =
+        boxedShape && mlir::isa<fir::ShapeType>(boxedShape.getType());
+    bool boxedShapeIsShapeShift =
+        boxedShape && mlir::isa<fir::ShapeShiftType>(boxedShape.getType());
 
     // Slices changing the number of dimensions are not supported
     // for array_coor yet.
@@ -481,6 +492,21 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
     if (op.getSlice() && boxedSlice && boxedSlice != op.getSlice())
       return mlir::failure();
 
+    // If v is a shape_shift operation:
+    //   fir.shape_shift %l1, %e1, %l2, %e2, ...
+    // create:
+    //   fir.shape %e1, %e2, ...
+    auto getShapeFromShapeShift = [&](mlir::Value v) -> mlir::Value {
+      auto shapeShiftOp =
+          mlir::dyn_cast_or_null<fir::ShapeShiftOp>(v.getDefiningOp());
+      if (!shapeShiftOp)
+        return nullptr;
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointAfter(shapeShiftOp);
+      return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
+                                           shapeShiftOp.getExtents());
+    };
+
     // The embox/rebox and array_coor either have compatible
     // shape/slice at this point or shape/slice is null
     // in one of them but not in the other.
@@ -489,32 +515,90 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
       if (boxedShape) {
         if (op.getSlice()) {
           if (!boxedSlice) {
-            // %0 = fir.rebox %arg(%shape)
-            // %1 = fir.array_coor %0 [%slice] %idx
-            // Both the slice indices and %idx are 1-based, so the rebox
-            // may be pulled in as:
-            // %1 = fir.array_coor %arg [%slice] %idx
-            boxedShape = nullptr;
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Both the slice indices and %idx are 1-based, so the rebox
+              // may be pulled in as:
+              // %1 = fir.array_coor %arg [%slice] %idx
+              boxedShape = nullptr;
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Pull in as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              boxedShape = getShapeFromShapeShift(boxedShape);
+              if (!boxedShape)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
           } else {
-            // %0 = fir.rebox %arg(%shape) [%slice]
-            // %1 = fir.array_coor %0 [%slice] %idx
-            // I believe this FIR may only be valid if the shape specifies
-            // that all lower bounds are 1s and the slice's start indices
-            // are all 1s.
-            // We could pull in the rebox as:
-            // %1 = fir.array_coor %arg [%slice] %idx
-            // Do not do anything for the time being.
-            return mlir::failure();
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the shape specifies
+              // that all lower bounds are 1s and the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the rebox as:
+              // %1 = fir.array_coor %arg [%slice] %idx
+              // Do not do anything for the time being.
+              return mlir::failure();
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the embox as:
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              return mlir::failure();
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the shape specifies
+              // that all lower bounds are 1s and the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the embox as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
           }
         } else { // !op.getSlice()
           if (!boxedSlice) {
-            // %0 = fir.rebox %arg(%shape)
-            // %1 = fir.array_coor %0 %idx
-            // Pull in as:
-            // %1 = fir.array_coor %arg %idx
-            boxedShape = nullptr;
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg %idx
+              boxedShape = nullptr;
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) %idx
+              boxedShape = getShapeFromShapeShift(boxedShape);
+              if (!boxedShape)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
           } else {
-            // %0 = fir.rebox %arg(%shape) [%slice]
+            // %0 = fir.embox %arg(%shape) [%slice]
             // %1 = fir.array_coor %0 %idx
             // Pull in as:
             // %1 = fir.array_coor %arg(%shape) %[slice] %idx
@@ -530,6 +614,8 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           } else {
             // %0 = fir.rebox %arg [%slice]
             // %1 = fir.array_coor %0 [%slice] %idx
+            // This is a valid FIR iff the slice's lower bounds
+            // and strides are all 1s.
             // Pull in as:
             // %1 = fir.array_coor %arg [%slice] %idx
           }
@@ -552,24 +638,24 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         // Check if pulling in non-default shape is correct.
         if (op.getSlice()) {
           if (!boxedSlice) {
-            // %0 = fir.rebox %arg(%shape)
+            // %0 = fir.embox %arg(%shape)
             // %1 = fir.array_coor %0(%shape) [%slice] %idx
             // Pull in as:
             // %1 = fir.array_coor %arg(%shape) [%slice] %idx
           } else {
-            // %0 = fir.rebox %arg(%shape) [%slice]
+            // %0 = fir.embox %arg(%shape) [%slice]
             // %1 = fir.array_coor %0(%shape) [%slice] %idx
             // Pull in as:
             // %1 = fir.array_coor %arg(%shape) [%slice] %idx
           }
         } else { // !op.getSlice()
           if (!boxedSlice) {
-            // %0 = fir.rebox %arg(%shape)
+            // %0 = fir.embox %arg(%shape)
             // %1 = fir.array_coor %0(%shape) %idx
             // Pull in as:
             // %1 = fir.array_coor %arg(%shape) %idx
           } else {
-            // %0 = fir.rebox %arg(%shape) [%slice]
+            // %0 = fir.embox %arg(%shape) [%slice]
             // %1 = fir.array_coor %0(%shape) %idx
             // Cannot pull in without adjusting the array_coor indices.
             return mlir::failure();
@@ -630,6 +716,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
 
 void fir::ArrayCoorOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  // TODO: !fir.shape<1> operand may be removed from array_coor always.
   patterns.add<SimplifyArrayCoorOp>(context);
 }
 

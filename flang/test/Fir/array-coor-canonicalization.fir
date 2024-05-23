@@ -120,15 +120,54 @@ func.func @_QPtest4() {
   return
 }
 
-// CHECK-LABEL:   func.func @test5(
+// CHECK-LABEL:   func.func @test5_1(
+// CHECK-SAME:                       %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 9 : index
+// CHECK:           %[[VAL_3:.*]] = fir.slice %[[VAL_1]], %[[VAL_2]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]] {{\[}}%[[VAL_3]]] %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_4]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test5_1(%arg0: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c9 = arith.constant 9 : index
+  %sh = fir.shift %c10 : (index) -> !fir.shift<1>
+  %2 = fir.rebox %arg0(%sh) : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
+  %s = fir.slice %c1, %c9, %c1 : (index, index, index) -> !fir.slice<1>
+  %3 = fir.array_coor %2 [%s] %c1 : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test5_2(
 // CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
-// CHECK:           %[[VAL_3:.*]] = fir.slice %[[VAL_1]], %[[VAL_2]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
-// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]] {{\[}}%[[VAL_3]]] %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
-// CHECK:           return %[[VAL_4]] : !fir.ref<i32>
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.slice %[[VAL_1]], %[[VAL_2]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_5:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) {{\[}}%[[VAL_4]]] %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_5]] : !fir.ref<i32>
 // CHECK:         }
-func.func @test5(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+func.func @test5_2(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %s = fir.slice %c1, %c10, %c1 : (index, index, index) -> !fir.slice<1>
+  %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+  %3 = fir.array_coor %2 [%s] %c1 : (!fir.box<!fir.array<10xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test5_3(
+// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.slice %[[VAL_1]], %[[VAL_2]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_5:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) {{\[}}%[[VAL_4]]] %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_5]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test5_3(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %1 = fir.shape_shift %c10, %c10 : (index, index) -> !fir.shapeshift<1>
@@ -138,7 +177,50 @@ func.func @test5(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
   return %3 : !fir.ref<i32>
 }
 
-// CHECK-LABEL:   func.func @test6(
+// CHECK-LABEL:   func.func @test6_1(
+// CHECK-SAME:                       %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 9 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shift %[[VAL_1]] : (index) -> !fir.shift<1>
+// CHECK:           %[[VAL_4:.*]] = fir.slice %[[VAL_1]], %[[VAL_2]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_5:.*]] = fir.rebox %[[VAL_0]](%[[VAL_3]]) {{\[}}%[[VAL_4]]] : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_6:.*]] = fir.array_coor %[[VAL_5]] {{\[}}%[[VAL_4]]] %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_6]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test6_1(%arg0: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c9 = arith.constant 9 : index
+  %sh = fir.shift %c1 : (index) -> !fir.shift<1>
+  %s = fir.slice %c1, %c9, %c1 : (index, index, index) -> !fir.slice<1>
+  %2 = fir.rebox %arg0(%sh) [%s] : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.array_coor %2 [%s] %c1 : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test6_2(
+// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 19 : index
+// CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_5:.*]] = fir.slice %[[VAL_2]], %[[VAL_3]], %[[VAL_1]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_0]](%[[VAL_4]]) {{\[}}%[[VAL_5]]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<10xi32>>
+// CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] {{\[}}%[[VAL_5]]] %[[VAL_1]] : (!fir.box<!fir.array<10xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_7]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test6_2(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c19 = arith.constant 19 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %s = fir.slice %c10, %c19, %c1 : (index, index, index) -> !fir.slice<1>
+  %2 = fir.embox %arg0(%1) [%s] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<10xi32>>
+  %3 = fir.array_coor %2 [%s] %c1 : (!fir.box<!fir.array<10xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test6_3(
 // CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
@@ -149,7 +231,7 @@ func.func @test5(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] {{\[}}%[[VAL_5]]] %[[VAL_1]] : (!fir.box<!fir.array<10xi32>>, !fir.slice<1>, index) -> !fir.ref<i32>
 // CHECK:           return %[[VAL_7]] : !fir.ref<i32>
 // CHECK:         }
-func.func @test6(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+func.func @test6_3(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %c19 = arith.constant 19 : index
@@ -160,13 +242,48 @@ func.func @test6(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
   return %3 : !fir.ref<i32>
 }
 
-// CHECK-LABEL:   func.func @test7(
-// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+// CHECK-LABEL:   func.func @test7_1(
+// CHECK-SAME:                       %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = fir.array_coor %[[VAL_0]] %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+// CHECK:           %[[VAL_2:.*]] = fir.array_coor %[[VAL_0]] %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           return %[[VAL_2]] : !fir.ref<i32>
 // CHECK:         }
-func.func @test7(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+func.func @test7_1(%arg0: !fir.box<!fir.array<?xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c9 = arith.constant 9 : index
+  %sh = fir.shift %c10 : (index) -> !fir.shift<1>
+  %2 = fir.rebox %arg0(%sh) : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test7_2(
+// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_4]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test7_2(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+  %3 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+  return %3 : !fir.ref<i32>
+}
+
+// CHECK-LABEL:   func.func @test7_3(
+// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           return %[[VAL_4]] : !fir.ref<i32>
+// CHECK:         }
+func.func @test7_3(%arg0: !fir.ref<!fir.array<10xi32>>) -> !fir.ref<i32> {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %1 = fir.shape_shift %c10, %c10 : (index, index) -> !fir.shapeshift<1>
