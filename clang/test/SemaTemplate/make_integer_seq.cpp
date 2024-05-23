@@ -61,7 +61,7 @@ using test2 = B<int, 1>;
 
 template <template <class T, T...> class S, class T, int N> struct C {
   using test3 = __make_integer_seq<S, T, N>;
-//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:63:3, col:43> col:9 test3 '__make_integer_seq<S, T, N>':'__make_integer_seq<type-parameter-0-1, N>'
+//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:63:3, col:43> col:9 test3 '__make_integer_seq<S, T, N>':'__make_integer_seq<template-parameter-0-0, type-parameter-0-1, N>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<S, T, N>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<S, T, N>' sugar dependent alias __make_integer_seq
 // CHECK-NEXT:       |-TemplateArgument template S
@@ -71,7 +71,7 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:       |-TemplateArgument expr
 // CHECK-NEXT:       | `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:42> 'T' <Dependent>
 // CHECK-NEXT:       |   `-DeclRefExpr 0x{{[0-9A-Fa-f]+}} <col:42> 'int' NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} 'N' 'int'
-// CHECK-NEXT:       `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<type-parameter-0-1, N>' dependent __make_integer_seq
+// CHECK-NEXT:       `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<template-parameter-0-0, type-parameter-0-1, N>' dependent __make_integer_seq
 // CHECK-NEXT:         |-TemplateArgument template
 // CHECK-NEXT:         |-TemplateArgument type 'type-parameter-0-1'
 // CHECK-NEXT:         | `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-1' dependent depth 0 index 1
