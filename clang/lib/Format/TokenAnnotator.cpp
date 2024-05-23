@@ -1428,12 +1428,9 @@ private:
         // the colon are passed as macro arguments.
         Tok->setType(TT_ObjCMethodExpr);
       } else if (Contexts.back().ContextKind == tok::l_paren &&
-                 !Line.InPragmaDirective) {
-        if (Style.isTableGen() && Contexts.back().IsTableGenDAGArg) {
-          Tok->setType(TT_TableGenDAGArgListColon);
-          break;
-        }
-        Tok->setType(TT_InlineASMColon);
+                 !Line.InPragmaDirective && Style.isTableGen() &&
+                 Contexts.back().IsTableGenDAGArg) {
+        Tok->setType(TT_TableGenDAGArgListColon);
       }
       break;
     case tok::pipe:
