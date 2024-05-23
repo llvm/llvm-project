@@ -43,16 +43,12 @@ body:             |
     %2:gpr = COPY $x11
     %1:gpr = COPY $x10
     %3:vr = COPY $v8
-    %pt5:vr = IMPLICIT_DEF
-    %17:vr = PseudoVSLL_VI_M1 %pt5, %3, 5, 1, 6 /* e64 */, 0
+    %17:vr = PseudoVSLL_VI_M1 undef $noreg, %3, 5, 1, 6 /* e64 */, 0
     %22:vr = PseudoVMSNE_VI_M1 %3, 0, 1, 6 /* e64 */
     $v0 = COPY %22
-    %26:vrnov0 = IMPLICIT_DEF
-    %25:vrnov0 = PseudoVMERGE_VIM_M1 %26, %17, -1, $v0, 1, 6 /* e64 */
-    %pt8:vr = IMPLICIT_DEF
+    %25:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %17, -1, $v0, 1, 6 /* e64 */
     %29:vr = PseudoVC_V_X_SE_M1 3, 31, %2, 1, 6 /* e64 */, implicit-def dead $vcix_state, implicit $vcix_state
-    %pt9:vr = IMPLICIT_DEF
-    %30:vr = PseudoVMV_V_I_M1 %pt9, 0, 1, 6 /* e64 */, 0
+    %30:vr = PseudoVMV_V_I_M1 undef $noreg, 0, 1, 6 /* e64 */, 0
     BGEU %1, $x0, %bb.2
 
   bb.1.entry:

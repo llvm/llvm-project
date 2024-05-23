@@ -115,7 +115,6 @@ class InlineElementalsPass
     : public hlfir::impl::InlineElementalsBase<InlineElementalsPass> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
@@ -126,14 +125,11 @@ public:
     patterns.insert<InlineElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func->getLoc(), "failure in HLFIR elemental inlining");
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
+                      "failure in HLFIR elemental inlining");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createInlineElementalsPass() {
-  return std::make_unique<InlineElementalsPass>();
-}

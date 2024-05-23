@@ -538,9 +538,19 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     Out << "nullptr";
     break;
 
-  case Template:
-    getAsTemplate().print(Out, Policy, TemplateName::Qualified::Fully);
+  case Template: {
+    TemplateName TN = getAsTemplate();
+    if (const auto *TD = TN.getAsTemplateDecl();
+        TD && TD->getDeclName().isEmpty()) {
+      assert(isa<TemplateTemplateParmDecl>(TD) &&
+             "Unexpected anonymous template");
+      const auto *TTP = cast<TemplateTemplateParmDecl>(TD);
+      Out << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
+    } else {
+      TN.print(Out, Policy, TemplateName::Qualified::Fully);
+    }
     break;
+  }
 
   case TemplateExpansion:
     getAsTemplateOrTemplatePattern().print(Out, Policy);

@@ -24,17 +24,17 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 }
 
-static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
-  return mlir::LLVM::DIBasicTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_base_type, "void", 32, 1);
-}
-
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
                                            mlir::StringAttr name,
                                            unsigned bitSize,
                                            unsigned decoding) {
   return mlir::LLVM::DIBasicTypeAttr::get(
       context, llvm::dwarf::DW_TAG_base_type, name, bitSize, decoding);
+}
+
+static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
+  return genBasicType(context, mlir::StringAttr::get(context, "integer"), 32,
+                      llvm::dwarf::DW_ATE_signed);
 }
 
 mlir::LLVM::DITypeAttr
@@ -45,14 +45,30 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   if (Ty.isInteger()) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_signed);
-  } else if (Ty.isa<mlir::FloatType>() || Ty.isa<fir::RealType>()) {
+  } else if (mlir::isa<mlir::FloatType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "real"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
-  } else if (auto logTy = Ty.dyn_cast_or_null<fir::LogicalType>()) {
+  } else if (auto realTy = mlir::dyn_cast_or_null<fir::RealType>(Ty)) {
+    return genBasicType(context, mlir::StringAttr::get(context, "real"),
+                        kindMapping.getRealBitsize(realTy.getFKind()),
+                        llvm::dwarf::DW_ATE_float);
+  } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(Ty)) {
     return genBasicType(context,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
                         kindMapping.getLogicalBitsize(logTy.getFKind()),
                         llvm::dwarf::DW_ATE_boolean);
+  } else if (fir::isa_complex(Ty)) {
+    unsigned bitWidth;
+    if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
+      auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+      bitWidth = floatTy.getWidth();
+    } else if (auto cplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(Ty)) {
+      bitWidth = kindMapping.getRealBitsize(cplxTy.getFKind());
+    } else {
+      llvm_unreachable("Unhandled complex type");
+    }
+    return genBasicType(context, mlir::StringAttr::get(context, "complex"),
+                        bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
     // placeholder type to allow us to test supported bits.

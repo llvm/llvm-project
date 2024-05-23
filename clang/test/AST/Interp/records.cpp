@@ -999,10 +999,9 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}}
+      return x.a;
     }
-    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}}
+    static_assert(foo(S()) == 0, "");
   };
 #endif
 }
@@ -1336,8 +1335,6 @@ namespace UnnamedBitFields {
   static_assert(a.c == 'a', "");
 }
 
-/// FIXME: This still doesn't work in the new interpreter because
-/// we lack type information for dummy pointers.
 namespace VirtualBases {
   /// This used to crash.
   namespace One {
@@ -1347,7 +1344,7 @@ namespace VirtualBases {
     };
     class B : public virtual A {
     public:
-      int getX() { return x; } // ref-note {{declared here}}
+      int getX() { return x; } // both-note {{declared here}}
     };
 
     class DV : virtual public B{};
@@ -1355,7 +1352,7 @@ namespace VirtualBases {
     void foo() {
       DV b;
       int a[b.getX()]; // both-warning {{variable length arrays}} \
-                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+                       // both-note {{non-constexpr function 'getX' cannot be used}}
     }
   }
 
@@ -1425,6 +1422,11 @@ namespace ZeroInit {
   };
   constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
   static_assert(s3d.n == 0, "");
+
+  struct P {
+    int a = 10;
+  };
+  static_assert(P().a == 10, "");
 }
 
 namespace {
@@ -1439,4 +1441,29 @@ namespace {
   constexpr auto waldo = "abc"_c;
   static_assert(waldo == 4, "");
 #endif
+}
+
+
+namespace TemporaryWithInvalidDestructor {
+#if __cplusplus >= 202002L
+  struct A {
+    bool a = true;
+    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
+      throw; // both-note 2{{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+#endif
+}
+
+namespace IgnoredCtorWithZeroInit {
+  struct S {
+    int a;
+  };
+
+  bool get_status() {
+    return (S(), true);
+  }
 }

@@ -636,8 +636,8 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = [
-        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/ARMTargetDefEmitter.cpp",
+        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
@@ -1125,6 +1125,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BitstreamReader",
+        ":BitstreamWriter",
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -2421,6 +2423,7 @@ gentbl(
         strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":BinaryFormat",
+            ":CodeGen",
             ":CodeGenTypes",
             ":Core",
             ":DebugInfoCodeView",
@@ -4049,7 +4052,7 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs =[
+    srcs = [
         "tools/llvm-mca/llvm-mca.cpp",
     ],
     copts = llvm_copts,

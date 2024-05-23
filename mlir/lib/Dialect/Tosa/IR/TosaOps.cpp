@@ -139,7 +139,7 @@ void TosaDialect::initialize() {
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
       mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
-      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, DivOp,
+      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp,
       LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
       LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
       BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp, LogOp, LogicalNotOp,
@@ -220,7 +220,8 @@ static bool hasZeroDimension(ShapedType shapedType) {
   return false;
 }
 
-template <typename T> static LogicalResult verifyConvOp(T op) {
+template <typename T>
+static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
   auto weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
@@ -962,7 +963,7 @@ mlir::LogicalResult tosa::ReshapeOp::verify() {
     return emitOpError() << "tensor has a dimension with size zero. Each "
                             "dimension of a tensor must have size >= 1";
 
-  if ((int64_t) getNewShape().size() != outputType.getRank())
+  if ((int64_t)getNewShape().size() != outputType.getRank())
     return emitOpError() << "new shape does not match result rank";
 
   for (auto [newShapeDim, outputShapeDim] :
@@ -1127,7 +1128,7 @@ LogicalResult TransposeOp::reifyResultShapes(
     return failure();
 
   Value input = getInput1();
-  auto inputType = input.getType().cast<TensorType>();
+  auto inputType = cast<TensorType>(input.getType());
 
   SmallVector<OpFoldResult> returnedDims(inputType.getRank());
   for (auto dim : transposePerms) {
@@ -1380,12 +1381,12 @@ NARY_SHAPE_INFER(tosa::CeilOp)
 NARY_SHAPE_INFER(tosa::ClampOp)
 NARY_SHAPE_INFER(tosa::ClzOp)
 NARY_SHAPE_INFER(tosa::CosOp)
-NARY_SHAPE_INFER(tosa::DivOp)
 NARY_SHAPE_INFER(tosa::ExpOp)
 NARY_SHAPE_INFER(tosa::FloorOp)
 NARY_SHAPE_INFER(tosa::GreaterEqualOp)
 NARY_SHAPE_INFER(tosa::GreaterOp)
 NARY_SHAPE_INFER(tosa::IdentityOp)
+NARY_SHAPE_INFER(tosa::IntDivOp)
 NARY_SHAPE_INFER(tosa::LogOp)
 NARY_SHAPE_INFER(tosa::LogicalAndOp)
 NARY_SHAPE_INFER(tosa::LogicalLeftShiftOp)

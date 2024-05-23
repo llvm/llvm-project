@@ -157,7 +157,7 @@
 
 // FIXME: This case leaves nnan and ninf. That seems wrong!
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,ERRNO,NOROUNDING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
@@ -209,7 +209,7 @@
 
 // RUN: %clang -### -funsafe-math-optimizations -fno-unsafe-math-optimizations \
 // RUN:     -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NO-NSZ,NO-AFN %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,ARCP,NSZ,AFN %s
 
@@ -224,9 +224,8 @@
 // RUN: %clang -### -ffast-math -ftrapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,ARCP,NSZ,AFN,TRAPPING %s
 
-// FIXME: -fno-unsafe-math-optimizations shouldn't imply trapping math
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NO-ARCP,NO-NSZ,NO-AFN,TRAPPING %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 
 // Reassociate is allowed because it does not require reciprocal-math.
 
