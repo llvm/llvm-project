@@ -7840,8 +7840,9 @@ static bool printLLVMOMPOFFLOADNoteLLVMStyle(uint32_t NoteType,
 
 static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
   W.printNumber("Page Size", Note.PageSize);
+  ListScope D(W, "Mappings");
   for (const CoreFileMapping &Mapping : Note.Mappings) {
-    ListScope D(W, "Mapping");
+    DictScope D(W);
     W.printHex("Start", Mapping.Start);
     W.printHex("End", Mapping.End);
     W.printHex("Offset", Mapping.Offset);
