@@ -338,10 +338,8 @@ def NS_NOp : NS_Op<"op_with_properties", []> {
   let arguments = (ins Property<"unsigned">:$value);
 }
 
-// Check that `getDiscardableAttrDictionary()` is used with properties.
-
 // DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) :
-// DEFS-SAME: odsAttrs(op->getDiscardableAttrDictionary())
+// DEFS-SAME: odsAttrs(op->getRawDictionaryAttrs())
 // DEFS-SAME: odsOpName(op->getName())
 // DEFS-SAME: properties(op.getProperties())
 // DEFS-SAME: odsRegions(op->getRegions())
