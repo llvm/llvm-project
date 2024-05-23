@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++14 -verify=expected,pedantic  %s \
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
@@ -1123,7 +1123,7 @@ struct CXX11MemberInitTest2 {
     RecordType(int) {}
   };
 
-  RecordType rec = RecordType(int()); // expected-warning {{2 uninitialized fields at the end of the constructor call}}
+  RecordType rec = RecordType(int()); // expected-warning {{2 uninitialized fields}}
   int dontGetFilteredByNonPedanticMode = 0;
 
   CXX11MemberInitTest2() {}

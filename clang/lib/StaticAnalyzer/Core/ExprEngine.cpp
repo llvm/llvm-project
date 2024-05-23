@@ -1964,11 +1964,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
       Bldr.takeNodes(Pred);
-      ExplodedNodeSet CheckedSet;
-      getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, S, *this);
+      ExplodedNodeSet PreVisit;
+      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(CheckedSet, Tmp, *currBldrCtx);
+      StmtNodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
 
       bool HasRewrittenInit = false;
       const Expr *ArgE = nullptr;
@@ -1982,12 +1982,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         llvm_unreachable("unknown constant wrapper kind");
 
       if (HasRewrittenInit) {
-        for (auto *I : CheckedSet) {
-          ProgramStateRef state = (*I).getState();
-          const LocationContext *LCtx = (*I).getLocationContext();
-          SVal Val = state->getSVal(ArgE, LCtx);
-          state = state->BindExpr(S, LCtx, Val);
-          Bldr2.generateNode(S, I, state);
+        for (auto *N : PreVisit) {
+          ProgramStateRef state = N->getState();
+          const LocationContext *LCtx = N->getLocationContext();
+          state = state->BindExpr(S, LCtx, state->getSVal(ArgE, LCtx));
+          Bldr2.generateNode(S, N, state);
         }
       } else {
         // If it's not rewritten, the contents of these expressions are not
@@ -2000,13 +1999,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         }
 
         std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
-        if (!ConstantVal)
-          ConstantVal = UnknownVal();
-
         const LocationContext *LCtx = Pred->getLocationContext();
-        for (auto *I : CheckedSet) {
+        for (auto *I : PreVisit) {
           ProgramStateRef State = I->getState();
-          State = State->BindExpr(S, LCtx, *ConstantVal);
+          State = State->BindExpr(S, LCtx, ConstantVal.value_or(UnknownVal()));
           if (IsTemporary)
             State = createTemporaryRegionIfNeeded(State, LCtx, cast<Expr>(S),
                                                   cast<Expr>(S));
