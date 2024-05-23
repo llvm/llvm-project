@@ -135,10 +135,8 @@ module m6d
 end
 !Expect: m6d.mod
 !module m6d
-! use m6a,only:t1
 ! use m6a,only:t2=>t1
-! private::t1
-! type(t2),parameter::p=t1()
+! type(t2),parameter::p=t2()
 !end
 
 module m6e
@@ -177,4 +175,50 @@ end
 !module m7b
 ! use m7a,only:x
 ! private::x
+!end
+
+module m8a
+  private foo
+  type t
+   contains
+    procedure, nopass :: foo
+  end type
+ contains
+  pure integer function foo(n)
+    integer, intent(in) :: n
+    foo = n
+  end
+end
+!Expect: m8a.mod
+!module m8a
+!type::t
+!contains
+!procedure,nopass::foo
+!end type
+!private::foo
+!contains
+!pure function foo(n)
+!integer(4),intent(in)::n
+!integer(4)::foo
+!end
+!end
+
+module m8b
+  use m8a
+ contains
+  subroutine foo(x,a)
+    type(t), intent(in) :: x
+    real a(x%foo(10))
+  end
+end
+!Expect: m8b.mod
+!module m8b
+!use m8a,only:m8a$foo=>foo
+!use m8a,only:t
+!private::m8a$foo
+!contains
+!subroutine foo(x,a)
+!type(t),intent(in)::x
+!real(4)::a(1_8:int(m8a$foo(10_4),kind=8))
+!end
 !end
