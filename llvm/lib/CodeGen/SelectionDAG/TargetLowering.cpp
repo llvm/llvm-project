@@ -587,6 +587,10 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   if (VT.isVector())
     return false;
 
+  assert(Op.getOperand(0).getValueType().getScalarSizeInBits() == BitWidth &&
+         Op.getOperand(1).getValueType().getScalarSizeInBits() == BitWidth &&
+         "ShrinkDemandedOp only supports operands that have the same size!");
+
   // Don't do this if the node has another user, which may require the
   // full value.
   if (!Op.getNode()->hasOneUse())
@@ -1832,11 +1836,33 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // TODO: Can we merge this fold with the one below?
       // Try shrinking the operation as long as the shift amount will still be
       // in range.
-      if ((ShAmt < DemandedBits.getActiveBits()) &&
-          ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
-        return true;
+      if (ShAmt < DemandedBits.getActiveBits() && !VT.isVector() &&
+          Op.getNode()->hasOneUse()) {
+        // Search for the smallest integer type with free casts to and from
+        // Op's type. For expedience, just check power-of-2 integer types.
+        unsigned DemandedSize = DemandedBits.getActiveBits();
+        for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
+             SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
+          EVT SmallVT = EVT::getIntegerVT(*TLO.DAG.getContext(), SmallVTBits);
+          if (isNarrowingProfitable(VT, SmallVT) &&
+              isTypeDesirableForOp(ISD::SHL, SmallVT) &&
+              isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT) &&
+              (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, SmallVT))) {
+            assert(DemandedSize <= SmallVTBits &&
+                   "Narrowed below demanded bits?");
+            // We found a type with free casts.
+            SDValue NarrowShl = TLO.DAG.getNode(
+                ISD::SHL, dl, SmallVT,
+                TLO.DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(0)),
+                TLO.DAG.getShiftAmountConstant(ShAmt, SmallVT, dl));
+            return TLO.CombineTo(
+                Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, NarrowShl));
+          }
+        }
+      }
 
       // Narrow shift to lower half - similar to ShrinkDemandedOp.
       // (shl i64:x, K) -> (i64 zero_extend (shl (i32 (trunc i64:x)), K))
@@ -1907,11 +1933,6 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     EVT ShiftVT = Op1.getValueType();
-
-    // Try to match AVG patterns.
-    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
-                                        DemandedElts, Depth + 1))
-      return TLO.CombineTo(Op, AVG);
 
     KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
@@ -1994,6 +2015,12 @@ bool TargetLowering::SimplifyDemandedBits(
       // shift amounts.
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     }
+
+    // Try to match AVG patterns (after shift simplification).
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
+                                        DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
+
     break;
   }
   case ISD::SRA: {
@@ -2014,11 +2041,6 @@ bool TargetLowering::SimplifyDemandedBits(
     // the shift amount is >= the size of the datatype, which is undefined.
     if (DemandedBits.isOne())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl, VT, Op0, Op1));
-
-    // Try to match AVG patterns.
-    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
-                                        DemandedElts, Depth + 1))
-      return TLO.CombineTo(Op, AVG);
 
     KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
@@ -2106,6 +2128,12 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
     }
+
+    // Try to match AVG patterns (after shift simplification).
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
+                                        DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
+
     break;
   }
   case ISD::FSHL:
@@ -2786,10 +2814,16 @@ bool TargetLowering::SimplifyDemandedBits(
     unsigned DemandedBitsLZ = DemandedBits.countl_zero();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
     KnownBits KnownOp0, KnownOp1;
-    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, KnownOp0, TLO,
+    auto GetDemandedBitsLHSMask = [&](APInt Demanded,
+                                      const KnownBits &KnownRHS) {
+      if (Op.getOpcode() == ISD::MUL)
+        Demanded.clearHighBits(KnownRHS.countMinTrailingZeros());
+      return Demanded;
+    };
+    if (SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
                              Depth + 1) ||
-        SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
-                             Depth + 1) ||
+        SimplifyDemandedBits(Op0, GetDemandedBitsLHSMask(LoMask, KnownOp1),
+                             DemandedElts, KnownOp0, TLO, Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
       if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
@@ -9194,11 +9228,21 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
 
-  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
-  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
   SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
+
+  // Branchless expansion iff cmp result is allbits:
+  // abds(lhs, rhs) -> sub(sgt(lhs, rhs), xor(sgt(lhs, rhs), sub(lhs, rhs)))
+  // abdu(lhs, rhs) -> sub(ugt(lhs, rhs), xor(ugt(lhs, rhs), sub(lhs, rhs)))
+  if (CCVT == VT && getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+    SDValue Diff = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Diff, Cmp);
+    return DAG.getNode(ISD::SUB, dl, VT, Cmp, Xor);
+  }
+
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
 }

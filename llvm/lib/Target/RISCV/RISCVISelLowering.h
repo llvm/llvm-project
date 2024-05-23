@@ -264,8 +264,12 @@ enum NodeType : unsigned {
   SSUBSAT_VL,
   USUBSAT_VL,
 
+  // Averaging adds of signed integers.
+  AVGFLOORS_VL,
   // Averaging adds of unsigned integers.
   AVGFLOORU_VL,
+  // Rounding averaging adds of signed integers.
+  AVGCEILS_VL,
   // Rounding averaging adds of unsigned integers.
   AVGCEILU_VL,
 

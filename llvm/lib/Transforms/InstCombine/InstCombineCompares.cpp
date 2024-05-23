@@ -214,6 +214,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     // Find out if the comparison would be true or false for the i'th element.
     Constant *C = ConstantFoldCompareInstOperands(ICI.getPredicate(), Elt,
                                                   CompareRHS, DL, &TLI);
+    if (!C)
+      return nullptr;
+
     // If the result is undef for this element, ignore it.
     if (isa<UndefValue>(C)) {
       // Extend range state machines to cover this element in case there is an
