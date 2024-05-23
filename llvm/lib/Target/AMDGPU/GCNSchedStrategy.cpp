@@ -648,7 +648,7 @@ GCNScheduleDAGMILive::getBBLiveOutMap() const {
   for (; I != E; I++)
     BBEnders.push_back(getLastMIForRegion(I->first, I->second));
 
-  return getLiveRegMap(BBEnders, /*After= */true, *LIS);
+  return getLiveRegMap(BBEnders, /*After= */ true, *LIS);
 }
 
 void GCNScheduleDAGMILive::finalizeSchedule() {
