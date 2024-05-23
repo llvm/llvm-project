@@ -158,9 +158,9 @@ svfloat16_t test_svdup_neonq_f16(float16x8_t n) {
   return SVE_ACLE_FUNC(svdup_neonq, _f16, , )(n);
 }
 
-// CHECK-NEXT  %0 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %n, i64 0)
-// CHECK-NEXT  %1 = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %0, i64 0)
-// CHECK-NEXT  ret <vscale x 4 x float> %1
+// CHECK-NEXT: %0 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %n, i64 0)
+// CHECK-NEXT: %1 = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %0, i64 0)
+// CHECK-NEXT: ret <vscale x 4 x float> %1
 // CHECK-LABEL: @test_svdup_neonq_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> [[N:%.*]], i64 0)

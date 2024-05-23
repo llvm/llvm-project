@@ -210,7 +210,7 @@ template void f<M128{1, 2, 3, 4}>();
 template void f<M128D{1, 2}>();
 // FIXME: We define __m128i as a vector of long long, whereas MSVC appears to
 // mangle it as if it were a vector of char.
-// MSABI-FIXME: define {{.*}} @"??$f@$2UM128I@@2T__m128i@@3D00@01@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@@@@@@YAXXZ"
+// COM: MSABI: define {{.*}} @"??$f@$2UM128I@@2T__m128i@@3D00@01@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@0A@@@@@@@YAXXZ"
 // MSABI: define {{.*}} @"??$f@$2UM128I@@2T__m128i@@3_J00@01@@@@@@YAXXZ"
 template void f<M128I{1, 2}>();
 

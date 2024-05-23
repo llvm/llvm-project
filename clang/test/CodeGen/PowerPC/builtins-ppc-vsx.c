@@ -2300,9 +2300,9 @@ vector double xxsldwi_should_not_assert(vector double a, vector double b) {
 // CHECK-NEXT:  bitcast <4 x i32> %{{[0-9]+}} to <2 x double>
 
 // CHECK-LE:  bitcast <2 x double> %{{[0-9]+}} to <4 x i32>
-// CHECK-NEXT-LE:  bitcast <2 x double> %{{[0-9]+}} to <4 x i32>
-// CHECK-NEXT-LE:  shufflevector <4 x i32> %{{[0-9]+}}, <4 x i32> %{{[0-9]+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-NEXT-LE:  bitcast <4 x i32> %{{[0-9]+}} to <2 x double>
+// CHECK-LE-NEXT:  bitcast <2 x double> %{{[0-9]+}} to <4 x i32>
+// CHECK-LE-NEXT:  shufflevector <4 x i32> %{{[0-9]+}}, <4 x i32> %{{[0-9]+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-LE-NEXT:  bitcast <4 x i32> %{{[0-9]+}} to <2 x double>
 }
 
 void test_vector_cpsgn_float(vector float a, vector float b) {

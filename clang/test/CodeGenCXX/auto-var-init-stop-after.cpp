@@ -33,7 +33,7 @@ int foo(unsigned n) {
   // PATTERN-STOP-AFTER-2-ARRAY-NOT:          vla-init.loop:
   // PATTERN-STOP-AFTER-3-VLA:                vla-init.loop:
   // PATTERN-STOP-AFTER-3-VLA-NEXT:           %vla.cur = phi ptr [ %vla, %vla-setup.loop ], [ %vla.next, %vla-init.loop ]
-  // PATTERN-STOP-AFTER-3-VLA-NEXT-NEXT:      call void @llvm.memcpy.p0.p0.i64(ptr align 8 %vla.cur, ptr align 4 @__const._Z3fooj.vla, i64 8, i1 false)
+  // PATTERN-STOP-AFTER-3-VLA-NEXT:      call void @llvm.memcpy.p0.p0.i64(ptr align 8 %vla.cur, ptr align 4 @__const._Z3fooj.vla, i64 8, i1 false)
   // PATTERN-STOP-AFTER-3-VLA-NOT:            store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %p, align 8
   // PATTERN-STOP-AFTER-4-POINTER:            store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %p, align 8
   // PATTERN-STOP-AFTER-4-POINTER-NOT:        call void @llvm.memset.p0.i64(ptr align 16 %5, i8 -86, i64 %mul, i1 false)

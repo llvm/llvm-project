@@ -18,13 +18,13 @@ void test_vdup_lane_u64(uint64x1_t a1) {
 }
 
 // uncomment out the following code once scalar_to_vector in the backend
-// works (for 64 bit?).  Change the "CHECK@" to "CHECK<colon>"
+// works (for 64 bit?). Remove COM<colon>
 /*
 float64x1_t test_vdup_n_f64(float64_t a1) {
-  // CHECK-LABEL@ test_vdup_n_f64
+  // COM: CHECK-LABEL: test_vdup_n_f64
   return vdup_n_f64(a1);
   // match that an element is inserted into part 0
-  // CHECK@ insertelement {{.*, i32 0 *$}}
+  // COM: CHECK: insertelement {{.*, i32 0 *$}}
 }
 */
 

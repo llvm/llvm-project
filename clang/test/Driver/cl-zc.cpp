@@ -61,7 +61,7 @@
 
 // RUN: %clang_cl /c -### /Zc:foobar -- %s 2>&1 | FileCheck -check-prefix=FOOBAR-ON %s
 // FOOBAR-ON: argument unused during compilation
-// RUN: %clang_cl /c -### /Zc:foobar- -- %s 2>&1 | FileCheck -check-prefix=FOOBAR-ON %s
+// RUN: %clang_cl /c -### /Zc:foobar- -- %s 2>&1 | FileCheck -check-prefix=FOOBAR-OFF %s
 // FOOBAR-OFF: argument unused during compilation
 
 // These are ignored if enabled, and warn if disabled.

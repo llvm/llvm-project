@@ -6,7 +6,7 @@
 
 // RUN: %clang -### --target=avr -mmcu=attiny13 --rtlib=libgcc --sysroot %S/Inputs/basic_avr_tree %s -mno-relax 2>&1 | FileCheck -check-prefix LINKC %s
 // LINKC: {{".*ld.*"}} {{.*}} {{"-L.*avr25/tiny-stack"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800060" "--start-group" {{.*}} "-lattiny13" {{.*}} "--end-group" "-mavr25"
-// LINLC-NOT: "--relax"
+// LINKC-NOT: "--relax"
 
 // RUN: %clang -### --target=avr -mmcu=attiny44 --rtlib=libgcc --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKD %s
 // LINKD: {{".*ld.*"}} {{.*}} {{"-L.*avr25"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800060" "--start-group" {{.*}} "-lattiny44" {{.*}} "--end-group" "--relax" "-mavr25"

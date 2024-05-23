@@ -127,7 +127,7 @@ svuint16_t test_svhadd_u16_m(svbool_t pg, svuint16_t op1, svuint16_t op2)
 //
 svuint32_t test_svhadd_u32_m(svbool_t pg, svuint32_t op1, svuint32_t op2)
 {
-  // CHECKA-LABEL: test_svhadd_u32_m
+  // CHECK-LABEL: test_svhadd_u32_m
   return SVE_ACLE_FUNC(svhadd,_u32,_m,)(pg, op1, op2);
 }
 
@@ -438,7 +438,7 @@ svuint16_t test_svhadd_u16_z(svbool_t pg, svuint16_t op1, svuint16_t op2)
 //
 svuint32_t test_svhadd_u32_z(svbool_t pg, svuint32_t op1, svuint32_t op2)
 {
-  // CHECKA-LABEL: test_svhadd_u32_z
+  // CHECK-LABEL: test_svhadd_u32_z
   return SVE_ACLE_FUNC(svhadd,_u32,_z,)(pg, op1, op2);
 }
 
@@ -753,7 +753,7 @@ svuint16_t test_svhadd_u16_x(svbool_t pg, svuint16_t op1, svuint16_t op2)
 //
 svuint32_t test_svhadd_u32_x(svbool_t pg, svuint32_t op1, svuint32_t op2)
 {
-  // CHECKA-LABEL: test_svhadd_u32_x
+  // CHECK-LABEL: test_svhadd_u32_x
   return SVE_ACLE_FUNC(svhadd,_u32,_x,)(pg, op1, op2);
 }
 

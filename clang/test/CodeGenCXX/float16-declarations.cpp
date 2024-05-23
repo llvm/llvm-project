@@ -130,8 +130,8 @@ int main(void) {
 
 
   long double cvtld = f2n;
-//CHECK-AARCh64-DAG: [[H2LD:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to fp128
-//CHECK-AARCh64-DAG: store fp128 [[H2LD]], ptr %{{.*}}, align 16
+//CHECK-AARCH64-DAG: [[H2LD:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to fp128
+//CHECK-AARCH64-DAG: store fp128 [[H2LD]], ptr %{{.*}}, align 16
 
   _Float16 f2h = 42.0f;
 //CHECK-DAG: store half 0xH5140, ptr %{{.*}}, align 2

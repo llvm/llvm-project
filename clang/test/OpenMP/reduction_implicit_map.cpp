@@ -34,7 +34,7 @@ int foo(int n) {
   ;
   return 0;
 }
-// CHECK-NOT @.offload_maptypes
+// CHECK-NOT: @.offload_maptypes
 #elif defined(DIAG)
 class S2 {
   mutable int a;

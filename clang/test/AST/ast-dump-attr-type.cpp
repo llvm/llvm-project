@@ -19,6 +19,6 @@ using Ty1 = decltype(y);
 // CHECK-NEXT:   |-DeclRefExpr 0x{{[^ ]*}} <col:22> '__attribute__((address_space(3))) int *' lvalue Var 0x{{[^ ]*}} 'y' '__attribute__((address_space(3))) int *' non_odr_use_unevaluated
 // CHECK-NEXT:     `-PointerType 0x{{[^ ]*}} '__attribute__((address_space(3))) int *'
 // CHECK-NEXT:       `-AttributedType 0x{{[^ ]*}} '__attribute__((address_space(3))) int' sugar
-// CHECK-NEXT          |-BuiltinType 0x{{[^ ]*}} 'int'
-// CHECK-NEXT          `-QualType 0x{{[^ ]*}} '__attribute__((address_space(3))) int' __attribute__((address_space(3)))
-// CHECK-NEXT            `-BuiltinType 0x{{[^ ]*}} 'int'
+// CHECK-NEXT:         |-BuiltinType 0x{{[^ ]*}} 'int'
+// CHECK-NEXT:         `-QualType 0x{{[^ ]*}} '__attribute__((address_space(3))) int' __attribute__((address_space(3)))
+// CHECK-NEXT:           `-BuiltinType 0x{{[^ ]*}} 'int'

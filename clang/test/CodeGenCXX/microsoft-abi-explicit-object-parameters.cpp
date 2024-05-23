@@ -65,6 +65,6 @@ void chain_test() {
 // CHECK: {{.*}} = alloca %struct.S2, align 4
 // CHECK: %call = call i32 @"?bar@T@@SA?AUS2@@_VAEBU1@H@Z"{{.*}}
 // CHECK: %coerce.dive = getelementptr inbounds nuw %struct.S2, {{.*}} %{{.*}}, i32 0, i32 0
-// CHECK  store i32 %call, ptr %coerce.dive, align 4
+// CHECK: store i32 %call, ptr %coerce.dive, align 4
 // CHECK: call void @"?foo@S2@@SAX_VAEBU1@H@Z"
 // CHECK: ret void

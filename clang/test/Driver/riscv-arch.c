@@ -539,4 +539,4 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32idzdinx -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-D-ZDINX-ER %s
 // RV32-D-ZDINX-ER: error: invalid arch name 'rv32idzdinx',
-// RV32-D-ZFINX-ER: 'f' and 'zfinx' extensions are incompatible
+// RV32-D-ZDINX-ER: 'f' and 'zfinx' extensions are incompatible

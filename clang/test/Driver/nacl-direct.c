@@ -39,7 +39,7 @@
 // CHECK-x86_64: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}lib"
 // CHECK-x86_64: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}usr{{/|\\\\}}lib"
 // CHECK-x86_64: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}x86_64-nacl"
-// CHECK-X86_64-NOT: -lpthread
+// CHECK-x86_64-NOT: -lpthread
 //
 // RUN: %clang -### %s \
 // RUN:     --target=armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \

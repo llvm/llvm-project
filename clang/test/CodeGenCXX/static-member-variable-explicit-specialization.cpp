@@ -23,7 +23,7 @@ extern "C" int foo();
 template<typename T> struct A { static int a; };
 template<typename T> int A<T>::a = foo();
 
-// ALLK-NOT: @_ZN1AIcE1aE
+// ALL-NOT: @_ZN1AIcE1aE
 template<> int A<char>::a;
 
 // ALL: @_ZN1AIbE1aE ={{.*}} global i32 10

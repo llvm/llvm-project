@@ -364,7 +364,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   bl_t b2 = b1;
   // COMMON: call {{(spir_func )?}}void @block_G_block_invoke(ptr addrspace(4) addrspacecast (ptr addrspace(1)
   // COMMON-SAME: [[BL_GLOBAL]]
-  // COOMON-SAME: to ptr addrspace(4)), ptr addrspace(3) null)
+  // COMMON-SAME: to ptr addrspace(4)), ptr addrspace(3) null)
   b2(0);
   // Uses global block literal [[BL_GLOBAL]] and block kernel [[INV_G_K]]. [[INV_G_K]] calls [[INV_G]].
   // COMMON: call {{(spir_func )?}}i32 @__get_kernel_preferred_work_group_size_multiple_impl(

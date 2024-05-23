@@ -72,8 +72,8 @@ T template_in_middle_by_host(T x) {
 
 // Implicit host device template indirectly used by device function only.
 // Emitted on device.
-// DEVICE-LABEL: define {{.*}}@_Z34template_indirectly_used_by_deviceIiET_S0_(
-// DEVICE:  ret i32 21
+// DEV-LABEL: define {{.*}}@_Z34template_indirectly_used_by_deviceIiET_S0_(
+// DEV:  ret i32 21
 template<typename T>
 T template_indirectly_used_by_device(T x) {
   return 21;
@@ -87,8 +87,8 @@ T template_in_middle_by_device(T x) {
 
 // Implicit host device template indirectly used by host device function only.
 // Emitted on host and device.
-// COMMON-LABEL: define {{.*}}@_Z39template_indirectly_used_by_host_deviceIiET_S0_(
-// COMMON:  ret i32 31
+// COMM-LABEL: define {{.*}}@_Z39template_indirectly_used_by_host_deviceIiET_S0_(
+// COMM:  ret i32 31
 template<typename T>
 T template_indirectly_used_by_host_device(T x) {
   return 31;

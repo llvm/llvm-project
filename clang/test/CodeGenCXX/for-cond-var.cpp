@@ -65,7 +65,7 @@ void PR49585() {
   // CHECK: [[cleanup_cont]]:
   // CHECK: br label %[[for_cond]]
 
-  // CHECK [[for_end]]:
+  // CHECK: [[for_end]]:
   // CHECK: ret void
 }
 
@@ -120,7 +120,7 @@ void PR49585_break() {
   // CHECK: [[cleanup_cont]]:
   // CHECK: br label %[[for_cond]]
 
-  // CHECK [[for_end]]:
+  // CHECK: [[for_end]]:
   // CHECK: ret void
 }
 

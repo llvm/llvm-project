@@ -109,5 +109,5 @@ void uses() {
   // DEMANGLED: call void @void dummy<wrapper5<double>{wrapper5<double>::'unnamed'{.RightName = wrapper5<double>::'unnamed'::'unnamed'{wrapper5<double>::'unnamed'::'unnamed'::'unnamed'{0x1.ec{{.*}}p+6}, 0x1.c8{{.*}}p+8}}}>()()
   dummy<wrapper6<double>{1}>();
   // CHECK: call void @_Z5dummyITnDaXtl8wrapper6IdEtlNS1_Ut_Edi9RightNametlNS2_Ut_Edi9RightNameLd3ff0000000000000EEEEEEvv
-  // DEMANGELD: call void @void dummy<wrapper6<double>{wrapper6<double>::'unnamed'{.RightName = wrapper6<double>::'unnamed'::'unnamed'{.RightName = 0x1{{.*}}p+0}}}>()()   
+  // DEMANGLED: call void @void dummy<wrapper6<double>{wrapper6<double>::'unnamed'{.RightName = wrapper6<double>::'unnamed'::'unnamed'{.RightName = 0x1{{.*}}p+0}}}>()()   
 }

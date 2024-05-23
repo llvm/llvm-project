@@ -31,8 +31,8 @@ int as_fastcall() { return func_as_ptr(f_fastcall); }
 // disambiguate it from the member pointer case below where it shouldn't be
 // mangled.
 //int as_thiscall() { return func_as_ptr(f_thiscall); }
-// CHECKX: define dso_local i32 @_Z11as_thiscallv()
-// CHECKX:   call i32 @_ZL11func_as_ptrIPU8thiscallFviiEEiT_(ptr @_Z10f_thiscallii)
+// COM: CHECK: define dso_local i32 @_Z11as_thiscallv()
+// COM: CHECK:   call i32 @_ZL11func_as_ptrIPU8thiscallFviiEEiT_(ptr @_Z10f_thiscallii)
 
 // CHECK: define dso_local void @_Z11funcRefTypeRU8fastcallFviiE(ptr noundef nonnull %fr)
 void funcRefType(void(__attribute__((fastcall)) & fr)(int, int)) {

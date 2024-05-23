@@ -54,8 +54,8 @@ void foo(void) {
 // CHECK: ret void
 
 // CHECK: define internal void @foo.omp_outlined.3(
-// NO-CHECK: call void @__kmpc_for_static_init
-// NO-CHECK: call void @__kmpc_for_static_fini
+// CHECK-NOT: call void @__kmpc_for_static_init
+// CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
 // CHECK: define internal void @foo.omp_outlined.4(
@@ -64,8 +64,8 @@ void foo(void) {
 // CHECK: ret void
 
 // CHECK: define internal void @foo.omp_outlined.5(
-// NO-CHECK: call void @__kmpc_for_static_init
-// NO-CHECK: call void @__kmpc_for_static_fini
+// CHECK-NOT: call void @__kmpc_for_static_init
+// CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
 #endif

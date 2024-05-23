@@ -104,8 +104,8 @@ T foo(T targ, U uarg) {
 // CHECK:      int arr[100][100];
 // CHECK-NEXT: #pragma omp target update to(arr[2][0:1:2])
 // CHECK-NEXT: #pragma omp target update from(arr[2][0:1:2])
-// OMP5-NEXT: #pragma omp target update to(present: arr[2][0:1:2])
-// OMP5-NEXT: #pragma omp target update from(present: arr[2][0:1:2], a)
+// OMP51-NEXT: #pragma omp target update to(present: arr[2][0:1:2])
+// OMP51-NEXT: #pragma omp target update from(present: arr[2][0:1:2], a)
 
 int main(int argc, char **argv) {
   static int a;
@@ -125,9 +125,9 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target update from(argv[2][0:1:2])
 #ifdef OMP51
 #pragma omp target update to(present: argv[2][0:1:2])
-// OMP5-NEXT: #pragma omp target update to(present: arr[2][0:1:2])
+// OMP51-NEXT: #pragma omp target update to(present: arr[2][0:1:2])
 #pragma omp target update from(argv[2][0:1:2], a)
-// OMP5-NEXT: #pragma omp target update from(present: arr[2][0:1:2], a)
+// OMP51-NEXT: #pragma omp target update from(present: arr[2][0:1:2], a)
 #endif
 
 float marr[10][10][10];

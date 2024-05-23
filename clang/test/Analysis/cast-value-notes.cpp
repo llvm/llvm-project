@@ -77,8 +77,8 @@ void evalReferences(const Shape &S) {
   // expected-note@-2 {{Dereference of null pointer}}
   // expected-warning@-3 {{Dereference of null pointer}}
   clang_analyzer_printState();
-  // XX86-CHECK:      "dynamic_types": [
-  // XX86-CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const class clang::Circle &", "sub_classable": true }
+  // X86-CHECK:      "dynamic_types": [
+  // X86-CHECK-NEXT:   { "region": "SymRegion{reg_$0<const Shape & S>}", "dyn_type": "const class clang::Circle &", "sub_classable": true }
   (void)C;
 }
 #if defined(SUPPRESSED)

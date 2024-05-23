@@ -15,7 +15,7 @@
 // RUN:   -march=rv32imac -mabi=ilp32 \
 // RUN:   | FileCheck -check-prefix=GCC-MULTI-LIB-REUSE-RV32IMAC-ILP32 %s
 // GCC-MULTI-LIB-REUSE-RV32IMAC-ILP32: rv32imac/ilp32
-// GCC-MULTI-LIB-REUSE-RV32IMAC-ILP32--NOT: {{^.+$}}
+// GCC-MULTI-LIB-REUSE-RV32IMAC-ILP32-NOT: {{^.+$}}
 
 // RUN: %clang %s \
 // RUN:   -target riscv64-unknown-elf \

@@ -51,8 +51,8 @@ namespace test0 {
 
 // CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_
 // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_
-// CHECK-LABEL-O1: define linkonce_odr hidden void @__copy_helper_block_
-// CHECK-LABEL-O1: define linkonce_odr hidden void @__destroy_helper_block_
+// CHECK-O1-LABEL: define linkonce_odr hidden void @__copy_helper_block_
+// CHECK-O1-LABEL: define linkonce_odr hidden void @__destroy_helper_block_
 
 namespace test1 {
 

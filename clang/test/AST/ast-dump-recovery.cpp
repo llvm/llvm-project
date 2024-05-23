@@ -200,7 +200,7 @@ void InvalidInitalizer(int x) {
   // CHECK:     `-VarDecl {{.*}} a3 'Bar'
   // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-InitListExpr
-  // CHECK-NEDT:   `-DeclRefExpr {{.*}} 'x'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'x'
   Bar a3{x};
   // CHECK:     `-VarDecl {{.*}} a4 'Bar'
   // CHECK-NEXT: `-ParenListExpr {{.*}} 'NULL TYPE' contains-errors

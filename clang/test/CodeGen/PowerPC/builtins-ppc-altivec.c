@@ -535,7 +535,7 @@ void test1() {
 
   res_vi  = vec_and(vbi, vi);
 // CHECK: and <4 x i32>
-// CHECK-le: and <4 x i32>
+// CHECK-LE: and <4 x i32>
 
   res_vi  = vec_and(vi, vbi);
 // CHECK: and <4 x i32>

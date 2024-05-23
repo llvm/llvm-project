@@ -395,8 +395,8 @@ void compound2() {
 }
 
 // CXX98-NOT:  mustprogress
-// CXX11    :  mustprogress
-// FINITE   :  mustprogress
+// CXX11:  mustprogress
+// FINITE:  mustprogress
 // CHECK-LABEL: @_Z5Falsev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body

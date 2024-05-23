@@ -215,9 +215,9 @@
 // RUN:   -T custom_script.ld 2>&1 \
 // RUN:   | FileCheck -check-prefix=CUSTOM-LD-SCRIPT %s
 // CUSTOM-LD-SCRIPT: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
-// CUSTOM-LD_SCRIPT-NOT: "-Tmsp430g2553.ld"
+// CUSTOM-LD-SCRIPT-NOT: "-Tmsp430g2553.ld"
 // CUSTOM-LD-SCRIPT: "-T" "custom_script.ld"
-// CUSTOM-LD_SCRIPT-NOT: "-Tmsp430g2553.ld"
+// CUSTOM-LD-SCRIPT-NOT: "-Tmsp430g2553.ld"
 
 // Test for compiling for simulator
 

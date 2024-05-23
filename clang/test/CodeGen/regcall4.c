@@ -60,7 +60,7 @@ void __regcall hfa3(double a, double b, double c, double d, double e, struct HFA
 // Because they are not classified as homogeneous, they don't get special
 // handling to ensure alignment.
 void __regcall hfa4(struct HFA5 a) {}
-// X32: define dso_local x86_regcallcc void @__regcall4__hfa4(ptr noundef byval(%struct.HFA5) align 4 %{{.*}})
+// X86: define dso_local x86_regcallcc void @__regcall4__hfa4(ptr noundef byval(%struct.HFA5) align 4 %{{.*}})
 // Win64: define dso_local x86_regcallcc void @__regcall4__hfa4(ptr noundef %a)
 // Lin64: define dso_local x86_regcallcc void @__regcall4__hfa4(double %a.coerce0, double %a.coerce1, double %a.coerce2, double %a.coerce3, double %a.coerce4)
 

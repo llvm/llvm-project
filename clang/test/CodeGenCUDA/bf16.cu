@@ -41,7 +41,7 @@ __device__ __bf16 test_call( __bf16 in) {
 // CHECK-NEXT:   _Z13external_funcDF16b,
 // CHECK-NEXT:   (
 // CHECK-NEXT:   param0
-// CHECK-NEXT    );
+// CHECK-NEXT:   );
 // CHECK:        ld.param.b16    %[[RET:rs[0-9]+]], [retval0];
   return external_func(in);
 // CHECK:        st.param.b16    [func_retval0], %[[RET]]

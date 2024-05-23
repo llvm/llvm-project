@@ -24,7 +24,7 @@
 // CHECK-GNUSTEP2: @b ={{.*}} global ptr inttoptr (i64 -3340545023602065388 to ptr), align 8
 // CHECK-GNUSTEP2: @.objc_str_Hello_World = linkonce_odr hidden global { ptr, i32, i32, i32, i32, ptr } { ptr @._OBJC_CLASS_NSConstantString, i32 0, i32 11, i32 11, i32 0, ptr @1 }, section "__objc_constant_string", comdat, align 8
 // CHECK-GNUSTEP2: @c =
-// CHECK-SAME-GNUSTEP2: @.objc_str_Hello_World
+// CHECK-GNUSTEP2-SAME: @.objc_str_Hello_World
 //
 id a = @"Hello World!";
 id b = @"hi";

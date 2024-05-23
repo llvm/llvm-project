@@ -236,8 +236,8 @@ void fn9() {
 void fn10(int i) {
   // CHECK-LABEL: define{{.*}} void @_Z4fn10i
   // CHECK: alloca [3 x i32]
-  // CHECK-X86: call noalias nonnull align 16 ptr @_Znw{{[jm]}}
-  // CHECK-AMDGPU: call noalias nonnull align 8 ptr @_Znw{{[jm]}}
+  // X86: call noalias nonnull align 16 ptr @_Znw{{[jm]}}
+  // AMDGCN: call noalias nonnull align 8 ptr @_Znw{{[jm]}}
   // CHECK: store i32 %
   // CHECK: store i32 2
   // CHECK: store i32 3
