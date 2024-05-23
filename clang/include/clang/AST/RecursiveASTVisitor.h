@@ -30,6 +30,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -510,6 +511,7 @@ private:
   bool
   TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
   bool VisitOpenACCClauseList(ArrayRef<const OpenACCClause *>);
+  bool VisitOpenACCClause(const OpenACCClause *);
 };
 
 template <typename Derived>
@@ -3968,8 +3970,25 @@ bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOpenACCClause(const OpenACCClause *C) {
+  for (const Stmt *Child : C->children())
+    TRY_TO(TraverseStmt(const_cast<Stmt *>(Child)));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
-    ArrayRef<const OpenACCClause *>) {
+    ArrayRef<const OpenACCClause *> Clauses) {
+
+  for (const auto *C : Clauses)
+    TRY_TO(VisitOpenACCClause(C));
+//    if (const auto *WithCond = dyn_cast<OopenACCClauseWithCondition>(C);
+//        WithCond && WIthCond->hasConditionExpr()) {
+//      TRY_TO(TraverseStmt(WithCond->getConditionExpr());
+//    } else if (const auto *
+//  }
+//  OpenACCClauseWithCondition::getConditionExpr/hasConditionExpr
+//OpenACCClauseWithExprs::children (might be null?)
   // TODO OpenACC: When we have Clauses with expressions, we should visit them
   // here.
   return true;
