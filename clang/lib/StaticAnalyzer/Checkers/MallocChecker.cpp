@@ -323,6 +323,7 @@ public:
     CK_NewDeleteLeaksChecker,
     CK_MismatchedDeallocatorChecker,
     CK_InnerPointerChecker,
+    CK_TaintMallocChecker,
     CK_NumCheckKinds
   };
 
@@ -366,7 +367,7 @@ private:
   mutable std::unique_ptr<BugType> BT_MismatchedDealloc;
   mutable std::unique_ptr<BugType> BT_OffsetFree[CK_NumCheckKinds];
   mutable std::unique_ptr<BugType> BT_UseZerroAllocated[CK_NumCheckKinds];
-  mutable std::unique_ptr<BugType> BT_TaintedAlloc[CK_NumCheckKinds];
+  mutable std::unique_ptr<BugType> BT_TaintedAlloc;
 
 #define CHECK_FN(NAME)                                                         \
   void NAME(const CallEvent &Call, CheckerContext &C) const;
@@ -1803,22 +1804,22 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
                                    llvm::ArrayRef<SymbolRef> TaintedSyms,
                                    AllocationFamily Family,
                                    const Expr *SizeEx) const {
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
 
-    std::optional<MallocChecker::CheckKind> CheckKind =
-        getCheckIfTracked(Family);
-    if (!CheckKind)
-      return;
-    if (!BT_TaintedAlloc[*CheckKind])
-      BT_TaintedAlloc[*CheckKind].reset(new BugType(CheckNames[*CheckKind],
-                                                    "Tainted Memory Allocation",
-                                                    categories::MemoryError));
-    auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT_TaintedAlloc[*CheckKind], Msg, N);
+  if (!ChecksEnabled[CK_TaintMallocChecker])
+    return;
 
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
+    if (!BT_TaintedAlloc)
+      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintMallocChecker],
+                                        "Tainted Memory Allocation",
+                                        categories::TaintedData));
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_TaintedAlloc, Msg, N);
+
+    R->addRange(SizeEx->getSourceRange());
     bugreporter::trackExpressionValue(N, SizeEx, *R);
-    for (auto Sym : TaintedSyms)
-      R->markInteresting(Sym);
+    for (auto TaintedSym : TaintedSyms) {
+      R->markInteresting(TaintedSym);
+    }
     C.emitReport(std::move(R));
   }
 }
@@ -1827,36 +1828,37 @@ void MallocChecker::CheckTaintedness(CheckerContext &C, const CallEvent &Call,
                                      const SVal SizeSVal, ProgramStateRef State,
                                      AllocationFamily Family) const {
   std::vector<SymbolRef> TaintedSyms =
-      clang::ento::taint::getTaintedSymbols(State, SizeSVal);
-  if (!TaintedSyms.empty()) {
-    SValBuilder &SVB = C.getSValBuilder();
-    QualType SizeTy = SVB.getContext().getSizeType();
-    QualType CmpTy = SVB.getConditionType();
-    // In case the symbol is tainted, we give a warning if the
-    // size is larger than SIZE_MAX/4
-    BasicValueFactory &BVF = SVB.getBasicValueFactory();
-    const llvm::APSInt MaxValInt = BVF.getMaxValue(SizeTy);
-    NonLoc MaxLength =
-        SVB.makeIntVal(MaxValInt / APSIntType(MaxValInt).getValue(4));
-    std::optional<NonLoc> SizeNL = SizeSVal.getAs<NonLoc>();
-    auto Cmp = SVB.evalBinOpNN(State, BO_GE, *SizeNL, MaxLength, CmpTy)
-                   .getAs<DefinedOrUnknownSVal>();
-    if (!Cmp)
-      return;
-    auto [StateTooLarge, StateNotTooLarge] = State->assume(*Cmp);
-    if (!StateTooLarge && StateNotTooLarge) {
-      // we can prove that size is not too large so ok.
-      return;
-    }
+      taint::getTaintedSymbols(State, SizeSVal);
+  if (TaintedSyms.empty())
+    return;
 
-    std::string Callee = "Memory allocation function";
-    if (Call.getCalleeIdentifier())
-      Callee = Call.getCalleeIdentifier()->getName().str();
-    reportTaintBug(
-        Callee + " is called with a tainted (potentially attacker controlled) "
-                 "value. Make sure the value is bound checked.",
-        State, C, TaintedSyms, Family, Call.getArgExpr(0));
+  SValBuilder &SVB = C.getSValBuilder();
+  QualType SizeTy = SVB.getContext().getSizeType();
+  QualType CmpTy = SVB.getConditionType();
+  // In case the symbol is tainted, we give a warning if the
+  // size is larger than SIZE_MAX/4
+  BasicValueFactory &BVF = SVB.getBasicValueFactory();
+  const llvm::APSInt MaxValInt = BVF.getMaxValue(SizeTy);
+  NonLoc MaxLength =
+      SVB.makeIntVal(MaxValInt / APSIntType(MaxValInt).getValue(4));
+  std::optional<NonLoc> SizeNL = SizeSVal.getAs<NonLoc>();
+  auto Cmp = SVB.evalBinOpNN(State, BO_GE, *SizeNL, MaxLength, CmpTy)
+                 .getAs<DefinedOrUnknownSVal>();
+  if (!Cmp)
+    return;
+  auto [StateTooLarge, StateNotTooLarge] = State->assume(*Cmp);
+  if (!StateTooLarge && StateNotTooLarge) {
+    // we can prove that size is not too large so ok.
+    return;
   }
+
+  std::string Callee = "Memory allocation function";
+  if (Call.getCalleeIdentifier())
+    Callee = Call.getCalleeIdentifier()->getName().str();
+  reportTaintBug(
+      Callee + " is called with a tainted (potentially attacker controlled) "
+               "value. Make sure the value is bound checked.",
+      State, C, TaintedSyms, Family, Call.getArgExpr(0));
 }
 
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
@@ -3804,3 +3806,4 @@ REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
+REGISTER_CHECKER(TaintMallocChecker)

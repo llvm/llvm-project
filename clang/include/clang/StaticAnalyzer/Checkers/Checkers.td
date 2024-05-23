@@ -36,6 +36,8 @@ def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 // Note: OptIn is *not* intended for checkers that are too noisy to be on by
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
+def TaintOptIn : Package<"taint">, ParentPackage<OptIn>;
+
 def CoreOptIn : Package<"core">, ParentPackage<OptIn>;
 
 // In the Portability package reside checkers for finding code that relies on
@@ -452,6 +454,7 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 
 } // end "optin.core"
 
+
 //===----------------------------------------------------------------------===//
 // Unix API checkers.
 //===----------------------------------------------------------------------===//
@@ -624,6 +627,16 @@ def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
+
+let ParentPackage = TaintOptIn in {
+
+def TaintMallocChecker: Checker<"TaintMalloc">,
+  HelpText<"Check for memory allocations, where the size parameter "
+           "might be a tainted (attacker controlled) value.">,
+  Dependencies<[DynamicMemoryModeling]>,
+  Documentation<HasDocumentation>;
+
+} // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
 // C++ checkers.

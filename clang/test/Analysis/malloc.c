@@ -4,7 +4,8 @@
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintMalloc
 
 #include "Inputs/system-header-simulator.h"
 
@@ -50,41 +51,41 @@ void myfooint(int p);
 char *fooRetPtr(void);
 
 void t1(void) {
-  size_t size;
+  size_t size = 0;
   scanf("%zu", &size);
   int *p = malloc(size); // expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
   free(p);
 }
 
 void t2(void) {
-  size_t size;
+  size_t size = 0;
   scanf("%zu", &size);
   int *p = calloc(size,2); // expected-warning{{calloc is called with a tainted (potentially attacker controlled) value}}
   free(p);
 }
 
 void t3(void) {
-  size_t size;
+  size_t size = 0;
   scanf("%zu", &size);
-  if (1024<size)
+  if (1024 < size)
     return;
   int *p = malloc(size); // No warning expected as the the user input is bound
   free(p);
 }
 
 void t4(void) {
-  size_t size;
-  int *p = malloc(sizeof(int)); 
-  scanf("%zu", &size);  
-  p = (int*) realloc((void*) p, size); // // expected-warning{{realloc is called with a tainted (potentially attacker controlled) value}}
+  size_t size = 0;
+  int *p = malloc(sizeof(int));
+  scanf("%zu", &size);
+  p = (int*) realloc((void*) p, size); // expected-warning{{realloc is called with a tainted (potentially attacker controlled) value}}
   free(p);
 }
 
 void t5(void) {
-  size_t size;
-  int *p = alloca(sizeof(int)); 
-  scanf("%zu", &size);  
-  p = (int*) alloca(size); // // expected-warning{{alloca is called with a tainted (potentially attacker controlled) value}}  
+  size_t size = 0;
+  int *p = alloca(sizeof(int));
+  scanf("%zu", &size);
+  p = (int*) alloca(size); // expected-warning{{alloca is called with a tainted (potentially attacker controlled) value}}
 }
 
 
