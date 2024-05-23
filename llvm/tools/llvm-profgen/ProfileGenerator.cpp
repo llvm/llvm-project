@@ -767,7 +767,8 @@ void ProfileGeneratorBase::calculateBodySamplesAndSize(
   // line can emit many machine instructions. We observed a regression when we
   // switched to use the accumulated body samples(by using
   // -update-total-samples). Hence, it's safer to re-calculate here to avoid
-  // such discrepancy.
+  // such discrepancy. There is no problem for probe-based profile, as the
+  // TotalSamples is exactly the same as the accumulated body samples.
   for (const auto &I : FSamples.getBodySamples())
     TotalBodySamples += I.second.getSamples();
 
