@@ -499,21 +499,39 @@ func.func @fold_unit_dims_entirely(%arg0 : vector<8xi32>,
 
 // -----
 
-func.func @fold_unit_center_dim_scalable(%arg0 : vector<8x1x[1]xf128>,
-                              %arg1 : vector<1x8x[1]xf128>) -> vector<8x[1]xf128> {
-   %sc_arg1 = vector.shape_cast %arg1 : vector<1x8x[1]xf128> to vector<8x1x[1]xf128>
-   %add = arith.mulf %arg0, %sc_arg1 : vector<8x1x[1]xf128>
-   %res = vector.shape_cast %add : vector<8x1x[1]xf128> to vector<8x[1]xf128>
-   return %res : vector<8x[1]xf128>
+func.func @fold_unit_inner_dim(%arg0 : vector<8x1x3xf128>,
+                              %arg1 : vector<1x8x3xf128>) -> vector<8x3xf128> {
+   %sc_arg1 = vector.shape_cast %arg1 : vector<1x8x3xf128> to vector<8x1x3xf128>
+   %mul = arith.mulf %arg0, %sc_arg1 : vector<8x1x3xf128>
+   %res = vector.shape_cast %mul : vector<8x1x3xf128> to vector<8x3xf128>
+   return %res : vector<8x3xf128>
 }
 
-// CHECK-LABEL: func.func @fold_unit_center_dim_scalable(
-// CHECK-SAME:    %[[VAL_0:.*]]: vector<8x1x[1]xf128>,
-// CHECK-SAME:    %[[VAL_1:.*]]: vector<1x8x[1]xf128>) -> vector<8x[1]xf128> {
-// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<8x1x[1]xf128> to vector<8x[1]xf128>
-// CHECK:         %[[VAL_3:.*]] = vector.shape_cast %[[VAL_1]] : vector<1x8x[1]xf128> to vector<8x[1]xf128>
-// CHECK:         %[[VAL_4:.*]] = arith.mulf %[[VAL_2]], %[[VAL_3]] : vector<8x[1]xf128>
-// CHECK:         return %[[VAL_4]] : vector<8x[1]xf128>
+// CHECK-LABEL: func.func @fold_unit_inner_dim(
+// CHECK-SAME:    %[[VAL_0:.*]]: vector<8x1x3xf128>,
+// CHECK-SAME:    %[[VAL_1:.*]]: vector<1x8x3xf128>) -> vector<8xxf128> {
+// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<8x1x3xf128> to vector<8x3xf128>
+// CHECK:         %[[VAL_3:.*]] = vector.shape_cast %[[VAL_1]] : vector<1x8x3xf128> to vector<8x3xf128>
+// CHECK:         %[[VAL_4:.*]] = arith.mulf %[[VAL_2]], %[[VAL_3]] : vector<8x3xf128>
+// CHECK:         return %[[VAL_4]] : vector<8x3xf128>
+
+// -----
+
+func.func @fold_unit_inner_dim_scalable(%arg0 : vector<8x1x[1]x3xf128>,
+                              %arg1 : vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
+   %sc_arg1 = vector.shape_cast %arg1 : vector<1x8x[1]x3xf128> to vector<8x1x[1]x3xf128>
+   %mul = arith.mulf %arg0, %sc_arg1 : vector<8x1x[1]x3xf128>
+   %res = vector.shape_cast %add : vector<8x1x[1]x3xf128> to vector<8x[1]x3xf128>
+   return %mul : vector<8x[1]x3xf128>
+}
+
+// CHECK-LABEL: func.func @fold_unit_inner_dim_scalable(
+// CHECK-SAME:    %[[VAL_0:.*]]: vector<8x1x[1]x3xf128>,
+// CHECK-SAME:    %[[VAL_1:.*]]: vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
+// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<8x1x[1]x3xf128> to vector<8x[1]x3xf128>
+// CHECK:         %[[VAL_3:.*]] = vector.shape_cast %[[VAL_1]] : vector<1x8x[1]x3xf128> to vector<8x[1]x3xf128>
+// CHECK:         %[[VAL_4:.*]] = arith.mulf %[[VAL_2]], %[[VAL_3]] : vector<8x[1]x3xf128>
+// CHECK:         return %[[VAL_4]] : vector<8x[1]x3xf128>
 
 // -----
 
