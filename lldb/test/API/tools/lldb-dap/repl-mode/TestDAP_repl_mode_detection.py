@@ -18,6 +18,7 @@ class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
             regex,
         )
 
+    @skipIfRemote
     def test_completions(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
