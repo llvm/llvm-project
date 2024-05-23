@@ -109,3 +109,74 @@ struct A {
 #endif
 
 } // namespace cwg2858
+
+namespace cwg2881 { // cwg2881: 19 tentatively ready 2024-04-19
+
+#if __cplusplus >= 202302L
+
+template <typename T> struct A : T {};
+template <typename T> struct B : T {};
+template <typename T> struct C : virtual T { C(T t) : T(t) {} };
+template <typename T> struct D : virtual T { D(T t) : T(t) {} };
+
+template <typename Ts>
+struct O1 : A<Ts>, B<Ts> {
+  using A<Ts>::operator();
+  using B<Ts>::operator();
+};
+
+template <typename Ts> struct O2 : protected Ts { // expected-note {{declared protected here}}
+  using Ts::operator();
+  O2(Ts ts) : Ts(ts) {}
+};
+
+template <typename Ts> struct O3 : private Ts { // expected-note {{declared private here}}
+  using Ts::operator();
+  O3(Ts ts) : Ts(ts) {}
+};
+
+// Not ambiguous because of virtual inheritance.
+template <typename Ts>
+struct O4 : C<Ts>, D<Ts> {
+  using C<Ts>::operator();
+  using D<Ts>::operator();
+  O4(Ts t) : Ts(t), C<Ts>(t), D<Ts>(t) {}
+};
+
+// This still has a public path to the lambda, and it's also not
+// ambiguous because of virtual inheritance.
+template <typename Ts>
+struct O5 : private C<Ts>, D<Ts> {
+  using C<Ts>::operator();
+  using D<Ts>::operator();
+  O5(Ts t) : Ts(t), C<Ts>(t), D<Ts>(t) {}
+};
+
+// This is only invalid if we call T's call operator.
+template <typename T, typename U>
+struct O6 : private T, U { // expected-note {{declared private here}}
+  using T::operator();
+  using U::operator();
+  O6(T t, U u) : T(t), U(u) {}
+};
+
+void f() {
+  int x;
+  auto L1 = [=](this auto&& self) { (void) &x; };
+  auto L2 = [&](this auto&& self) { (void) &x; };
+  O1<decltype(L1)>{L1, L1}(); // expected-error {{inaccessible due to ambiguity}}
+  O1<decltype(L2)>{L2, L2}(); // expected-error {{inaccessible due to ambiguity}}
+  O2{L1}(); // expected-error {{must derive publicly from the lambda}}
+  O3{L1}(); // expected-error {{must derive publicly from the lambda}}
+  O4{L1}();
+  O5{L1}();
+  O6 o{L1, L2};
+  o.decltype(L1)::operator()(); // expected-error {{must derive publicly from the lambda}}
+  o.decltype(L1)::operator()(); // No error here because we've already diagnosed this method.
+  o.decltype(L2)::operator()();
+}
+
+#endif
+
+} // namespace cwg2881
+
