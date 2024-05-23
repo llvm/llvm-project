@@ -1604,7 +1604,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
-        auto context = converter.getFirOpBuilder().getContext();
         auto location =
             mlir::NameLoc::get(mlir::StringAttr::get(firOpBuilder.getContext(),
                                                      sym.name().ToString()),
