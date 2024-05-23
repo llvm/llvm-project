@@ -2089,7 +2089,7 @@ bool AMDGPUInstructionSelector::selectPOPSExitingWaveID(
   // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
   // mayLoad/mayStore and tablegen complains about the mismatch.
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
-                 .addDef(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
+                 .addReg(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
