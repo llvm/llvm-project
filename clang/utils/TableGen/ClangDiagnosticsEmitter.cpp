@@ -1240,7 +1240,7 @@ static bool isExemptAtStart(StringRef Text) {
       .Case("Microsoft", true)
       .Case("Neon", true)
       .StartsWith("NSInvocation", true) // NSInvocation, NSInvocation's
-      .Case("Objective", true)          // Objective-C, Objective-C++
+      .Case("Objective", true)          // Objective-C (- is a word boundary)
       .Case("OpenACC", true)
       .Case("OpenCL", true)
       .Case("OpenMP", true)
@@ -1302,7 +1302,8 @@ static void verifyDiagnosticWording(const Record &Diag) {
     // closing '}', skipping intermediary {} pairs.
 
     size_t BraceCount = 1;
-    auto Iter = FullDiagText.begin() + /*%select{*/ 8;
+    constexpr size_t PercentSelectBraceLen = sizeof("%select{") - 1;
+    auto Iter = FullDiagText.begin() + PercentSelectBraceLen;
     for (auto End = FullDiagText.end(); Iter != End; ++Iter) {
       char Ch = *Iter;
       if (Ch == '{')
@@ -1316,8 +1317,9 @@ static void verifyDiagnosticWording(const Record &Diag) {
     if (BraceCount != 0)
       return;
 
-    StringRef SelectText = FullDiagText.substr(
-        /*%select{*/ 8, Iter - FullDiagText.begin() - /*%select{*/ 8);
+    StringRef SelectText =
+        FullDiagText.substr(PercentSelectBraceLen, Iter - FullDiagText.begin() -
+                                                       PercentSelectBraceLen);
     SmallVector<StringRef, 4> SelectPieces;
     SelectText.split(SelectPieces, '|');
 
@@ -1355,7 +1357,7 @@ static void verifyDiagnosticWording(const Record &Diag) {
   if (isDigit(FullDiagText.back()) && *(FullDiagText.end() - 2) == '}') {
     // Scan backwards to find the opening curly brace.
     size_t BraceCount = 1;
-    auto Iter = FullDiagText.end() - /*}0*/ 3;
+    auto Iter = FullDiagText.end() - sizeof("}0");
     for (auto End = FullDiagText.begin(); Iter != End; --Iter) {
       char Ch = *Iter;
       if (Ch == '}')
@@ -1371,9 +1373,10 @@ static void verifyDiagnosticWording(const Record &Diag) {
 
     // Continue the backwards scan to find the word before the '{' to see if it
     // is 'select'.
+    constexpr size_t SelectLen = sizeof("select") - 1;
     bool IsSelect =
-        (FullDiagText.substr(Iter - /*select*/ 6 - FullDiagText.begin(),
-                             /*select*/ 6) == "select");
+        (FullDiagText.substr(Iter - SelectLen - FullDiagText.begin(),
+                             SelectLen) == "select");
     if (IsSelect) {
       // Gather the content between the {} for the select in question so we can
       // split it into pieces.
