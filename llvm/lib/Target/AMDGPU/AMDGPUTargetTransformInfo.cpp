@@ -367,17 +367,9 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS)
     return 512;
 
-  if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
-      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
-      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER)
-    return ST->isAmdPalOS() ? 128 : 512;
-
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
-  // Common to flat, global, local and region. Assume for unknown addrspace.
   return 128;
 }
 

@@ -127,8 +127,8 @@ define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; VI-NEXT:    s_lshr_b32 s5, s7, 16
 ; VI-NEXT:    s_sub_i32 s6, s6, s7
 ; VI-NEXT:    s_sub_i32 s4, s4, s5
-; VI-NEXT:    s_and_b32 s5, s6, 0xffff
 ; VI-NEXT:    s_lshl_b32 s4, s4, 16
+; VI-NEXT:    s_and_b32 s5, s6, 0xffff
 ; VI-NEXT:    s_or_b32 s4, s5, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0

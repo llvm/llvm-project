@@ -105,9 +105,9 @@ define amdgpu_kernel void @s_test_add_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; VI-NEXT:    s_lshr_b32 s3, s0, 16
 ; VI-NEXT:    s_add_i32 s2, s2, s0
 ; VI-NEXT:    s_add_i32 s1, s1, s3
-; VI-NEXT:    s_and_b32 s0, s2, 0xffff
-; VI-NEXT:    s_lshl_b32 s1, s1, 16
-; VI-NEXT:    s_or_b32 s0, s0, s1
+; VI-NEXT:    s_lshl_b32 s0, s1, 16
+; VI-NEXT:    s_and_b32 s1, s2, 0xffff
+; VI-NEXT:    s_or_b32 s0, s1, s0
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm

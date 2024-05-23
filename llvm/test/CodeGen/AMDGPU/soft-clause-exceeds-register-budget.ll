@@ -3,23 +3,32 @@
 define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(ptr addrspace(4) %wei_ptr, ptr addrspace(1) %out_ptr, ptr addrspace(1) %in) {
 ; CHECK-LABEL: excess_soft_clause_reg_pressure:
 ; CHECK:  BB0_1: ; %for.cond28.preheader
-; CHECK:         s_load_dwordx16
-; CHECK-NEXT:    s_load_dwordx16
+; CHECK:         s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
 
 ; CHECK:         global_load_dword
 ; CHECK-NEXT:    global_load_dword
 ; CHECK-NEXT:    global_load_dword
 ; CHECK-NEXT:    global_load_dword
 
-; CHECK:         s_load_dwordx16
-; CHECK-NEXT:    s_load_dwordx16
+; CHECK:         s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
 
 ; CHECK-NOT: v_writelane_b32
 ; CHECK-NOT: v_readlane_b32
 
-; CHECK:         s_load_dwordx16
-; CHECK:         s_load_dwordx16
-; CHECK:         s_load_dwordx16
+; CHECK:         s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK:         s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
+; CHECK-NEXT:    s_load_dwordx8
 
 ; CHECK-NOT: v_writelane_b32
 ; CHECK-NOT: v_readlane_b32

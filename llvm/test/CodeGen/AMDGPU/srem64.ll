@@ -181,7 +181,7 @@ define amdgpu_kernel void @s_test_srem(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_mov_b64 s[14:15], s[6:7]
 ; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[18:19]
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB0_3
-; GCN-IR-NEXT:  .LBB0_4: ; %Flow7
+; GCN-IR-NEXT:  .LBB0_4: ; %Flow6
 ; GCN-IR-NEXT:    s_lshl_b64 s[8:9], s[8:9], 1
 ; GCN-IR-NEXT:    s_or_b64 s[8:9], s[6:7], s[8:9]
 ; GCN-IR-NEXT:  .LBB0_5: ; %udiv-end
@@ -443,12 +443,12 @@ define amdgpu_kernel void @s_test_srem23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-LABEL: s_test_srem23_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dword s1, s[0:1], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s0, s4
-; GCN-NEXT:    s_ashr_i64 s[8:9], s[0:1], 41
+; GCN-NEXT:    s_ashr_i64 s[8:9], s[8:9], 41
 ; GCN-NEXT:    v_cvt_f32_i32_e32 v0, s8
 ; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    s_ashr_i64 s[4:5], s[6:7], 41
@@ -478,12 +478,12 @@ define amdgpu_kernel void @s_test_srem23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-LABEL: s_test_srem23_64:
 ; GCN-IR:       ; %bb.0:
 ; GCN-IR-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-IR-NEXT:    s_load_dword s1, s[0:1], 0xe
+; GCN-IR-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
 ; GCN-IR-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-IR-NEXT:    s_mov_b32 s2, -1
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-IR-NEXT:    s_mov_b32 s0, s4
-; GCN-IR-NEXT:    s_ashr_i64 s[8:9], s[0:1], 41
+; GCN-IR-NEXT:    s_ashr_i64 s[8:9], s[8:9], 41
 ; GCN-IR-NEXT:    v_cvt_f32_i32_e32 v0, s8
 ; GCN-IR-NEXT:    s_mov_b32 s1, s5
 ; GCN-IR-NEXT:    s_ashr_i64 s[4:5], s[6:7], 41
@@ -520,12 +520,12 @@ define amdgpu_kernel void @s_test_srem24_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-LABEL: s_test_srem24_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dword s1, s[0:1], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s0, s4
-; GCN-NEXT:    s_ashr_i64 s[8:9], s[0:1], 40
+; GCN-NEXT:    s_ashr_i64 s[8:9], s[8:9], 40
 ; GCN-NEXT:    v_cvt_f32_i32_e32 v0, s8
 ; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    s_ashr_i64 s[4:5], s[6:7], 40
@@ -555,12 +555,12 @@ define amdgpu_kernel void @s_test_srem24_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-LABEL: s_test_srem24_64:
 ; GCN-IR:       ; %bb.0:
 ; GCN-IR-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-IR-NEXT:    s_load_dword s1, s[0:1], 0xe
+; GCN-IR-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
 ; GCN-IR-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-IR-NEXT:    s_mov_b32 s2, -1
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-IR-NEXT:    s_mov_b32 s0, s4
-; GCN-IR-NEXT:    s_ashr_i64 s[8:9], s[0:1], 40
+; GCN-IR-NEXT:    s_ashr_i64 s[8:9], s[8:9], 40
 ; GCN-IR-NEXT:    v_cvt_f32_i32_e32 v0, s8
 ; GCN-IR-NEXT:    s_mov_b32 s1, s5
 ; GCN-IR-NEXT:    s_ashr_i64 s[4:5], s[6:7], 40
@@ -650,7 +650,7 @@ define i64 @v_test_srem24_64(i64 %x, i64 %y) {
 define amdgpu_kernel void @s_test_srem25_64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_srem25_64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -694,7 +694,7 @@ define amdgpu_kernel void @s_test_srem25_64(ptr addrspace(1) %out, i64 %x, i64 %
 ;
 ; GCN-IR-LABEL: s_test_srem25_64:
 ; GCN-IR:       ; %bb.0:
-; GCN-IR-NEXT:    s_load_dword s3, s[0:1], 0xe
+; GCN-IR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-IR-NEXT:    s_mov_b32 s6, -1
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
@@ -745,7 +745,7 @@ define amdgpu_kernel void @s_test_srem25_64(ptr addrspace(1) %out, i64 %x, i64 %
 define amdgpu_kernel void @s_test_srem31_64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_srem31_64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -789,7 +789,7 @@ define amdgpu_kernel void @s_test_srem31_64(ptr addrspace(1) %out, i64 %x, i64 %
 ;
 ; GCN-IR-LABEL: s_test_srem31_64:
 ; GCN-IR:       ; %bb.0:
-; GCN-IR-NEXT:    s_load_dword s3, s[0:1], 0xe
+; GCN-IR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-IR-NEXT:    s_mov_b32 s6, -1
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1138,7 +1138,7 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_mov_b64 s[16:17], s[6:7]
 ; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[20:21]
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB8_3
-; GCN-IR-NEXT:  .LBB8_4: ; %Flow7
+; GCN-IR-NEXT:  .LBB8_4: ; %Flow6
 ; GCN-IR-NEXT:    s_lshl_b64 s[10:11], s[10:11], 1
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
 ; GCN-IR-NEXT:  .LBB8_5: ; %udiv-end
