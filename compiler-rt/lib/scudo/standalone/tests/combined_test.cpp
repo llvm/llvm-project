@@ -347,7 +347,17 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
       EXPECT_NE(P, nullptr);
       for (scudo::uptr I = 0; I < Size; I++)
         ASSERT_EQ((reinterpret_cast<char *>(P))[I], '\0');
+
+      // Fill with a non-zero pattern.
       memset(P, 0xaa, Size);
+
+      // Shrink and then grow by one byte, verifying that it gets re-filled in
+      // the process. We assume that changing the size by just 1 is done in
+      // place.
+      ASSERT_EQ(Allocator->reallocate(P, Size - 1), P);
+      ASSERT_EQ(Allocator->reallocate(P, Size), P);
+      EXPECT_EQ((reinterpret_cast<unsigned char *>(P))[Size - 1], '\0');
+
       Allocator->deallocate(P, Origin, Size);
     }
   }
@@ -374,7 +384,18 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
         else
           ASSERT_TRUE(V == scudo::PatternFillByte || V == 0);
       }
+
+      // Fill with a known pattern different from PatternFillByte.
       memset(P, 0xaa, Size);
+
+      // Shrink and then grow by one byte, verifying that it gets re-filled in
+      // the process. We assume that changing the size by just 1 is done in
+      // place.
+      ASSERT_EQ(Allocator->reallocate(P, Size - 1), P);
+      ASSERT_EQ(Allocator->reallocate(P, Size), P);
+      EXPECT_EQ((reinterpret_cast<unsigned char *>(P))[Size - 1],
+                scudo::PatternFillByte);
+
       Allocator->deallocate(P, Origin, Size);
     }
   }
