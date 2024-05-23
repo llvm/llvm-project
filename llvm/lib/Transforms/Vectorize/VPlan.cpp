@@ -900,6 +900,7 @@ void VPlan::execute(VPTransformState *State) {
   }
 
   State->CFG.DTU.flush();
+  // DT is currently updated for non-native path only.
   assert(EnableVPlanNativePath || State->CFG.DTU.getDomTree().verify(
                                       DominatorTree::VerificationLevel::Fast));
 }
