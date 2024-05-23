@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -debug-info-kind=limited -gomit-unreferenced-members %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=limited -gomit-unreferenced-methods %s -emit-llvm -o - | FileCheck %s
 
 struct t1 {
   void f1();

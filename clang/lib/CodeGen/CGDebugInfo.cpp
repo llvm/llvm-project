@@ -2755,7 +2755,7 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
 
   // Collect data fields (including static variables and any initializers).
   CollectRecordFields(RD, DefUnit, EltTys, FwdDecl);
-  if (CXXDecl && !CGM.getCodeGenOpts().DebugOmitUnreferencedMembers)
+  if (CXXDecl && !CGM.getCodeGenOpts().DebugOmitUnreferencedMethods)
     CollectCXXMemberFunctions(CXXDecl, DefUnit, EltTys, FwdDecl);
 
   LexicalBlockStack.pop_back();

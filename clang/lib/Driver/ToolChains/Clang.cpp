@@ -4458,11 +4458,12 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                          DebuggerTuning != llvm::DebuggerKind::DBX)))
     CmdArgs.push_back("-gno-column-info");
 
-  if (const Arg *A = Args.getLastArg(options::OPT_gomit_unreferenced_members))
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_gomit_unreferenced_methods,
+                          options::OPT_gno_omit_unreferenced_methods))
     (void)checkDebugInfoOption(A, Args, D, TC);
-  if (Args.hasFlag(options::OPT_gomit_unreferenced_members,
-                   options::OPT_gno_omit_unreferenced_members, false))
-    CmdArgs.push_back("-gomit-unreferenced-members");
+  Args.addOptInFlag(CmdArgs, options::OPT_gomit_unreferenced_methods,
+                    options::OPT_gno_omit_unreferenced_methods);
 
   // FIXME: Move backend command line options to the module.
   if (Args.hasFlag(options::OPT_gmodules, options::OPT_gno_modules, false)) {
