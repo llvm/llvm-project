@@ -1337,14 +1337,15 @@ inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
 inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-
   if (Ptr.canBeInitialized())
     Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
