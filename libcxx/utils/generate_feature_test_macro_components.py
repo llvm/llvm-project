@@ -515,7 +515,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_format_path",
-            "values": {"c++26": 202403}, # P2845R8: Formatting of std::filesystem::path
+            "values": {"c++26": 202403},  # P2845R8: Formatting of std::filesystem::path
             "headers": ["filesystem"],
             "unimplemented": True,
         },
