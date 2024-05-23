@@ -979,11 +979,40 @@ private:
     InstIdx++;
   }
 
+  std::optional<CastKind> getCastKind(Instruction::CastOps Cast) {
+    switch (Cast) {
+    case Instruction::ZExt:
+      return CastKindZeroExt;
+    case Instruction::SExt:
+      return CastKindSignExt;
+    case Instruction::Trunc:
+      return CastKindTrunc;
+    default:
+      return nullopt;
+    }
+    abort(); // unreachable
+  }
+
   /// Serialise a cast-like instruction.
-  void serialiseZExtInst(ZExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+  void serialiseCastInst(CastInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
-    // We don't support vectors.
-    if (I->getOperand(0)->getType()->isVectorTy()) {
+    // We don't support:
+    // - truncating ptrtoint
+    // - any cast we've not thought about
+    // - vector casts
+    std::optional<CastKind> CK = getCastKind(I->getOpcode());
+    if (isa<PtrToIntInst>(I)) {
+      DataLayout DL(&M);
+      TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
+      TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
+      if (DstSize < SrcSize) {
+        serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+        return;
+      }
+      // After excluding truncation from ptrtoint, it's just a zext in disguise.
+      CK = CastKindZeroExt;
+    }
+    if (!CK.has_value() || (I->getOperand(0)->getType()->isVectorTy())) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -991,75 +1020,11 @@ private:
     // opcode:
     serialiseOpcode(OpCodeCast);
     // cast_kind:
-    serialiseCastKind(CastKindZeroExt);
+    serialiseCastKind(CK.value()); // checked to be !nullopt above.
     // val:
     serialiseOperand(I, FLCtxt, I->getOperand(0));
     // dest_type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
-
-    FLCtxt.updateVLMap(I, InstIdx);
-    InstIdx++;
-  }
-
-  /// Serialise a trunc instruction.
-  void serialiseTruncInst(TruncInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
-                          unsigned &InstIdx) {
-    // We don't support vectors.
-    if (I->getOperand(0)->getType()->isVectorTy()) {
-      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
-      return;
-    }
-
-    DataLayout DL(&M);
-    TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
-    TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
-
-    // The bit size of the value must be larger than the bit size of the
-    // destination type.
-    assert(SrcSize > DstSize);
-
-    // opcode:
-    serialiseOpcode(OpCodeCast);
-    // cast_kind:
-    serialiseCastKind(CastKindTrunc);
-    // val:
-    serialiseOperand(I, FLCtxt, I->getOperand(0));
-    // dest_type_idx:
-    OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
-
-    FLCtxt.updateVLMap(I, InstIdx);
-    InstIdx++;
-  }
-
-  /// Serialise ptrtoint instruction.
-  void serialisePtrToIntInst(PtrToIntInst *I, FuncLowerCtxt &FLCtxt,
-                             unsigned BBIdx, unsigned &InstIdx) {
-    if (I->getType()->isVectorTy()) {
-      // Vector variants are currently not supported.
-      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
-      return;
-    }
-    DataLayout DL(&M);
-    TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
-    TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
-
-    if (SrcSize <= DstSize) {
-      // Zero extend
-      // FIXME: We probably want to lower same-sized types to a bitcast, but
-      // zeroextend will do for now.
-      // opcode:
-      serialiseOpcode(OpCodeCast);
-      // cast_kind:
-      serialiseCastKind(CastKindZeroExt);
-      // val:
-      serialiseOperand(I, FLCtxt, I->getPointerOperand());
-      // dest_type_idx:
-      OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
-    } else if (SrcSize > DstSize) {
-      // Truncate
-      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
-      return;
-    }
 
     FLCtxt.updateVLMap(I, InstIdx);
     InstIdx++;
@@ -1147,13 +1112,9 @@ private:
     INST_SERIALISE(I, LoadInst, serialiseLoadInst);
     INST_SERIALISE(I, PHINode, serialisePhiInst);
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
-    // FIXME: merge the serialisers for casts.
-    INST_SERIALISE(I, ZExtInst, serialiseZExtInst);
-    INST_SERIALISE(I, SExtInst, serialiseSExtInst);
-    INST_SERIALISE(I, TruncInst, serialiseTruncInst);
+    INST_SERIALISE(I, CastInst, serialiseCastInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
     INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
-    INST_SERIALISE(I, PtrToIntInst, serialisePtrToIntInst);
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
     // the instruction wasn't handled.
