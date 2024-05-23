@@ -41,17 +41,27 @@
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaLoongArch.h"
+#include "clang/Sema/SemaMIPS.h"
+#include "clang/Sema/SemaNVPTX.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaSystemZ.h"
+#include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -206,16 +216,26 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      ARMPtr(std::make_unique<SemaARM>(*this)),
+      BPFPtr(std::make_unique<SemaBPF>(*this)),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
+      HexagonPtr(std::make_unique<SemaHexagon>(*this)),
+      LoongArchPtr(std::make_unique<SemaLoongArch>(*this)),
+      MIPSPtr(std::make_unique<SemaMIPS>(*this)),
+      NVPTXPtr(std::make_unique<SemaNVPTX>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
+      PPCPtr(std::make_unique<SemaPPC>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
       RISCVPtr(std::make_unique<SemaRISCV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
+      SystemZPtr(std::make_unique<SemaSystemZ>(*this)),
+      WasmPtr(std::make_unique<SemaWasm>(*this)),
       X86Ptr(std::make_unique<SemaX86>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),

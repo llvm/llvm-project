@@ -42,6 +42,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
@@ -931,7 +932,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // PPC MMA non-pointer types are not allowed as throw expr types.
   if (Ex && Context.getTargetInfo().getTriple().isPPC64())
-    CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
+    PPC().CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
 
   return new (Context)
       CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope);
