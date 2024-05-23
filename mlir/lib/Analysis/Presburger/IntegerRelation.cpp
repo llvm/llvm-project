@@ -1521,6 +1521,37 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<MPInt> dividend,
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
 }
 
+/// Adds a new local variable as the mod of an affine function of other
+/// variables. The coefficients of the operands of the mod are provided in `lhs`
+/// and `rhs` respectively. Three constraints are added to provide a
+/// conservative bound for the mod:
+///  1. rhs > 0 (assumption/precondition)
+///  2. lhs % rhs < rhs
+///  3. lhs % rhs >= 0
+/// We ensure the rhs is positive so we can assume the result is positive.
+void IntegerRelation::addLocalModConservativeBounds(ArrayRef<MPInt> lhs,
+                                                    ArrayRef<MPInt> rhs) {
+  appendVar(VarKind::Local);
+
+  // Ensure the rhs is > 0 (most likely case).
+  // If this constraint does not hold the following bounds are incorrect.
+  SmallVector<MPInt, 8> rhsCopy(rhs);
+  rhsCopy.insert(rhsCopy.end() - 1, MPInt(0));
+  rhsCopy.back() -= MPInt(1);
+  addInequality(rhsCopy);
+
+  // rhs - (lhs % rhs) - 1 >= 0 i.e. lhs % rhs < rhs
+  SmallVector<MPInt, 8> resultUpperBound(rhs);
+  resultUpperBound.insert(resultUpperBound.end() - 1, MPInt(-1));
+  resultUpperBound.back() -= MPInt(1);
+  addInequality(resultUpperBound);
+
+  // lhs % rhs >= 0
+  SmallVector<MPInt, 8> resultLowerBound(rhs.size());
+  resultLowerBound.insert(resultLowerBound.end() - 1, MPInt(1));
+  addInequality(resultLowerBound);
+}
+
 /// Finds an equality that equates the specified variable to a constant.
 /// Returns the position of the equality row. If 'symbolic' is set to true,
 /// symbols are also treated like a constant, i.e., an affine function of the

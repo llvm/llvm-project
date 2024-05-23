@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir::vector {
 
@@ -62,6 +63,10 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
   scalableCstr.processWorklist();
 
+  // Check the resulting constraints set is valid.
+  if (scalableCstr.cstr.isEmpty())
+    return failure();
+
   // Project out all columns apart from vscale and the starting point
   // (value/dim). This should result in constraints in terms of vscale only.
   auto projectOutFn = [&](ValueDim p) {
@@ -71,6 +76,11 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
   };
   scalableCstr.projectOut(projectOutFn);
+  // Also project out local variables (these are not tracked by the
+  // ValueBoundsConstraintSet).
+  for (unsigned i = 0; i < scalableCstr.cstr.getNumLocalVars(); ++i) {
+    scalableCstr.cstr.projectOut(scalableCstr.cstr.getNumDimAndSymbolVars());
+  }
 
   assert(scalableCstr.cstr.getNumDimAndSymbolVars() ==
              scalableCstr.positionToValueDim.size() &&

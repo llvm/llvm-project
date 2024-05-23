@@ -413,7 +413,8 @@ protected:
   /// lhs of the mod, floordiv, ceildiv or mul expression and with respect to a
   /// symbolic rhs expression. `localExpr` is the simplified tree expression
   /// (AffineExpr) corresponding to the quantifier.
-  virtual void addLocalIdSemiAffine(AffineExpr localExpr);
+  virtual void addLocalIdSemiAffine(AffineExpr localExpr, ArrayRef<int64_t> lhs,
+                                    ArrayRef<int64_t> rhs);
 
 private:
   /// Adds `expr`, which may be mod, ceildiv, floordiv or mod expression
@@ -422,7 +423,8 @@ private:
   /// quantifier is already present, we put the coefficient in the proper index
   /// of `result`, otherwise we add a new local variable and put the coefficient
   /// there.
-  void addLocalVariableSemiAffine(AffineExpr expr,
+  void addLocalVariableSemiAffine(AffineExpr expr, ArrayRef<int64_t> lhs,
+                                  ArrayRef<int64_t> rhs,
                                   SmallVectorImpl<int64_t> &result,
                                   unsigned long resultSize);
 

@@ -46,9 +46,15 @@ public:
   // inequalities.
   IntegerPolyhedron localVarCst;
 
-  AffineExprFlattener(unsigned nDims, unsigned nSymbols)
+  AffineExprFlattener(unsigned nDims, unsigned nSymbols,
+                      bool addConservativeSemiAffineBounds = false)
       : SimpleAffineExprFlattener(nDims, nSymbols),
-        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)) {}
+        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)),
+        addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {}
+
+  bool hasUnhandledSemiAffineExpressions() const {
+    return unhandledSemiAffineExpressions;
+  }
 
 private:
   // Add a local variable (needed to flatten a mod, floordiv, ceildiv expr).
@@ -63,34 +69,60 @@ private:
     // Update localVarCst.
     localVarCst.addLocalFloorDiv(dividend, divisor);
   }
+
+  // Add a local identifier (needed to flatten a mod, floordiv, ceildiv, mul
+  // expr) when the rhs is a symbolic expression. The local identifier added
+  // may be a floordiv, ceildiv, mul or mod of a pure affine/semi-affine
+  // function of other identifiers, coefficients of which are specified in the
+  // lhs of the mod, floordiv, ceildiv or mul expression and with respect to a
+  // symbolic rhs expression. `localExpr` is the simplified tree expression
+  // (AffineExpr) corresponding to the quantifier.
+  void addLocalIdSemiAffine(AffineExpr localExpr, ArrayRef<int64_t> lhs,
+                            ArrayRef<int64_t> rhs) override {
+    SimpleAffineExprFlattener::addLocalIdSemiAffine(localExpr, lhs, rhs);
+    if (!addConservativeSemiAffineBounds) {
+      unhandledSemiAffineExpressions = true;
+      return;
+    }
+    if (localExpr.getKind() == AffineExprKind::Mod) {
+      localVarCst.addLocalModConservativeBounds(lhs, rhs);
+      return;
+    }
+    // TODO: Support other semi-affine expressions.
+    unhandledSemiAffineExpressions = true;
+  }
+
+  bool addConservativeSemiAffineBounds = false;
+  bool unhandledSemiAffineExpressions = false;
 };
 
 } // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
 // flattened. For example two specific cases:
-// 1. semi-affine expressions not handled yet.
+// 1. an unhandled semi-affine expressions is found.
 // 2. has poison expression (i.e., division by zero).
 static LogicalResult
 getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
                         unsigned numSymbols,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
-                        FlatLinearConstraints *localVarCst) {
+                        FlatLinearConstraints *localVarCst,
+                        bool addConservativeSemiAffineBounds = false) {
   if (exprs.empty()) {
     if (localVarCst)
       *localVarCst = FlatLinearConstraints(numDims, numSymbols);
     return success();
   }
 
-  AffineExprFlattener flattener(numDims, numSymbols);
+  AffineExprFlattener flattener(numDims, numSymbols,
+                                addConservativeSemiAffineBounds);
   // Use the same flattener to simplify each expression successively. This way
   // local variables / expressions are shared.
   for (auto expr : exprs) {
-    if (!expr.isPureAffine())
-      return failure();
-    // has poison expression
     auto flattenResult = flattener.walkPostOrder(expr);
     if (failed(flattenResult))
+      return failure();
+    if (flattener.hasUnhandledSemiAffineExpressions())
       return failure();
   }
 
@@ -106,33 +138,33 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
 }
 
 // Flattens 'expr' into 'flattenedExpr'. Returns failure if 'expr' was unable to
-// be flattened (semi-affine expressions not handled yet).
-LogicalResult
-mlir::getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
-                             unsigned numSymbols,
-                             SmallVectorImpl<int64_t> *flattenedExpr,
-                             FlatLinearConstraints *localVarCst) {
+// be flattened (an unhandled semi-affine was found).
+LogicalResult mlir::getFlattenedAffineExpr(
+    AffineExpr expr, unsigned numDims, unsigned numSymbols,
+    SmallVectorImpl<int64_t> *flattenedExpr, FlatLinearConstraints *localVarCst,
+    bool addConservativeSemiAffineBounds) {
   std::vector<SmallVector<int64_t, 8>> flattenedExprs;
-  LogicalResult ret = ::getFlattenedAffineExprs({expr}, numDims, numSymbols,
-                                                &flattenedExprs, localVarCst);
+  LogicalResult ret =
+      ::getFlattenedAffineExprs({expr}, numDims, numSymbols, &flattenedExprs,
+                                localVarCst, addConservativeSemiAffineBounds);
   *flattenedExpr = flattenedExprs[0];
   return ret;
 }
 
 /// Flattens the expressions in map. Returns failure if 'expr' was unable to be
-/// flattened (i.e., semi-affine expressions not handled yet).
+/// flattened (i.e., an unhandled semi-affine was found).
 LogicalResult mlir::getFlattenedAffineExprs(
     AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
-    FlatLinearConstraints *localVarCst) {
+    FlatLinearConstraints *localVarCst, bool addConservativeSemiAffineBounds) {
   if (map.getNumResults() == 0) {
     if (localVarCst)
       *localVarCst =
           FlatLinearConstraints(map.getNumDims(), map.getNumSymbols());
     return success();
   }
-  return ::getFlattenedAffineExprs(map.getResults(), map.getNumDims(),
-                                   map.getNumSymbols(), flattenedExprs,
-                                   localVarCst);
+  return ::getFlattenedAffineExprs(
+      map.getResults(), map.getNumDims(), map.getNumSymbols(), flattenedExprs,
+      localVarCst, addConservativeSemiAffineBounds);
 }
 
 LogicalResult mlir::getFlattenedAffineExprs(
@@ -641,9 +673,11 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
 }
 
 LogicalResult FlatLinearConstraints::flattenAlignedMapAndMergeLocals(
-    AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs) {
+    AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
+    bool addConservativeSemiAffineBounds) {
   FlatLinearConstraints localCst;
-  if (failed(getFlattenedAffineExprs(map, flattenedExprs, &localCst))) {
+  if (failed(getFlattenedAffineExprs(map, flattenedExprs, &localCst,
+                                     addConservativeSemiAffineBounds))) {
     LLVM_DEBUG(llvm::dbgs()
                << "composition unimplemented for semi-affine maps\n");
     return failure();
@@ -664,9 +698,9 @@ LogicalResult FlatLinearConstraints::flattenAlignedMapAndMergeLocals(
   return success();
 }
 
-LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
-                                              AffineMap boundMap,
-                                              bool isClosedBound) {
+LogicalResult FlatLinearConstraints::addBound(
+    BoundType type, unsigned pos, AffineMap boundMap, bool isClosedBound,
+    AddConservativeSemiAffineBounds addSemiAffineBounds) {
   assert(boundMap.getNumDims() == getNumDimVars() && "dim mismatch");
   assert(boundMap.getNumSymbols() == getNumSymbolVars() && "symbol mismatch");
   assert(pos < getNumDimAndSymbolVars() && "invalid position");
@@ -680,7 +714,9 @@ LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
   bool lower = type == BoundType::LB || type == BoundType::EQ;
 
   std::vector<SmallVector<int64_t, 8>> flatExprs;
-  if (failed(flattenAlignedMapAndMergeLocals(boundMap, &flatExprs)))
+  if (failed(flattenAlignedMapAndMergeLocals(
+          boundMap, &flatExprs,
+          addSemiAffineBounds == AddConservativeSemiAffineBounds::Yes)))
     return failure();
   assert(flatExprs.size() == boundMap.getNumResults());
 
@@ -716,9 +752,11 @@ LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
   return success();
 }
 
-LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
-                                              AffineMap boundMap) {
-  return addBound(type, pos, boundMap, /*isClosedBound=*/type != BoundType::UB);
+LogicalResult FlatLinearConstraints::addBound(
+    BoundType type, unsigned pos, AffineMap boundMap,
+    AddConservativeSemiAffineBounds addSemiAffineBounds) {
+  return addBound(type, pos, boundMap,
+                  /*isClosedBound=*/type != BoundType::UB, addSemiAffineBounds);
 }
 
 /// Compute an explicit representation for local vars. For all systems coming
