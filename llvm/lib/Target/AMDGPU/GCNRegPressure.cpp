@@ -354,14 +354,14 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
 
-bool GCNUpwardRPTracker::recede(const MachineInstr &MI, bool ShouldTrackIt) {
+void GCNUpwardRPTracker::recede(const MachineInstr &MI, bool ShouldTrackIt) {
   assert(MRI && "call reset first");
 
   if (ShouldTrackIt)
     LastTrackedMI = &MI;
 
   if (MI.isDebugInstr())
-    return false;
+    return;
 
   // Kill all defs.
   GCNRegPressure DefPressure, ECDefPressure;
@@ -413,7 +413,6 @@ bool GCNUpwardRPTracker::recede(const MachineInstr &MI, bool ShouldTrackIt) {
                           : max(CurPressure, MaxPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
-  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -450,9 +449,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
     SI = NextMI == MBBEnd
              ? CurrLIS->getInstructionIndex(*LastTrackedMI).getDeadSlot()
              : CurrLIS->getInstructionIndex(*NextMI).getBaseIndex();
-  }
-
-  else { //! ShouldTrackIt
+  } else { //! ShouldTrackIt
     CurrLIS = TheLIS;
     SI = CurrLIS->getInstructionIndex(*MI).getBaseIndex();
     CurrMI = MI;
@@ -503,8 +500,10 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
 }
 
 void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI, bool ShouldTrackIt) {
-  LastTrackedMI = &*NextMI++;
-  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  if (ShouldTrackIt) {
+    LastTrackedMI = &*NextMI++;
+    NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  }
 
   MachineInstr *CurrMI =
       ShouldTrackIt ? const_cast<MachineInstr *>(LastTrackedMI) : MI;
