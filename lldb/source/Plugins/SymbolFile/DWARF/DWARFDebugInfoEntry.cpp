@@ -42,11 +42,11 @@ extern int g_verbose;
 // Extract a debug info entry for a given DWARFUnit from the data
 // starting at the offset in offset_ptr
 bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
-                                  const DWARFUnit *cu,
+                                  const DWARFUnit &unit,
                                   lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
   auto report_error = [&](const char *fmt, const auto &...vals) {
-    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+    unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "[{0:x16}]: {1}, please file a bug and "
         "attach the file at the start of this error message",
         static_cast<uint64_t>(m_offset), llvm::formatv(fmt, vals...));
@@ -67,7 +67,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
     return true; // NULL debug tag entry
   }
 
-  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(&unit);
   if (abbrevDecl == nullptr)
     return report_error("invalid abbreviation code {0}", abbr_idx);
 
@@ -75,7 +75,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   m_has_children = abbrevDecl->hasChildren();
   // Skip all data in the .debug_info or .debug_types for the attributes
   for (const auto &attribute : abbrevDecl->attributes()) {
-    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, cu))
+    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, &unit))
       continue;
 
     return report_error("Unsupported DW_FORM_{1:x}", attribute.Form);
