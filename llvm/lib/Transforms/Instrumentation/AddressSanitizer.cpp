@@ -232,6 +232,11 @@ static cl::opt<bool>
                       cl::desc("instrument byval call arguments"), cl::Hidden,
                       cl::init(true));
 
+static cl::opt<bool>
+    ClInstrumentAMDGPULDS("asan-instrument-amdgpu-lds",
+                          cl::desc("instrument amdgpu LDS accesses"),
+                          cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClAlwaysSlowPath(
     "asan-always-slow-path",
     cl::desc("use instrumentation with slow path for all accesses"), cl::Hidden,
@@ -1293,8 +1298,8 @@ static GlobalVariable *getKernelSwLDSBaseGlobal(Module &M) {
 static void updateLDSSizeFnAttr(Function *Func, uint32_t Offset,
                                 bool UsesDynLDS) {
   if (Offset != 0) {
-    std::string Buffer;
-    raw_string_ostream SS{Buffer};
+    SmallString<256> Buffer;
+    raw_svector_ostream SS(Buffer);
     SS << format("%u", Offset);
     if (UsesDynLDS)
       SS << format(",%u", Offset);
@@ -1312,33 +1317,30 @@ static void recordLDSAbsoluteAddress(Module &M, GlobalVariable *GV,
                   MDNode::get(Ctx, {MinC, MaxC}));
 }
 
-static void UpdateSwLDSMetadataWithRedzoneInfo(Function &F, int Scale) {
+/// Update SwLDS Metadata global initializer with redzone info.
+static SmallVector<std::pair<uint32_t, uint32_t>, 64>
+UpdateSwLDSMetadataWithRedzoneInfo(Function &F, int Scale) {
   Module *M = F.getParent();
   GlobalVariable *SwLDSMetadataGlobal = getKernelSwLDSMetadataGlobal(*M, F);
   GlobalVariable *SwLDSGlobal = getKernelSwLDSGlobal(*M, F);
   if (!SwLDSMetadataGlobal || !SwLDSGlobal)
-    return;
+    return {};
 
   LLVMContext &Ctx = M->getContext();
   Type *Int32Ty = Type::getInt32Ty(Ctx);
-
+  SmallVector<std::pair<uint32_t, uint32_t>, 64> RedzoneOffsetAndSizeVector;
   Constant *MdInit = SwLDSMetadataGlobal->getInitializer();
-  Align MdAlign = Align(SwLDSMetadataGlobal->getAlign().valueOrOne());
   Align LDSAlign = Align(SwLDSGlobal->getAlign().valueOrOne());
 
   StructType *MDStructType =
       cast<StructType>(SwLDSMetadataGlobal->getValueType());
-  assert(MDStructType);
   unsigned NumStructs = MDStructType->getNumElements();
-
-  std::vector<Type *> Items;
   std::vector<Constant *> Initializers;
   uint32_t MallocSize = 0;
-  //{GV.start, Align(GV.size + Redzone.size), Redzone.start, Redzone.size}
-  StructType *LDSItemTy = StructType::create(
-      Ctx, {Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty}, "");
+  StructType *LDSItemTy =
+      cast<StructType>(MDStructType->getStructElementType(0));
+
   for (unsigned i = 0; i < NumStructs; i++) {
-    Items.push_back(LDSItemTy);
     ConstantStruct *member =
         dyn_cast<ConstantStruct>(MdInit->getAggregateElement(i));
     Constant *NewInitItem;
@@ -1353,91 +1355,48 @@ static void UpdateSwLDSMetadataWithRedzoneInfo(Function &F, int Scale) {
         const uint64_t RightRedzoneSize =
             getRedzoneSizeForGlobal(Scale, GlobalSizeValue);
         MallocSize += GlobalSizeValue;
-        Constant *NewItemRedzoneStartOffset =
-            ConstantInt::get(Int32Ty, MallocSize);
+        RedzoneOffsetAndSizeVector.emplace_back(MallocSize, RightRedzoneSize);
         MallocSize += RightRedzoneSize;
-        Constant *NewItemRedzoneSize =
-            ConstantInt::get(Int32Ty, RightRedzoneSize);
-
         unsigned NewItemAlignGlobalPlusRedzoneSize =
             alignTo(GlobalSizeValue + RightRedzoneSize, LDSAlign);
         Constant *NewItemAlignGlobalPlusRedzoneSizeConst =
             ConstantInt::get(Int32Ty, NewItemAlignGlobalPlusRedzoneSize);
         NewInitItem = ConstantStruct::get(
             LDSItemTy, {NewItemStartOffset, NewItemGlobalSizeConst,
-                        NewItemAlignGlobalPlusRedzoneSizeConst,
-                        NewItemRedzoneStartOffset, NewItemRedzoneSize});
+                        NewItemAlignGlobalPlusRedzoneSizeConst});
         MallocSize = alignTo(MallocSize, LDSAlign);
       } else {
         Constant *CurrMallocSize = ConstantInt::get(Int32Ty, MallocSize);
         Constant *zero = ConstantInt::get(Int32Ty, 0);
-        NewInitItem = ConstantStruct::get(
-            LDSItemTy, {CurrMallocSize, zero, zero, zero, zero});
+        NewInitItem =
+            ConstantStruct::get(LDSItemTy, {CurrMallocSize, zero, zero});
+        RedzoneOffsetAndSizeVector.emplace_back(0, 0);
       }
     } else {
       Constant *CurrMallocSize = ConstantInt::get(Int32Ty, MallocSize);
       Constant *zero = ConstantInt::get(Int32Ty, 0);
-      NewInitItem = ConstantStruct::get(
-          LDSItemTy, {CurrMallocSize, zero, zero, zero, zero});
+      NewInitItem =
+          ConstantStruct::get(LDSItemTy, {CurrMallocSize, zero, zero});
+      RedzoneOffsetAndSizeVector.emplace_back(0, 0);
     }
     Initializers.push_back(NewInitItem);
   }
   GlobalVariable *SwDynLDS = getKernelSwDynLDSGlobal(*M, F);
-  bool usesDynLDS = SwDynLDS ? true : false;
+  bool usesDynLDS = SwDynLDS != nullptr;
   updateLDSSizeFnAttr(&F, MallocSize, usesDynLDS);
   if (usesDynLDS)
     recordLDSAbsoluteAddress(*M, SwDynLDS, MallocSize);
 
-  StructType *MetadataStructType = StructType::create(Ctx, Items, "");
-
-  GlobalVariable *NewSwLDSMetadataGlobal = new GlobalVariable(
-      *M, MetadataStructType, false, GlobalValue::InternalLinkage,
-      PoisonValue::get(MetadataStructType), "", nullptr,
-      GlobalValue::NotThreadLocal, 1, false);
-  Constant *Data = ConstantStruct::get(MetadataStructType, Initializers);
-  NewSwLDSMetadataGlobal->setInitializer(Data);
-  NewSwLDSMetadataGlobal->setAlignment(MdAlign);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  NewSwLDSMetadataGlobal->setSanitizerMetadata(MD);
-
-  for (Use &U : make_early_inc_range(SwLDSMetadataGlobal->uses())) {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(U.getUser())) {
-      SmallVector<Constant *> Indices;
-      for (Use &Idx : GEP->indices()) {
-        Indices.push_back(cast<Constant>(Idx));
-      }
-      Constant *NewGEP = ConstantExpr::getGetElementPtr(
-          MetadataStructType, NewSwLDSMetadataGlobal, Indices, true);
-      GEP->replaceAllUsesWith(NewGEP);
-    } else if (LoadInst *Load = dyn_cast<LoadInst>(U.getUser())) {
-      Constant *zero = ConstantInt::get(Int32Ty, 0);
-      SmallVector<Constant *> Indices{zero, zero, zero};
-      Constant *NewGEP = ConstantExpr::getGetElementPtr(
-          MetadataStructType, NewSwLDSMetadataGlobal, Indices, true);
-      IRBuilder<> IRB(Load);
-      LoadInst *NewLoad = IRB.CreateLoad(Load->getType(), NewGEP);
-      Load->replaceAllUsesWith(NewLoad);
-      Load->eraseFromParent();
-    } else if (StoreInst *Store = dyn_cast<StoreInst>(U.getUser())) {
-      Constant *zero = ConstantInt::get(Int32Ty, 0);
-      SmallVector<Constant *> Indices{zero, zero, zero};
-      Constant *NewGEP = ConstantExpr::getGetElementPtr(
-          MetadataStructType, NewSwLDSMetadataGlobal, Indices, true);
-      IRBuilder<> IRB(Store);
-      StoreInst *NewStore = IRB.CreateStore(Store->getValueOperand(), NewGEP);
-      Store->replaceAllUsesWith(NewStore);
-      Store->eraseFromParent();
-    } else
-      report_fatal_error("AMDGPU Sw LDS Metadata User instruction not handled");
-  }
-  SwLDSMetadataGlobal->replaceAllUsesWith(NewSwLDSMetadataGlobal);
-  NewSwLDSMetadataGlobal->takeName(SwLDSMetadataGlobal);
-  SwLDSMetadataGlobal->eraseFromParent();
-  return;
+  Constant *Data = ConstantStruct::get(MDStructType, Initializers);
+  SwLDSMetadataGlobal->setInitializer(Data);
+  return RedzoneOffsetAndSizeVector;
 }
 
-static void poisonRedzonesForSwLDS(Function &F) {
+/// Poison redzone regions using the redzone size and offset info.
+static void
+poisonRedzonesForSwLDS(Function &F,
+                       SmallVector<std::pair<uint32_t, uint32_t>, 64>
+                           &RedzoneOffsetAndSizeVector) {
   Module *M = F.getParent();
   GlobalVariable *SwLDSGlobal = getKernelSwLDSGlobal(*M, F);
   GlobalVariable *SwLDSMetadataGlobal = getKernelSwLDSMetadataGlobal(*M, F);
@@ -1466,10 +1425,10 @@ static void poisonRedzonesForSwLDS(Function &F) {
 
     StructType *MDStructType =
         cast<StructType>(SwLDSMetadataGlobal->getValueType());
-    assert(MDStructType);
     unsigned NumStructs = MDStructType->getNumElements();
     Value *StoreMallocPointer = SI->getValueOperand();
 
+    assert(RedzoneOffsetAndSizeVector.size() == NumStructs);
     for (unsigned i = 0; i < NumStructs; i++) {
       ConstantStruct *member =
           dyn_cast<ConstantStruct>(MdInit->getAggregateElement(i));
@@ -1484,35 +1443,28 @@ static void poisonRedzonesForSwLDS(Function &F) {
         continue;
       IRBuilder<> IRB(SI);
       IRB.SetInsertPoint(SI->getNextNode());
+      auto &RedzonePair = RedzoneOffsetAndSizeVector[i];
+      uint64_t RedzoneOffset = RedzonePair.first;
+      uint64_t RedzoneSize = RedzonePair.second;
 
-      auto *GEPForOffset = IRB.CreateInBoundsGEP(
-          MDStructType, SwLDSMetadataGlobal,
-          {IRB.getInt32(0), IRB.getInt32(i), IRB.getInt32(3)});
-
-      auto *GEPForSize = IRB.CreateInBoundsGEP(
-          MDStructType, SwLDSMetadataGlobal,
-          {IRB.getInt32(0), IRB.getInt32(i), IRB.getInt32(4)});
-
-      Value *RedzoneOffset = IRB.CreateLoad(IRB.getInt32Ty(), GEPForOffset);
-      RedzoneOffset = IRB.CreateZExt(RedzoneOffset, IRB.getInt64Ty());
       Value *RedzoneAddrOffset = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(), StoreMallocPointer, {RedzoneOffset});
+          IRB.getInt8Ty(), StoreMallocPointer, {IRB.getInt64(RedzoneOffset)});
       Value *RedzoneAddress =
           IRB.CreatePtrToInt(RedzoneAddrOffset, IRB.getInt64Ty());
-      Value *RedzoneSize = IRB.CreateLoad(IRB.getInt32Ty(), GEPForSize);
-      RedzoneSize = IRB.CreateZExt(RedzoneSize, IRB.getInt64Ty());
-      IRB.CreateCall(AsanPoisonRegion, {RedzoneAddress, RedzoneSize});
+      IRB.CreateCall(AsanPoisonRegion,
+                     {RedzoneAddress, IRB.getInt64(RedzoneSize)});
     }
   }
-  return;
 }
 
+/// Update SwLDS Metadata global initializer with redzone info.
+/// Poison redzone regions using the redzone size and offset info.
 static void preProcessAMDGPULDSAccesses(Module &M, int Scale) {
   for (Function &F : M) {
-    UpdateSwLDSMetadataWithRedzoneInfo(F, Scale);
-    poisonRedzonesForSwLDS(F);
+    auto RedzoneOffsetAndSizeVector =
+        UpdateSwLDSMetadataWithRedzoneInfo(F, Scale);
+    poisonRedzonesForSwLDS(F, RedzoneOffsetAndSizeVector);
   }
-  return;
 }
 
 AddressSanitizerPass::AddressSanitizerPass(
@@ -1527,7 +1479,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
   Triple TargetTriple = Triple(M.getTargetTriple());
 
-  if (TargetTriple.isAMDGPU()) {
+  if (TargetTriple.isAMDGPU() && ClInstrumentAMDGPULDS) {
     unsigned LongSize = M.getDataLayout().getPointerSizeInBits();
     ShadowMapping Mapping = getShadowMapping(TargetTriple, LongSize, false);
     preProcessAMDGPULDSAccesses(M, Mapping.Scale);
@@ -2147,7 +2099,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   }
 
   Value *AddrLong;
-  if (TargetTriple.isAMDGCN()) {
+  if (TargetTriple.isAMDGPU() && ClInstrumentAMDGPULDS) {
     Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
     if (PtrTy->getPointerAddressSpace() == 3) {
       Module *M = IRB.GetInsertBlock()->getParent()->getParent();
@@ -2168,6 +2120,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
           SwLDS = IRB.CreateIntToPtr(IRB.getInt32(0), IRB.getPtrTy(3));
         }
       }
+      assert(SwLDS && "Invalid AMDGPU Sw LDS base ptr");
       Value *PtrToInt = IRB.CreatePtrToInt(Addr, IRB.getInt32Ty());
       Value *LoadMallocPtr = IRB.CreateLoad(IRB.getPtrTy(1), SwLDS);
       Value *GEP =
