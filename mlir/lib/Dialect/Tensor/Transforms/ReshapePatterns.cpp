@@ -83,7 +83,7 @@ struct FoldInsertOfRankReducingInsert : public OpRewritePattern<OpTy> {
 /// Fold expand_shape which only adds static dimensions of size `1`
 /// into insert_slice.
 template <typename OpTy>
-struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
+struct FoldPaddingExpandIntoInsert : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OpTy insertSliceOp,
@@ -93,8 +93,8 @@ struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
     if (!expandShapeOp)
       return failure();
 
-    // Only fold away simple rank increasing expansion where all added
-    // dimensions have static size `1`.
+    // Only fold away simple expansion where all added dimensions have static
+    // size `1`.
     SliceVerificationResult res = isRankReducedType(
         expandShapeOp.getResultType(), expandShapeOp.getSrcType());
     if (res != SliceVerificationResult::Success)
@@ -111,11 +111,10 @@ struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<FoldExpandOfRankReducingExtract,
-           FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
-           FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
-           FoldRankIncreasingExpandIntoInsert<tensor::InsertSliceOp>,
-           FoldRankIncreasingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
-          patterns.getContext());
+  patterns.add<FoldExpandOfRankReducingExtract,
+               FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
+               FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
+               FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
+               FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
+      patterns.getContext());
 }
