@@ -85,6 +85,9 @@ def icf_eq: Joined<["--"], "icf=">,
     HelpText<"Set level for identical code folding (default: none)">,
     MetaVarName<"[none,safe,all]">,
     Group<grp_lld>;
+def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
+    HelpText<"For symbols that were folded by ICF - retain them as stabs entries">,
+    Group<grp_lld>;
 def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
