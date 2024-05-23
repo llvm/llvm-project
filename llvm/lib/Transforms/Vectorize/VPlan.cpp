@@ -733,11 +733,11 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
 static InstructionCost computeCostForRecipe(VPRecipeBase *R, ElementCount VF,
                                             VPCostContext &Ctx) {
-  Instruction *UI = nullptr;
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
-    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-  if (UI && Ctx.skipForCostComputation(UI))
-    return 0;
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(R)) {
+    auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+    if (UI && Ctx.skipCostComputation(UI))
+      return 0;
+  }
 
   InstructionCost RecipeCost = R->computeCost(VF, Ctx);
   if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
@@ -767,8 +767,15 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
     return Cost;
   }
 
+  // Compute the cost of a replicate region. Replicating isn't supported for
+  // scalable vectors, return an invalid cost for them.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
+  // First compute the cost of the conditionally executed recipes, followed by
+  // account for the branching cost, except if the mask is a header mask or
+  // uniform condition.
   using namespace llvm::VPlanPatternMatch;
-  assert(isReplicator() && "can only compute cost for a replicator region");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
   for (VPRecipeBase &R : *Then)
     Cost += computeCostForRecipe(&R, VF, Ctx);
@@ -777,15 +784,16 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
   auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
   VPValue *Cond = BOM->getOperand(0);
 
-  // Check if Cond is a uniform compare or a header mask.
+  // Check if Cond is a uniform compare or a header mask and don't account for
+  // branching costs. A uniform condition correspondings to a single branch per
+  // VF, and the header mask will always be true except in the last iteration.
   VPValue *Op;
   bool IsHeaderMaskOrUniformCond =
-      vputils::isUniformCompare(Cond) ||
+      vputils::isUniformBoolean(Cond) || isa<VPActiveLaneMaskPHIRecipe>(Cond) ||
       match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
       (match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue(Op))) &&
-       Op == getPlan()->getOrCreateBackedgeTakenCount()) ||
-      isa<VPActiveLaneMaskPHIRecipe>(Cond);
-  if (IsHeaderMaskOrUniformCond || VF.isScalable())
+       Op == getPlan()->getOrCreateBackedgeTakenCount());
+  if (IsHeaderMaskOrUniformCond)
     return Cost;
 
   // For the scalar case, we may not always execute the original predicated
@@ -1556,15 +1564,14 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   return Expanded;
 }
 
-bool vputils::isUniformCompare(VPValue *Cond) {
+bool vputils::isUniformBoolean(VPValue *Cond) {
   if (match(Cond, m_Not(m_VPValue())))
     Cond = Cond->getDefiningRecipe()->getOperand(0);
   auto *R = Cond->getDefiningRecipe();
   if (!R)
     return true;
-  if (!match(R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())))
-    return false;
-  return all_of(R->operands(), [](VPValue *Op) {
-    return vputils::isUniformAfterVectorization(Op);
-  });
+  return match(R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
+         all_of(R->operands(), [](VPValue *Op) {
+           return vputils::isUniformAfterVectorization(Op);
+         });
 }

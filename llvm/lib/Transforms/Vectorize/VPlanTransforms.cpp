@@ -909,9 +909,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
         VPSingleDefRecipe *VPC;
-        if (auto *UV = R.getOperand(0)->getUnderlyingValue())
+        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue())
           VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
-                                      TruncTy, *cast<CastInst>(UV));
+                                      TruncTy, *cast<CastInst>(UnderlyingExt));
         else
           VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
                                       TruncTy);

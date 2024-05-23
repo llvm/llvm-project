@@ -667,6 +667,7 @@ public:
   /// region for VPRegionBlocks.
   virtual VPBlockBase *clone() = 0;
 
+  /// Compute the cost of the block.
   virtual InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) = 0;
 };
 
@@ -718,7 +719,7 @@ struct VPCostContext {
       : TTI(TTI), Types(CanIVTy, Ctx), Ctx(Ctx), CM(CM) {}
 
   InstructionCost getLegacyCost(Instruction *UI, ElementCount VF);
-  bool skipForCostComputation(Instruction *UI) const;
+  bool skipCostComputation(Instruction *UI) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -760,8 +761,9 @@ public:
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
 
-  /// Compute the cost for the recipe. Returns an invalid cost if the recipe
-  /// does not yet implement computing the cost.
+  /// Compute the cost of this recipe. Unless overriden by subclasses, the
+  /// default implementation falls back to the legacy cost model using the
+  /// underlying instructions.
   virtual InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
@@ -1374,8 +1376,6 @@ public:
 
   /// Produce widened copies of all Ingredients.
   void execute(VPTransformState &State) override;
-
-  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) override;
 
   unsigned getOpcode() const { return Opcode; }
 
@@ -2971,6 +2971,7 @@ public:
     return NewBlock;
   }
 
+  /// Compute the cost of this VPBasicBlock
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) override;
 
 private:
@@ -3082,6 +3083,7 @@ public:
   /// their recipes without updating the operands of the cloned recipes.
   VPRegionBlock *clone() override;
 
+  // Compute the cost of this region.
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) override;
 };
 
@@ -3183,6 +3185,7 @@ public:
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
+  /// Compute the cost of this plan.
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx);
 
   VPBasicBlock *getEntry() { return Entry; }
@@ -3660,8 +3663,8 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   return false;
 }
 
-/// Return true if \p Cond is an uniform compare.
-bool isUniformCompare(VPValue *Cond);
+/// Return true if \p Cond is a uniform boolean.
+bool isUniformBoolean(VPValue *Cond);
 
 } // end namespace vputils
 
