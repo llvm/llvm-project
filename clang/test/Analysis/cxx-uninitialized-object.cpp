@@ -1130,7 +1130,6 @@ struct CXX11MemberInitTest2 {
 };
 
 void fCXX11MemberInitTest2() {
-  // TODO: we'd expect the warning: {{2 uninitializeds field}}
   CXX11MemberInitTest2(); // no-warning
 }
 
