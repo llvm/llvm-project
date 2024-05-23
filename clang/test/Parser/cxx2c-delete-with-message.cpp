@@ -46,6 +46,8 @@ U b = delete ("hello"), c, d = delete ("hello"); // expected-error 2 {{only func
 
 struct C {
   T e = delete ("hello"); // expected-error {{'= delete' is a function definition and must occur in a standalone declaration}}
-  U f = delete ("hello"); // expected-error {{cannot delete expression of type 'const char[6]'}}
+  U f = delete ("hello");
+// expected-warning@-1 {{deleting array of type 'const char[6]'}}
+// expected-error@-2 {{cannot initialize a member subobject of type 'U' (aka 'int') with an rvalue of type 'void'}}
 };
 }

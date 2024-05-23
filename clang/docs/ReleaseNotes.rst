@@ -769,6 +769,10 @@ Bug Fixes to C++ Support
 - Fixed a crash when trying to emit captures in a lambda call operator with an explicit object
   parameter that is called on a derived type of the lambda.
   Fixes (#GH87210), (GH89541).
+- Fix delete-expression operand not undergoing array-to-pointer conversion. Now warn ``-Wdelete-array`` when
+  trying to delete an array object.
+- Fix GNU extension that allows deleting ``void *`` making some deletes of class type ambiguous when there
+  is an object pointer and void pointer conversion operator. Now chooses the object pointer conversion.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

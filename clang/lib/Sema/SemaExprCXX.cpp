@@ -3672,13 +3672,60 @@ void Sema::AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
   }
 }
 
+namespace {
+class DeleteConverter : public Sema::ContextualImplicitConverter {
+public:
+  bool AllowVoidPointer = false;
+
+  DeleteConverter() : ContextualImplicitConverter(false, true) {}
+
+  bool match(QualType ConvType) override {
+    return ConvType->isObjectPointerType() &&
+           (AllowVoidPointer || !ConvType->isVoidPointerType());
+  }
+
+  using SDB = Sema::SemaDiagnosticBuilder;
+
+  SDB diagnoseNoMatch(Sema &S, SourceLocation Loc, QualType T) override {
+    return S.Diag(Loc, diag::err_delete_operand) << T;
+  }
+
+  SDB diagnoseIncomplete(Sema &S, SourceLocation Loc, QualType T) override {
+    return S.Diag(Loc, diag::err_delete_incomplete_class_type) << T;
+  }
+
+  SDB diagnoseExplicitConv(Sema &S, SourceLocation Loc, QualType T,
+                           QualType ConvTy) override {
+    return S.Diag(Loc, diag::err_delete_explicit_conversion) << T << ConvTy;
+  }
+
+  SDB noteExplicitConv(Sema &S, CXXConversionDecl *Conv,
+                       QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_delete_conversion) << ConvTy;
+  }
+
+  SDB diagnoseAmbiguous(Sema &S, SourceLocation Loc, QualType T) override {
+    return S.Diag(Loc, diag::err_ambiguous_delete_operand) << T;
+  }
+
+  SDB noteAmbiguous(Sema &S, CXXConversionDecl *Conv,
+                    QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_delete_conversion) << ConvTy;
+  }
+
+  SDB diagnoseConversion(Sema &S, SourceLocation Loc, QualType T,
+                         QualType ConvTy) override {
+    llvm_unreachable("conversion functions are permitted");
+  }
+};
+} // namespace
+
 /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
 /// @code ::delete ptr; @endcode
 /// or
 /// @code delete [] ptr; @endcode
-ExprResult
-Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
-                     bool ArrayForm, Expr *ExE) {
+ExprResult Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
+                                bool ArrayForm, Expr *Ex) {
   // C++ [expr.delete]p1:
   //   The operand shall have a pointer type, or a class type having a single
   //   non-explicit conversion function to a pointer type. The result has type
@@ -3686,88 +3733,61 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
   //
   // DR599 amends "pointer type" to "pointer to object type" in both cases.
 
-  ExprResult Ex = ExE;
   FunctionDecl *OperatorDelete = nullptr;
   bool ArrayFormAsWritten = ArrayForm;
   bool UsualArrayDeleteWantsSize = false;
 
-  if (!Ex.get()->isTypeDependent()) {
-    // Perform lvalue-to-rvalue cast, if needed.
-    Ex = DefaultLvalueConversion(Ex.get());
-    if (Ex.isInvalid())
+  if (!Ex->isTypeDependent()) {
+    if (ExprResult Conv = DefaultLvalueConversion(Ex); Conv.isInvalid())
       return ExprError();
+    else
+      Ex = Conv.get();
+    QualType Type = Ex->getType();
 
-    QualType Type = Ex.get()->getType();
+    if (Type->isRecordType()) {
+      DeleteConverter Converter;
+      // Suppress diagnostics the first time around
+      Converter.Suppress = true;
 
-    class DeleteConverter : public ContextualImplicitConverter {
-    public:
-      DeleteConverter() : ContextualImplicitConverter(false, true) {}
-
-      bool match(QualType ConvType) override {
-        // FIXME: If we have an operator T* and an operator void*, we must pick
-        // the operator T*.
-        if (const PointerType *ConvPtrType = ConvType->getAs<PointerType>())
-          if (ConvPtrType->getPointeeType()->isIncompleteOrObjectType())
-            return true;
-        return false;
+      if (ExprResult Conv =
+              PerformContextualImplicitConversion(StartLoc, Ex, Converter);
+          !Conv.isInvalid() && Conv.get() != Ex) {
+        Ex = Conv.get();
+      } else {
+        // As an extension, allow void pointers
+        Converter.AllowVoidPointer = true;
+        Converter.Suppress = false;
+        Conv = PerformContextualImplicitConversion(StartLoc, Ex, Converter);
+        if (Conv.isInvalid() || Conv.get() == Ex)
+          return ExprError();
+        Ex = Conv.get();
       }
 
-      SemaDiagnosticBuilder diagnoseNoMatch(Sema &S, SourceLocation Loc,
-                                            QualType T) override {
-        return S.Diag(Loc, diag::err_delete_operand) << T;
-      }
+      Type = Ex->getType();
+      assert(Converter.match(Type) && "PerformContextualImplicitConversion "
+                                      "returned something of the wrong type");
+    } else {
+      if (Type->isArrayType())
+        Diag(StartLoc, diag::warn_delete_array) << Type;
 
-      SemaDiagnosticBuilder diagnoseIncomplete(Sema &S, SourceLocation Loc,
-                                               QualType T) override {
-        return S.Diag(Loc, diag::err_delete_incomplete_class_type) << T;
+      if (ExprResult Conv = DefaultFunctionArrayLvalueConversion(Ex);
+          Conv.isInvalid())
+        return ExprError();
+      else
+        Ex = Conv.get();
+      Type = Ex->getType();
+      if (!Type->isObjectPointerType()) {
+        Diag(StartLoc, diag::err_delete_operand) << Type;
+        return ExprError();
       }
-
-      SemaDiagnosticBuilder diagnoseExplicitConv(Sema &S, SourceLocation Loc,
-                                                 QualType T,
-                                                 QualType ConvTy) override {
-        return S.Diag(Loc, diag::err_delete_explicit_conversion) << T << ConvTy;
-      }
-
-      SemaDiagnosticBuilder noteExplicitConv(Sema &S, CXXConversionDecl *Conv,
-                                             QualType ConvTy) override {
-        return S.Diag(Conv->getLocation(), diag::note_delete_conversion)
-          << ConvTy;
-      }
-
-      SemaDiagnosticBuilder diagnoseAmbiguous(Sema &S, SourceLocation Loc,
-                                              QualType T) override {
-        return S.Diag(Loc, diag::err_ambiguous_delete_operand) << T;
-      }
-
-      SemaDiagnosticBuilder noteAmbiguous(Sema &S, CXXConversionDecl *Conv,
-                                          QualType ConvTy) override {
-        return S.Diag(Conv->getLocation(), diag::note_delete_conversion)
-          << ConvTy;
-      }
-
-      SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
-                                               QualType T,
-                                               QualType ConvTy) override {
-        llvm_unreachable("conversion functions are permitted");
-      }
-    } Converter;
-
-    Ex = PerformContextualImplicitConversion(StartLoc, Ex.get(), Converter);
-    if (Ex.isInvalid())
-      return ExprError();
-    Type = Ex.get()->getType();
-    if (!Converter.match(Type))
-      // FIXME: PerformContextualImplicitConversion should return ExprError
-      //        itself in this case.
-      return ExprError();
+    }
 
     QualType Pointee = Type->castAs<PointerType>()->getPointeeType();
     QualType PointeeElem = Context.getBaseElementType(Pointee);
 
     if (Pointee.getAddressSpace() != LangAS::Default &&
         !getLangOpts().OpenCLCPlusPlus)
-      return Diag(Ex.get()->getBeginLoc(),
-                  diag::err_address_space_qualified_delete)
+      return Diag(Ex->getBeginLoc(), diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
              << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
 
@@ -3777,16 +3797,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // effectively bans deletion of "void*". However, most compilers support
       // this, so we treat it as a warning unless we're in a SFINAE context.
       Diag(StartLoc, diag::ext_delete_void_ptr_operand)
-        << Type << Ex.get()->getSourceRange();
+          << Type << Ex->getSourceRange();
     } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
                Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
-        << Type << Ex.get()->getSourceRange());
+                       << Type << Ex->getSourceRange());
     } else if (!Pointee->isDependentType()) {
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
-      if (!RequireCompleteType(StartLoc, Pointee,
-                               diag::warn_delete_incomplete, Ex.get())) {
+      if (!RequireCompleteType(StartLoc, Pointee, diag::warn_delete_incomplete,
+                               Ex)) {
         if (const RecordType *RT = PointeeElem->getAs<RecordType>())
           PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
       }
@@ -3794,7 +3814,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (Pointee->isArrayType() && !ArrayForm) {
       Diag(StartLoc, diag::warn_delete_array_type)
-          << Type << Ex.get()->getSourceRange()
+          << Type << Ex->getSourceRange()
           << FixItHint::CreateInsertion(getLocForEndOfToken(StartLoc), "[]");
       ArrayForm = true;
     }
@@ -3864,7 +3884,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     bool IsVirtualDelete = false;
     if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-        CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
+        CheckDestructorAccess(Ex->getExprLoc(), Dtor,
                               PDiag(diag::err_access_dtor) << PointeeElem);
         IsVirtualDelete = Dtor->isVirtual();
       }
@@ -3885,17 +3905,20 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         Qs.removeCVRQualifiers();
         QualType Unqual = Context.getPointerType(
             Context.getQualifiedType(Pointee.getUnqualifiedType(), Qs));
-        Ex = ImpCastExprToType(Ex.get(), Unqual, CK_NoOp);
+        Ex = ImpCastExprToType(Ex, Unqual, CK_NoOp).get();
       }
-      Ex = PerformImplicitConversion(Ex.get(), ParamType, AA_Passing);
-      if (Ex.isInvalid())
+      if (ExprResult Conv =
+              PerformImplicitConversion(Ex, ParamType, AA_Passing);
+          Conv.isInvalid())
         return ExprError();
+      else
+        Ex = Conv.get();
     }
   }
 
-  CXXDeleteExpr *Result = new (Context) CXXDeleteExpr(
-      Context.VoidTy, UseGlobal, ArrayForm, ArrayFormAsWritten,
-      UsualArrayDeleteWantsSize, OperatorDelete, Ex.get(), StartLoc);
+  CXXDeleteExpr *Result = new (Context)
+      CXXDeleteExpr(Context.VoidTy, UseGlobal, ArrayForm, ArrayFormAsWritten,
+                    UsualArrayDeleteWantsSize, OperatorDelete, Ex, StartLoc);
   AnalyzeDeleteExprMismatch(Result);
   return Result;
 }
