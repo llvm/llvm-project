@@ -107,9 +107,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SIGN_EXTEND_INREG:
                          Res = PromoteIntRes_SIGN_EXTEND_INREG(N); break;
   case ISD::SRA:
-  case ISD::VP_ASHR:     Res = PromoteIntRes_SRA(N); break;
+  case ISD::VP_SRA:      Res = PromoteIntRes_SRA(N); break;
   case ISD::SRL:
-  case ISD::VP_LSHR:     Res = PromoteIntRes_SRL(N); break;
+  case ISD::VP_SRL:      Res = PromoteIntRes_SRL(N); break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:    Res = PromoteIntRes_TRUNCATE(N); break;
   case ISD::UNDEF:       Res = PromoteIntRes_UNDEF(N); break;
@@ -573,7 +573,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
                        ShAmt);
   SDValue Mask = N->getOperand(1);
   SDValue EVL = N->getOperand(2);
-  return DAG.getNode(ISD::VP_LSHR, dl, NVT,
+  return DAG.getNode(ISD::VP_SRL, dl, NVT,
                      DAG.getNode(ISD::VP_BSWAP, dl, NVT, Op, Mask, EVL), ShAmt,
                      Mask, EVL);
 }
@@ -601,7 +601,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
                        DAG.getNode(ISD::BITREVERSE, dl, NVT, Op), ShAmt);
   SDValue Mask = N->getOperand(1);
   SDValue EVL = N->getOperand(2);
-  return DAG.getNode(ISD::VP_LSHR, dl, NVT,
+  return DAG.getNode(ISD::VP_SRL, dl, NVT,
                      DAG.getNode(ISD::VP_BITREVERSE, dl, NVT, Op, Mask, EVL),
                      ShAmt, Mask, EVL);
 }
@@ -1405,7 +1405,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRA(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
-  if (N->getOpcode() != ISD::VP_ASHR)
+  if (N->getOpcode() != ISD::VP_SRA)
     return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS);
   return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS,
                      N->getOperand(2), N->getOperand(3));
@@ -1417,7 +1417,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
-  if (N->getOpcode() != ISD::VP_LSHR)
+  if (N->getOpcode() != ISD::VP_SRL)
     return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS);
   return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS,
                      N->getOperand(2), N->getOperand(3));
@@ -1513,10 +1513,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
     Hi = DAG.getNode(ISD::VP_SHL, DL, VT, Hi, HiShift, Mask, EVL);
     Lo = DAG.getVPZeroExtendInReg(Lo, Mask, EVL, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::VP_OR, DL, VT, Hi, Lo, Mask, EVL);
-    Res = DAG.getNode(IsFSHR ? ISD::VP_LSHR : ISD::VP_SHL, DL, VT, Res, Amt,
+    Res = DAG.getNode(IsFSHR ? ISD::VP_SRL : ISD::VP_SHL, DL, VT, Res, Amt,
                       Mask, EVL);
     if (!IsFSHR)
-      Res = DAG.getNode(ISD::VP_LSHR, DL, VT, Res, HiShift, Mask, EVL);
+      Res = DAG.getNode(ISD::VP_SRL, DL, VT, Res, HiShift, Mask, EVL);
     return Res;
   }
 
@@ -2212,7 +2212,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_SIGN_EXTEND(SDNode *N) {
   // FIXME: There is no VP_SIGN_EXTEND_INREG so use a pair of shifts.
   SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShAmt, N->getOperand(1),
                             N->getOperand(2));
-  return DAG.getNode(ISD::VP_ASHR, dl, VT, Shl, ShAmt, N->getOperand(1),
+  return DAG.getNode(ISD::VP_SRA, dl, VT, Shl, ShAmt, N->getOperand(1),
                      N->getOperand(2));
 }
 
