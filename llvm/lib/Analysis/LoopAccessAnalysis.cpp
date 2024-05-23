@@ -203,11 +203,9 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 ///
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
-void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
-                                    Type *AccessTy, bool WritePtr,
-                                    unsigned DepSetId, unsigned ASId,
-                                    PredicatedScalarEvolution &PSE,
-                                    bool NeedsFreeze) {
+static std::pair<const SCEV *, const SCEV *>
+getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
+                        PredicatedScalarEvolution &PSE) {
   ScalarEvolution *SE = PSE.getSE();
 
   const SCEV *ScStart;
@@ -215,9 +213,7 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
 
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
-  } else {
-    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr);
-    assert(AR && "Invalid addrec expression");
+  } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
     const SCEV *Ex = PSE.getBackedgeTakenCount();
 
     ScStart = AR->getStart();
@@ -236,16 +232,33 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
       ScStart = SE->getUMinExpr(ScStart, ScEnd);
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
-  }
+  } else
+    return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
   assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-  Type *IdxTy = DL.getIndexType(Ptr->getType());
+  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
+  return {ScStart, ScEnd};
+}
+
+/// Calculate Start and End points of memory access using
+/// getStartAndEndForAccess.
+void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+                                    Type *AccessTy, bool WritePtr,
+                                    unsigned DepSetId, unsigned ASId,
+                                    PredicatedScalarEvolution &PSE,
+                                    bool NeedsFreeze) {
+  const auto &[ScStart, ScEnd] =
+      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, PSE);
+  assert(!isa<SCEVCouldNotCompute>(ScStart) &&
+         !isa<SCEVCouldNotCompute>(ScEnd) &&
+         "must be able to compute both start and end expressions");
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
                         NeedsFreeze);
 }
@@ -1976,6 +1989,23 @@ getDependenceDistanceStrideAndSize(
       isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
+
+  // Check if we can prove that Sink only accesses memory after Src's end or
+  // vice versa.
+  const auto &[SrcStart, SrcEnd] =
+      getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
+  const auto &[SinkStart, SinkEnd] =
+      getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
+
+  if (!isa<SCEVCouldNotCompute>(SrcStart) &&
+      !isa<SCEVCouldNotCompute>(SrcEnd) &&
+      !isa<SCEVCouldNotCompute>(SinkStart) &&
+      !isa<SCEVCouldNotCompute>(SinkEnd)) {
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
+      return MemoryDepChecker::Dependence::NoDep;
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
+      return MemoryDepChecker::Dependence::NoDep;
+  }
 
   // Need accesses with constant strides and the same direction. We don't want
   // to vectorize "A[B[i]] += ..." and similar code or pointer arithmetic that

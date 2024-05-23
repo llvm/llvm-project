@@ -66,6 +66,12 @@ def Write4PassDGEMM : SchedWrite;
 def Write8PassDGEMM : SchedWrite;
 def Write16PassDGEMM : SchedWrite;
 
+// WMMA/SWMMA instructions
+def WriteXDL2PassWMMA : SchedWrite;
+def WriteXDL4PassWMMA : SchedWrite;
+def Write4PassWMMA : SchedWrite;
+def Write8PassWMMA : SchedWrite;
+
 // Scalar float instructions
 def WriteSFPU : SchedWrite;
 
@@ -99,6 +105,7 @@ def SIDPGFX950FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 def GFX11SpeedModel : SISchedMachineModel;
 def GFX12SpeedModel : SISchedMachineModel;
+def GFX1210SpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
 def HWBranch : ProcResource<1> {
@@ -455,3 +462,47 @@ def : HWWriteRes<WriteBarrier,           [HWBranch],       2000>;
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = GFX12SpeedModel
+
+let SchedModel = GFX1210SpeedModel in {
+
+let ReleaseAtCycles = [12] in
+def : HWWriteRes<WriteXDL2PassWMMA, [HWXDL], 12>;
+let ReleaseAtCycles = [20] in
+def : HWWriteRes<WriteXDL4PassWMMA, [HWXDL], 20>;
+
+def : HWWriteRes<Write4PassWMMA, [HWVALU], 20>;
+def : HWWriteRes<Write8PassWMMA, [HWVALU], 36>;
+
+def : HWWriteRes<Write32Bit,             [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteFloatCvt,          [HWVALU, HWRC],   5>;
+def : HWWriteRes<Write64Bit,             [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteTrans32,           [HWTransVALU, HWRC],   7>;
+def : HWWriteRes<WriteQuarterRate32,     [HWVALU, HWRC],   8>;
+def : HWWriteRes<WriteFloatFMA,          [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteDouble,            [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteDoubleAdd,         [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteIntMul,            [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC],   7>;
+def : HWWriteRes<WritePseudoScalarTrans, [HWVALU, HWRC],   5>;
+
+def : HWWriteRes<WriteBranch,            [HWBranch],       32>;
+def : HWWriteRes<WriteExport,            [HWExport, HWRC], 16>;
+def : HWWriteRes<WriteLDS,               [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteSALU,              [HWSALU,   HWRC], 2>;
+def : HWWriteRes<WriteSFPU,              [HWSALU,   HWRC], 4>;
+def : HWWriteRes<WriteSMEM,              [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteVMEM,              [HWVMEM,   HWRC], 320>;
+def : HWWriteRes<WriteBarrier,           [HWBranch],       2000>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
+
+def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_WMMA_.*_16X16X32_(BF16|F16)")>;
+def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_16X16X64_(IU8|FP8|BF16)")>;
+def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_WMMA_.*_16X16X128_(IU4|F8F6F4)")>;
+def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_SWMMAC_.*_16X16X128_(FP8|BF8|IU8)")>;
+def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_SWMMAC_.*_16X16X256_IU4")>;
+def : InstRW<[Write4PassWMMA], (instregex "^V_WMMA_F32_16X16X4_F32")>;
+def : InstRW<[Write8PassWMMA], (instregex "^V_WMMA_F64_16X16X[4|8]_F64")>;
+
+} // SchedModel = GFX1210SpeedModel

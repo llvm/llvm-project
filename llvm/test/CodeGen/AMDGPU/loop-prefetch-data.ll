@@ -82,9 +82,9 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GFX1210-NEXT:    flat_load_b128 v[0:3], v[0:1] offset:-176
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX1210-NEXT:    flat_load_b128 v[0:3], v[0:1] offset:-176
 ; GFX1210-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    flat_store_b128 v[4:5], v[0:3]

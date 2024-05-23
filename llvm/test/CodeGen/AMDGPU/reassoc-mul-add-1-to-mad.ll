@@ -5095,38 +5095,37 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ;
 ; GFX1210-LABEL: compute_mad:
 ; GFX1210:       ; %bb.0: ; %bb
+; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b96 s[4:6], s[0:1], 0x10
-; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_add_co_i32 s2, s6, 1
-; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    v_mul_lo_u32 v1, s2, v0
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1210-NEXT:    v_dual_add_nc_u32 v2, s2, v1 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v0
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1210-NEXT:    v_mul_lo_u32 v3, v2, v1
-; GFX1210-NEXT:    v_add_nc_u32_e32 v1, v3, v1
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_add_co_i32 s6, s6, 1
 ; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x4
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mul_lo_u32 v1, s6, v0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1210-NEXT:    v_mul_lo_u32 v1, v1, v2
-; GFX1210-NEXT:    v_add_nc_u32_e32 v2, 1, v3
-; GFX1210-NEXT:    v_mul_lo_u32 v3, v1, v2
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, s6, v1 :: v_dual_add_nc_u32 v1, 1, v1
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v3, v2, v1
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX1210-NEXT:    v_add_nc_u32_e32 v2, v3, v2
+; GFX1210-NEXT:    v_dual_add_nc_u32 v1, v3, v1 :: v_dual_add_nc_u32 v3, 1, v3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mad_u32 v0, ttmp9, s2, v0
-; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v1, v2
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1210-NEXT:    v_mul_lo_u32 v4, v2, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-; GFX1210-NEXT:    v_mad_u32 v3, v2, v3, v2
+; GFX1210-NEXT:    v_add_nc_u32_e32 v3, v4, v3
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[4:5]
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v3, v2
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v3, v2, v4, v2
 ; GFX1210-NEXT:    v_mad_u32 v2, v3, v2, v3
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

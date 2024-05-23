@@ -64,6 +64,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
@@ -117,8 +118,13 @@ bool AMDGPULowerVGPREncoding::setMode(unsigned NewMode,
     return false;
 
   I = handleClause(I);
-  BuildMI(*I->getParent(), I, nullptr, TII->get(AMDGPU::S_SET_VGPR_MSB))
-      .addImm(NewMode);
+  if (ST->hasVGPRIndexingRegisters()) {
+    BuildMI(*I->getParent(), I, nullptr, TII->get(AMDGPU::S_SET_VGPR_FRAMES))
+        .addImm(NewMode << 8);
+  } else {
+    BuildMI(*I->getParent(), I, nullptr, TII->get(AMDGPU::S_SET_VGPR_MSB))
+        .addImm(NewMode);
+  }
 
   Mode = NewMode;
   return true;
@@ -234,12 +240,12 @@ AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has1024AddressableVGPRs())
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  if (!ST->has1024AddressableVGPRs())
     return false;
 
-  TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;

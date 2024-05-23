@@ -158,7 +158,7 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   endif()
   add_compile_definitions(EXPENSIVE_CHECKS)
 
-  # In some libstdc++ versions, std::min_element is not constexpr when
+  # In libstdc++ 9 and earlier, std::min_element is not constexpr when
   # _GLIBCXX_DEBUG is enabled.
   CHECK_CXX_SOURCE_COMPILES("
     #define _GLIBCXX_DEBUG

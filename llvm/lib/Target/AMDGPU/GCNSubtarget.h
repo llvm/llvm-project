@@ -1446,7 +1446,7 @@ public:
   bool hasPkMinimumMaximum3F16Insts() const { return GFX12_10Insts; }
 
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
-  bool hasCvtPkF16Inst() const { return GFX12_10Insts; }
+  bool hasCvtPkF16Inst() const { return GFX12_10Insts && !GFX13Insts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also
