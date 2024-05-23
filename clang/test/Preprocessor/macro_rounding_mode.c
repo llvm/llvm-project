@@ -1,11 +1,62 @@
-// RUN: %clang_cc1 -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -E -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
 
-double sin(double);
-double sin_rte(double);
-double sin_rtz(double);
-double sin_rtp(double);
-double sin_rtn(double);
-double sin_rta(double);
+v1 = __ROUNDING_MODE__;
+// CHECK: v1 = ;
+
+#pragma STDC FENV_ROUND FE_TONEAREST
+v2 = __ROUNDING_MODE__;
+// CHECK: v2 = _rte;
+
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+v3 = __ROUNDING_MODE__;
+// CHECK: v3 = _rtz;
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+v4 = __ROUNDING_MODE__;
+// CHECK: v4 = _rtn;
+
+#pragma STDC FENV_ROUND FE_UPWARD
+v5 = __ROUNDING_MODE__;
+// CHECK: v5 = _rtp;
+
+#pragma STDC FENV_ROUND FE_TONEARESTFROMZERO
+v6 = __ROUNDING_MODE__;
+// CHECK: v6 = _rta;
+
+#pragma STDC FENV_ROUND FE_DYNAMIC
+v7 = __ROUNDING_MODE__;
+// CHECK: v7 = ;
+
+
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+#pragma STDC FENV_ROUND FE_UPWARD
+v10 = __ROUNDING_MODE__;
+// CHECK: v10 = _rtp;
+
+#pragma STDC FENV_ROUND FE_DYNAMIC
+{
+  #pragma STDC FENV_ROUND FE_TOWARDZERO
+  {
+    #pragma STDC FENV_ROUND FE_TONEAREST
+    {
+      #pragma STDC FENV_ROUND FE_DOWNWARD
+      {
+        #pragma STDC FENV_ROUND FE_UPWARD
+        v11 = __ROUNDING_MODE__;
+        // CHECK: v11 = _rtp;
+      }
+      v12 = __ROUNDING_MODE__;
+      // CHECK: v12 = _rtn;
+    }
+    v13 = __ROUNDING_MODE__;
+    // CHECK: v13 = _rte;
+  }
+  v14 = __ROUNDING_MODE__;
+  // CHECK: v14 = _rtz;
+}
+v15 = __ROUNDING_MODE__;
+// CHECK: v15 = ;
+
 
 #define CONCAT(a, b) CONCAT_(a, b)
 #define CONCAT_(a, b) a##b
@@ -13,43 +64,25 @@ double sin_rta(double);
 
 #define sin(x) ADD_ROUNDING_MODE_SUFFIX(sin)(x)
 
-double call_dyn(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_dyn(
-// CHECK:       call double @llvm.sin.f64(
+sin(x);
+// CHECK: sin(x);
 
 #pragma STDC FENV_ROUND FE_TOWARDZERO
-double call_tz(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_tz(
-// CHECK:       call double @sin_rtz(
+sin(x);
+// CHECK: sin_rtz(x);
 
 #pragma STDC FENV_ROUND FE_TONEAREST
-double call_te(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_te(
-// CHECK:       call double @sin_rte(
+sin(x);
+// CHECK: sin_rte(x);
 
 #pragma STDC FENV_ROUND FE_DOWNWARD
-double call_tn(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_tn(
-// CHECK:       call double @sin_rtn(
+sin(x);
+// CHECK: sin_rtn(x);
 
 #pragma STDC FENV_ROUND FE_UPWARD
-double call_tp(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_tp(
-// CHECK:       call double @sin_rtp(
+sin(x);
+// CHECK: sin_rtp(x);
 
 #pragma STDC FENV_ROUND FE_TONEARESTFROMZERO
-double call_tea(double x) {
-  return sin(x);
-}
-// CHECK-LABEL: define {{.*}} double @call_tea(
-// CHECK:       call double @sin_rta(
+sin(x);
+// CHECK: sin_rta(x);

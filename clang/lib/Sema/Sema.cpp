@@ -2725,7 +2725,6 @@ Sema::FPFeaturesStateRAII::~FPFeaturesStateRAII() {
   S.CurFPFeatures = OldFPFeaturesState;
   S.FpPragmaStack.CurrentValue = OldOverrides;
   S.PP.setCurrentFPEvalMethod(OldFPPragmaLocation, OldEvalMethod);
-  S.PP.setCurrentRoundingMode(S.CurFPFeatures.getConstRoundingMode());
 }
 
 bool Sema::isDeclaratorFunctionLike(Declarator &D) {

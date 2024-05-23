@@ -211,7 +211,6 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> NoUnrollAndJamHintHandler;
   std::unique_ptr<PragmaHandler> FPHandler;
   std::unique_ptr<PragmaHandler> STDCFenvAccessHandler;
-  std::unique_ptr<PragmaHandler> STDCFenvRoundHandler;
   std::unique_ptr<PragmaHandler> STDCCXLIMITHandler;
   std::unique_ptr<PragmaHandler> STDCUnknownHandler;
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;

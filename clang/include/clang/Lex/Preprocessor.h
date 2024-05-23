@@ -202,9 +202,6 @@ class Preprocessor {
   LangOptions::FPEvalMethodKind TUFPEvalMethod =
       LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
 
-  LangOptions::RoundingMode CurrentRoundingMode =
-      LangOptions::RoundingMode::Dynamic;
-
   // Next __COUNTER__ value, starts at 0.
   unsigned CounterValue = 0;
 
@@ -1165,6 +1162,17 @@ private:
   /// the beginning of a skipped block, to the number of bytes that should be
   /// skipped.
   llvm::DenseMap<const char *, unsigned> RecordedSkippedRanges;
+
+  /// Nesting level of curly braces.
+  unsigned CurlyBraceLevel = 0;
+
+  /// Information about an instance of pragma FENV_ROUND.
+  struct RoundingPragmaRecord {
+    unsigned Level;
+    LangOptions::RoundingMode RM;
+  };
+
+  SmallVector<RoundingPragmaRecord, 8> RoundingPragmas;
 
   void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
 
@@ -2360,13 +2368,9 @@ public:
     TUFPEvalMethod = Val;
   }
 
-  LangOptions::RoundingMode getCurrentRoundingMode() const {
-    return CurrentRoundingMode;
-  }
+  void setRoundingMode(LangOptions::RoundingMode RM);
 
-  void setCurrentRoundingMode(LangOptions::RoundingMode RM) {
-    CurrentRoundingMode = RM;
-  }
+  LangOptions::RoundingMode getCurrentRoundingMode() const;
 
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();

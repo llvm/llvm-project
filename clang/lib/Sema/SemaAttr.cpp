@@ -1322,7 +1322,6 @@ void Sema::ActOnPragmaFEnvRound(SourceLocation Loc, llvm::RoundingMode FPR) {
   NewFPFeatures.setConstRoundingModeOverride(FPR);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
-  PP.setCurrentRoundingMode(FPR);
 }
 
 void Sema::setExceptionMode(SourceLocation Loc,

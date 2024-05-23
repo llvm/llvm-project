@@ -709,6 +709,8 @@ def note_pp_module_begin_here : Note<
   "entering module '%0' due to this pragma">;
 def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
+def err_pragma_round_expected_mode : Error<"expected rounding mode">;
+def err_pragma_round_unknown_mode : Error<"invalid or unsupported rounding mode">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<

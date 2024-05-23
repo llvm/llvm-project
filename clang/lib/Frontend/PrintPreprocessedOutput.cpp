@@ -1001,9 +1001,14 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
       "#pragma clang", Callbacks,
       /*RequireTokenExpansion=*/PP.getLangOpts().MicrosoftExt));
 
+  std::unique_ptr<UnknownPragmaHandler> STDCHandler(new UnknownPragmaHandler(
+      "#pragma STDC", Callbacks,
+      /*RequireTokenExpansion=*/PP.getLangOpts().MicrosoftExt));
+
   PP.AddPragmaHandler(MicrosoftExtHandler.get());
   PP.AddPragmaHandler("GCC", GCCHandler.get());
   PP.AddPragmaHandler("clang", ClangHandler.get());
+  PP.AddPragmaHandler("STDC", STDCHandler.get());
 
   // The tokens after pragma omp need to be expanded.
   //
@@ -1050,4 +1055,5 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PP.RemovePragmaHandler("GCC", GCCHandler.get());
   PP.RemovePragmaHandler("clang", ClangHandler.get());
   PP.RemovePragmaHandler("omp", OpenMPHandler.get());
+  PP.RemovePragmaHandler("STDC", STDCHandler.get());
 }
