@@ -8656,10 +8656,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       StoreInst *SI;
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
-        // Only create recipe for the last intermediate store.
+        // Only create recipe for the last intermediate store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
           auto *Recipe = new VPIntermediateStoreRecipe(
-              I, /* StoredVal = */ Operands[0], /* Address = */ Operands[1]);
+              *SI, /* StoredVal = */ Operands[0], /* Address = */ Operands[1],
+              SI->getDebugLoc());
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         continue;

@@ -1922,14 +1922,13 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIntermediateStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(getUnderlyingInstr());
   IRBuilderBase &Builder = State.Builder;
   Value *StoredVal = State.get(getStoredVal(), 0, /*IsScalar*/ true);
   Value *Addr = State.get(getAddress(), 0, /*IsScalar*/ true);
   StoreInst *NewSI =
-      Builder.CreateAlignedStore(StoredVal, Addr, SI->getAlign());
-  // NewSI->setDebugLoc(getDebugLoc());
-  State.addMetadata(NewSI, SI);
+      Builder.CreateAlignedStore(StoredVal, Addr, getLoadStoreAlignment(&SI));
+  NewSI->setDebugLoc(getDebugLoc());
+  State.addMetadata(NewSI, &SI);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

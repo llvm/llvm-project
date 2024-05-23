@@ -2967,17 +2967,20 @@ public:
 };
 
 /// A recipe to represent scalar stores that sink outside the vector loop.
-class VPIntermediateStoreRecipe : public VPRecipeWithIRFlags {
+class VPIntermediateStoreRecipe : public VPRecipeBase {
+  StoreInst &SI;
+
 public:
-  VPIntermediateStoreRecipe(Instruction &SI, VPValue *StoredVal, VPValue *Addr)
-      : VPRecipeWithIRFlags(VPDef::VPIntermediateStoreSC,
-                            ArrayRef<VPValue *>({StoredVal, Addr}), SI) {}
+  VPIntermediateStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr,
+                            DebugLoc DL)
+      : VPRecipeBase(VPDef::VPIntermediateStoreSC, {StoredVal, Addr}, DL),
+        SI(SI) {}
 
   ~VPIntermediateStoreRecipe() override = default;
 
   VPIntermediateStoreRecipe *clone() override {
-    return new VPIntermediateStoreRecipe(*getUnderlyingInstr(), getStoredVal(),
-                                         getAddress());
+    return new VPIntermediateStoreRecipe(SI, getStoredVal(), getAddress(),
+                                         getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPIntermediateStoreSC)
@@ -2991,8 +2994,10 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Return the value stored by this recipe.
   VPValue *getStoredVal() const { return getOperand(0); }
 
+  /// Return the address accessed by this recipe.
   VPValue *getAddress() const { return getOperand(1); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
