@@ -83,7 +83,7 @@ body:             |
   auto *MF = MMI.getMachineFunction(*M->getFunction("vgpr-block-insts"));
   auto *MBB = MF->getBlockNumbered(0);
 
-  auto &MIt = --MBB->instr_end();
+  auto MIt = --MBB->instr_end();
 
   LiveRegUnits LiveUnits;
   LiveUnits.init(*ST.getRegisterInfo());
