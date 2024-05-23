@@ -754,7 +754,7 @@ def note_include_header_or_declare : Note<
 def note_previous_builtin_declaration : Note<"%0 is a builtin with type %1">;
 def warn_implicit_decl_no_jmp_buf
     : Warning<"declaration of built-in function '%0' requires the declaration"
-    " of the 'jmp_buf' type, commonly provided in the header <setjmp.h>.">,
+    " of the 'jmp_buf' type, commonly provided in the header <setjmp.h>">,
       InGroup<DiagGroup<"incomplete-setjmp-declaration">>;
 def warn_implicit_decl_requires_sysheader : Warning<
   "declaration of built-in function '%1' requires inclusion of the header <%0>">,
@@ -3197,7 +3197,7 @@ def err_attribute_bad_sve_vector_size : Error<
   "'-msve-vector-bits' ('%1')">;
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
-  "value of 128, 256, 512, 1024 or 2048.">;
+  "value of 128, 256, 512, 1024 or 2048">;
 def warn_attribute_arm_sm_incompat_builtin : Warning<
   "builtin call has undefined behaviour when called from a %0 function">,
   InGroup<DiagGroup<"undefined-arm-streaming">>;
@@ -4526,7 +4526,7 @@ def err_objc_attr_typedef_not_void_pointer : Error<
 def err_objc_cf_bridged_not_interface : Error<
   "CF object of type %0 is bridged to %1, which is not an Objective-C class">;
 def err_objc_ns_bridged_invalid_cfobject : Error<
-  "ObjectiveC object of type %0 is bridged to %1, which is not valid CF object">;
+  "Objective-C object of type %0 is bridged to %1, which is not valid CF object">;
 def warn_objc_invalid_bridge : Warning<
   "%0 bridges to %1, not %2">, InGroup<ObjCBridge>;
 def warn_objc_invalid_bridge_to_cf : Warning<
@@ -8002,8 +8002,8 @@ def warn_deprecated_volatile_structured_binding : Warning<
   InGroup<DeprecatedVolatile>;
 
 def warn_deprecated_altivec_src_compat : Warning<
-  "Current handling of vector bool and vector pixel types in this context are "
-  "deprecated. The default behaviour will soon change to that implied by the "
+  "current handling of vector bool and vector pixel types in this context are "
+  "deprecated; the default behaviour will soon change to that implied by the "
   "'-altivec-compat=xl' option">,
   InGroup<DiagGroup<"deprecated-altivec-src-compat">>;
 
@@ -8966,8 +8966,8 @@ def err_va_arg_in_device : Error<
 def err_alias_not_supported_on_nvptx : Error<"CUDA older than 10.0 does not support .alias">;
 def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
   "constexpr function %0 without __host__ or __device__ attributes cannot "
-  "overload __device__ function with same signature.  Add a __host__ "
-  "attribute, or build with -fno-cuda-host-device-constexpr.">;
+  "overload __device__ function with the same signature; add a __host__ "
+  "attribute, or build with -fno-cuda-host-device-constexpr">;
 def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
@@ -8975,9 +8975,9 @@ def err_cuda_device_exceptions : Error<
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
-    "__device__, __constant__, __shared__, and __managed__ variables.">;
+    "__device__, __constant__, __shared__, and __managed__ variables">;
 def err_shared_var_init : Error<
-    "initialization is not supported for __shared__ variables.">;
+    "initialization is not supported for __shared__ variables">;
 def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
@@ -10361,12 +10361,12 @@ def err_shufflevector_argument_too_large : Error<
   "index for __builtin_shufflevector must be less than the total number "
   "of vector elements">;
 def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
-  "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 not permitted in a constexpr context.">;
+  "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 is not permitted in a constexpr context">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
 def err_convertvector_constexpr_unsupported_vector_cast : Error<
-  "unsupported vector cast from %0 to %1 in a constant expression.">;
+  "unsupported vector cast from %0 to %1 in a constant expression">;
 def err_builtin_non_vector_type : Error<
   "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
@@ -10694,7 +10694,7 @@ def err_kernel_arg_address_space : Error<
   "pointer arguments to kernel functions must reside in '__global', "
   "'__constant' or '__local' address space">;
 def err_opencl_ext_vector_component_invalid_length : Error<
-  "vector component access has invalid length %0.  Supported: 1,2,3,4,8,16.">;
+  "vector component access has invalid length %0; supported lengths are: 1,2,3,4,8,16">;
 def err_opencl_function_variable : Error<
   "%select{non-kernel function|function scope}0 variable cannot be declared in %1 address space">;
 def err_opencl_addrspace_scope : Error<
@@ -11142,12 +11142,12 @@ def err_omp_atomic_compare : Error<
   "the statement for 'atomic compare' must be a compound statement of form '{x = expr ordop x ? expr : x;}', '{x = x ordop expr? expr : x;}',"
   " '{x = x == e ? d : x;}', '{x = e == x ? d : x;}', or 'if(expr ordop x) {x = expr;}', 'if(x ordop expr) {x = expr;}', 'if(x == e) {x = d;}',"
   " 'if(e == x) {x = d;}' where 'x' is an lvalue expression with scalar type, 'expr', 'e', and 'd' are expressions with scalar type,"
-  " and 'ordop' is one of '<' or '>'.">;
+  " and 'ordop' is one of '<' or '>'">;
 def err_omp_atomic_compare_capture : Error<
   "the statement for 'atomic compare capture' must be a compound statement of form '{v = x; cond-up-stmt}', ''{cond-up-stmt v = x;}', '{if(x == e) {x = d;} else {v = x;}}',"
   " '{r = x == e; if(r) {x = d;}}', or '{r = x == e; if(r) {x = d;} else {v = x;}}', where 'cond-update-stmt' can have one of the following forms: 'if(expr ordop x) {x = expr;}',"
   " 'if(x ordop expr) {x = expr;}', 'if(x == e) {x = d;}', or 'if(e == x) {x = d;}' where 'x', 'r', and 'v' are lvalue expressions with scalar type, 'expr', 'e', and 'd' are expressions with scalar type,"
-  " and 'ordop' is one of '<' or '>'.">;
+  " and 'ordop' is one of '<' or '>'">;
 def note_omp_atomic_compare: Note<
   "%select{expected compound statement|expected exactly one expression statement|expected assignment statement|expected conditional operator|expect result value to be at false expression|"
   "expect binary operator in conditional expression|expect '<', '>' or '==' as order operator|expect comparison in a form of 'x == e', 'e == x', 'x ordop expr', or 'expr ordop x'|"
@@ -11313,7 +11313,7 @@ def err_omp_expected_int_param : Error<
 def err_omp_at_least_one_motion_clause_required : Error<
   "expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'">;
 def err_omp_cannot_update_with_internal_linkage : Error<
-  "the host cannot update a declare target variable that is not externally visible.">;
+  "the host cannot update a declare target variable that is not externally visible">;
 def err_omp_usedeviceptr_not_a_pointer : Error<
   "expected pointer or reference to pointer in 'use_device_ptr' clause">;
 def err_omp_argument_type_isdeviceptr : Error <
@@ -11757,7 +11757,7 @@ def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"
 >;
 def warn_coroutine_handle_address_invalid_return_type : Warning <
-  "return type of 'coroutine_handle<>::address should be 'void*' (have %0) in order to get capability with existing async C API.">,
+  "return type of 'coroutine_handle<>::address should be 'void*' (have %0) in order to get capability with existing async C API">,
   InGroup<Coroutine>;
 def err_coroutine_promise_final_suspend_requires_nothrow : Error<
   "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"
@@ -11785,7 +11785,7 @@ def err_conflicting_aligned_options : Error <
   "conflicting option '-fcoro-aligned-allocation' and '-fno-aligned-allocation'"
 >;
 def err_coro_invalid_addr_of_label : Error<
-  "the GNU address of label extension is not allowed in coroutines."
+  "the GNU address of label extension is not allowed in coroutines"
 >;
 def err_coroutine_return_type : Error<
   "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
