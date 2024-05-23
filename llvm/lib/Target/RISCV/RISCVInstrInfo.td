@@ -1313,7 +1313,7 @@ def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
 
 let Size = 8, isReMaterializable = 1 in
 def PseudoLIaddr : Pseudo<(outs GPR:$dst), (ins uimm20_lui:$hi, simm12:$lo), []>,
-                     Sched<[WriteIALU]>;
+                   Sched<[WriteIALU]>;
 
 def LUIADDI : PatFrag<(ops node:$hi, node:$lo),
                       (riscv_add_lo (riscv_hi node:$hi), node:$lo)>;
