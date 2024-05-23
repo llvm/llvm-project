@@ -839,13 +839,9 @@ void CIRGenFunction::buildDecl(const Decl &D) {
            "Should not see file-scope variables inside a function!");
     buildVarDecl(VD);
     if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      assert(0 && "Not implemented");
-
-    // FIXME: add this
-    // if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-    //   for (auto *B : DD->bindings())
-    //     if (auto *HD = B->getHoldingVar())
-    //       EmitVarDecl(*HD);
+      for (auto *B : DD->bindings())
+        if (auto *HD = B->getHoldingVar())
+          buildVarDecl(*HD);
     return;
   }
 
