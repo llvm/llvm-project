@@ -2466,24 +2466,26 @@ def int_amdgcn_perm :
 // GFX9 Intrinsics
 //===----------------------------------------------------------------------===//
 
-class AMDGPUGlobalLoadLDS : Intrinsic <
-  [],
-  [LLVMQualPointerType<1>,             // Base global pointer to load from
-   LLVMQualPointerType<3>,             // LDS base pointer to store to
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
-                                       //                                   bit 1 = slc/sc1,
-                                       //                                   bit 2 = dlc on gfx10/gfx11))
-                                       //                                   bit 4 = scc/nt on gfx90a+))
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-  [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
-  "", [SDNPMemOperand]>;
+class AMDGPUGlobalLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
+  Intrinsic <
+    [],
+    [LLVMQualPointerType<1>,            // Base global pointer to load from
+     LLVMQualPointerType<3>,            // LDS base pointer to store to
+     llvm_i32_ty,                       // Data byte size: 1/2/4
+     llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
+     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                                        //                                   bit 1 = sc1,
+                                        //                                   bit 4 = scc))
+    [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
+     "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+
+// Use read/write of inaccessible memory to model the fact that this reads a
+// volatile value.
+def int_amdgcn_pops_exiting_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -3143,25 +3145,37 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
 // ===----------------------------------------------------------------------===//
+//
+// Control-flow intrinsics in LLVM IR are convergent because they represent the
+// wave CFG, i.e., sets of threads that are "converged" or "execute in
+// lock-step". But they exist during a small window in the lowering process,
+// inserted after the structurizer and then translated to equivalent MIR
+// pseudos. So rather than create convergence tokens for these builtins, we
+// simply mark them as not convergent.
+//
+// This is really a workaround to allow control flow lowering in the presence of
+// convergence control tokens. The corresponding MIR pseudos are marked as
+// having side effects, which is sufficient to prevent optimizations without
+// having to mark them as convergent.
 def int_amdgcn_if : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
-  [llvm_i1_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_else : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
-  [llvm_anyint_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_if_break : Intrinsic<[llvm_anyint_ty],
   [llvm_i1_ty, LLVMMatchType<0>],
-  [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_loop : Intrinsic<[llvm_i1_ty],
-  [llvm_anyint_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_end_cf : Intrinsic<[], [llvm_anyint_ty],
-  [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  [IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Represent unreachable in a divergent region.
 def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree]>;

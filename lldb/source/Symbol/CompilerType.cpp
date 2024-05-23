@@ -108,6 +108,27 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+unsigned CompilerType::GetPtrAuthKey() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthKey(m_type);
+  return 0;
+}
+
+unsigned CompilerType::GetPtrAuthDiscriminator() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthDiscriminator(m_type);
+  return 0;
+}
+
+bool CompilerType::GetPtrAuthAddressDiversity() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+  return false;
+}
+
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -664,6 +685,13 @@ CompilerType CompilerType::GetPointerType() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddPtrAuthModifier(m_type, payload);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -874,7 +902,7 @@ uint32_t CompilerType::GetIndexOfFieldWithName(
   return UINT32_MAX;
 }
 
-CompilerType CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
     std::string &child_name, uint32_t &child_byte_size,

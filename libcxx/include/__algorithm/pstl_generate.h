@@ -40,8 +40,8 @@ template <class _ExecutionPolicy,
           class _Generator,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
-__generate(_ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, _Generator&& __gen) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty> __generate(
+    _ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, _Generator&& __gen) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last, _Generator __g_gen) {
@@ -77,7 +77,7 @@ template <class _ExecutionPolicy,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
-__generate_n(_ExecutionPolicy&& __policy, _ForwardIterator&& __first, _Size&& __n, _Generator&& __gen) {
+__generate_n(_ExecutionPolicy&& __policy, _ForwardIterator&& __first, _Size&& __n, _Generator&& __gen) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate_n, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _Size __g_n, _Generator __g_gen) {

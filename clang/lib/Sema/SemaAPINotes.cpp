@@ -16,6 +16,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 
 using namespace clang;
 
@@ -268,7 +269,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               ASTAllocateString(S.Context, Info.UnavailableMsg),
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
-              /*Priority=*/Sema::AP_Explicit);
+              /*Priority=*/Sema::AP_Explicit,
+              /*Environment=*/nullptr);
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -372,7 +374,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       if (auto Var = dyn_cast<VarDecl>(D)) {
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(Var)) {
-          Type = S.AdjustParameterTypeForObjCAutoRefCount(
+          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
               Type, D->getLocation(), TypeInfo);
           Type = S.Context.getAdjustedParameterType(Type);
         }

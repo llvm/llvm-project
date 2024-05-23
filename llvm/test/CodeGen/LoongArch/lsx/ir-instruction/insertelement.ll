@@ -87,10 +87,9 @@ define void @insert_16xi8_idx(ptr %src, ptr %dst, i8 %ins, i32 %idx) nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
-; CHECK-NEXT:    addi.d $a3, $sp, 0
-; CHECK-NEXT:    bstrins.d $a3, $a0, 3, 0
-; CHECK-NEXT:    st.b $a2, $a3, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a3, 3, 0
+; CHECK-NEXT:    st.b $a2, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -107,10 +106,9 @@ define void @insert_8xi16_idx(ptr %src, ptr %dst, i16 %ins, i32 %idx) nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
-; CHECK-NEXT:    addi.d $a3, $sp, 0
-; CHECK-NEXT:    bstrins.d $a3, $a0, 3, 1
-; CHECK-NEXT:    st.h $a2, $a3, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a3, 3, 1
+; CHECK-NEXT:    st.h $a2, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -127,10 +125,9 @@ define void @insert_4xi32_idx(ptr %src, ptr %dst, i32 %ins, i32 %idx) nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
-; CHECK-NEXT:    addi.d $a3, $sp, 0
-; CHECK-NEXT:    bstrins.d $a3, $a0, 3, 2
-; CHECK-NEXT:    st.w $a2, $a3, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a3, 3, 2
+; CHECK-NEXT:    st.w $a2, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -147,10 +144,9 @@ define void @insert_2xi64_idx(ptr %src, ptr %dst, i64 %ins, i32 %idx) nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
-; CHECK-NEXT:    addi.d $a3, $sp, 0
-; CHECK-NEXT:    bstrins.d $a3, $a0, 3, 3
-; CHECK-NEXT:    st.d $a2, $a3, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a3, 3, 3
+; CHECK-NEXT:    st.d $a2, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -167,10 +163,9 @@ define void @insert_4xfloat_idx(ptr %src, ptr %dst, float %ins, i32 %idx) nounwi
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr1, $a0, 0
 ; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 3, 2
-; CHECK-NEXT:    fst.s $fa0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 3, 2
+; CHECK-NEXT:    fst.s $fa0, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -187,10 +182,9 @@ define void @insert_2xdouble_idx(ptr %src, ptr %dst, double %ins, i32 %idx) noun
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr1, $a0, 0
 ; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 3, 3
-; CHECK-NEXT:    fst.d $fa0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 3, 3
+; CHECK-NEXT:    fst.d $fa0, $a0, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16

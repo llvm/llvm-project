@@ -349,10 +349,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  check_cxx_compiler_flag("-Werror -Wnested-anon-types" CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG)
-  if( CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
-  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -523,6 +520,8 @@ endif()
 
 
 if( CLANG_INCLUDE_TESTS )
+  find_package(Perl)
+
   add_subdirectory(unittests)
   list(APPEND CLANG_TEST_DEPS ClangUnitTests)
   list(APPEND CLANG_TEST_PARAMS

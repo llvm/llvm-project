@@ -262,6 +262,12 @@ public:
   size_t GetPointerByteSize() const;
   /// \}
 
+  unsigned GetPtrAuthKey() const;
+
+  unsigned GetPtrAuthDiscriminator() const;
+
+  bool GetPtrAuthAddressDiversity() const;
+
   /// Accessors.
   /// \{
 
@@ -369,6 +375,12 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Return a new CompilerType adds a ptrauth modifier from the given 32-bit
+  /// opaque payload to this type if this type is valid and the type system
+  /// supports ptrauth modifiers, else return an invalid type. Note that this
+  /// does not check if this type is a pointer.
+  CompilerType AddPtrAuthModifier(uint32_t payload) const;
   /// \}
 
   /// Exploring the type.
@@ -424,7 +436,7 @@ public:
                                    uint32_t *bitfield_bit_size_ptr = nullptr,
                                    bool *is_bitfield_ptr = nullptr) const;
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
       std::string &child_name, uint32_t &child_byte_size,

@@ -1,4 +1,4 @@
-; RUN: not llc --mtriple=loongarch64 < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch64 -mattr=+d < %s 2>&1 | FileCheck %s
 
 declare ptr @llvm.returnaddress(i32 immarg)
 

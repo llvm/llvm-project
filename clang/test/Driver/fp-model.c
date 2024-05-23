@@ -64,7 +64,8 @@
 
 // RUN: %clang -### -ffp-model=strict -fdenormal-fp-math=preserve-sign,preserve-sign -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN10 %s
-// WARN10: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-option]
+// WARN10: "-cc1"
+// WARN10-NOT: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-option]
 
 // RUN: %clang -### -ffp-model=fast -ffp-model=strict -c %s 2>&1 | FileCheck \
 // RUN:   --check-prefix=WARN11 %s
@@ -128,6 +129,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
 // RUN: %clang -### -nostdinc -ffp-model=strict -Ofast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
+// CHECK-NO-EXCEPT: "-cc1"
 // CHECK-NO-EXCEPT-NOT: "-ffp-exception-behavior=strict"
 
 // RUN: %clang -### -nostdinc -ffp-exception-behavior=strict -c %s 2>&1 \
@@ -148,7 +150,7 @@
 // CHECK-FEB-IGNORE: "-fno-rounding-math"
 // CHECK-FEB-IGNORE: "-ffp-exception-behavior=ignore"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=fast -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-FAST %s
 // CHECK-FASTMATH-FPM-FAST: "-cc1"
 // CHECK-FASTMATH-FPM-FAST: "-menable-no-infs"
@@ -163,7 +165,7 @@
 // CHECK-FASTMATH-FPM-FAST: "-ffast-math"
 // CHECK-FASTMATH-FPM-FAST: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=precise -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-PRECISE %s
 // CHECK-FASTMATH-FPM-PRECISE:     "-cc1"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-menable-no-infs"
@@ -178,7 +180,7 @@
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=strict -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-STRICT %s
 // CHECK-FASTMATH-FPM-STRICT:     "-cc1"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-menable-no-infs"
