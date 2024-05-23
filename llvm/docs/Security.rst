@@ -56,6 +56,7 @@ username for an individual isn't available, the brackets will be empty.
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
 * Tim Penge (Sony) []
 * Will Huhn (Intel) [@wphuhn-intel]
+* Yvan Roux (ST) [@yroux]
 
 Criteria
 --------
