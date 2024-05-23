@@ -42,4 +42,10 @@ namespace SimpleStore {
     return a.b;
   }
   static_assert(foo() == 10, "");
+
+  constexpr int empty() {
+    A a{}; /// Just test that this works.
+    return 10;
+  }
+  static_assert(empty() == 10, "");
 }
