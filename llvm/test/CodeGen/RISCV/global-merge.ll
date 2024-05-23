@@ -18,8 +18,8 @@ define void @f1(i32 %a) nounwind {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.L_MergedGlobals)
-; CHECK-NEXT:    sw a0, %lo(.L_MergedGlobals)(a1)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L_MergedGlobals)
+; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    sw a0, 4(a1)
 ; CHECK-NEXT:    sw a0, 8(a1)
 ; CHECK-NEXT:    sw a0, 12(a1)

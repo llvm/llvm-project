@@ -2457,6 +2457,61 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+// To prevent SelectAddrRegImm from folding offsets that conflicts with the
+// fusion of PseudoLIAddr, check if the offset of every use of a given address
+// is within the alignment
+static bool areUserOffsetsWithinAlignment(SDValue Addr, Align Alignment) {
+  for (auto *Use : Addr->uses()) {
+    if (!Use->isMachineOpcode()) {
+      // Don't allow stores of the value. It must be used as the address.
+      if (Use->getOpcode() == ISD::STORE &&
+          cast<StoreSDNode>(Use)->getValue() == Addr)
+        return false;
+      if (Use->getOpcode() == ISD::ATOMIC_STORE &&
+          cast<AtomicSDNode>(Use)->getVal() == Addr)
+        return false;
+      // If the user is direct load/store, there is no offset.
+      if (Use->getOpcode() == ISD::LOAD || Use->getOpcode() == ISD::STORE ||
+          Use->getOpcode() == ISD::ATOMIC_LOAD ||
+          Use->getOpcode() == ISD::ATOMIC_STORE)
+        continue;
+      if (Use->getOpcode() == ISD::ADD &&
+          isa<ConstantSDNode>(Use->getOperand(1)) &&
+          Alignment > cast<ConstantSDNode>(Use->getOperand(1))->getSExtValue())
+        continue;
+
+      return false;
+    }
+
+    // If user is already selected, get offsets from load/store instructions
+    unsigned int Opcode = Use->getMachineOpcode();
+    if (Opcode == RISCV::LB || Opcode == RISCV::LBU || Opcode == RISCV::LH ||
+        Opcode == RISCV::LHU || Opcode == RISCV::LW || Opcode == RISCV::LWU ||
+        Opcode == RISCV::LD || Opcode == RISCV::FLH || Opcode == RISCV::FLW ||
+        Opcode == RISCV::FLD) {
+      if (auto *Offset = dyn_cast<ConstantSDNode>(Use->getOperand(1))) {
+        if (Offset->isZero() || Alignment > Offset->getSExtValue())
+          continue;
+      }
+      return false;
+    }
+    if (Opcode == RISCV::SB || Opcode == RISCV::SH || Opcode == RISCV::SW ||
+        Opcode == RISCV::SD || Opcode == RISCV::FSH || Opcode == RISCV::FSW ||
+        Opcode == RISCV::FSD) {
+      // Also check if Addr is used as the value of store.
+      if (Use->getOperand(0) == Addr)
+        return false;
+      if (auto *Offset = dyn_cast<ConstantSDNode>(Use->getOperand(2))) {
+        if (Offset->isZero() || Alignment > Offset->getSExtValue())
+          continue;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  return true;
+}
 bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
                                               unsigned MaxShiftAmount,
                                               SDValue &Base, SDValue &Index,
@@ -2520,9 +2575,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areUserOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   int64_t RV32ZdinxRange = IsINX ? 4 : 0;
@@ -2541,7 +2608,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if (CVal == 0 || Alignment > CVal) {
+          if (areUserOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
