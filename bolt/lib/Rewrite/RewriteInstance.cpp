@@ -1497,7 +1497,7 @@ void RewriteInstance::registerFragments() {
   if (!BC->hasSymbolsWithFileName()) {
     BC->errs() << "BOLT-ERROR: input file has split functions but does not "
                   "have FILE symbols. If the binary was stripped, preserve "
-                  "FILE symbols with --keep-file-symbols strip option";
+                  "FILE symbols with --keep-file-symbols strip option\n";
     exit(1);
   }
 
