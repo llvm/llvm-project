@@ -533,15 +533,10 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
 
 static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
                                         MachineBasicBlock::iterator RegionEnd) {
-  MachineInstr *LastMI;
-  auto *BB = RegionBegin->getParent();
-  if (RegionEnd != BB->end() && !RegionEnd->isDebugInstr())
-    LastMI = &*RegionEnd;
-  else if (RegionEnd == BB->end())
-    LastMI = &*prev_nodbg(RegionEnd, RegionBegin);
-  else
-    LastMI = &*skipDebugInstructionsBackward(RegionEnd, RegionBegin);
-  return LastMI;
+  auto REnd = RegionEnd == RegionBegin->getParent()->end()
+                  ? std::prev(RegionEnd)
+                  : RegionEnd;
+  return &*skipDebugInstructionsBackward(REnd, RegionBegin);
 }
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
@@ -641,7 +636,7 @@ GCNScheduleDAGMILive::getBBLiveInMap() const {
       ++I;
     } while (I != E && I->first->getParent() == BB);
   } while (I != E);
-  return getLiveRegMap(BBStarters, false /*After*/, *LIS);
+  return getLiveRegMap(BBStarters, /*After=*/false, *LIS);
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
@@ -653,7 +648,7 @@ GCNScheduleDAGMILive::getBBLiveOutMap() const {
   for (; I != E; I++)
     BBEnders.push_back(getLastMIForRegion(I->first, I->second));
 
-  return getLiveRegMap(BBEnders, true /*After*/, *LIS);
+  return getLiveRegMap(BBEnders, /*After= */true, *LIS);
 }
 
 void GCNScheduleDAGMILive::finalizeSchedule() {
