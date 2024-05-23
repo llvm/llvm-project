@@ -260,11 +260,11 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     include(CheckLinkerFlag)
-    # Linkers that support Darwin allow a setting to internalize all symbol exports, 
+    # Linkers that support Darwin allow a setting to internalize all symbol exports,
     # aiding in reducing binary size and often is applicable for executables.
     check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
-    
-    if (NOT LLVM_USE_LINKER) 
+
+    if (NOT LLVM_USE_LINKER)
       # Apple's linker complains about duplicate libraries, which CMake likes to do
       # to support ELF platforms. To silence that warning, we can use
       # -no_warn_duplicate_libraries, but only in versions of the linker that
@@ -273,8 +273,8 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     else()
       set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
     endif()
-  
-  else() 
+
+  else()
     set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
   endif()
 endif()
@@ -1038,7 +1038,7 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
-  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND 
+  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
       NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
     if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
@@ -1641,7 +1641,7 @@ function(add_unittest test_suite test_name)
 
   if (SUPPORTS_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
-  endif ()
+  endif()
   # Some parts of gtest rely on this GNU extension, don't warn on it.
   if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
