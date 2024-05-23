@@ -1848,7 +1848,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     return !includesUndef(Kind);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
-    return false;
+    return true;
   case TargetOpcode::G_BUILD_VECTOR: {
     GBuildVector *BV = cast<GBuildVector>(RegDef);
     unsigned NumSources = BV->getNumSources();

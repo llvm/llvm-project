@@ -265,11 +265,12 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     }
   }
 
-  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+  // FIXME: observer must be aware of dropping
+  //  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
 
   // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {
-    MatchInfo = [=](MachineIRBuilder &B) { MRI.replaceRegWith(DstOp, OrigOp); };
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(DstOp, OrigOp); };
     return true;
   }
 

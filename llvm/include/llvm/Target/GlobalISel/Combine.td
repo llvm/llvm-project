@@ -1636,7 +1636,7 @@ extract_vector_element_build_vector_trunc5,
 extract_vector_element_build_vector_trunc6,
 extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
-extract_vector_element_freeze,
+//extract_vector_element_freeze,
 extract_vector_element_shuffle_vector,
 insert_vector_element_extract_vector_element
 ]>;
