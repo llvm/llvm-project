@@ -359,7 +359,7 @@ public:
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
-  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = true; }
+  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
   /// Return true if relocations against symbol with a given name
   /// must be created.
@@ -676,6 +676,9 @@ public:
   /// Indicates if any of local symbols used for functions or data objects
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
+
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
 
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
