@@ -1345,8 +1345,8 @@ def note_pragma_attribute_namespace_on_attribute : Note<
   "omit the namespace to add attributes to the most-recently"
   " pushed attribute group">;
 def warn_no_support_for_eval_method_source_on_m32 : Warning<
-  "Setting the floating point evaluation method to `source` on a target"
-  " without SSE is not supported.">, InGroup<Pragmas>;
+  "setting the floating point evaluation method to `source` on a target "
+  "without SSE is not supported">, InGroup<Pragmas>;
 // - #pragma __debug
 def warn_pragma_debug_dependent_argument : Warning<
   "%select{value|type}0-dependent expression passed as an argument to debug "

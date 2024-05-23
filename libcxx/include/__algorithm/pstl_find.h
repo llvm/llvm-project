@@ -65,8 +65,8 @@ template <class _ExecutionPolicy,
           class _Predicate,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__remove_cvref_t<_ForwardIterator>>
-__find_if_not(_ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, _Predicate&& __pred) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__remove_cvref_t<_ForwardIterator>> __find_if_not(
+    _ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, _Predicate&& __pred) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_find_if_not, _RawPolicy),
       [&](_ForwardIterator&& __g_first, _ForwardIterator&& __g_last, _Predicate&& __g_pred)
@@ -76,9 +76,9 @@ __find_if_not(_ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardI
               return !__g_pred(__value);
             });
       },
-      std::move(__first),
-      std::move(__last),
-      std::move(__pred));
+      std::forward<_ForwardIterator>(__first),
+      std::forward<_ForwardIterator>(__last),
+      std::forward<_Predicate>(__pred));
 }
 
 template <class _ExecutionPolicy,
@@ -103,8 +103,8 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__remove_cvref_t<_ForwardIterator>>
-__find(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__remove_cvref_t<_ForwardIterator>> __find(
+    _ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, const _Tp& __value) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_find, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_value) -> optional<_ForwardIterator> {
@@ -113,8 +113,8 @@ __find(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator _
               return __element == __g_value;
             });
       },
-      std::move(__first),
-      std::move(__last),
+      std::forward<_ForwardIterator>(__first),
+      std::forward<_ForwardIterator>(__last),
       __value);
 }
 

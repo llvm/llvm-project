@@ -836,7 +836,7 @@ private:
     for (uint32_t i = 0; i < n; i++) {
       std::string name;
       uint32_t size;
-      GetChildType(i, name, size);
+      (void)GetChildType(i, name, size);
       // NOTE: the offset returned by GetChildCompilerTypeAtIndex()
       //       can't be used because it never considers alignment bytes
       //       between struct fields.
@@ -903,7 +903,8 @@ private:
   }
 
   // get child
-  CompilerType GetChildType(uint32_t i, std::string &name, uint32_t &size) {
+  llvm::Expected<CompilerType> GetChildType(uint32_t i, std::string &name,
+                                            uint32_t &size) {
     // GetChild constant inputs
     const bool transparent_pointers = false;
     const bool omit_empty_base_classes = true;

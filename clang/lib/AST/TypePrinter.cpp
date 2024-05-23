@@ -2273,16 +2273,17 @@ bool clang::isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
 
   if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param)) {
     return TTPD->hasDefaultArgument() &&
-           isSubstitutedTemplateArgument(Ctx, Arg, TTPD->getDefaultArgument(),
-                                         Args, Depth);
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
   } else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
     return TTPD->hasDefaultArgument() &&
            isSubstitutedTemplateArgument(
                Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
   } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     return NTTPD->hasDefaultArgument() &&
-           isSubstitutedTemplateArgument(Ctx, Arg, NTTPD->getDefaultArgument(),
-                                         Args, Depth);
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, NTTPD->getDefaultArgument().getArgument(), Args,
+               Depth);
   }
   return false;
 }
