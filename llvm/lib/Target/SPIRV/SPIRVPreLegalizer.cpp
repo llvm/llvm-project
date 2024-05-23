@@ -534,29 +534,13 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
   }
 }
 
-static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                            const SPIRVSubtarget &ST,
-                            MachineIRBuilder MIRBuilder) {
-  SmallVector<MachineInstr *> ToProcess;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (isSpvIntrinsic(MI, Intrinsic::spv_inline_asm) ||
-          MI.getOpcode() == TargetOpcode::INLINEASM)
-        ToProcess.push_back(&MI);
-    }
-  }
-  unsigned Sz = ToProcess.size();
-  if (Sz == 0)
-    return;
-
-  if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly))
-    report_fatal_error("Inline assembly instructions require the "
-                       "following SPIR-V extension: SPV_INTEL_inline_assembly",
-                       false);
-
+static void
+insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                       const SPIRVSubtarget &ST, MachineIRBuilder MIRBuilder,
+                       const SmallVector<MachineInstr *> &ToProcess) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register AsmTargetReg;
-  for (unsigned i = 0; i + 1 < Sz; i += 2) {
+  for (unsigned i = 0, Sz = ToProcess.size(); i + 1 < Sz; i += 2) {
     MachineInstr *I1 = ToProcess[i], *I2 = ToProcess[i + 1];
     assert(isSpvIntrinsic(*I1, Intrinsic::spv_inline_asm) && I2->isInlineAsm());
     MIRBuilder.setInsertPt(*I1->getParent(), *I1);
@@ -590,11 +574,13 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                       .addUse(GR->getSPIRVTypeID(RetType))
                       .addUse(GR->getSPIRVTypeID(FuncType))
                       .addUse(AsmTargetReg);
-    const MDOperand &AsmStrMO = IAMD->getOperand(1);
-    const MDOperand &ConstrMO = IAMD->getOperand(2);
-    assert(isa<MDString>(AsmStrMO) && isa<MDString>(ConstrMO));
-    addStringImm(cast<MDString>(AsmStrMO)->getString(), AsmMIB);
-    addStringImm(cast<MDString>(ConstrMO)->getString(), AsmMIB);
+    // inline asm string:
+    addStringImm(I2->getOperand(InlineAsm::MIOp_AsmString).getSymbolName(),
+                 AsmMIB);
+    // inline asm constraint string:
+    addStringImm(cast<MDString>(I1->getOperand(2).getMetadata()->getOperand(0))
+                     ->getString(),
+                 AsmMIB);
     GR->add(AsmMIB.getInstr(), &MF, AsmReg);
 
     // calls the inline assembly instruction
@@ -631,17 +617,13 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       GR->assignSPIRVTypeToVReg(VoidType, DefReg, MF);
     }
     auto AsmCall = MIRBuilder.buildInstr(SPIRV::OpAsmCallINTEL)
-        .addDef(DefReg)
-        .addUse(GR->getSPIRVTypeID(RetType))
-        .addUse(AsmReg);
-    //for (unsigned Idx : Ops)
-    //  AsmCall.add(I2->getOperand(Idx));
-    //for (auto It = Ops.rbegin(), End = Ops.rend(); It != End; ++It)
-    //  I2->removeOperand(*It);
-    unsigned IntrIdx = 1;
+                       .addDef(DefReg)
+                       .addUse(GR->getSPIRVTypeID(RetType))
+                       .addUse(AsmReg);
+    unsigned IntrIdx = 2;
     for (unsigned Idx : Ops) {
       ++IntrIdx;
-      const MachineOperand& MO = I2->getOperand(Idx);
+      const MachineOperand &MO = I2->getOperand(Idx);
       if (MO.isReg())
         AsmCall.addUse(MO.getReg());
       else
@@ -650,6 +632,28 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToProcess)
     MI->eraseFromParent();
+}
+
+static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                            const SPIRVSubtarget &ST,
+                            MachineIRBuilder MIRBuilder) {
+  SmallVector<MachineInstr *> ToProcess;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_inline_asm) ||
+          MI.getOpcode() == TargetOpcode::INLINEASM)
+        ToProcess.push_back(&MI);
+    }
+  }
+  if (ToProcess.size() == 0)
+    return;
+
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly))
+    report_fatal_error("Inline assembly instructions require the "
+                       "following SPIR-V extension: SPV_INTEL_inline_assembly",
+                       false);
+
+  insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
 static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {

@@ -630,22 +630,6 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   }
 }
 
-/*
-  Constant *IATyVal = UndefValue::get(IA->getFunctionType());
-  MetadataAsValue *IAtyArg = MetadataAsValue::get(
-      Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(IATyVal)));
-//  MetadataAsValue *IAtyArg = MetadataAsValue::get(Ctx, ValueAsMetadata::get(&Call));
-  MetadataAsValue *IAStr =
-      MetadataAsValue::get(Ctx, MDString::get(Ctx, IA->getAsmString()));
-  MetadataAsValue *IAConstr =
-      MetadataAsValue::get(Ctx, MDString::get(Ctx, IA->getConstraintString()));
-//  SmallVector<Value *> Args = {UndefValue::get(IntegerType::getInt8Ty(Ctx))};//, IAStr, IAStr, IAConstr};
-  SmallVector<Value *> Args = {IAtyArg};//, IAStr, IAStr, IAConstr};
-  IRBuilder<> B(Call.getParent());
-  B.SetInsertPoint(&Call);
-//  B.CreateIntrinsic(Intrinsic::spv_inline_asm, {IntegerType::getInt8Ty(Ctx)}, {Args});
-// works with def int_spv_inline_asm : Intrinsic<[], [llvm_any_ty]>; --> B.CreateIntrinsic(Intrinsic::spv_inline_asm, {IAtyArg->getType}, {Args});
-*/
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -653,12 +637,12 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = F->getContext();
 
-  Constant *IATyVal = UndefValue::get(IA->getFunctionType());
-  ArrayRef<Metadata *> MDs = {ValueAsMetadata::getConstant(IATyVal),
-                              MDString::get(Ctx, IA->getAsmString()),
-                              MDString::get(Ctx, IA->getConstraintString())};
+  Constant *TyC = UndefValue::get(IA->getFunctionType());
+  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
   SmallVector<Value *> Args = {
-      MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))};
+      MetadataAsValue::get(Ctx,
+                           MDNode::get(Ctx, ValueAsMetadata::getConstant(TyC))),
+      MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
   for (unsigned OpIdx = 0; OpIdx < Call.arg_size(); OpIdx++)
     Args.push_back(Call.getArgOperand(OpIdx));
 

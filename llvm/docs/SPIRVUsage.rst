@@ -163,8 +163,6 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
-   * - ``SPV_KHR_shader_clock``
-     - Adds the extension cl_khr_kernel_clock.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
@@ -337,6 +335,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[]`
      - Generates an undefined value. Useful for optimizations and indicating uninitialized variables.
+   * - `int_spv_inline_asm`
+     - None
+     - `[Metadata, Metadata, Vararg]`
+     - Associates inline assembly features to inline assembly call instances by creating metadatas and preserving original arguments. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_assume`
      - None
      - `[1-bit Integer]`
