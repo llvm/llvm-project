@@ -246,7 +246,9 @@ protected:
   bool HasForceStoreSC0SC1 = false;
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
-
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
 
@@ -1344,6 +1346,18 @@ public:
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
+  }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
@@ -1413,6 +1427,9 @@ public:
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
   bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
+
+  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
+  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
