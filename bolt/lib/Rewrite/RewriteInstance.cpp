@@ -105,11 +105,9 @@ cl::opt<std::string>
                     "output binary via bolt info section"),
            cl::cat(BoltCategory));
 
-cl::opt<bool>
-AllowStripped("allow-stripped",
-  cl::desc("allow processing of stripped binaries"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> AllowStripped("allow-stripped",
+                            cl::desc("allow processing of stripped binaries"),
+                            cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> DumpDotAll(
     "dump-dot-all",
