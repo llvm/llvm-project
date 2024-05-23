@@ -2249,13 +2249,13 @@ multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, string Constraint = "", int sew = 0
                                        UsesVXRM=0>;
 }
 
-multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
+multiclass VPseudoVGTR_EI16_VV<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach sew = EEWList in {
       defvar dataEMULOctuple = m.octuple;
-      // emul = lmul * eew / sew
-      defvar idxEMULOctuple = !srl(!mul(dataEMULOctuple, eew), !logtwo(sew));
+      // emul = lmul * 16 / sew
+      defvar idxEMULOctuple = !srl(!mul(dataEMULOctuple, 16), !logtwo(sew));
       if !and(!ge(idxEMULOctuple, 1), !le(idxEMULOctuple, 64)) then {
         defvar emulMX = octuple_to_str<idxEMULOctuple>.ret;
         defvar emul = !cast<LMULInfo>("V_" # emulMX);
@@ -6879,8 +6879,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
 defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<uimm5, "@earlyclobber $rd">;
-defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
-                                             Constraint="@earlyclobber $rd">;
+defm PseudoVRGATHEREI16 : VPseudoVGTR_EI16_VV<Constraint = "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
 // 16.5. Vector Compress Instruction
