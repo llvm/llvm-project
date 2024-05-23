@@ -3249,3 +3249,209 @@ define double @v_fmaximum3_f64_const1_const2(double %a) {
   %max1 = call double @llvm.maximum.f64(double %max0, double 16.0)
   ret double %max1
 }
+
+define <2 x float> @v_no_fmaximum3_f32__multi_use(float %a, float %b, float %c) {
+; GFX12-LABEL: v_no_fmaximum3_f32__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_maximum_f32 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_maximum_f32 v1, v0, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_no_fmaximum3_f32__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v3, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
+; GFX9-NEXT:    v_max_f32_e32 v1, v0, v2
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %max0 = call float @llvm.maximum.f32(float %a, float %b)
+  %max1 = call float @llvm.maximum.f32(float %max0, float %c)
+  %insert.0 = insertelement <2 x float> poison, float %max0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %max1, i32 1
+  ret <2 x float> %insert.1
+}
+
+define amdgpu_ps <2 x i32> @s_no_fmaximum3_f32__multi_use(float inreg %a, float inreg %b, float inreg %c) {
+; GFX12-LABEL: s_no_fmaximum3_f32__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_maximum_f32 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    s_maximum_f32 s1, s0, s2
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_no_fmaximum3_f32__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_max_f32_e32 v1, s0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-NEXT:    v_max_f32_e32 v1, s2, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s2, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-NEXT:    ; return to shader part epilog
+  %max0 = call float @llvm.maximum.f32(float %a, float %b)
+  %max1 = call float @llvm.maximum.f32(float %max0, float %c)
+  %cast0 = bitcast float %max0 to i32
+  %cast1 = bitcast float %max1 to i32
+  %readfirstlane0 = call i32 @llvm.amdgcn.readfirstlane(i32 %cast0)
+  %readfirstlane1 = call i32 @llvm.amdgcn.readfirstlane(i32 %cast1)
+  %insert.0 = insertelement <2 x i32> poison, i32 %readfirstlane0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %readfirstlane1, i32 1
+  ret <2 x i32> %insert.1
+}
+
+define <2 x half> @v_no_fmaximum3_f16__multi_use(half %a, half %b, half %c) {
+; GFX12-LABEL: v_no_fmaximum3_f16__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_maximum_f16 v1, v0, v2
+; GFX12-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_no_fmaximum3_f16__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f16_e32 v3, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7e00
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
+; GFX9-NEXT:    v_max_f16_e32 v1, v0, v2
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
+; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %max0 = call half @llvm.maximum.f16(half %a, half %b)
+  %max1 = call half @llvm.maximum.f16(half %max0, half %c)
+  %insert.0 = insertelement <2 x half> poison, half %max0, i32 0
+  %insert.1 = insertelement <2 x half> %insert.0, half %max1, i32 1
+  ret <2 x half> %insert.1
+}
+
+define amdgpu_ps <2 x i32> @s_no_fmaximum3_f16__multi_use(half inreg %a, half inreg %b, half inreg %c) {
+; GFX12-LABEL: s_no_fmaximum3_f16__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_maximum_f16 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-NEXT:    s_maximum_f16 s1, s0, s2
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_no_fmaximum3_f16__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_max_f16_e32 v1, s0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-NEXT:    v_max_f16_e32 v1, s2, v0
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-NEXT:    ; return to shader part epilog
+  %max0 = call half @llvm.maximum.f16(half %a, half %b)
+  %max1 = call half @llvm.maximum.f16(half %max0, half %c)
+  %cast0 = bitcast half %max0 to i16
+  %cast1 = bitcast half %max1 to i16
+  %ext0 = zext i16 %cast0 to i32
+  %ext1 = zext i16 %cast1 to i32
+  %readfirstlane0 = call i32 @llvm.amdgcn.readfirstlane(i32 %ext0)
+  %readfirstlane1 = call i32 @llvm.amdgcn.readfirstlane(i32 %ext1)
+  %insert.0 = insertelement <2 x i32> poison, i32 %readfirstlane0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %readfirstlane1, i32 1
+  ret <2 x i32> %insert.1
+}
+
+define <4 x half> @v_no_fmaximum3_v2f16__multi_use(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
+; GFX12-LABEL: v_no_fmaximum3_v2f16__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_maximum_f16 v1, v0, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_no_fmaximum3_v2f16__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v3, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7e00
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v4, v3, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX9-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v0, v1, v5, s4
+; GFX9-NEXT:    v_pk_max_f16 v3, v0, v2
+; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v5, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v4, v3, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX9-NEXT:    v_cmp_o_f16_sdwa vcc, v1, v2 src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-NEXT:    v_perm_b32 v1, v1, v5, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %max0 = call <2 x half> @llvm.maximum.f16(<2 x half> %a, <2 x half> %b)
+  %max1 = call <2 x half> @llvm.maximum.f16(<2 x half> %max0, <2 x half> %c)
+  %concat = shufflevector <2 x half> %max0, <2 x half> %max1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x half> %concat
+}
+
+define <2 x double> @v_no_fmaximum3_f64__multi_use(double %a, double %b, double %c) {
+; GFX12-LABEL: v_no_fmaximum3_f64__multi_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_maximum_f64 v[2:3], v[0:1], v[4:5]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_no_fmaximum3_f64__multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %max0 = call double @llvm.maximum.f64(double %a, double %b)
+  %max1 = call double @llvm.maximum.f64(double %max0, double %c)
+  %insert.0 = insertelement <2 x double> poison, double %max0, i32 0
+  %insert.1 = insertelement <2 x double> %insert.0, double %max1, i32 1
+  ret <2 x double> %insert.1
+}
