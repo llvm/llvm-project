@@ -385,9 +385,17 @@ bool Symbol::IsFuncResult() const {
       details_);
 }
 
+const ArraySpec *Symbol::GetShape() const {
+  if (const auto *details{std::get_if<ObjectEntityDetails>(&details_)}) {
+    return &details->shape();
+  } else {
+    return nullptr;
+  }
+}
+
 bool Symbol::IsObjectArray() const {
-  const auto *details{std::get_if<ObjectEntityDetails>(&details_)};
-  return details && details->IsArray();
+  const ArraySpec *shape{GetShape()};
+  return shape && !shape->empty();
 }
 
 bool Symbol::IsSubprogram() const {
