@@ -669,7 +669,8 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     IdentifierInfo *IIEnv = A->getEnvironment();
     StringRef TargetEnv =
         Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(TargetEnv);
+    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+        Context.getTargetInfo().getTriple().getEnvironment());
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
       if (Message) {

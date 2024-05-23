@@ -1060,42 +1060,23 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
-static llvm::StringRef getPrettyEnviromentName(llvm::StringRef Environment) {
-    return llvm::StringSwitch<llvm::StringRef>(Environment)
-             .Case("pixel", "pixel shader")
-             .Case("vertex", "vertex shader")
-             .Case("geometry", "geometry shader")
-             .Case("hull", "hull shader")
-             .Case("domain", "domain shader")
-             .Case("compute", "compute shader")
-             .Case("raygeneration", "ray generation shader")
-             .Case("intersection", "intersection shader")
-             .Case("anyhit", "anyhit shader")
-             .Case("closesthit", "closesthit shader")
-             .Case("miss", "miss shader")
-             .Case("callable", "callable shader")
-             .Case("mesh", "mesh shader")
-             .Case("amplification", "amplification shader")
-             .Case("library", "shader library")
-             .Default(Environment);
-}
-static llvm::StringRef getEnvironmentString(llvm::Triple::EnvironmentType EnvironmentType) {
+static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
   switch (EnvironmentType) {
-    case llvm::Triple::EnvironmentType::Pixel: return "pixel";
-    case llvm::Triple::EnvironmentType::Vertex: return "vertex";
-    case llvm::Triple::EnvironmentType::Geometry: return "geometry";
-    case llvm::Triple::EnvironmentType::Hull: return "hull";
-    case llvm::Triple::EnvironmentType::Domain: return "domain";
-    case llvm::Triple::EnvironmentType::Compute: return "compute";
-    case llvm::Triple::EnvironmentType::RayGeneration: return "ray generation";
-    case llvm::Triple::EnvironmentType::Intersection: return "intersection";
-    case llvm::Triple::EnvironmentType::AnyHit: return "any hit";
-    case llvm::Triple::EnvironmentType::ClosestHit: return "closest hit";
-    case llvm::Triple::EnvironmentType::Miss: return "miss";
-    case llvm::Triple::EnvironmentType::Callable: return "callable";
-    case llvm::Triple::EnvironmentType::Mesh: return "mesh";
-    case llvm::Triple::EnvironmentType::Amplification: return "amplification";
-    case llvm::Triple::EnvironmentType::Library: return "library";
+    case llvm::Triple::EnvironmentType::Pixel: return "pixel shader";
+    case llvm::Triple::EnvironmentType::Vertex: return "vertex shader";
+    case llvm::Triple::EnvironmentType::Geometry: return "geometry shader";
+    case llvm::Triple::EnvironmentType::Hull: return "hull shader";
+    case llvm::Triple::EnvironmentType::Domain: return "domain shader";
+    case llvm::Triple::EnvironmentType::Compute: return "compute shader";
+    case llvm::Triple::EnvironmentType::RayGeneration: return "raygeneration shader";
+    case llvm::Triple::EnvironmentType::Intersection: return "intersection shader";
+    case llvm::Triple::EnvironmentType::AnyHit: return "anyhit shader";
+    case llvm::Triple::EnvironmentType::ClosestHit: return "closesthit shader";
+    case llvm::Triple::EnvironmentType::Miss: return "miss shader";
+    case llvm::Triple::EnvironmentType::Callable: return "callable shader";
+    case llvm::Triple::EnvironmentType::Mesh: return "mesh shader";
+    case llvm::Triple::EnvironmentType::Amplification: return "amplification shader";
+    case llvm::Triple::EnvironmentType::Library: return "shader library";
     default: return "";
   }
 }
