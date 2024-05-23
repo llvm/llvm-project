@@ -20,7 +20,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_execution_policy.h>
-#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <optional>
