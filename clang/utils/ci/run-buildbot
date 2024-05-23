@@ -83,6 +83,7 @@ build-clang)
         -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"                                 \
         -DCMAKE_BUILD_TYPE=Release                                             \
         -DCMAKE_INSTALL_PREFIX=install                                         \
+        -DLLVM_TARGETS_TO_BUILD=Native                                         \
         -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
 
     ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
