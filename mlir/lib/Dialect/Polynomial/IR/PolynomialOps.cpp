@@ -283,10 +283,10 @@ void SubOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 void NTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<NTTAfterINTT>(context);
+  results.add<NTTAfterINTT, NTTOfAdd, NTTOfSub>(context);
 }
 
 void INTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<INTTAfterNTT>(context);
+  results.add<INTTAfterNTT, INTTOfAdd, INTTOfSub>(context);
 }
