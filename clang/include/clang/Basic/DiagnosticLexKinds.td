@@ -991,5 +991,5 @@ def err_pp_unclosed_pragma_unsafe_buffer_usage :
 Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
-Error<"Expected 'begin' or 'end'">;
+Error<"expected 'begin' or 'end'">;
 }

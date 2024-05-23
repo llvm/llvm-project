@@ -549,9 +549,17 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_char_kind",
+     &I::genSelectedCharKind,
+     {{{"name", asAddr}}},
+     /*isElemental=*/false},
     {"selected_int_kind",
      &I::genSelectedIntKind,
      {{{"scalar", asAddr}}},
+     /*isElemental=*/false},
+    {"selected_logical_kind",
+     &I::genSelectedLogicalKind,
+     {{{"bits", asAddr}}},
      /*isElemental=*/false},
     {"selected_real_kind",
      &I::genSelectedRealKind,
@@ -5873,6 +5881,18 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
 }
 
+// SELECTED_CHAR_KIND
+fir::ExtendedValue
+IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedCharKind(builder, loc, fir::getBase(args[0]),
+                                        fir::getLen(args[0])));
+}
+
 // SELECTED_INT_KIND
 mlir::Value
 IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
@@ -5882,6 +5902,17 @@ IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSelectedIntKind(builder, loc, fir::getBase(args[0])));
+}
+
+// SELECTED_LOGICAL_KIND
+mlir::Value
+IntrinsicLibrary::genSelectedLogicalKind(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genSelectedLogicalKind(
+                                   builder, loc, fir::getBase(args[0])));
 }
 
 // SELECTED_REAL_KIND

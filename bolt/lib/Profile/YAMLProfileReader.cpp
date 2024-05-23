@@ -253,10 +253,8 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
     BF.setExecutionCount(FunctionExecutionCount);
-    estimateEdgeCounts(BF);
-  }
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
 
