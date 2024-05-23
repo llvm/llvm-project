@@ -10,7 +10,7 @@
 #define LLVM_LIBC_BENCHMARKS_GPU_BENCHMARKLOGGER_H
 
 namespace LIBC_NAMESPACE {
-namespace libc_gpu_benchmarks {
+namespace benchmarks {
 
 // A class to log to standard output in the context of hermetic tests.
 struct BenchmarkLogger {
@@ -21,7 +21,7 @@ struct BenchmarkLogger {
 // A global TestLogger instance to be used in tests.
 extern BenchmarkLogger blog;
 
-} // namespace libc_gpu_benchmarks
+} // namespace benchmarks
 } // namespace LIBC_NAMESPACE
 
 #endif /* LLVM_LIBC_BENCHMARKS_GPU_BENCHMARKLOGGER_H */

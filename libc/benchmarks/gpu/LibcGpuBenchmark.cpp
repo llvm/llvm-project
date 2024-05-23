@@ -4,7 +4,7 @@
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE {
-namespace libc_gpu_benchmarks {
+namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks_to_run;
 
@@ -23,22 +23,22 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
                           cpp::function<uint64_t(void)> wrapper_func) {
   BenchmarkResult result;
   RuntimeEstimationProgression rep;
-  size_t total_iterations = 0;
-  size_t iterations = options.initial_iterations;
-  if (iterations < (uint32_t)1)
+  uint32_t total_iterations = 0;
+  uint32_t iterations = options.initial_iterations;
+  if (iterations < 1u)
     iterations = 1;
 
-  size_t samples = 0;
+  uint32_t samples = 0;
   uint64_t total_time = 0;
   uint64_t best_guess = 0;
   uint64_t total_cycles = 0;
-  uint64_t cycles_2 = 0;
-  uint64_t min = UINT_MAX;
+  uint64_t cycles_squared = 0;
+  uint64_t min = UINT64_MAX;
   uint64_t max = 0;
-  for (;;) {
+  for (uint64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
     uint64_t overhead = LIBC_NAMESPACE::overhead();
-    const clock_t start = (double)clock();
+    const clock_t start = static_cast<double>(clock());
     for (uint32_t i = 0; i < iterations; i++) {
       auto wrapper_intermediate = wrapper_func();
       uint64_t result = wrapper_intermediate - overhead;
@@ -50,9 +50,10 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     const clock_t duration_ns =
         ((end - start) * 1000 * 1000 * 1000) / CLOCKS_PER_SEC;
     total_time += duration_ns;
+    time_budget -= duration_ns;
     samples++;
     total_cycles += sample_cycles;
-    cycles_2 += sample_cycles * sample_cycles;
+    cycles_squared += sample_cycles * sample_cycles;
 
     total_iterations += iterations;
     const double change_ratio =
@@ -60,8 +61,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     best_guess = rep.current_estimation;
 
     if (samples >= options.max_samples ||
-        iterations >= options.max_iterations ||
-        total_time >= options.max_duration) {
+        iterations >= options.max_iterations) {
       break;
     } else if (total_time >= options.min_duration &&
                samples >= options.min_samples &&
@@ -72,8 +72,9 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     iterations *= options.scaling_factor;
   }
   result.cycles = best_guess;
-  result.standard_deviation = fputil::sqrt((double)cycles_2 / total_iterations -
-                                           (best_guess * best_guess));
+  result.standard_deviation =
+      fputil::sqrt(static_cast<double>(cycles_squared) / total_iterations -
+                   (best_guess * best_guess));
   result.min = min;
   result.max = max;
   result.samples = samples;
@@ -82,5 +83,5 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   return result;
 };
 
-} // namespace libc_gpu_benchmarks
+} // namespace benchmarks
 } // namespace LIBC_NAMESPACE

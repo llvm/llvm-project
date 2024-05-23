@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
-namespace libc_gpu_benchmarks {
+namespace benchmarks {
 
 // cpp::string_view specialization
 template <>
@@ -93,5 +93,5 @@ template BenchmarkLogger &BenchmarkLogger::operator<< <UInt<320>>(UInt<320>);
 
 BenchmarkLogger blog;
 
-} // namespace libc_gpu_benchmarks
+} // namespace benchmarks
 } // namespace LIBC_NAMESPACE

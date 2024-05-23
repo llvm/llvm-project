@@ -9,12 +9,11 @@
 #include "src/__support/fixedvector.h"
 #include "src/time/clock.h"
 
-#include <stddef.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
 
-namespace libc_gpu_benchmarks {
+namespace benchmarks {
 
 struct BenchmarkOptions {
   uint32_t initial_iterations = 1;
@@ -28,13 +27,13 @@ struct BenchmarkOptions {
 };
 
 struct Measurement {
-  size_t iterations = 0;
+  uint32_t iterations = 0;
   uint64_t elapsed_cycles = 0;
 };
 
 class RefinableRuntimeEstimation {
   uint64_t total_cycles = 0;
-  size_t total_iterations = 0;
+  uint32_t total_iterations = 0;
 
 public:
   uint64_t update(const Measurement &M) {
@@ -53,7 +52,8 @@ public:
 
   double compute_improvement(const Measurement &M) {
     const uint64_t new_estimation = rre.update(M);
-    double ratio = ((double)current_estimation / new_estimation) - 1.0;
+    double ratio =
+        (static_cast<double>(current_estimation) / new_estimation) - 1.0;
 
     // Get absolute value
     if (ratio < 0)
@@ -67,10 +67,10 @@ public:
 struct BenchmarkResult {
   uint64_t cycles = 0;
   double standard_deviation = 0;
-  uint64_t min = UINT_MAX;
+  uint64_t min = UINT64_MAX;
   uint64_t max = 0;
-  size_t samples = 0;
-  size_t total_iterations = 0;
+  uint32_t samples = 0;
+  uint32_t total_iterations = 0;
   clock_t total_time = 0;
 };
 
@@ -78,35 +78,22 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
                           cpp::function<uint64_t(void)> wrapper_func);
 
 class Benchmark {
-  Benchmark *next = nullptr;
-
-public:
-  virtual ~Benchmark() {}
-  virtual void set_up() {}
-  virtual void tear_down() {}
-
-  static int run_benchmarks();
-
-protected:
-  static void add_benchmark(Benchmark *);
-
-private:
-  virtual void run() = 0;
-  virtual const cpp::string_view get_name() const = 0;
-};
-
-class WrapperBenchmark : public Benchmark {
   const cpp::function<uint64_t(void)> func;
   const cpp::string_view name;
 
 public:
-  WrapperBenchmark(cpp::function<uint64_t(void)> func, char const *name)
+  Benchmark(cpp::function<uint64_t(void)> func, char const *name)
       : func(func), name(name) {
     add_benchmark(this);
   }
 
+  static int run_benchmarks();
+
+protected:
+  static void add_benchmark(Benchmark *benchmark);
+
 private:
-  void run() override {
+  void run() {
     BenchmarkOptions options;
     auto result = benchmark(options, func);
     constexpr auto GREEN = "\033[32m";
@@ -115,15 +102,16 @@ private:
     blog << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
          << " cycles, " << result.min << " min, " << result.max << " max, "
          << result.total_iterations << " iterations, " << result.total_time
-         << " ns, " << (long)result.standard_deviation << " stddev\n";
+         << " ns, " << static_cast<long>(result.standard_deviation)
+         << " stddev\n";
   }
-  const cpp::string_view get_name() const override { return name; }
+  const cpp::string_view get_name() const { return name; }
 };
-} // namespace libc_gpu_benchmarks
+} // namespace benchmarks
 } // namespace LIBC_NAMESPACE
 
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
-  LIBC_NAMESPACE::libc_gpu_benchmarks::WrapperBenchmark                        \
-      SuiteName##_##TestName##_Instance(Func, #SuiteName "." #TestName);
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName "." #TestName);
 
 #endif
