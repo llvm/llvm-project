@@ -3843,58 +3843,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
       DefaultAttrsIntrinsic<[llvm_v16f32_ty],
                             [llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty],
                             [IntrNoMem]>;
-
-  def int_x86_avx512_rcp28_ps : ClangBuiltin<"__builtin_ia32_rcp28ps_mask">,
-      DefaultAttrsIntrinsic<[llvm_v16f32_ty],
-                            [llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-  def int_x86_avx512_rcp28_pd : ClangBuiltin<"__builtin_ia32_rcp28pd_mask">,
-      DefaultAttrsIntrinsic<[llvm_v8f64_ty],
-                            [llvm_v8f64_ty, llvm_v8f64_ty, llvm_i8_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-  def int_x86_avx512_exp2_ps : ClangBuiltin<"__builtin_ia32_exp2ps_mask">,
-      DefaultAttrsIntrinsic<[llvm_v16f32_ty],
-                            [llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-  def int_x86_avx512_exp2_pd : ClangBuiltin<"__builtin_ia32_exp2pd_mask">,
-      DefaultAttrsIntrinsic<[llvm_v8f64_ty],
-                            [llvm_v8f64_ty, llvm_v8f64_ty, llvm_i8_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-
-  def int_x86_avx512_rcp28_ss : ClangBuiltin<"__builtin_ia32_rcp28ss_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
-                            [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
-                             llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_rcp28_sd : ClangBuiltin<"__builtin_ia32_rcp28sd_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
-                            [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
-                             llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_rsqrt28_ps : ClangBuiltin<"__builtin_ia32_rsqrt28ps_mask">,
-      DefaultAttrsIntrinsic<[llvm_v16f32_ty],
-                            [llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-  def int_x86_avx512_rsqrt28_pd : ClangBuiltin<"__builtin_ia32_rsqrt28pd_mask">,
-      DefaultAttrsIntrinsic<[llvm_v8f64_ty],
-                            [llvm_v8f64_ty, llvm_v8f64_ty, llvm_i8_ty,
-                             llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-  def int_x86_avx512_rsqrt28_ss : ClangBuiltin<"__builtin_ia32_rsqrt28ss_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
-                            [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
-                             llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_rsqrt28_sd : ClangBuiltin<"__builtin_ia32_rsqrt28sd_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
-                            [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
-                             llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_psad_bw_512 : ClangBuiltin<"__builtin_ia32_psadbw512">,
       DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v64i8_ty, llvm_v64i8_ty],
                             [IntrNoMem, Commutative]>;
@@ -4177,38 +4125,6 @@ let TargetPrefix = "x86" in {
           Intrinsic<[],
           [llvm_ptr_ty, llvm_i8_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i32_ty],
           [ImmArg<ArgIndex<4>>]>;
-
-  // gather prefetch
-  // NOTE: These can't be ArgMemOnly because you can put the address completely
-  // in the index register.
-  def int_x86_avx512_gatherpf_dpd_512  : ClangBuiltin<"__builtin_ia32_gatherpfdpd">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i32_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_gatherpf_dps_512  : ClangBuiltin<"__builtin_ia32_gatherpfdps">,
-          Intrinsic<[], [llvm_i16_ty, llvm_v16i32_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_gatherpf_qpd_512  : ClangBuiltin<"__builtin_ia32_gatherpfqpd">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_gatherpf_qps_512  : ClangBuiltin<"__builtin_ia32_gatherpfqps">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-
-  // scatter prefetch
-  // NOTE: These can't be ArgMemOnly because you can put the address completely
-  // in the index register.
-  def int_x86_avx512_scatterpf_dpd_512  : ClangBuiltin<"__builtin_ia32_scatterpfdpd">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i32_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_scatterpf_dps_512  : ClangBuiltin<"__builtin_ia32_scatterpfdps">,
-          Intrinsic<[], [llvm_i16_ty, llvm_v16i32_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_scatterpf_qpd_512  : ClangBuiltin<"__builtin_ia32_scatterpfqpd">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  def int_x86_avx512_scatterpf_qps_512  : ClangBuiltin<"__builtin_ia32_scatterpfqps">,
-          Intrinsic<[], [llvm_i8_ty, llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 }
 
 // AVX512 gather/scatter intrinsics that use vXi1 masks.
