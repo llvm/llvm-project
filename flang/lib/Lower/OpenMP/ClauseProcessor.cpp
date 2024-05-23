@@ -882,8 +882,11 @@ bool ClauseProcessor::processMap(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
+          auto location = mlir::NameLoc::get(
+              mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
+              symAddr.getLoc());
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr,
+              firOpBuilder, location, symAddr,
               /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
               /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<

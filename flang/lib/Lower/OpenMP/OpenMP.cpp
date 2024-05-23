@@ -1604,9 +1604,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
-
+        auto location =
+            mlir::NameLoc::get(mlir::StringAttr::get(firOpBuilder.getContext(),
+                                                     sym.name().ToString()),
+                               baseOp.getLoc());
         mlir::Value mapOp = createMapInfoOp(
-            firOpBuilder, baseOp.getLoc(), baseOp, /*varPtrPtr=*/mlir::Value{},
+            firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{},
             name.str(), bounds, /*members=*/{},
             /*membersIndex=*/mlir::DenseIntElementsAttr{},
             static_cast<
