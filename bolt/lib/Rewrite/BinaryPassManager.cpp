@@ -343,8 +343,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
 
-  const DynoStats InitialDynoStats =
-      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
+  Manager.registerPass(std::make_unique<DynoStatsSetPass>());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
@@ -456,10 +455,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
 
   // Print final dyno stats right while CFG and instruction analysis are intact.
-  Manager.registerPass(
-      std::make_unique<DynoStatsPrintPass>(
-          InitialDynoStats, "after all optimizations before SCTC and FOP"),
-      opts::PrintDynoStats || opts::DynoStatsAll);
+  Manager.registerPass(std::make_unique<DynoStatsPrintPass>(
+                           "after all optimizations before SCTC and FOP"),
+                       opts::PrintDynoStats || opts::DynoStatsAll);
 
   // Add the StokeInfo pass, which extract functions for stoke optimization and
   // get the liveness information for them
