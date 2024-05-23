@@ -16,7 +16,7 @@ define signext i32 @foo() #1 {
 ; LARGE-LABEL: foo:
 ; LARGE:       # %bb.0: # %entry
 ; LARGE-NEXT:    addis 3, a[TD]@u(2)
-; LARGE-NEXT:    addi 3, 3, a[TD]@toc@l
+; LARGE-NEXT:    la 3, a[TD]@l(3)
 ; LARGE-NEXT:    lwa 3, 0(3)
 ; LARGE-NEXT:    blr
 entry:
