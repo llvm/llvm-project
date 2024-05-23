@@ -1821,6 +1821,18 @@ class Cursor(Structure):
         return AvailabilityKind.from_id(self._availability)
 
     @property
+    def binary_operator(self):
+        """
+        Retrieves the opcode if this cursor points to a binary operator
+        :return:
+        """
+
+        if not hasattr(self, "_binopcode"):
+            self._binopcode = conf.lib.clang_Cursor_getBinaryOpcode(self)
+
+        return BinaryOperator.from_id(self._binopcode)
+
+    @property
     def access_specifier(self):
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2108,6 +2120,55 @@ class Cursor(Structure):
 
         res._tu = args[0]._tu
         return res
+
+
+class BinaryOperator(BaseEnumeration):
+    """
+    Describes the BinaryOperator of a declaration
+    """
+
+    def __nonzero__(self):
+        """Allows checks of the kind ```if cursor.binary_operator:```"""
+        return self.value != 0
+
+    @property
+    def is_assignment(self):
+        return BinaryOperator.Assign.value <= self.value < BinaryOperator.Comma.value
+
+    Invalid = 0
+    PtrMemD = 1
+    PtrMemI = 2
+    Mul = 3
+    Div = 4
+    Rem = 5
+    Add = 6
+    Sub = 7
+    Shl = 8
+    Shr = 9
+    Cmp = 10
+    LT = 11
+    GT = 12
+    LE = 13
+    GE = 14
+    EQ = 15
+    NE = 16
+    And = 17
+    Xor = 18
+    Or = 19
+    LAnd = 20
+    LOr = 21
+    Assign = 22
+    MulAssign = 23
+    DivAssign = 24
+    RemAssign = 25
+    AddAssign = 26
+    SubAssign = 27
+    ShlAssign = 28
+    ShrAssign = 29
+    AndAssign = 30
+    XorAssign = 31
+    OrAssign = 32
+    Comma = 33
 
 
 class StorageClass(BaseEnumeration):
@@ -3847,6 +3908,7 @@ functionList = [
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_Cursor_isAnonymous", [Cursor], bool),
     ("clang_Cursor_isBitField", [Cursor], bool),
+    ("clang_Cursor_getBinaryOpcode", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString, _CXString.from_result),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString, _CXString.from_result),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4016,6 +4078,7 @@ conf = Config()
 
 __all__ = [
     "AvailabilityKind",
+    "BinaryOperator",
     "Config",
     "CodeCompletionResults",
     "CompilationDatabase",

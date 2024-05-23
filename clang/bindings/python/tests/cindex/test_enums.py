@@ -12,6 +12,7 @@ from clang.cindex import (
     LinkageKind,
     TLSKind,
     StorageClass,
+    BinaryOperator,
 )
 
 
@@ -28,6 +29,7 @@ class TestEnums(unittest.TestCase):
         LinkageKind,
         TLSKind,
         StorageClass,
+        BinaryOperator,
     ]
 
     def test_from_id(self):
