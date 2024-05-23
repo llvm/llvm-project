@@ -8318,11 +8318,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       if (!ShuffleKinds[Part])
         continue;
-      ArrayRef<int> MaskSlice =
-          Mask.slice(Part * EltsPerVector,
-                     (Part == NumParts - 1 && Mask.size() % EltsPerVector != 0)
-                         ? Mask.size() % EltsPerVector
-                         : EltsPerVector);
+      unsigned SliceStart = Part * EltsPerVector;
+      if (SliceStart >= Mask.size())
+        break;
+      unsigned SliceSize = (SliceStart + EltsPerVector) > Mask.size()
+                               ? Mask.size() - SliceStart
+                               : EltsPerVector;
+      ArrayRef<int> MaskSlice = Mask.slice(SliceStart, SliceSize);
       SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
       std::optional<TTI::ShuffleKind> RegShuffleKind =
