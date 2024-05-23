@@ -2353,7 +2353,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBB.Index = Idx;
 
       for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
-        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+        YamlBF.Blocks[BI->second.Index].Hash = BI->second.Hash;
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {
@@ -2363,7 +2363,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           exit(1);
         }
         --BlockIt;
-        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+        return std::pair(BlockIt->first, BlockIt->second.Index);
       };
 
       for (const BranchInfo &BI : Branches.Data) {

@@ -543,6 +543,86 @@ def Vector_InterleaveOp :
   }];
 }
 
+class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
+  "the trailing dimension of the results is half the width of source trailing dimension",
+  "source", result,
+  [{
+    [&]() -> ::mlir::VectorType {
+      auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+      ::mlir::VectorType::Builder builder(vectorType);
+      auto lastDim = vectorType.getRank() - 1;
+      auto newDimSize = vectorType.getDimSize(lastDim) / 2;;
+      if (newDimSize <= 0)
+         return vectorType; // (invalid input type)
+      return builder.setDim(lastDim, newDimSize);
+    }()
+  }]
+>;
+
+def SourceVectorEvenElementCount : PredOpTrait<
+  "the trailing dimension of the source vector has an even number of elements",
+  CPred<[{
+    [&](){
+      auto srcVec = getSourceVectorType();
+      return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
+    }()
+  }]>
+>;
+
+def Vector_DeinterleaveOp :
+  Vector_Op<"deinterleave", [Pure,
+    SourceVectorEvenElementCount,
+    ResultIsHalfSourceVectorType<"res1">,
+    AllTypesMatch<["res1", "res2"]>
+    ]> {
+      let summary = "constructs two vectors by deinterleaving an input vector";
+      let description = [{
+        The deinterleave operation constructs two vectors from a single input
+        vector. The first result vector contains the elements from even indexes
+        of the input, and the second contains elements from odd indexes. This is
+        the inverse of a `vector.interleave` operation.
+
+        Each output's trailing dimension is half of the size of the input
+        vector's trailing dimension. This operation requires the input vector
+        to have a rank > 0 and an even number of elements in its trailing
+        dimension.
+
+        The operation supports scalable vectors.
+
+        Example:
+        ```mlir
+        %0, %1 = vector.deinterleave %a
+                   : vector<8xi8> -> vector<4xi8>
+        %2, %3 = vector.deinterleave %b
+                   : vector<2x8xi8> -> vector<2x4xi8>
+        %4, %5 = vector.deinterleave %c
+                   : vector<2x8x4xi8> -> vector<2x8x2xi8>
+        %6, %7 = vector.deinterleave %d
+                   : vector<[8]xf32> -> vector<[4]xf32>
+        %8, %9 = vector.deinterleave %e
+                   : vector<2x[6]xf64> -> vector<2x[3]xf64>
+        %10, %11 = vector.deinterleave %f
+                   : vector<2x4x[6]xf64> -> vector<2x4x[3]xf64>
+        ```
+      }];
+
+      let arguments = (ins AnyVector:$source);
+      let results = (outs AnyVector:$res1, AnyVector:$res2);
+
+      let assemblyFormat = [{
+        $source attr-dict `:` type($source) `->` type($res1)
+      }];
+
+      let extraClassDeclaration = [{
+        VectorType getSourceVectorType() {
+          return ::llvm::cast<VectorType>(getSource().getType());
+        }
+        VectorType getResultVectorType() {
+          return ::llvm::cast<VectorType>(getRes1().getType());
+        }
+      }];
+    }
+
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
      TypesMatchWith<"result type matches element type of vector operand",
