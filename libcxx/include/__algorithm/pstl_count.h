@@ -87,8 +87,8 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iter_diff_t<_ForwardIterator>>
-__count(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iter_diff_t<_ForwardIterator>> __count(
+    _ExecutionPolicy&& __policy, _ForwardIterator&& __first, _ForwardIterator&& __last, const _Tp& __value) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_count, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_value)
@@ -97,8 +97,8 @@ __count(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator 
           return __v == __g_value;
         });
       },
-      std::move(__first),
-      std::move(__last),
+      std::forward<_ForwardIterator>(__first),
+      std::forward<_ForwardIterator>(__last),
       __value);
 }
 

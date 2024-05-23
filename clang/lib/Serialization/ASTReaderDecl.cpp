@@ -2695,7 +2695,8 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (Record.readInt())
-    D->setDefaultArgument(readTypeSourceInfo());
+    D->setDefaultArgument(Reader.getContext(),
+                          Record.readTemplateArgumentLoc());
 }
 
 void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
@@ -2716,7 +2717,8 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     // Rest of NonTypeTemplateParmDecl.
     D->ParameterPack = Record.readInt();
     if (Record.readInt())
-      D->setDefaultArgument(Record.readExpr());
+      D->setDefaultArgument(Reader.getContext(),
+                            Record.readTemplateArgumentLoc());
   }
 }
 

@@ -2814,7 +2814,7 @@ private:
                                        SourceLocation CorrectLocation);
 
   void stripTypeAttributesOffDeclSpec(ParsedAttributes &Attrs, DeclSpec &DS,
-                                      Sema::TagUseKind TUK);
+                                      TagUseKind TUK);
 
   // FixItLoc = possible correct location for the attributes
   void ProhibitAttributes(ParsedAttributes &Attrs,
@@ -2997,7 +2997,8 @@ private:
   bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
                                   IdentifierInfo *AttrName,
                                   SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc);
+                                  SourceLocation *EndLoc,
+                                  ParsedAttr::Form Form);
 
   IdentifierInfo *TryParseCXX11AttributeIdentifier(
       SourceLocation &Loc,

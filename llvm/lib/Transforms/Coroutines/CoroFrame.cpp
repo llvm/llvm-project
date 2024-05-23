@@ -19,6 +19,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Config/llvm-config.h"
@@ -1440,17 +1441,22 @@ namespace {
 struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   using Base = PtrUseVisitor<AllocaUseVisitor>;
   AllocaUseVisitor(const DataLayout &DL, const DominatorTree &DT,
-                   const CoroBeginInst &CB, const SuspendCrossingInfo &Checker,
+                   const coro::Shape &CoroShape,
+                   const SuspendCrossingInfo &Checker,
                    bool ShouldUseLifetimeStartInfo)
-      : PtrUseVisitor(DL), DT(DT), CoroBegin(CB), Checker(Checker),
-        ShouldUseLifetimeStartInfo(ShouldUseLifetimeStartInfo) {}
+      : PtrUseVisitor(DL), DT(DT), CoroShape(CoroShape), Checker(Checker),
+        ShouldUseLifetimeStartInfo(ShouldUseLifetimeStartInfo) {
+    for (AnyCoroSuspendInst *SuspendInst : CoroShape.CoroSuspends)
+      CoroSuspendBBs.insert(SuspendInst->getParent());
+  }
 
   void visit(Instruction &I) {
     Users.insert(&I);
     Base::visit(I);
     // If the pointer is escaped prior to CoroBegin, we have to assume it would
     // be written into before CoroBegin as well.
-    if (PI.isEscaped() && !DT.dominates(&CoroBegin, PI.getEscapingInst())) {
+    if (PI.isEscaped() &&
+        !DT.dominates(CoroShape.CoroBegin, PI.getEscapingInst())) {
       MayWriteBeforeCoroBegin = true;
     }
   }
@@ -1553,10 +1559,19 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     // When we found the lifetime markers refers to a
     // subrange of the original alloca, ignore the lifetime
     // markers to avoid misleading the analysis.
-    if (II.getIntrinsicID() != Intrinsic::lifetime_start || !IsOffsetKnown ||
-        !Offset.isZero())
+    if (!IsOffsetKnown || !Offset.isZero())
       return Base::visitIntrinsicInst(II);
-    LifetimeStarts.insert(&II);
+    switch (II.getIntrinsicID()) {
+    default:
+      return Base::visitIntrinsicInst(II);
+    case Intrinsic::lifetime_start:
+      LifetimeStarts.insert(&II);
+      LifetimeStartBBs.push_back(II.getParent());
+      break;
+    case Intrinsic::lifetime_end:
+      LifetimeEndBBs.insert(II.getParent());
+      break;
+    }
   }
 
   void visitCallBase(CallBase &CB) {
@@ -1586,7 +1601,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
 private:
   const DominatorTree &DT;
-  const CoroBeginInst &CoroBegin;
+  const coro::Shape &CoroShape;
   const SuspendCrossingInfo &Checker;
   // All alias to the original AllocaInst, created before CoroBegin and used
   // after CoroBegin. Each entry contains the instruction and the offset in the
@@ -1594,6 +1609,9 @@ private:
   DenseMap<Instruction *, std::optional<APInt>> AliasOffetMap{};
   SmallPtrSet<Instruction *, 4> Users{};
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
+  SmallVector<BasicBlock *> LifetimeStartBBs{};
+  SmallPtrSet<BasicBlock *, 2> LifetimeEndBBs{};
+  SmallPtrSet<const BasicBlock *, 2> CoroSuspendBBs{};
   bool MayWriteBeforeCoroBegin{false};
   bool ShouldUseLifetimeStartInfo{true};
 
@@ -1605,10 +1623,19 @@ private:
     // every basic block that uses the pointer to see if they cross suspension
     // points. The uses cover both direct uses as well as indirect uses.
     if (ShouldUseLifetimeStartInfo && !LifetimeStarts.empty()) {
-      for (auto *I : Users)
-        for (auto *S : LifetimeStarts)
-          if (Checker.isDefinitionAcrossSuspend(*S, I))
-            return true;
+      // If there is no explicit lifetime.end, then assume the address can
+      // cross suspension points.
+      if (LifetimeEndBBs.empty())
+        return true;
+
+      // If there is a path from a lifetime.start to a suspend without a
+      // corresponding lifetime.end, then the alloca's lifetime persists
+      // beyond that suspension point and the alloca must go on the frame.
+      llvm::SmallVector<BasicBlock *> Worklist(LifetimeStartBBs);
+      if (isManyPotentiallyReachableFromMany(Worklist, CoroSuspendBBs,
+                                             &LifetimeEndBBs, &DT))
+        return true;
+
       // Addresses are guaranteed to be identical after every lifetime.start so
       // we cannot use the local stack if the address escaped and there is a
       // suspend point between lifetime markers. This should also cover the
@@ -1646,13 +1673,13 @@ private:
   }
 
   void handleMayWrite(const Instruction &I) {
-    if (!DT.dominates(&CoroBegin, &I))
+    if (!DT.dominates(CoroShape.CoroBegin, &I))
       MayWriteBeforeCoroBegin = true;
   }
 
   bool usedAfterCoroBegin(Instruction &I) {
     for (auto &U : I.uses())
-      if (DT.dominates(&CoroBegin, U))
+      if (DT.dominates(CoroShape.CoroBegin, U))
         return true;
     return false;
   }
@@ -1661,7 +1688,7 @@ private:
     // We track all aliases created prior to CoroBegin but used after.
     // These aliases may need to be recreated after CoroBegin if the alloca
     // need to live on the frame.
-    if (DT.dominates(&CoroBegin, &I) || !usedAfterCoroBegin(I))
+    if (DT.dominates(CoroShape.CoroBegin, &I) || !usedAfterCoroBegin(I))
       return;
 
     if (!IsOffsetKnown) {
@@ -2830,8 +2857,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
   bool ShouldUseLifetimeStartInfo =
       (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
        Shape.ABI != coro::ABI::RetconOnce);
-  AllocaUseVisitor Visitor{AI->getModule()->getDataLayout(), DT,
-                           *Shape.CoroBegin, Checker,
+  AllocaUseVisitor Visitor{AI->getModule()->getDataLayout(), DT, Shape, Checker,
                            ShouldUseLifetimeStartInfo};
   Visitor.visitPtr(*AI);
   if (!Visitor.getShouldLiveOnFrame())
@@ -2948,10 +2974,12 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVILoc = DVI.getDebugLoc();
+      if (ILoc && DVILoc &&
+          DVILoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
         DVI.setDebugLoc(I->getDebugLoc());
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
@@ -2988,11 +3016,13 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
-        DVR.setDebugLoc(I->getDebugLoc());
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVRLoc = DVR.getDebugLoc();
+      if (ILoc && DVRLoc &&
+          DVRLoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
+        DVR.setDebugLoc(ILoc);
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
