@@ -68,9 +68,9 @@ RT_DEVICE_NOINLINE_HOST_INLINE RT_API_ATTRS RESULT Log2VisitHelper(
 }
 
 template <typename VISITOR, typename... VARIANT>
-RT_DEVICE_NOINLINE_HOST_INLINE RT_API_ATTRS auto visit(
-    VISITOR &&visitor, VARIANT &&...u)
-    -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...)) {
+RT_DEVICE_NOINLINE_HOST_INLINE RT_API_ATTRS auto
+visit(VISITOR &&visitor, VARIANT &&...u) -> decltype(visitor(std::get<0>(
+                                             std::forward<VARIANT>(u))...)) {
   using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...));
   if constexpr (sizeof...(u) == 1) {
     static constexpr std::size_t high{
