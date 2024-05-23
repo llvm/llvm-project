@@ -1,19 +1,30 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-renamed-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-renamed-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-for-cg-matching=0 --min-bb-for-cg-matching=0 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-renamed-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-for-cg-matching=10 --min-bb-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
 
 ; CHECK: Function new_block_only is not in profile or symbol list table.
 ; CHECK: Function new_foo is not in profile or symbol list table.
 
 ; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
-; CHECK: Callee renaming is found in function main, changing profile name from foo to new_foo
-; CHECK: The similarity between new_block_only(IR) and block_only(profile) is 1.00
-; CHECK: Callee renaming is found in function baz, changing profile name from block_only to new_block_only
-; CHECK: Existing callee renaming is found in function baz, changing profile name from block_only to new_block_only
-; CHECK: Existing callee renaming is found in function cold_func, changing profile name from block_only to new_block_only
-; CHECK: Existing callee renaming is found in function test_noninline, changing profile name from foo to new_foo
-; CHECK: Existing callee renaming is found in function baz, changing profile name from block_only to new_block_only
+; CHECK: In function main, changing profile name from foo to new_foo
+; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match
+; CHECK: In function baz, changing profile name from block_only to new_block_only
+; CHECK: In function baz, changing profile name from block_only to new_block_only
+; CHECK: In function cold_func, changing profile name from block_only to new_block_only
+; CHECK: In function test_noninline, changing profile name from foo to new_foo
+; CHECK: In function baz, changing profile name from block_only to new_block_only
+
+; Verify the matched function is updated correctly by checking the inlining.
+; CHECK: 'new_foo' inlined into 'main' to match profiling context with (cost=110, threshold=3000) at callsite main:2:7.5;
+; CHECK: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ main:3:7.6
+; CHECK: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ new_foo:2:3.3 @ main:2:7.5;
+; CHECK: 'new_foo' inlined into 'test_noninline' to match profiling context with (cost=110, threshold=3000) at callsite test_noninline:1:3.2;
+
+; TINY-FUNC-NOT: block_only to new_block_only
+; TINY-FUNC-NOT: from foo to new_foo
+
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

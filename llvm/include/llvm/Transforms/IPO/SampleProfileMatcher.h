@@ -15,7 +15,6 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
 namespace llvm {
@@ -187,15 +186,22 @@ private:
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
+  std::pair<Function *, bool>
+  findOrMatchFunction(const FunctionId &ProfCallee,
+                      FunctionMap &OldProfToNewSymbolMap,
+                      const std::vector<Function *> &NewIRCallees);
+  std::vector<FunctionSamples *> sortFuncProfiles(SampleProfileMap &ProfileMap);
   void findNewIRCallees(Function &Caller,
                         const StringMap<Function *> &newIRFunctions,
                         std::vector<Function *> &NewIRCallees);
+  bool functionMatchesProfileHelper(const Function &IRFunc,
+                                    const FunctionId &ProfFunc);
   bool functionMatchesProfile(const Function &IRFunc,
                               const FunctionId &ProfFunc);
   void matchProfileForNewFunctions(const StringMap<Function *> &newIRFunctions,
                                    FunctionSamples &FS,
                                    FunctionMap &OldProfToNewSymbolMap);
-  void findnewIRFunctions(StringMap<Function *> &newIRFunctions);
+  void findNewIRFunctions(StringMap<Function *> &newIRFunctions);
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };
