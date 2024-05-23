@@ -1900,7 +1900,7 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
 
   if (NTTP->hasDefaultArgument()) {
     Out << " = ";
-    NTTP->getDefaultArgument()->printPretty(Out, nullptr, Policy, Indentation,
-                                            "\n", &Context);
+    NTTP->getDefaultArgument().getArgument().print(Policy, Out,
+                                                   /*IncludeType=*/false);
   }
 }

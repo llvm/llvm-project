@@ -1023,8 +1023,9 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
       if (NTP->hasDefaultArgument()) {
         SmallString<8> ExprStr;
         raw_svector_ostream Output(ExprStr);
-        NTP->getDefaultArgument()->printPretty(
-            Output, nullptr, NTP->getASTContext().getPrintingPolicy());
+        NTP->getDefaultArgument().getArgument().print(
+            NTP->getASTContext().getPrintingPolicy(), Output,
+            /*IncludeType=*/false);
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
             .append(ExprStr, DeclarationFragments::FragmentKind::Text);
       }
