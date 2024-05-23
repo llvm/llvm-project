@@ -143,6 +143,25 @@ set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
+
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND
+   "host" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+  message(STATUS "Not building host plugin: only Linux systems are supported")
+  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
+  if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
+  endif()
+  if("nvptx" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building CUDA plugin: only support AMDGPU in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "cuda")
+  endif()
+endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
 
