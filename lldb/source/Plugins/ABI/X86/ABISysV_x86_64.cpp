@@ -591,11 +591,18 @@ static bool ExtractBytesFromRegisters(
     bool child_is_base_class = false;
     bool child_is_deref_of_parent = false;
     uint64_t language_flags;
-    CompilerType field_clang_type = clang_type.GetChildCompilerTypeAtIndex(
+    auto field_clang_type_or_err = clang_type.GetChildCompilerTypeAtIndex(
         &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
         ignore_array_bounds, name, child_byte_size, child_byte_offset,
         child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
         child_is_deref_of_parent, nullptr, language_flags);
+    if (!field_clang_type_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions),
+                     field_clang_type_or_err.takeError(),
+                     "Could not get child type: {0}");
+      return false;
+    }
+    CompilerType field_clang_type = *field_clang_type_or_err;
 
     const uint64_t field_bit_offset = child_byte_offset * 8;
     const size_t field_bit_width =
