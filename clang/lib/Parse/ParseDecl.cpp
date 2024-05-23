@@ -1923,9 +1923,8 @@ void Parser::DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs) {
 // variable.
 // This function moves attributes that should apply to the type off DS to Attrs.
 void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributes &Attrs,
-                                            DeclSpec &DS,
-                                            Sema::TagUseKind TUK) {
-  if (TUK == Sema::TUK_Reference)
+                                            DeclSpec &DS, TagUseKind TUK) {
+  if (TUK == TagUseKind::Reference)
     return;
 
   llvm::SmallVector<ParsedAttr *, 1> ToBeMoved;
@@ -5326,9 +5325,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // enum foo {..};  void bar() { enum foo; }    <- new foo in bar.
   // enum foo {..};  void bar() { enum foo x; }  <- use of old foo.
   //
-  Sema::TagUseKind TUK;
+  TagUseKind TUK;
   if (AllowEnumSpecifier == AllowDefiningTypeSpec::No)
-    TUK = Sema::TUK_Reference;
+    TUK = TagUseKind::Reference;
   else if (Tok.is(tok::l_brace)) {
     if (DS.isFriendSpecified()) {
       Diag(Tok.getLocation(), diag::err_friend_decl_defines_type)
@@ -5340,9 +5339,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       ScopedEnumKWLoc = SourceLocation();
       IsScopedUsingClassTag = false;
       BaseType = TypeResult();
-      TUK = Sema::TUK_Friend;
+      TUK = TagUseKind::Friend;
     } else {
-      TUK = Sema::TUK_Definition;
+      TUK = TagUseKind::Definition;
     }
   } else if (!isTypeSpecifier(DSC) &&
              (Tok.is(tok::semi) ||
@@ -5351,7 +5350,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     // An opaque-enum-declaration is required to be standalone (no preceding or
     // following tokens in the declaration). Sema enforces this separately by
     // diagnosing anything else in the DeclSpec.
-    TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
+    TUK = DS.isFriendSpecified() ? TagUseKind::Friend : TagUseKind::Declaration;
     if (Tok.isNot(tok::semi)) {
       // A semicolon was missing after this declaration. Diagnose and recover.
       ExpectAndConsume(tok::semi, diag::err_expected_after, "enum");
@@ -5359,21 +5358,21 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       Tok.setKind(tok::semi);
     }
   } else {
-    TUK = Sema::TUK_Reference;
+    TUK = TagUseKind::Reference;
   }
 
   bool IsElaboratedTypeSpecifier =
-      TUK == Sema::TUK_Reference || TUK == Sema::TUK_Friend;
+      TUK == TagUseKind::Reference || TUK == TagUseKind::Friend;
 
   // If this is an elaborated type specifier nested in a larger declaration,
   // and we delayed diagnostics before, just merge them into the current pool.
-  if (TUK == Sema::TUK_Reference && shouldDelayDiagsInTag) {
+  if (TUK == TagUseKind::Reference && shouldDelayDiagsInTag) {
     diagsFromTag.redelay();
   }
 
   MultiTemplateParamsArg TParams;
   if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
-      TUK != Sema::TUK_Reference) {
+      TUK != TagUseKind::Reference) {
     if (!getLangOpts().CPlusPlus11 || !SS.isSet()) {
       // Skip the rest of this declarator, up until the comma or semicolon.
       Diag(Tok, diag::err_enum_template);
@@ -5394,7 +5393,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     SS.setTemplateParamLists(TParams);
   }
 
-  if (!Name && TUK != Sema::TUK_Definition) {
+  if (!Name && TUK != TagUseKind::Definition) {
     Diag(Tok, diag::err_enumerator_unnamed_no_def);
 
     DS.SetTypeSpecError();
@@ -5427,7 +5426,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
 
   SkipBodyInfo SkipBody;
-  if (!Name && TUK == Sema::TUK_Definition && Tok.is(tok::l_brace) &&
+  if (!Name && TUK == TagUseKind::Definition && Tok.is(tok::l_brace) &&
       NextToken().is(tok::identifier))
     SkipBody = Actions.shouldSkipAnonEnumBody(getCurScope(),
                                               NextToken().getIdentifierInfo(),
@@ -5448,7 +5447,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                     OffsetOfState, &SkipBody).get();
 
   if (SkipBody.ShouldSkip) {
-    assert(TUK == Sema::TUK_Definition && "can only skip a definition");
+    assert(TUK == TagUseKind::Definition && "can only skip a definition");
 
     BalancedDelimiterTracker T(*this, tok::l_brace);
     T.consumeOpen();
@@ -5490,7 +5489,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (!TagDecl) {
     // The action failed to produce an enumeration tag. If this is a
     // definition, consume the entire definition.
-    if (Tok.is(tok::l_brace) && TUK != Sema::TUK_Reference) {
+    if (Tok.is(tok::l_brace) && TUK != TagUseKind::Reference) {
       ConsumeBrace();
       SkipUntil(tok::r_brace, StopAtSemi);
     }
@@ -5499,7 +5498,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     return;
   }
 
-  if (Tok.is(tok::l_brace) && TUK == Sema::TUK_Definition) {
+  if (Tok.is(tok::l_brace) && TUK == TagUseKind::Definition) {
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&
