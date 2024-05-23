@@ -5020,7 +5020,7 @@ bool InstCombinerImpl::run() {
           BasicBlock* IncomingBlock = PN->getIncomingBlock(Num);
           if (UserParent && UserParent != IncomingBlock)
             return std::nullopt;
-          UserParent = PN->getIncomingBlock(Num);
+          UserParent = IncomingBlock;
         } else {
           if (UserParent && UserParent != UserInst->getParent())
             return std::nullopt;
