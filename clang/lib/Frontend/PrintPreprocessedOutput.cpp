@@ -760,7 +760,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
-       !Tok.is(tok::annot_repl_input_end)))
+       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.

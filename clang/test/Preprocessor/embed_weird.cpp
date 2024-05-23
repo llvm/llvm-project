@@ -31,7 +31,7 @@ _Static_assert(sizeof
 , ""
 );
 _Static_assert(sizeof(
-#embed <jk.txt>
+#embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
 ) ==
 sizeof(unsigned char)
 , ""
@@ -70,7 +70,7 @@ void do_stuff() {
 // from embedded data; the data is modeled as a string literal internally, but
 // is not actually a string literal.
 const unsigned char *ptr =
-#embed <jk.txt>
+#embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
 ; // c-error@-2 {{incompatible integer to pointer conversion initializing 'const unsigned char *' with an expression of type 'unsigned char'}} \
      cxx-error@-2 {{cannot initialize a variable of type 'const unsigned char *' with an rvalue of type 'unsigned char'}}
 

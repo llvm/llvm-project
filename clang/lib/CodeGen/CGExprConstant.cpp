@@ -1287,8 +1287,7 @@ public:
 
     // Initialising an array requires us to automatically
     // initialise any elements that have not been initialised explicitly
-    uint64_t NumInitableElts =
-        std::min<uint64_t>(NumInitElements, NumElements);
+    uint64_t NumInitableElts = std::min<uint64_t>(NumInitElements, NumElements);
 
     QualType EltType = CAT->getElementType();
 

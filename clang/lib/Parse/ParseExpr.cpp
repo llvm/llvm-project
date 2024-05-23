@@ -1073,9 +1073,11 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
     SourceLocation StartLoc = ConsumeAnnotationToken();
     ASTContext &Context = Actions.getASTContext();
-    return IntegerLiteral::Create(
-        Context, llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
-        Context.UnsignedCharTy, StartLoc);
+    Res = IntegerLiteral::Create(Context,
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 Context.UnsignedCharTy, StartLoc);
+    if (Data->BinaryData.size() > 1)
+      Diag(StartLoc, diag::warn_unused_comma_left_operand);
   } break;
 
   case tok::kw___super:

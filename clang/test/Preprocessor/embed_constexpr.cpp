@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -Wno-c23-extensions
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -fexperimental-new-constant-interpreter -Wno-c23-extensions
-// expected-no-diagnostics
 
 constexpr int value(int a, int b) {
   return a + b;
@@ -47,7 +46,7 @@ int array[
 static_assert(sizeof(array) / sizeof(int) == 'j');
 
 constexpr int comma_expr = (
-#embed <jk.txt>
+#embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
 );
 static_assert(comma_expr == 'k');
 

@@ -1062,7 +1062,7 @@ void f() {
     E Ee{ { { g( { Array[I] } ) } } };
   }
   // CHECK-MESSAGES: :[[@LINE-7]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int & I : Array)
+  // CHECK-FIXES: for (int I : Array)
   // CHECK-FIXES-NEXT: int A{ I };
   // CHECK-FIXES-NEXT: int B{ g(I) };
   // CHECK-FIXES-NEXT: int C{ g( { I } ) };

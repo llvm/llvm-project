@@ -7,7 +7,7 @@ const char data[] = {
 #embed <jk.txt> if_empty('a', 'b') clang::offset(0) limit(1) suffix(, 'a', 0) prefix('h',)
 };
 
-// EXPANDED: const char data[] = {'h',106, 'a', 0};
+// EXPANDED: const char data[] = {'h',106 , 'a', 0};
 // DIRECTIVE: const char data[] = {
 // DIRECTIVE-NEXT: #embed <jk.txt> if_empty('a', 'b') limit(1) clang::offset(0) prefix('h',) suffix(, 'a', 0) /* clang -E -dE */
 // DIRECTIVE-NEXT: };
@@ -28,7 +28,7 @@ const char even_more[] = {
 };
 
 // EXPANDED: const char even_more[] = {
-// EXPANDED-NEXT:   1, 2, 3,4, 5,106, 107, 6, 7 , 8, 9, 10
+// EXPANDED-NEXT:   1, 2, 3,4, 5,106, 107 , 6, 7 , 8, 9, 10
 // EXPANDED-EMPTY:
 // EXPANDED-EMPTY:
 // EXPANDED-NEXT: };
