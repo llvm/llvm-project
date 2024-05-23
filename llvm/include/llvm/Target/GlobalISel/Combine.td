@@ -220,6 +220,13 @@ def idempotent_prop : GICombineRule<
    (match (idempotent_prop_frags $dst, $src)),
    (apply (GIReplaceReg $dst, $src))>;
 
+// Convert freeze(Op(Op0, NonPoisonOps...)) to Op(freeze(Op0), NonPoisonOps...)
+// when Op0 is not guaranteed non-poison
+def push_freeze_to_prevent_poison_from_propagating : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_FREEZE $dst, $src):$root,
+         [{ return !isGuaranteedNotToBePoison(${src}.getReg(), MRI) && Helper.matchFreezeOfSingleMaybePoisonOperand(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
@@ -1309,7 +1316,7 @@ def select_to_minmax: GICombineRule<
 
 def select_to_iminmax: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (G_ICMP $tst, $tst1, $x, $y),
+  (match (G_ICMP $tst, $tst1, $a, $b),
          (G_SELECT $root, $tst, $x, $y),
          [{ return Helper.matchSelectIMinMax(${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnMO(${root}, ${info}); }])>;
@@ -1713,7 +1720,8 @@ def all_combines : GICombineGroup<[trivial_combines, vector_ops_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    sext_trunc, zext_trunc, combine_shuffle_concat]>;
+    sext_trunc, zext_trunc, combine_shuffle_concat,
+    push_freeze_to_prevent_poison_from_propagating]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
