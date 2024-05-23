@@ -1555,8 +1555,12 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  uint64_t Index = Ptr.getIndex();
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  uint64_t Index;
+  if (Ptr.isOnePastEnd())
+    Index = MaxIndex;
+  else
+    Index = Ptr.getIndex();
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
