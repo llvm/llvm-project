@@ -1053,6 +1053,9 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->visitInitializer(Inits[0]);
 
+    if (Inits.size() == 0)
+      return this->emitFinishInit(E);
+
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       if (!this->visit(Init))
