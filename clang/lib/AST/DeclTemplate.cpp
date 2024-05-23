@@ -795,14 +795,21 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 SourceRange NonTypeTemplateParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getOuterLocStart(),
-                       getDefaultArgument()->getSourceRange().getEnd());
+                       getDefaultArgument().getSourceRange().getEnd());
   return DeclaratorDecl::getSourceRange();
 }
 
 SourceLocation NonTypeTemplateParmDecl::getDefaultArgumentLoc() const {
-  return hasDefaultArgument()
-    ? getDefaultArgument()->getSourceRange().getBegin()
-    : SourceLocation();
+  return hasDefaultArgument() ? getDefaultArgument().getSourceRange().getBegin()
+                              : SourceLocation();
+}
+
+void NonTypeTemplateParmDecl::setDefaultArgument(
+    const ASTContext &C, const TemplateArgumentLoc &DefArg) {
+  if (DefArg.getArgument().isNull())
+    DefaultArgument.set(nullptr);
+  else
+    DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
 //===----------------------------------------------------------------------===//
