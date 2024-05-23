@@ -1552,17 +1552,19 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned InstsEmitted = 0;
 
   unsigned BrTarget = MI->getOperand(0).getReg();
+
   auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();
+  assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+         "Invalid auth call key");
+
   uint64_t Disc = MI->getOperand(2).getImm();
+  assert(isUInt<16>(Disc));
+
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
   // Compute discriminator into x17
-  assert(isUInt<16>(Disc));
   unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, InstsEmitted);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
-
-  assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
-         "Invalid auth call key");
 
   unsigned Opc;
   if (Key == AArch64PACKey::IA)
@@ -1726,8 +1728,12 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI: {
     const uint64_t Key = MI->getOperand(2).getImm();
-    assert(Key < 2 && "Unknown key kind for authenticating tail-call return");
+    assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+           "Invalid auth key for tail-call return");
+
     const uint64_t Disc = MI->getOperand(3).getImm();
+    assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
+
     Register AddrDisc = MI->getOperand(4).getReg();
 
     Register ScratchReg = MI->getOperand(0).getReg() == AArch64::X16
@@ -1736,8 +1742,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     unsigned DiscReg = AddrDisc;
     if (Disc) {
-      assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
-
       if (AddrDisc != AArch64::NoRegister) {
         EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
                                          .addReg(ScratchReg)
@@ -1758,14 +1762,14 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       DiscReg = ScratchReg;
     }
 
-    const bool isZero = DiscReg == AArch64::NoRegister;
+    const bool IsZero = DiscReg == AArch64::NoRegister;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
                                     {AArch64::BRAB, AArch64::BRABZ}};
 
     MCInst TmpInst;
-    TmpInst.setOpcode(Opcodes[Key][isZero]);
+    TmpInst.setOpcode(Opcodes[Key][IsZero]);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-    if (!isZero)
+    if (!IsZero)
       TmpInst.addOperand(MCOperand::createReg(DiscReg));
     EmitToStreamer(*OutStreamer, TmpInst);
     return;

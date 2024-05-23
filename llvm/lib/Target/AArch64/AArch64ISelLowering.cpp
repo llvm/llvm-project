@@ -8468,8 +8468,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.insert(Ops.begin() + 1, GA);
   } else if (CallConv == CallingConv::ARM64EC_Thunk_X64) {
     Opc = AArch64ISD::CALL_ARM64EC_TO_X64;
-  } else if (GuardWithBTI)
+  } else if (GuardWithBTI) {
     Opc = AArch64ISD::CALL_BTI;
+  }
 
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
@@ -8480,9 +8481,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (CLI.PAI) {
     const uint64_t Key = CLI.PAI->Key;
-    // Authenticated calls only support IA and IB.
-    if (Key > 1)
-      report_fatal_error("Unsupported key kind for authenticating call");
+    assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
 
     // Split the discriminator into address/integer components.
     SDValue AddrDisc, IntDisc;

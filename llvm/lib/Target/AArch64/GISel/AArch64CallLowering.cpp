@@ -1021,10 +1021,11 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
 
   if (!IsTailCall) {
     if (!PAI)
-      return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
+      return IsIndirect ? getBLRCallOpcode(CallerF) : AArch64::BL;
 
-    assert(IsIndirect && "authenticated direct call");
-    assert(PAI->Key == 0 || PAI->Key == 1 && "invalid ptrauth key");
+    assert(IsIndirect && "Direct call should not be authenticated");
+    assert((PAI->Key == AArch64PACKey::IA || PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
     return AArch64::BLRA;
   }
 
@@ -1036,11 +1037,12 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   if (FuncInfo->branchTargetEnforcement()) {
     if (PAI)
       return AArch64::AUTH_TCRETURN_BTI;
-    else if (FuncInfo->branchProtectionPAuthLR())
+    if (FuncInfo->branchProtectionPAuthLR())
       return AArch64::TCRETURNrix17;
-    else
-      return AArch64::TCRETURNrix16x17;
-  } else if (FuncInfo->branchProtectionPAuthLR())
+    return AArch64::TCRETURNrix16x17;
+  }
+
+  if (FuncInfo->branchProtectionPAuthLR())
     return AArch64::TCRETURNrinotx16;
 
   if (PAI)
@@ -1104,7 +1106,9 @@ bool AArch64CallLowering::lowerTailCall(
 
   // Authenticated tail calls always take key/discriminator arguments.
   if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI) {
-    assert(Info.PAI->Key == 0 || Info.PAI->Key == 1 && "invalid key");
+    assert((Info.PAI->Key == AArch64PACKey::IA ||
+            Info.PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
     MIB.addImm(Info.PAI->Key);
 
     Register AddrDisc = 0;
@@ -1371,7 +1375,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);
 
   if (Opc == AArch64::BLRA || Opc == AArch64::BLRA_RVMARKER) {
-    assert(Info.PAI->Key == 0 || Info.PAI->Key == 1 && "invalid key");
+    assert((Info.PAI->Key == AArch64PACKey::IA ||
+            Info.PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
     MIB.addImm(Info.PAI->Key);
 
     Register AddrDisc = 0;
