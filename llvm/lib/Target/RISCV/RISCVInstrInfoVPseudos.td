@@ -2264,8 +2264,8 @@ multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
           defm _VV
               : VPseudoBinaryEmul<m.vrclass, m.vrclass, emul.vrclass, m, emul,
                                   Constraint, e>,
-                SchedBinary<"WriteVRGatherVV", "ReadVRGatherVV_data",
-                            "ReadVRGatherVV_index", mx, e, forceMergeOpRead=true>;
+                SchedBinary<"WriteVRGatherEI16VV", "ReadVRGatherEI16VV_data",
+                            "ReadVRGatherEI16VV_index", mx, e, forceMergeOpRead=true>;
         }
       }
     }
