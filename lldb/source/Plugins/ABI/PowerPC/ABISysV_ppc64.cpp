@@ -836,7 +836,7 @@ private:
     for (uint32_t i = 0; i < n; i++) {
       std::string name;
       uint32_t size;
-      GetChildType(i, name, size);
+      (void)GetChildType(i, name, size);
       // NOTE: the offset returned by GetChildCompilerTypeAtIndex()
       //       can't be used because it never considers alignment bytes
       //       between struct fields.
