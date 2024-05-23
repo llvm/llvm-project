@@ -1807,6 +1807,8 @@ static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
 // Returns the template parameter list with all default template argument
 // information.
 static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
+  if (TD->isImplicit())
+    return TD->getTemplateParameters();
   // Make sure we get the template parameter list from the most
   // recent declaration, since that is the only one that is guaranteed to
   // have all the default template argument information.
@@ -1827,7 +1829,8 @@ static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
   //    template <class = void> friend struct C;
   //  };
   //  template struct S<int>;
-  while (D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None &&
+  while ((D->isImplicit() ||
+          D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None) &&
          D->getPreviousDecl())
     D = D->getPreviousDecl();
   return cast<TemplateDecl>(D)->getTemplateParameters();

@@ -766,6 +766,11 @@ Bug Fixes to C++ Support
 - Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
 - Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
   as implicitly ``const`` in language modes after C++11.
+- Fixed a crash when trying to emit captures in a lambda call operator with an explicit object
+  parameter that is called on a derived type of the lambda.
+  Fixes (#GH87210), (GH89541).
+- Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
+  Fixes (#GH91308).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
