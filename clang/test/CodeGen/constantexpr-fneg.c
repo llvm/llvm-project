@@ -4,7 +4,7 @@
 // Test case for PR45426. Make sure we do not crash while writing bitcode
 // containing a simplify-able fneg constant expression.
 //
-// CHECK-LABEL define i32 @main()
+// CHECK-LABEL: define{{.*}} i32 @main()
 // CHECK:      entry:
 // CHECK-NEXT:   %retval = alloca i32
 // CHECK-NEXT:   store i32 0, ptr %retval

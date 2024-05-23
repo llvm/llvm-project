@@ -306,8 +306,8 @@ void gronk::bar(void) {
   // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: {{.*}} in variable declaration
   // CHECK-FIXES:      {{^  }}void (gronk::*p5){{$}}
   // CHECK-FIXES-NEXT: {{^      \($}}
-  // CHECK-FIXES-NExT: {{^          $}}
-  // CHECK-FIXES-NExT: {{^      \);$}}
+  // CHECK-FIXES-NEXT: {{^          $}}
+  // CHECK-FIXES-NEXT: {{^      \);$}}
 }
 
 // intentionally not LLVM style to check preservation of whitespace

@@ -835,7 +835,7 @@ kernel void test_s_setreg(uint val) {
   __builtin_amdgcn_s_setreg(8193, val);
 }
 
-// CHECK-LABEL test_atomic_inc_dec(
+// CHECK-LABEL: test_atomic_inc_dec(
 #if !defined(__SPIRV__)
 void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
 #else
@@ -863,7 +863,7 @@ void test_atomic_inc_dec(__attribute__((address_space(3))) uint *lptr, __attribu
   #endif
 }
 
-// CHECK-LABEL test_wavefrontsize(
+// CHECK-LABEL: test_wavefrontsize(
 unsigned test_wavefrontsize() {
 
   // CHECK-AMDGCN: ret i32 {{[0-9]+}}
@@ -871,7 +871,7 @@ unsigned test_wavefrontsize() {
   return __builtin_amdgcn_wavefrontsize();
 }
 
-// CHECK-LABEL test_flt_rounds(
+// CHECK-LABEL: test_flt_rounds(
 unsigned test_flt_rounds() {
 
   // CHECK: {{.*}}call{{.*}} i32 @llvm.get.rounding()
@@ -885,13 +885,13 @@ unsigned test_flt_rounds() {
   return mode;
 }
 
-// CHECK-LABEL test_get_fpenv(
+// CHECK-LABEL: test_get_fpenv(
 unsigned long test_get_fpenv() {
   // CHECK: {{.*}}call{{.*}} i64 @llvm.get.fpenv.i64()
   return __builtin_amdgcn_get_fpenv();
 }
 
-// CHECK-LABEL test_set_fpenv(
+// CHECK-LABEL: test_set_fpenv(
 void test_set_fpenv(unsigned long env) {
   // CHECK: {{.*}}call{{.*}} void @llvm.set.fpenv.i64(i64 %[[ENV:.+]])
   __builtin_amdgcn_set_fpenv(env);
