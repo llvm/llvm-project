@@ -960,6 +960,12 @@ private:
   /// Serialise a cast-like instruction.
   void serialiseSExtInst(SExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
+    // We don't support vectors.
+    if (I->getOperand(0)->getType()->isVectorTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeCast);
     // cast_kind:
@@ -976,6 +982,12 @@ private:
   /// Serialise a cast-like instruction.
   void serialiseZExtInst(ZExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
+    // We don't support vectors.
+    if (I->getOperand(0)->getType()->isVectorTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeCast);
     // cast_kind:
@@ -1135,6 +1147,7 @@ private:
     INST_SERIALISE(I, LoadInst, serialiseLoadInst);
     INST_SERIALISE(I, PHINode, serialisePhiInst);
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
+    // FIXME: merge the serialisers for casts.
     INST_SERIALISE(I, ZExtInst, serialiseZExtInst);
     INST_SERIALISE(I, SExtInst, serialiseSExtInst);
     INST_SERIALISE(I, TruncInst, serialiseTruncInst);
