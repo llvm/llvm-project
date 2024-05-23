@@ -367,6 +367,11 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
+  // Common to other address spaces: flat, global, buffer, local and region.
+  // Assume for unknown addrspace. For constant, we also return 128 here despite
+  // support for wide scalar loads, because very large vectors can cause
+  // problems in the backend: high register pressure or increased
+  // fragmentation.
   return 128;
 }
 
