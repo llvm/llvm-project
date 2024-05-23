@@ -1050,38 +1050,71 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   if (T->isRecordType()) {
     const Record *R = getRecord(E->getType());
 
-    if (Inits.size() == 1 && E->getType() == Inits[0]->getType()) {
+    if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->visitInitializer(Inits[0]);
+
+    auto initPrimitiveField = [=](const Record::Field *FieldToInit,
+                                  const Expr *Init, PrimType T) -> bool {
+      if (!this->visit(Init))
+        return false;
+
+      if (FieldToInit->isBitField()) {
+        if (!this->emitInitBitField(T, FieldToInit, E))
+          return false;
+      } else {
+        if (!this->emitInitField(T, FieldToInit->Offset, E))
+          return false;
+      }
+      return this->emitPopPtr(E);
+    };
+
+    auto initCompositeField = [=](const Record::Field *FieldToInit,
+                                  const Expr *Init) -> bool {
+      // Non-primitive case. Get a pointer to the field-to-initialize
+      // on the stack and recurse into visitInitializer().
+      if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+        return false;
+      if (!this->visitInitializer(Init))
+        return false;
+      return this->emitPopPtr(E);
+    };
+
+    if (R->isUnion()) {
+      assert(Inits.size() == 1);
+      const Expr *Init = Inits[0];
+      const FieldDecl *FToInit = nullptr;
+      if (const auto *ILE = dyn_cast<InitListExpr>(E))
+        FToInit = ILE->getInitializedFieldInUnion();
+      else
+        FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
+
+      if (!this->emitDupPtr(E))
+        return false;
+
+      const Record::Field *FieldToInit = R->getField(FToInit);
+      if (std::optional<PrimType> T = classify(Init)) {
+        if (!initPrimitiveField(FieldToInit, Init, *T))
+          return false;
+      } else {
+        if (!initCompositeField(FieldToInit, Init))
+          return false;
+      }
+      return this->emitFinishInit(E);
     }
 
+    assert(!R->isUnion());
     unsigned InitIndex = 0;
     for (const Expr *Init : Inits) {
       // Skip unnamed bitfields.
       while (InitIndex < R->getNumFields() &&
              R->getField(InitIndex)->Decl->isUnnamedBitField())
         ++InitIndex;
-
-      // Potentially skip ahead. This is especially relevant in unions.
-      if (const auto *D = dyn_cast<CXXDefaultInitExpr>(Init))
-        InitIndex = D->getField()->getFieldIndex();
-
       if (!this->emitDupPtr(E))
         return false;
 
       if (std::optional<PrimType> T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
-        if (!this->visit(Init))
-          return false;
-
-        if (FieldToInit->isBitField()) {
-          if (!this->emitInitBitField(*T, FieldToInit, E))
-            return false;
-        } else {
-          if (!this->emitInitField(*T, FieldToInit->Offset, E))
-            return false;
-        }
-
-        if (!this->emitPopPtr(E))
+        if (!initPrimitiveField(FieldToInit, Init, *T))
           return false;
         ++InitIndex;
       } else {
@@ -1099,21 +1132,13 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
           // into the Record's fields.
         } else {
           const Record::Field *FieldToInit = R->getField(InitIndex);
-          // Non-primitive case. Get a pointer to the field-to-initialize
-          // on the stack and recurse into visitInitializer().
-          if (!this->emitGetPtrField(FieldToInit->Offset, Init))
-            return false;
-
-          if (!this->visitInitializer(Init))
-            return false;
-
-          if (!this->emitPopPtr(E))
+          if (!initCompositeField(FieldToInit, Init))
             return false;
           ++InitIndex;
         }
       }
     }
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
@@ -1137,7 +1162,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       }
     }
 
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
