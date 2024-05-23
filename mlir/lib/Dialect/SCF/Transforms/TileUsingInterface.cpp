@@ -1399,8 +1399,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
         loc, sliceOp.getSource(), sliceOp.getDest(), sliceOp.getMixedOffsets(),
         sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
   } else {
-    auto newForOp = cast<scf::ForOp>(newLoopOp);
-    rewriter.setInsertionPoint(newForOp.getBody()->getTerminator());
+    rewriter.setInsertionPoint(candidateSliceOp);
     clonedInsertSliceOp =
         cast<tensor::InsertSliceOp>(rewriter.clone(*candidateSliceOp));
   }
