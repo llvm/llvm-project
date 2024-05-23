@@ -74,8 +74,8 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_many_svepred_arg(<
 
 ; Test that arg2 is passed through x0, i.e., x0 = &%arg2; and return values are loaded from x0:
 ;     P0 = ldr [x0]
-define aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_svepred_arg_2d_4x_1x([4 x <vscale x 16 x i1>] %arg1, [1 x <vscale x 16 x i1>] %arg2) {
-; CHECK: name: callee_with_svepred_arg_2d_4x_1x
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_svepred_arg_4xv16i1_1xv16i1([4 x <vscale x 16 x i1>] %arg1, [1 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: callee_with_svepred_arg_4xv16i1_1xv16i1
 ; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
 ; CHECK:    $p0 = COPY [[PRED0]]
@@ -87,8 +87,8 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_svepred_arg_2d_4x_
 ; Test that arg1 is stored to the stack from p0; and the stack location is passed throuch x0 to setup the call:
 ;     str P0, [stack_loc_for_args]
 ;     x0 = stack_loc_for_args
-define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_2d_4x_1x([1 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
-; CHECK: name: caller_with_svepred_arg_2d_4x_1x
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_1xv16i1_4xv16i1([1 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: caller_with_svepred_arg_1xv16i1_4xv16i1
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
 ; CHECK-NEXT:     stack-id: scalable-vector,
@@ -97,9 +97,9 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_2d_4x_
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
 ; CHECK:    [[STACK:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
 ; CHECK:    $x0 = COPY [[STACK]]
-; CHECK:    BL @callee_with_svepred_arg_2d_4x_1x, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
+; CHECK:    BL @callee_with_svepred_arg_4xv16i1_1xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
 ; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  %res = call <vscale x 16 x i1> @callee_with_svepred_arg_2d_4x_1x([4 x <vscale x 16 x i1>] %arg2, [1 x <vscale x 16 x i1>] %arg1)
+  %res = call <vscale x 16 x i1> @callee_with_svepred_arg_4xv16i1_1xv16i1([4 x <vscale x 16 x i1>] %arg2, [1 x <vscale x 16 x i1>] %arg1)
   ret <vscale x 16 x i1> %res
 }
 
@@ -108,8 +108,8 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_2d_4x_
 ;     P1 = ldr [x0 +   sizeof(Px)]
 ;     P2 = ldr [x0 + 2*sizeof(Px)]
 ;     P3 = ldr [x0 + 3*sizeof(Px)]
-define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
-; CHECK: name: callee_with_svepred_arg_2d_4x
+define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_4xv16i1_4xv16i1([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: callee_with_svepred_arg_4xv16i1_4xv16i1
 ; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
 ; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
 ; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[BASE]], killed [[OFFSET1]]
@@ -135,8 +135,8 @@ define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_
 ;     str P2, [stack_loc_for_args + 2*sizeof(Px)]
 ;     str P3, [stack_loc_for_args + 3*sizeof(Px)]
 ;     x0 = stack_loc_for_args
-define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
-; CHECK: name: caller_with_svepred_arg_2d_4x
+define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_4xv16i1_4xv16i1([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: caller_with_svepred_arg_4xv16i1_4xv16i1
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 2,
 ; CHECK-NEXT:     stack-id: scalable-vector,
@@ -157,15 +157,75 @@ define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_2d_4x([4 x <vscale x 16
 ; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
 ; CHECK:    $x0 = COPY [[STACK]]
-; CHECK:    BL @callee_with_svepred_arg_2d_4x, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; CHECK:    BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
 ; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  %res = call [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg2, [4 x <vscale x 16 x i1>] %arg1)
+  %res = call [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_4xv16i1_4xv16i1([4 x <vscale x 16 x i1>] %arg2, [4 x <vscale x 16 x i1>] %arg1)
   ret [4 x <vscale x 16 x i1>] %res
 }
 
+; Test that arg2 is passed through x0, i.e., x0 = &%arg2; and return values are loaded from x0:
+;     P0 = ldr [x0]
+;     P1 = ldr [x0 +   sizeof(Px)]
+;     P2 = ldr [x0 + 2*sizeof(Px)]
+;     P3 = ldr [x0 + 3*sizeof(Px)]
+define aarch64_sve_vector_pcs [2 x <vscale x 32 x i1>] @callee_with_svepred_arg_1xv16i1_2xv32i1([1 x <vscale x 16 x i1>] %arg1, [2 x <vscale x 32 x i1>] %arg2) {
+; CHECK: name: callee_with_svepred_arg_1xv16i1_2xv32i1
+; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
+; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[BASE]], killed [[OFFSET1]]
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR1]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET2]]
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR2]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
+; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET3]]
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR3]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    $p0 = COPY [[PRED0]]
+; CHECK:    $p1 = COPY [[PRED1]]
+; CHECK:    $p2 = COPY [[PRED2]]
+; CHECK:    $p3 = COPY [[PRED3]]
+; CHECK:    RET_ReallyLR implicit $p0, implicit $p1, implicit $p2, implicit $p3
+  ret [2 x <vscale x 32 x i1>] %arg2
+}
+
+; Test that arg1 is stored to the stack from p0~p3; and the stack location is passed throuch x0 to setup the call:
+;     str P0, [stack_loc_for_args]
+;     str P1, [stack_loc_for_args +   sizeof(Px)]
+;     str P2, [stack_loc_for_args + 2*sizeof(Px)]
+;     str P3, [stack_loc_for_args + 3*sizeof(Px)]
+;     x0 = stack_loc_for_args
+define [2 x <vscale x 32 x i1>] @caller_with_svepred_arg_2xv32i1_1xv16i1([2 x <vscale x 32 x i1>] %arg1, [1 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: caller_with_svepred_arg_2xv32i1_1xv16i1
+; CHECK: stack:
+; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 2,
+; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = COPY $p3
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
+; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
+; CHECK:    [[STACK:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
+; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], killed [[OFFSET3]]
+; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+; CHECK:    STR_PXI [[PRED3]], killed [[ADDR3]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], killed [[OFFSET2]]
+; CHECK:    STR_PXI [[PRED2]], killed [[ADDR2]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[STACK]], killed [[OFFSET1]]
+; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
+; CHECK:    $x0 = COPY [[STACK]]
+; CHECK:    BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  %res = call [2 x <vscale x 32 x i1>] @callee_with_svepred_arg_1xv16i1_2xv32i1([1 x <vscale x 16 x i1>] %arg2, [2 x <vscale x 32 x i1>] %arg1)
+  ret [2 x <vscale x 32 x i1>] %res
+}
+
 ; Test that arg1 and arg3 are passed via P0~P3, arg1 is passed indirectly through address on stack in x0
-define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2d_mixed([2 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2, [2 x <vscale x 16 x i1>] %arg3) nounwind {
-; CHECK: name: callee_with_svepred_arg_2d_mixed
+define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2xv16i1_4xv16i1_2xv16i1([2 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2, [2 x <vscale x 16 x i1>] %arg3) nounwind {
+; CHECK: name: callee_with_svepred_arg_2xv16i1_4xv16i1_2xv16i1
 ; CHECK:    [[P3:%[0-9]+]]:ppr = COPY $p3
 ; CHECK:    [[P2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK:    [[X0:%[0-9]+]]:gpr64common = COPY $x0
