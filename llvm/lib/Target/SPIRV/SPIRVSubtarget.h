@@ -15,8 +15,8 @@
 
 #include "SPIRVCallLowering.h"
 #include "SPIRVFrameLowering.h"
-#include "SPIRVInlineAsmLowering.h"
 #include "SPIRVISelLowering.h"
+#include "SPIRVInlineAsmLowering.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"

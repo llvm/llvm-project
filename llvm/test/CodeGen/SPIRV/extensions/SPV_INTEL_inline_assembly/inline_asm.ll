@@ -66,12 +66,6 @@ define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_
   %i2 = load i8, ptr addrspace(1) %_arg_int
   %f1 = load float, ptr addrspace(1) %_arg_float
   %h1 = load half, ptr addrspace(1) %_arg_half
-;  ; inline asm: complex result
-;  call { i64, half } asm sideeffect "structcmd_nop", "=r,=r"()
-;  %r_struct = call { i64, half } asm sideeffect "structcmd $0 $0 $1 $1", "=r,=r,0,1"(i64 123, half %h1)
-;;  %r_struct1 = extractvalue { i64, half } %r_struct, 0
-;;  %r_struct2 = extractvalue { i64, half } %r_struct, 1
-;;  store half %r_struct2, ptr addrspace(1) %_arg_half
   ; inline asm
   call void asm sideeffect "", ""()
   call void asm sideeffect "nop", ""()
