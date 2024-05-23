@@ -479,7 +479,7 @@ func.func @wgmma_commit_group_sync_aligned() {
 }
 
 
-// CHECK-LABEL: @wgmma_commit_group_sync_aligned
+// CHECK-LABEL: @wgmma_wait_group_sync_aligned
 func.func @wgmma_wait_group_sync_aligned() {
   // CHECK: nvvm.wgmma.wait.group.sync.aligned
   nvvm.wgmma.wait.group.sync.aligned 0
