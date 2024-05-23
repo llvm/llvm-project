@@ -2962,32 +2962,6 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
   return msgs;
 }
 
-static UnorderedSymbolSet CollectEntryPointsWithDummy(const Symbol &dummy) {
-  UnorderedSymbolSet entries;
-  const Scope &subpScope{dummy.owner()};
-  for (const auto &[_, ref] : subpScope.parent()) {
-    const Symbol &x{*ref};
-    if (const auto *subp{x.detailsIf<SubprogramDetails>()}) {
-      if (x.scope() == &subpScope || subp->entryScope() == &dummy.owner()) {
-        if (std::find(subp->dummyArgs().begin(), subp->dummyArgs().end(),
-                &dummy) != subp->dummyArgs().end()) {
-          entries.insert(x);
-        }
-      }
-    }
-  }
-  return entries;
-}
-
-static bool AnyNonBindCEntry(const Symbol &dummy) {
-  for (const Symbol &subp : CollectEntryPointsWithDummy(dummy)) {
-    if (!subp.attrs().test(Attr::BIND_C)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 parser::Messages CheckHelper::WhyNotInteroperableObject(
     const Symbol &symbol, bool isError) {
   parser::Messages msgs;
@@ -3048,10 +3022,6 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     }
     if (type->IsAssumedType()) { // ok
     } else if (IsAssumedLengthCharacter(symbol)) {
-      if (AnyNonBindCEntry(symbol)) {
-        msgs.Say(symbol.name(),
-            "An assumed-length dummy argument must not appear in a non-BIND(C) entry in a subprogram with an entry that must be interoperable"_err_en_US);
-      }
     } else if (IsAllocatableOrPointer(symbol) &&
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
@@ -3081,12 +3051,6 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   if (IsOptional(symbol) && !symbol.attrs().test(Attr::VALUE)) {
     msgs.Say(symbol.name(),
         "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
-  }
-  if (symbol.attrs().test(Attr::VALUE)) {
-    if (AnyNonBindCEntry(symbol)) {
-      msgs.Say(symbol.name(),
-          "A VALUE dummy argument must not appear in a non-BIND(C) entry of a subprogram with an entry that must be interoperable"_err_en_US);
-    }
   }
   if (IsDescriptor(symbol) && IsPointer(symbol) &&
       symbol.attrs().test(Attr::CONTIGUOUS)) {
