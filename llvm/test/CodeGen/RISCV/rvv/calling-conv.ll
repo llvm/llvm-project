@@ -39,11 +39,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    vs8r.v v16, (a0)
+; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect
 ; RV32-NEXT:    addi sp, s0, -144
@@ -70,11 +70,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    vs8r.v v16, (a0)
+; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect
 ; RV64-NEXT:    addi sp, s0, -144
@@ -248,4 +248,120 @@ define <vscale x 1 x i64> @case4_2(<vscale x 1 x i64> %0, {<vscale x 8 x i64>, <
 ; CHECK-NEXT:    ret
   %add = add <vscale x 1 x i64> %0, %2
   ret <vscale x 1 x i64> %add
+}
+
+declare <vscale x 1 x i64> @callee1()
+declare void @callee2(<vscale x 1 x i64>)
+declare void @callee3(<vscale x 4 x i32>)
+define void @caller() {
+; RV32-LABEL: caller:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    call callee1
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV32-NEXT:    vadd.vv v8, v8, v8
+; RV32-NEXT:    call callee2
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: caller:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    call callee1
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64-NEXT:    vadd.vv v8, v8, v8
+; RV64-NEXT:    call callee2
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+  %a = call <vscale x 1 x i64> @callee1()
+  %add = add <vscale x 1 x i64> %a, %a
+  call void @callee2(<vscale x 1 x i64> %add)
+  ret void
+}
+
+declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @callee_tuple()
+define void @caller_tuple() {
+; RV32-LABEL: caller_tuple:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    call callee_tuple
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV32-NEXT:    vadd.vv v8, v8, v10
+; RV32-NEXT:    call callee3
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: caller_tuple:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    call callee_tuple
+; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV64-NEXT:    vadd.vv v8, v8, v10
+; RV64-NEXT:    call callee3
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+  %a = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @callee_tuple()
+  %b = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %a, 0
+  %c = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %a, 1
+  %add = add <vscale x 4 x i32> %b, %c
+  call void @callee3(<vscale x 4 x i32> %add)
+  ret void
+}
+
+declare {<vscale x 4 x i32>, {<vscale x 4 x i32>, <vscale x 4 x i32>}} @callee_nested()
+define void @caller_nested() {
+; RV32-LABEL: caller_nested:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    call callee_nested
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV32-NEXT:    vadd.vv v8, v8, v10
+; RV32-NEXT:    vadd.vv v8, v8, v12
+; RV32-NEXT:    call callee3
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: caller_nested:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    call callee_nested
+; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV64-NEXT:    vadd.vv v8, v8, v10
+; RV64-NEXT:    vadd.vv v8, v8, v12
+; RV64-NEXT:    call callee3
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+  %a = call {<vscale x 4 x i32>, {<vscale x 4 x i32>, <vscale x 4 x i32>}} @callee_nested()
+  %b = extractvalue {<vscale x 4 x i32>, {<vscale x 4 x i32>, <vscale x 4 x i32>}} %a, 0
+  %c = extractvalue {<vscale x 4 x i32>, {<vscale x 4 x i32>, <vscale x 4 x i32>}} %a, 1
+  %c0 = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %c, 0
+  %c1 = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %c, 1
+  %add0 = add <vscale x 4 x i32> %b, %c0
+  %add1 = add <vscale x 4 x i32> %add0, %c1
+  call void @callee3(<vscale x 4 x i32> %add1)
+  ret void
 }

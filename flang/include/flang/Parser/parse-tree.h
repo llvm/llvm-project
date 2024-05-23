@@ -455,7 +455,8 @@ struct SpecificationPart {
 struct InternalSubprogram {
   UNION_CLASS_BOILERPLATE(InternalSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
-      common::Indirection<SubroutineSubprogram>>
+      common::Indirection<SubroutineSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -2904,7 +2905,8 @@ struct ModuleSubprogram {
   UNION_CLASS_BOILERPLATE(ModuleSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
-      common::Indirection<SeparateModuleSubprogram>>
+      common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -3552,7 +3554,10 @@ struct OmpReductionOperator {
 //                                         variable-name-list)
 struct OmpReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpReductionClause);
-  std::tuple<OmpReductionOperator, OmpObjectList> t;
+  ENUM_CLASS(ReductionModifier, Inscan, Task, Default)
+  std::tuple<std::optional<ReductionModifier>, OmpReductionOperator,
+      OmpObjectList>
+      t;
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -4298,12 +4303,23 @@ struct OpenACCConstruct {
 };
 
 // CUF-kernel-do-construct ->
-//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
-//     >>> do-construct
+//   !$CUF KERNEL DO [ (scalar-int-constant-expr) ]
+//      <<< grid, block [, stream] >>>
+//      [ cuf-reduction... ]
+//      do-construct
 // star-or-expr -> * | scalar-int-expr
 // grid -> * | scalar-int-expr | ( star-or-expr-list )
 // block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
+// cuf-reduction -> [ REDUCE | REDUCTION ] (
+//                  acc-reduction-op : scalar-variable-list )
+
+struct CUFReduction {
+  TUPLE_CLASS_BOILERPLATE(CUFReduction);
+  using Operator = AccReductionOperator;
+  std::tuple<Operator, std::list<Scalar<Variable>>> t;
+};
+
 struct CUFKernelDoConstruct {
   TUPLE_CLASS_BOILERPLATE(CUFKernelDoConstruct);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarIntExpr>);
@@ -4311,7 +4327,8 @@ struct CUFKernelDoConstruct {
     TUPLE_CLASS_BOILERPLATE(Directive);
     CharBlock source;
     std::tuple<std::optional<ScalarIntConstantExpr>, std::list<StarOrExpr>,
-        std::list<StarOrExpr>, std::optional<ScalarIntExpr>>
+        std::list<StarOrExpr>, std::optional<ScalarIntExpr>,
+        std::list<CUFReduction>>
         t;
   };
   std::tuple<Directive, std::optional<DoConstruct>> t;

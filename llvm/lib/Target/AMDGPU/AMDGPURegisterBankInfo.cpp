@@ -2261,7 +2261,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_FCMP:
     if (!Subtarget.hasSALUFloatInsts())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AMDGPU::G_ICMP:
   case AMDGPU::G_UADDO:
   case AMDGPU::G_USUBO:
@@ -5132,6 +5132,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
+    case Intrinsic::amdgcn_pops_exiting_wave_id:
+      return getDefaultMappingSOP(MI);
     default:
       return getInvalidInstructionMapping();
     }

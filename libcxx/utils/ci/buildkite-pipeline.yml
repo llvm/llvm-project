@@ -43,7 +43,6 @@ definitions:
 
 environment_definitions:
   _common_env: &common_env
-      ENABLE_CLANG_TIDY: "On"
       LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
       CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
       CC: clang-${LLVM_HEAD_VERSION}

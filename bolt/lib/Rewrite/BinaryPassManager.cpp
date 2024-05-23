@@ -23,6 +23,7 @@
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
+#include "bolt/Passes/MCF.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
 #include "bolt/Passes/RegReAssign.h"
@@ -89,6 +90,11 @@ static cl::opt<bool>
 PrintAfterLowering("print-after-lowering",
   cl::desc("print function after instruction lowering"),
   cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintEstimateEdgeCounts(
+    "print-estimate-edge-counts",
+    cl::desc("print function after edge counts are set for no-LBR profile"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintFinalized("print-finalized",
@@ -334,6 +340,9 @@ Error BinaryFunctionPassManager::runPasses() {
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
+  Manager.registerPass(
+      std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
+
   const DynoStats InitialDynoStats =
       getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
 
@@ -356,7 +365,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // order they're registered.
 
   // Run this pass first to use stats for the original functions.
-  Manager.registerPass(std::make_unique<PrintProgramStats>(NeverPrint));
+  Manager.registerPass(std::make_unique<PrintProgramStats>());
 
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
@@ -377,8 +386,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<NormalizeCFG>(PrintNormalized));
 
-  Manager.registerPass(std::make_unique<StripRepRet>(NeverPrint),
-                       opts::StripRepRet);
+  if (BC.isX86())
+    Manager.registerPass(std::make_unique<StripRepRet>(NeverPrint),
+                         opts::StripRepRet);
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);

@@ -476,8 +476,40 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
   }
 
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
+      continue;
+    if (Error E = addVTableWithName(
+            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+      return E;
+  }
+
   Sorted = false;
   finalizeSymtab();
+  return Error::success();
+}
+
+Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
+                                         StringRef VTablePGOName) {
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addSymbolName(Name))
+      return E;
+
+    bool Inserted = true;
+    std::tie(std::ignore, Inserted) =
+        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    if (!Inserted)
+      LLVM_DEBUG(dbgs() << "GUID conflict within one module");
+    return Error::success();
+  };
+  if (Error E = mapName(VTablePGOName))
+    return E;
+
+  StringRef CanonicalName = getCanonicalName(VTablePGOName);
+  if (CanonicalName != VTablePGOName)
+    return mapName(CanonicalName);
+
   return Error::success();
 }
 
@@ -1135,9 +1167,9 @@ static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
   if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::little>(D);
   else
-    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -1246,6 +1278,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs,
                        uint64_t Sum, InstrProfValueKind ValueKind,
                        uint32_t MaxMDCount) {
+  if (VDs.empty())
+    return;
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
@@ -1281,7 +1315,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || !Tag->getString().equals("VP"))
+  if (!Tag || Tag->getString() != "VP")
     return nullptr;
 
   // Now check kind:
@@ -1586,13 +1620,12 @@ inline size_t constexpr offsetOf(T1 T2::*Member) {
   return size_t(&(Object.*Member)) - size_t(&Object);
 }
 
+// Read a uint64_t from the specified buffer offset, and swap the bytes in
+// native endianness if necessary.
 static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
-}
-
-uint64_t Header::formatVersion() const {
-  using namespace support;
-  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
+  using namespace ::support;
+  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
+                                                                     Offset);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1604,18 +1637,15 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
-  if (Magic != IndexedInstrProf::Magic)
+  if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
   H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.formatVersion()) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.formatVersion())) {
+  switch (GET_VERSION(H.Version)) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
@@ -1646,7 +1676,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 }
 
 size_t Header::size() const {
-  switch (GET_VERSION(formatVersion())) {
+  switch (GET_VERSION(Version)) {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.

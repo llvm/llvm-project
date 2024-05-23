@@ -555,6 +555,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                                      const uint64_t NextJTAddress,
                                      JumpTable::AddressesType *EntriesAsAddress,
                                      bool *HasEntryInFragment) const {
+  // Target address of __builtin_unreachable.
+  const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
+
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
@@ -564,9 +567,15 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
-  auto addEntryAddress = [&](uint64_t EntryAddress) {
-    if (EntriesAsAddress)
-      EntriesAsAddress->emplace_back(EntryAddress);
+  // Size of the jump table without trailing __builtin_unreachable entries.
+  size_t TrimmedSize = 0;
+
+  auto addEntryAddress = [&](uint64_t EntryAddress, bool Unreachable = false) {
+    if (!EntriesAsAddress)
+      return;
+    EntriesAsAddress->emplace_back(EntryAddress);
+    if (!Unreachable)
+      TrimmedSize = EntriesAsAddress->size();
   };
 
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
@@ -618,8 +627,8 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
             : *getPointerAtAddress(EntryAddress);
 
     // __builtin_unreachable() case.
-    if (Value == BF.getAddress() + BF.getSize()) {
-      addEntryAddress(Value);
+    if (Value == UnreachableAddress) {
+      addEntryAddress(Value, /*Unreachable*/ true);
       HasUnreachable = true;
       LLVM_DEBUG(dbgs() << formatv("OK: {0:x} __builtin_unreachable\n", Value));
       continue;
@@ -672,6 +681,13 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       *HasEntryInFragment = true;
     addEntryAddress(Value);
   }
+
+  // Trim direct/normal jump table to exclude trailing unreachable entries that
+  // can collide with a function address.
+  if (Type == JumpTable::JTT_NORMAL && EntriesAsAddress &&
+      TrimmedSize != EntriesAsAddress->size() &&
+      getBinaryFunctionAtAddress(UnreachableAddress))
+    EntriesAsAddress->resize(TrimmedSize);
 
   // It's a jump table if the number of real entries is more than 1, or there's
   // one real entry and one or more special targets. If there are only multiple
@@ -918,10 +934,13 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
   uint64_t Offset = 0;
   if (const JumpTable *JT = BF.getJumpTableContainingAddress(Address)) {
     Offset = Address - JT->getAddress();
-    auto Itr = JT->Labels.find(Offset);
-    if (Itr != JT->Labels.end())
-      return std::string(Itr->second->getName());
-    Id = JumpTableIds.at(JT->getAddress());
+    auto JTLabelsIt = JT->Labels.find(Offset);
+    if (JTLabelsIt != JT->Labels.end())
+      return std::string(JTLabelsIt->second->getName());
+
+    auto JTIdsIt = JumpTableIds.find(JT->getAddress());
+    assert(JTIdsIt != JumpTableIds.end());
+    Id = JTIdsIt->second;
   } else {
     Id = JumpTableIds[Address] = BF.JumpTables.size();
   }
@@ -1306,7 +1325,9 @@ void BinaryContext::processInterproceduralReferences() {
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
     uint64_t Address = It.second;
-    if (!Address || Function.isIgnored())
+    // Process interprocedural references from ignored functions in BAT mode
+    // (non-simple in non-relocation mode) to properly register entry points
+    if (!Address || (Function.isIgnored() && !HasBATSection))
       continue;
 
     BinaryFunction *TargetFunction =
@@ -1864,7 +1885,7 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
   Expected<StringRef> NameOrError = Symbol.getName();

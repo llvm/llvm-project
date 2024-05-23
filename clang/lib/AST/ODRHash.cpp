@@ -462,7 +462,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddTemplateArgument(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -480,7 +480,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddStmt(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -695,6 +695,12 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
+
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
+  if (DeletedMessage)
+    ID.AddString(DeletedMessage->getBytes());
 
   AddDecl(Function);
 

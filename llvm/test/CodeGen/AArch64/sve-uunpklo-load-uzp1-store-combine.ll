@@ -114,8 +114,8 @@ define void @uzp1_i8_valid(<vscale x 8 x i16> %a, ptr %b) #0 {
 define void @uzp1_i8_invalid(<vscale x 8 x i16> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i8_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 8 x i16> %a to <vscale x 16 x i8>
@@ -141,8 +141,8 @@ define void @uzp1_i16_valid(<vscale x 4 x i32> %a, ptr %b) #0 {
 define void @uzp1_i16_invalid(<vscale x 4 x i32> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i16_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 4 x i32> %a to <vscale x 8 x i16>
@@ -168,8 +168,8 @@ define void @uzp1_i32_valid(<vscale x 2 x i64> %a, ptr %b) #0 {
 define void @uzp1_i32_invalid(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i32_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>
@@ -182,8 +182,8 @@ define void @uzp1_i32_invalid(<vscale x 2 x i64> %a, ptr %b) #0 {
 define void @uzp1_invalid_all(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_invalid_all:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>

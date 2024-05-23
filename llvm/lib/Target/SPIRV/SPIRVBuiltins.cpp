@@ -189,6 +189,10 @@ lookupBuiltin(StringRef DemangledCall,
   std::string BuiltinName =
       DemangledCall.substr(0, DemangledCall.find('(')).str();
 
+  // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
+  if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
+    BuiltinName = BuiltinName.substr(12);
+
   // Check if the extracted name contains type information between angle
   // brackets. If so, the builtin is an instantiated template - needs to have
   // the information after angle brackets and return type removed.
@@ -1114,6 +1118,39 @@ static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+  if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_shader_clock)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_KHR_shader_clock";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ResultReg = Call->ReturnRegister;
+  MRI->setRegClass(ResultReg, &SPIRV::IDRegClass);
+
+  // Deduce the `Scope` operand from the builtin function name.
+  SPIRV::Scope::Scope ScopeArg =
+      StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
+          .EndsWith("device", SPIRV::Scope::Scope::Device)
+          .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
+          .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
+  Register ScopeReg = buildConstantIntReg(ScopeArg, MIRBuilder, GR);
+
+  MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+      .addDef(ResultReg)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(ScopeReg);
+
+  return true;
+}
+
 // These queries ask for a single size_t result for a given dimension index, e.g
 // size_t get_global_id(uint dimindex). In SPIR-V, the builtins corresonding to
 // these values are all vec3 types, so we need to extract the correct index or
@@ -1634,7 +1671,10 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
       ReturnType = ReturnType.substr(ReturnType.find("_R") + 2);
       ReturnType = ReturnType.substr(0, ReturnType.find('('));
     }
-    SPIRVType *Type = GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
+    SPIRVType *Type =
+        Call->ReturnType
+            ? Call->ReturnType
+            : GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
     if (!Type) {
       std::string DiagMsg =
           "Unable to recognize SPIRV type name: " + ReturnType;
@@ -1756,7 +1796,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       if (!MRI->getRegClassOrNull(GWSPtr))
         MRI->setRegClass(GWSPtr, &SPIRV::IDRegClass);
       // TODO: Maybe simplify generation of the type of the fields.
-      unsigned Size = Call->Builtin->Name.equals("ndrange_3D") ? 3 : 2;
+      unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
       unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
       Type *BaseTy = IntegerType::get(MF.getFunction().getContext(), BitWidth);
       Type *FieldTy = ArrayType::get(BaseTy, Size);
@@ -1879,7 +1919,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // Local sizes arguments: Sizes of block invoke arguments. Clang generates
   // local size operands as an array, so we need to unpack them.
   SmallVector<Register, 16> LocalSizes;
-  if (Call->Builtin->Name.find("_varargs") != StringRef::npos || IsSpirvOp) {
+  if (Call->Builtin->Name.contains("_varargs") || IsSpirvOp) {
     const unsigned LocalSizeArrayIdx = HasEvents ? 9 : 6;
     Register GepReg = Call->Arguments[LocalSizeArrayIdx];
     MachineInstr *GepMI = MRI->getUniqueVRegDef(GepReg);
@@ -2005,6 +2045,13 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  bool IsSet = Opcode == SPIRV::OpGroupAsyncCopy;
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              IsSet ? TypeReg : Register(0));
+
   auto Scope = buildConstantIntReg(SPIRV::Scope::Workgroup, MIRBuilder, GR);
 
   switch (Opcode) {
@@ -2276,6 +2323,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateIntelSubgroupsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GroupUniform:
     return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::KernelClock:
+    return generateKernelClockInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -2303,7 +2352,7 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
     // parseBuiltinCallArgumentBaseType(...) as this function only retrieves the
     // base types.
     if (TypeStr.ends_with("*"))
-      TypeStr = TypeStr.slice(0, TypeStr.find_first_of(" "));
+      TypeStr = TypeStr.slice(0, TypeStr.find_first_of(" *"));
 
     return parseBuiltinTypeNameToTargetExtType("opencl." + TypeStr.str() + "_t",
                                                Ctx);
