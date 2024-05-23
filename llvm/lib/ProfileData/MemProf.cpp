@@ -247,6 +247,7 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
         Callback) const {
   MemProfRecord Record;
 
+  Record.AllocSites.reserve(AllocSites.size());
   for (const memprof::IndexedAllocationInfo &IndexedAI : AllocSites) {
     memprof::AllocationInfo AI;
     AI.Info = IndexedAI.Info;
@@ -254,6 +255,7 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
     Record.AllocSites.push_back(std::move(AI));
   }
 
+  Record.CallSites.reserve(CallSiteIds.size());
   for (memprof::CallStackId CSId : CallSiteIds)
     Record.CallSites.push_back(Callback(CSId));
 
