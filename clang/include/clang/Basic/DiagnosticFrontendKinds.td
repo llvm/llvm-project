@@ -337,7 +337,7 @@ def warn_atomic_op_oversized : Warning<
 InGroup<AtomicAlignment>;
 
 def warn_sync_op_misaligned : Warning<
-  "__sync builtin operation MUST have natural alignment (consider using __atomic)">,
+  "__sync builtin operation must have natural alignment (consider using __atomic)">,
   InGroup<SyncAlignment>;
 
 def warn_alias_with_section : Warning<
