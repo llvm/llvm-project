@@ -1203,16 +1203,13 @@ struct Header {
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
 
-  // Reads a header struct from the buffer.
+  // Reads a header struct from the buffer. Header fields are in machine native
+  // endianness.
   static Expected<Header> readFromBuffer(const unsigned char *Buffer);
 
   // Returns the size of the header in bytes for all valid fields based on the
   // version. I.e a older version header will return a smaller size.
   size_t size() const;
-
-  // Returns the format version in little endian. The header retains the version
-  // in native endian of the compiler runtime.
-  uint64_t formatVersion() const;
 };
 
 // Profile summary data recorded in the profile data file in indexed

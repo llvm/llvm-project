@@ -290,13 +290,17 @@ linkage:
     symbol is weak until linked, if not linked, the symbol becomes null
     instead of being an undefined reference.
 ``linkonce_odr``, ``weak_odr``
-    Some languages allow differing globals to be merged, such as two
-    functions with different semantics. Other languages, such as
-    ``C++``, ensure that only equivalent globals are ever merged (the
-    "one definition rule" --- "ODR"). Such languages can use the
-    ``linkonce_odr`` and ``weak_odr`` linkage types to indicate that the
-    global will only be merged with equivalent globals. These linkage
-    types are otherwise the same as their non-``odr`` versions.
+    The ``odr`` suffix indicates that all globals defined with the given name
+    are equivalent, along the lines of the C++ "one definition rule" ("ODR").
+    Informally, this means we can inline functions and fold loads of constants.
+
+    Formally, use the following definition: when an ``odr`` function is
+    called, one of the definitions is non-deterministically chosen to run. For
+    ``odr`` variables, if any byte in the value is not equal in all
+    initializers, that byte is a :ref:`poison value <poisonvalues>`. For
+    aliases and ifuncs, apply the rule for the underlying function or variable.
+
+    These linkage types are otherwise the same as their non-``odr`` versions.
 ``external``
     If none of the above identifiers are used, the global is externally
     visible, meaning that it participates in linkage and can be used to

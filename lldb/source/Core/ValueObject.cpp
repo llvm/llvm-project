@@ -505,15 +505,23 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
   uint64_t language_flags = 0;
 
   const bool transparent_pointers = !synthetic_array_member;
-  CompilerType child_compiler_type;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  child_compiler_type = GetCompilerType().GetChildCompilerTypeAtIndex(
-      &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-      ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
-      child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-      child_is_deref_of_parent, this, language_flags);
+  auto child_compiler_type_or_err =
+      GetCompilerType().GetChildCompilerTypeAtIndex(
+          &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name_str, child_byte_size,
+          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, this, language_flags);
+  CompilerType child_compiler_type;
+  if (!child_compiler_type_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                   child_compiler_type_or_err.takeError(),
+                   "could not find child: {0}");
+  else
+    child_compiler_type = *child_compiler_type_or_err;
+
   if (child_compiler_type) {
     if (synthetic_index)
       child_byte_offset += child_byte_size * synthetic_index;
@@ -2624,16 +2632,23 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     bool child_is_deref_of_parent = false;
     const bool transparent_pointers = false;
     CompilerType compiler_type = GetCompilerType();
-    CompilerType child_compiler_type;
     uint64_t language_flags = 0;
 
     ExecutionContext exe_ctx(GetExecutionContextRef());
 
-    child_compiler_type = compiler_type.GetChildCompilerTypeAtIndex(
+    CompilerType child_compiler_type;
+    auto child_compiler_type_or_err = compiler_type.GetChildCompilerTypeAtIndex(
         &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
         ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
         child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
         child_is_deref_of_parent, this, language_flags);
+    if (!child_compiler_type_or_err)
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                     child_compiler_type_or_err.takeError(),
+                     "could not find child: {0}");
+    else
+      child_compiler_type = *child_compiler_type_or_err;
+
     if (child_compiler_type && child_byte_size) {
       ConstString child_name;
       if (!child_name_str.empty())

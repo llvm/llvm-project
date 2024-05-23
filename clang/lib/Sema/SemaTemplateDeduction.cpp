@@ -519,18 +519,14 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
   switch (A->getKind()) {
   case Decl::TemplateTypeParm: {
     auto *T = cast<TemplateTypeParmDecl>(A);
-    // FIXME: A TemplateTypeParmDecl's DefaultArgument can't hold a full
-    // TemplateArgument, so there is currently no way to specify a pack as a
-    // default argument for these.
-    if (T->isParameterPack())
-      return A;
     auto *R = TemplateTypeParmDecl::Create(
         S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
         T->getDepth(), T->getIndex(), T->getIdentifier(),
-        T->wasDeclaredWithTypename(), /*ParameterPack=*/false,
+        T->wasDeclaredWithTypename(), T->isParameterPack(),
         T->hasTypeConstraint());
     R->setDefaultArgument(
-        S.Context.getTrivialTypeSourceInfo(Default.getAsType()));
+        S.Context,
+        S.getTrivialTemplateArgumentLoc(Default, QualType(), SourceLocation()));
     if (R->hasTypeConstraint()) {
       auto *C = R->getTypeConstraint();
       R->setTypeConstraint(C->getConceptReference(),
@@ -540,14 +536,14 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
   }
   case Decl::NonTypeTemplateParm: {
     auto *T = cast<NonTypeTemplateParmDecl>(A);
-    // FIXME: Ditto, as above for TemplateTypeParm case.
-    if (T->isParameterPack())
-      return A;
     auto *R = NonTypeTemplateParmDecl::Create(
         S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
         T->getDepth(), T->getIndex(), T->getIdentifier(), T->getType(),
-        /*ParameterPack=*/false, T->getTypeSourceInfo());
-    R->setDefaultArgument(Default.getAsExpr());
+        T->isParameterPack(), T->getTypeSourceInfo());
+    R->setDefaultArgument(S.Context,
+                          S.getTrivialTemplateArgumentLoc(
+                              Default, Default.getNonTypeTemplateArgumentType(),
+                              SourceLocation()));
     if (auto *PTC = T->getPlaceholderTypeConstraint())
       R->setPlaceholderTypeConstraint(PTC);
     return R;
