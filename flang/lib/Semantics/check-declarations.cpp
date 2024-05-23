@@ -3000,14 +3000,14 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   examinedByWhyNotInteroperable_.insert(symbol);
   CHECK(symbol.has<ObjectEntityDetails>());
   if (isExplicitBindC && !symbol.owner().IsModule()) {
-    messages_.Say(symbol.name(),
+    msgs.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
   }
   auto shape{evaluate::GetShape(foldingContext_, symbol)};
   if (shape) {
     if (evaluate::GetRank(*shape) == 0) { // 18.3.4
       if (IsAllocatableOrPointer(symbol) && !IsDummy(symbol)) {
-        messages_.Say(symbol.name(),
+        msgs.Say(symbol.name(),
             "A scalar interoperable variable may not be ALLOCATABLE or POINTER"_err_en_US);
       }
     } else if (auto extents{
@@ -3028,25 +3028,22 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     if (derived) {
       if (derived->typeSymbol().attrs().test(Attr::BIND_C)) {
       } else if (isError) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
-          msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-        }
-        context_.SetError(symbol);
+        msgs.Say(symbol.name(),
+                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)
+            .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       } else if (auto bad{WhyNotInteroperableDerivedType(
                      derived->typeSymbol(), /*isError=*/false)};
                  bad.AnyFatalError()) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)}) {
-          msg->Attach(
-              derived->typeSymbol().name(), "Non-interoperable type"_en_US);
-          bad.AttachTo(*msg, parser::Severity::None);
-        }
+        bad.AttachTo(
+            msgs.Say(symbol.name(),
+                    "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)
+                .Attach(derived->typeSymbol().name(),
+                    "Non-interoperable type"_en_US),
+            parser::Severity::None);
       } else {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of an interoperable object should be BIND(C)"_warn_en_US)}) {
-          msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-        }
+        msgs.Say(symbol.name(),
+                "The derived type of an interoperable object should be BIND(C)"_warn_en_US)
+            .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       }
     }
     if (type->IsAssumedType()) { // ok
