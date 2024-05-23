@@ -372,9 +372,9 @@ public:
 
       // Replace Region with its definition if it is in <scratch space>.
       auto NonScratchExpansionLoc = getNonScratchExpansionLoc(Loc);
-      Loc = NonScratchExpansionLoc.first;
       auto EndLoc = NonScratchExpansionLoc.second;
       if (EndLoc.has_value()) {
+        Loc = NonScratchExpansionLoc.first;
         Region.setStartLoc(Loc);
         Region.setEndLoc(EndLoc.value());
       }
