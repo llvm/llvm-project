@@ -916,16 +916,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // handled in PPCLinuxAsmPrinter.
     if (MAI->isLittleEndian())
       return;
-    const Function &F = MI->getParent()->getParent()->getFunction();
-    if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num = 0;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return;
-      emitNops(Num);
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+    if (!Num)
       return;
-    }
+    emitNops(Num);
+    return;
   }
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
