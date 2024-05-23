@@ -1713,6 +1713,17 @@ def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCPlusA
 ]>;
 
+def freeze_of_not_undef_and_poison : GICombineRule<
+   (defs root:$root),
+   (match (G_FREEZE $root, $src),
+          [{ return isGuaranteedNotToBeUndefOrPoison(${src}.getReg(), MRI); }]),
+   (apply (GIReplaceReg $root, $src))>;
+
+def freeze_combines: GICombineGroup<[
+  freeze_of_not_undef_and_poison,
+  push_freeze_to_prevent_poison_from_propagating
+]>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -1771,7 +1782,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
-    vector_ops_combines,
+    vector_ops_combines, freeze_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,
@@ -1793,8 +1804,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    sext_trunc, zext_trunc, combine_shuffle_concat,
-    push_freeze_to_prevent_poison_from_propagating]>;
+    sext_trunc, zext_trunc, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
