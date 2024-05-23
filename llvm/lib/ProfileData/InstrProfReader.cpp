@@ -1557,15 +1557,20 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(!MemProfCallStackTable &&
            "MemProfCallStackTable must not be available");
-    return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable.get());
+    return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
-    return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable.get(),
-                              *MemProfCallStackTable.get());
+    return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
+                              *MemProfCallStackTable);
   }
 
-  llvm_unreachable("unknown version");
+  return make_error<InstrProfError>(
+      instrprof_error::unsupported_version,
+      formatv("MemProf version {} not supported; "
+              "requires version between {} and {}, inclusive",
+              Version, memprof::MinimumSupportedVersion,
+              memprof::MaximumSupportedVersion));
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
