@@ -1,0 +1,17 @@
+#RUN: llvm-dwarfdump %p/Inputs/dwarfdump-loclist-basetyperef.elf-x86-64 --debug-loclists | FileCheck %s
+
+// The .debug-loclists section of the binary contains a base type reference as an argument
+// to DW_OP_regval_type that cannot be resolved when only dumping the .debug-loclists
+// section. prettyPrintBaseTypeRef must handle this case without crashing by printing reduced information.
+// 
+// The binary was compiled using following command:
+//    gcc-13 dwarfdump-loclist-basetyperef.c -c -g -Og -o dwarfdump-loclist-basetyperef.elf-x86-64
+//
+// Contents of dwarfdump-loclist-basetyperef.c:
+//    extern double foo();
+//      
+//    void bar(double arg1, double *arg2) {
+//        *arg2 = foo(arg1);
+//    }
+
+#CHECK: (0x0000000000000011, 0x0000000000000018): DW_OP_entry_value(DW_OP_regval_type XMM0 <base_type ref: 0x2e>), DW_OP_stack_value
