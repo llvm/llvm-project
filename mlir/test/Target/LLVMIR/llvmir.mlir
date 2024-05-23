@@ -2399,6 +2399,5 @@ llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
 
 // -----
 
-// Translation is currently very slow so the test is not enabled.
-//llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
-//XCHECK: @big_ = common global [4294967296 x i8] zeroinitializer
+llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+//CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
