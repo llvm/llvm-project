@@ -10,7 +10,6 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
@@ -33,7 +32,7 @@ convertArithOverflowFlags(arith::IntegerOverflowFlags flags) {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ConstantOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                           SetIntRangeFn setResultRange) {
   auto constAttr = llvm::dyn_cast_or_null<IntegerAttr>(getValue());
   if (constAttr) {
@@ -46,48 +45,57 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-void arith::AddIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::AddIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferAdd(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  auto infer = inferFromOptionals([this](ArrayRef<ConstantIntRanges> ranges) {
+    return inferAdd(ranges, convertArithOverflowFlags(getOverflowFlags()));
+  });
+
+  setResultRange(getResult(), infer(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-void arith::SubIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::SubIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferSub(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  auto infer = inferFromOptionals([this](ArrayRef<ConstantIntRanges> ranges) {
+    return inferSub(ranges, convertArithOverflowFlags(getOverflowFlags()));
+  });
+
+  setResultRange(getResult(), infer(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-void arith::MulIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::MulIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMul(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  auto infer = inferFromOptionals([this](ArrayRef<ConstantIntRanges> ranges) {
+    return inferMul(ranges, convertArithOverflowFlags(getOverflowFlags()));
+  });
+
+  setResultRange(getResult(), infer(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::DivUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::DivUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferDivU(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferDivU)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // DivSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::DivSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::DivSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferDivS(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferDivS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
@@ -95,8 +103,8 @@ void arith::DivSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 //===----------------------------------------------------------------------===//
 
 void arith::CeilDivUIOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferCeilDivU(argRanges));
+    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), inferFromOptionals(inferCeilDivU)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,8 +112,8 @@ void arith::CeilDivUIOp::inferResultRanges(
 //===----------------------------------------------------------------------===//
 
 void arith::CeilDivSIOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferCeilDivS(argRanges));
+    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), inferFromOptionals(inferCeilDivS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
@@ -113,122 +121,132 @@ void arith::CeilDivSIOp::inferResultRanges(
 //===----------------------------------------------------------------------===//
 
 void arith::FloorDivSIOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
-  return setResultRange(getResult(), inferFloorDivS(argRanges));
+    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  return setResultRange(getResult(),
+                        inferFromOptionals(inferFloorDivS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // RemUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::RemUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::RemUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferRemU(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferRemU)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // RemSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::RemSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::RemSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferRemS(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferRemS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // AndIOp
 //===----------------------------------------------------------------------===//
 
-void arith::AndIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::AndIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferAnd(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferAnd)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // OrIOp
 //===----------------------------------------------------------------------===//
 
-void arith::OrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::OrIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                      SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferOr(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferOr)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // XOrIOp
 //===----------------------------------------------------------------------===//
 
-void arith::XOrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::XOrIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferXor(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferXor)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // MaxSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::MaxSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::MaxSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMaxS(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferMaxS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // MaxUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::MaxUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::MaxUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMaxU(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferMaxU)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::MinSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::MinSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMinS(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferMinS)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // MinUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::MinUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::MinUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferMinU(argRanges));
+  setResultRange(getResult(), inferFromOptionals(inferMinU)(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // ExtUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::ExtUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ExtUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
+  if (!argRanges[0])
+    return;
+
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
-  setResultRange(getResult(), extUIRange(argRanges[0], destWidth));
+  setResultRange(getResult(), extUIRange(*argRanges[0], destWidth));
 }
 
 //===----------------------------------------------------------------------===//
 // ExtSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::ExtSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ExtSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
+  if (!argRanges[0])
+    return;
+
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
-  setResultRange(getResult(), extSIRange(argRanges[0], destWidth));
+  setResultRange(getResult(), extSIRange(*argRanges[0], destWidth));
 }
 
 //===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-void arith::TruncIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::TruncIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
+  if (!argRanges[0])
+    return;
+
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
-  setResultRange(getResult(), truncRange(argRanges[0], destWidth));
+  setResultRange(getResult(), truncRange(*argRanges[0], destWidth));
 }
 
 //===----------------------------------------------------------------------===//
@@ -236,18 +254,21 @@ void arith::TruncIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 //===----------------------------------------------------------------------===//
 
 void arith::IndexCastOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  if (!argRanges[0])
+    return;
+
   Type sourceType = getOperand().getType();
   Type destType = getResult().getType();
   unsigned srcWidth = ConstantIntRanges::getStorageBitwidth(sourceType);
   unsigned destWidth = ConstantIntRanges::getStorageBitwidth(destType);
 
   if (srcWidth < destWidth)
-    setResultRange(getResult(), extSIRange(argRanges[0], destWidth));
+    setResultRange(getResult(), extSIRange(*argRanges[0], destWidth));
   else if (srcWidth > destWidth)
-    setResultRange(getResult(), truncRange(argRanges[0], destWidth));
+    setResultRange(getResult(), truncRange(*argRanges[0], destWidth));
   else
-    setResultRange(getResult(), argRanges[0]);
+    setResultRange(getResult(), *argRanges[0]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -255,34 +276,40 @@ void arith::IndexCastOp::inferResultRanges(
 //===----------------------------------------------------------------------===//
 
 void arith::IndexCastUIOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  if (!argRanges[0])
+    return;
+
   Type sourceType = getOperand().getType();
   Type destType = getResult().getType();
   unsigned srcWidth = ConstantIntRanges::getStorageBitwidth(sourceType);
   unsigned destWidth = ConstantIntRanges::getStorageBitwidth(destType);
 
   if (srcWidth < destWidth)
-    setResultRange(getResult(), extUIRange(argRanges[0], destWidth));
+    setResultRange(getResult(), extUIRange(*argRanges[0], destWidth));
   else if (srcWidth > destWidth)
-    setResultRange(getResult(), truncRange(argRanges[0], destWidth));
+    setResultRange(getResult(), truncRange(*argRanges[0], destWidth));
   else
-    setResultRange(getResult(), argRanges[0]);
+    setResultRange(getResult(), *argRanges[0]);
 }
 
 //===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::CmpIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   arith::CmpIPredicate arithPred = getPredicate();
   intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(arithPred);
-  const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  const OptionalIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+
+  if (!lhs || !rhs)
+    return;
 
   APInt min = APInt::getZero(1);
   APInt max = APInt::getAllOnes(1);
 
-  std::optional<bool> truthValue = intrange::evaluatePred(pred, lhs, rhs);
+  std::optional<bool> truthValue = intrange::evaluatePred(pred, *lhs, *rhs);
   if (truthValue.has_value() && *truthValue)
     min = max;
   else if (truthValue.has_value() && !(*truthValue))
@@ -295,9 +322,10 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-void arith::SelectOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::SelectOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
-  std::optional<APInt> mbCondVal = argRanges[0].getConstantValue();
+  std::optional<APInt> mbCondVal =
+      argRanges[0] ? argRanges[0]->getConstantValue() : std::nullopt;
 
   if (mbCondVal) {
     if (mbCondVal->isZero())
@@ -306,33 +334,40 @@ void arith::SelectOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
       setResultRange(getResult(), argRanges[1]);
     return;
   }
-  setResultRange(getResult(), argRanges[1].rangeUnion(argRanges[2]));
+
+  if (argRanges[1] && argRanges[2])
+    setResultRange(getResult(), argRanges[1]->rangeUnion(*argRanges[2]));
 }
 
 //===----------------------------------------------------------------------===//
 // ShLIOp
 //===----------------------------------------------------------------------===//
 
-void arith::ShLIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ShLIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferShl(argRanges, convertArithOverflowFlags(
-                                                      getOverflowFlags())));
+  auto infer = inferFromOptionals([&](ArrayRef<ConstantIntRanges> ranges) {
+    return inferShl(ranges, convertArithOverflowFlags(getOverflowFlags()));
+  });
+
+  setResultRange(getResult(), infer(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // ShRUIOp
 //===----------------------------------------------------------------------===//
 
-void arith::ShRUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ShRUIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferShrU(argRanges));
+  auto infer = inferFromOptionals(inferShrU);
+  setResultRange(getResult(), infer(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // ShRSIOp
 //===----------------------------------------------------------------------===//
 
-void arith::ShRSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+void arith::ShRSIOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferShrS(argRanges));
+  auto infer = inferFromOptionals(inferShrS);
+  setResultRange(getResult(), infer(argRanges));
 }

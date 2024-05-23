@@ -105,10 +105,11 @@ private:
 
 raw_ostream &operator<<(raw_ostream &, const ConstantIntRanges &);
 
+using OptionalIntRanges = std::optional<ConstantIntRanges>;
 /// The type of the `setResultRanges` callback provided to ops implementing
 /// InferIntRangeInterface. It should be called once for each integer result
 /// value and be passed the ConstantIntRanges corresponding to that value.
-using SetIntRangeFn = function_ref<void(Value, const ConstantIntRanges &)>;
+using SetIntRangeFn = function_ref<void(Value, const OptionalIntRanges &)>;
 } // end namespace mlir
 
 #include "mlir/Interfaces/InferIntRangeInterface.h.inc"

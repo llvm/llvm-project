@@ -45,7 +45,7 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
        APInts in their `argRanges` element.
     }],
     "void", "inferResultRanges", (ins
-      "::llvm::ArrayRef<::mlir::ConstantIntRanges>":$argRanges,
+      "::llvm::ArrayRef<::std::optional<::mlir::ConstantIntRanges>>":$argRanges,
       "::mlir::SetIntRangeFn":$setResultRanges)
   >];
 }

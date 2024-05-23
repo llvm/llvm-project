@@ -25,7 +25,10 @@ namespace intrange {
 /// abstracted away here to permit writing the function that handles both
 /// 64- and 32-bit index types.
 using InferRangeFn =
-    function_ref<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
+    std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
+
+using OptionalRangeFn =
+    std::function<OptionalIntRanges(ArrayRef<OptionalIntRanges>)>;
 
 static constexpr unsigned indexMinWidth = 32;
 static constexpr unsigned indexMaxWidth = 64;
@@ -43,6 +46,8 @@ enum class OverflowFlags : uint32_t {
 /// taking special overflow behavior into account.
 using InferRangeWithOvfFlagsFn =
     function_ref<ConstantIntRanges(ArrayRef<ConstantIntRanges>, OverflowFlags)>;
+
+OptionalRangeFn inferFromOptionals(intrange::InferRangeFn inferFn);
 
 /// Compute `inferFn` on `ranges`, whose size should be the index storage
 /// bitwidth. Then, compute the function on `argRanges` again after truncating
