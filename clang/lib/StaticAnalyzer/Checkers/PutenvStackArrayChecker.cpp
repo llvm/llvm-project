@@ -1,4 +1,4 @@
-//== PutenvWithAutoChecker.cpp --------------------------------- -*- C++ -*--=//
+//== PutenvStackArrayChecker.cpp ------------------------------- -*- C++ -*--=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines PutenvWithAutoChecker which finds calls of ``putenv``
-// function with automatic variable as the argument.
+// This file defines PutenvStackArrayChecker which finds calls of ``putenv``
+// function with automatic array variable as the argument.
 // https://wiki.sei.cmu.edu/confluence/x/6NYxBQ
 //
 //===----------------------------------------------------------------------===//
 
-#include "../AllocationState.h"
+#include "AllocationState.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -26,9 +26,9 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class PutenvWithAutoChecker : public Checker<check::PostCall> {
+class PutenvStackArrayChecker : public Checker<check::PostCall> {
 private:
-  BugType BT{this, "'putenv' function should not be called with auto variables",
+  BugType BT{this, "'putenv' called with stack-allocated string",
              categories::SecurityError};
   const CallDescription Putenv{CDM::CLibrary, {"putenv"}, 1};
 
@@ -37,8 +37,8 @@ public:
 };
 } // namespace
 
-void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
-                                          CheckerContext &C) const {
+void PutenvStackArrayChecker::checkPostCall(const CallEvent &Call,
+                                            CheckerContext &C) const {
   if (!Putenv.matches(Call))
     return;
 
@@ -50,7 +50,7 @@ void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
     return;
 
   StringRef ErrorMsg = "The 'putenv' function should not be called with "
-                       "arguments that have automatic storage";
+                       "arrays that have automatic storage";
   ExplodedNode *N = C.generateErrorNode();
   auto Report = std::make_unique<PathSensitiveBugReport>(BT, ErrorMsg, N);
 
@@ -60,8 +60,10 @@ void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
   C.emitReport(std::move(Report));
 }
 
-void ento::registerPutenvWithAuto(CheckerManager &Mgr) {
-  Mgr.registerChecker<PutenvWithAutoChecker>();
+void ento::registerPutenvStackArray(CheckerManager &Mgr) {
+  Mgr.registerChecker<PutenvStackArrayChecker>();
 }
 
-bool ento::shouldRegisterPutenvWithAuto(const CheckerManager &) { return true; }
+bool ento::shouldRegisterPutenvStackArray(const CheckerManager &) {
+  return true;
+}
