@@ -137,9 +137,6 @@ void ReorderFunctions::reorder(BinaryContext &BC,
       BF.setIndex(Index++);
   }
 
-  if (opts::ReorderFunctions == RT_NONE)
-    return;
-
   printStats(BC, Clusters, FuncAddr);
 }
 
@@ -269,9 +266,11 @@ Error ReorderFunctions::readFunctionOrderFile(
 }
 
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
+  if (opts::ReorderFunctions == RT_NONE) {
+    return Error::success();
+  }
   auto &BFs = BC.getBinaryFunctions();
-  if (opts::ReorderFunctions != RT_NONE &&
-      opts::ReorderFunctions != RT_EXEC_COUNT &&
+  if (opts::ReorderFunctions != RT_EXEC_COUNT &&
       opts::ReorderFunctions != RT_USER) {
     Cg = buildCallGraph(
         BC,
@@ -292,8 +291,6 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   std::vector<Cluster> Clusters;
 
   switch (opts::ReorderFunctions) {
-  case RT_NONE:
-    break;
   case RT_EXEC_COUNT: {
     std::vector<BinaryFunction *> SortedFunctions(BFs.size());
     llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),

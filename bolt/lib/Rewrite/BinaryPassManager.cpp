@@ -442,7 +442,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // size of a function to determine the order.  It should definitely
   // also happen after any changes to the call graph are made, e.g. inlining.
   Manager.registerPass(
-      std::make_unique<ReorderFunctions>(PrintReorderedFunctions),opts::ReorderFunctions != RT_NONE);
+      std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
   // This is the second run of the SplitFunctions pass required by certain
   // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
