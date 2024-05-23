@@ -1607,7 +1607,7 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
 
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

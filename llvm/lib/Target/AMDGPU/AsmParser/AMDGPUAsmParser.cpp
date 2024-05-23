@@ -4915,7 +4915,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
     if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), Opc, DppCtrl) &&
-        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
+        AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
       // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
       // only on GFX12+.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
