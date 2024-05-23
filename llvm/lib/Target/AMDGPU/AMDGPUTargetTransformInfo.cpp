@@ -364,9 +364,6 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 }
 
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS)
-    return 512;
-
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
