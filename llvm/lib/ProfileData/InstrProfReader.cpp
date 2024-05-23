@@ -1212,7 +1212,6 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  memprof::IndexedVersion Version = memprof::Version0;
   if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
     // Everything is good.  We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
@@ -1490,6 +1489,55 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   return error(instrprof_error::unknown_function);
 }
 
+static Expected<memprof::MemProfRecord>
+getMemProfRecordV0(const memprof::IndexedMemProfRecord &IndexedRecord,
+                   MemProfFrameHashTable &MemProfFrameTable) {
+  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
+      MemProfFrameTable);
+
+  memprof::MemProfRecord Record =
+      memprof::MemProfRecord(IndexedRecord, FrameIdConv);
+
+  // Check that all frame ids were successfully converted to frames.
+  if (FrameIdConv.LastUnmappedId) {
+    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
+                                      "memprof frame not found for frame id " +
+                                          Twine(*FrameIdConv.LastUnmappedId));
+  }
+
+  return Record;
+}
+
+static Expected<memprof::MemProfRecord>
+getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
+                   MemProfFrameHashTable &MemProfFrameTable,
+                   MemProfCallStackHashTable &MemProfCallStackTable) {
+  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
+      MemProfFrameTable);
+
+  memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
+      MemProfCallStackTable, FrameIdConv);
+
+  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+
+  // Check that all call stack ids were successfully converted to call stacks.
+  if (CSIdConv.LastUnmappedId) {
+    return make_error<InstrProfError>(
+        instrprof_error::hash_mismatch,
+        "memprof call stack not found for call stack id " +
+            Twine(*CSIdConv.LastUnmappedId));
+  }
+
+  // Check that all frame ids were successfully converted to frames.
+  if (FrameIdConv.LastUnmappedId) {
+    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
+                                      "memprof frame not found for frame id " +
+                                          Twine(*FrameIdConv.LastUnmappedId));
+  }
+
+  return Record;
+}
+
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1502,41 +1550,27 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
         instrprof_error::unknown_function,
         "memprof record not found for function hash " + Twine(FuncNameHash));
 
-  // Setup a callback to convert from frame ids to frame using the on-disk
-  // FrameData hash table.
-  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
-      *MemProfFrameTable.get());
-
   const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
-  memprof::MemProfRecord Record;
-  if (MemProfCallStackTable) {
-    // Setup a callback to convert call stack ids to call stacks using the
-    // on-disk hash table.
-    memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
-        *MemProfCallStackTable.get(), FrameIdConv);
-
-    Record = IndexedRecord.toMemProfRecord(CSIdConv);
-
-    // Check that all call stack ids were successfully converted to call stacks.
-    if (CSIdConv.LastUnmappedId) {
-      return make_error<InstrProfError>(
-          instrprof_error::hash_mismatch,
-          "memprof call stack not found for call stack id " +
-              Twine(*CSIdConv.LastUnmappedId));
-    }
-  } else {
-    Record = memprof::MemProfRecord(IndexedRecord, FrameIdConv);
+  switch (Version) {
+  case memprof::Version0:
+  case memprof::Version1:
+    assert(MemProfFrameTable && "MemProfFrameTable must be available");
+    assert(!MemProfCallStackTable &&
+           "MemProfCallStackTable must not be available");
+    return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
+  case memprof::Version2:
+    assert(MemProfFrameTable && "MemProfFrameTable must be available");
+    assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
+    return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
+                              *MemProfCallStackTable);
   }
 
-  // Check that all frame ids were successfully converted to frames.
-  if (FrameIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(
-        instrprof_error::hash_mismatch,
-        "memprof frame not found for frame id " +
-            Twine(*FrameIdConv.LastUnmappedId));
-  }
-
-  return Record;
+  return make_error<InstrProfError>(
+      instrprof_error::unsupported_version,
+      formatv("MemProf version {} not supported; "
+              "requires version between {} and {}, inclusive",
+              Version, memprof::MinimumSupportedVersion,
+              memprof::MaximumSupportedVersion));
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
