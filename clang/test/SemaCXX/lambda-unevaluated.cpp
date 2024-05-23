@@ -189,3 +189,167 @@ void recursive() {
 
 }
 }
+
+namespace GH63845 {
+
+template <bool> struct A {};
+
+struct true_type {
+  constexpr operator bool() noexcept { return true; }
+};
+
+constexpr bool foo() {
+  true_type x{};
+  return requires { typename A<x>; }; // fails in Clang
+}
+
+constexpr bool foo(auto b) {
+    return requires { typename A<b>; };
+}
+
+static_assert(foo(true_type{}));
+static_assert(foo());
+
+}
+
+namespace GH88081 {
+
+// Test that ActOnLambdaClosureQualifiers is called only once.
+void foo(auto value)
+  requires requires { [&] -> decltype(value) {}; }
+  // expected-error@-1 {{non-local lambda expression cannot have a capture-default}}
+{}
+
+struct S { //#S
+  S(auto value) //#S-ctor
+  requires requires { [&] -> decltype(value) { return 2; }; } {} // #S-requires
+
+  static auto foo(auto value) -> decltype([&]() -> decltype(value) {}()) { return {}; } // #S-foo
+
+  static auto bar(auto value) -> decltype([&] { return value; }()) {
+    return "a"; // #bar-body
+  }
+};
+
+S s("a"); // #use
+// expected-error@#S-requires {{cannot initialize return object of type 'decltype(value)' (aka 'const char *') with an rvalue of type 'int'}}
+// expected-error@#use {{no matching constructor}}
+// expected-note@#S-requires {{substituting into a lambda expression here}}
+// expected-note@#S-requires {{substituting template arguments into constraint expression here}}
+// expected-note@#S-requires {{in instantiation of requirement here}}
+// expected-note@#use {{checking constraint satisfaction for template 'S<const char *>' required here}}
+// expected-note@#use {{requested here}}
+// expected-note-re@#S 2{{candidate constructor {{.*}} not viable}}
+// expected-note@#S-ctor {{constraints not satisfied}}
+// expected-note-re@#S-requires {{because {{.*}} would be invalid}}
+
+void func() {
+  S::foo(42);
+  S::bar("str");
+  S::bar(0.618);
+  // expected-error-re@#bar-body {{cannot initialize return object of type {{.*}} (aka 'double') with an lvalue of type 'const char[2]'}}
+  // expected-note@-2 {{requested here}}
+}
+
+} // namespace GH88081
+
+namespace GH69307 {
+
+constexpr auto ICE() {
+  constexpr auto b = 1;
+  return [=](auto c) -> int
+           requires requires { b + c; }
+  { return 1; };
+};
+
+constexpr auto Ret = ICE()(1);
+
+constexpr auto ICE(auto a) { // template function, not lambda
+  return [=]()
+    requires requires { a; }
+  { return 1; };
+};
+
+} // namespace GH69307
+
+namespace GH91633 {
+
+struct __normal_iterator {};
+
+template <typename _Iterator>
+void operator==(_Iterator __lhs, _Iterator) // expected-note {{declared here}}
+  requires requires { __lhs; };
+
+__normal_iterator finder();
+
+template <typename >
+void findDetail() {
+  auto makeResult = [&](auto foo) -> void {
+    finder() != foo;
+    // expected-error@-1 {{function for rewritten '!=' comparison is not 'bool'}}
+  };
+  makeResult(__normal_iterator{}); // expected-note {{requested here}}
+}
+
+void find() {
+  findDetail<void>(); // expected-note {{requested here}}
+}
+} // namespace GH91633
+
+namespace GH90669 {
+
+struct __normal_iterator {};
+
+struct vector {
+  __normal_iterator begin(); // #begin
+  int end();
+};
+
+template <typename _IteratorR>
+bool operator==(_IteratorR __lhs, int)
+  requires requires { __lhs; }
+{}
+
+template <typename PrepareFunc> void queued_for_each(PrepareFunc prep) {
+  prep(vector{}); //#prep
+}
+
+void scan() {
+  queued_for_each([&](auto ino) -> int { // #queued-for-each
+    for (auto e : ino) { // #for-each
+      // expected-error@#for-each {{cannot increment value of type '__normal_iterator'}}
+      // expected-note-re@#prep {{instantiation {{.*}} requested here}}
+      // expected-note-re@#queued-for-each {{instantiation {{.*}} requested here}}
+      // expected-note@#for-each {{implicit call to 'operator++'}}
+      // expected-note@#begin {{selected 'begin' function}}
+    };
+  });
+}
+} // namespace GH90669
+
+namespace GH89496 {
+template <class Iter> struct RevIter {
+  Iter current;
+  constexpr explicit RevIter(Iter x) : current(x) {}
+  inline constexpr bool operator==(const RevIter<Iter> &other) const
+    requires requires {
+      // { current == other.current } -> std::convertible_to<bool>;
+      { other };
+    }
+  {
+    return true;
+  }
+};
+struct Foo {
+  Foo() {};
+};
+void CrashFunc() {
+  auto lambda = [&](auto from, auto to) -> Foo {
+    (void)(from == to);
+    return Foo();
+  };
+  auto from = RevIter<int *>(nullptr);
+  auto to = RevIter<int *>(nullptr);
+  lambda(from, to);
+}
+} // namespace pr89496
