@@ -70,8 +70,8 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
   return printRange(stream, vec);
 }
 
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
-                                     const ShardingOption &v) {
+[[maybe_unused]] static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
+                                                      const ShardingOption &v) {
   return stream << "{empty = " << v.empty << ", mesh" << v.mesh
                 << ", shardingArray = " << v.shardingArray << "}";
 }
@@ -94,8 +94,8 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
   return printTuple(stream, t, std::index_sequence_for<Ts...>{});
 }
 
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
-                                     ReshardingRquirementKind v) {
+[[maybe_unused]] static llvm::raw_ostream &
+operator<<(llvm::raw_ostream &stream, ReshardingRquirementKind v) {
   return stream << static_cast<int>(v);
 }
 
