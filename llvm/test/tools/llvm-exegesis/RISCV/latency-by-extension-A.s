@@ -8,7 +8,7 @@ AMOAND_D-NEXT:     - 'AMOAND_D [[RE01:X[0-9]+]] X10 [[RE01:X[0-9]+]]'
 AMOAND_D-NEXT: config: ''
 AMOAND_D-NEXT: register_initial_values:
 AMOAND_D-NEXT: - '[[RE01:X[0-9]+]]=0x0'
-AMOAND_D-LAST: ...
+AMOAND_D-DAG: ...
 
 # RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=AMOADD_W -mattr="+a" | FileCheck --check-prefix=AMOADD_W %s
 
@@ -20,7 +20,7 @@ AMOADD_W-NEXT:     - 'AMOADD_W [[RE02:X[0-9]+]] X10 [[RE02:X[0-9]+]]'
 AMOADD_W-NEXT: config: ''
 AMOADD_W-NEXT: register_initial_values:
 AMOADD_W-NEXT: - '[[RE02:X[0-9]+]]=0x0'
-AMOADD_W-LAST: ...
+AMOADD_W-DAG: ...
 
 # RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=AMOMAXU_D -mattr="+a" | FileCheck --check-prefix=AMOMAXU_D %s
 
@@ -32,7 +32,7 @@ AMOMAXU_D-NEXT:     - 'AMOMAXU_D [[RE03:X[0-9]+]] X10 [[RE03:X[0-9]+]]'
 AMOMAXU_D-NEXT: config: ''
 AMOMAXU_D-NEXT: register_initial_values:
 AMOMAXU_D-NEXT: - '[[RE03:X[0-9]+]]=0x0'
-AMOMAXU_D-LAST: ...
+AMOMAXU_D-DAG: ...
 
 # RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=AMOMIN_W -mattr="+a" | FileCheck --check-prefix=AMOMIN_W %s
 
@@ -44,7 +44,7 @@ AMOMIN_W-NEXT:     - 'AMOMIN_W [[RE04:X[0-9]+]] X10 [[RE04:X[0-9]+]]'
 AMOMIN_W-NEXT: config: ''
 AMOMIN_W-NEXT: register_initial_values:
 AMOMIN_W-NEXT: - '[[RE04:X[0-9]+]]=0x0'
-AMOMIN_W-LAST: ...
+AMOMIN_W-DAG: ...
 
 # RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=AMOXOR_D -mattr="+a" | FileCheck --check-prefix=AMOXOR_D %s
 
@@ -56,4 +56,4 @@ AMOXOR_D-NEXT:     - 'AMOXOR_D [[RE05:X[0-9]+]] X10 [[RE05:X[0-9]+]]'
 AMOXOR_D-NEXT: config: ''
 AMOXOR_D-NEXT: register_initial_values:
 AMOXOR_D-NEXT: - '[[RE05:X[0-9]+]]=0x0'
-AMOXOR_D-LAST: ...
+AMOXOR_D-DAG: ...
