@@ -527,6 +527,20 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
+Triage Role
+^^^^^^^^^^^^^
+
+The `Triage Role <https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/managing-repository-roles/repository-roles-for-an-organization>`_ in GitHub gives users elevated permissions for managing issues and
+pull requests.  If you want to help triaging issues and pull requests in the
+project and don't need write access to the repository, you may request triage
+access instead of commit access when you email Chris.
+
+Also, once a month we review the list of users with commit access and ask anyone
+(via a GitHub issue) with less than 5 interactions (i.e commits, created PRs, or
+PR comments) if they  still need commit access.  If a user does not respond within
+30 days, then they will be moved from the Write Role to the Triage Role.
+
+
 .. _discuss the change/gather consensus:
 
 Making a Major Change
