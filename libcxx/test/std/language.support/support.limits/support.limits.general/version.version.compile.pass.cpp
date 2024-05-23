@@ -88,7 +88,7 @@
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
     __cpp_lib_format                                        202106L [C++20]
-    __cpp_lib_format_path                                   202403L [C++23]
+    __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
     __cpp_lib_format_uchar                                  202311L [C++20]
     __cpp_lib_formatters                                    202302L [C++23]
@@ -216,7 +216,7 @@
     __cpp_lib_to_array                                      201907L [C++20]
     __cpp_lib_to_chars                                      201611L [C++17]
                                                             202306L [C++26]
-    __cpp_lib_to_string                                     202306L [C++23]
+    __cpp_lib_to_string                                     202306L [C++26]
     __cpp_lib_to_underlying                                 202102L [C++23]
     __cpp_lib_transformation_trait_aliases                  201304L [C++14]
     __cpp_lib_transparent_operators                         201210L [C++14]
@@ -513,7 +513,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -1005,7 +1005,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -1348,7 +1348,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -1891,7 +1891,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -2303,7 +2303,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -2972,7 +2972,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -3543,7 +3543,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -4350,7 +4350,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -4971,17 +4971,8 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should be defined in c++23"
-#   endif
-#   if __cpp_lib_format_path != 202403L
-#     error "__cpp_lib_format_path should have the value 202403L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_format_path
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_format_ranges
@@ -5943,17 +5934,8 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should be defined in c++23"
-#   endif
-#   if __cpp_lib_to_string != 202306L
-#     error "__cpp_lib_to_string should have the value 202306L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_to_string
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_to_underlying
