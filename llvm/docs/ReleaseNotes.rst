@@ -140,9 +140,6 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
-- Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
-  while assembly encoding/decoding supports are kept.
-
 Changes to the OCaml bindings
 -----------------------------
 

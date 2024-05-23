@@ -699,6 +699,18 @@ namespace llvm {
     // Test if in transactional execution.
     XTEST,
 
+    // ERI instructions.
+    RSQRT28,
+    RSQRT28_SAE,
+    RSQRT28S,
+    RSQRT28S_SAE,
+    RCP28,
+    RCP28_SAE,
+    RCP28S,
+    RCP28S_SAE,
+    EXP2,
+    EXP2_SAE,
+
     // Conversions between float and half-float.
     CVTPS2PH,
     CVTPS2PH_SAE,

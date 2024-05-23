@@ -95,9 +95,9 @@ constexpr FeatureBitset FeaturesBroadwell =
 
 // Intel Knights Landing and Knights Mill
 // Knights Landing has feature parity with Broadwell.
-constexpr FeatureBitset FeaturesKNL = FeaturesBroadwell | FeatureAES |
-                                      FeatureAVX512F | FeatureEVEX512 |
-                                      FeatureAVX512CD;
+constexpr FeatureBitset FeaturesKNL =
+    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureEVEX512 |
+    FeatureAVX512CD | FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
 constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
 
 // Intel Skylake processors.
