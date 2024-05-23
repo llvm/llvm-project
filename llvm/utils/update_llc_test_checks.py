@@ -111,8 +111,9 @@ def main():
                 from UpdateTestChecks import asm as output_type
 
             common.verify_filecheck_prefixes(filecheck_cmd)
-            if llc_tool not in LLC_LIKE_TOOLS and \
-               (not ti.args.tool or llc_tool != ti.args.tool):
+            if llc_tool not in LLC_LIKE_TOOLS and (
+                not ti.args.tool or llc_tool != ti.args.tool
+            ):
                 common.warn("Skipping non-llc RUN line: " + l)
                 continue
 
