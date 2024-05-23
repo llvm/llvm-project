@@ -67,7 +67,8 @@ struct OverflowTracking {
   bool HasNUW;
   bool HasNSW;
   bool AllKnownNonNegative;
-  OverflowTracking(void) : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
+  OverflowTracking(void)
+      : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
 };
 
 class XorOpnd;
