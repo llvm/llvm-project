@@ -19,7 +19,7 @@
 // - EmptyTrait: the class has no data members.
 // - WrapperTrait: the class has a single member `v`
 // - TupleTrait: the class has a tuple member `t`
-// - UnionTrait the class has a varuant member `u`
+// - UnionTrait the class has a variant member `u`
 // - IncompleteTrait: the class is a placeholder class that is currently empty,
 //   but will be completed at a later time.
 // Note: This structure follows the one used in flang parser.
