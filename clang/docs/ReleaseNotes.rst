@@ -801,8 +801,6 @@ AMDGPU Support
 X86 Support
 ^^^^^^^^^^^
 
-- Remove knl/knm specific ISA supports: AVX512PF, AVX512ER, PREFETCHWT1
-
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
