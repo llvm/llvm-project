@@ -1002,46 +1002,60 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
-std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
-    ArrayRef<TemporalProfTraceTy> Traces) {
+void TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+    bool RemoveOutlierUNs) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
-  // Collect all function IDs ordered by their smallest timestamp. This will be
-  // used as the initial FunctionNode order.
-  SetVector<IDT> FunctionIds;
-  size_t LargestTraceSize = 0;
-  for (auto &Trace : Traces)
-    LargestTraceSize =
-        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
-  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
-    for (auto &Trace : Traces)
-      if (Timestamp < Trace.FunctionNameRefs.size())
-        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
-
-  const int N = Log2_64(LargestTraceSize) + 1;
-
+  UtilityNodeT MaxUN = 0;
+  DenseMap<IDT, size_t> IdToFirstTimestamp;
+  DenseMap<IDT, UtilityNodeT> IdToFirstUN;
+  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
-  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
-  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
-    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
-    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
-        auto FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
-        FuncGroups[FunctionId].push_back(GroupId);
+  for (auto &Trace : Traces) {
+    size_t CutoffTimestamp = 1;
+    for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
+         Timestamp++) {
+      IDT Id = Trace.FunctionNameRefs[Timestamp];
+      auto [It, WasInserted] = IdToFirstTimestamp.try_emplace(Id, Timestamp);
+      if (!WasInserted)
+        It->getSecond() = std::min<size_t>(It->getSecond(), Timestamp);
+      if (Timestamp >= CutoffTimestamp) {
+        ++MaxUN;
+        CutoffTimestamp = 2 * Timestamp;
       }
+      IdToFirstUN.try_emplace(Id, MaxUN);
     }
+    for (auto &[Id, FirstUN] : IdToFirstUN)
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+        IdToUNs[Id].push_back(UN);
+    ++MaxUN;
+    IdToFirstUN.clear();
   }
 
-  std::vector<BPFunctionNode> Nodes;
-  for (auto Id : FunctionIds) {
-    auto &UNs = FuncGroups[Id];
-    llvm::sort(UNs);
-    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
-    Nodes.emplace_back(Id, UNs);
+  if (RemoveOutlierUNs) {
+    DenseMap<UtilityNodeT, unsigned> UNFrequency;
+    for (auto &[Id, UNs] : IdToUNs)
+      for (auto &UN : UNs)
+        ++UNFrequency[UN];
+    // Filter out utility nodes that are too infrequent or too prevalent to make
+    // BalancedPartitioning more effective.
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+      });
   }
-  return Nodes;
+
+  for (auto &[Id, UNs] : IdToUNs)
+    Nodes.emplace_back(Id, UNs);
+
+  // Since BalancedPartitioning is sensitive to the initial order, we explicitly
+  // order nodes by their earliest timestamp.
+  llvm::sort(Nodes, [&](auto &L, auto &R) {
+    return std::make_pair(IdToFirstTimestamp[L.Id], L.Id) <
+           std::make_pair(IdToFirstTimestamp[R.Id], R.Id);
+  });
 }
 
 #define INSTR_PROF_COMMON_API_IMPL
