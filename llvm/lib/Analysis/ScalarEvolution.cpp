@@ -13003,7 +13003,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *End = nullptr, *BECount = nullptr,
              *BECountIfBackedgeTaken = nullptr;
   if (!isLoopInvariant(RHS, L)) {
-    if (const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS)) {
+    const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
+    if (RHSAddRec != nullptr && RHSAddRec->getLoop() == L) {
       /*
         The structure of loop we are trying to calculate backedge-count of:
         left = left_start
@@ -13026,7 +13027,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // check if RHSStride<0 and Stride-RHSStride will not overflow
       // FIXME: Can RHSStride be positive?
       if (isKnownNegative(RHSStride) &&
-          willNotOverflow(Instruction::Sub, /*Signed=*/true, Stride, RHSStride)) {
+          willNotOverflow(Instruction::Sub, /*Signed=*/true, Stride,
+                          RHSStride)) {
 
         const SCEV *Denominator = getMinusSCEV(Stride, RHSStride);
         if (isKnownPositive(Denominator)) {
