@@ -581,6 +581,46 @@ multiclass FLAT_Scratch_Load_LDS_Pseudo<string opName> {
                FlatScratchInst<opName, "ST">;
 }
 
+class FLAT_Scratch_Discard_Pseudo <string opName, bit EnableSaddr = 0,
+  bit EnableSVE = 0,
+  bit EnableVaddr = !or(EnableSVE, !not(EnableSaddr))> : FLAT_Pseudo<
+  opName,
+  (outs),
+  !if(EnableSVE,
+    (ins VGPR_32:$vaddr, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+    !if(EnableSaddr,
+      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      !if(EnableVaddr,
+        (ins VGPR_32:$vaddr, flat_offset:$offset, CPol_0:$cpol),
+        (ins flat_offset:$offset, CPol_0:$cpol)))),
+  " "#!if(EnableVaddr, "$vaddr", "off")#", "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
+  let is_flat_scratch = 1;
+  let mayStore = 1;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_vaddr = EnableVaddr;
+  let has_sve = EnableSVE;
+  let sve = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
+}
+
+multiclass FLAT_Scratch_Discard_Pseudo<string opName> {
+  def "" : FLAT_Scratch_Discard_Pseudo<opName>,
+           FlatScratchInst<opName, "SV">;
+  def _SADDR : FLAT_Scratch_Discard_Pseudo<opName, 1>,
+               FlatScratchInst<opName, "SS">;
+
+  let SubtargetPredicate = HasFlatScratchSVSMode in
+  def _SVS : FLAT_Scratch_Discard_Pseudo<opName, 1, 1>,
+             FlatScratchInst<opName, "SVS">;
+
+  let SubtargetPredicate = HasFlatScratchSTMode in
+  def _ST  : FLAT_Scratch_Discard_Pseudo<opName, 0, 0, 0>,
+             FlatScratchInst<opName, "ST">;
+}
+
 class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
                                string asm, list<dag> pattern = []> :
   FLAT_Pseudo<opName, outs, ins, asm, pattern> {
@@ -724,6 +764,25 @@ multiclass FLAT_Global_Atomic_Pseudo<
   RegisterClass data_rc = vdst_rc> {
   defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
   defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+}
+
+class FLAT_Discard_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayStore = 1;
+}
+
+multiclass FLAT_Global_Discard_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Discard_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Discard_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+      let PseudoInstr = opName#"_SADDR";
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1166,6 +1225,17 @@ let SubtargetPredicate = HasVectorPrefetch in {
   def FLAT_PREFETCH_B8    : FLAT_Prefetch_Pseudo<"flat_prefetch_b8">;
   defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
 }
+
+def FLAT_DISCARD_B32   : FLAT_Discard_Pseudo<"flat_discard_b32">;
+def FLAT_DISCARD_B128  : FLAT_Discard_Pseudo<"flat_discard_b128">;
+def FLAT_DISCARD_B1024 : FLAT_Discard_Pseudo<"flat_discard_b1024">;
+
+defm GLOBAL_DISCARD_B32   : FLAT_Global_Discard_Pseudo<"global_discard_b32">;
+defm GLOBAL_DISCARD_B128  : FLAT_Global_Discard_Pseudo<"global_discard_b128">;
+defm GLOBAL_DISCARD_B1024 : FLAT_Global_Discard_Pseudo<"global_discard_b1024">;
+
+defm SCRATCH_DISCARD_B32  : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b32">;
+defm SCRATCH_DISCARD_B128 : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b128">;
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -2095,6 +2165,98 @@ let SubtargetPredicate = HasVectorPrefetch in {
     let AddedComplexity = 30;
   }
 }
+
+
+
+//===----------------------------------------------------------------------===//
+// GFX13: Discard instruction patterns
+//===----------------------------------------------------------------------===//
+foreach size = ["b32", "b128", "b1024"] in {
+def discard_flat_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def discard_global_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+  }];
+}
+} // foreach size = ["b32", "b128", "b1024"]
+
+foreach size = ["b32", "b128"] in {
+def discard_scratch_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+  }];
+}
+} // foreach size = ["b32", "b128"]
+
+class FlatDiscardPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class FlatDiscardSignedPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class GlobalDiscardSaddrPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 timm:$cpol)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+multiclass GlobalFlatDiscardPats <FLAT_Pseudo inst, PatFrag intrPat> {
+  def : FlatDiscardSignedPat<inst, intrPat> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalDiscardSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), intrPat> {
+    let AddedComplexity = 11;
+  }
+}
+
+class ScratchDiscardSignedPat<FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (ScratchOffset (i32 VGPR_32:$vaddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class ScratchDiscardSaddrPat<FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (ScratchSAddr (i32 SGPR_32:$saddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $saddr, $offset, $cpol)
+>;
+
+multiclass ScratchFlatDiscardPats<FLAT_Pseudo inst, PatFrag intrPat> {
+  def : ScratchDiscardSignedPat <inst, intrPat> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchDiscardSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), intrPat> {
+    let AddedComplexity = 26;
+  }
+}
+
+def : FlatDiscardPat <FLAT_DISCARD_B32,   discard_flat_b32>;
+def : FlatDiscardPat <FLAT_DISCARD_B128,  discard_flat_b128>;
+def : FlatDiscardPat <FLAT_DISCARD_B1024, discard_flat_b1024>;
+
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B32,   discard_global_b32>;
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B128,  discard_global_b128>;
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B1024, discard_global_b1024>;
+
+defm : ScratchFlatDiscardPats <SCRATCH_DISCARD_B32,  discard_scratch_b32>;
+defm : ScratchFlatDiscardPats <SCRATCH_DISCARD_B128, discard_scratch_b128>;
 
 //===----------------------------------------------------------------------===//
 // Target
@@ -3329,6 +3491,9 @@ defm FLAT_ATOMIC_COND_SUB_U32         : VFLAT_Real_Atomics_gfx13<0x47>;
 defm FLAT_PREFETCH_B8                 : VFLAT_Real_Base_gfx13<0x048>;
 defm FLAT_ATOMIC_PK_ADD_F16           : VFLAT_Real_Atomics_gfx13<0x4a>;
 defm FLAT_ATOMIC_PK_ADD_BF16          : VFLAT_Real_Atomics_gfx13<0x4b>;
+defm FLAT_DISCARD_B32                 : VFLAT_Real_Base_gfx13<0x04c>;
+defm FLAT_DISCARD_B128                : VFLAT_Real_Base_gfx13<0x04d>;
+defm FLAT_DISCARD_B1024               : VFLAT_Real_Base_gfx13<0x04e>;
 defm FLAT_ATOMIC_SWAP_X2              : VFLAT_Real_Atomics_gfx13<0x50, "flat_atomic_swap_b64">;
 defm FLAT_ATOMIC_CMPSWAP_X2           : VFLAT_Real_Atomics_gfx13<0x51, "flat_atomic_cmpswap_b64">;
 defm FLAT_ATOMIC_ADD_X2               : VFLAT_Real_Atomics_gfx13<0x52, "flat_atomic_add_u64">;
@@ -3401,6 +3566,9 @@ defm GLOBAL_ATOMIC_COND_SUB_U32       : VGLOBAL_Real_Atomics_gfx13<0x47>;
 defm GLOBAL_PREFETCH_B8               : VGLOBAL_Real_AllAddr_gfx13<0x48>;
 defm GLOBAL_ATOMIC_PK_ADD_F16         : VGLOBAL_Real_Atomics_gfx13<0x4a>;
 defm GLOBAL_ATOMIC_PK_ADD_BF16        : VGLOBAL_Real_Atomics_gfx13<0x4b>;
+defm GLOBAL_DISCARD_B32               : VGLOBAL_Real_AllAddr_gfx13<0x4c>;
+defm GLOBAL_DISCARD_B128              : VGLOBAL_Real_AllAddr_gfx13<0x4d>;
+defm GLOBAL_DISCARD_B1024             : VGLOBAL_Real_AllAddr_gfx13<0x4e>;
 defm GLOBAL_ATOMIC_SWAP_X2            : VGLOBAL_Real_Atomics_gfx13<0x50, "global_atomic_swap_b64">;
 defm GLOBAL_ATOMIC_CMPSWAP_X2         : VGLOBAL_Real_Atomics_gfx13<0x51, "global_atomic_cmpswap_b64">;
 defm GLOBAL_ATOMIC_ADD_X2             : VGLOBAL_Real_Atomics_gfx13<0x52, "global_atomic_add_u64">;
@@ -3468,3 +3636,5 @@ defm SCRATCH_LOAD_SHORT_D16           : VSCRATCH_Real_AllAddr_gfx13<0x24, "scrat
 defm SCRATCH_LOAD_SHORT_D16_HI        : VSCRATCH_Real_AllAddr_gfx13<0x25, "scratch_load_d16_hi_b16">;
 defm SCRATCH_LOAD_BLOCK               : VSCRATCH_Real_AllAddr_gfx13<0x43>;
 defm SCRATCH_STORE_BLOCK              : VSCRATCH_Real_AllAddr_gfx13<0x44>;
+defm SCRATCH_DISCARD_B32              : VSCRATCH_Real_AllAddr_gfx13<0x4c>;
+defm SCRATCH_DISCARD_B128             : VSCRATCH_Real_AllAddr_gfx13<0x4d>;
