@@ -438,8 +438,8 @@ define void @caller() nounwind {
 ; ILP32-NEXT:    addi sp, sp, -272
 ; ILP32-NEXT:    sw ra, 268(sp) # 4-byte Folded Spill
 ; ILP32-NEXT:    sw s0, 264(sp) # 4-byte Folded Spill
-; ILP32-NEXT:    lui a0, %hi(var)
-; ILP32-NEXT:    addi s0, a0, %lo(var)
+; ILP32-NEXT:    lui s0, %hi(var)
+; ILP32-NEXT:    addi s0, s0, %lo(var)
 ; ILP32-NEXT:    fld fa5, 0(s0)
 ; ILP32-NEXT:    fsd fa5, 256(sp) # 8-byte Folded Spill
 ; ILP32-NEXT:    fld fa5, 8(s0)
@@ -579,8 +579,8 @@ define void @caller() nounwind {
 ; LP64-NEXT:    addi sp, sp, -272
 ; LP64-NEXT:    sd ra, 264(sp) # 8-byte Folded Spill
 ; LP64-NEXT:    sd s0, 256(sp) # 8-byte Folded Spill
-; LP64-NEXT:    lui a0, %hi(var)
-; LP64-NEXT:    addi s0, a0, %lo(var)
+; LP64-NEXT:    lui s0, %hi(var)
+; LP64-NEXT:    addi s0, s0, %lo(var)
 ; LP64-NEXT:    fld fa5, 0(s0)
 ; LP64-NEXT:    fsd fa5, 248(sp) # 8-byte Folded Spill
 ; LP64-NEXT:    fld fa5, 8(s0)
@@ -720,8 +720,8 @@ define void @caller() nounwind {
 ; LP64E-NEXT:    addi sp, sp, -272
 ; LP64E-NEXT:    sd ra, 264(sp) # 8-byte Folded Spill
 ; LP64E-NEXT:    sd s0, 256(sp) # 8-byte Folded Spill
-; LP64E-NEXT:    lui a0, %hi(var)
-; LP64E-NEXT:    addi s0, a0, %lo(var)
+; LP64E-NEXT:    lui s0, %hi(var)
+; LP64E-NEXT:    addi s0, s0, %lo(var)
 ; LP64E-NEXT:    fld fa5, 0(s0)
 ; LP64E-NEXT:    fsd fa5, 248(sp) # 8-byte Folded Spill
 ; LP64E-NEXT:    fld fa5, 8(s0)
@@ -873,8 +873,8 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    fsd fs9, 184(sp) # 8-byte Folded Spill
 ; ILP32D-NEXT:    fsd fs10, 176(sp) # 8-byte Folded Spill
 ; ILP32D-NEXT:    fsd fs11, 168(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    lui a0, %hi(var)
-; ILP32D-NEXT:    addi s0, a0, %lo(var)
+; ILP32D-NEXT:    lui s0, %hi(var)
+; ILP32D-NEXT:    addi s0, s0, %lo(var)
 ; ILP32D-NEXT:    fld fa5, 0(s0)
 ; ILP32D-NEXT:    fsd fa5, 160(sp) # 8-byte Folded Spill
 ; ILP32D-NEXT:    fld fa5, 8(s0)
@@ -1014,8 +1014,8 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    fsd fs9, 176(sp) # 8-byte Folded Spill
 ; LP64D-NEXT:    fsd fs10, 168(sp) # 8-byte Folded Spill
 ; LP64D-NEXT:    fsd fs11, 160(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    lui a0, %hi(var)
-; LP64D-NEXT:    addi s0, a0, %lo(var)
+; LP64D-NEXT:    lui s0, %hi(var)
+; LP64D-NEXT:    addi s0, s0, %lo(var)
 ; LP64D-NEXT:    fld fa5, 0(s0)
 ; LP64D-NEXT:    fsd fa5, 152(sp) # 8-byte Folded Spill
 ; LP64D-NEXT:    fld fa5, 8(s0)

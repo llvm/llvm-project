@@ -168,8 +168,8 @@ define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 define dso_local i32 @lw_sw_global(i32 %a) nounwind {
 ; RV32I-LABEL: lw_sw_global:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, %hi(G)
-; RV32I-NEXT:    addi a2, a1, %lo(G)
+; RV32I-NEXT:    lui a2, %hi(G)
+; RV32I-NEXT:    addi a2, a2, %lo(G)
 ; RV32I-NEXT:    lw a1, 0(a2)
 ; RV32I-NEXT:    sw a0, 0(a2)
 ; RV32I-NEXT:    lw zero, 36(a2)

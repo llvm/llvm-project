@@ -721,8 +721,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32IZCMP-NEXT:    andi a0, a0, -16
 ; RV32IZCMP-NEXT:    sub s2, sp, a0
 ; RV32IZCMP-NEXT:    mv sp, s2
-; RV32IZCMP-NEXT:    lui a0, %hi(var)
-; RV32IZCMP-NEXT:    addi s1, a0, %lo(var)
+; RV32IZCMP-NEXT:    lui s1, %hi(var)
+; RV32IZCMP-NEXT:    addi s1, s1, %lo(var)
 ; RV32IZCMP-NEXT:    lw s3, 0(s1)
 ; RV32IZCMP-NEXT:    lw s4, 4(s1)
 ; RV32IZCMP-NEXT:    lw s5, 8(s1)
@@ -761,8 +761,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64IZCMP-NEXT:    andi a0, a0, -16
 ; RV64IZCMP-NEXT:    sub s2, sp, a0
 ; RV64IZCMP-NEXT:    mv sp, s2
-; RV64IZCMP-NEXT:    lui a0, %hi(var)
-; RV64IZCMP-NEXT:    addi s1, a0, %lo(var)
+; RV64IZCMP-NEXT:    lui s1, %hi(var)
+; RV64IZCMP-NEXT:    addi s1, s1, %lo(var)
 ; RV64IZCMP-NEXT:    lw s3, 0(s1)
 ; RV64IZCMP-NEXT:    lw s4, 4(s1)
 ; RV64IZCMP-NEXT:    lw s5, 8(s1)
@@ -799,8 +799,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32IZCMP-SR-NEXT:    andi a0, a0, -16
 ; RV32IZCMP-SR-NEXT:    sub s2, sp, a0
 ; RV32IZCMP-SR-NEXT:    mv sp, s2
-; RV32IZCMP-SR-NEXT:    lui a0, %hi(var)
-; RV32IZCMP-SR-NEXT:    addi s1, a0, %lo(var)
+; RV32IZCMP-SR-NEXT:    lui s1, %hi(var)
+; RV32IZCMP-SR-NEXT:    addi s1, s1, %lo(var)
 ; RV32IZCMP-SR-NEXT:    lw s3, 0(s1)
 ; RV32IZCMP-SR-NEXT:    lw s4, 4(s1)
 ; RV32IZCMP-SR-NEXT:    lw s5, 8(s1)
@@ -839,8 +839,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64IZCMP-SR-NEXT:    andi a0, a0, -16
 ; RV64IZCMP-SR-NEXT:    sub s2, sp, a0
 ; RV64IZCMP-SR-NEXT:    mv sp, s2
-; RV64IZCMP-SR-NEXT:    lui a0, %hi(var)
-; RV64IZCMP-SR-NEXT:    addi s1, a0, %lo(var)
+; RV64IZCMP-SR-NEXT:    lui s1, %hi(var)
+; RV64IZCMP-SR-NEXT:    addi s1, s1, %lo(var)
 ; RV64IZCMP-SR-NEXT:    lw s3, 0(s1)
 ; RV64IZCMP-SR-NEXT:    lw s4, 4(s1)
 ; RV64IZCMP-SR-NEXT:    lw s5, 8(s1)
@@ -886,8 +886,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub s1, sp, a0
 ; RV32I-NEXT:    mv sp, s1
-; RV32I-NEXT:    lui a0, %hi(var)
-; RV32I-NEXT:    addi s2, a0, %lo(var)
+; RV32I-NEXT:    lui s2, %hi(var)
+; RV32I-NEXT:    addi s2, s2, %lo(var)
 ; RV32I-NEXT:    lw s3, 0(s2)
 ; RV32I-NEXT:    lw s4, 4(s2)
 ; RV32I-NEXT:    lw s5, 8(s2)
@@ -944,8 +944,8 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub s1, sp, a0
 ; RV64I-NEXT:    mv sp, s1
-; RV64I-NEXT:    lui a0, %hi(var)
-; RV64I-NEXT:    addi s2, a0, %lo(var)
+; RV64I-NEXT:    lui s2, %hi(var)
+; RV64I-NEXT:    addi s2, s2, %lo(var)
 ; RV64I-NEXT:    lw s3, 0(s2)
 ; RV64I-NEXT:    lw s4, 4(s2)
 ; RV64I-NEXT:    lw s5, 8(s2)

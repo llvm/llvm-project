@@ -1060,8 +1060,8 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    sw s9, 100(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a0, %hi(var)
-; RV32I-NEXT:    addi s0, a0, %lo(var)
+; RV32I-NEXT:    lui s0, %hi(var)
+; RV32I-NEXT:    addi s0, s0, %lo(var)
 ; RV32I-NEXT:    lw a0, 0(s0)
 ; RV32I-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lw a0, 4(s0)
@@ -1191,8 +1191,8 @@ define void @caller() nounwind {
 ; RV32I-ILP32E-NEXT:    sw ra, 132(sp) # 4-byte Folded Spill
 ; RV32I-ILP32E-NEXT:    sw s0, 128(sp) # 4-byte Folded Spill
 ; RV32I-ILP32E-NEXT:    sw s1, 124(sp) # 4-byte Folded Spill
-; RV32I-ILP32E-NEXT:    lui a0, %hi(var)
-; RV32I-ILP32E-NEXT:    addi s0, a0, %lo(var)
+; RV32I-ILP32E-NEXT:    lui s0, %hi(var)
+; RV32I-ILP32E-NEXT:    addi s0, s0, %lo(var)
 ; RV32I-ILP32E-NEXT:    lw a0, 0(s0)
 ; RV32I-ILP32E-NEXT:    sw a0, 120(sp) # 4-byte Folded Spill
 ; RV32I-ILP32E-NEXT:    lw a0, 4(s0)
@@ -1343,8 +1343,8 @@ define void @caller() nounwind {
 ; RV32I-WITH-FP-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
 ; RV32I-WITH-FP-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
 ; RV32I-WITH-FP-NEXT:    addi s0, sp, 144
-; RV32I-WITH-FP-NEXT:    lui a0, %hi(var)
-; RV32I-WITH-FP-NEXT:    addi s1, a0, %lo(var)
+; RV32I-WITH-FP-NEXT:    lui s1, %hi(var)
+; RV32I-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV32I-WITH-FP-NEXT:    lw a0, 0(s1)
 ; RV32I-WITH-FP-NEXT:    sw a0, -56(s0) # 4-byte Folded Spill
 ; RV32I-WITH-FP-NEXT:    lw a0, 4(s1)
@@ -1474,8 +1474,8 @@ define void @caller() nounwind {
 ; RV32IZCMP:       # %bb.0:
 ; RV32IZCMP-NEXT:    cm.push {ra, s0-s11}, -112
 ; RV32IZCMP-NEXT:    addi sp, sp, -48
-; RV32IZCMP-NEXT:    lui a0, %hi(var)
-; RV32IZCMP-NEXT:    addi s0, a0, %lo(var)
+; RV32IZCMP-NEXT:    lui s0, %hi(var)
+; RV32IZCMP-NEXT:    addi s0, s0, %lo(var)
 ; RV32IZCMP-NEXT:    lw a0, 0(s0)
 ; RV32IZCMP-NEXT:    sw a0, 92(sp) # 4-byte Folded Spill
 ; RV32IZCMP-NEXT:    lw a0, 4(s0)
@@ -1603,8 +1603,8 @@ define void @caller() nounwind {
 ; RV32IZCMP-WITH-FP-NEXT:    sw s10, 96(sp) # 4-byte Folded Spill
 ; RV32IZCMP-WITH-FP-NEXT:    sw s11, 92(sp) # 4-byte Folded Spill
 ; RV32IZCMP-WITH-FP-NEXT:    addi s0, sp, 144
-; RV32IZCMP-WITH-FP-NEXT:    lui a0, %hi(var)
-; RV32IZCMP-WITH-FP-NEXT:    addi s1, a0, %lo(var)
+; RV32IZCMP-WITH-FP-NEXT:    lui s1, %hi(var)
+; RV32IZCMP-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV32IZCMP-WITH-FP-NEXT:    lw a0, 0(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a0, -56(s0) # 4-byte Folded Spill
 ; RV32IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)
@@ -1746,8 +1746,8 @@ define void @caller() nounwind {
 ; RV64I-NEXT:    sd s9, 184(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s10, 176(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s11, 168(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a0, %hi(var)
-; RV64I-NEXT:    addi s0, a0, %lo(var)
+; RV64I-NEXT:    lui s0, %hi(var)
+; RV64I-NEXT:    addi s0, s0, %lo(var)
 ; RV64I-NEXT:    lw a0, 0(s0)
 ; RV64I-NEXT:    sd a0, 160(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lw a0, 4(s0)
@@ -1877,8 +1877,8 @@ define void @caller() nounwind {
 ; RV64I-LP64E-NEXT:    sd ra, 264(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-NEXT:    sd s0, 256(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-NEXT:    sd s1, 248(sp) # 8-byte Folded Spill
-; RV64I-LP64E-NEXT:    lui a0, %hi(var)
-; RV64I-LP64E-NEXT:    addi s0, a0, %lo(var)
+; RV64I-LP64E-NEXT:    lui s0, %hi(var)
+; RV64I-LP64E-NEXT:    addi s0, s0, %lo(var)
 ; RV64I-LP64E-NEXT:    lw a0, 0(s0)
 ; RV64I-LP64E-NEXT:    sd a0, 240(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-NEXT:    lw a0, 4(s0)
@@ -2029,8 +2029,8 @@ define void @caller() nounwind {
 ; RV64I-WITH-FP-NEXT:    sd s10, 192(sp) # 8-byte Folded Spill
 ; RV64I-WITH-FP-NEXT:    sd s11, 184(sp) # 8-byte Folded Spill
 ; RV64I-WITH-FP-NEXT:    addi s0, sp, 288
-; RV64I-WITH-FP-NEXT:    lui a0, %hi(var)
-; RV64I-WITH-FP-NEXT:    addi s1, a0, %lo(var)
+; RV64I-WITH-FP-NEXT:    lui s1, %hi(var)
+; RV64I-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV64I-WITH-FP-NEXT:    lw a0, 0(s1)
 ; RV64I-WITH-FP-NEXT:    sd a0, -112(s0) # 8-byte Folded Spill
 ; RV64I-WITH-FP-NEXT:    lw a0, 4(s1)
@@ -2160,8 +2160,8 @@ define void @caller() nounwind {
 ; RV64IZCMP:       # %bb.0:
 ; RV64IZCMP-NEXT:    cm.push {ra, s0-s11}, -160
 ; RV64IZCMP-NEXT:    addi sp, sp, -128
-; RV64IZCMP-NEXT:    lui a0, %hi(var)
-; RV64IZCMP-NEXT:    addi s0, a0, %lo(var)
+; RV64IZCMP-NEXT:    lui s0, %hi(var)
+; RV64IZCMP-NEXT:    addi s0, s0, %lo(var)
 ; RV64IZCMP-NEXT:    lw a0, 0(s0)
 ; RV64IZCMP-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
 ; RV64IZCMP-NEXT:    lw a0, 4(s0)
@@ -2289,8 +2289,8 @@ define void @caller() nounwind {
 ; RV64IZCMP-WITH-FP-NEXT:    sd s10, 192(sp) # 8-byte Folded Spill
 ; RV64IZCMP-WITH-FP-NEXT:    sd s11, 184(sp) # 8-byte Folded Spill
 ; RV64IZCMP-WITH-FP-NEXT:    addi s0, sp, 288
-; RV64IZCMP-WITH-FP-NEXT:    lui a0, %hi(var)
-; RV64IZCMP-WITH-FP-NEXT:    addi s1, a0, %lo(var)
+; RV64IZCMP-WITH-FP-NEXT:    lui s1, %hi(var)
+; RV64IZCMP-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV64IZCMP-WITH-FP-NEXT:    lw a0, 0(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a0, -112(s0) # 8-byte Folded Spill
 ; RV64IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)

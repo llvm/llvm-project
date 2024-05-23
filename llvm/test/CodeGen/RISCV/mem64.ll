@@ -213,8 +213,8 @@ define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I-LABEL: ld_sd_global:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, %hi(G)
-; RV64I-NEXT:    addi a2, a1, %lo(G)
+; RV64I-NEXT:    lui a2, %hi(G)
+; RV64I-NEXT:    addi a2, a2, %lo(G)
 ; RV64I-NEXT:    ld a1, 0(a2)
 ; RV64I-NEXT:    sd a0, 0(a2)
 ; RV64I-NEXT:    ld zero, 72(a2)
