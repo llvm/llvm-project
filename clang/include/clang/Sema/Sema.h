@@ -177,6 +177,7 @@ class SemaOpenMP;
 class SemaPseudoObject;
 class SemaRISCV;
 class SemaSYCL;
+class SemaX86;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -1037,6 +1038,11 @@ public:
     return *SYCLPtr;
   }
 
+  SemaX86 &X86() {
+    assert(X86Ptr);
+    return *X86Ptr;
+  }
+
   /// Source of additional semantic information.
   IntrusiveRefCntPtr<ExternalSemaSource> ExternalSource;
 
@@ -1076,6 +1082,7 @@ private:
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
+  std::unique_ptr<SemaX86> X86Ptr;
 
   ///@}
 
@@ -2122,16 +2129,6 @@ private:
                            CallExpr *TheCall);
   bool CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSystemZBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
-                                         ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
-                                            ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
