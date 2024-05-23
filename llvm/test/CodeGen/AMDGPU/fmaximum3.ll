@@ -89,8 +89,7 @@ define float @v_fmaximum3_f32(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
   %max1 = call float @llvm.maximum.f32(float %max0, float %c)
@@ -126,8 +125,7 @@ define float @v_fmaximum3_f32_commute(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_commute:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v2, v0, v0
+; GFX950-NEXT:    v_maximum3_f32 v0, v2, v0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
   %max1 = call float @llvm.maximum.f32(float %c, float %max0)
@@ -161,9 +159,9 @@ define amdgpu_ps i32 @s_fmaximum3_f32(float inreg %a, float inreg %b, float inre
 ;
 ; GFX950-LABEL: s_fmaximum3_f32:
 ; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s1, s1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s2, s2
+; GFX950-NEXT:    v_mov_b32_e32 v0, s1
+; GFX950-NEXT:    v_mov_b32_e32 v1, s2
+; GFX950-NEXT:    v_maximum3_f32 v0, s0, v0, v1
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ; return to shader part epilog
@@ -203,8 +201,7 @@ define float @v_fmaximum3_f32_fabs0(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fabs0:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %max0 = call float @llvm.maximum.f32(float %a.fabs, float %b)
@@ -241,8 +238,7 @@ define float @v_fmaximum3_f32_fabs1(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fabs1:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v1|, |v1|
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v1|, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %b.fabs = call float @llvm.fabs.f32(float %b)
   %max0 = call float @llvm.maximum.f32(float %a, float %b.fabs)
@@ -279,8 +275,7 @@ define float @v_fmaximum3_f32_fabs2(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fabs2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v2|, |v2|
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, |v2|
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %c.fabs = call float @llvm.fabs.f32(float %c)
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
@@ -317,8 +312,7 @@ define float @v_fmaximum3_f32_fabs_all(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fabs_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v1|, |v1|
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v2|, |v2|
+; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v1|, |v2|
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %b.fabs = call float @llvm.fabs.f32(float %b)
@@ -357,8 +351,7 @@ define float @v_fmaximum3_f32_fneg_all(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fneg_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v1, -v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v2, -v2
+; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v1, -v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg float %a
   %b.fneg = fneg float %b
@@ -397,8 +390,7 @@ define float @v_fmaximum3_f32_fneg_fabs_all(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fneg_fabs_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, -|v0|, -|v1|, -|v1|
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -|v2|, -|v2|
+; GFX950-NEXT:    v_maximum3_f32 v0, -|v0|, -|v1|, -|v2|
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %b.fabs = call float @llvm.fabs.f32(float %b)
@@ -440,8 +432,7 @@ define float @v_fmaximum3_f32_fneg0(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fneg0:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, -v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, -v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg float %a
   %max0 = call float @llvm.maximum.f32(float %a.fneg, float %b)
@@ -478,8 +469,7 @@ define float @v_fmaximum3_f32_fneg1(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fneg1:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v1, -v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %b.fneg = fneg float %b
   %max0 = call float @llvm.maximum.f32(float %a, float %b.fneg)
@@ -516,8 +506,7 @@ define float @v_fmaximum3_f32_fneg2(float %a, float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_fneg2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v2, -v2
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, -v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %c.fneg = fneg float %c
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
@@ -555,8 +544,7 @@ define float @v_fmaximum3_f32_const0(float %b, float %c) {
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b32 s0, 0x41000000
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, s0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float 8.0, float %b)
   %max1 = call float @llvm.maximum.f32(float %max0, float %c)
@@ -592,9 +580,8 @@ define float @v_fmaximum3_f32__const2(float %a, float %b) {
 ; GFX950-LABEL: v_fmaximum3_f32__const2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
 ; GFX950-NEXT:    s_mov_b32 s0, 0x41000000
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, s0
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
   %max1 = call float @llvm.maximum.f32(float %max0, float 8.0)
@@ -630,8 +617,7 @@ define float @v_fmaximum3_f32_inlineimm0(float %b, float %c) {
 ; GFX950-LABEL: v_fmaximum3_f32_inlineimm0:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 4.0, 4.0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, 4.0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float 4.0, float %b)
   %max1 = call float @llvm.maximum.f32(float %max0, float %c)
@@ -667,8 +653,7 @@ define float @v_fmaximum3_f32__inlineimm(float %a, float %b) {
 ; GFX950-LABEL: v_fmaximum3_f32__inlineimm:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 4.0, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v1, 4.0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
   %max1 = call float @llvm.maximum.f32(float %max0, float 4.0)
@@ -707,9 +692,8 @@ define float @v_fmaximum3_f32_const1_const2(float %a) {
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b32 s0, 0x41000000
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, s0
-; GFX950-NEXT:    s_mov_b32 s0, 0x41800000
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, s0
+; GFX950-NEXT:    v_mov_b32_e32 v1, 0x41800000
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, s0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call float @llvm.maximum.f32(float %a, float 8.0)
   %max1 = call float @llvm.maximum.f32(float %max0, float 16.0)
@@ -798,10 +782,8 @@ define <2 x float> @v_fmaximum3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float
 ; GFX950-LABEL: v_fmaximum3_v2f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
-; GFX950-NEXT:    v_maximum3_f32 v0, v4, v0, v0
-; GFX950-NEXT:    v_maximum3_f32 v1, v5, v1, v1
+; GFX950-NEXT:    v_maximum3_f32 v0, v4, v0, v2
+; GFX950-NEXT:    v_maximum3_f32 v1, v5, v1, v3
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %a, <2 x float> %b)
   %max1 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %c, <2 x float> %max0)
@@ -890,10 +872,8 @@ define <2 x float> @v_fmaximum3_v2f32_commute(<2 x float> %a, <2 x float> %b, <2
 ; GFX950-LABEL: v_fmaximum3_v2f32_commute:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v4, v4
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v5, v5
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v4
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, v5
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %a, <2 x float> %b)
   %max1 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %max0, <2 x float> %c)
@@ -974,10 +954,8 @@ define <2 x float> @v_fmaximum3_v2f32__fabs_all(<2 x float> %a, <2 x float> %b, 
 ; GFX950-LABEL: v_fmaximum3_v2f32__fabs_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, |v1|, |v3|, |v3|
-; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v2|, |v2|
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v4|, |v4|
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, |v5|, |v5|
+; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v2|, |v4|
+; GFX950-NEXT:    v_maximum3_f32 v1, |v1|, |v3|, |v5|
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
   %b.fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %b)
@@ -1061,10 +1039,8 @@ define <2 x float> @v_fmaximum3_v2f32__fneg_all(<2 x float> %a, <2 x float> %b, 
 ; GFX950-LABEL: v_fmaximum3_v2f32__fneg_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, -v1, -v3, -v3
-; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v2, -v2
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v4, -v4
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, -v5, -v5
+; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v2, -v4
+; GFX950-NEXT:    v_maximum3_f32 v1, -v1, -v3, -v5
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg <2 x float> %a
   %b.fneg = fneg <2 x float> %b
@@ -1138,10 +1114,8 @@ define <2 x float> @v_fmaximum3_v2f32__inlineimm1(<2 x float> %a, <2 x float> %c
 ; GFX950-LABEL: v_fmaximum3_v2f32__inlineimm1:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, 2.0, 2.0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 2.0, 2.0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, v3
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, 2.0, v2
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, 2.0, v3
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %a, <2 x float> <float 2.0, float 2.0>)
   %max1 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %max0, <2 x float> %c)
@@ -1212,10 +1186,8 @@ define <2 x float> @v_fmaximum3_v2f32__inlineimm2(<2 x float> %a, <2 x float> %b
 ; GFX950-LABEL: v_fmaximum3_v2f32__inlineimm2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, v2
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 4.0, 4.0
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, 4.0, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v2, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, v3, 4.0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %a, <2 x float> %b)
   %max1 = call <2 x float> @llvm.maximum.v2f32(<2 x float> %max0, <2 x float> <float 4.0, float 4.0>)
@@ -1335,12 +1307,9 @@ define <3 x float> @v_fmaximum3_v3f32(<3 x float> %a, <3 x float> %b, <3 x float
 ; GFX950-LABEL: v_fmaximum3_v3f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, v5
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, v4
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v6, v0, v0
-; GFX950-NEXT:    v_maximum3_f32 v1, v7, v1, v1
-; GFX950-NEXT:    v_maximum3_f32 v2, v8, v2, v2
+; GFX950-NEXT:    v_maximum3_f32 v0, v6, v0, v3
+; GFX950-NEXT:    v_maximum3_f32 v1, v7, v1, v4
+; GFX950-NEXT:    v_maximum3_f32 v2, v8, v2, v5
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %a, <3 x float> %b)
   %max1 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %c, <3 x float> %max0)
@@ -1460,12 +1429,9 @@ define <3 x float> @v_fmaximum3_v3f32_commute(<3 x float> %a, <3 x float> %b, <3
 ; GFX950-LABEL: v_fmaximum3_v3f32_commute:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, v5
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, v4
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v6, v6
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v7, v7
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, v8, v8
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, v6
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, v7
+; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, v8
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %a, <3 x float> %b)
   %max1 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %max0, <3 x float> %c)
@@ -1573,12 +1539,9 @@ define <3 x float> @v_fmaximum3_v3f32__fabs_all(<3 x float> %a, <3 x float> %b, 
 ; GFX950-LABEL: v_fmaximum3_v3f32__fabs_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, |v2|, |v5|, |v5|
-; GFX950-NEXT:    v_maximum3_f32 v1, |v1|, |v4|, |v4|
-; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v3|, |v3|
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, |v6|, |v6|
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, |v7|, |v7|
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, |v8|, |v8|
+; GFX950-NEXT:    v_maximum3_f32 v0, |v0|, |v3|, |v6|
+; GFX950-NEXT:    v_maximum3_f32 v1, |v1|, |v4|, |v7|
+; GFX950-NEXT:    v_maximum3_f32 v2, |v2|, |v5|, |v8|
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %a)
   %b.fabs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %b)
@@ -1689,12 +1652,9 @@ define <3 x float> @v_fmaximum3_v3f32__fneg_all(<3 x float> %a, <3 x float> %b, 
 ; GFX950-LABEL: v_fmaximum3_v3f32__fneg_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, -v2, -v5, -v5
-; GFX950-NEXT:    v_maximum3_f32 v1, -v1, -v4, -v4
-; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v3, -v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, -v6, -v6
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, -v7, -v7
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, -v8, -v8
+; GFX950-NEXT:    v_maximum3_f32 v0, -v0, -v3, -v6
+; GFX950-NEXT:    v_maximum3_f32 v1, -v1, -v4, -v7
+; GFX950-NEXT:    v_maximum3_f32 v2, -v2, -v5, -v8
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg <3 x float> %a
   %b.fneg = fneg <3 x float> %b
@@ -1790,12 +1750,9 @@ define <3 x float> @v_fmaximum3_v3f32__inlineimm1(<3 x float> %a, <3 x float> %c
 ; GFX950-LABEL: v_fmaximum3_v3f32__inlineimm1:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, 2.0, 2.0
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, 2.0, 2.0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 2.0, 2.0
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, v4
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, v5
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, 2.0, v3
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, 2.0, v4
+; GFX950-NEXT:    v_maximum3_f32 v2, v2, 2.0, v5
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %a, <3 x float> <float 2.0, float 2.0, float 2.0>)
   %max1 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %max0, <3 x float> %c)
@@ -1888,12 +1845,9 @@ define <3 x float> @v_fmaximum3_v3f32__inlineimm2(<3 x float> %a, <3 x float> %b
 ; GFX950-LABEL: v_fmaximum3_v3f32__inlineimm2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, v5
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, v4
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, v3
-; GFX950-NEXT:    v_maximum3_f32 v0, v0, 4.0, 4.0
-; GFX950-NEXT:    v_maximum3_f32 v1, v1, 4.0, 4.0
-; GFX950-NEXT:    v_maximum3_f32 v2, v2, 4.0, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v0, v0, v3, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v1, v1, v4, 4.0
+; GFX950-NEXT:    v_maximum3_f32 v2, v2, v5, 4.0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %a, <3 x float> %b)
   %max1 = call <3 x float> @llvm.maximum.v3f32(<3 x float> %max0, <3 x float> <float 4.0, float 4.0, float 4.0>)

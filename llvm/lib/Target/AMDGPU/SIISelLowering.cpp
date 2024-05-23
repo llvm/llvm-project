@@ -13399,7 +13399,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
-    return (VT == MVT::f32 || VT == MVT::f16) && Subtarget.hasIEEEMinMax3();
+    return (VT == MVT::f32 && Subtarget.hasMinimum3Maximum3F32()) ||
+           (VT == MVT::f16 && Subtarget.hasMinimum3Maximum3F16());
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
