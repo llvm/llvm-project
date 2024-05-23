@@ -27,10 +27,10 @@ define <vscale x 4 x half> @complex_mul_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.experimental.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %a)
+  %a.deinterleaved = tail call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %a)
   %a.real = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.experimental.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %b)
+  %b.deinterleaved = tail call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %b)
   %b.real = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %b.deinterleaved, 1
   %0 = fmul fast <vscale x 2 x half> %b.imag, %a.real
@@ -39,7 +39,7 @@ entry:
   %3 = fmul fast <vscale x 2 x half> %b.real, %a.real
   %4 = fmul fast <vscale x 2 x half> %a.imag, %b.imag
   %5 = fsub fast <vscale x 2 x half> %3, %4
-  %interleaved.vec = tail call <vscale x 4 x half> @llvm.experimental.vector.interleave2.nxv4f16(<vscale x 2 x half> %5, <vscale x 2 x half> %2)
+  %interleaved.vec = tail call <vscale x 4 x half> @llvm.vector.interleave2.nxv4f16(<vscale x 2 x half> %5, <vscale x 2 x half> %2)
   ret <vscale x 4 x half> %interleaved.vec
 }
 
@@ -54,10 +54,10 @@ define <vscale x 8 x half> @complex_mul_v8f16(<vscale x 8 x half> %a, <vscale x 
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.experimental.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %a)
+  %a.deinterleaved = tail call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %a)
   %a.real = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.experimental.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %b)
+  %b.deinterleaved = tail call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %b)
   %b.real = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %b.deinterleaved, 1
   %0 = fmul fast <vscale x 4 x half> %b.imag, %a.real
@@ -66,7 +66,7 @@ entry:
   %3 = fmul fast <vscale x 4 x half> %b.real, %a.real
   %4 = fmul fast <vscale x 4 x half> %a.imag, %b.imag
   %5 = fsub fast <vscale x 4 x half> %3, %4
-  %interleaved.vec = tail call <vscale x 8 x half> @llvm.experimental.vector.interleave2.nxv8f16(<vscale x 4 x half> %5, <vscale x 4 x half> %2)
+  %interleaved.vec = tail call <vscale x 8 x half> @llvm.vector.interleave2.nxv8f16(<vscale x 4 x half> %5, <vscale x 4 x half> %2)
   ret <vscale x 8 x half> %interleaved.vec
 }
 ; Expected to transform
@@ -84,10 +84,10 @@ define <vscale x 16 x half> @complex_mul_v16f16(<vscale x 16 x half> %a, <vscale
 ; CHECK-NEXT:    mov z0.d, z5.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.experimental.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %a)
+  %a.deinterleaved = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %a)
   %a.real = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.experimental.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %b)
+  %b.deinterleaved = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %b)
   %b.real = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %b.deinterleaved, 1
   %0 = fmul fast <vscale x 8 x half> %b.imag, %a.real
@@ -96,7 +96,7 @@ entry:
   %3 = fmul fast <vscale x 8 x half> %b.real, %a.real
   %4 = fmul fast <vscale x 8 x half> %a.imag, %b.imag
   %5 = fsub fast <vscale x 8 x half> %3, %4
-  %interleaved.vec = tail call <vscale x 16 x half> @llvm.experimental.vector.interleave2.nxv16f16(<vscale x 8 x half> %5, <vscale x 8 x half> %2)
+  %interleaved.vec = tail call <vscale x 16 x half> @llvm.vector.interleave2.nxv16f16(<vscale x 8 x half> %5, <vscale x 8 x half> %2)
   ret <vscale x 16 x half> %interleaved.vec
 }
 
@@ -123,10 +123,10 @@ define <vscale x 32 x half> @complex_mul_v32f16(<vscale x 32 x half> %a, <vscale
 ; CHECK-NEXT:    mov z2.d, z27.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.experimental.vector.deinterleave2.nxv32f16(<vscale x 32 x half> %a)
+  %a.deinterleaved = tail call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.vector.deinterleave2.nxv32f16(<vscale x 32 x half> %a)
   %a.real = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.experimental.vector.deinterleave2.nxv32f16(<vscale x 32 x half> %b)
+  %b.deinterleaved = tail call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.vector.deinterleave2.nxv32f16(<vscale x 32 x half> %b)
   %b.real = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %b.deinterleaved, 1
   %0 = fmul fast <vscale x 16 x half> %b.imag, %a.real
@@ -135,20 +135,20 @@ entry:
   %3 = fmul fast <vscale x 16 x half> %b.real, %a.real
   %4 = fmul fast <vscale x 16 x half> %a.imag, %b.imag
   %5 = fsub fast <vscale x 16 x half> %3, %4
-  %interleaved.vec = tail call <vscale x 32 x half> @llvm.experimental.vector.interleave2.nxv32f16(<vscale x 16 x half> %5, <vscale x 16 x half> %2)
+  %interleaved.vec = tail call <vscale x 32 x half> @llvm.vector.interleave2.nxv32f16(<vscale x 16 x half> %5, <vscale x 16 x half> %2)
   ret <vscale x 32 x half> %interleaved.vec
 }
 
-declare { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.experimental.vector.deinterleave2.nxv4f16(<vscale x 4 x half>)
-declare <vscale x 4 x half> @llvm.experimental.vector.interleave2.nxv4f16(<vscale x 2 x half>, <vscale x 2 x half>)
+declare { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half>)
+declare <vscale x 4 x half> @llvm.vector.interleave2.nxv4f16(<vscale x 2 x half>, <vscale x 2 x half>)
 
-declare { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.experimental.vector.deinterleave2.nxv8f16(<vscale x 8 x half>)
-declare <vscale x 8 x half> @llvm.experimental.vector.interleave2.nxv8f16(<vscale x 4 x half>, <vscale x 4 x half>)
+declare { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half>)
+declare <vscale x 8 x half> @llvm.vector.interleave2.nxv8f16(<vscale x 4 x half>, <vscale x 4 x half>)
 
-declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.experimental.vector.deinterleave2.nxv16f16(<vscale x 16 x half>)
-declare <vscale x 16 x half> @llvm.experimental.vector.interleave2.nxv16f16(<vscale x 8 x half>, <vscale x 8 x half>)
+declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half>)
+declare <vscale x 16 x half> @llvm.vector.interleave2.nxv16f16(<vscale x 8 x half>, <vscale x 8 x half>)
 
-declare { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.experimental.vector.deinterleave2.nxv32f16(<vscale x 32 x half>)
-declare <vscale x 32 x half> @llvm.experimental.vector.interleave2.nxv32f16(<vscale x 16 x half>, <vscale x 16 x half>)
+declare { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.vector.deinterleave2.nxv32f16(<vscale x 32 x half>)
+declare <vscale x 32 x half> @llvm.vector.interleave2.nxv32f16(<vscale x 16 x half>, <vscale x 16 x half>)
 
 

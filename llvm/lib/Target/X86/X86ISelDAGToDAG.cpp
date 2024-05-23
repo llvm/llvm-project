@@ -2353,7 +2353,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     SDValue Src = N.getOperand(0);
     unsigned SrcOpc = Src.getOpcode();
     if (((SrcOpc == ISD::ADD && Src->getFlags().hasNoUnsignedWrap()) ||
-         CurDAG->isADDLike(Src)) &&
+         CurDAG->isADDLike(Src, /*NoWrap=*/true)) &&
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);

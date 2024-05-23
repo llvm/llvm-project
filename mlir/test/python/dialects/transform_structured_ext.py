@@ -8,6 +8,7 @@ from mlir.dialects import transform
 from mlir.dialects import pdl
 from mlir.dialects.transform import structured
 from mlir.dialects.transform import pdl as transform_pdl
+from mlir.dialects.transform.extras import constant_param
 
 
 def run(f):
@@ -315,9 +316,9 @@ def testPadOpNoArgs(target):
 def testPadOpArgs(target):
     structured.PadOp(
         target,
+        pad_to_multiple_of=[128],
         padding_values=[FloatAttr.get_f32(42.0), StringAttr.get("0")],
         padding_dimensions=Attribute.parse("[1]"),
-        pad_to_multiple_of=[128],
         pack_paddings=[0],
         transpose_paddings=[[1, Attribute.parse("0")], Attribute.parse("[0, 1]")],
         copy_back_op="linalg.copy",
@@ -325,12 +326,28 @@ def testPadOpArgs(target):
     # CHECK-LABEL: TEST: testPadOpArgs
     # CHECK: transform.sequence
     # CHECK: transform.structured.pad
+    # CHECK-DAG: pad_to_multiple_of [128]
     # CHECK-DAG: copy_back_op = "linalg.copy"
     # CHECK-DAG: pack_paddings = [0]
-    # CHECK-DAG: pad_to_multiple_of = [128]
     # CHECK-DAG: padding_dimensions = [1]
     # CHECK-DAG: padding_values = [4.200000e+01 : f32, "0"]
     # CHECK-DAG: transpose_paddings = {{\[}}[1, 0], [0, 1]]
+
+
+@run
+@create_sequence
+def testPadOpArgsParam(target):
+    structured.PadOp(
+        target,
+        pad_to_multiple_of=[constant_param(128), Attribute.parse("2"), 10],
+        padding_dimensions=Attribute.parse("[0, 1, 2]"),
+    )
+    # CHECK-LABEL: TEST: testPadOpArgsParam
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[P:.*]] = transform.param.constant 128
+    # CHECK: transform.structured.pad
+    # CHECK-DAG: pad_to_multiple_of [%[[P]], 2, 10]
+    # CHECK-DAG: padding_dimensions = [0, 1, 2]
 
 
 @run

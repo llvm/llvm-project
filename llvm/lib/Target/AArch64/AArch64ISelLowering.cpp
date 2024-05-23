@@ -842,6 +842,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
   setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+  setOperationAction(ISD::GET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::SET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
@@ -1674,6 +1677,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv16i1, MVT::nxv16i8);
 
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
+
+    for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
@@ -4870,6 +4876,65 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
+SDValue AArch64TargetLowering::LowerGET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Truncate FPCR to 32 bits.
+  SDValue Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPCR);
+
+  return DAG.getMergeValues({Result, Chain}, DL);
+}
+
+SDValue AArch64TargetLowering::LowerSET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue Mode = Op->getOperand(1);
+
+  // Extend the specified value to 64 bits.
+  SDValue FPCR = DAG.getZExtOrTrunc(Mode, DL, MVT::i64);
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {
+      Chain, DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64), FPCR};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
+SDValue AArch64TargetLowering::LowerRESET_FPMODE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Clear bits that are not reserved.
+  SDValue FPSCRMasked = DAG.getNode(
+      ISD::AND, DL, MVT::i64, FPCR,
+      DAG.getConstant(AArch64::ReservedFPControlBits, DL, MVT::i64));
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {Chain,
+                    DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64),
+                    FPSCRMasked};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
 static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
                                  SDLoc DL, bool &IsMLA) {
   bool IsN0SExt = isSignExtended(N0, DAG);
@@ -5686,8 +5751,24 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::get_active_lane_mask: {
     SDValue ID =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl, MVT::i64);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(), ID,
-                       Op.getOperand(1), Op.getOperand(2));
+
+    EVT VT = Op.getValueType();
+    if (VT.isScalableVector())
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID, Op.getOperand(1),
+                         Op.getOperand(2));
+
+    // We can use the SVE whilelo instruction to lower this intrinsic by
+    // creating the appropriate sequence of scalable vector operations and
+    // then extracting a fixed-width subvector from the scalable vector.
+
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
+
+    SDValue Mask = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, WhileVT, ID,
+                               Op.getOperand(1), Op.getOperand(2));
+    SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, dl, ContainerVT, Mask);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, MaskAsInt,
+                       DAG.getVectorIdxConstant(0, dl));
   }
   case Intrinsic::aarch64_neon_uaddlv: {
     EVT OpVT = Op.getOperand(1).getValueType();
@@ -6484,6 +6565,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
     return LowerSET_ROUNDING(Op, DAG);
+  case ISD::GET_FPMODE:
+    return LowerGET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return LowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::MULHS:
@@ -15892,7 +15979,8 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  if (!VecTy->isScalableTy() && !Subtarget->hasNEON())
+  if (!VecTy->isScalableTy() && !Subtarget->isNeonAvailable() &&
+      !Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   if (VecTy->isScalableTy() && !Subtarget->hasSVEorSME())
@@ -15916,18 +16004,20 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   }
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
-  if (!Subtarget->isNeonAvailable() ||
-      (Subtarget->useSVEForFixedLengthVectors() &&
-       (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
-        (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
-         isPowerOf2_32(MinElts) && VecSize > 128)))) {
-    UseScalable = true;
-    return true;
+  if (Subtarget->useSVEForFixedLengthVectors()) {
+    unsigned MinSVEVectorSize =
+        std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
+    if (VecSize % MinSVEVectorSize == 0 ||
+        (VecSize < MinSVEVectorSize && isPowerOf2_32(MinElts) &&
+         (!Subtarget->isNeonAvailable() || VecSize > 128))) {
+      UseScalable = true;
+      return true;
+    }
   }
 
   // Ensure the total vector size is 64 or a multiple of 128. Types larger than
   // 128 will be split into multiple interleaved accesses.
-  return VecSize == 64 || VecSize % 128 == 0;
+  return Subtarget->isNeonAvailable() && (VecSize == 64 || VecSize % 128 == 0);
 }
 
 static ScalableVectorType *getSVEContainerIRType(FixedVectorType *VTy) {
@@ -16018,8 +16108,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
   bool UseScalable;
-  if (!Subtarget->hasNEON() ||
-      !isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
@@ -16196,8 +16285,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() ||
-      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
     return false;
 
   unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
@@ -16330,7 +16418,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     IntrinsicInst *DI, LoadInst *LI) const {
   // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
   // Only a factor of 2 supported at present.
@@ -16405,7 +16493,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     IntrinsicInst *II, StoreInst *SI) const {
   // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
   // Only a factor of 2 supported at present.
@@ -16562,13 +16650,13 @@ bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
 
   // inch|dech
   if (Imm % 8 == 0)
-    return std::labs(Imm / 8) <= 16;
+    return std::abs(Imm / 8) <= 16;
   // incw|decw
   if (Imm % 4 == 0)
-    return std::labs(Imm / 4) <= 16;
+    return std::abs(Imm / 4) <= 16;
   // incd|decd
   if (Imm % 2 == 0)
-    return std::labs(Imm / 2) <= 16;
+    return std::abs(Imm / 2) <= 16;
 
   return false;
 }
@@ -17603,6 +17691,23 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
+  // Can the const C be decomposed into (1 - (1 - 2^M) * 2^N), eg:
+  // C = 29 is equal to 1 - (1 - 2^3) * 2^2.
+  auto isPowMinusMinusOneConst = [](APInt C, APInt &M, APInt &N) {
+    APInt CVMinus1 = C - 1;
+    if (CVMinus1.isNegative())
+      return false;
+    unsigned TrailingZeroes = CVMinus1.countr_zero();
+    APInt CVPlus1 = CVMinus1.ashr(TrailingZeroes) + 1;
+    if (CVPlus1.isPowerOf2()) {
+      unsigned BitWidth = CVPlus1.getBitWidth();
+      M = APInt(BitWidth, CVPlus1.logBase2());
+      N = APInt(BitWidth, TrailingZeroes);
+      return true;
+    }
+    return false;
+  };
+
   if (ConstValue.isNonNegative()) {
     // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
@@ -17611,6 +17716,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     //     => MV = (add (shl x, M), x); (add (shl MV, N), MV)
     // (mul x, (2^M + 1) * 2^N + 1))
     //     =>  MV = add (shl x, M), x); add (shl MV, N), x)
+    // (mul x, 1 - (1 - 2^M) * 2^N))
+    //     =>  MV = sub (x - (shl x, M)); sub (x - (shl MV, N))
     APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt SCVPlus1 = ShiftedConstValue + 1;
     APInt CVPlus1 = ConstValue + 1;
@@ -17645,6 +17752,17 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       if (ShiftM <= 4 && ShiftN <= 4) {
         SDValue MVal = Add(Shl(N0, CVM.getZExtValue()), N0);
         return Add(Shl(MVal, CVN.getZExtValue()), N0);
+      }
+    }
+
+    if (Subtarget->hasALULSLFast() &&
+        isPowMinusMinusOneConst(ConstValue, CVM, CVN)) {
+      unsigned ShiftM = CVM.getZExtValue();
+      unsigned ShiftN = CVN.getZExtValue();
+      // ALULSLFast implicate that Shifts <= 4 places are fast
+      if (ShiftM <= 4 && ShiftN <= 4) {
+        SDValue MVal = Sub(N0, Shl(N0, CVM.getZExtValue()));
+        return Sub(N0, Shl(MVal, CVN.getZExtValue()));
       }
     }
   } else {
@@ -20462,39 +20580,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
-  case Intrinsic::get_active_lane_mask: {
-    SDValue Res = SDValue();
-    EVT VT = N->getValueType(0);
-    if (VT.isFixedLengthVector()) {
-      // We can use the SVE whilelo instruction to lower this intrinsic by
-      // creating the appropriate sequence of scalable vector operations and
-      // then extracting a fixed-width subvector from the scalable vector.
-
-      SDLoc DL(N);
-      SDValue ID =
-          DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64);
-
-      EVT WhileVT = EVT::getVectorVT(
-          *DAG.getContext(), MVT::i1,
-          ElementCount::getScalable(VT.getVectorNumElements()));
-
-      // Get promoted scalable vector VT, i.e. promote nxv4i1 -> nxv4i32.
-      EVT PromVT = getPromotedVTForPredicate(WhileVT);
-
-      // Get the fixed-width equivalent of PromVT for extraction.
-      EVT ExtVT =
-          EVT::getVectorVT(*DAG.getContext(), PromVT.getVectorElementType(),
-                           VT.getVectorElementCount());
-
-      Res = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, WhileVT, ID,
-                        N->getOperand(1), N->getOperand(2));
-      Res = DAG.getNode(ISD::SIGN_EXTEND, DL, PromVT, Res);
-      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtVT, Res,
-                        DAG.getConstant(0, DL, MVT::i64));
-      Res = DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
-    }
-    return Res;
-  }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
     return tryCombineFixedPointConvert(N, DCI, DAG);
@@ -22778,7 +22863,8 @@ SDValue performCONDCombine(SDNode *N,
   SDNode *SubsNode = N->getOperand(CmpIndex).getNode();
   unsigned CondOpcode = SubsNode->getOpcode();
 
-  if (CondOpcode != AArch64ISD::SUBS || SubsNode->hasAnyUseOfValue(0))
+  if (CondOpcode != AArch64ISD::SUBS || SubsNode->hasAnyUseOfValue(0) ||
+      !SubsNode->hasOneUse())
     return SDValue();
 
   // There is a SUBS feeding this condition. Is it fed by a mask we can
@@ -25568,8 +25654,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
-    assert((VT == MVT::i8 || VT == MVT::i16) &&
-           "custom lowering for unexpected type");
 
     Intrinsic::ID IntID =
         static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
@@ -25577,6 +25661,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     default:
       return;
     case Intrinsic::aarch64_sve_clasta_n: {
+      assert((VT == MVT::i8 || VT == MVT::i16) &&
+             "custom lowering for unexpected type");
       SDLoc DL(N);
       auto Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, N->getOperand(2));
       auto V = DAG.getNode(AArch64ISD::CLASTA_N, DL, MVT::i32,
@@ -25585,6 +25671,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::aarch64_sve_clastb_n: {
+      assert((VT == MVT::i8 || VT == MVT::i16) &&
+             "custom lowering for unexpected type");
       SDLoc DL(N);
       auto Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, N->getOperand(2));
       auto V = DAG.getNode(AArch64ISD::CLASTB_N, DL, MVT::i32,
@@ -25593,6 +25681,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::aarch64_sve_lasta: {
+      assert((VT == MVT::i8 || VT == MVT::i16) &&
+             "custom lowering for unexpected type");
       SDLoc DL(N);
       auto V = DAG.getNode(AArch64ISD::LASTA, DL, MVT::i32,
                            N->getOperand(1), N->getOperand(2));
@@ -25600,9 +25690,25 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::aarch64_sve_lastb: {
+      assert((VT == MVT::i8 || VT == MVT::i16) &&
+             "custom lowering for unexpected type");
       SDLoc DL(N);
       auto V = DAG.getNode(AArch64ISD::LASTB, DL, MVT::i32,
                            N->getOperand(1), N->getOperand(2));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+      return;
+    }
+    case Intrinsic::get_active_lane_mask: {
+      if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
+        return;
+
+      // NOTE: Only trivial type promotion is supported.
+      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+      if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
+        return;
+
+      SDLoc DL(N);
+      auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
       return;
     }

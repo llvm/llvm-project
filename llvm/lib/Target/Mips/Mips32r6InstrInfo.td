@@ -1117,6 +1117,22 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
               ISA_MIPS32R6;
 }
 
+// llvm.fmin/fmax operations.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(fmaxnum f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+}
+
 // Pseudo instructions
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT], hasPostISelHook = 1 in {

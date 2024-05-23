@@ -2230,7 +2230,7 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
               dyn_cast<UnaryOperator>(Last->getAssociatedExpression());
           if ((UO && UO->getOpcode() == UO_Deref) ||
               isa<ArraySubscriptExpr>(Last->getAssociatedExpression()) ||
-              isa<OMPArraySectionExpr>(Last->getAssociatedExpression()) ||
+              isa<ArraySectionExpr>(Last->getAssociatedExpression()) ||
               isa<MemberExpr>(EI->getAssociatedExpression()) ||
               isa<OMPArrayShapingExpr>(Last->getAssociatedExpression())) {
             IsVariableAssociatedWithSection = true;
@@ -3061,7 +3061,9 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
                                                OpenMPDirectiveKind Kind) {
   ASTContext &Context = getASTContext();
   LookupResult Lookup(SemaRef, Id, Sema::LookupOrdinaryName);
-  SemaRef.LookupParsedName(Lookup, CurScope, &ScopeSpec, true);
+  SemaRef.LookupParsedName(Lookup, CurScope, &ScopeSpec,
+                           /*ObjectType=*/QualType(),
+                           /*AllowBuiltinCreation=*/true);
 
   if (Lookup.isAmbiguous())
     return ExprError();
@@ -3884,7 +3886,7 @@ public:
                                     MappableComponent &MC) {
                                return MC.getAssociatedDeclaration() ==
                                           nullptr &&
-                                      (isa<OMPArraySectionExpr>(
+                                      (isa<ArraySectionExpr>(
                                            MC.getAssociatedExpression()) ||
                                        isa<OMPArrayShapingExpr>(
                                            MC.getAssociatedExpression()) ||
@@ -4062,7 +4064,7 @@ public:
                   // Do both expressions have the same kind?
                   if (CCI->getAssociatedExpression()->getStmtClass() !=
                       SC.getAssociatedExpression()->getStmtClass())
-                    if (!((isa<OMPArraySectionExpr>(
+                    if (!((isa<ArraySectionExpr>(
                                SC.getAssociatedExpression()) ||
                            isa<OMPArrayShapingExpr>(
                                SC.getAssociatedExpression())) &&
@@ -5428,9 +5430,9 @@ static std::pair<ValueDecl *, bool> getPrivateItem(Sema &S, Expr *&RefExpr,
         Base = TempASE->getBase()->IgnoreParenImpCasts();
       RefExpr = Base;
       IsArrayExpr = ArraySubscript;
-    } else if (auto *OASE = dyn_cast_or_null<OMPArraySectionExpr>(RefExpr)) {
+    } else if (auto *OASE = dyn_cast_or_null<ArraySectionExpr>(RefExpr)) {
       Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
-      while (auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base))
+      while (auto *TempOASE = dyn_cast<ArraySectionExpr>(Base))
         Base = TempOASE->getBase()->IgnoreParenImpCasts();
       while (auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
         Base = TempASE->getBase()->IgnoreParenImpCasts();
@@ -6060,10 +6062,10 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
       // Array section - need to check for the mapping of the array section
       // element.
       QualType CanonType = E->getType().getCanonicalType();
-      if (CanonType->isSpecificBuiltinType(BuiltinType::OMPArraySection)) {
-        const auto *OASE = cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts());
+      if (CanonType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
+        const auto *OASE = cast<ArraySectionExpr>(E->IgnoreParenImpCasts());
         QualType BaseType =
-            OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+            ArraySectionExpr::getBaseOriginalType(OASE->getBase());
         QualType ElemType;
         if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
           ElemType = ATy->getElementType();
@@ -7407,7 +7409,8 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
   const IdentifierInfo *BaseII = D.getIdentifier();
   LookupResult Lookup(SemaRef, DeclarationName(BaseII), D.getIdentifierLoc(),
                       Sema::LookupOrdinaryName);
-  SemaRef.LookupParsedName(Lookup, S, &D.getCXXScopeSpec());
+  SemaRef.LookupParsedName(Lookup, S, &D.getCXXScopeSpec(),
+                           /*ObjectType=*/QualType());
 
   TypeSourceInfo *TInfo = SemaRef.GetTypeForDeclarator(D);
   QualType FType = TInfo->getType();
@@ -19311,7 +19314,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
   if (S) {
     LookupResult Lookup(SemaRef, ReductionId, Sema::LookupOMPReductionName);
     Lookup.suppressDiagnostics();
-    while (S && SemaRef.LookupParsedName(Lookup, S, &ReductionIdScopeSpec)) {
+    while (S && SemaRef.LookupParsedName(Lookup, S, &ReductionIdScopeSpec,
+                                         /*ObjectType=*/QualType())) {
       NamedDecl *D = Lookup.getRepresentativeDecl();
       do {
         S = S->getParent();
@@ -19513,7 +19517,7 @@ struct ReductionData {
 } // namespace
 
 static bool checkOMPArraySectionConstantForReduction(
-    ASTContext &Context, const OMPArraySectionExpr *OASE, bool &SingleElement,
+    ASTContext &Context, const ArraySectionExpr *OASE, bool &SingleElement,
     SmallVectorImpl<llvm::APSInt> &ArraySizes) {
   const Expr *Length = OASE->getLength();
   if (Length == nullptr) {
@@ -19540,7 +19544,7 @@ static bool checkOMPArraySectionConstantForReduction(
 
   // We require length = 1 for all array sections except the right-most to
   // guarantee that the memory region is contiguous and has no holes in it.
-  while (const auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base)) {
+  while (const auto *TempOASE = dyn_cast<ArraySectionExpr>(Base)) {
     Length = TempOASE->getLength();
     if (Length == nullptr) {
       // For array sections of the form [1:] or [:], we would need to analyze
@@ -19745,12 +19749,12 @@ static bool actOnOMPReductionKindClause(
     Expr *TaskgroupDescriptor = nullptr;
     QualType Type;
     auto *ASE = dyn_cast<ArraySubscriptExpr>(RefExpr->IgnoreParens());
-    auto *OASE = dyn_cast<OMPArraySectionExpr>(RefExpr->IgnoreParens());
+    auto *OASE = dyn_cast<ArraySectionExpr>(RefExpr->IgnoreParens());
     if (ASE) {
       Type = ASE->getType().getNonReferenceType();
     } else if (OASE) {
       QualType BaseType =
-          OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+          ArraySectionExpr::getBaseOriginalType(OASE->getBase());
       if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
         Type = ATy->getElementType();
       else
@@ -21284,10 +21288,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPDependClause(
           // List items used in depend clauses cannot be zero-length array
           // sections.
           QualType ExprTy = RefExpr->getType().getNonReferenceType();
-          const auto *OASE = dyn_cast<OMPArraySectionExpr>(SimpleExpr);
+          const auto *OASE = dyn_cast<ArraySectionExpr>(SimpleExpr);
           if (OASE) {
             QualType BaseType =
-                OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+                ArraySectionExpr::getBaseOriginalType(OASE->getBase());
             if (BaseType.isNull())
               return nullptr;
             if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
@@ -21346,7 +21350,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDependClause(
             Res = SemaRef.CreateBuiltinUnaryOp(ELoc, UO_AddrOf,
                                                RefExpr->IgnoreParenImpCasts());
           }
-          if (!Res.isUsable() && !isa<OMPArraySectionExpr>(SimpleExpr) &&
+          if (!Res.isUsable() && !isa<ArraySectionExpr>(SimpleExpr) &&
               !isa<OMPArrayShapingExpr>(SimpleExpr)) {
             Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
                 << (getLangOpts().OpenMP >= 50 ? 1 : 0)
@@ -21447,7 +21451,7 @@ static bool checkTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,
 static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
                                                         const Expr *E,
                                                         QualType BaseQTy) {
-  const auto *OASE = dyn_cast<OMPArraySectionExpr>(E);
+  const auto *OASE = dyn_cast<ArraySectionExpr>(E);
 
   // If this is an array subscript, it refers to the whole size if the size of
   // the dimension is constant and equals 1. Also, an array section assumes the
@@ -21505,7 +21509,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
 static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
                                                         const Expr *E,
                                                         QualType BaseQTy) {
-  const auto *OASE = dyn_cast<OMPArraySectionExpr>(E);
+  const auto *OASE = dyn_cast<ArraySectionExpr>(E);
 
   // An array subscript always refer to a single element. Also, an array section
   // assumes the format of an array subscript if no colon is used.
@@ -21720,14 +21724,14 @@ public:
     return RelevantExpr || Visit(E);
   }
 
-  bool VisitOMPArraySectionExpr(OMPArraySectionExpr *OASE) {
+  bool VisitArraySectionExpr(ArraySectionExpr *OASE) {
     // After OMP 5.0  Array section in reduction clause will be implicitly
     // mapped
     assert(!(SemaRef.getLangOpts().OpenMP < 50 && NoDiagnose) &&
            "Array sections cannot be implicitly mapped.");
     Expr *E = OASE->getBase()->IgnoreParenImpCasts();
     QualType CurType =
-        OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+        ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
     //  If the type of a list item is a reference to a type T then the type
@@ -21900,7 +21904,7 @@ static const Expr *checkMapClauseExpressionBase(
       auto CE = CurComponents.rend();
       for (; CI != CE; ++CI) {
         const auto *OASE =
-            dyn_cast<OMPArraySectionExpr>(CI->getAssociatedExpression());
+            dyn_cast<ArraySectionExpr>(CI->getAssociatedExpression());
         if (!OASE)
           continue;
         if (OASE && OASE->getLength())
@@ -21970,10 +21974,10 @@ static bool checkMapConflicts(
           //  variable in map clauses of the same construct.
           if (CurrentRegionOnly &&
               (isa<ArraySubscriptExpr>(CI->getAssociatedExpression()) ||
-               isa<OMPArraySectionExpr>(CI->getAssociatedExpression()) ||
+               isa<ArraySectionExpr>(CI->getAssociatedExpression()) ||
                isa<OMPArrayShapingExpr>(CI->getAssociatedExpression())) &&
               (isa<ArraySubscriptExpr>(SI->getAssociatedExpression()) ||
-               isa<OMPArraySectionExpr>(SI->getAssociatedExpression()) ||
+               isa<ArraySectionExpr>(SI->getAssociatedExpression()) ||
                isa<OMPArrayShapingExpr>(SI->getAssociatedExpression()))) {
             SemaRef.Diag(CI->getAssociatedExpression()->getExprLoc(),
                          diag::err_omp_multiple_array_items_in_map_clause)
@@ -22001,11 +22005,10 @@ static bool checkMapConflicts(
           if (const auto *ASE =
                   dyn_cast<ArraySubscriptExpr>(SI->getAssociatedExpression())) {
             Type = ASE->getBase()->IgnoreParenImpCasts()->getType();
-          } else if (const auto *OASE = dyn_cast<OMPArraySectionExpr>(
+          } else if (const auto *OASE = dyn_cast<ArraySectionExpr>(
                          SI->getAssociatedExpression())) {
             const Expr *E = OASE->getBase()->IgnoreParenImpCasts();
-            Type =
-                OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+            Type = ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
           } else if (const auto *OASE = dyn_cast<OMPArrayShapingExpr>(
                          SI->getAssociatedExpression())) {
             Type = OASE->getBase()->getType()->getPointeeType();
@@ -22181,7 +22184,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
   LookupResult Lookup(SemaRef, MapperId, Sema::LookupOMPMapperName);
   Lookup.suppressDiagnostics();
   if (S) {
-    while (S && SemaRef.LookupParsedName(Lookup, S, &MapperIdScopeSpec)) {
+    while (S && SemaRef.LookupParsedName(Lookup, S, &MapperIdScopeSpec,
+                                         /*ObjectType=*/QualType())) {
       NamedDecl *D = Lookup.getRepresentativeDecl();
       while (S && !S->isDeclScope(D))
         S = S->getParent();
@@ -22480,13 +22484,13 @@ static void checkMappableExpressionList(
     (void)I;
     QualType Type;
     auto *ASE = dyn_cast<ArraySubscriptExpr>(VE->IgnoreParens());
-    auto *OASE = dyn_cast<OMPArraySectionExpr>(VE->IgnoreParens());
+    auto *OASE = dyn_cast<ArraySectionExpr>(VE->IgnoreParens());
     auto *OAShE = dyn_cast<OMPArrayShapingExpr>(VE->IgnoreParens());
     if (ASE) {
       Type = ASE->getType().getNonReferenceType();
     } else if (OASE) {
       QualType BaseType =
-          OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+          ArraySectionExpr::getBaseOriginalType(OASE->getBase());
       if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
         Type = ATy->getElementType();
       else
@@ -23498,7 +23502,9 @@ void SemaOpenMP::DiagnoseUnterminatedOpenMPDeclareTarget() {
 NamedDecl *SemaOpenMP::lookupOpenMPDeclareTargetName(
     Scope *CurScope, CXXScopeSpec &ScopeSpec, const DeclarationNameInfo &Id) {
   LookupResult Lookup(SemaRef, Id, Sema::LookupOrdinaryName);
-  SemaRef.LookupParsedName(Lookup, CurScope, &ScopeSpec, true);
+  SemaRef.LookupParsedName(Lookup, CurScope, &ScopeSpec,
+                           /*ObjectType=*/QualType(),
+                           /*AllowBuiltinCreation=*/true);
 
   if (Lookup.isAmbiguous())
     return nullptr;
@@ -23955,7 +23961,7 @@ SemaOpenMP::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
     MVLI.VarBaseDeclarations.push_back(D);
     MVLI.VarComponents.emplace_back();
     Expr *Component = SimpleRefExpr;
-    if (VD && (isa<OMPArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
+    if (VD && (isa<ArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
                isa<ArraySubscriptExpr>(RefExpr->IgnoreParenImpCasts())))
       Component =
           SemaRef.DefaultFunctionArrayLvalueConversion(SimpleRefExpr).get();
@@ -24105,7 +24111,7 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
     // against other clauses later on.
     Expr *Component = SimpleRefExpr;
     auto *VD = dyn_cast<VarDecl>(D);
-    if (VD && (isa<OMPArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
+    if (VD && (isa<ArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
                isa<ArraySubscriptExpr>(RefExpr->IgnoreParenImpCasts())))
       Component =
           SemaRef.DefaultFunctionArrayLvalueConversion(SimpleRefExpr).get();
@@ -24519,7 +24525,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAffinityClause(
       Sema::TentativeAnalysisScope Trap(SemaRef);
       Res = SemaRef.CreateBuiltinUnaryOp(ELoc, UO_AddrOf, SimpleExpr);
     }
-    if (!Res.isUsable() && !isa<OMPArraySectionExpr>(SimpleExpr) &&
+    if (!Res.isUsable() && !isa<ArraySectionExpr>(SimpleExpr) &&
         !isa<OMPArrayShapingExpr>(SimpleExpr)) {
       Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
           << 1 << 0 << RefExpr->getSourceRange();
@@ -24632,7 +24638,7 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
     Expr *Stride, SourceLocation RBLoc) {
   ASTContext &Context = getASTContext();
   if (Base->hasPlaceholderType() &&
-      !Base->hasPlaceholderType(BuiltinType::OMPArraySection)) {
+      !Base->hasPlaceholderType(BuiltinType::ArraySection)) {
     ExprResult Result = SemaRef.CheckPlaceholderExpr(Base);
     if (Result.isInvalid())
       return ExprError();
@@ -24672,13 +24678,13 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
        (LowerBound->isTypeDependent() || LowerBound->isValueDependent())) ||
       (Length && (Length->isTypeDependent() || Length->isValueDependent())) ||
       (Stride && (Stride->isTypeDependent() || Stride->isValueDependent()))) {
-    return new (Context) OMPArraySectionExpr(
+    return new (Context) ArraySectionExpr(
         Base, LowerBound, Length, Stride, Context.DependentTy, VK_LValue,
         OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
   }
 
   // Perform default conversions.
-  QualType OriginalTy = OMPArraySectionExpr::getBaseOriginalType(Base);
+  QualType OriginalTy = ArraySectionExpr::getBaseOriginalType(Base);
   QualType ResultTy;
   if (OriginalTy->isAnyPointerType()) {
     ResultTy = OriginalTy->getPointeeType();
@@ -24801,14 +24807,14 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
     }
   }
 
-  if (!Base->hasPlaceholderType(BuiltinType::OMPArraySection)) {
+  if (!Base->hasPlaceholderType(BuiltinType::ArraySection)) {
     ExprResult Result = SemaRef.DefaultFunctionArrayLvalueConversion(Base);
     if (Result.isInvalid())
       return ExprError();
     Base = Result.get();
   }
-  return new (Context) OMPArraySectionExpr(
-      Base, LowerBound, Length, Stride, Context.OMPArraySectionTy, VK_LValue,
+  return new (Context) ArraySectionExpr(
+      Base, LowerBound, Length, Stride, Context.ArraySectionTy, VK_LValue,
       OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
 }
 

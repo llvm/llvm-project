@@ -109,16 +109,14 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr && !ValueExpr->isValueDependent()) {
-      llvm::APSInt ValueAPS;
-      ExprResult R = S.VerifyIntegerConstantExpression(ValueExpr, &ValueAPS);
-      assert(!R.isInvalid() && "unroll count value must be a valid value, it's "
-                               "should be checked in Sema::CheckLoopHintExpr");
-      (void)R;
-      // The values of 0 and 1 block any unrolling of the loop.
-      if (ValueAPS.isZero() || ValueAPS.isOne())
-        SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Disable);
-      else
+    if (ValueExpr) {
+      if (!ValueExpr->isValueDependent()) {
+        auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
+        if (Value.isZero() || Value.isOne())
+          SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+        else
+          SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+      } else
         SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
     } else
       SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);

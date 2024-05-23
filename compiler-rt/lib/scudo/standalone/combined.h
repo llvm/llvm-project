@@ -173,6 +173,9 @@ public:
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
 
     Stats.init();
+    // TODO(chiahungduan): Given that we support setting the default value in
+    // the PrimaryConfig and CacheConfig, consider to deprecate the use of
+    // `release_to_os_interval_ms` flag.
     const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
     Primary.init(ReleaseToOsIntervalMs);
     Secondary.init(&Stats, ReleaseToOsIntervalMs);

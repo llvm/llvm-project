@@ -50,6 +50,7 @@ Implemented Papers
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
 - P2387R3 - Pipe support for user-defined range adaptors
+- P2713R1 - Escaping improvements in ``std::format``
 
 Improvements and New Features
 -----------------------------
@@ -117,6 +118,9 @@ Deprecations and Removals
   a ``std::basic_*fstream`` from a ``std::basic_string_view``, a input-iterator or a C-string, instead
   you can construct a temporary ``std::basic_string``. This change has been applied to C++17 and later.
 
+- The ``_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS`` macro has been removed and is not honored anymore. Additional
+  warnings provided by libc++ as a matter of QoI will now be provided unconditionally.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -148,3 +152,5 @@ Build System Changes
 
 - The Cmake variable ``LIBCXX_ENABLE_CLANG_TIDY`` has been removed. The build system has been changed
   to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
+
+- The CMake options ``LIBCXX_INSTALL_MODULES`` now defaults to ``ON``.

@@ -50,7 +50,11 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-- Added Memory Model Relaxation Annotations (MMRAs).
+* Added Memory Model Relaxation Annotations (MMRAs).
+* Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
+* Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
+* Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
+* Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -69,12 +73,15 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
 Changes to the ARM Backend
 --------------------------
@@ -112,6 +119,9 @@ Changes to the RISC-V Backend
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
+  match GNU objdump. The bytes within the groups are in big endian order.
+* Added smstateen extension to -march. CSR names for smstateen were already supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -154,6 +164,8 @@ Changes to the C API
 * Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
+* Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -162,6 +174,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------

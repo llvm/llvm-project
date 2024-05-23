@@ -1763,8 +1763,9 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     }
     case tok::kw_enum:
-      // Ignore if this is part of "template <enum ..." or "... -> enum".
-      if (Previous && Previous->isOneOf(tok::less, tok::arrow)) {
+      // Ignore if this is part of "template <enum ..." or "... -> enum" or
+      // "template <..., enum ...>".
+      if (Previous && Previous->isOneOf(tok::less, tok::arrow, tok::comma)) {
         nextToken();
         break;
       }
@@ -2510,6 +2511,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
   auto *LeftParen = FormatTok;
   bool SeenEqual = false;
+  bool MightBeFoldExpr = false;
   const bool MightBeStmtExpr = Tokens->peekNextToken()->is(tok::l_brace);
   nextToken();
   do {
@@ -2521,7 +2523,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren:
-      if (!MightBeStmtExpr && !Line->InMacroBody &&
+      if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Prev = LeftParen->Previous;
         const auto *Next = Tokens->peekNextToken();
@@ -2563,6 +2565,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
         parseBracedList();
       }
+      break;
+    case tok::ellipsis:
+      MightBeFoldExpr = true;
+      nextToken();
       break;
     case tok::equal:
       SeenEqual = true;
@@ -3201,10 +3207,11 @@ void UnwrappedLineParser::parseDoWhile() {
 void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
   nextToken();
   unsigned OldLineLevel = Line->Level;
-  if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-    --Line->Level;
+
   if (LeftAlignLabel)
     Line->Level = 0;
+  else if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+    --Line->Level;
 
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->is(tok::l_brace)) {
@@ -3944,8 +3951,11 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
       // We can have macros in between 'class' and the class name.
-      if (!IsNonMacroIdentifier(Previous))
+      if (!IsNonMacroIdentifier(Previous) ||
+          // e.g. `struct macro(a) S { int i; };`
+          Previous->Previous == &InitialToken) {
         parseParens();
+      }
       break;
     case tok::coloncolon:
       break;

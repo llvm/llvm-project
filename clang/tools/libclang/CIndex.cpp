@@ -2782,6 +2782,11 @@ class OpenACCClauseEnqueue : public OpenACCClauseVisitor<OpenACCClauseEnqueue> {
 public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
+  void VisitVarList(const OpenACCClauseWithVarList &C) {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
+
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
@@ -2806,6 +2811,34 @@ void OpenACCClauseEnqueue::VisitVectorLengthClause(
 void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   for (Expr *IE : C.getIntExprs())
     Visitor.AddStmt(IE);
+}
+
+void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
+  VisitVarList(C);
 }
 } // namespace
 
@@ -5713,8 +5746,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("UnaryOperator");
   case CXCursor_ArraySubscriptExpr:
     return cxstring::createRef("ArraySubscriptExpr");
-  case CXCursor_OMPArraySectionExpr:
-    return cxstring::createRef("OMPArraySectionExpr");
+  case CXCursor_ArraySectionExpr:
+    return cxstring::createRef("ArraySectionExpr");
   case CXCursor_OMPArrayShapingExpr:
     return cxstring::createRef("OMPArrayShapingExpr");
   case CXCursor_OMPIteratorExpr:

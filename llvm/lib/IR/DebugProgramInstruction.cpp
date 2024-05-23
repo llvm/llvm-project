@@ -366,8 +366,8 @@ void DbgVariableRecord::setKillLocation() {
 }
 
 bool DbgVariableRecord::isKillLocation() const {
-  return (getNumVariableLocationOps() == 0 &&
-          !getExpression()->isComplex()) ||
+  return (!hasArgList() && isa<MDNode>(getRawLocation())) ||
+         (getNumVariableLocationOps() == 0 && !getExpression()->isComplex()) ||
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 

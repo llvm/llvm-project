@@ -36,6 +36,22 @@
     defined(__need_unreachable) || defined(__need_max_align_t) ||              \
     defined(__need_offsetof) || defined(__need_wint_t)
 
+#if defined(__MVS__) && __has_include_next(<stddef.h>)
+#define __STDDEF_H
+#undef __need_ptrdiff_t
+#undef __need_size_t
+#undef __need_rsize_t
+#undef __need_wchar_t
+#undef __need_NULL
+#undef __need_nullptr_t
+#undef __need_unreachable
+#undef __need_max_align_t
+#undef __need_offsetof
+#undef __need_wint_t
+#include_next <stddef.h>
+
+#else
+
 #if !defined(__need_ptrdiff_t) && !defined(__need_size_t) &&                   \
     !defined(__need_rsize_t) && !defined(__need_wchar_t) &&                    \
     !defined(__need_NULL) && !defined(__need_nullptr_t) &&                     \
@@ -120,4 +136,5 @@ __WINT_TYPE__ directly; accommodate both by requiring __need_wint_t */
 #undef __need_wint_t
 #endif /* __need_wint_t */
 
+#endif /* __MVS__ */
 #endif

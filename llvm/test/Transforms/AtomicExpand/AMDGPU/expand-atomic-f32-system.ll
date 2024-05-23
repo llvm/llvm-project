@@ -39,28 +39,28 @@ define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memo
 }
 
 ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
 ; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
 ; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
 ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
 ; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
 ; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
@@ -326,8 +326,8 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -344,7 +344,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -361,7 +361,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -378,7 +378,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -395,12 +395,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -417,7 +417,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -434,7 +434,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -451,12 +451,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_remote_memory_acc
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -473,7 +473,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -490,7 +490,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -507,7 +507,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -524,12 +524,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -546,7 +546,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -563,7 +563,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -580,12 +580,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(ptr addrspace(1) %ptr, float %value) #0 {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(ptr addrspace(1) %ptr, float %value) #0 {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -602,7 +602,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -619,7 +619,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -636,7 +636,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -653,12 +653,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -675,7 +675,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -692,7 +692,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -709,12 +709,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -731,7 +731,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -748,7 +748,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -765,7 +765,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -782,12 +782,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -804,7 +804,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -821,7 +821,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -838,7 +838,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
@@ -1100,8 +1100,8 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1118,7 +1118,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1135,7 +1135,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1152,7 +1152,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1169,12 +1169,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1191,7 +1191,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1208,7 +1208,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1225,12 +1225,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1247,7 +1247,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1264,7 +1264,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1281,7 +1281,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1298,12 +1298,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1320,7 +1320,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1337,7 +1337,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1354,12 +1354,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(ptr addrspace(1) %ptr, float %value) #0 {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, float %value) #0 {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1376,7 +1376,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1393,7 +1393,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1410,7 +1410,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1427,12 +1427,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1449,7 +1449,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1466,7 +1466,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1483,12 +1483,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
-; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
+; GFX803-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1505,7 +1505,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret float [[TMP5]]
 ;
-; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX906-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1522,7 +1522,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret float [[TMP5]]
 ;
-; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX908-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1539,7 +1539,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
-; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1556,12 +1556,12 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
-; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1578,7 +1578,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret float [[TMP5]]
 ;
-; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1595,7 +1595,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
-; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1612,7 +1612,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_ignore_denormal_mode
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
@@ -1878,8 +1878,8 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1896,7 +1896,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1913,7 +1913,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1930,7 +1930,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1947,12 +1947,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1969,7 +1969,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1986,7 +1986,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2003,12 +2003,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_remote_memor
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2025,7 +2025,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2042,7 +2042,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2059,7 +2059,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2076,12 +2076,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2098,7 +2098,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2115,7 +2115,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2132,12 +2132,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(ptr addrspace(1) %ptr, float %value) #0 {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(ptr addrspace(1) %ptr, float %value) #0 {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2154,7 +2154,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2171,7 +2171,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2188,7 +2188,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2205,12 +2205,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2227,7 +2227,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2244,7 +2244,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_daz(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2261,12 +2261,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2283,7 +2283,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2300,7 +2300,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2317,7 +2317,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2334,12 +2334,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2356,7 +2356,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2373,7 +2373,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_f32_dynamic(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2390,7 +2390,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_no_fine_grained
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -2652,8 +2652,8 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2670,7 +2670,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2687,7 +2687,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2704,7 +2704,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2721,12 +2721,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2743,7 +2743,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2760,7 +2760,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2777,12 +2777,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2799,7 +2799,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2816,7 +2816,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2833,7 +2833,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2850,12 +2850,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2872,7 +2872,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2889,7 +2889,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2906,12 +2906,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(ptr addrspace(1) %ptr, float %value) #0 {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, float %value) #0 {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2928,7 +2928,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2945,7 +2945,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2962,7 +2962,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -2979,12 +2979,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3001,7 +3001,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3018,7 +3018,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3035,12 +3035,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
 
-define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
-; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, float %value) #1 {
+; GFX803-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3057,7 +3057,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX803:       atomicrmw.end:
 ; GFX803-NEXT:    ret void
 ;
-; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX906-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3074,7 +3074,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX906:       atomicrmw.end:
 ; GFX906-NEXT:    ret void
 ;
-; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3091,7 +3091,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
 ;
-; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3108,12 +3108,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX940-NEXT:    ret void
 ;
-; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3130,7 +3130,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret void
 ;
-; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3147,7 +3147,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
 ; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3164,7 +3164,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_system__amdgpu_ignore_denormal
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
 
@@ -3216,8 +3216,8 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memo
   ret float %res
 }
 
-define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3234,12 +3234,12 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_remote_memory_acc
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3256,7 +3256,7 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_no_fine_grained_memo
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
@@ -3304,8 +3304,8 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode
   ret float %res
 }
 
-define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3322,12 +3322,12 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3344,7 +3344,7 @@ define float @test_atomicrmw_fsub_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
@@ -3396,8 +3396,8 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memo
   ret float %res
 }
 
-define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3414,12 +3414,12 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory_acc
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3436,7 +3436,7 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memo
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
@@ -3484,8 +3484,8 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode
   ret float %res
 }
 
-define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3502,12 +3502,12 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3524,7 +3524,7 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
@@ -3576,8 +3576,8 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memo
   ret float %res
 }
 
-define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3594,12 +3594,12 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory_acc
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
-define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3616,7 +3616,7 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memo
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
@@ -3664,8 +3664,8 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode
   ret float %res
 }
 
-define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3682,12 +3682,12 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
-define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
+; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -3704,7 +3704,7 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret float [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 

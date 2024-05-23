@@ -344,10 +344,14 @@ public:
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
   /// Returns the explicit value, defaulting to null Attribute for unset.
-  Attribute getExplicitVal() const { return enc.getExplicitVal(); }
+  Attribute getExplicitVal() const {
+    return enc ? enc.getExplicitVal() : nullptr;
+  }
 
   /// Returns the implicit value, defaulting to null Attribute for 0.
-  Attribute getImplicitVal() const { return enc.getImplicitVal(); }
+  Attribute getImplicitVal() const {
+    return enc ? enc.getImplicitVal() : nullptr;
+  }
 
   /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
   Type getCrdType() const { return enc.getCrdElemType(); }

@@ -138,8 +138,8 @@ public:
     mlir::Location loc = getLoc();
     mlir::Type idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> extents;
-    auto seqTy = hlfir::getFortranElementOrSequenceType(fieldType)
-                     .cast<fir::SequenceType>();
+    auto seqTy = mlir::cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(fieldType));
     for (auto extent : seqTy.getShape()) {
       if (extent == fir::SequenceType::getUnknownExtent()) {
         // We have already generated invalid hlfir.declare
@@ -199,7 +199,7 @@ private:
                                    const T &designatorNode) {
     // Get base's shape if its a sequence type with no previously computed
     // result shape
-    if (partInfo.base && resultValueType.isa<fir::SequenceType>() &&
+    if (partInfo.base && mlir::isa<fir::SequenceType>(resultValueType) &&
         !partInfo.resultShape)
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
@@ -209,7 +209,7 @@ private:
       return fir::ClassType::get(resultValueType);
     // Character scalar with dynamic length needs a fir.boxchar to hold the
     // designator length.
-    auto charType = resultValueType.dyn_cast<fir::CharacterType>();
+    auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
     if (charType && charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
     // Arrays with non default lower bounds or dynamic length or dynamic extent
@@ -218,7 +218,7 @@ private:
         hasNonDefaultLowerBounds(partInfo))
       return fir::BoxType::get(resultValueType);
     // Non simply contiguous ref require a fir.box to carry the byte stride.
-    if (resultValueType.isa<fir::SequenceType>() &&
+    if (mlir::isa<fir::SequenceType>(resultValueType) &&
         !Fortran::evaluate::IsSimplyContiguous(
             designatorNode, getConverter().getFoldingContext()))
       return fir::BoxType::get(resultValueType);
@@ -398,8 +398,8 @@ private:
       partInfo.typeParams[0] =
           fir::factory::genMaxWithZero(builder, loc, rawLen);
     }
-    auto kind = hlfir::getFortranElementType(baseStringType)
-                    .cast<fir::CharacterType>()
+    auto kind = mlir::cast<fir::CharacterType>(
+                    hlfir::getFortranElementType(baseStringType))
                     .getFKind();
     auto newCharTy = fir::CharacterType::get(
         baseStringType.getContext(), kind,
@@ -579,7 +579,7 @@ private:
       return createVectorSubscriptElementAddrOp(partInfo, baseType,
                                                 resultExtents);
 
-    mlir::Type resultType = baseType.cast<fir::SequenceType>().getEleTy();
+    mlir::Type resultType = mlir::cast<fir::SequenceType>(baseType).getEleTy();
     if (!resultTypeShape.empty()) {
       // Ranked array section. The result shape comes from the array section
       // subscripts.
@@ -612,8 +612,8 @@ private:
   }
   static bool hasNonDefaultLowerBounds(const PartInfo &partInfo) {
     return partInfo.resultShape &&
-           (partInfo.resultShape.getType().isa<fir::ShiftType>() ||
-            partInfo.resultShape.getType().isa<fir::ShapeShiftType>());
+           mlir::isa<fir::ShiftType, fir::ShapeShiftType>(
+               partInfo.resultShape.getType());
   }
 
   mlir::Type visit(const Fortran::evaluate::Component &component,
@@ -705,7 +705,7 @@ private:
     const Fortran::semantics::Symbol &componentSym = component.GetLastSymbol();
     partInfo.componentName = converter.getRecordTypeFieldName(componentSym);
     auto recordType =
-        hlfir::getFortranElementType(baseType).cast<fir::RecordType>();
+        mlir::cast<fir::RecordType>(hlfir::getFortranElementType(baseType));
     if (recordType.isDependentType())
       TODO(getLoc(), "Designate derived type with length parameters in HLFIR");
     mlir::Type fieldType = recordType.getType(partInfo.componentName);
@@ -718,7 +718,7 @@ private:
     if (fir::isRecordWithTypeParameters(fieldEleType))
       TODO(loc,
            "lower a component that is a parameterized derived type to HLFIR");
-    if (auto charTy = fieldEleType.dyn_cast<fir::CharacterType>()) {
+    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(fieldEleType)) {
       mlir::Location loc = getLoc();
       mlir::Type idxTy = builder.getIndexType();
       if (charTy.hasConstantLen())
@@ -811,7 +811,7 @@ private:
       }
     }
     builder.setInsertionPoint(elementalAddrOp);
-    return baseType.cast<fir::SequenceType>().getEleTy();
+    return mlir::cast<fir::SequenceType>(baseType).getEleTy();
   }
 
   /// Yield the designator for the final part-ref inside the
@@ -1665,7 +1665,7 @@ private:
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Type ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
-    auto recTy = ty.cast<fir::RecordType>();
+    auto recTy = mlir::cast<fir::RecordType>(ty);
 
     if (recTy.isDependentType())
       TODO(loc, "structure constructor for derived type with length parameters "

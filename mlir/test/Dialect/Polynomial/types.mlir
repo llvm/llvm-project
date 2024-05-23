@@ -40,3 +40,17 @@ func.func @test_non_x_variable_64_bit(%0: !ty2) -> !ty2 {
 func.func @test_linear_poly(%0: !ty3) -> !ty3 {
   return %0 : !ty3
 }
+
+// CHECK-LABEL: func @test_negative_leading_1
+// CHECK-SAME:  !polynomial.polynomial<
+// CHECK-SAME:    #polynomial.ring<
+// CHECK-SAME:       coefficientType=i32,
+// CHECK-SAME:       coefficientModulus=2837465 : i32,
+// CHECK-SAME:       polynomialModulus=#polynomial.polynomial<-1 + x**1024>>>
+#my_poly_4 = #polynomial.polynomial<-1 + x**1024>
+#ring4 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly_4>
+!ty4 = !polynomial.polynomial<#ring4>
+func.func @test_negative_leading_1(%0: !ty4) -> !ty4 {
+  return %0 : !ty4
+}
+

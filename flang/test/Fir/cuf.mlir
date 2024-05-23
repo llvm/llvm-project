@@ -74,3 +74,15 @@ func.func @_QPsub1() {
 
 // CHECK: fir.cuda_allocate %{{.*}} : !fir.ref<!fir.box<none>> errmsg(%{{.*}} : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
 // CHECK: fir.cuda_deallocate %{{.*}} : !fir.ref<!fir.box<none>> errmsg(%{{.*}} : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
+
+// -----
+
+func.func @_QPsub1() {
+  %0 = fir.cuda_alloc f32 {bindc_name = "r", cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub1Er"} -> !fir.ref<f32>
+  fir.cuda_free %0 : !fir.ref<f32> {cuda_attr = #fir.cuda<device>}
+  return
+}
+
+// CHECK: fir.cuda_alloc
+// CHECK: fir.cuda_free
+

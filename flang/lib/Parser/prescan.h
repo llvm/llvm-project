@@ -43,6 +43,7 @@ public:
   Messages &messages() { return messages_; }
   const Preprocessor &preprocessor() const { return preprocessor_; }
   Preprocessor &preprocessor() { return preprocessor_; }
+  common::LanguageFeatureControl &features() { return features_; }
 
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;

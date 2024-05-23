@@ -2001,43 +2001,30 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   if (!GEP1)
     return nullptr;
 
-  if (GEP2) {
-    // (gep X, ...) - (gep X, ...)
-    //
-    // Avoid duplicating the arithmetic if there are more than one non-constant
-    // indices between the two GEPs and either GEP has a non-constant index and
-    // multiple users. If zero non-constant index, the result is a constant and
-    // there is no duplication. If one non-constant index, the result is an add
-    // or sub with a constant, which is no larger than the original code, and
-    // there's no duplicated arithmetic, even if either GEP has multiple
-    // users. If more than one non-constant indices combined, as long as the GEP
-    // with at least one non-constant index doesn't have multiple users, there
-    // is no duplication.
-    unsigned NumNonConstantIndices1 = GEP1->countNonConstantIndices();
-    unsigned NumNonConstantIndices2 = GEP2->countNonConstantIndices();
-    if (NumNonConstantIndices1 + NumNonConstantIndices2 > 1 &&
-        ((NumNonConstantIndices1 > 0 && !GEP1->hasOneUse()) ||
-         (NumNonConstantIndices2 > 0 && !GEP2->hasOneUse()))) {
-      return nullptr;
-    }
-  }
+  // To avoid duplicating the offset arithmetic, rewrite the GEP to use the
+  // computed offset. This may erase the original GEP, so be sure to cache the
+  // inbounds flag before emitting the offset.
+  // TODO: We should probably do this even if there is only one GEP.
+  bool RewriteGEPs = GEP2 != nullptr;
 
   // Emit the offset of the GEP and an intptr_t.
-  Value *Result = EmitGEPOffset(GEP1);
+  bool GEP1IsInBounds = GEP1->isInBounds();
+  Value *Result = EmitGEPOffset(GEP1, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
-    if (IsNUW && !GEP2 && !Swapped && GEP1->isInBounds() &&
+    if (IsNUW && !GEP2 && !Swapped && GEP1IsInBounds &&
         I->getOpcode() == Instruction::Mul)
       I->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.
   if (GEP2) {
-    Value *Offset = EmitGEPOffset(GEP2);
+    bool GEP2IsInBounds = GEP2->isInBounds();
+    Value *Offset = EmitGEPOffset(GEP2, RewriteGEPs);
     Result = Builder.CreateSub(Result, Offset, "gepdiff", /* NUW */ false,
-                               GEP1->isInBounds() && GEP2->isInBounds());
+                               GEP1IsInBounds && GEP2IsInBounds);
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.
@@ -2779,6 +2766,16 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
       SelectInst *NewSel = SelectInst::Create(Cond, NegX, P);
       propagateSelectFMF(NewSel, P == X);
+      return NewSel;
+    }
+
+    // -(Cond ? X : C) --> Cond ? -X : -C
+    // -(Cond ? C : Y) --> Cond ? -C : -Y
+    if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
+      Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
+      Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
+      SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
+      propagateSelectFMF(NewSel, /*CommonOperand=*/true);
       return NewSel;
     }
   }

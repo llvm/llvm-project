@@ -409,12 +409,16 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
-                    context_.Say(GetContext().clauseSource,
-                        "'%s' in the %s clause is already present in the same "
-                        "clause in this module"_warn_en_US,
-                        name->symbol->name(),
-                        parser::ToUpperCaseLetters(
-                            llvm::acc::getOpenACCClauseName(clause).str()));
+                    if (context_.languageFeatures().ShouldWarn(
+                            common::UsageWarning::OpenAccUsage)) {
+                      context_.Say(GetContext().clauseSource,
+                          "'%s' in the %s clause is already present in the "
+                          "same "
+                          "clause in this module"_warn_en_US,
+                          name->symbol->name(),
+                          parser::ToUpperCaseLetters(
+                              llvm::acc::getOpenACCClauseName(clause).str()));
+                    }
                   } else {
                     context_.Say(GetContext().clauseSource,
                         "'%s' in the %s clause is already present in another "
@@ -780,7 +784,10 @@ void AccStructureChecker::Enter(const parser::AccClause::If &x) {
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
-  context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
+  if (context_.languageFeatures().ShouldWarn(
+          common::UsageWarning::OpenAccUsage)) {
+    context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
+  }
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

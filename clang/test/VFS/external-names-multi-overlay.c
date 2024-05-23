@@ -5,10 +5,10 @@
 
 // Check that the external name is given when multiple overlays are provided
 
-// RUN: %clang_cc1 -Werror -I %t/A -ivfsoverlay %t/vfs/a-b-ft.yaml -ivfsoverlay %t/vfs/empty.yaml -fsyntax-only -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
-// RUN: %clang_cc1 -Werror -I %t/A -ivfsoverlay %t/vfs/a-b-fb.yaml -ivfsoverlay %t/vfs/empty.yaml -fsyntax-only -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
-// RUN: %clang_cc1 -Werror -I %t/B -ivfsoverlay %t/vfs/a-b-ft.yaml -ivfsoverlay %t/vfs/empty.yaml -fsyntax-only -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
-// RUN: %clang_cc1 -Werror -I %t/B -ivfsoverlay %t/vfs/a-b-fb.yaml -ivfsoverlay %t/vfs/empty.yaml -fsyntax-only -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
+// RUN: %clang_cc1 -Werror -I %t/A -ivfsoverlay %t/vfs/a-b-ft.yaml -ivfsoverlay %t/vfs/empty.yaml -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
+// RUN: %clang_cc1 -Werror -I %t/A -ivfsoverlay %t/vfs/a-b-fb.yaml -ivfsoverlay %t/vfs/empty.yaml -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
+// RUN: %clang_cc1 -Werror -I %t/B -ivfsoverlay %t/vfs/a-b-ft.yaml -ivfsoverlay %t/vfs/empty.yaml -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
+// RUN: %clang_cc1 -Werror -I %t/B -ivfsoverlay %t/vfs/a-b-fb.yaml -ivfsoverlay %t/vfs/empty.yaml -E -C %t/main.c 2>&1 | FileCheck --check-prefix=FROM_B %s
 // FROM_B: # 1 "{{.*(/|\\\\)B(/|\\\\)}}Header.h"
 // FROM_B: // Header.h in B
 

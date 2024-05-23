@@ -102,12 +102,20 @@ using namespace lldb_private;
 static os_log_t g_os_log;
 static std::once_flag g_os_log_once;
 
-void Host::SystemLog(llvm::StringRef message) {
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
   if (__builtin_available(macos 10.12, iOS 10, tvOS 10, watchOS 3, *)) {
     std::call_once(g_os_log_once, []() {
       g_os_log = os_log_create("com.apple.dt.lldb", "lldb");
     });
-    os_log(g_os_log, "%{public}s", message.str().c_str());
+    switch (severity) {
+    case lldb::eSeverityInfo:
+    case lldb::eSeverityWarning:
+      os_log(g_os_log, "%{public}s", message.str().c_str());
+      break;
+    case lldb::eSeverityError:
+      os_log_error(g_os_log, "%{public}s", message.str().c_str());
+      break;
+    }
   } else {
     llvm::errs() << message;
   }

@@ -110,6 +110,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -333,6 +334,20 @@ extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
+bool shouldInstrumentEntryBB() {
+  return PGOInstrumentEntry ||
+         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+}
+
+// FIXME(mtrofin): re-enable this for ctx profiling, for non-indirect calls. Ctx
+// profiling implicitly captures indirect call cases, but not other values.
+// Supporting other values is relatively straight-forward - just another counter
+// range within the context.
+bool isValueProfilingDisabled() {
+  return DisableValueProfiling ||
+         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+}
+
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
@@ -379,7 +394,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
   if (IsCS)
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
-  if (PGOInstrumentEntry)
+  if (shouldInstrumentEntryBB())
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
@@ -861,7 +876,7 @@ static void instrumentOneFunc(
   }
 
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
-      F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry,
+      F, TLI, ComdatMembers, true, BPI, BFI, IsCS, shouldInstrumentEntryBB(),
       PGOBlockCoverage);
 
   auto Name = FuncInfo.FuncNameVar;
@@ -882,6 +897,43 @@ static void instrumentOneFunc(
   FuncInfo.getInstrumentBBs(InstrumentBBs);
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+
+  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+    auto *CSIntrinsic =
+        Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
+    // We want to count the instrumentable callsites, then instrument them. This
+    // is because the llvm.instrprof.callsite intrinsic has an argument (like
+    // the other instrprof intrinsics) capturing the total number of
+    // instrumented objects (counters, or callsites, in this case). In this
+    // case, we want that value so we can readily pass it to the compiler-rt
+    // APIs that may have to allocate memory based on the nr of callsites.
+    // The traversal logic is the same for both counting and instrumentation,
+    // just needs to be done in succession.
+    auto Visit = [&](llvm::function_ref<void(CallBase * CB)> Visitor) {
+      for (auto &BB : F)
+        for (auto &Instr : BB)
+          if (auto *CS = dyn_cast<CallBase>(&Instr)) {
+            if ((CS->getCalledFunction() &&
+                 CS->getCalledFunction()->isIntrinsic()) ||
+                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+              continue;
+            Visitor(CS);
+          }
+    };
+    // First, count callsites.
+    uint32_t TotalNrCallsites = 0;
+    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+
+    // Now instrument.
+    uint32_t CallsiteIndex = 0;
+    Visit([&](auto *CB) {
+      IRBuilder<> Builder(CB);
+      Builder.CreateCall(CSIntrinsic,
+                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                          Builder.getInt32(CallsiteIndex++),
+                          CB->getCalledOperand()});
+    });
+  }
 
   uint32_t I = 0;
   if (PGOTemporalInstrumentation) {
@@ -914,7 +966,7 @@ static void instrumentOneFunc(
                                        FuncInfo.FunctionHash);
   assert(I == NumCounters);
 
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
@@ -1676,7 +1728,7 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
 
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   // Create the PGOFuncName meta data.
@@ -1779,7 +1831,7 @@ static bool InstrumentAllFunctions(
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
-  if (!IsCS)
+  if (!IsCS && !PGOCtxProfLoweringPass::isContextualIRPGOEnabled())
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
 
   Triple TT(M.getTargetTriple());
@@ -2018,6 +2070,8 @@ static bool annotateAllFunctions(
   bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
+  InstrumentFuncEntry |= PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
     if (skipPGOUse(F))
@@ -2071,7 +2125,7 @@ static bool annotateAllFunctions(
       HotFunctions.push_back(&F);
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, LI);
@@ -2086,7 +2140,7 @@ static bool annotateAllFunctions(
     }
     if (PGOViewRawCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       if (PGOViewRawCounts == PGOVCT_Graph)
         if (ViewBlockFreqFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());

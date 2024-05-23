@@ -29,7 +29,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.

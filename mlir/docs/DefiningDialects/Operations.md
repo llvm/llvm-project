@@ -640,10 +640,11 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation. Any inherent 
-    -   attributes that are not used elsewhere in the format are printed as
-    -   part of the attribute dictionary unless a `prop-dict` is present.
-    -   Discardable attributes are always part of the `attr-dict`.  
+    -   Represents the attribute dictionary of the operation.
+    -   Any inherent attributes that are not used elsewhere in the format are
+        printed as part of the attribute dictionary unless a `prop-dict` is
+        present.
+    -   Discardable attributes are always part of the `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -654,23 +655,23 @@ The available directives are as follows:
 
     -   Represents the properties of the operation converted to a dictionary.
     -   Any property or inherent attribute that are not used elsewhere in the
-    -   format are parsed and printed as part of this dictionary.
+        format are parsed and printed as part of this dictionary.
     -   If present, the `attr-dict` will not contain any inherent attributes.
 
-*   `custom` < UserDirective > ( Params )
+*   `custom < UserDirective > ( Params )`
 
     -   Represents a custom directive implemented by the user in C++.
     -   See the [Custom Directives](#custom-directives) section below for more
         details.
 
-*   `functional-type` ( inputs , outputs )
+*   `functional-type ( inputs , outputs )`
 
     -   Formats the `inputs` and `outputs` arguments as a
         [function type](../Dialects/Builtin.md/#functiontype).
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
-*   `oilist` ( \`keyword\` elements | \`otherKeyword\` elements ...)
+*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)``
 
     -   Represents an optional order-independent list of clauses. Each clause
         has a keyword and corresponding assembly format.
@@ -682,7 +683,7 @@ The available directives are as follows:
 
     -   Represents all of the operands of an operation.
 
-*   `ref` ( input )
+*   `ref ( input )`
 
     -   Represents a reference to the a variable or directive, that must have
         already been resolved, that may be used as a parameter to a `custom`
@@ -703,13 +704,13 @@ The available directives are as follows:
 
     -   Represents all of the successors of an operation.
 
-*   `type` ( input )
+*   `type ( input )`
 
     -   Represents the type of the given input.
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
-*   `qualified` ( type_or_attribute )
+*   `qualified ( type_or_attribute )`
 
     -   Wraps a `type` directive or an attribute parameter.
     -   Used to force printing the type or attribute prefixed with its dialect
@@ -1700,11 +1701,11 @@ To allow more convenient syntax, helper classes exist for TableGen classes
 which are commonly used as anonymous definitions. These currently include:
 
 * `DeprecatedOpBuilder`: Can be used in place of `OpBuilder` with the same
-  arguments except taking the reason as first argument, e.g. 
+  arguments except taking the reason as first argument, e.g.
   `DeprecatedOpBuilder<"use 'build' with foo instead", (ins "int":$bar)>`
 
-Note: Support for the `CppDeprecated` mechanism has to be implemented by 
-every code generator separately. 
+Note: Support for the `CppDeprecated` mechanism has to be implemented by
+every code generator separately.
 
 ### Requirements and existing mechanisms analysis
 
