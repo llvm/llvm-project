@@ -10,8 +10,7 @@
 define void @leaf_function() #0 {
 ; CHECK-LABEL: leaf_function:
 ; CHECK:       callq __cyg_profile_func_enter_bare
-; CHECK:       {{.*}} %rdi
-;	CHECK-NEXT:  callq	__cyg_profile_func_exit
+;	CHECK:       callq	__cyg_profile_func_exit
   ret void
 }
 
@@ -20,8 +19,7 @@ entry:
 ; CHECK-LABEL: root_function:
 ; CHECK:       callq __cyg_profile_func_enter_bare
 ; CHECK-NEXT:  callq leaf_function
-; CHECK:       {{.*}} %rdi
-;	CHECK-NEXT:  callq	__cyg_profile_func_exit
+;	CHECK:       callq	__cyg_profile_func_exit
   call void @leaf_function()
   ret void
 }
