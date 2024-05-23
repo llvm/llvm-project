@@ -14,7 +14,8 @@
 
 define i1 @icmp_ptrauth_globals() {
 ; CHECK-LABEL: @icmp_ptrauth_globals(
-; CHECK-NEXT:    ret i1 icmp eq (ptr @g.ptrauth, ptr @g2.ptrauth)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @g.ptrauth, @g2.ptrauth
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr @g.ptrauth, @g2.ptrauth
   ret i1 %cmp
@@ -22,7 +23,8 @@ define i1 @icmp_ptrauth_globals() {
 
 define i1 @icmp_ptrauth_same_global() {
 ; CHECK-LABEL: @icmp_ptrauth_same_global(
-; CHECK-NEXT:    ret i1 icmp eq (ptr @g.ptrauth, ptr @g.ptrauth2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @g.ptrauth, @g.ptrauth2
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr @g.ptrauth, @g.ptrauth2
   ret i1 %cmp
@@ -30,7 +32,8 @@ define i1 @icmp_ptrauth_same_global() {
 
 define i1 @icmp_ptrauth_null() {
 ; CHECK-LABEL: @icmp_ptrauth_null(
-; CHECK-NEXT:    ret i1 icmp eq (ptr @g.ptrauth, ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @g.ptrauth, null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr @g.ptrauth, null
   ret i1 %cmp
@@ -38,7 +41,8 @@ define i1 @icmp_ptrauth_null() {
 
 define i1 @icmp_ptrauth_weak_null() {
 ; CHECK-LABEL: @icmp_ptrauth_weak_null(
-; CHECK-NEXT:    ret i1 icmp eq (ptr @g_weak.ptrauth, ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @g_weak.ptrauth, null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr @g_weak.ptrauth, null
   ret i1 %cmp
