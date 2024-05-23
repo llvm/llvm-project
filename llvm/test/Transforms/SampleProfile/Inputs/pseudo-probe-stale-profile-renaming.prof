@@ -32,18 +32,13 @@ main:47:0
   !CFGChecksum: 281479271677951
  10: cold_func:0
   1: 0
-  2: block_only:0
-   1: 0
-   3: 0
-   5: 0
-   10: 0
-   !CFGChecksum: 206551239323
+  2: 0 block_only:0
   !CFGChecksum: 281479271677951
  !CFGChecksum: 1126003093360596
 test_noninline:22:2
  1: 2
  2: foo:20
-  1: 2
+  1: 3
   2: 2 bar:3
   4: 3 bar:3
   3: baz:13
