@@ -11,7 +11,7 @@
 ;CHECK-DENSITY-CS: Sample PGO is estimated to optimize better with 12.5x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
 ;CHECK-DENSITY-CS: Functions with density >= 800.1 account for 99.00% total sample counts.
 
-;CHECK-DENSITY-CS-80: Functions with density >= 1860.5 account for 80.00% total sample counts.
+;CHECK-DENSITY-CS-80: Functions with density >= 1886.2 account for 80.00% total sample counts.
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out

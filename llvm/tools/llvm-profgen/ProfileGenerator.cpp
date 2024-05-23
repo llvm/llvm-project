@@ -747,30 +747,36 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
   }
 }
 
-// Note that ideally the size should be the number of function instruction.
-// However, for probe-based profile, we don't have the accurate instruction
-// count for each probe, instead, the probe sample is the samples count for the
-// block, which is equivelant to total_instruction_samples/num_of_instruction in
-// one block. Hence, we use the number of probe as a proxy for the function's
-// size.
 void ProfileGeneratorBase::calculateBodySamplesAndSize(
     const FunctionSamples &FSamples, uint64_t &TotalBodySamples,
     uint64_t &FuncBodySize) {
-  FuncBodySize +=
-      FSamples.getBodySamples().size() + FSamples.getCallsiteSamples().size();
+  // Note that ideally the size should be the number of function instruction.
+  // However, for probe-based profile, we don't have the accurate instruction
+  // count for each probe, instead, the probe sample is the samples count for
+  // the block, which is equivelant to
+  // total_instruction_samples/num_of_instruction in one block. Hence, we use
+  // the number of probe as a proxy for the function's size.
+  FuncBodySize += FSamples.getBodySamples().size();
 
+  // The accumulated body samples re-calculated here could be different from the
+  // TotalSamples(getTotalSamples) field of FunctionSamples for line-number
+  // based profile. The reason is that TotalSamples is the sum of all the
+  // samples of the machine instruction in one source-code line, however, the
+  // entry of Bodysamples is the only max number of them, so the TotalSamples is
+  // usually much bigger than the accumulated body samples as one souce-code
+  // line can emit many machine instructions. We observed a regression when we
+  // switched to use the accumulated body samples(by using
+  // -update-total-samples). Hence, it's safer to re-calculate here to avoid
+  // such discrepancy.
   for (const auto &I : FSamples.getBodySamples())
     TotalBodySamples += I.second.getSamples();
 
-  // The whole function could be inlined and optimized out, use the callsite
-  // head samples instead to estimate the body count.
   for (const auto &CallsiteSamples : FSamples.getCallsiteSamples())
     for (const auto &Callee : CallsiteSamples.second) {
       // For binary-level density, the inlinees' samples and size should be
       // included in the calculation.
       calculateBodySamplesAndSize(Callee.second, TotalBodySamples,
                                   FuncBodySize);
-      TotalBodySamples += Callee.second.getHeadSamplesEstimate();
     }
 }
 
