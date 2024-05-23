@@ -38,8 +38,9 @@ public:
                                     CallExpr *TheCall);
   bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool ParseSVEImmChecks(CallExpr *TheCall,
-                         llvm::SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool
+  ParseSVEImmChecks(CallExpr *TheCall,
+                    llvm::SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
   bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);

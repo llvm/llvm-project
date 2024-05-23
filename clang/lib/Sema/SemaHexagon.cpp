@@ -21,7 +21,8 @@ namespace clang {
 
 SemaHexagon::SemaHexagon(Sema &S) : SemaBase(S) {}
 
-bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
+bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID,
+                                              CallExpr *TheCall) {
   struct ArgInfo {
     uint8_t OpNum;
     bool IsSigned;
@@ -248,9 +249,9 @@ bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheC
   // first run.
   static const bool SortOnce =
       (llvm::sort(Infos,
-                 [](const BuiltinInfo &LHS, const BuiltinInfo &RHS) {
-                   return LHS.BuiltinID < RHS.BuiltinID;
-                 }),
+                  [](const BuiltinInfo &LHS, const BuiltinInfo &RHS) {
+                    return LHS.BuiltinID < RHS.BuiltinID;
+                  }),
        true);
   (void)SortOnce;
 
@@ -282,7 +283,7 @@ bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheC
 }
 
 bool SemaHexagon::CheckHexagonBuiltinFunctionCall(unsigned BuiltinID,
-                                           CallExpr *TheCall) {
+                                                  CallExpr *TheCall) {
   return CheckHexagonBuiltinArgument(BuiltinID, TheCall);
 }
 

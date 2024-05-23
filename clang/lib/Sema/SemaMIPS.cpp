@@ -20,13 +20,14 @@ namespace clang {
 SemaMIPS::SemaMIPS(Sema &S) : SemaBase(S) {}
 
 bool SemaMIPS::CheckMipsBuiltinFunctionCall(const TargetInfo &TI,
-                                        unsigned BuiltinID, CallExpr *TheCall) {
+                                            unsigned BuiltinID,
+                                            CallExpr *TheCall) {
   return CheckMipsBuiltinCpu(TI, BuiltinID, TheCall) ||
          CheckMipsBuiltinArgument(BuiltinID, TheCall);
 }
 
 bool SemaMIPS::CheckMipsBuiltinCpu(const TargetInfo &TI, unsigned BuiltinID,
-                               CallExpr *TheCall) {
+                                   CallExpr *TheCall) {
 
   if (Mips::BI__builtin_mips_addu_qb <= BuiltinID &&
       BuiltinID <= Mips::BI__builtin_mips_lwx) {

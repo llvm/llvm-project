@@ -31,21 +31,21 @@ public:
   // code to be safe.
   // Here we try to get information about the alignment of the struct member
   // from the struct passed to the caller function. We only warn when the struct
-  // is passed byval, hence the series of checks and early returns if we are a not
-  // passing a struct byval.
+  // is passed byval, hence the series of checks and early returns if we are a
+  // not passing a struct byval.
   void checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg);
 
   /// BuiltinPPCMMACall - Check the call to a PPC MMA builtin for validity.
   /// Emit an error and return true on failure; return false on success.
-  /// TypeStr is a string containing the type descriptor of the value returned by
-  /// the builtin and the descriptors of the expected type of the arguments.
+  /// TypeStr is a string containing the type descriptor of the value returned
+  /// by the builtin and the descriptors of the expected type of the arguments.
   bool BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
                          const char *TypeDesc);
 
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
-  // Customized Sema Checking for VSX builtins that have the following signature:
-  // vector [...] builtinName(vector [...], vector [...], const int);
+  // Customized Sema Checking for VSX builtins that have the following
+  // signature: vector [...] builtinName(vector [...], vector [...], const int);
   // Which takes the same type of vectors (any legal vector type) for the first
   // two arguments and takes compile time constant for the third argument.
   // Example builtins are :

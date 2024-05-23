@@ -108,7 +108,7 @@ static bool isValidPreserveEnumValueArg(Expr *Arg) {
 }
 
 bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
-                                       CallExpr *TheCall) {
+                                          CallExpr *TheCall) {
   assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
           BuiltinID == BPF::BI__builtin_btf_type_id ||
           BuiltinID == BPF::BI__builtin_preserve_type_info ||

@@ -2144,7 +2144,7 @@ public:
   bool checkArgCountRange(CallExpr *Call, unsigned MinArgCount,
                           unsigned MaxArgCount);
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
-  
+
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
 private:
@@ -3576,9 +3576,9 @@ public:
   /// Negative argument is implicitly converted to unsigned, unless
   /// \p StrictlyUnsigned is true.
   template <typename AttrInfo>
-  bool checkUInt32Argument(const AttrInfo &AI, const Expr *Expr,
-                                  uint32_t &Val, unsigned Idx = UINT_MAX,
-                                  bool StrictlyUnsigned = false) {
+  bool checkUInt32Argument(const AttrInfo &AI, const Expr *Expr, uint32_t &Val,
+                           unsigned Idx = UINT_MAX,
+                           bool StrictlyUnsigned = false) {
     std::optional<llvm::APSInt> I = llvm::APSInt(32);
     if (Expr->isTypeDependent() ||
         !(I = Expr->getIntegerConstantExpr(Context))) {

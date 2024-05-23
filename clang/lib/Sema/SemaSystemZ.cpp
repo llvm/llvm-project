@@ -22,7 +22,7 @@ namespace clang {
 SemaSystemZ::SemaSystemZ(Sema &S) : SemaBase(S) {}
 
 bool SemaSystemZ::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
-                                           CallExpr *TheCall) {
+                                                  CallExpr *TheCall) {
   if (BuiltinID == SystemZ::BI__builtin_tabort) {
     Expr *Arg = TheCall->getArg(0);
     if (std::optional<llvm::APSInt> AbortCode =

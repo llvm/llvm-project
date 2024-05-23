@@ -23,7 +23,7 @@ namespace clang {
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
 bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
-                                          CallExpr *TheCall) {
+                                                CallExpr *TheCall) {
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
   switch (BuiltinID) {
@@ -118,7 +118,7 @@ checkAMDGPUFlatWorkGroupSizeArguments(Sema &S, Expr *MinExpr, Expr *MaxExpr,
 
 AMDGPUFlatWorkGroupSizeAttr *
 SemaAMDGPU::CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI,
-                                        Expr *MinExpr, Expr *MaxExpr) {
+                                              Expr *MinExpr, Expr *MaxExpr) {
   ASTContext &Context = getASTContext();
   AMDGPUFlatWorkGroupSizeAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
 
@@ -129,13 +129,14 @@ SemaAMDGPU::CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI,
 }
 
 void SemaAMDGPU::addAMDGPUFlatWorkGroupSizeAttr(Decl *D,
-                                          const AttributeCommonInfo &CI,
-                                          Expr *MinExpr, Expr *MaxExpr) {
+                                                const AttributeCommonInfo &CI,
+                                                Expr *MinExpr, Expr *MaxExpr) {
   if (auto *Attr = CreateAMDGPUFlatWorkGroupSizeAttr(CI, MinExpr, MaxExpr))
     D->addAttr(Attr);
 }
 
-void SemaAMDGPU::handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL) {
+void SemaAMDGPU::handleAMDGPUFlatWorkGroupSizeAttr(Decl *D,
+                                                   const ParsedAttr &AL) {
   Expr *MinExpr = AL.getArgAsExpr(0);
   Expr *MaxExpr = AL.getArgAsExpr(1);
 
@@ -177,8 +178,8 @@ static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,
 }
 
 AMDGPUWavesPerEUAttr *
-SemaAMDGPU::CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *MinExpr,
-                                 Expr *MaxExpr) {
+SemaAMDGPU::CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI,
+                                       Expr *MinExpr, Expr *MaxExpr) {
   ASTContext &Context = getASTContext();
   AMDGPUWavesPerEUAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
 
@@ -189,7 +190,7 @@ SemaAMDGPU::CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *MinE
 }
 
 void SemaAMDGPU::addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
-                                   Expr *MinExpr, Expr *MaxExpr) {
+                                         Expr *MinExpr, Expr *MaxExpr) {
   if (auto *Attr = CreateAMDGPUWavesPerEUAttr(CI, MinExpr, MaxExpr))
     D->addAttr(Attr);
 }
@@ -210,7 +211,8 @@ void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkUInt32Argument(AL, NumSGPRExpr, NumSGPR))
     return;
 
-  D->addAttr(::new (getASTContext()) AMDGPUNumSGPRAttr(getASTContext(), AL, NumSGPR));
+  D->addAttr(::new (getASTContext())
+                 AMDGPUNumSGPRAttr(getASTContext(), AL, NumSGPR));
 }
 
 void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
@@ -219,7 +221,8 @@ void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkUInt32Argument(AL, NumVGPRExpr, NumVGPR))
     return;
 
-  D->addAttr(::new (getASTContext()) AMDGPUNumVGPRAttr(getASTContext(), AL, NumVGPR));
+  D->addAttr(::new (getASTContext())
+                 AMDGPUNumVGPRAttr(getASTContext(), AL, NumVGPR));
 }
 
 static bool
@@ -242,7 +245,7 @@ checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
   for (int i = 0; i < 3; i++) {
     if (Exprs[i]) {
       if (!S.checkUInt32Argument(Attr, Exprs[i], NumWG, i,
-                               /*StrictlyUnsigned=*/true))
+                                 /*StrictlyUnsigned=*/true))
         return true;
       if (NumWG == 0) {
         S.Diag(Attr.getLoc(), diag::err_attribute_argument_is_zero)
@@ -255,27 +258,29 @@ checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
   return false;
 }
 
-AMDGPUMaxNumWorkGroupsAttr *
-SemaAMDGPU::CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI,
-                                       Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
+AMDGPUMaxNumWorkGroupsAttr *SemaAMDGPU::CreateAMDGPUMaxNumWorkGroupsAttr(
+    const AttributeCommonInfo &CI, Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
   ASTContext &Context = getASTContext();
   AMDGPUMaxNumWorkGroupsAttr TmpAttr(Context, CI, XExpr, YExpr, ZExpr);
 
-  if (checkAMDGPUMaxNumWorkGroupsArguments(SemaRef, XExpr, YExpr, ZExpr, TmpAttr))
+  if (checkAMDGPUMaxNumWorkGroupsArguments(SemaRef, XExpr, YExpr, ZExpr,
+                                           TmpAttr))
     return nullptr;
 
   return ::new (Context)
       AMDGPUMaxNumWorkGroupsAttr(Context, CI, XExpr, YExpr, ZExpr);
 }
 
-void SemaAMDGPU::addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
-                                         Expr *XExpr, Expr *YExpr,
-                                         Expr *ZExpr) {
+void SemaAMDGPU::addAMDGPUMaxNumWorkGroupsAttr(Decl *D,
+                                               const AttributeCommonInfo &CI,
+                                               Expr *XExpr, Expr *YExpr,
+                                               Expr *ZExpr) {
   if (auto *Attr = CreateAMDGPUMaxNumWorkGroupsAttr(CI, XExpr, YExpr, ZExpr))
     D->addAttr(Attr);
 }
 
-void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL) {
+void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
+                                                  const ParsedAttr &AL) {
   Expr *YExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
   Expr *ZExpr = (AL.getNumArgs() > 2) ? AL.getArgAsExpr(2) : nullptr;
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);

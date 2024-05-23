@@ -1,4 +1,4 @@
-//===------ SemaNVPTX.cpp -------- NVPTX target-specific routines -----------===//
+//===------ SemaNVPTX.cpp ------- NVPTX target-specific routines ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,8 +19,8 @@ namespace clang {
 SemaNVPTX::SemaNVPTX(Sema &S) : SemaBase(S) {}
 
 bool SemaNVPTX::CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI,
-                                         unsigned BuiltinID,
-                                         CallExpr *TheCall) {
+                                              unsigned BuiltinID,
+                                              CallExpr *TheCall) {
   switch (BuiltinID) {
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_8:

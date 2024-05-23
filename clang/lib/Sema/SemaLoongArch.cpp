@@ -20,8 +20,8 @@ namespace clang {
 SemaLoongArch::SemaLoongArch(Sema &S) : SemaBase(S) {}
 
 bool SemaLoongArch::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
-                                             unsigned BuiltinID,
-                                             CallExpr *TheCall) {
+                                                      unsigned BuiltinID,
+                                                      CallExpr *TheCall) {
   switch (BuiltinID) {
   default:
     break;
@@ -29,7 +29,8 @@ bool SemaLoongArch::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   case LoongArch::BI__builtin_loongarch_cacop_d:
   case LoongArch::BI__builtin_loongarch_cacop_w: {
     SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5));
-    SemaRef.BuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12), llvm::maxIntN(12));
+    SemaRef.BuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12),
+                                    llvm::maxIntN(12));
     break;
   }
   case LoongArch::BI__builtin_loongarch_break:
@@ -510,6 +511,5 @@ bool SemaLoongArch::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   }
   return false;
 }
-
 
 } // namespace clang

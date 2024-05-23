@@ -22,7 +22,6 @@ class SemaNVPTX : public SemaBase {
 public:
   SemaNVPTX(Sema &S);
 
-  
   bool CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
 };

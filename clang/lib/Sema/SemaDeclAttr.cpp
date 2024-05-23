@@ -294,7 +294,8 @@ static bool checkFunctionOrMethodParameterIndex(
   }
   if (HasImplicitThisParam && !CanIndexImplicitThis) {
     if (IdxSource == 1) {
-      S.Diag(S.getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
+      S.Diag(S.getAttrLoc(AI),
+             diag::err_attribute_invalid_implicit_this_argument)
           << &AI << IdxExpr->getSourceRange();
       return false;
     }
@@ -3255,7 +3256,7 @@ static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
   for (unsigned i = 0; i < 3; ++i) {
     const Expr *E = AL.getArgAsExpr(i);
     if (!S.checkUInt32Argument(AL, E, WGSize[i], i,
-                             /*StrictlyUnsigned=*/true))
+                               /*StrictlyUnsigned=*/true))
       return;
     if (WGSize[i] == 0) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
@@ -4185,7 +4186,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
       // If the expression is not parseable as an int32_t we have a problem.
       if (!S.checkUInt32Argument(AL, IdxExpr, (uint32_t &)ArgIdx, I + 1,
-                               false)) {
+                                 false)) {
         S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_bounds)
             << AL << (I + 1) << IdxExpr->getSourceRange();
         return;

@@ -43,8 +43,8 @@ void SemaPPC::checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg) {
   for (const FieldDecl *FD :
        ArgType->castAs<RecordType>()->getDecl()->fields()) {
     if (const auto *AA = FD->getAttr<AlignedAttr>()) {
-      CharUnits Alignment =
-          getASTContext().toCharUnitsFromBits(AA->getAlignment(getASTContext()));
+      CharUnits Alignment = getASTContext().toCharUnitsFromBits(
+          AA->getAlignment(getASTContext()));
       if (Alignment.getQuantity() == 16) {
         Diag(FD->getLocation(), diag::warn_not_xl_compatible) << FD;
         Diag(Loc, diag::note_misaligned_member_used_here) << PD;
@@ -89,8 +89,9 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   return false;
 }
 
-bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                       CallExpr *TheCall) {
+bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
+                                          unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
   unsigned i = 0, l = 0, u = 0;
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
@@ -101,7 +102,8 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned Builtin
            << TheCall->getSourceRange();
 
   switch (BuiltinID) {
-  default: return false;
+  default:
+    return false;
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
@@ -260,7 +262,7 @@ bool SemaPPC::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
 #define PPC_VECTOR_TYPE(Name, Id, Size) || CoreType == Context.Id##Ty
   if (false
 #include "clang/Basic/PPCTypes.def"
-     ) {
+  ) {
     Diag(TypeLoc, diag::err_ppc_invalid_use_mma_type);
     return true;
   }
@@ -296,10 +298,13 @@ static QualType DecodePPCMMATypeFromStr(ASTContext &Context, const char *&Str,
     Str = End;
     QualType Type;
     switch (size) {
-  #define PPC_VECTOR_TYPE(typeName, Id, size) \
-    case size: Type = Context.Id##Ty; break;
-  #include "clang/Basic/PPCTypes.def"
-    default: llvm_unreachable("Invalid PowerPC MMA vector type");
+#define PPC_VECTOR_TYPE(typeName, Id, size)                                    \
+  case size:                                                                   \
+    Type = Context.Id##Ty;                                                     \
+    break;
+#include "clang/Basic/PPCTypes.def"
+    default:
+      llvm_unreachable("Invalid PowerPC MMA vector type");
     }
     bool CheckVectorArgs = false;
     while (!CheckVectorArgs) {
@@ -324,7 +329,7 @@ static QualType DecodePPCMMATypeFromStr(ASTContext &Context, const char *&Str,
 }
 
 bool SemaPPC::BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
-                             const char *TypeStr) {
+                                const char *TypeStr) {
 
   assert((TypeStr[0] != '\0') &&
          "Invalid types in PPC MMA builtin declaration");
@@ -368,7 +373,8 @@ bool SemaPPC::BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
     // If the value of the Mask is not 0, we have a constraint in the size of
     // the integer argument so here we ensure the argument is a constant that
     // is in the valid range.
-    if (Mask != 0 && SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, Mask, true))
+    if (Mask != 0 &&
+        SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, Mask, true))
       return true;
 
     ArgNum++;
@@ -379,7 +385,7 @@ bool SemaPPC::BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
   // number of arguments in TheCall and if it is not the case, to display a
   // better error message.
   while (*TypeStr != '\0') {
-    (void) DecodePPCMMATypeFromStr(Context, TypeStr, Mask);
+    (void)DecodePPCMMATypeFromStr(Context, TypeStr, Mask);
     ArgNum++;
   }
   if (SemaRef.checkArgCount(TheCall, ArgNum))

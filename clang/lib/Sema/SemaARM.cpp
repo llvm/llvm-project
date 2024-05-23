@@ -21,7 +21,8 @@ namespace clang {
 SemaARM::SemaARM(Sema &S) : SemaBase(S) {}
 
 /// BuiltinARMMemoryTaggingCall - Handle calls of memory tagging extensions
-bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall) {
+bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
 
   if (BuiltinID == AArch64::BI__builtin_arm_irg) {
@@ -36,7 +37,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType FirstArgType = FirstArg.get()->getType();
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
-               << "first" << FirstArgType << Arg0->getSourceRange();
+             << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
     ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
@@ -45,7 +46,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType SecArgType = SecArg.get()->getType();
     if (!SecArgType->isIntegerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-               << "second" << SecArgType << Arg1->getSourceRange();
+             << "second" << SecArgType << Arg1->getSourceRange();
 
     // Derive the return type from the pointer argument.
     TheCall->setType(FirstArgType);
@@ -63,7 +64,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType FirstArgType = FirstArg.get()->getType();
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
-               << "first" << FirstArgType << Arg0->getSourceRange();
+             << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
     // Derive the return type from the pointer argument.
@@ -85,12 +86,12 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType FirstArgType = FirstArg.get()->getType();
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
-               << "first" << FirstArgType << Arg0->getSourceRange();
+             << "first" << FirstArgType << Arg0->getSourceRange();
 
     QualType SecArgType = Arg1->getType();
     if (!SecArgType->isIntegerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-               << "second" << SecArgType << Arg1->getSourceRange();
+             << "second" << SecArgType << Arg1->getSourceRange();
     TheCall->setType(Context.IntTy);
     return false;
   }
@@ -107,7 +108,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType FirstArgType = FirstArg.get()->getType();
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
-               << "first" << FirstArgType << Arg0->getSourceRange();
+             << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
     // Derive the return type from the pointer argument.
@@ -129,18 +130,19 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
     QualType ArgTypeA = ArgExprA.get()->getType();
     QualType ArgTypeB = ArgExprB.get()->getType();
 
-    auto isNull = [&] (Expr *E) -> bool {
-      return E->isNullPointerConstant(
-                        Context, Expr::NPC_ValueDependentIsNotNull); };
+    auto isNull = [&](Expr *E) -> bool {
+      return E->isNullPointerConstant(Context,
+                                      Expr::NPC_ValueDependentIsNotNull);
+    };
 
     // argument should be either a pointer or null
     if (!ArgTypeA->isAnyPointerType() && !isNull(ArgA))
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
-        << "first" << ArgTypeA << ArgA->getSourceRange();
+             << "first" << ArgTypeA << ArgA->getSourceRange();
 
     if (!ArgTypeB->isAnyPointerType() && !isNull(ArgB))
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
-        << "second" << ArgTypeB << ArgB->getSourceRange();
+             << "second" << ArgTypeB << ArgB->getSourceRange();
 
     // Ensure Pointee types are compatible
     if (ArgTypeA->isAnyPointerType() && !isNull(ArgA) &&
@@ -148,24 +150,27 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
       QualType pointeeA = ArgTypeA->getPointeeType();
       QualType pointeeB = ArgTypeB->getPointeeType();
       if (!Context.typesAreCompatible(
-             Context.getCanonicalType(pointeeA).getUnqualifiedType(),
-             Context.getCanonicalType(pointeeB).getUnqualifiedType())) {
-        return Diag(TheCall->getBeginLoc(), diag::err_typecheck_sub_ptr_compatible)
-          << ArgTypeA <<  ArgTypeB << ArgA->getSourceRange()
-          << ArgB->getSourceRange();
+              Context.getCanonicalType(pointeeA).getUnqualifiedType(),
+              Context.getCanonicalType(pointeeB).getUnqualifiedType())) {
+        return Diag(TheCall->getBeginLoc(),
+                    diag::err_typecheck_sub_ptr_compatible)
+               << ArgTypeA << ArgTypeB << ArgA->getSourceRange()
+               << ArgB->getSourceRange();
       }
     }
 
     // at least one argument should be pointer type
     if (!ArgTypeA->isAnyPointerType() && !ArgTypeB->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_any2arg_pointer)
-        <<  ArgTypeA << ArgTypeB << ArgA->getSourceRange();
+             << ArgTypeA << ArgTypeB << ArgA->getSourceRange();
 
     if (isNull(ArgA)) // adopt type of the other pointer
-      ArgExprA = SemaRef.ImpCastExprToType(ArgExprA.get(), ArgTypeB, CK_NullToPointer);
+      ArgExprA =
+          SemaRef.ImpCastExprToType(ArgExprA.get(), ArgTypeB, CK_NullToPointer);
 
     if (isNull(ArgB))
-      ArgExprB = SemaRef.ImpCastExprToType(ArgExprB.get(), ArgTypeA, CK_NullToPointer);
+      ArgExprB =
+          SemaRef.ImpCastExprToType(ArgExprB.get(), ArgTypeA, CK_NullToPointer);
 
     TheCall->setArg(0, ArgExprA.get());
     TheCall->setArg(1, ArgExprB.get());
@@ -179,8 +184,8 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall)
 /// BuiltinARMSpecialReg - Handle a check if argument ArgNum of CallExpr
 /// TheCall is an ARM/AArch64 special register string literal.
 bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
-                                int ArgNum, unsigned ExpectedFieldNum,
-                                bool AllowName) {
+                                   int ArgNum, unsigned ExpectedFieldNum,
+                                   bool AllowName) {
   bool IsARMBuiltin = BuiltinID == ARM::BI__builtin_arm_rsr64 ||
                       BuiltinID == ARM::BI__builtin_arm_wsr64 ||
                       BuiltinID == ARM::BI__builtin_arm_rsr ||
@@ -248,7 +253,7 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     else
       Ranges.append({15, 7, 15});
 
-    for (unsigned i=0; i<Fields.size(); ++i) {
+    for (unsigned i = 0; i < Fields.size(); ++i) {
       int IntField;
       ValidString &= !Fields[i].getAsInteger(10, IntField);
       ValidString &= (IntField >= 0 && IntField <= Ranges[i]);
@@ -272,17 +277,17 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     // These are the named PSTATE accesses using "MSR (immediate)" instructions,
     // along with the upper limit on the immediates allowed.
     auto MaxLimit = llvm::StringSwitch<std::optional<unsigned>>(Reg)
-      .CaseLower("spsel", 15)
-      .CaseLower("daifclr", 15)
-      .CaseLower("daifset", 15)
-      .CaseLower("pan", 15)
-      .CaseLower("uao", 15)
-      .CaseLower("dit", 15)
-      .CaseLower("ssbs", 15)
-      .CaseLower("tco", 15)
-      .CaseLower("allint", 1)
-      .CaseLower("pm", 1)
-      .Default(std::nullopt);
+                        .CaseLower("spsel", 15)
+                        .CaseLower("daifclr", 15)
+                        .CaseLower("daifset", 15)
+                        .CaseLower("pan", 15)
+                        .CaseLower("uao", 15)
+                        .CaseLower("dit", 15)
+                        .CaseLower("ssbs", 15)
+                        .CaseLower("tco", 15)
+                        .CaseLower("allint", 1)
+                        .CaseLower("pm", 1)
+                        .Default(std::nullopt);
 
     // If this is not a named PSTATE, just continue without validating, as this
     // will be lowered to an "MSR (register)" instruction directly
@@ -457,34 +462,37 @@ bool SemaARM::ParseSVEImmChecks(
       break;
     case SVETypeFlags::ImmCheckExtract:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                  (2048 / ElementSizeInBits) - 1))
+                                          (2048 / ElementSizeInBits) - 1))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckShiftRight:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, ElementSizeInBits))
+      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
+                                          ElementSizeInBits))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckShiftRightNarrow:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, ElementSizeInBits / 2))
+      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
+                                          ElementSizeInBits / 2))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckShiftLeft:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, ElementSizeInBits - 1))
+      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                          ElementSizeInBits - 1))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckLaneIndex:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                  (128 / (1 * ElementSizeInBits)) - 1))
+                                          (128 / (1 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckLaneIndexCompRotate:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                  (128 / (2 * ElementSizeInBits)) - 1))
+                                          (128 / (2 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckLaneIndexDot:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                  (128 / (4 * ElementSizeInBits)) - 1))
+                                          (128 / (4 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
     case SVETypeFlags::ImmCheckComplexRot90_270:
@@ -565,7 +573,8 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
       BuiltinType = SemaARM::ArmStreaming;
   }
 
-  if (FnType == SemaARM::ArmStreaming && BuiltinType == SemaARM::ArmNonStreaming) {
+  if (FnType == SemaARM::ArmStreaming &&
+      BuiltinType == SemaARM::ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
   }
@@ -577,7 +586,8 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     return;
   }
 
-  if (FnType == SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmStreaming) {
+  if (FnType == SemaARM::ArmNonStreaming &&
+      BuiltinType == SemaARM::ArmStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
   }
@@ -607,7 +617,8 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
   }
 }
 
-bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
@@ -645,7 +656,8 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall)
   return ParseSVEImmChecks(TheCall, ImmChecks);
 }
 
-bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
@@ -672,7 +684,8 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall)
 }
 
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
-                                        unsigned BuiltinID, CallExpr *TheCall) {
+                                           unsigned BuiltinID,
+                                           CallExpr *TheCall) {
   if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
 
     switch (BuiltinID) {
@@ -697,14 +710,14 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
   bool HasConstPtr = false;
   switch (BuiltinID) {
 #define GET_NEON_OVERLOAD_CHECK
-#include "clang/Basic/arm_neon.inc"
 #include "clang/Basic/arm_fp16.inc"
+#include "clang/Basic/arm_neon.inc"
 #undef GET_NEON_OVERLOAD_CHECK
   }
 
   // For NEON intrinsics which are overloaded on vector element type, validate
   // the immediate which specifies which variant to emit.
-  unsigned ImmArg = TheCall->getNumArgs()-1;
+  unsigned ImmArg = TheCall->getNumArgs() - 1;
   if (mask) {
     if (SemaRef.BuiltinConstantArg(TheCall, ImmArg, Result))
       return true;
@@ -728,8 +741,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                           Arch == llvm::Triple::aarch64_32 ||
                           Arch == llvm::Triple::aarch64_be;
     bool IsInt64Long = TI.getInt64Type() == TargetInfo::SignedLong;
-    QualType EltTy =
-        getNeonEltType(NeonTypeFlags(TV), getASTContext(), IsPolyUnsigned, IsInt64Long);
+    QualType EltTy = getNeonEltType(NeonTypeFlags(TV), getASTContext(),
+                                    IsPolyUnsigned, IsInt64Long);
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
@@ -737,8 +750,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
-    if (SemaRef.DiagnoseAssignmentResult(ConvTy, Arg->getBeginLoc(), LHSTy, RHSTy,
-                                 RHS.get(), Sema::AA_Assigning))
+    if (SemaRef.DiagnoseAssignmentResult(ConvTy, Arg->getBeginLoc(), LHSTy,
+                                         RHSTy, RHS.get(), Sema::AA_Assigning))
       return true;
   }
 
@@ -748,25 +761,27 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
-  #define GET_NEON_IMMEDIATE_CHECK
-  #include "clang/Basic/arm_neon.inc"
-  #include "clang/Basic/arm_fp16.inc"
-  #undef GET_NEON_IMMEDIATE_CHECK
+#define GET_NEON_IMMEDIATE_CHECK
+#include "clang/Basic/arm_fp16.inc"
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_IMMEDIATE_CHECK
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
 }
 
-bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   switch (BuiltinID) {
   default:
     return false;
-  #include "clang/Basic/arm_mve_builtin_sema.inc"
+#include "clang/Basic/arm_mve_builtin_sema.inc"
   }
 }
 
-bool SemaARM::CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                       CallExpr *TheCall) {
+bool SemaARM::CheckCDEBuiltinFunctionCall(const TargetInfo &TI,
+                                          unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   bool Err = false;
   switch (BuiltinID) {
   default:
@@ -781,7 +796,8 @@ bool SemaARM::CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned Builtin
 }
 
 bool SemaARM::CheckARMCoprocessorImmediate(const TargetInfo &TI,
-                                        const Expr *CoprocArg, bool WantCDE) {
+                                           const Expr *CoprocArg,
+                                           bool WantCDE) {
   ASTContext &Context = getASTContext();
   if (SemaRef.isConstantEvaluatedContext())
     return false;
@@ -804,8 +820,9 @@ bool SemaARM::CheckARMCoprocessorImmediate(const TargetInfo &TI,
   return false;
 }
 
-bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
-                                        unsigned MaxWidth) {
+bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
+                                           CallExpr *TheCall,
+                                           unsigned MaxWidth) {
   assert((BuiltinID == ARM::BI__builtin_arm_ldrex ||
           BuiltinID == ARM::BI__builtin_arm_ldaex ||
           BuiltinID == ARM::BI__builtin_arm_strex ||
@@ -821,7 +838,8 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall
                  BuiltinID == AArch64::BI__builtin_arm_ldaex;
 
   ASTContext &Context = getASTContext();
-  DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+  DeclRefExpr *DRE =
+      cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
 
   // Ensure that we have the proper number of arguments.
   if (SemaRef.checkArgCount(TheCall, IsLdrex ? 1 : 2))
@@ -832,7 +850,8 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall
   // Because it is a pointer type, we don't have to worry about any implicit
   // casts here.
   Expr *PointerArg = TheCall->getArg(IsLdrex ? 0 : 1);
-  ExprResult PointerArgRes = SemaRef.DefaultFunctionArrayLvalueConversion(PointerArg);
+  ExprResult PointerArgRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(PointerArg);
   if (PointerArgRes.isInvalid())
     return true;
   PointerArg = PointerArgRes.get();
@@ -920,8 +939,9 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall
   return false;
 }
 
-bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                       CallExpr *TheCall) {
+bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
+                                          unsigned BuiltinID,
+                                          CallExpr *TheCall) {
   if (BuiltinID == ARM::BI__builtin_arm_ldrex ||
       BuiltinID == ARM::BI__builtin_arm_ldaex ||
       BuiltinID == ARM::BI__builtin_arm_strex ||
@@ -955,7 +975,8 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI, unsigned Builtin
   // range check them here.
   // FIXME: VFP Intrinsics should error if VFP not present.
   switch (BuiltinID) {
-  default: return false;
+  default:
+    return false;
   case ARM::BI__builtin_arm_ssat:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
   case ARM::BI__builtin_arm_usat:
@@ -997,8 +1018,8 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI, unsigned Builtin
 }
 
 bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
-                                           unsigned BuiltinID,
-                                           CallExpr *TheCall) {
+                                              unsigned BuiltinID,
+                                              CallExpr *TheCall) {
   if (BuiltinID == AArch64::BI__builtin_arm_ldrex ||
       BuiltinID == AArch64::BI__builtin_arm_ldaex ||
       BuiltinID == AArch64::BI__builtin_arm_strex ||

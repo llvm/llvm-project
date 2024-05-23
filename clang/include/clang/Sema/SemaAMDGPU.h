@@ -27,7 +27,7 @@ public:
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
-    /// Create an AMDGPUWavesPerEUAttr attribute.
+  /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *
   CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,
                                     Expr *Max);
