@@ -20,8 +20,6 @@
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPlatformPythonInterface.h"
 
-#include "lldb/Target/ExecutionContext.h"
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
