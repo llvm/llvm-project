@@ -220,45 +220,93 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
       b, loc, minMap, SmallVector<OpFoldResult>{offset, tileSize, size});
 }
 
+/// Returns true if the maximum tile offset `tileSize * numThreads-1` is less
+/// than `iterationSize`.
+static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
+                                           OpFoldResult numThreads,
+                                           OpFoldResult iterationSize) {
+  std::optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
+  std::optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
+  std::optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
+  if (!tileSizeConst || !numThreadsConst || !iterSizeConst)
+    return false;
+  return *tileSizeConst * (*numThreadsConst - 1) < *iterSizeConst;
+}
+
 /// Compute the tile offsets and sizes.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
 getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
                       ArrayRef<Range> iterationDomain,
-                      ArrayRef<OpFoldResult> tileSizes, bool isLoopNormalized) {
+                      ArrayRef<OpFoldResult> tileSizes,
+                      ArrayRef<OpFoldResult> numThreads) {
   SmallVector<OpFoldResult> offsets, sizes;
   int materializedLoopNum = 0;
 
-  AffineExpr d0, s0, s1, s2;
-  AffineExpr offsetExpr;
-  if (isLoopNormalized) {
-    bindDims(rewriter.getContext(), d0);
+  if (!numThreads.empty()) {
+    AffineExpr d0, d1, s0, s1, s2;
+    AffineExpr offsetExpr, residualTileSizeExpr;
+    bindDims(rewriter.getContext(), d0, d1);
     bindSymbols(rewriter.getContext(), s0, s1, s2);
-    offsetExpr = s0 + d0 * s1 * s2;
-  }
+    offsetExpr = d0 + d1 * s0 * s1;
+    residualTileSizeExpr = s2 - (d0 + d1 * s0 * s1);
 
-  for (auto [tileSize, loopRange] :
-       llvm::zip_equal(tileSizes, iterationDomain)) {
-    if (isConstantIntValue(tileSize, 0)) {
-      offsets.push_back(loopRange.offset);
-      sizes.push_back(loopRange.size);
-      continue;
-    }
-    // If loop is normalized, the offset is (lb + iv * step * tileSize)
-    Value iv = ivs[materializedLoopNum++];
-    OpFoldResult offset;
-    if (isLoopNormalized) {
-      offset = affine::makeComposedFoldedAffineApply(
+    for (auto [nt, tileSize, loopRange] :
+         llvm::zip_equal(numThreads, tileSizes, iterationDomain)) {
+
+      if (isConstantIntValue(nt, 0) || isConstantIntValue(nt, 1)) {
+        offsets.push_back(loopRange.offset);
+        sizes.push_back(loopRange.size);
+        continue;
+      }
+
+      Value iv = ivs[materializedLoopNum++];
+      OpFoldResult offset = affine::makeComposedFoldedAffineApply(
           rewriter, loc, offsetExpr,
-          ArrayRef<OpFoldResult>{iv, loopRange.offset, loopRange.stride,
+          ArrayRef<OpFoldResult>{loopRange.offset, iv, loopRange.stride,
                                  tileSize});
-    } else {
-      offset = getAsOpFoldResult(iv);
+      OpFoldResult residualTileSize = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, residualTileSizeExpr,
+          {loopRange.offset, nt, loopRange.stride, tileSize, loopRange.size});
+      OpFoldResult size = tileSize;
+      if (!isConstantIntValue(residualTileSize, 0)) {
+        OpFoldResult sizeMinusOffsetPerThread =
+            affine::makeComposedFoldedAffineApply(rewriter, loc, s0 - d0,
+                                                  {offset, loopRange.size});
+        size = affine::makeComposedFoldedAffineMin(
+            rewriter, loc,
+            AffineMap::getMultiDimIdentityMap(2, rewriter.getContext()),
+            {sizeMinusOffsetPerThread, tileSize});
+      }
+      if (!canOmitTileOffsetInBoundsCheck(tileSize, nt, loopRange.size)) {
+        AffineMap maxMap =
+            AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
+        size = affine::makeComposedFoldedAffineMax(
+            rewriter, loc, maxMap, {rewriter.getIndexAttr(0), size});
+      }
+
+      offsets.push_back(offset);
+      sizes.push_back(size);
     }
-    offsets.push_back(offset);
-    sizes.push_back(
-        getBoundedTileSize(rewriter, loc, loopRange, offset, tileSize));
+    return {offsets, sizes};
+  } else {
+    for (auto [tileSize, loopRange] :
+         llvm::zip_equal(tileSizes, iterationDomain)) {
+
+      if (isConstantIntValue(tileSize, 0)) {
+        offsets.push_back(loopRange.offset);
+        sizes.push_back(loopRange.size);
+        continue;
+      }
+
+      Value iv = ivs[materializedLoopNum++];
+      OpFoldResult offset = getAsOpFoldResult(iv);
+      offsets.push_back(offset);
+      OpFoldResult size =
+          getBoundedTileSize(rewriter, loc, loopRange, offset, tileSize);
+      sizes.push_back(size);
+    }
+    return {offsets, sizes};
   }
-  return {offsets, sizes};
 }
 
 /// Function to return the bounds of the loops to be generated.
@@ -765,7 +813,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     // 4a. Compute the `offsets` and `sizes` to use for tiling.
     SmallVector<OpFoldResult> offsets, sizes;
     std::tie(offsets, sizes) = getTileOffsetAndSizes(
-        rewriter, loc, ivs, iterationDomain, tileSizes, !numThreads.empty());
+        rewriter, loc, ivs, iterationDomain, tileSizes, numThreads);
 
     // 4b. If interchange was provided, apply inverse of the interchange
     //     to get back the offsets/sizes in the order to be specified.

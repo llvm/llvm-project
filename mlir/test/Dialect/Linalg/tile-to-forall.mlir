@@ -3,9 +3,9 @@
 // Offset per thread:
 // CHECK-DAG: affine_map<(d0)[s0] -> (d0 * (s0 ceildiv 10))>
 // Per thread tile size.
-// CHECK-DAG: affine_map<(d0)[s0] -> (s0 ceildiv 10, -(d0 * (s0 ceildiv 10)) + s0)>
+// CHECK-DAG: affine_map<(d0)[s0] -> (-(d0 * (s0 ceildiv 10)) + s0, s0 ceildiv 10)>
 // CHECK-DAG: affine_map<(d0)[s0] -> (d0 * (s0 ceildiv 20))>
-// CHECK-DAG: affine_map<(d0)[s0] -> (s0 ceildiv 20, -(d0 * (s0 ceildiv 20)) + s0)>
+// CHECK-DAG: affine_map<(d0)[s0] -> (-(d0 * (s0 ceildiv 20)) + s0, s0 ceildiv 20)>
 
 module {
 // CHECK-LABEL: matmul(
@@ -96,7 +96,7 @@ module {
 // In this test case, matmul dims and tile size are dynamic.
 
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
-// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0, s1] -> (s0, -(d0 * s0) + s1)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
 // CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * s0)>
 
 // CHECK-LABEL: matmul_tile_size_dynamic_dynamic(
@@ -140,7 +140,7 @@ module attributes {transform.with_named_sequence} {
 
 // Tests that dimension 0 can eliminate affine.min/max, dimension 1 cannot.
 
-// CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (15, d0 * -15 + 300)>
+// CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * -15 + 300, 15)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<(d0) -> (0, d0)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0) -> (d0 * 10)>
 // CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (d0 * 15)>
@@ -176,6 +176,7 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
 // -----
 
 // CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
@@ -296,7 +297,7 @@ module {
 
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
-// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0, s1] -> (s0, -(d0 * s0) + s1)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
 // CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
 // CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * s0)>
 // CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
@@ -339,7 +340,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * -15 + 100, 15)>
-// CHECK-DAG: #[[$map1:.+]] = affine_map<(d0) -> (0, d0)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0) -> (d0 * 15)>
 // CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (d0)>
 
@@ -352,8 +352,7 @@ module attributes {transform.with_named_sequence} {
                                          %OUT1: tensor<100xf32>, %OUT2: tensor<100xf32>)
                                          -> (tensor<100xf32>, tensor<100xf32>) {
 //      CHECK: scf.forall (%[[IV0:.+]]) in (7) shared_outs(%[[OUT1:[0-9a-z]+]] = %[[ORGOUT1]], %[[OUT2:[0-9a-z]+]] = %[[ORGOUT2]])
-//      CHECK:   %[[TSMIN:.+]] = affine.min #[[$map0]](%[[IV0]])
-//      CHECK:   %[[TS:.+]] = affine.max #[[$map1]](%[[TSMIN]])
+//      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV0]])
 //  CHECK-NOT:   affine.min
 //  CHECK-NOT:   affine.max
 //      CHECK:   %[[LB:.+]] = affine.apply #[[$map2]](%[[IV0]])
@@ -453,9 +452,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
-// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
-// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
-// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (0, d0)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map6:.+]] = affine_map<(d0) -> (d0 * 20)>
 
 // CHECK-LABEL: matmul_tile_size_dynamic(
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
@@ -470,10 +470,12 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
   //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
-  //      CHECK:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
+  //      CHECK:   %[[TSMIN0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //      CHECK:   %[[TS0:.+]] = affine.max #[[$map3]](%[[TSMIN0]])
+  //      CHECK:   %[[TSMIN1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
+  //      CHECK:   %[[TS1:.+]] = affine.max #[[$map3]](%[[TSMIN1]])
+  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
   //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :
@@ -521,9 +523,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
-// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
-// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
-// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (0, d0)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map6:.+]] = affine_map<(d0) -> (d0 * 20)>
 
 // CHECK-LABEL: matmul_tile_size_dynamic(
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
@@ -538,10 +541,12 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
   //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
-  //      CHECK:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
+  //      CHECK:   %[[TSMIN0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //      CHECK:   %[[TS0:.+]] = affine.max #[[$map3]](%[[TSMIN0]])
+  //      CHECK:   %[[TSMIN1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
+  //      CHECK:   %[[TS1:.+]] = affine.max #[[$map3]](%[[TSMIN1]])
+  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
   //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :
