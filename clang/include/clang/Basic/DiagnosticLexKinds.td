@@ -436,9 +436,6 @@ def warn_compat_pp_embed_directive : Warning<
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
-def ext_pp_embed_parameter_extension : Extension<
-  "'%0' is a Clang extension">,
-  InGroup<DiagGroup<"embed-parameter-extensions">>;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;

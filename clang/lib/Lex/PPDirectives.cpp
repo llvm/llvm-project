@@ -3822,9 +3822,6 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       Result.MaybeLimitParam =
           PPEmbedParameterLimit{*Limit, {ParamStartLoc, CurTok.getLocation()}};
     } else if (Parameter == "clang::offset") {
-      // Let the user know they're using an extension.
-      Diag(CurTok, diag::ext_pp_embed_parameter_extension) << Parameter;
-
       if (Result.MaybeOffsetParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
 
