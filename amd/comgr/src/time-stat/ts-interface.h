@@ -4,6 +4,7 @@
 #include "llvm/ADT/StringRef.h"
 // External interface
 
+namespace COMGR {
 namespace TimeStatistics {
 
 struct ProfilePoint {
@@ -22,5 +23,6 @@ void StartAction(amd_comgr_action_kind_t);
 void EndAction();
 
 } // namespace TimeStatistics
+} // namespace COMGR
 
 #endif // AMD_COMGR_TS_INTERFACE_H

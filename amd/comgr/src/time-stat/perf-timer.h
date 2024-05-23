@@ -1,6 +1,7 @@
 #ifndef AMD_COMGR_PERF_TIMER_H
 #define AMD_COMGR_PERF_TIMER_H
 
+namespace COMGR {
 namespace TimeStatistics {
 
 // Timer abstract interface
@@ -25,5 +26,6 @@ public:
   double getCurrentTime() { return pImpl->getCurrentTime(); }
 };
 } // namespace TimeStatistics
+} // namespace COMGR
 
 #endif // AMD_COMGR_PERF_TIMER_H

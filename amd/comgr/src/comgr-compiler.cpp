@@ -93,7 +93,7 @@ using namespace llvm::sys;
 using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::options;
-using namespace TimeStatistics;
+using namespace COMGR::TimeStatistics;
 
 namespace COMGR {
 

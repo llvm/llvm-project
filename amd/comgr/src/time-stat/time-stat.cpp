@@ -22,6 +22,7 @@ using namespace COMGR;
 #include "time-stat.h"
 #include "ts-interface.h"
 
+namespace COMGR {
 namespace TimeStatistics {
 
 static std::unique_ptr<PerfStats> PS = nullptr;
@@ -159,3 +160,4 @@ bool PerfTimer::Init() {
 }
 
 } // namespace TimeStatistics
+} // namespace COMGR

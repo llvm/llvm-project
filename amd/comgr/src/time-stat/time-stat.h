@@ -7,6 +7,7 @@
 #include "amd_comgr.h"
 #include <iostream>
 
+namespace COMGR {
 namespace TimeStatistics {
 
 struct ProfileData {
@@ -65,5 +66,6 @@ public:
 };
 
 } // namespace TimeStatistics
+} // namespace COMGR
 
 #endif // AMD_COMGR_TIME_STAT_H

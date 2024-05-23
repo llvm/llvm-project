@@ -71,7 +71,7 @@
 
 using namespace llvm;
 using namespace COMGR;
-using namespace TimeStatistics;
+using namespace COMGR::TimeStatistics;
 
 static bool isLanguageValid(amd_comgr_language_t Language) {
   return Language >= AMD_COMGR_LANGUAGE_NONE &&
