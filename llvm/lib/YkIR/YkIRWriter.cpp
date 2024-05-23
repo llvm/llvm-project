@@ -744,6 +744,23 @@ private:
 
   void serialiseStoreInst(StoreInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                           unsigned &InstIdx) {
+    // We don't yet support:
+    //  - volatile store
+    //  - atomic store
+    //  - stores into exotic address spaces
+    //  - potentially misaligned stores
+    //
+    // See the comment in `serialiseLoadInst()` for context on misaligned memory
+    // accesses.
+    DataLayout DL(&M);
+    if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
+        (I->getPointerAddressSpace() != 0) ||
+        (I->getAlign() !=
+         DL.getPrefTypeAlign(I->getValueOperand()->getType()))) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeStore);
     // value:
