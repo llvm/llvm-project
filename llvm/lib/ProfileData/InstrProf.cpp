@@ -1620,13 +1620,12 @@ inline size_t constexpr offsetOf(T1 T2::*Member) {
   return size_t(&(Object.*Member)) - size_t(&Object);
 }
 
+// Read a uint64_t from the specified buffer offset, and swap the bytes in
+// native endianness if necessary.
 static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
-}
-
-uint64_t Header::formatVersion() const {
-  using namespace support;
-  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
+  using namespace ::support;
+  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
+                                                                     Offset);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1638,18 +1637,15 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
-  if (Magic != IndexedInstrProf::Magic)
+  if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
   H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.formatVersion()) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.formatVersion())) {
+  switch (GET_VERSION(H.Version)) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
@@ -1680,7 +1676,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 }
 
 size_t Header::size() const {
-  switch (GET_VERSION(formatVersion())) {
+  switch (GET_VERSION(Version)) {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.

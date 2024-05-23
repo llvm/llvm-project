@@ -23,9 +23,8 @@ def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let constructor = "hlfir::createBufferizeHLFIRPass()";
 }
 
-def OptimizedBufferization : Pass<"opt-bufferization", "::mlir::func::FuncOp"> {
+def OptimizedBufferization : Pass<"opt-bufferization"> {
   let summary = "Special cases for hlfir.expr bufferization where we can avoid a temporary which would be created by the generic bufferization pass";
-  let constructor = "hlfir::createOptimizedBufferizationPass()";
 }
 
 def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
@@ -35,7 +34,6 @@ def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
 
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
-  let constructor = "hlfir::createLowerHLFIROrderedAssignmentsPass()";
   let options = [
     Option<"tryFusingAssignments", "fuse-assignments",
            "bool", /*default=*/"false",
@@ -50,9 +48,8 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
   let summary = "Simplify HLFIR intrinsic operations that don't need to result in runtime calls";
 }
 
-def InlineElementals : Pass<"inline-elementals", "::mlir::func::FuncOp"> {
+def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
-  let constructor = "hlfir::createInlineElementalsPass()";
 }
 
 #endif //FORTRAN_DIALECT_HLFIR_PASSES
