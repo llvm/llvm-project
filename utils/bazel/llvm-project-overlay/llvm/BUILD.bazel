@@ -1881,6 +1881,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":ObjCARC",
         ":Object",
         ":ProfileData",
         ":Remarks",
