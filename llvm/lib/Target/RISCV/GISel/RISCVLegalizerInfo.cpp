@@ -372,10 +372,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalIf(typeIsScalarFPArith(0, ST));
 
-  getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({s32, s64})
-      .minScalar(0, s32)
-      .scalarize(0);
+  // TODO: widen half to float and scalarize vector types.
+  getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
