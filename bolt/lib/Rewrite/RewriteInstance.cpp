@@ -105,6 +105,12 @@ cl::opt<std::string>
                     "output binary via bolt info section"),
            cl::cat(BoltCategory));
 
+cl::opt<bool>
+AllowStripped("allow-stripped",
+  cl::desc("allow processing of stripped binaries"),
+  cl::Hidden,
+  cl::cat(BoltCategory));
+
 cl::opt<bool> DumpDotAll(
     "dump-dot-all",
     cl::desc("dump function CFGs to graphviz format after each stage;"
@@ -3206,12 +3212,14 @@ void RewriteInstance::preprocessProfileData() {
   if (Error E = ProfileReader->preprocessProfile(*BC.get()))
     report_error("cannot pre-process profile", std::move(E));
 
-  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName()) {
+  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName() &&
+      !opts::AllowStripped) {
     BC->errs()
         << "BOLT-ERROR: input binary does not have local file symbols "
            "but profile data includes function names with embedded file "
            "names. It appears that the input binary was stripped while a "
-           "profiled binary was not\n";
+           "profiled binary was not. If you know what you are doing and "
+           "wish to proceed, use -allow-stripped option.\n";
     exit(1);
   }
 }
