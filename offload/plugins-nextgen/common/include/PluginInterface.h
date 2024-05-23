@@ -1052,6 +1052,10 @@ struct GenericPluginTy {
   /// given target. Returns true if the \p Image is compatible with the plugin.
   Expected<bool> checkELFImage(StringRef Image) const;
 
+  /// Return true if the \p Image can be compiled to run on the platform's
+  /// target architecture.
+  Expected<bool> checkBitcodeImage(StringRef Image) const;
+
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
@@ -1066,8 +1070,11 @@ protected:
 public:
   // TODO: This plugin interface needs to be cleaned up.
 
+  /// Returns true if the plugin has been initialized.
+  int32_t is_initialized() const;
+
   /// Returns non-zero if the provided \p Image can be executed by the runtime.
-  int32_t is_valid_binary(__tgt_device_image *Image);
+  int32_t is_valid_binary(__tgt_device_image *Image, bool Initialized = true);
 
   /// Initialize the device inside of the plugin.
   int32_t init_device(int32_t DeviceId);
@@ -1187,6 +1194,9 @@ public:
                        void **KernelPtr);
 
 private:
+  /// Indicates if the platform runtime has been fully initialized.
+  bool Initialized = false;
+
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
 
