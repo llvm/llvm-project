@@ -761,7 +761,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // 15.5.2.5 -- actual & dummy are both POINTER or both ALLOCATABLE
-  // For INTENT(IN) we relax two checks that are in Fortran to
+  // For INTENT(IN), and for a polymorphic actual being associated with a
+  // monomorphic dummy, we relax two checks that are in Fortran to
   // prevent the callee from changing the type or to avoid having
   // to use a descriptor.
   if (!typesCompatible) {
@@ -770,7 +771,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       (actualIsAllocatable && dummyIsAllocatable)) {
     bool actualIsUnlimited{actualType.type().IsUnlimitedPolymorphic()};
     bool dummyIsUnlimited{dummy.type.type().IsUnlimitedPolymorphic()};
+    bool checkTypeCompatibility{true};
     if (actualIsUnlimited != dummyIsUnlimited) {
+      checkTypeCompatibility = false;
       if (dummyIsUnlimited && dummy.intent == common::Intent::In &&
           context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
         if (context.ShouldWarn(
@@ -790,11 +793,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           messages.Say(
               "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
         }
+      } else if (actualIsPolymorphic &&
+          context.IsEnabled(common::LanguageFeature::
+                  PolymorphicActualAllocatableOrPointerToMonomorphicDummy)) {
+        if (context.ShouldWarn(common::LanguageFeature::
+                    PolymorphicActualAllocatableOrPointerToMonomorphicDummy)) {
+          messages.Say(
+              "If a POINTER or ALLOCATABLE actual argument is polymorphic, the corresponding dummy argument should also be so"_port_en_US);
+        }
       } else {
+        checkTypeCompatibility = false;
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
       }
-    } else if (!actualIsUnlimited) {
+    }
+    if (checkTypeCompatibility && !actualIsUnlimited) {
       if (!actualType.type().IsTkCompatibleWith(dummy.type.type())) {
         if (dummy.intent == common::Intent::In &&
             context.IsEnabled(

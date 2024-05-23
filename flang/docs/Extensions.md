@@ -223,6 +223,10 @@ end
 * When a dummy argument is `POINTER` or `ALLOCATABLE` and is `INTENT(IN)`, we
   relax enforcement of some requirements on actual arguments that must otherwise
   hold true for definable arguments.
+* We allow a limited polymorphic `POINTER` or `ALLOCATABLE` actual argument
+  to be associated with a compatible monomorphic dummy argument, as
+  our implementation, like others, supports a reallocation that would
+  change the dynamic type
 * Assignment of `LOGICAL` to `INTEGER` and vice versa (but not other types) is
   allowed.  The values are normalized to canonical `.TRUE.`/`.FALSE.`.
   The values are also normalized for assignments of `LOGICAL(KIND=K1)` to
