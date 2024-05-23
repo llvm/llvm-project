@@ -101,6 +101,19 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
+Event *
+ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
+  return event.m_opaque_ptr;
+}
+
+Stream *ScriptInterpreter::GetOpaqueTypeFromSBStream(
+    const lldb::SBStream &stream) const {
+  if (stream.m_opaque_up)
+    return const_cast<lldb::SBStream &>(stream).m_opaque_up.get();
+
+  return nullptr;
+}
+
 std::optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
