@@ -1,4 +1,4 @@
-//===-- mlir-c/Dialect/Polynomial.h - C API for LLVM --------------*- C -*-===//
+//===-- mlir-c/Dialect/Polynomial.h - C API for Polynomial --------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
