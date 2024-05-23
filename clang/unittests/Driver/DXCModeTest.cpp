@@ -156,9 +156,10 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   TranslatedArgs.reset(
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 1u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
-               "invalid validator version : 0.1\; if validator major version is "
-               "0, minor version must also be 0");
+  EXPECT_STREQ(
+      DiagConsumer->Errors.back().c_str(),
+      "invalid validator version : 0.1\; if validator major version is 0, "
+      "minor version must also be 0");
   Diags.Clear();
   DiagConsumer->clear();
 
