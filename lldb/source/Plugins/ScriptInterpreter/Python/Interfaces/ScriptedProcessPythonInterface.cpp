@@ -49,7 +49,8 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_capabilities", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
     return {};
 
   return dict;
@@ -90,7 +91,8 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_threads_info", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
     return {};
 
   return dict;
@@ -106,7 +108,8 @@ bool ScriptedProcessPythonInterface::CreateBreakpoint(lldb::addr_t addr,
   if (py_error.Fail())
     error = py_error;
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetBooleanValue();
@@ -131,7 +134,8 @@ lldb::offset_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
   StructuredData::ObjectSP obj =
       Dispatch("write_memory_at_address", py_error, addr, data_sp, error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return LLDB_INVALID_OFFSET;
 
   // If there was an error on the python call, surface it to the user.
@@ -146,7 +150,8 @@ StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
   StructuredData::ArraySP array =
       Dispatch<StructuredData::ArraySP>("get_loaded_images", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, array, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, array,
+                                                    error))
     return {};
 
   return array;
@@ -156,7 +161,8 @@ lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_process_id", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return LLDB_INVALID_PROCESS_ID;
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_PROCESS_ID);
@@ -166,7 +172,8 @@ bool ScriptedProcessPythonInterface::IsAlive() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_alive", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetBooleanValue();
@@ -177,7 +184,8 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_scripted_thread_plugin", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetStringValue().str();
@@ -193,7 +201,8 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_process_metadata", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
     return {};
 
   return dict;
