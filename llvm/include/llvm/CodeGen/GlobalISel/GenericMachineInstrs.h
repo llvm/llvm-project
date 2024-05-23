@@ -34,6 +34,17 @@ public:
   static bool classof(const MachineInstr *MI) {
     return isPreISelGenericOpcode(MI->getOpcode());
   }
+
+  bool hasPoisonGeneratingFlags() const {
+    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
+                         FmNoNans | FmNoInfs);
+  }
+
+  void dropPoisonGeneratingFlags() {
+    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
+               FmNoInfs);
+    assert(!hasPoisonGeneratingFlags());
+  }
 };
 
 /// Provides common memory operand functionality.
