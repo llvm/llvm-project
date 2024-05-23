@@ -30,3 +30,22 @@ constexpr A ab = {.d = 1.0};
 static_assert(ab.d == 1.0, "");
 static_assert(ab.a == 1, ""); // both-error {{not an integral constant expression}} \
                               // both-note {{read of member 'a' of union with active member 'd'}}
+
+namespace SimpleStore {
+  union A {
+    int a;
+    int b;
+  };
+  constexpr int foo() {
+    A a{.b = 4};
+    a.b = 10;
+    return a.b;
+  }
+  static_assert(foo() == 10, "");
+
+  constexpr int empty() {
+    A a{}; /// Just test that this works.
+    return 10;
+  }
+  static_assert(empty() == 10, "");
+}

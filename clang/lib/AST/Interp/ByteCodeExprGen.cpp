@@ -1053,6 +1053,9 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->visitInitializer(Inits[0]);
 
+    if (Inits.size() == 0)
+      return this->emitFinishInit(E);
+
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       if (!this->visit(Init))
@@ -3792,6 +3795,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   if (std::optional<unsigned> I = P.getOrCreateDummy(D)) {
     if (!this->emitGetPtrGlobal(*I, E))
       return false;
+    if (E->getType()->isVoidType())
+      return true;
     // Convert the dummy pointer to another pointer type if we have to.
     if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
       if (!this->emitDecayPtr(PT_Ptr, PT, E))
