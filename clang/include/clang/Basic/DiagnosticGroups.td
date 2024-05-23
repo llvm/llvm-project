@@ -15,8 +15,6 @@ def Implicit : DiagGroup<"implicit", [
     ImplicitInt
 ]>;
 
-def DeprecatedStaticAnalyzerFlag : DiagGroup<"deprecated-static-analyzer-flag">;
-
 // Empty DiagGroups are recognized by clang but ignored.
 def ODR : DiagGroup<"odr">;
 def : DiagGroup<"abi">;
