@@ -35,6 +35,7 @@
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mlir/IR/Value.h>
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
@@ -221,6 +223,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"shift", asAddr},
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"etime",
+     &I::genEtime,
+     {{{"values", asBox}, {"time", asBox}}},
      /*isElemental=*/false},
     {"execute_command_line",
      &I::genExecuteCommandLine,
@@ -543,9 +549,17 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_char_kind",
+     &I::genSelectedCharKind,
+     {{{"name", asAddr}}},
+     /*isElemental=*/false},
     {"selected_int_kind",
      &I::genSelectedIntKind,
      {{{"scalar", asAddr}}},
+     /*isElemental=*/false},
+    {"selected_logical_kind",
+     &I::genSelectedLogicalKind,
+     {{{"bits", asAddr}}},
      /*isElemental=*/false},
     {"selected_real_kind",
      &I::genSelectedRealKind,
@@ -1682,6 +1696,24 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::SubroutineGenerator>(
   return mlir::Value();
 }
 
+template <>
+fir::ExtendedValue
+IntrinsicLibrary::genElementalCall<IntrinsicLibrary::DualGenerator>(
+    DualGenerator generator, llvm::StringRef name, mlir::Type resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, bool outline) {
+  assert(resultType.getImpl() && "expect elemental intrinsic to be functions");
+
+  for (const fir::ExtendedValue &arg : args)
+    if (!arg.getUnboxed() && !arg.getCharBox())
+      // fir::emitFatalError(loc, "nonscalar intrinsic argument");
+      crashOnMissingIntrinsic(loc, name);
+  if (outline)
+    return outlineInExtendedWrapper(generator, name, resultType, args);
+
+  return std::invoke(generator, *this, std::optional<mlir::Type>{resultType},
+                     args);
+}
+
 static fir::ExtendedValue
 invokeHandler(IntrinsicLibrary::ElementalGenerator generator,
               const IntrinsicHandler &handler,
@@ -1723,6 +1755,22 @@ invokeHandler(IntrinsicLibrary::SubroutineGenerator generator,
                                         args);
   std::invoke(generator, lib, args);
   return mlir::Value{};
+}
+
+static fir::ExtendedValue
+invokeHandler(IntrinsicLibrary::DualGenerator generator,
+              const IntrinsicHandler &handler,
+              std::optional<mlir::Type> resultType,
+              llvm::ArrayRef<fir::ExtendedValue> args, bool outline,
+              IntrinsicLibrary &lib) {
+  if (handler.isElemental)
+    return lib.genElementalCall(generator, handler.name, mlir::Type{}, args,
+                                outline);
+  if (outline)
+    return lib.outlineInExtendedWrapper(generator, handler.name, resultType,
+                                        args);
+
+  return std::invoke(generator, lib, resultType, args);
 }
 
 std::pair<fir::ExtendedValue, bool>
@@ -1818,6 +1866,34 @@ IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
     extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
   std::invoke(generator, *this, extendedArgs);
   return {};
+}
+
+mlir::Value
+IntrinsicLibrary::invokeGenerator(DualGenerator generator,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  llvm::SmallVector<fir::ExtendedValue> extendedArgs;
+  for (mlir::Value arg : args)
+    extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
+  std::invoke(generator, *this, std::optional<mlir::Type>{}, extendedArgs);
+  return {};
+}
+
+mlir::Value
+IntrinsicLibrary::invokeGenerator(DualGenerator generator,
+                                  mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  llvm::SmallVector<fir::ExtendedValue> extendedArgs;
+  for (mlir::Value arg : args)
+    extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
+
+  if (resultType.getImpl() == nullptr) {
+    // TODO:
+    assert(false && "result type is null");
+  }
+
+  auto extendedResult = std::invoke(
+      generator, *this, std::optional<mlir::Type>{resultType}, extendedArgs);
+  return toValue(extendedResult, builder, loc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3233,6 +3309,37 @@ void IntrinsicLibrary::genExecuteCommandLine(
           : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
                                       exitstatBox, cmdstatBox, cmdmsgBox);
+}
+
+// ETIME
+fir::ExtendedValue
+IntrinsicLibrary::genEtime(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 2 && !resultType.has_value()) ||
+         (args.size() == 1 && resultType.has_value()));
+
+  mlir::Value values = fir::getBase(args[0]);
+  if (resultType.has_value()) {
+    // function form
+    if (!values)
+      fir::emitFatalError(loc, "expected VALUES parameter");
+
+    auto timeAddr = builder.createTemporary(loc, *resultType);
+    auto timeBox = builder.createBox(loc, timeAddr);
+    fir::runtime::genEtime(builder, loc, values, timeBox);
+    return builder.create<fir::LoadOp>(loc, timeAddr);
+  } else {
+    // subroutine form
+    mlir::Value time = fir::getBase(args[1]);
+    if (!values)
+      fir::emitFatalError(loc, "expected VALUES parameter");
+    if (!time)
+      fir::emitFatalError(loc, "expected TIME parameter");
+
+    fir::runtime::genEtime(builder, loc, values, time);
+    return {};
+  }
+  return {};
 }
 
 // EXIT
@@ -5774,6 +5881,18 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
 }
 
+// SELECTED_CHAR_KIND
+fir::ExtendedValue
+IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedCharKind(builder, loc, fir::getBase(args[0]),
+                                        fir::getLen(args[0])));
+}
+
 // SELECTED_INT_KIND
 mlir::Value
 IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
@@ -5783,6 +5902,17 @@ IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSelectedIntKind(builder, loc, fir::getBase(args[0])));
+}
+
+// SELECTED_LOGICAL_KIND
+mlir::Value
+IntrinsicLibrary::genSelectedLogicalKind(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genSelectedLogicalKind(
+                                   builder, loc, fir::getBase(args[0])));
 }
 
 // SELECTED_REAL_KIND
