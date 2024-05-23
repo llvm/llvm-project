@@ -2763,10 +2763,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope)
-      || m_value.GetValueType() == Value::ValueType::LoadAddress)
-        return DoCast(compiler_type);
+  if (compiler_type.GetByteSize(exe_scope) <=
+          GetCompilerType().GetByteSize(exe_scope) ||
+      m_value.GetValueType() == Value::ValueType::LoadAddress)
+    return DoCast(compiler_type);
 
   error.SetErrorString("Can only cast to a type that is equal to or smaller "
                        "than the orignal type.");

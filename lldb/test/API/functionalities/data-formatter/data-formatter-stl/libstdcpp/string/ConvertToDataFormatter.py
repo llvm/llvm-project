@@ -5,6 +5,7 @@ Helper formmater to verify Std::String by created via SBData
 
 import lldb
 
+
 class SyntheticFormatter:
     def __init__(self, valobj, dict):
         self.valobj = valobj
@@ -35,9 +36,7 @@ class SyntheticFormatter:
 
         child = self.valobj.GetChildMemberWithName(name)
         valType = child.GetType()
-        return self.valobj.CreateValueFromData(name,
-                child.GetData(),
-                valType)
+        return self.valobj.CreateValueFromData(name, child.GetData(), valType)
 
 
 def __lldb_init_module(debugger, dict):

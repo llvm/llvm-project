@@ -46,7 +46,6 @@ class StdStringDataFormatterTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(self.cleanup())
 
@@ -94,7 +93,6 @@ class StdStringDataFormatterTestCase(TestBase):
 
         self.assertEqual(var_S.GetSummary(), 'L"!!!!!"', "new S summary wrong")
 
-
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_std_string_as_data(self):
@@ -124,24 +122,30 @@ class StdStringDataFormatterTestCase(TestBase):
         self.assertEqual(
             var_str_container.GetChildAtIndex(0).GetSummary(),
             '"u22"',
-            "string container child wrong")
+            "string container child wrong",
+        )
         self.assertEqual(
             var_str_container.GetChildAtIndex(1).GetSummary(),
             '"quite a long std::string with lots of info inside it inside a struct"',
-            "string container child wrong")
+            "string container child wrong",
+        )
         self.assertEqual(
             var_str_container.GetChildAtIndex(2).GetSummary(),
             '"u22"',
-            "string container child wrong")
+            "string container child wrong",
+        )
         self.assertEqual(
             var_str_container.GetChildAtIndex(3).GetSummary(),
             '"quite a long std::string with lots of info inside it inside a struct"',
-            "string container child wrong")
+            "string container child wrong",
+        )
         self.assertEqual(
             var_str_container.GetChildAtIndex(4).GetSummary(),
             '"u22"',
-            "string container child wrong")
+            "string container child wrong",
+        )
         self.assertEqual(
             var_str_container.GetChildAtIndex(5).GetSummary(),
             '"quite a long std::string with lots of info inside it inside a struct"',
-            "string container child wrong")
+            "string container child wrong",
+        )

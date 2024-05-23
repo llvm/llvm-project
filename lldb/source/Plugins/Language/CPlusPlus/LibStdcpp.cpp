@@ -292,18 +292,16 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
         return true;
     } break;
     case eAddressTypeHost: {
-      // For std::strings created as data, the valueobject points to char * pointer
-      // so we can get the address of our pointer from the value object
+      // For std::strings created as data, the valueobject points to char *
+      // pointer so we can get the address of our pointer from the value object
       // and then just read the char* as the summary value
       ProcessSP process_sp(valobj.GetProcessSP());
       if (!process_sp)
         return false;
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      DataExtractor data = DataExtractor(
-        (void*)addr_of_string,
-        process_sp->GetAddressByteSize(),
-        process_sp->GetByteOrder(),
-        8);
+      DataExtractor data = DataExtractor((void *)addr_of_string,
+                                         process_sp->GetAddressByteSize(),
+                                         process_sp->GetByteOrder(), 8);
       Status error;
       lldb::offset_t offset = 0;
       lldb::addr_t addr_of_string_from_data = data.GetAddress(&offset);
