@@ -706,6 +706,31 @@ private:
 
   void serialiseLoadInst(LoadInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
+    // We don't yet support:
+    //  - volatile loads
+    //  - atomic loads
+    //  - loads from exotic address spaces
+    //  - potentially misaligned loads
+    //
+    // FIXME: About misaligned loads, when a load is aligned `N`, this is a hard
+    // guarantee to the code generator that at runtime, the pointer is aligned
+    // to N bytes. The codegen uses this to decide whether or not to split the
+    // operation into multiple loads (in order to avoid a memory access
+    // straddling an alignment boundary on a CPU that disallows such things).
+    //
+    // For now we are going to reject any load that has an alignment value not
+    // the same as the natural alignment of the type of the data being loaded.
+    // Eventually we will have to encode the alignment of the load into our IR
+    // and have the trace code generator split up the loads where necessary.
+    // The same will have to be done for store instructions.
+    DataLayout DL(&M);
+    if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
+        (I->getPointerAddressSpace() != 0) ||
+        (I->getAlign() != DL.getPrefTypeAlign(I->getType()))) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeLoad);
     // ptr:
