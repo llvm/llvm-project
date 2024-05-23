@@ -32,6 +32,40 @@ namespace omp {
 
 class DataSharingProcessor {
 private:
+  /// A symbol visitor that keeps track of the currently active OpenMPConstruct
+  /// at any point in time. This is used to track Symbol definition scopes in
+  /// order to tell which OMP scope defined vs. references a certain Symbol.
+  struct OMPConstructSymbolVisitor {
+    template <typename T>
+    bool Pre(const T &) {
+      return true;
+    }
+    template <typename T>
+    void Post(const T &) {}
+
+    bool Pre(const parser::OpenMPConstruct &omp) {
+      currentConstruct = &omp;
+      return true;
+    }
+
+    void Post(const parser::OpenMPConstruct &omp) {
+      currentConstruct = nullptr;
+    }
+
+    void Post(const parser::Name &name) {
+      symDefMap.try_emplace(name.symbol, currentConstruct);
+    }
+
+    const parser::OpenMPConstruct *currentConstruct = nullptr;
+    llvm::DenseMap<semantics::Symbol *, const parser::OpenMPConstruct *>
+        symDefMap;
+
+    /// Given a \p symbol and an \p eval, returns true if eval is the OMP
+    /// construct that defines symbol.
+    bool isSymbolDefineBy(const semantics::Symbol *symbol,
+                          lower::pft::Evaluation &eval) const;
+  };
+
   bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
   mlir::OpBuilder::InsertPoint insPt;
@@ -53,6 +87,7 @@ private:
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
   lower::SymMap *symTable;
+  OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
   void collectSymbols(semantics::Symbol::Flag flag,
@@ -97,11 +132,7 @@ public:
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization = false,
-                       lower::SymMap *symTable = nullptr)
-      : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
-        firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
-        shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
-        useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
+                       lower::SymMap *symTable = nullptr);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
