@@ -278,3 +278,9 @@ void addrlabelexpr(void) {
  a0: ;
   static void *ps[] = { &&a0 }; // pedantic-warning {{use of GNU address-of-label extension}}
 }
+
+extern void cv2;
+void *foo5 (void)
+{
+  return &cv2; // pedantic-warning{{address of an expression of type 'void'}}
+}
