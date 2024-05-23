@@ -214,6 +214,13 @@ Iostat ExternalFileUnit::SetDirection(Direction direction) {
     }
   } else {
     if (mayWrite()) {
+      if (direction_ == Direction::Input) {
+        // Don't retain any input data from previous record, like a
+        // variable-length unformatted record footer, in the frame,
+        // since we're going start writing frames.
+        frameOffsetInFile_ += recordOffsetInFrame_;
+        recordOffsetInFrame_ = 0;
+      }
       direction_ = Direction::Output;
       return IostatOk;
     } else {
@@ -332,5 +339,4 @@ bool ExternalFileUnit::Wait(int id) {
 }
 
 } // namespace Fortran::runtime::io
-
 #endif // !defined(RT_USE_PSEUDO_FILE_UNIT)
