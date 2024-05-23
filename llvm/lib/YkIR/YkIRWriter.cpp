@@ -1082,6 +1082,12 @@ private:
 
   void serialisePhiInst(PHINode *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                         unsigned &InstIdx) {
+    // We don't yet support fast math flags.
+    if ((isa<FPMathOperator>(I) && (I->getFastMathFlags().any()))) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodePHI);
     // num_incoming:
