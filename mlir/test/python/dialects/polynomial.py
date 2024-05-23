@@ -20,5 +20,5 @@ def test_smoke():
     value = Attribute.parse("#polynomial.float_polynomial<0.5 + 1.3e06 x**2>")
     output = Type.parse("!polynomial.polynomial<ring=<coefficientType=f32>>")
     res = polynomial.constant(output, value)
-    # CHECK: polynomial.constant {value = #polynomial.float_polynomial<0.5 + 1.3E+6x**2>} : <ring = <coefficientType = f32>>
+    # CHECK: polynomial.constant float<0.5 + 1.3E+6x**2> : <ring = <coefficientType = f32>>
     print(res)
