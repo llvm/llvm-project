@@ -80,7 +80,8 @@ struct FoldInsertOfRankReducingInsert : public OpRewritePattern<OpTy> {
   }
 };
 
-/// Fold rank increasing expand_shape into insert_slice.
+/// Fold expand_shape which only adds static dimensions of size `1`
+/// into insert_slice.
 template <typename OpTy>
 struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -92,16 +93,16 @@ struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
     if (!expandShapeOp)
       return failure();
 
-    // Only fold away simple rank increasing expansion.
+    // Only fold away simple rank increasing expansion where all added
+    // dimensions have static size `1`.
     SliceVerificationResult res = isRankReducedType(
         expandShapeOp.getResultType(), expandShapeOp.getSrcType());
-    if (res != SliceVerificationResult::Success) {
+    if (res != SliceVerificationResult::Success)
       return rewriter.notifyMatchFailure(insertSliceOp,
                                          "expected rank increasing expansion");
-    }
 
     rewriter.modifyOpInPlace(insertSliceOp, [&]() {
-      insertSliceOp.setOperand(/*source=*/0, expandShapeOp.getSrc());
+      insertSliceOp.getSourceMutable().assign(expandShapeOp.getSrc());
     });
     return success();
   }
