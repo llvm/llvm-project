@@ -7525,6 +7525,11 @@ def err_explicit_object_parameter_mutable: Error<
 def err_invalid_explicit_object_type_in_lambda: Error<
   "invalid explicit object parameter type %0 in lambda with capture; "
   "the type must be the same as, or derived from, the lambda">;
+def err_explicit_object_lambda_ambiguous_base : Error<
+  "lambda %0 is inaccessible due to ambiguity:%1">;
+def err_explicit_object_lambda_inaccessible_base : Error<
+  "invalid explicit object parameter type %0 in lambda with capture; "
+  "the type must derive publicly from the lambda">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
@@ -10056,12 +10061,6 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
-def warn_unsupported_lifetime_extension : Warning<
-  "lifetime extension of "
-  "%select{temporary|backing array of initializer list}0 created "
-  "by aggregate initialization using a default member initializer "
-  "is not yet supported; lifetime of %select{temporary|backing array}0 "
-  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12386,4 +12385,8 @@ def err_acc_reduction_composite_type
 def err_acc_reduction_composite_member_type :Error<
     "OpenACC 'reduction' composite variable must not have non-scalar field">;
 def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
+
+// AMDGCN builtins diagnostics
+def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
+def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
 } // end of sema component.
