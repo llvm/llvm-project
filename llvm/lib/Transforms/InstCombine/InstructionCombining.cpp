@@ -5017,7 +5017,8 @@ bool InstCombinerImpl::run() {
           // Bail out if we have uses in different blocks. We don't do any
           // sophisticated analysis (i.e finding NearestCommonDominator of
           // these use blocks).
-          if (UserParent && UserParent != PN->getIncomingBlock(Num))
+          BasicBlock* IncomingBlock = PN->getIncomingBlock(Num);
+          if (UserParent && UserParent != IncomingBlock)
             return std::nullopt;
           UserParent = PN->getIncomingBlock(Num);
         } else {
