@@ -810,4 +810,68 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+define void @ctest_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
+; CHECK-LABEL: ctest_continous:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    ctestll {dfv=} %esi, %esi
+; CHECK-NEXT:    ctestnsl {dfv=sf} %edx, %edx
+; CHECK-NEXT:    jns .LBB21_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp foo # TAILCALL
+; CHECK-NEXT:  .LBB21_1: # %if.end
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ctest_continous:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %esi, %edi
+; NDD-NEXT:    ctestll {dfv=} %esi, %esi
+; NDD-NEXT:    ctestnsl {dfv=sf} %edx, %edx
+; NDD-NEXT:    jns .LBB21_1
+; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    jmp foo # TAILCALL
+; NDD-NEXT:  .LBB21_1: # %if.end
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp slt i32 %a, %b
+  %cmp1 = icmp slt i32 %b, 0
+  %or.cond = and i1 %cmp, %cmp1
+  %cmp2 = icmp slt i32 %c, 0
+  %or.cond3 = or i1 %or.cond, %cmp2
+  br i1 %or.cond3, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void (...) @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}
+
+define i32 @ctest_nobranch(i32 noundef %a, i32 noundef %b) {
+; CHECK-LABEL: ctest_nobranch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    ctestlel {dfv=} %esi, %esi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ctest_nobranch:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testl %edi, %edi
+; NDD-NEXT:    ctestlel {dfv=} %esi, %esi
+; NDD-NEXT:    setg %al
+; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %a, 0
+  %cmp1 = icmp sgt i32 %b, 0
+  %or.cond.not = or i1 %cmp, %cmp1
+  %. = zext i1 %or.cond.not to i32
+  ret i32 %.
+}
+
 declare dso_local void @foo(...)

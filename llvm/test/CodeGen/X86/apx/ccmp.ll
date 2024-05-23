@@ -222,11 +222,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: ccmp64rr_of:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    cmpq %rdx, %rdi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    setno %cl
-; CHECK-NEXT:    testb %cl, %al
-; CHECK-NEXT:    jne .LBB6_1
+; CHECK-NEXT:    ccmpbq {dfv=of} %rsi, %rdi
+; CHECK-NEXT:    jno .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
@@ -236,11 +233,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; NDD-LABEL: ccmp64rr_of:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    cmpq %rdx, %rdi
-; NDD-NEXT:    setb %al
-; NDD-NEXT:    cmpq %rsi, %rdi
-; NDD-NEXT:    setno %cl
-; NDD-NEXT:    testb %cl, %al
-; NDD-NEXT:    jne .LBB6_1
+; NDD-NEXT:    ccmpbq {dfv=of} %rsi, %rdi
+; NDD-NEXT:    jno .LBB6_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
@@ -1010,6 +1004,70 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry, %if.then
   ret void
+}
+
+define void @ccmp_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
+; CHECK-LABEL: ccmp_continous:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    ccmplel {dfv=} $2, %esi
+; CHECK-NEXT:    ccmpll {dfv=} $3, %edx
+; CHECK-NEXT:    jge .LBB27_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp foo # TAILCALL
+; CHECK-NEXT:  .LBB27_1: # %if.end
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ccmp_continous:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testl %edi, %edi
+; NDD-NEXT:    ccmplel {dfv=} $2, %esi
+; NDD-NEXT:    ccmpll {dfv=} $3, %edx
+; NDD-NEXT:    jge .LBB27_1
+; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    jmp foo # TAILCALL
+; NDD-NEXT:  .LBB27_1: # %if.end
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp slt i32 %a, 1
+  %cmp1 = icmp slt i32 %b, 2
+  %or.cond = and i1 %cmp, %cmp1
+  %cmp3 = icmp slt i32 %c, 3
+  %or.cond4 = and i1 %or.cond, %cmp3
+  br i1 %or.cond4, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void (...) @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}
+
+define i32 @ccmp_nobranch(i32 noundef %a, i32 noundef %b) {
+; CHECK-LABEL: ccmp_nobranch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    ccmplel {dfv=} $2, %esi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ccmp_nobranch:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testl %edi, %edi
+; NDD-NEXT:    ccmplel {dfv=} $2, %esi
+; NDD-NEXT:    setge %al
+; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %a, 0
+  %cmp1 = icmp sgt i32 %b, 1
+  %or.cond.not = or i1 %cmp, %cmp1
+  %. = zext i1 %or.cond.not to i32
+  ret i32 %.
 }
 
 declare dso_local void @foo(...)
