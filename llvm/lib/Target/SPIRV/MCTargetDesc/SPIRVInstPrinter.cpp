@@ -313,41 +313,6 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-/*
-void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
-                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).isReg() || OpNo >= MI->getNumOperands())
-    return;
-
-  unsigned StrStartIndex = OpNo;
-  std::string Str = getSPIRVStringOperand(*MI, StrStartIndex);
-  O << '"';
-  for (char c : Str) {
-    // Escape ", \n characters (might break for complex UTF-8).
-    if (c == '\n') {
-      O.write("\\n", 2);
-    } else {
-      if (c == '"')
-        O.write('\\');
-      O.write(c);
-    }
-  }
-  O << '"';
-
-  unsigned numOpsInString = (Str.size() / 4) + 1;
-  StrStartIndex += numOpsInString;
-
-  // Check for final Op of "OpDecorate %x %stringImm %linkageAttribute".
-  if (MI->getOpcode() == SPIRV::OpDecorate &&
-      MI->getOperand(1).getImm() ==
-          static_cast<unsigned>(Decoration::LinkageAttributes)) {
-    O << ' ';
-    printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
-        MI, StrStartIndex, O);
-  }
-}
-*/
-
 void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O) {
   const unsigned NumOps = MI->getNumOperands();
