@@ -17,6 +17,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/Relocation.h"
+#include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
@@ -86,6 +87,7 @@ extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
+extern cl::opt<bool> TimeRewrite;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -234,11 +236,6 @@ UseGnuStack("use-gnu-stack",
            "issues with strip/objcopy)"),
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
-
-static cl::opt<bool>
-    TimeRewrite("time-rewrite",
-                cl::desc("print time spent in rewriting passes"), cl::Hidden,
-                cl::cat(BoltCategory));
 
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
@@ -1500,7 +1497,7 @@ void RewriteInstance::registerFragments() {
   if (!BC->hasSymbolsWithFileName()) {
     BC->errs() << "BOLT-ERROR: input file has split functions but does not "
                   "have FILE symbols. If the binary was stripped, preserve "
-                  "FILE symbols with --keep-file-symbols strip option";
+                  "FILE symbols with --keep-file-symbols strip option\n";
     exit(1);
   }
 
@@ -3285,8 +3282,11 @@ void RewriteInstance::processProfileData() {
   // Release memory used by profile reader.
   ProfileReader.reset();
 
-  if (opts::AggregateOnly)
+  if (opts::AggregateOnly) {
+    PrintProgramStats PPS(&*BAT);
+    BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*BC));
     exit(0);
+  }
 }
 
 void RewriteInstance::disassembleFunctions() {

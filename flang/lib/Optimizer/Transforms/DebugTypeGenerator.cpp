@@ -57,6 +57,18 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
                         kindMapping.getLogicalBitsize(logTy.getFKind()),
                         llvm::dwarf::DW_ATE_boolean);
+  } else if (fir::isa_complex(Ty)) {
+    unsigned bitWidth;
+    if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
+      auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+      bitWidth = floatTy.getWidth();
+    } else if (auto cplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(Ty)) {
+      bitWidth = kindMapping.getRealBitsize(cplxTy.getFKind());
+    } else {
+      llvm_unreachable("Unhandled complex type");
+    }
+    return genBasicType(context, mlir::StringAttr::get(context, "complex"),
+                        bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
     // placeholder type to allow us to test supported bits.

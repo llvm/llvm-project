@@ -1789,7 +1789,7 @@ LogicalResult DistributeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ReductionOp
+// DeclareReductionOp
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
@@ -1879,21 +1879,6 @@ LogicalResult DeclareReductionOp::verifyRegions() {
                             "of the reduction type";
 
   return success();
-}
-
-LogicalResult ReductionOp::verify() {
-  auto *op = (*this)->getParentWithTrait<ReductionClauseInterface::Trait>();
-  if (!op)
-    return emitOpError() << "must be used within an operation supporting "
-                            "reduction clause interface";
-  while (op) {
-    for (const auto &var :
-         cast<ReductionClauseInterface>(op).getAllReductionVars())
-      if (var == getAccumulator())
-        return success();
-    op = op->getParentWithTrait<ReductionClauseInterface::Trait>();
-  }
-  return emitOpError() << "the accumulator is not used by the parent";
 }
 
 //===----------------------------------------------------------------------===//
