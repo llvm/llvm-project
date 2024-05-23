@@ -40,6 +40,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
 
   DEPENDS
   vt_gen
+  intrinsics_gen
   )
 set_target_properties(LLVMTableGenCommon PROPERTIES FOLDER "Tablegenning")
 
