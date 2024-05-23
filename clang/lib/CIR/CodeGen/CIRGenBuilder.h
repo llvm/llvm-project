@@ -754,6 +754,11 @@ public:
                                 [[maybe_unused]] bool isVolatile) {
     assert(!UnimplementedFeature::volatileLoadOrStore());
     assert(!UnimplementedFeature::alignedLoad());
+    // FIXME: create a more generic version of createLoad and rewrite this and
+    // others in terms of that. Ideally there should only be one call to
+    // create<mlir::cir::LoadOp> in all helpers.
+    if (ty != ptr.getType().cast<mlir::cir::PointerType>().getPointee())
+      ptr = createPtrBitcast(ptr, ty);
     return create<mlir::cir::LoadOp>(loc, ty, ptr);
   }
 
@@ -779,6 +784,18 @@ public:
                                      mlir::Value dst) {
     auto flag = getBool(val, loc);
     return CIRBaseBuilderTy::createStore(loc, flag, dst);
+  }
+
+  mlir::cir::StoreOp createAlignedStore(mlir::Location loc, mlir::Value val,
+                                        mlir::Value dst,
+                                        [[maybe_unused]] clang::CharUnits align,
+                                        bool _volatile = false,
+                                        ::mlir::cir::MemOrderAttr order = {}) {
+    // TODO: add alignment for LoadOp/StoreOp, right now LowerToLLVM knows
+    // how to figure out for most part, but it's possible the client might want
+    // to enforce a different alignment.
+    assert(!UnimplementedFeature::alignedStore());
+    return CIRBaseBuilderTy::createStore(loc, val, dst, _volatile, order);
   }
 
   // Convert byte offset to sequence of high-level indices suitable for

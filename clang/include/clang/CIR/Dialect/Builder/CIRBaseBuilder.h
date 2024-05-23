@@ -177,6 +177,9 @@ public:
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                                  mlir::Value dst, bool _volatile = false,
                                  ::mlir::cir::MemOrderAttr order = {}) {
+    if (dst.getType().cast<mlir::cir::PointerType>().getPointee() !=
+        val.getType())
+      dst = createPtrBitcast(dst, val.getType());
     return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, order);
   }
 

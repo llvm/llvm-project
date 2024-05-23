@@ -1362,8 +1362,7 @@ static mlir::Type GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
   case NeonTypeFlags::Int8:
   case NeonTypeFlags::Poly8:
     return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
-                                      CGF->UInt8PtrTy,
-                                      V1Ty ? 1 : (8 << IsQuad));
+                                      CGF->UInt8Ty, V1Ty ? 1 : (8 << IsQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
     llvm_unreachable("NYI");
@@ -1540,6 +1539,23 @@ mlir::Value CIRGenFunction::buildAArch64SVEBuiltinExpr(unsigned BuiltinID,
                                               AArch64SVEIntrinsicsProvenSorted);
   (void)Builtin;
   llvm_unreachable("NYI");
+}
+
+mlir::Value CIRGenFunction::buildScalarOrConstFoldImmArg(unsigned ICEArguments,
+                                                         unsigned Idx,
+                                                         const CallExpr *E) {
+  mlir::Value Arg = {};
+  if ((ICEArguments & (1 << Idx)) == 0) {
+    Arg = buildScalarExpr(E->getArg(Idx));
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    std::optional<llvm::APSInt> Result =
+        E->getArg(Idx)->getIntegerConstantExpr(getContext());
+    assert(Result && "Expected argument to be a constant");
+    Arg = builder.getConstInt(getLoc(E->getSourceRange()), *Result);
+  }
+  return Arg;
 }
 
 mlir::Value
@@ -1902,7 +1918,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
         continue;
       }
     }
-    llvm_unreachable("NYI");
+    Ops.push_back(buildScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
@@ -2222,6 +2238,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
           buildAArch64TblBuiltinExpr(*this, BuiltinID, E, Ops, Arch))
     return V;
 
+  mlir::Type VTy = Ty;
   switch (BuiltinID) {
   default:
     return nullptr;
@@ -2630,11 +2647,16 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
-    llvm_unreachable("NYI");
+    return builder.createAlignedLoad(Ops[0].getLoc(), VTy, Ops[0],
+                                     PtrOp0.getAlignment());
   }
   case NEON::BI__builtin_neon_vst1_v:
-  case NEON::BI__builtin_neon_vst1q_v:
-    llvm_unreachable("NYI");
+  case NEON::BI__builtin_neon_vst1q_v: {
+    Ops[1] = builder.createBitcast(Ops[1], VTy);
+    (void)builder.createAlignedStore(Ops[1].getLoc(), Ops[1], Ops[0],
+                                     PtrOp0.getAlignment());
+    return Ops[1];
+  }
   case NEON::BI__builtin_neon_vld1_lane_v:
   case NEON::BI__builtin_neon_vld1q_lane_v: {
     llvm_unreachable("NYI");

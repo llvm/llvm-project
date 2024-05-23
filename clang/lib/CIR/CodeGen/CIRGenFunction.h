@@ -1236,6 +1236,8 @@ public:
                                      ReturnValueSlot ReturnValue);
 
   // Target specific builtin emission
+  mlir::Value buildScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
+                                           const CallExpr *E);
   mlir::Value buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                       ReturnValueSlot ReturnValue,
                                       llvm::Triple::ArchType Arch);
