@@ -250,8 +250,3 @@ body:             |
     %add:_(<2 x s64>) = G_ADD %a, %sub1
     $q0 = COPY %add
     RET_ReallyLR implicit $x0
-
-
-
-
-
