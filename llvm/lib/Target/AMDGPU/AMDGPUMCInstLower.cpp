@@ -247,6 +247,21 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE) {
+      if (isVerbose()) {
+        std::string InstMask, RuleMask;
+        raw_string_ostream InstStream(InstMask), RuleStream(RuleMask);
+        InstStream << format_hex(MI->getOperand(0).getImm(), 10, true);
+        RuleStream << format_hex(MI->getOperand(3).getImm(), 16, true);
+        OutStreamer->emitRawComment(
+            " sched_group_barrier mask(" + InstMask + ") size(" +
+            Twine(MI->getOperand(1).getImm()) + ") SyncID(" +
+            Twine(MI->getOperand(2).getImm()) + ")" + " RuleMask(" + RuleMask +
+            ")");
+      }
+      return;
+    }
+
     if (MI->getOpcode() == AMDGPU::IGLP_OPT) {
       if (isVerbose()) {
         std::string HexString;

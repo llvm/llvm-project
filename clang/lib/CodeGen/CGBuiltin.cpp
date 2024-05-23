@@ -18977,6 +18977,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_grid_size_z:
     return EmitAMDGPUGridSize(*this, 2);
 
+  // scheduling builtins
+  case AMDGPU::BI__builtin_amdgcn_sched_group_barrier: {
+    if (E->getNumArgs() == 3) {
+      return Builder.CreateCall(
+          CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier),
+          {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
+           EmitScalarExpr(E->getArg(2))});
+    }
+
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier_rule),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
+         EmitScalarExpr(E->getArg(2)),
+         llvm::ConstantInt::get(
+             Int64Ty,
+             cast<ConstantInt>(EmitScalarExpr(E->getArg(3)))->getZExtValue())});
+  }
+
   // r600 intrinsics
   case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
   case AMDGPU::BI__builtin_r600_recipsqrt_ieeef:

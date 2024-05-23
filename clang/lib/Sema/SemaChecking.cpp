@@ -5693,6 +5693,17 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
 bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
+
+  if (BuiltinID == AMDGPU::BI__builtin_amdgcn_sched_group_barrier) {
+    auto NumArgs = TheCall->getNumArgs();
+    if (TheCall->getNumArgs() > 4)
+      return Diag(TheCall->getEndLoc(),
+                  diag::err_typecheck_call_too_many_args_at_most)
+             << 0 /*function call*/ << 4 << NumArgs << /*is non object*/ 0
+             << TheCall->getSourceRange();
+    return false;
+  }
+
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
   switch (BuiltinID) {

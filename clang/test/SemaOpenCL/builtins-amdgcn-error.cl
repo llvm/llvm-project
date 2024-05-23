@@ -227,3 +227,9 @@ void test_atomic_dec64() {
   __INT64_TYPE__ signedVal = 15;
   signedVal = __builtin_amdgcn_atomic_dec64(&signedVal, signedVal, __ATOMIC_ACQUIRE, ""); // expected-warning {{passing '__private long *' to parameter of type 'volatile __private unsigned long *' converts between pointers to integer types with different sign}}
 }
+
+void test_sched_group_barrier_rule()
+{
+  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 1, 2, 3, 4, 5, 6, 7); // expected-error {{too many arguments to function call, expected at most 4, have 11}}
+  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); // expected-error {{too many arguments to function call, expected at most 4, have 14}}
+}
