@@ -153,6 +153,9 @@ namespace {
 
       M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
+      M->setLanguageStandard(
+          LangStandard::getLangStandardForKind(Ctx->getLangOpts().LangStd)
+              .getName());
       const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
       if (!SDKVersion.empty())
         M->setSDKVersion(SDKVersion);

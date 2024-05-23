@@ -946,6 +946,9 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// Original source file name recorded in a bitcode record.
   std::string SourceFileName;
 
+  /// Original language standard recorded in a bitcode record.
+  std::string LanguageStandard;
+
   /// The string identifier given to this module by the client, normally the
   /// path to the bitcode file.
   StringRef ModulePath;
@@ -4613,12 +4616,21 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       VSTOffset = Record[0] - 1;
       break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
-    case bitc::MODULE_CODE_SOURCE_FILENAME:
+    case bitc::MODULE_CODE_SOURCE_FILENAME: {
       SmallString<128> ValueName;
       if (convertToString(Record, 0, ValueName))
         return error("Invalid record");
       TheModule->setSourceFileName(ValueName);
       break;
+    }
+    /// MODULE_CODE_LANGUAGE_STANDARD: [strchar x N]
+    case bitc::MODULE_CODE_LANGUAGE_STANDARD: {
+      SmallString<128> ValueLangStd;
+      if (convertToString(Record, 0, ValueLangStd))
+        return error("Invalid record");
+      TheModule->setLanguageStandard(ValueLangStd);
+      break;
+    }
     }
     Record.clear();
   }
@@ -7225,6 +7237,14 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           if (convertToString(Record, 0, ValueName))
             return error("Invalid record");
           SourceFileName = ValueName.c_str();
+          break;
+        }
+        /// MODULE_CODE_LANGUAGE_STANDARD: [strchar x N]
+        case bitc::MODULE_CODE_LANGUAGE_STANDARD: {
+          SmallString<128> ValueName;
+          if (convertToString(Record, 0, ValueName))
+            return error("Invalid record");
+          LanguageStandard = ValueName.c_str();
           break;
         }
         /// MODULE_CODE_HASH: [5*i32]

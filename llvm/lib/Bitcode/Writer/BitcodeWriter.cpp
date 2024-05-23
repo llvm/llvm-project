@@ -1484,6 +1484,29 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+  // Emit the module's language standard.
+  {
+    StringEncoding Bits = getStringEncoding(M.getLanguageStandard());
+    BitCodeAbbrevOp AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8);
+    if (Bits == SE_Char6)
+      AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Char6);
+    else if (Bits == SE_Fixed7)
+      AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 7);
+
+    // MODULE_CODE_SOURCE_FILENAME: [namechar x N]
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_LANGUAGE_STANDARD));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    Abbv->Add(AbbrevOpToUse);
+    unsigned LangStdAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+    for (const auto P : M.getLanguageStandard())
+      Vals.push_back((unsigned char)P);
+
+    // Emit the finished record.
+    Stream.EmitRecord(bitc::MODULE_CODE_LANGUAGE_STANDARD, Vals, LangStdAbbrev);
+    Vals.clear();
+  }
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {

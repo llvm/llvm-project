@@ -196,6 +196,7 @@ private:
                                   ///< recorded in bitcode.
   std::string TargetTriple;       ///< Platform target triple Module compiled on
                                   ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
+  std::string LanguageStandard;   ///< Language standard: c89/c99/c11/c23 etc.
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
   StringMap<unsigned>
@@ -277,6 +278,9 @@ public:
   /// contain the source file name.
   const std::string &getSourceFileName() const { return SourceFileName; }
 
+  /// Get the module's language standard.
+  const std::string &getLanguageStandard() const { return LanguageStandard; }
+
   /// Get a short "name" for the module.
   ///
   /// This is useful for debugging or logging. It is essentially a convenience
@@ -338,6 +342,9 @@ public:
 
   /// Set the target triple.
   void setTargetTriple(StringRef T) { TargetTriple = std::string(T); }
+
+  /// Set the language standard.
+  void setLanguageStandard(StringRef S) { LanguageStandard = std::string(S); }
 
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.

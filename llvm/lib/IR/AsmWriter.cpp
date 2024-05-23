@@ -2928,6 +2928,12 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getTargetTriple().empty())
     Out << "target triple = \"" << M->getTargetTriple() << "\"\n";
 
+  if (!M->getLanguageStandard().empty()) {
+    Out << "language_standard = \"";
+    printEscapedString(M->getLanguageStandard(), Out);
+    Out << "\"\n";
+  }
+
   if (!M->getModuleInlineAsm().empty()) {
     Out << '\n';
 
