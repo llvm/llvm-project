@@ -173,8 +173,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 2u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
-               "invalid validator version : 1\nFormat of validator version is "
-               "\"<major>.<minor>\" (ex:\"1.4\").");
+               "invalid validator version : 1; format of validator version is "
+               "\"<major>.<minor>\" (ex:\"1.4\")");
   Diags.Clear();
   DiagConsumer->clear();
 
@@ -190,8 +190,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   EXPECT_EQ(Diags.getNumErrors(), 3u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
-      "invalid validator version : -Tlib_6_7\nFormat of validator version is "
-      "\"<major>.<minor>\" (ex:\"1.4\").");
+      "invalid validator version : -Tlib_6_7; format of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\")");
   Diags.Clear();
   DiagConsumer->clear();
 
@@ -207,8 +207,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   EXPECT_EQ(Diags.getNumErrors(), 4u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
-      "invalid validator version : foo\nFormat of validator version is "
-      "\"<major>.<minor>\" (ex:\"1.4\").");
+      "invalid validator version : foo; format of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\")");
   Diags.Clear();
   DiagConsumer->clear();
 }

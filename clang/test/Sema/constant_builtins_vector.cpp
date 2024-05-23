@@ -720,6 +720,6 @@ constexpr vector4char
  must be initialized by a constant expression}}
     __builtin_shufflevector( // expected-error {{index for __builtin_shufflevector \
 not within the bounds of the input vectors; index of -1 found at position 0 not \
-permitted in a constexpr context.}}
+permitted in a constexpr context}}
         vector4charConst1,
         vector4charConst2, -1, -1, -1, -1);
