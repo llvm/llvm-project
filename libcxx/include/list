@@ -465,10 +465,10 @@ public:
 
 template <class _Tp, class _Alloc>
 class __list_imp {
-  __list_imp(const __list_imp&);
-  __list_imp& operator=(const __list_imp&);
-
 public:
+  __list_imp(const __list_imp&) = delete;
+  __list_imp& operator=(const __list_imp&) = delete;
+
   typedef _Alloc allocator_type;
   typedef allocator_traits<allocator_type> __alloc_traits;
   typedef typename __alloc_traits::size_type size_type;
