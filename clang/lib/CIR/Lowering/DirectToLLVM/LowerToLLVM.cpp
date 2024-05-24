@@ -872,15 +872,15 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     const auto llvmTy =
         getTypeConverter()->convertType(op.getResult().getType());
-    unsigned alignment = 0;
     auto memorder = op.getMemOrder();
     auto ordering = getLLVMMemOrder(memorder);
-
-    // FIXME: right now we only pass in the alignment when the memory access
-    // is atomic, we should always pass it instead.
-    if (ordering != mlir::LLVM::AtomicOrdering::not_atomic) {
+    auto alignOpt = op.getAlignment();
+    unsigned alignment = 0;
+    if (!alignOpt) {
       mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
       alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
+    } else {
+      alignment = *alignOpt;
     }
 
     // TODO: nontemporal, invariant, syncscope.
