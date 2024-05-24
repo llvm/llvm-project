@@ -16,7 +16,7 @@ module {
   // MLIR-NEXT:   %[[#RES:]] = llvm.extractvalue %[[#INTRIN_RET]][0] : !llvm.struct<(i32, i1)>
   // MLIR-NEXT:   %[[#OVFL:]] = llvm.extractvalue %[[#INTRIN_RET]][1] : !llvm.struct<(i32, i1)>
   // MLIR-NEXT:   %[[#OVFL_EXT:]] = llvm.zext %[[#OVFL]] : i1 to i8
-  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] : i32, !llvm.ptr
+  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] {{.*}} : i32, !llvm.ptr
   // MLIR-NEXT:   llvm.return %[[#OVFL_EXT]] : i8
   // MLIR-NEXT: }
 
@@ -46,7 +46,7 @@ module {
   // MLIR-NEXT:   %[[#TRUNC_OVFL:]] = llvm.icmp "ne" %[[#RES_EXT_2]], %[[#RES_EXT]] : i33
   // MLIR-NEXT:   %[[#OVFL:]] = llvm.or %[[#ARITH_OVFL]], %[[#TRUNC_OVFL]]  : i1
   // MLIR-NEXT:   %[[#OVFL_EXT:]] = llvm.zext %[[#OVFL]] : i1 to i8
-  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] : i32, !llvm.ptr
+  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] {{.*}} : i32, !llvm.ptr
   // MLIR-NEXT:   llvm.return %[[#OVFL_EXT]] : i8
   // MLIR-NEXT: }
 

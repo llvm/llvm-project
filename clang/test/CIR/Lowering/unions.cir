@@ -28,7 +28,7 @@ module {
     // CHECK: %[[#VAL:]] = llvm.mlir.constant(1 : i8) : i8
     // The bitcast it just to bypass the type checker. It will be replaced by an opaque pointer.
     // CHECK: %[[#ADDR:]] = llvm.bitcast %{{.+}} : !llvm.ptr
-    // CHECK: llvm.store %[[#VAL]], %[[#ADDR]] : i8, !llvm.ptr
+    // CHECK: llvm.store %[[#VAL]], %[[#ADDR]] {{.*}}: i8, !llvm.ptr
 
     // Should load direclty from the union's base address.
     %7 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_22U122> -> !cir.ptr<!cir.bool>

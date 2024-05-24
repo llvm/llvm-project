@@ -29,7 +29,7 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:    %2 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:    %3 = llvm.alloca %2 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
+// MLIR-NEXT:    llvm.store %arg0, %1 {{.*}}: i32, !llvm.ptr
 // MLIR-NEXT:    %4 = llvm.load %1 : !llvm.ptr -> i32
 // MLIR-NEXT:    %5 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:    %6 = llvm.icmp "sgt" %4, %5 : i32
@@ -43,7 +43,7 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:  ^bb3(%9: i32):  // 2 preds: ^bb1, ^bb2
 // MLIR-NEXT:    llvm.br ^bb4
 // MLIR-NEXT:  ^bb4:  // pred: ^bb3
-// MLIR-NEXT:    llvm.store %9, %3 : i32, !llvm.ptr
+// MLIR-NEXT:    llvm.store %9, %3 {{.*}}: i32, !llvm.ptr
 // MLIR-NEXT:    %10 = llvm.load %3 : !llvm.ptr -> i32
 // MLIR-NEXT:    llvm.return %10 : i32
 // MLIR-NEXT:  }

@@ -41,14 +41,14 @@ module {
 // MLIR:   ^bb[[#COND_NO]]:
 // MLIR:    llvm.br ^bb[[#BLK:]]
 // MLIR:  ^bb[[#BLK]]:
-// MLIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] : i32, !llvm.ptr
+// MLIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] {{.*}}: i32, !llvm.ptr
 // MLIR:    llvm.br ^bb[[#RETURN:]]
 // MLIR:  ^bb[[#RETURN]]:
 // MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] : !llvm.ptr -> i32
 // MLIR:    llvm.return %[[#Ret_val]] : i32
 // MLIR:  ^bb[[#GOTO_BLK]]:
 // MLIR:    %[[#Neg_one:]] = llvm.sub %[[#Zero]], %[[#One]]  : i32
-// MLIR:    llvm.store %[[#Neg_one]], %[[#Ret_val_addr]] : i32, !llvm.ptr
+// MLIR:    llvm.store %[[#Neg_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
 // MLIR:    llvm.br ^bb[[#RETURN]]
 // MLIR: }
 }

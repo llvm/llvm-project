@@ -19,7 +19,7 @@ module {
 //  MLIR-DAG:   [[v1:%[0-9]]] = llvm.mlir.constant(4 : i32) : i32
 //  MLIR-DAG:   [[v2:%[0-9]]] = llvm.mlir.constant(1 : index) : i64
 //  MLIR-DAG:   [[v3:%[0-9]]] = llvm.alloca [[v2]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:   llvm.store [[v1]], [[v3]] : i32, !llvm.ptr
+// MLIR-NEXT:   llvm.store [[v1]], [[v3]] {{.*}}: i32, !llvm.ptr
 // MLIR-NEXT:   llvm.br ^bb2
 // MLIR-NEXT: ^bb2:
 // MLIR-NEXT:   llvm.return
@@ -67,7 +67,7 @@ module {
   // MLIR-NEXT:  llvm.br ^bb1
   // MLIR-NEXT: ^bb1:  // pred: ^bb0
   // MLIR-NEXT:  [[v2:%.*]] = llvm.mlir.constant(0 : i32) : i32
-  // MLIR-NEXT:  llvm.store [[v2]], [[v1]] : i32, !llvm.ptr
+  // MLIR-NEXT:  llvm.store [[v2]], [[v1]] {{.*}}: i32, !llvm.ptr
   // MLIR-NEXT:  [[v3:%.*]] = llvm.load [[v1]] : !llvm.ptr -> i32
   // MLIR-NEXT:  llvm.return [[v3]] : i32
   // MLIR-NEXT: ^bb2:  // no predecessors

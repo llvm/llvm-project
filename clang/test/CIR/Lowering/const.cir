@@ -51,7 +51,7 @@ module {
   // CHECK:    %6 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:    %7 = llvm.insertvalue %6, %5[1] : !llvm.struct<"struct.anon.1", (i32, i32)>
   // CHECK:    %8 = llvm.insertvalue %7, %2[0] : !llvm.array<1 x struct<"struct.anon.1", (i32, i32)>>
-  // CHECK:    llvm.store %8, %1 : !llvm.array<1 x struct<"struct.anon.1", (i32, i32)>>, !llvm.ptr
+  // CHECK:    llvm.store %8, %1 {{.*}}: !llvm.array<1 x struct<"struct.anon.1", (i32, i32)>>, !llvm.ptr
   // CHECK:    llvm.return
 
   cir.func @testArrWithTrailingZeros() {

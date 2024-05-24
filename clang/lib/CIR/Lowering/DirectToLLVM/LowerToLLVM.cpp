@@ -899,17 +899,17 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::StoreOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    unsigned alignment = 0;
     auto memorder = op.getMemOrder();
     auto ordering = getLLVMMemOrder(memorder);
-
-    // FIXME: right now we only pass in the alignment when the memory access
-    // is atomic, we should always pass it instead.
-    if (ordering != mlir::LLVM::AtomicOrdering::not_atomic) {
+    auto alignOpt = op.getAlignment();
+    unsigned alignment = 0;
+    if (!alignOpt) {
       const auto llvmTy =
           getTypeConverter()->convertType(op.getValue().getType());
       mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
       alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
+    } else {
+      alignment = *alignOpt;
     }
 
     // TODO: nontemporal, syncscope.

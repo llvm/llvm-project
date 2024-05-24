@@ -34,7 +34,7 @@ module {
   // CHECK:   %2 = llvm.mlir.undef : !llvm.struct<"struct.S2A", (i32)>
   // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.struct<"struct.S2A", (i32)>
-  // CHECK:   llvm.store %4, %1 : !llvm.struct<"struct.S2A", (i32)>, !llvm.ptr
+  // CHECK:   llvm.store %4, %1 {{.*}}: !llvm.struct<"struct.S2A", (i32)>, !llvm.ptr
   // CHECK:   llvm.return
   // CHECK: }
 
