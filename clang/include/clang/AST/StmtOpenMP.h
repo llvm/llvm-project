@@ -5760,8 +5760,7 @@ public:
   ///
   /// \param C          Context of the AST.
   /// \param NumClauses Number of clauses to allocate.
-  static OMPReverseDirective *CreateEmpty(const ASTContext &C,
-                                          unsigned NumClauses);
+  static OMPReverseDirective *CreateEmpty(const ASTContext &C);
 
   /// Gets/sets the associated loops after the transformation, i.e. after
   /// de-sugaring.
