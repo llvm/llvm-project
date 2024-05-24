@@ -1532,13 +1532,6 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
    [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
-def extract_vector_element_freeze : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_FREEZE $src, $input),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithFreeze(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
@@ -1636,7 +1629,6 @@ extract_vector_element_build_vector_trunc5,
 extract_vector_element_build_vector_trunc6,
 extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
-//extract_vector_element_freeze,
 extract_vector_element_shuffle_vector,
 insert_vector_element_extract_vector_element
 ]>;
