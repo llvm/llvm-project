@@ -727,6 +727,14 @@ func.func @bitcast_tensor_dim(%arg0 : tensor<4xf32>) {
 
 // -----
 
+func.func @bitcast_tensor_dim(%arg0 : tensor<?xf32>) {
+  // expected-error@+1 {{'arith.bitcast' op failed to verify that input and output have the same tensor dimensions}}
+  %0 = arith.bitcast %arg0 : tensor<?xf32> to tensor<4xi32>
+  return
+}
+
+// -----
+
 func.func @trunci_fl_to_scalable(%arg0 : vector<4xi32>) {
   // expected-error@+1 {{'arith.trunci' op requires the same shape for all operands and results}}
   %0 = arith.trunci %arg0 : vector<4xi32> to vector<[4]xi8>
