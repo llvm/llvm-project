@@ -8,6 +8,8 @@
 
 char string[] = "whatnow";
 // CHECK: cir.global external @string = #cir.const_array<"whatnow\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8>
+char big_string[100000] = "123";
+// CHECK: cir.global external @big_string = #cir.const_array<"123" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 100000>
 int sint[] = {123, 456, 789};
 // CHECK: cir.global external @sint = #cir.const_array<[#cir.int<123> : !s32i, #cir.int<456> : !s32i, #cir.int<789> : !s32i]> : !cir.array<!s32i x 3>
 int filler_sint[4] = {1, 2}; // Ensure missing elements are zero-initialized.
@@ -41,7 +43,7 @@ struct {
   char y[3];
   char z[3];
 } nestedString = {"1", "", "\0"};
-// CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>}>
+// CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1" : !cir.array<!s8i x 1>, trailing_zeros> : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>}>
 
 struct {
   char *name;

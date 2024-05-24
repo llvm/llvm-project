@@ -153,15 +153,26 @@ public:
                             unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
 
+    size_t lastNonZeroPos = str.find_last_not_of('\0');
     // If the string is full of null bytes, emit a #cir.zero rather than
     // a #cir.const_array.
-    if (str.count('\0') == str.size()) {
+    if (lastNonZeroPos == llvm::StringRef::npos) {
       auto arrayTy = mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
       return getZeroAttr(arrayTy);
     }
-
-    auto arrayTy = mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
-    return getConstArray(mlir::StringAttr::get(str, arrayTy), arrayTy);
+    // We will use trailing zeros only if there are more than one zero
+    // at the end
+    int trailingZerosNum =
+        finalSize > lastNonZeroPos + 2 ? finalSize - lastNonZeroPos - 1 : 0;
+    auto truncatedArrayTy = mlir::cir::ArrayType::get(
+        getContext(), eltTy, finalSize - trailingZerosNum);
+    auto fullArrayTy =
+        mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
+    return mlir::cir::ConstArrayAttr::get(
+        getContext(), fullArrayTy,
+        mlir::StringAttr::get(str.drop_back(trailingZerosNum),
+                              truncatedArrayTy),
+        trailingZerosNum);
   }
 
   mlir::cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
