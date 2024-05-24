@@ -663,7 +663,7 @@ func.func @extsi_scalable_to_fl(%arg0 : vector<[4]xi32>) {
 
 // -----
 
-func.func @extsi_tesor_dim(%arg0 : tensor<4xi32>) {
+func.func @extsi_tensor_dim(%arg0 : tensor<4xi32>) {
   // expected-error@+1 {{'arith.extsi' op failed to verify that input and output have the same tensor dimensions}}
   %0 = arith.extsi %arg0 : tensor<4xi32> to tensor<?xi64>
   return
