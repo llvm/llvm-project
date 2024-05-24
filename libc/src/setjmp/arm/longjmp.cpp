@@ -14,7 +14,7 @@ namespace LIBC_NAMESPACE {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
-[[gnu::naked]]
+[[gnu::naked, gnu::target("thumb")]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   asm(R"(
       # Reload r4, r5, r6, r7.
