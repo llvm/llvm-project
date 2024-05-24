@@ -59,6 +59,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 

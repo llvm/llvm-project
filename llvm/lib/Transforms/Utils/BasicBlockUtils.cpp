@@ -333,10 +333,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Finally, erase the old block and update dominator info.
   DeleteDeadBlock(BB, DTU);
 
-  // Remove redundant "llvm.dbg" instrunctions after blocks have been merged.
-  if (PredBB->getParent()->getSubprogram())
-    RemoveRedundantDbgInstrs(PredBB);
-
   return true;
 }
 
@@ -1145,6 +1141,7 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
+/// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
                                       DomTreeUpdater *DTU, DominatorTree *DT,

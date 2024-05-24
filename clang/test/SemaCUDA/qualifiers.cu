@@ -5,9 +5,9 @@
 // intentional errors. CC1 failure is expected and must be ignored
 // here. We're interested in what ends up in AST and that's what
 // FileCheck verifies.
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -ast-dump %s \
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -ast-dump %s \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ALL --check-prefix=CHECK-HOST
-// RUN: not %clang_cc1 -triple nvptx-unknown-cuda -fsyntax-only -ast-dump -fcuda-is-device %s \
+// RUN: not %clang_cc1 -triple nvptx-unknown-cuda -ast-dump -fcuda-is-device %s \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ALL --check-prefix=CHECK-DEVICE
 
 #include "Inputs/cuda.h"

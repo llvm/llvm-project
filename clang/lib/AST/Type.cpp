@@ -256,7 +256,8 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
-  E->Profile(ID, Context, true);
+  if (E)
+    E->Profile(ID, Context, true);
 }
 
 DependentVectorType::DependentVectorType(QualType ElementType,
@@ -629,6 +630,16 @@ bool Type::isStructureType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->isStruct();
   return false;
+}
+
+bool Type::isStructureTypeWithFlexibleArrayMember() const {
+  const auto *RT = getAs<RecordType>();
+  if (!RT)
+    return false;
+  const auto *Decl = RT->getDecl();
+  if (!Decl->isStruct())
+    return false;
+  return Decl->hasFlexibleArrayMember();
 }
 
 bool Type::isObjCBoxableRecordType() const {
@@ -2371,6 +2382,14 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
+  case InjectedClassName: {
+    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)->getDecl();
+    if (!Rec->isBeingDefined())
+      return false;
+    if (Def)
+      *Def = Rec;
+    return true;
+  }
   case ConstantArray:
   case VariableArray:
     // An array is incomplete if its element type is incomplete
@@ -3393,6 +3412,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "<overloaded function type>";
   case BoundMember:
     return "<bound member function type>";
+  case UnresolvedTemplate:
+    return "<unresolved template type>";
   case PseudoObject:
     return "<pseudo-object type>";
   case Dependent:
@@ -4685,6 +4706,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/AST/BuiltinTypes.def"
       return false;
 
+    case BuiltinType::UnresolvedTemplate:
     // Dependent types that could instantiate to a pointer type.
     case BuiltinType::Dependent:
     case BuiltinType::Overload:

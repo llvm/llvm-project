@@ -10,7 +10,7 @@
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-7'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '8'
+; YAML-NEXT:    - TreeSize:        '6'
 define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
 ; CHECK-LABEL: @stores(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN:%.*]], align 1
@@ -66,7 +66,7 @@ define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-9'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '8'
+; YAML-NEXT:    - TreeSize:        '6'
 define <4 x i64> @insertelems(ptr noalias %in, ptr noalias %inn) {
 ; CHECK-LABEL: @insertelems(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN:%.*]], align 1

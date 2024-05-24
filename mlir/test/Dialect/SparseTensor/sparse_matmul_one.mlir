@@ -2,9 +2,9 @@
 // RUN:             --sparsification-and-bufferization | FileCheck %s
 
 #CSR_ones_complex = #sparse_tensor.encoding<{
-  map = (d0, d1) -> (d0 : dense, d1 : compressed)
-// explicitVal = (1.0, 0.0) : complex<f32>,
-// implicitVal = (0.0, 0.0) : complex<f32>
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  explicitVal = #complex.number<:f32 1.0, 0.0>,
+  implicitVal = #complex.number<:f32 0.0, 0.0>
 }>
 
 #CSR_ones_fp = #sparse_tensor.encoding<{
@@ -20,9 +20,17 @@
 }>
 
 // CHECK-LABEL:   func.func @matmul_complex
-//
-// TODO: make this work
-//
+// CHECK:         scf.for
+// CHECK:           scf.for
+// CHECK:             %[[X:.*]] = memref.load
+// CHECK:             scf.for
+// CHECK:               %[[I:.*]] = memref.load
+// CHECK:               %[[Y:.*]] = memref.load
+// CHECK:               %[[M:.*]] = complex.add %[[Y]], %[[X]] : complex<f32>
+// CHECK:               memref.store %[[M]]
+// CHECK:             }
+// CHECK:           }
+// CHECK:         }
 func.func @matmul_complex(%a: tensor<10x20xcomplex<f32>>,
                           %b: tensor<20x30xcomplex<f32>, #CSR_ones_complex>,
                           %c: tensor<10x30xcomplex<f32>>) -> tensor<10x30xcomplex<f32>> {

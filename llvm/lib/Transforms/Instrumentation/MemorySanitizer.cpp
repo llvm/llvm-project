@@ -1135,6 +1135,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
+  SmallVector<Instruction *, 16> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1236,9 +1237,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Note: The loop based formation works for fixed length vectors too,
     // however we prefer to unroll and specialize alignment below.
     if (TS.isScalable()) {
-      Value *Size = IRB.CreateTypeSize(IRB.getInt32Ty(), TS);
-      Value *RoundUp = IRB.CreateAdd(Size, IRB.getInt32(kOriginSize - 1));
-      Value *End = IRB.CreateUDiv(RoundUp, IRB.getInt32(kOriginSize));
+      Value *Size = IRB.CreateTypeSize(MS.IntptrTy, TS);
+      Value *RoundUp =
+          IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
+      Value *End =
+          IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
         SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
@@ -1519,6 +1522,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
+
+    // `visit` above only collects instructions. Process them after iterating
+    // CFG to avoid requirement on CFG transformations.
+    for (Instruction *I : Instructions)
+      InstVisitor<MemorySanitizerVisitor>::visit(*I);
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -2196,7 +2204,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       return;
     }
-    InstVisitor<MemorySanitizerVisitor>::visit(I);
+
+    Instructions.push_back(&I);
   }
 
   /// Instrument LoadInst
@@ -4451,8 +4460,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
     const DataLayout &DL = F.getParent()->getDataLayout();
-    uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);
+    TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
+    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
     if (I.isArrayAllocation())
       Len = IRB.CreateMul(Len,
                           IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));

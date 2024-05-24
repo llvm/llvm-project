@@ -28,3 +28,63 @@ struct DerivedClassTmpl3 : T { };
 
 typedef DerivedClassTmpl3<RefCntblBase> Foo;
 Foo c;
+
+
+namespace WTF {
+
+class RefCountedBase {
+public:
+  void ref() const { ++count; }
+
+protected:
+  bool derefBase() const
+  {
+    return !--count;
+  }
+
+private:
+  mutable unsigned count;
+};
+
+template <typename T>
+class RefCounted : public RefCountedBase {
+public:
+  void deref() const {
+    if (derefBase())
+      delete const_cast<T*>(static_cast<const T*>(this));
+  }
+
+protected:
+  RefCounted() { }
+};
+
+template <typename T>
+class ThreadSafeRefCounted {
+public:
+  void ref() const;
+  bool deref() const;
+};
+
+template <typename T>
+class ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr {
+public:
+  void ref() const;
+  bool deref() const;
+};
+
+} // namespace WTF
+
+class DerivedClass4 : public WTF::RefCounted<DerivedClass4> { };
+
+class DerivedClass5 : public DerivedClass4 { };
+// expected-warning@-1{{Class 'DerivedClass4' is used as a base of class 'DerivedClass5' but doesn't have virtual destructor}}
+
+class DerivedClass6 : public WTF::ThreadSafeRefCounted<DerivedClass6> { };
+
+class DerivedClass7 : public DerivedClass6 { };
+// expected-warning@-1{{Class 'DerivedClass6' is used as a base of class 'DerivedClass7' but doesn't have virtual destructor}}
+
+class DerivedClass8 : public WTF::ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DerivedClass8> { };
+
+class DerivedClass9 : public DerivedClass8 { };
+// expected-warning@-1{{Class 'DerivedClass8' is used as a base of class 'DerivedClass9' but doesn't have virtual destructor}}

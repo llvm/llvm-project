@@ -113,17 +113,7 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 
 # Header install location
 if(${OPENMP_STANDALONE_BUILD})
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    execute_process(
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
-      RESULT_VARIABLE COMMAND_RETURN_CODE
-      OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-    )
-    set(LIBOMP_HEADERS_INSTALL_PATH "${COMPILER_RESOURCE_DIR}/include")
-  else()
-    set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
-  endif()
+  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
 else()
   include(GetClangResourceDir)
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)

@@ -527,6 +527,23 @@ define i32 @test25_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
   ret i32 %mul
 }
 
+define i32 @test29_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test29_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w0, w0, lsl #3
+; CHECK-NEXT:    sub w0, w0, w8, lsl #2
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test29_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #29 // =0x1d
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 29 ; 29 = 1 - (1-8) * 4
+  ret i32 %mul
+}
+
 define i32 @test45_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test45_fast_shift:
 ; CHECK:       // %bb.0:
@@ -615,6 +632,42 @@ define i32 @test97_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
   ret i32 %mul
 }
 
+; Negative test: The shift number 5 is out of bound
+define i32 @test125_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test125_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #125 // =0x7d
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test125_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #125 // =0x7d
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 125 ; 125 = 1 - ((1-32) << 2)
+  ret i32 %mul
+}
+
+; TODO: (1 - 2^M) * (1 - 2^N)
+define i32 @test225_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test225_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #225 // =0xe1
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test225_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #225 // =0xe1
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 225 ; 225 = (1-16)*(1-16)
+  ret i32 %mul
+}
+
 ; Negative test: The shift amount 5 larger than 4
 define i32 @test297_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test297_fast_shift:
@@ -630,6 +683,24 @@ define i32 @test297_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; GISEL-NEXT:    ret
 
   %mul = mul nsw i32 %x, 297 ; 297 = (1+8)*(1+32)
+  ret i32 %mul
+}
+
+; Negative test: The shift number 5 is out of bound
+define i32 @test481_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test481_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #481 // =0x1e1
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test481_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #481 // =0x1e1
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 481 ; 481 = 1 - ((1-16) << 5)
   ret i32 %mul
 }
 
@@ -910,9 +981,9 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI52_0
+; GISEL-NEXT:    adrp x8, .LCPI56_0
 ; GISEL-NEXT:    movi v3.4s, #1, msl #16
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI52_0]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI56_0]
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; GISEL-NEXT:    and v0.16b, v1.16b, v3.16b
 ; GISEL-NEXT:    ret

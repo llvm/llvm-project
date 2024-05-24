@@ -186,7 +186,7 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef name,
 // new synthetic sections at the location of the first input section
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
-void OutputSection::finalizeInputSections() {
+void OutputSection::finalizeInputSections(LinkerScript *script) {
   std::vector<MergeSyntheticSection *> mergeSections;
   for (SectionCommand *cmd : commands) {
     auto *isd = dyn_cast<InputSectionDescription>(cmd);
@@ -226,6 +226,11 @@ void OutputSection::finalizeInputSections() {
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
         isd->sections.push_back(syn);
+        // The merge synthetic section inherits the potential spill locations of
+        // its first contained section.
+        auto it = script->potentialSpillLists.find(ms);
+        if (it != script->potentialSpillLists.end())
+          script->potentialSpillLists.try_emplace(syn, it->second);
       }
       (*i)->addSection(ms);
     }
@@ -301,7 +306,11 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
-  deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  if (res != 0) {
+    errorOrWarn("--compress-sections: deflateInit2 returned " + Twine(res));
+    return {};
+  }
   s.next_in = const_cast<uint8_t *>(in.data());
   s.avail_in = in.size();
 
@@ -335,12 +344,14 @@ template <class ELFT> void OutputSection::maybeCompress() {
   (void)sizeof(Elf_Chdr);
 
   DebugCompressionType ctype = DebugCompressionType::None;
-  for (auto &[glob, t] : config->compressSections)
-    if (glob.match(name))
-      ctype = t;
+  size_t compressedSize = sizeof(Elf_Chdr);
+  unsigned level = 0; // default compression level
   if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
-      name.starts_with(".debug_") && size)
+      name.starts_with(".debug_"))
     ctype = *config->compressDebugSections;
+  for (auto &[glob, t, l] : config->compressSections)
+    if (glob.match(name))
+      std::tie(ctype, level) = {t, l};
   if (ctype == DebugCompressionType::None)
     return;
   if (flags & SHF_ALLOC) {
@@ -350,7 +361,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
   }
 
   llvm::TimeTraceScope timeScope("Compress sections");
-  compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
@@ -368,17 +378,17 @@ template <class ELFT> void OutputSection::maybeCompress() {
   [[maybe_unused]] constexpr size_t shardSize = 1 << 20;
   auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
   const size_t numShards = shardsIn.size();
-  compressed.numShards = numShards;
   auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
 
 #if LLVM_ENABLE_ZSTD
-  // Use ZSTD's streaming compression API which permits parallel workers working
-  // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
-  // "Streaming compression - HowTo".
+  // Use ZSTD's streaming compression API. See
+  // http://facebook.github.io/zstd/zstd_manual.html "Streaming compression -
+  // HowTo".
   if (ctype == DebugCompressionType::Zstd) {
     parallelFor(0, numShards, [&](size_t i) {
       SmallVector<uint8_t, 0> out;
       ZSTD_CCtx *cctx = ZSTD_createCCtx();
+      ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, level);
       ZSTD_inBuffer zib = {shardsIn[i].data(), shardsIn[i].size(), 0};
       ZSTD_outBuffer zob = {nullptr, 0, 0};
       size_t size;
@@ -398,20 +408,17 @@ template <class ELFT> void OutputSection::maybeCompress() {
       shardsOut[i] = std::move(out);
     });
     compressed.type = ELFCOMPRESS_ZSTD;
-    size = sizeof(Elf_Chdr);
     for (size_t i = 0; i != numShards; ++i)
-      size += shardsOut[i].size();
+      compressedSize += shardsOut[i].size();
   }
 #endif
 
 #if LLVM_ENABLE_ZLIB
   // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
-  // the fastest. If -O2 is given, we use level 6 to compress debug info more by
-  // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
-  // compression) while they take significant amount of time (~2x), so level 6
-  // seems enough.
+  // fast and provides decent compression ratios.
   if (ctype == DebugCompressionType::Zlib) {
-    const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
+    if (!level)
+      level = Z_BEST_SPEED;
 
     // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
     // shards but the last to flush the output to a byte boundary to be
@@ -425,19 +432,24 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
     // Update section size and combine Alder-32 checksums.
     uint32_t checksum = 1;       // Initial Adler-32 value
-    size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
+    compressedSize += 2;         // Elf_Chdir and zlib header
     for (size_t i = 0; i != numShards; ++i) {
-      size += shardsOut[i].size();
+      compressedSize += shardsOut[i].size();
       checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
     }
-    size += 4; // checksum
+    compressedSize += 4; // checksum
     compressed.type = ELFCOMPRESS_ZLIB;
     compressed.checksum = checksum;
   }
-
-  compressed.shards = std::move(shardsOut);
-  flags |= SHF_COMPRESSED;
 #endif
+
+  if (compressedSize >= size)
+    return;
+  compressed.uncompressedSize = size;
+  compressed.shards = std::move(shardsOut);
+  compressed.numShards = numShards;
+  size = compressedSize;
+  flags |= SHF_COMPRESSED;
 }
 
 static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {

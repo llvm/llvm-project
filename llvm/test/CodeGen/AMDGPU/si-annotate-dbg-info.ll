@@ -23,9 +23,9 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG16:![0-9]+]]
 ; OPT:       exit:
 ; OPT-NEXT:    [[RET:%.*]] = phi i32 [ [[TMP5]], [[FLOW]] ], [ 42, [[TRUE]] ], !dbg [[DBG17:![0-9]+]]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]]), !dbg [[DBG18:![0-9]+]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
 ; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[RET]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
-; OPT-NEXT:    ret i32 [[RET]], !dbg [[DBG18]]
+; OPT-NEXT:    ret i32 [[RET]], !dbg [[DBG18:![0-9]+]]
 ;
   %c = icmp eq i32 %0, 0, !dbg !13
   tail call void @llvm.dbg.value(metadata i1 %c, metadata !9, metadata !DIExpression()), !dbg !13
@@ -65,13 +65,13 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT:       Flow:
 ; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ undef, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[LOOP_BODY]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]]), !dbg [[DBG27]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
 ; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]]), !dbg [[DBG27]]
 ; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]]), !dbg [[DBG27]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]], !dbg [[DBG27]]
 ; OPT:       exit:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]]), !dbg [[DBG30:![0-9]+]]
-; OPT-NEXT:    ret void, !dbg [[DBG30]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
+; OPT-NEXT:    ret void, !dbg [[DBG30:![0-9]+]]
 ;
 entry:
   br label %loop, !dbg !24

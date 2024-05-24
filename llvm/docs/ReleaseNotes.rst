@@ -62,6 +62,10 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+  terminfo and now always uses the ``TERM`` environment variable for color
+  support autodetection.
+
 Changes to TableGen
 -------------------
 
@@ -76,14 +80,23 @@ Changes to the AArch64 Backend
 * Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
   Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
+* ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
+  default when the feature is enabled. The new behaviour results 
+  in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
+  is passed as part of ``-mcpu=`` options.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
 Changes to the ARM Backend
 --------------------------
+
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
+* armv8-r now implies only fp-armv8d16sp, rather than neon and full fp-armv8. These features are still included by default for cortex-r52. The default cpu for armv8-r is now "generic", for compatibility with variants that do not include neon, fp64, and d32.
 
 Changes to the AVR Backend
 --------------------------
@@ -119,6 +132,9 @@ Changes to the RISC-V Backend
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
+* Added smstateen extension to -march. CSR names for smstateen were already supported.
+* Zaamo and Zalrsc are no longer experimental.
+* Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -128,6 +144,9 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+- Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
+  while assembly encoding/decoding supports are kept.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -160,6 +179,15 @@ Changes to the C API
 
 * Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
+
+* Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
+* Added the following functions for creating and accessing data for CallBr instructions:
+
+  * ``LLVMBuildCallBr``
+  * ``LLVMGetCallBrDefaultDest``
+  * ``LLVMGetCallBrNumIndirectDests``
+  * ``LLVMGetCallBrIndirectDest``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -210,6 +238,19 @@ Changes to the LLVM tools
 * llvm-readelf's ``-r`` output for RELR has been improved.
   (`#89162 <https://github.com/llvm/llvm-project/pull/89162>`_)
   ``--raw-relr`` has been removed.
+
+* llvm-mca now aborts by default if it is given bad input where previously it
+  would continue. Additionally, it can now continue when it encounters
+  instructions which lack scheduling information. The behaviour can be
+  controlled by the newly introduced
+  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
+  documented in `--help` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`)
+
+* llvm-readobj's LLVM output format for ELF core files has been changed.
+  Similarly, the JSON format has been fixed for this case. The NT_FILE note
+  now has a map for the mapped files. (`#92835
+  <https://github.com/llvm/llvm-project/pull/92835>`).
 
 Changes to LLDB
 ---------------------------------

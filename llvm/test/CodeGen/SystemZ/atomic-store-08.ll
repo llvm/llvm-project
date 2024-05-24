@@ -1,8 +1,8 @@
-; Test long double atomic stores. The atomic store is converted to i128 by
-; the AtomicExpand pass.
+; Test long double atomic stores - via i128.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
-; xUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mattr=+soft-float | FileCheck -check-prefixes=SOFTFP %s
 
 define void @f1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: f1:
@@ -12,6 +12,14 @@ define void @f1(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    stpq %r0, 0(%r2)
 ; CHECK-NEXT:    bcr 1{{[45]}}, %r0
 ; CHECK-NEXT:    br %r14
+
+; SOFTFP-LABEL: f1:
+; SOFTFP:       # %bb.0:
+; SOFTFP-NEXT:    lg %r1, 8(%r3)
+; SOFTFP-NEXT:    lg %r0, 0(%r3)
+; SOFTFP-NEXT:    stpq %r0, 0(%r2)
+; SOFTFP-NEXT:    bcr 1{{[45]}}, %r0
+; SOFTFP-NEXT:    br %r14
   %val = load fp128, ptr %src, align 8
   store atomic fp128 %val, ptr %dst seq_cst, align 16
   ret void
@@ -32,8 +40,28 @@ define void @f1_fpsrc(ptr %dst, ptr %src) {
 ; Z13-NEXT: vlgvg	%r0, %v0, 0
 
 ; CHECK-NEXT: stpq	%r0, 0(%r2)
-; CHECK-NEXT: bcr	15, %r0
+; CHECK-NEXT: bcr	1{{[45]}}, %r0
 ; CHECK-NEXT: br	%r14
+
+; SOFTFP-LABEL: f1_fpsrc:
+; SOFTFP: lg	%r0, 8(%r3)
+; SOFTFP-NEXT: lg	%r1, 0(%r3)
+; SOFTFP-NEXT:	lgr	%r13, %r2
+; SOFTFP-NEXT:	stg	%r0, 168(%r15)
+; SOFTFP-NEXT:	stg	%r1, 160(%r15)
+; SOFTFP-NEXT:	stg	%r0, 184(%r15)
+; SOFTFP-NEXT:	la	%r2, 192(%r15)
+; SOFTFP-NEXT:	la	%r3, 176(%r15)
+; SOFTFP-NEXT:	la	%r4, 160(%r15)
+; SOFTFP-NEXT:	stg	%r1, 176(%r15)
+; SOFTFP-NEXT:	brasl	%r14, __addtf3@PLT
+; SOFTFP-NEXT:	lg	%r1, 200(%r15)
+; SOFTFP-NEXT:	lg	%r0, 192(%r15)
+; SOFTFP-NEXT:	stpq	%r0, 0(%r13)
+; SOFTFP-NEXT:	bcr	1{{[45]}}, %r0
+; SOFTFP-NEXT:	lmg	%r13, %r15, 312(%r15)
+; SOFTFP-NEXT:	br	%r14
+
   %val = load fp128, ptr %src, align 8
   %add = fadd fp128 %val, %val
   store atomic fp128 %add, ptr %dst seq_cst, align 16
@@ -58,8 +86,8 @@ define void @f2_fpuse(ptr %dst, ptr %src) {
 ; CHECK-NEXT:	.cfi_def_cfa_offset 336
 ; CHECK-NEXT:	ld	%f0, 0(%r3)
 ; CHECK-NEXT:	ld	%f2, 8(%r3)
-; CHECK-NEXT:	lgr	%r3, %r2
-; CHECK-NEXT:	axbr	%f0, %f0
+; CHECK-DAG:	lgr	%r3, %r2
+; CHECK-DAG:	axbr	%f0, %f0
 ; CHECK-NEXT:	la	%r4, 160(%r15)
 ; CHECK-NEXT:	lghi	%r2, 16
 ; CHECK-NEXT:	lhi	%r5, 5

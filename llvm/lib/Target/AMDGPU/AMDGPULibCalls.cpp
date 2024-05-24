@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <cmath>
@@ -577,18 +578,26 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
 static bool isKnownIntegral(const Value *V, const DataLayout &DL,
                             FastMathFlags FMF) {
-  if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
     return true;
+  if (isa<UndefValue>(V))
+    return false;
 
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
     return CF->getValueAPF().isInteger();
 
-  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
-    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
-      Constant *ConstElt = CDV->getElementAsConstant(i);
-      if (isa<UndefValue>(ConstElt))
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  const Constant *CV = dyn_cast<Constant>(V);
+  if (VFVTy && CV) {
+    unsigned NumElts = VFVTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt)
+        return false;
+      if (isa<PoisonValue>(Elt))
         continue;
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
       if (!CFP || !CFP->getValue().isInteger())
         return false;
     }
@@ -1148,35 +1157,49 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
 bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                 const FuncInfo &FInfo) {
-  // skip vector function
-  if (getVecSize(FInfo) != 1)
-    return false;
-
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
 
-  ConstantInt *CINT = dyn_cast<ConstantInt>(opr1);
-  if (!CINT) {
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APIntAllowPoison(CINT)))
     return false;
-  }
+
+  Function *Parent = B.GetInsertBlock()->getParent();
+
   int ci_opr1 = (int)CINT->getSExtValue();
-  if (ci_opr1 == 1) {  // rootn(x, 1) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+  if (ci_opr1 == 1 && !Parent->hasFnAttribute(Attribute::StrictFP)) {
+    // rootn(x, 1) = x
+    //
+    // TODO: Insert constrained canonicalize for strictfp case.
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << '\n');
     replaceCall(FPOp, opr0);
     return true;
   }
 
   Module *M = B.GetInsertBlock()->getModule();
-  if (ci_opr1 == 2) { // rootn(x, 2) = sqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2sqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
-  } else if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
+
+  CallInst *CI = cast<CallInst>(FPOp);
+  if (ci_opr1 == 2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, 2) = sqrt(x)
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0 << ")\n");
+
+    CallInst *NewCall = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    NewCall->takeName(CI);
+
+    // OpenCL rootn has a looser ulp of 2 requirement than sqrt, so add some
+    // metadata.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+    NewCall->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    replaceCall(CI, NewCall);
+    return true;
+  }
+
+  if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> cbrt(" << *opr0
@@ -1192,16 +1215,36 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                "__rootn2div");
     replaceCall(FPOp, nval);
     return true;
-  } else if (ci_opr1 == -2) { // rootn(x, -2) = rsqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2rsqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
   }
+
+  if (ci_opr1 == -2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, -2) = rsqrt(x)
+
+    // The original rootn had looser ulp requirements than the resultant sqrt
+    // and fdiv.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+
+    // TODO: Could handle strictfp but need to fix strict sqrt emission
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    FMF.setAllowContract(true);
+
+    CallInst *Sqrt = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    Instruction *RSqrt = cast<Instruction>(
+        B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0), Sqrt));
+    Sqrt->setFastMathFlags(FMF);
+    RSqrt->setFastMathFlags(FMF);
+    RSqrt->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
+                      << ")\n");
+    replaceCall(CI, RSqrt);
+    return true;
+  }
+
   return false;
 }
 

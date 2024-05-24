@@ -47,6 +47,7 @@ define i1 @hoist_with_debug2(i32 %x) !dbg !22 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ugt i32 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[X]], metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[X]], metadata [[META21]], metadata !DIExpression()), !dbg [[DBG23]]
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL_NOT]], i1 false, i1 true
 ; CHECK-NEXT:    ret i1 [[DOT]]
 ;

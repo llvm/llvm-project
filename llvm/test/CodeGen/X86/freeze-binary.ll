@@ -547,8 +547,7 @@ define <4 x i32> @freeze_ashr_vec_outofrange(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_ashr_vec_outofrange:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; X86-NEXT:    psrad $1, %xmm0
-; X86-NEXT:    psrad $2, %xmm0
+; X86-NEXT:    psrad $3, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_vec_outofrange:
@@ -661,8 +660,7 @@ define <4 x i32> @freeze_lshr_vec_outofrange(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_lshr_vec_outofrange:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; X86-NEXT:    psrld $1, %xmm0
-; X86-NEXT:    psrld $2, %xmm0
+; X86-NEXT:    psrld $3, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_vec_outofrange:

@@ -194,6 +194,15 @@ protected:
     return Bases;
   }
 
+  APIRecord::RecordKind getKindForDisplay(const CXXRecordDecl *Decl) {
+    if (Decl->isUnion())
+      return APIRecord::RK_Union;
+    if (Decl->isStruct())
+      return APIRecord::RK_Struct;
+
+    return APIRecord::RK_CXXClass;
+  }
+
   StringRef getOwningModuleName(const Decl &D) {
     if (auto *OwningModule = D.getImportedOwningModule())
       return OwningModule->Name;
@@ -599,13 +608,6 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-  APIRecord::RecordKind Kind;
-  if (Decl->isUnion())
-    Kind = APIRecord::RecordKind::RK_Union;
-  else if (Decl->isStruct())
-    Kind = APIRecord::RecordKind::RK_Struct;
-  else
-    Kind = APIRecord::RecordKind::RK_CXXClass;
   auto Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
 
   CXXClassRecord *Record;
@@ -619,13 +621,15 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
         SubHeading, Template(Decl->getDescribedClassTemplate()), Access,
         isInSystemHeader(Decl));
-  } else
+  } else {
     Record = API.createRecord<CXXClassRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, Kind, Access, isInSystemHeader(Decl),
-        isEmbeddedInVarDeclarator(*Decl));
+        SubHeading, APIRecord::RecordKind::RK_CXXClass, Access,
+        isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+  }
 
+  Record->KindForDisplay = getKindForDisplay(Decl);
   Record->Bases = getBases(Decl);
 
   return true;
@@ -849,6 +853,7 @@ bool ExtractAPIVisitorBase<Derived>::
       Template(Decl), DeclarationFragmentsBuilder::getAccessControl(Decl),
       isInSystemHeader(Decl));
 
+  CTPSR->KindForDisplay = getKindForDisplay(Decl);
   CTPSR->Bases = getBases(Decl);
 
   return true;

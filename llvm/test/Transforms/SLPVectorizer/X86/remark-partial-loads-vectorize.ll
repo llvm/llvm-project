@@ -10,7 +10,7 @@
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-3'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '5'
+; YAML-NEXT:    - TreeSize:        '4'
 
 define <4 x float> @test(ptr %x, float %v, float %a) {
 ; CHECK-LABEL: define <4 x float> @test(

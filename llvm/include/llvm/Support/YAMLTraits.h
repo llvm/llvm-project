@@ -567,10 +567,10 @@ inline bool isNumeric(StringRef S) {
 
   // Make S.front() and S.drop_front().front() (if S.front() is [+-]) calls
   // safe.
-  if (S.empty() || S.equals("+") || S.equals("-"))
+  if (S.empty() || S == "+" || S == "-")
     return false;
 
-  if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
+  if (S == ".nan" || S == ".NaN" || S == ".NAN")
     return true;
 
   // Infinity and decimal numbers can be prefixed with sign.
@@ -578,7 +578,7 @@ inline bool isNumeric(StringRef S) {
 
   // Check for infinity first, because checking for hex and oct numbers is more
   // expensive.
-  if (Tail.equals(".inf") || Tail.equals(".Inf") || Tail.equals(".INF"))
+  if (Tail == ".inf" || Tail == ".Inf" || Tail == ".INF")
     return true;
 
   // Section 10.3.2 Tag Resolution
@@ -599,7 +599,7 @@ inline bool isNumeric(StringRef S) {
   // digit after dot (as opposed by number which has digits before the dot), but
   // doesn't have one.
   if (S.starts_with(".") &&
-      (S.equals(".") ||
+      (S == "." ||
        (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
     return false;
 
@@ -656,14 +656,13 @@ inline bool isNumeric(StringRef S) {
 }
 
 inline bool isNull(StringRef S) {
-  return S.equals("null") || S.equals("Null") || S.equals("NULL") ||
-         S.equals("~");
+  return S == "null" || S == "Null" || S == "NULL" || S == "~";
 }
 
 inline bool isBool(StringRef S) {
   // FIXME: using parseBool is causing multiple tests to fail.
-  return S.equals("true") || S.equals("True") || S.equals("TRUE") ||
-         S.equals("false") || S.equals("False") || S.equals("FALSE");
+  return S == "true" || S == "True" || S == "TRUE" || S == "false" ||
+         S == "False" || S == "FALSE";
 }
 
 // 5.1. Character Set

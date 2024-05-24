@@ -6,24 +6,19 @@ define i16 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 5
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 6
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 8
 ; CHECK-NEXT:    br label [[WHILE:%.*]]
 ; CHECK:       while:
-; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX5:%.*]], [[WHILE]] ]
+; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX27:%.*]], [[WHILE]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[A1]], align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[A3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP7]], <8 x i32> <i32 2, i32 3, i32 poison, i32 1, i32 0, i32 4, i32 5, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i64> [[TMP8]], i64 [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> [[TMP9]], i64 [[TMP4]], i32 7
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 2, i32 3, i32 4, i32 5, i32 8, i32 8>
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> [[TMP11]])
-; CHECK-NEXT:    [[OP_RDX5]] = xor i64 [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A1]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr null, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    [[OP_RDX24:%.*]] = xor i64 0, [[TMP2]]
+; CHECK-NEXT:    [[OP_RDX25:%.*]] = xor i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX26:%.*]] = xor i64 [[OP_RDX24]], [[OP_RDX25]]
+; CHECK-NEXT:    [[OP_RDX27]] = xor i64 [[OP_RDX26]], [[TMP5]]
 ; CHECK-NEXT:    br label [[WHILE]]
 ;
 entry:

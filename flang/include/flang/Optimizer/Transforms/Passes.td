@@ -151,7 +151,10 @@ def CFGConversion : Pass<"cfg-conversion"> {
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
            /*default=*/"false",
-           "force the body of a loop to execute at least once">
+           "force the body of a loop to execute at least once">,
+    Option<"setNSW", "set-nsw", "bool",
+           /*default=*/"false",
+           "set nsw on loop variable increment">
   ];
 }
 
@@ -275,7 +278,6 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     aren't races adding new tags to the mlir context.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createAliasTagsPass()";
 }
 
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
@@ -298,7 +300,7 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
@@ -321,15 +323,15 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPDescriptorMapInfoGenPass
-    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+def OMPMapInfoFinalizationPass
+    : Pass<"omp-map-info-finalization", "mlir::func::FuncOp"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple 
     MapInfo's for each pointer element in the descriptor that requires 
     explicit individual mapping by the OpenMP runtime.
   }];
-  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
+  let constructor = "::fir::createOMPMapInfoFinalizationPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 

@@ -209,13 +209,12 @@ define void @lookahead_external_uses(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S, ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[D0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[S:%.*]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
-; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT1:%.*]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP1]], double [[D0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[S:%.*]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
+; CHECK-NEXT:    store double [[TMP9]], ptr [[EXT1:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -284,18 +283,17 @@ define void @lookahead_limit_users_budget(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[D0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[S:%.*]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
-; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT1:%.*]], align 8
-; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT2:%.*]], align 8
-; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT3:%.*]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    store double [[TMP11]], ptr [[EXT4:%.*]], align 8
-; CHECK-NEXT:    store double [[TMP11]], ptr [[EXT5:%.*]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP1]], double [[D0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[S:%.*]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
+; CHECK-NEXT:    store double [[TMP9]], ptr [[EXT1:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP9]], ptr [[EXT2:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP9]], ptr [[EXT3:%.*]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT4:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP10]], ptr [[EXT5:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

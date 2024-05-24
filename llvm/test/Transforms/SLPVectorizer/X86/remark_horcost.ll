@@ -87,7 +87,7 @@ for.body:                                         ; preds = %for.body, %entry
   ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
   ; YAML-NEXT:   - Cost:            '-5'
   ; YAML-NEXT:   - String:          ' and with tree size '
-  ; YAML-NEXT:   - TreeSize:        '5'
+  ; YAML-NEXT:   - TreeSize:        '4'
 
   ; YAML:      --- !Passed
   ; YAML-NEXT: Pass:            slp-vectorizer

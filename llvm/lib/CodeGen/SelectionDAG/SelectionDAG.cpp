@@ -470,8 +470,10 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VP_REDUCE_FMIN:
     return ISD::FMINNUM;
   case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMAXIMUM:
     return ISD::FMAXIMUM;
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
     return ISD::FMINIMUM;
   }
 }
@@ -1536,6 +1538,25 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
                                    VT.getScalarSizeInBits());
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
+}
+
+SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
+                                           SDValue EVL, const SDLoc &DL,
+                                           EVT VT) {
+  EVT OpVT = Op.getValueType();
+  assert(VT.isInteger() && OpVT.isInteger() &&
+         "Cannot getVPZeroExtendInReg FP types");
+  assert(VT.isVector() && OpVT.isVector() &&
+         "getVPZeroExtendInReg type and operand type should be vector!");
+  assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
+         "Vector element counts must match in getZeroExtendInReg");
+  assert(VT.bitsLE(OpVT) && "Not extending!");
+  if (OpVT == VT)
+    return Op;
+  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
+                                   VT.getScalarSizeInBits());
+  return getNode(ISD::VP_AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT), Mask,
+                 EVL);
 }
 
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
@@ -3466,19 +3487,28 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::mulhs(Known, Known2);
     break;
   }
-  case ISD::AVGFLOORU:
-  case ISD::AVGCEILU:
-  case ISD::AVGFLOORS:
-  case ISD::AVGCEILS: {
-    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
-    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
+  case ISD::AVGFLOORU: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
-    KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
-    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
-    Known = Known.extractBits(BitWidth, 1);
+    Known = KnownBits::avgFloorU(Known, Known2);
+    break;
+  }
+  case ISD::AVGCEILU: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::avgCeilU(Known, Known2);
+    break;
+  }
+  case ISD::AVGFLOORS: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::avgFloorS(Known, Known2);
+    break;
+  }
+  case ISD::AVGCEILS: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::avgCeilS(Known, Known2);
     break;
   }
   case ISD::SELECT:
@@ -3527,16 +3557,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.Zero.setBitsFrom(1);
     break;
   }
-  case ISD::SHL:
+  case ISD::SHL: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::shl(Known, Known2);
+
+    bool NUW = Op->getFlags().hasNoUnsignedWrap();
+    bool NSW = Op->getFlags().hasNoSignedWrap();
+
+    bool ShAmtNonZero = Known2.isNonZero();
+
+    Known = KnownBits::shl(Known, Known2, NUW, NSW, ShAmtNonZero);
 
     // Minimum shift low bits are known zero.
     if (const APInt *ShMinAmt =
             getValidMinimumShiftAmountConstant(Op, DemandedElts))
       Known.Zero.setLowBits(ShMinAmt->getZExtValue());
     break;
+  }
   case ISD::SRL:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -4366,6 +4403,16 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   return false;
 }
 
+bool SelectionDAG::isKnownToBeAPowerOfTwoFP(SDValue Val, unsigned Depth) const {
+  if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Val, true))
+    return C1->getValueAPF().getExactLog2Abs() >= 0;
+
+  if (Val.getOpcode() == ISD::UINT_TO_FP || Val.getOpcode() == ISD::SINT_TO_FP)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+
+  return false;
+}
+
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
 
@@ -4733,6 +4780,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         (VTBits - SignBitsOp0 + 1) + (VTBits - SignBitsOp1 + 1);
     return OutValidBits > VTBits ? 1 : VTBits - OutValidBits + 1;
   }
+  case ISD::AVGCEILS:
+  case ISD::AVGFLOORS:
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp == 1)
+      return 1; // Early out.
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    return std::min(Tmp, Tmp2);
   case ISD::SREM:
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
@@ -5081,6 +5135,24 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     }
     return true;
 
+  case ISD::VECTOR_SHUFFLE: {
+    APInt DemandedLHS, DemandedRHS;
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    if (!getShuffleDemandedElts(DemandedElts.getBitWidth(), SVN->getMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS,
+                                /*AllowUndefElts=*/false))
+      return false;
+    if (!DemandedLHS.isZero() &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                          PoisonOnly, Depth + 1))
+      return false;
+    if (!DemandedRHS.isZero() &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                          PoisonOnly, Depth + 1))
+      return false;
+    return true;
+  }
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
@@ -5204,18 +5276,26 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // Check if we demand any upper (undef) elements.
     return !PoisonOnly && DemandedElts.ugt(1);
 
+  case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {
     // Ensure that the element index is in bounds.
     EVT VecVT = Op.getOperand(0).getValueType();
-    KnownBits KnownIdx = computeKnownBits(Op.getOperand(1), Depth + 1);
-    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
+    if (isGuaranteedNotToBeUndefOrPoison(Idx, DemandedElts, PoisonOnly,
+                                         Depth + 1)) {
+      KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
+      return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    }
+    return true;
   }
 
-  case ISD::INSERT_VECTOR_ELT:{
-    // Ensure that the element index is in bounds.
-    EVT VecVT = Op.getOperand(0).getValueType();
-    KnownBits KnownIdx = computeKnownBits(Op.getOperand(2), Depth + 1);
-    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+  case ISD::VECTOR_SHUFFLE: {
+    // Check for any demanded shuffle element that is undef.
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    for (auto [Idx, Elt] : enumerate(SVN->getMask()))
+      if (Elt < 0 && DemandedElts[Idx])
+        return true;
+    return false;
   }
 
   default:
@@ -5519,6 +5599,13 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   }
 
   return computeKnownBits(Op, Depth).isNonZero();
+}
+
+bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
+  if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Op, true))
+    return !C1->isNegative();
+
+  return Op.getOpcode() == ISD::FABS;
 }
 
 bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
@@ -9572,6 +9659,44 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   assert(isa<ConstantSDNode>(N->getScale()) &&
          N->getScale()->getAsAPIntVal().isPowerOf2() &&
          "Scale should be a constant power of 2");
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getMaskedHistogram(SDVTList VTs, EVT MemVT,
+                                         const SDLoc &dl, ArrayRef<SDValue> Ops,
+                                         MachineMemOperand *MMO,
+                                         ISD::MemIndexType IndexType) {
+  assert(Ops.size() == 7 && "Incompatible number of operands");
+
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, VTs, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedHistogramSDNode>(
+      dl.getIROrder(), VTs, MemVT, MMO, IndexType));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
+    cast<MaskedGatherSDNode>(E)->refineAlignment(MMO);
+    return SDValue(E, 0);
+  }
+
+  auto *N = newSDNode<MaskedHistogramSDNode>(dl.getIROrder(), dl.getDebugLoc(),
+                                             VTs, MemVT, MMO, IndexType);
+  createOperands(N, Ops);
+
+  assert(N->getMask().getValueType().getVectorElementCount() ==
+             N->getIndex().getValueType().getVectorElementCount() &&
+         "Vector width mismatch between mask and data");
+  assert(isa<ConstantSDNode>(N->getScale()) &&
+         N->getScale()->getAsAPIntVal().isPowerOf2() &&
+         "Scale should be a constant power of 2");
+  assert(N->getInc().getValueType().isInteger() && "Non integer update value");
 
   CSEMap.InsertNode(N, IP);
   InsertNode(N);

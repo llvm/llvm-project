@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl \
 // RUN:  -finclude-default-header -emit-pch -o %t %S/Inputs/pch.hlsl
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl \
-// RUN:  -finclude-default-header -include-pch %t -fsyntax-only -ast-dump-all %s \
+// RUN:  -finclude-default-header -include-pch %t -ast-dump-all %s \
 // RUN: | FileCheck  %s
 
 // Make sure PCH works by using function declared in PCH header and declare a RWBuffer in current file.

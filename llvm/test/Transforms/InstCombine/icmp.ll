@@ -5183,3 +5183,18 @@ entry:
   %cmp = icmp eq i8 %add2, %add1
   ret i1 %cmp
 }
+
+define i1 @icmp_freeze_sext(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_freeze_sext(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1_FR:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[Y]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = or i1 [[TMP1]], [[CMP1_FR]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = icmp uge i16 %x, %y
+  %ext = sext i1 %cmp1 to i16
+  %ext.fr = freeze i16 %ext
+  %cmp2 = icmp uge i16 %ext.fr, %y
+  ret i1 %cmp2
+}

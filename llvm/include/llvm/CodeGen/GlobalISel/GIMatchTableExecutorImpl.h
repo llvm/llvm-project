@@ -100,10 +100,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto readULEB = [&]() {
-    unsigned N = 0;
-    uint64_t Val = decodeULEB128(MatchTable + CurrentIdx, &N);
-    CurrentIdx += N;
-    return Val;
+    return fastDecodeULEB128(MatchTable, CurrentIdx);
   };
 
   // Convenience function to return a signed value. This avoids
@@ -471,12 +468,29 @@ bool GIMatchTableExecutor::executeMatchTable(
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
+      break;
+    }
+    case GIM_CheckHasOneUse: {
+      uint64_t InsnID = readULEB();
 
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckHasOneUse(MIs["
+                             << InsnID << "]\n");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Used insn before defined");
+      assert(MI->getNumDefs() > 0 && "No defs");
+      const Register Res = MI->getOperand(0).getReg();
+
+      if (!MRI.hasOneNonDBGUse(Res)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
       break;
     }
     case GIM_CheckAtomicOrdering: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckAtomicOrdering(MIs["
                              << InsnID << "], " << (uint64_t)Ordering << ")\n");
@@ -493,7 +507,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIM_CheckAtomicOrderingOrStrongerThan: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
                              << ": GIM_CheckAtomicOrderingOrStrongerThan(MIs["
@@ -511,7 +525,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIM_CheckAtomicOrderingWeakerThan: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
                              << ": GIM_CheckAtomicOrderingWeakerThan(MIs["
@@ -531,7 +545,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t InsnID = readULEB();
       uint64_t MMOIdx = readULEB();
       // This accepts a list of possible address spaces.
-      const uint64_t NumAddrSpace = readULEB();
+      const uint64_t NumAddrSpace = MatchTable[CurrentIdx++];
 
       if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
         if (handleReject() == RejectAndGiveUp)
@@ -568,7 +582,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIM_CheckMemoryAlignment: {
       uint64_t InsnID = readULEB();
       uint64_t MMOIdx = readULEB();
-      uint64_t MinAlign = readULEB();
+      uint64_t MinAlign = MatchTable[CurrentIdx++];
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
 
@@ -1338,13 +1352,19 @@ bool GIMatchTableExecutor::executeMatchTable(
           -1); // Not a source operand of the old instruction.
       break;
     }
-    case GIR_CustomAction: {
+    case GIR_DoneWithCustomAction: {
       uint16_t FnID = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIR_CustomAction(FnID=" << FnID
-                             << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_DoneWithCustomAction(FnID="
+                             << FnID << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
-      runCustomAction(FnID, State, OutMIs);
+      if (runCustomAction(FnID, State, OutMIs)) {
+        propagateFlags();
+        return true;
+      }
+
+      if (handleReject() == RejectAndGiveUp)
+        return false;
       break;
     }
     case GIR_CustomOperandRenderer: {

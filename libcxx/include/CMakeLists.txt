@@ -224,6 +224,7 @@ set(files
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
+  __atomic/atomic_ref.h
   __atomic/atomic_sync.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -232,6 +233,7 @@ set(files
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
+  __atomic/to_gcc_order.h
   __availability
   __bit/bit_cast.h
   __bit/bit_ceil.h
@@ -446,6 +448,7 @@ set(files
   __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
+  __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
   __iterator/common_iterator.h
@@ -581,6 +584,8 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __ostream/basic_ostream.h
+  __ostream/print.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
@@ -731,7 +736,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/apply_cv.h
   __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h

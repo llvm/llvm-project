@@ -191,8 +191,11 @@ Frame *InterpFrame::getCaller() const {
 }
 
 SourceRange InterpFrame::getCallRange() const {
-  if (!Caller->Func)
-    return S.getRange(nullptr, {});
+  if (!Caller->Func) {
+    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+      return NullRange;
+    return S.EvalLocation;
+  }
   return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
 }
 
@@ -209,10 +212,8 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
-  auto Pt = Params.find(Off);
-  if (Pt != Params.end()) {
+  if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
-  }
 
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);

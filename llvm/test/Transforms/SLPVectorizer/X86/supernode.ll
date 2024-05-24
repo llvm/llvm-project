@@ -163,12 +163,11 @@ define void @supernode_scheduling(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Da
 ; ENABLED-NEXT:    [[D:%.*]] = load double, ptr [[DARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP3]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP1]], double [[D]], i32 1
-; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
-; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C]], i32 0
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP1]], double [[D]], i32 1
+; ENABLED-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP4]]
+; ENABLED-NEXT:    store <2 x double> [[TMP5]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:

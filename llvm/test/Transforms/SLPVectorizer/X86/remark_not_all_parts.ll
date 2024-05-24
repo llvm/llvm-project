@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
   ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
   ; YAML-NEXT:   - Cost:            '-1'
   ; YAML-NEXT:   - String:          ' and with tree size '
-  ; YAML-NEXT:   - TreeSize:        '6'
+  ; YAML-NEXT:   - TreeSize:        '4'
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 8
