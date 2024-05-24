@@ -16,30 +16,6 @@ function genLink(Ref) {
   return ANode;
 }
 
-function genHTMLOfIndex(Index, CurrentDirectory, IsOutermostList) {
-  // Out will store the HTML elements that Index requires to be generated
-  var Out = [];
-  if (Index.Name) {
-    var SpanNode = document.createElement("span");
-    var TextNode = document.createTextNode(Index.Name);
-    SpanNode.appendChild(genLink(Index));
-    Out.push(SpanNode);
-  }
-  if (Index.Children.length == 0)
-    return Out;
-  // Only the outermost list should use ol, the others should use ul
-  var ListNodeName = IsOutermostList ? "ol" : "ul";
-  var ListNode = document.createElement(ListNodeName);
-  for (Child of Index.Children) {
-    var LiNode = document.createElement("li");
-    ChildNodes = genHTMLOfIndex(Child, CurrentDirectory, false);
-    for (Node of ChildNodes)
-      LiNode.appendChild(Node);
-    ListNode.appendChild(LiNode);
-  }
-  Out.push(ListNode);
-  return Out;
-}
 
 function genHTMLOfIndex(Index, CurrentDirectory, IsOutermostList) {
   // Out will store the HTML elements that Index requires to be generated
