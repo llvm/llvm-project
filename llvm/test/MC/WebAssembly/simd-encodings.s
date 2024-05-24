@@ -848,4 +848,7 @@ main:
     # CHECK: f16x8.splat # encoding: [0xfd,0xa0,0x02]
     f16x8.splat
 
+    # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
+    f16x8.extract_lane 1
+
     end_function

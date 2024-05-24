@@ -341,6 +341,10 @@ def int_wasm_splat_f16x8:
   DefaultAttrsIntrinsic<[llvm_v8f16_ty],
                         [llvm_float_ty],
                         [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_extract_lane_f16x8:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+                        [llvm_v8f16_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
 
 
 //===----------------------------------------------------------------------===//

@@ -819,6 +819,12 @@ f16x8 splat_f16x8(float a) {
   // WEBASSEMBLY-NEXT: ret <8 x half> %0
   return __builtin_wasm_splat_f16x8(a);
 }
+
+float extract_lane_f16x8(f16x8 a, int i) {
+  // WEBASSEMBLY:  %0 = tail call float @llvm.wasm.extract.lane.f16x8(<8 x half> %a, i32 %i)
+  // WEBASSEMBLY-NEXT: ret float %0
+  return __builtin_wasm_extract_lane_f16x8(a, i);
+}
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();
   // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()
