@@ -173,7 +173,7 @@ public:
             continue;
 
           if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
-            for (auto& Arg : CTSD->getTemplateArgs().asArray()) {
+            for (auto &Arg : CTSD->getTemplateArgs().asArray()) {
               if (Arg.getKind() != TemplateArgument::Type)
                 continue;
               auto TemplT = Arg.getAsType();
