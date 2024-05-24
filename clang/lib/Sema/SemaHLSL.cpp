@@ -483,7 +483,7 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
     if (WasAlreadyScannedInCurrentStage(ScannedStages))
       continue;
 
-    ReportOnlyShaderStageIssues = NeverBeenScanned(ScannedStages);
+    ReportOnlyShaderStageIssues = !NeverBeenScanned(ScannedStages);
 
     AddToScannedFunctions(FD);
     TraverseStmt(FD->getBody());
