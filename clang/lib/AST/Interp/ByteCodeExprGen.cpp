@@ -1053,9 +1053,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->visitInitializer(Inits[0]);
 
-    if (Inits.size() == 0)
-      return this->emitFinishInit(E);
-
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       if (!this->visit(Init))
@@ -1083,24 +1080,38 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     };
 
     if (R->isUnion()) {
-      assert(Inits.size() == 1);
-      const Expr *Init = Inits[0];
-      const FieldDecl *FToInit = nullptr;
-      if (const auto *ILE = dyn_cast<InitListExpr>(E))
-        FToInit = ILE->getInitializedFieldInUnion();
-      else
-        FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
-
-      if (!this->emitDupPtr(E))
-        return false;
-
-      const Record::Field *FieldToInit = R->getField(FToInit);
-      if (std::optional<PrimType> T = classify(Init)) {
-        if (!initPrimitiveField(FieldToInit, Init, *T))
-          return false;
+      if (Inits.size() == 0) {
+        // Zero-initialize the first union field.
+        if (R->getNumFields() == 0)
+          return this->emitFinishInit(E);
+        const Record::Field *FieldToInit = R->getField(0u);
+        QualType FieldType = FieldToInit->Desc->getType();
+        if (std::optional<PrimType> T = classify(FieldType)) {
+          if (!this->visitZeroInitializer(*T, FieldType, E))
+            return false;
+          if (!this->emitInitField(*T, FieldToInit->Offset, E))
+            return false;
+        }
+        // FIXME: Non-primitive case?
       } else {
-        if (!initCompositeField(FieldToInit, Init))
+        const Expr *Init = Inits[0];
+        const FieldDecl *FToInit = nullptr;
+        if (const auto *ILE = dyn_cast<InitListExpr>(E))
+          FToInit = ILE->getInitializedFieldInUnion();
+        else
+          FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
+
+        if (!this->emitDupPtr(E))
           return false;
+
+        const Record::Field *FieldToInit = R->getField(FToInit);
+        if (std::optional<PrimType> T = classify(Init)) {
+          if (!initPrimitiveField(FieldToInit, Init, *T))
+            return false;
+        } else {
+          if (!initCompositeField(FieldToInit, Init))
+            return false;
+        }
       }
       return this->emitFinishInit(E);
     }
