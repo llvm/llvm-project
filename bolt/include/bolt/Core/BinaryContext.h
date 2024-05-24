@@ -1224,8 +1224,7 @@ public:
 
   /// Return a signed value of \p Size stored at \p Address. The address has
   /// to be a valid statically allocated address for the binary.
-  ErrorOr<uint64_t> getSignedValueAtAddress(uint64_t Address,
-                                            size_t Size) const;
+  ErrorOr<int64_t> getSignedValueAtAddress(uint64_t Address, size_t Size) const;
 
   /// Special case of getUnsignedValueAtAddress() that uses a pointer size.
   ErrorOr<uint64_t> getPointerAtAddress(uint64_t Address) const {
