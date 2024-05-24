@@ -7265,13 +7265,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fsized-deallocation is on by default in C++14 onwards and otherwise off
   // by default.
-  if (Arg *A = Args.getLastArg(options::OPT_fsized_deallocation,
-                               options::OPT_fno_sized_deallocation)) {
-    if (A->getOption().matches(options::OPT_fno_sized_deallocation))
-      CmdArgs.push_back("-fno-sized-deallocation");
-    else
-      CmdArgs.push_back("-fsized-deallocation");
-  }
+  Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
+                  options::OPT_fno_sized_deallocation);
 
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.
