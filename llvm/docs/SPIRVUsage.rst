@@ -163,6 +163,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
+   * - ``SPV_KHR_shader_clock``
+     - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
