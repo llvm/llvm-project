@@ -186,7 +186,8 @@ public:
               feOptions.ClangIRLifetimeCheck, lifetimeOpts,
               feOptions.ClangIRIdiomRecognizer, idiomRecognizerOpts,
               feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
-              action == CIRGenAction::OutputType::EmitCIRFlat)
+              action == CIRGenAction::OutputType::EmitCIRFlat,
+              action == CIRGenAction::OutputType::EmitMLIR)
               .failed()) {
         if (!passOptParsingFailure.empty())
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)

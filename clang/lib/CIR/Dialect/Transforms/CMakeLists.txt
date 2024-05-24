@@ -9,6 +9,7 @@ add_clang_library(MLIRCIRTransforms
   StdHelpers.cpp
   FlattenCFG.cpp
   GotoSolver.cpp
+  SCFPrepare.cpp
 
   DEPENDS
   MLIRCIRPassIncGen

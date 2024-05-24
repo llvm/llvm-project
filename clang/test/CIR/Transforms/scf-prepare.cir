@@ -1,0 +1,140 @@
+// RUN: cir-opt %s -cir-mlir-scf-prepare -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global "private" external @a : !cir.array<!s32i x 100>
+
+  // for (int i = l; u > i; ++i)
+  //   a[i] = 3;
+  //
+  // Check that the loop boundary been hoisted out of loop and the comparison
+  // been transferred from gt to lt.
+  cir.func @variableLoopBound(%arg0: !s32i, %arg1: !s32i) {
+    // CHECK: %[[BOUND:.*]] = cir.load %[[BOUND_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.for : cond {
+    // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %4) : !s32i, !s32i
+
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cmp(gt, %4, %5) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        %4 = cir.const #cir.int<3> : !s32i
+        %5 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %6 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %7 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %8 = cir.ptr_stride(%7 : !cir.ptr<!s32i>, %6 : !s32i), !cir.ptr<!s32i>
+        cir.store %4, %8 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.unary(inc, %4) : !s32i, !s32i
+        cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // for (int i = 0; 50 >= i; ++i)
+  //   a[i] = 3;
+  //
+  // Check that the loop boundary been hoisted out of loop and the comparison
+  // been transferred from ge to le.
+  cir.func @constantLoopBound() {
+    // CHECK: %[[BOUND:.*]] = cir.const #cir.int<50> : !s32i
+    // CHECK: cir.for : cond {
+    // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+    // CHECK:   %[[COND:.*]] = cir.cmp(le, %[[IV]], %[[BOUND]]) : !s32i, !s32i
+ 
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %2 = cir.const #cir.int<50> : !s32i
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %4 = cir.cmp(ge, %2, %3) : !s32i, !s32i
+        %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
+        cir.condition(%5)
+      } body {
+        %2 = cir.const #cir.int<3> : !s32i
+        %3 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %6 = cir.ptr_stride(%5 : !cir.ptr<!s32i>, %4 : !s32i), !cir.ptr<!s32i>
+        cir.store %2, %6 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.unary(inc, %2) : !s32i, !s32i
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // for (int i = l; u > i; ++i) {
+  //   --u;
+  //   a[i] = 3;
+  // }
+  //
+  // Check that the loop boundary not been hoisted because it's not loop
+  // invariant and the loop comparison been transferred from gt to lt.
+  cir.func @variableLoopBoundNotLoopInvariant(%arg0: !s32i, %arg1: !s32i) {
+    // CHECK: cir.store %[[IV_INIT:.*]], %[[IV_ADDR:.*]] : !s32i, !cir.ptr<!s32i>
+    // CHECK: cir.for : cond {
+    // CHECK:   %[[BOUND:.*]] = cir.load %[[BOUND_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+    // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %[[BOUND]]) : !s32i, !s32i
+
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cmp(gt, %4, %5) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        cir.scope {
+          %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+          %5 = cir.unary(dec, %4) : !s32i, !s32i
+          cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
+          %6 = cir.const #cir.int<3> : !s32i
+          %7 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+          %8 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+          %9 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+          %10 = cir.ptr_stride(%9 : !cir.ptr<!s32i>, %8 : !s32i), !cir.ptr<!s32i>
+          cir.store %6, %10 : !s32i, !cir.ptr<!s32i>
+        }
+        cir.yield
+      } step {
+        %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.unary(inc, %4) : !s32i, !s32i
+        cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+}
