@@ -27,8 +27,9 @@ namespace intrange {
 using InferRangeFn =
     std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
 
-using OptionalRangeFn =
-    std::function<OptionalIntRanges(ArrayRef<OptionalIntRanges>)>;
+/// Function that performs inferrence on an array of `IntegerValueRange`.
+using InferIntegerValueRangeFn =
+    std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>;
 
 static constexpr unsigned indexMinWidth = 32;
 static constexpr unsigned indexMaxWidth = 64;
@@ -47,7 +48,11 @@ enum class OverflowFlags : uint32_t {
 using InferRangeWithOvfFlagsFn =
     function_ref<ConstantIntRanges(ArrayRef<ConstantIntRanges>, OverflowFlags)>;
 
-OptionalRangeFn inferFromOptionals(intrange::InferRangeFn inferFn);
+/// Perform a pointwise extension of a function operating on `ConstantIntRanges`
+/// to a function operating on `IntegerValueRange` such that undefined input
+/// ranges propagate.
+InferIntegerValueRangeFn
+inferFromIntegerValueRange(intrange::InferRangeFn inferFn);
 
 /// Compute `inferFn` on `ranges`, whose size should be the index storage
 /// bitwidth. Then, compute the function on `argRanges` again after truncating
@@ -57,7 +62,7 @@ OptionalRangeFn inferFromOptionals(intrange::InferRangeFn inferFn);
 ///
 /// The `mode` argument specifies if the unsigned, signed, or both results of
 /// the inference computation should be used when comparing the results.
-ConstantIntRanges inferIndexOp(InferRangeFn inferFn,
+ConstantIntRanges inferIndexOp(const InferRangeFn &inferFn,
                                ArrayRef<ConstantIntRanges> argRanges,
                                CmpMode mode);
 

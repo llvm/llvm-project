@@ -648,7 +648,7 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
 
-void TestWithBoundsOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
+void TestWithBoundsOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), ConstantIntRanges{getUmin(), getUmax(),
                                                  getSmin(), getSmax()});
@@ -682,7 +682,7 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
 }
 
 void TestWithBoundsRegionOp::inferResultRanges(
-    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<IntegerValueRange> argRanges, SetIntRangeFn setResultRanges) {
   Value arg = getRegion().getArgument(0);
   setResultRanges(
       arg, ConstantIntRanges{getUmin(), getUmax(), getSmin(), getSmax()});
@@ -691,12 +691,12 @@ void TestWithBoundsRegionOp::inferResultRanges(
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
 
-void TestIncrementOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
+void TestIncrementOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
                                         SetIntRangeFn setResultRanges) {
-  if (!argRanges[0])
+  if (argRanges[0].isUninitialized())
     return;
 
-  const ConstantIntRanges &range = *argRanges[0];
+  const ConstantIntRanges &range = argRanges[0].getValue();
   APInt one(range.umin().getBitWidth(), 1);
   setResultRanges(getResult(), ConstantIntRanges{range.umin().uadd_sat(one),
                                                  range.umax().uadd_sat(one),
@@ -708,11 +708,11 @@ void TestIncrementOp::inferResultRanges(ArrayRef<OptionalIntRanges> argRanges,
 // TestReflectBoundsOp
 
 void TestReflectBoundsOp::inferResultRanges(
-    ArrayRef<OptionalIntRanges> argRanges, SetIntRangeFn setResultRanges) {
-  if (!argRanges[0])
+    ArrayRef<IntegerValueRange> argRanges, SetIntRangeFn setResultRanges) {
+  if (argRanges[0].isUninitialized())
     return;
 
-  const ConstantIntRanges &range = *argRanges[0];
+  const ConstantIntRanges &range = argRanges[0].getValue();
   MLIRContext *ctx = getContext();
   Builder b(ctx);
   Type sIntTy, uIntTy;

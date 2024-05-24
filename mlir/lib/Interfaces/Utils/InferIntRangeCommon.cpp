@@ -36,20 +36,20 @@ using namespace mlir;
 using ConstArithFn =
     function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
 
-std::function<OptionalIntRanges(ArrayRef<OptionalIntRanges>)>
-mlir::intrange::inferFromOptionals(intrange::InferRangeFn inferFn) {
+std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>
+mlir::intrange::inferFromIntegerValueRange(intrange::InferRangeFn inferFn) {
   return [inferFn = std::move(inferFn)](
-             ArrayRef<OptionalIntRanges> args) -> OptionalIntRanges {
+             ArrayRef<IntegerValueRange> args) -> IntegerValueRange {
     llvm::SmallVector<ConstantIntRanges> unpacked;
     unpacked.reserve(args.size());
 
-    for (const OptionalIntRanges &arg : args) {
-      if (!arg)
-        return std::nullopt;
-      unpacked.push_back(*arg);
+    for (const IntegerValueRange &arg : args) {
+      if (arg.isUninitialized())
+        return {};
+      unpacked.push_back(arg.getValue());
     }
 
-    return inferFn(unpacked);
+    return IntegerValueRange{inferFn(unpacked)};
   };
 }
 
@@ -93,7 +93,7 @@ static ConstantIntRanges minMaxBy(ConstArithFn op, ArrayRef<APInt> lhs,
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferIndexOp(InferRangeFn inferFn,
+mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
                              ArrayRef<ConstantIntRanges> argRanges,
                              intrange::CmpMode mode) {
   ConstantIntRanges sixtyFour = inferFn(argRanges);

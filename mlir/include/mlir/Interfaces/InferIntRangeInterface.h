@@ -105,11 +105,60 @@ private:
 
 raw_ostream &operator<<(raw_ostream &, const ConstantIntRanges &);
 
-using OptionalIntRanges = std::optional<ConstantIntRanges>;
+/// This lattice value represents the integer range of an SSA value.
+class IntegerValueRange {
+public:
+  /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
+  /// range that is used to mark the value as unable to be analyzed further,
+  /// where `t` is the type of `value`.
+  static IntegerValueRange getMaxRange(Value value);
+
+  /// Create an integer value range lattice value.
+  IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
+
+  /// Create an integer value range lattice value.
+  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
+      : value(std::move(value)) {}
+
+  /// Whether the range is uninitialized. This happens when the state hasn't
+  /// been set during the analysis.
+  bool isUninitialized() const { return !value.has_value(); }
+
+  /// Get the known integer value range.
+  const ConstantIntRanges &getValue() const {
+    assert(!isUninitialized());
+    return *value;
+  }
+
+  /// Compare two ranges.
+  bool operator==(const IntegerValueRange &rhs) const {
+    return value == rhs.value;
+  }
+
+  /// Compute the least upper bound of two ranges.
+  static IntegerValueRange join(const IntegerValueRange &lhs,
+                                const IntegerValueRange &rhs) {
+    if (lhs.isUninitialized())
+      return rhs;
+    if (rhs.isUninitialized())
+      return lhs;
+    return IntegerValueRange{lhs.getValue().rangeUnion(rhs.getValue())};
+  }
+
+  /// Print the integer value range.
+  void print(raw_ostream &os) const { os << value; }
+
+private:
+  /// The known integer value range.
+  std::optional<ConstantIntRanges> value;
+};
+
+raw_ostream &operator<<(raw_ostream &, const IntegerValueRange &);
+
 /// The type of the `setResultRanges` callback provided to ops implementing
 /// InferIntRangeInterface. It should be called once for each integer result
 /// value and be passed the ConstantIntRanges corresponding to that value.
-using SetIntRangeFn = function_ref<void(Value, const OptionalIntRanges &)>;
+using SetIntRangeFn = function_ref<void(Value, const IntegerValueRange &)>;
 } // end namespace mlir
 
 #include "mlir/Interfaces/InferIntRangeInterface.h.inc"
