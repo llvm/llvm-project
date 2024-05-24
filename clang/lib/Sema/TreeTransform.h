@@ -7337,7 +7337,7 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+    Result = SemaRef.BuildCountAttributedArrayOrPointerType(InnerTy, NewCount);
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);
