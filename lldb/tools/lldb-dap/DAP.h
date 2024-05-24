@@ -228,6 +228,8 @@ struct DAP {
 
   llvm::json::Value CreateTopLevelScopes();
 
+  void PopulateExceptionBreakpoints();
+
   /// \return
   ///   Attempt to determine if an expression is a variable expression or
   ///   lldb command using a hueristic based on the first term of the
@@ -331,6 +333,7 @@ private:
   // "Content-Length:" field followed by the length, followed by the raw
   // JSON bytes.
   void SendJSON(const std::string &json_str);
+  bool bp_initted;
 };
 
 extern DAP g_dap;

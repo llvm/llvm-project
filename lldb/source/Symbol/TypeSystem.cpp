@@ -335,3 +335,14 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
   }
   return GetTypeSystemForLanguage(language);
 }
+
+bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
+  if (language == eLanguageTypeUnknown)
+    return false;
+
+  LanguageSet plugins =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (plugins.Empty())
+    return false;
+  return plugins[language];
+}
