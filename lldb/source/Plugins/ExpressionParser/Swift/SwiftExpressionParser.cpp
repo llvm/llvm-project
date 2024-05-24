@@ -582,7 +582,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (!self_type.IsValid() ||
       !self_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because "
         "self isn't valid.");
 
@@ -593,7 +592,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   if (!imported_self_type.IsValid())
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the "
         "self type from an import isn't valid.");
 
@@ -603,7 +601,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         *stack_frame, imported_self_type);
     if (!imported_self_type)
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't bind the type parameters for self.");
   }
@@ -613,7 +610,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because "
           "self is not a Swift type.");
 
@@ -623,7 +619,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         imported_self_type.GetOpaqueQualType());
     if (!imported_self_type)
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because "
           "the Swift expression parser couldn't get the referent "
           "type for self.");
@@ -634,7 +629,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because "
           "self is not a Swift type.");
 
@@ -644,7 +638,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         imported_self_type.GetOpaqueQualType(), stack_frame_sp.get());
     if (!imported_self_type)
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't get the instance type for self.");
   }
@@ -657,13 +650,11 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
              "Couldn't get SwiftASTContext type for self type {0}.",
              imported_self_type.GetDisplayTypeName());
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the Swift "
         "expression parser couldn't get the Swift type for self.");
   }
   if (!swift_self_type.get())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "null self type");
+    return llvm::createStringError("null self type");
 
   swift::Type object_type = swift_self_type.get()->getWithoutSpecifierType();
 
@@ -681,7 +672,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
     if (!optional_type || optional_type->getGenericArgs().empty())
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't get an optional type for self.");
 
@@ -691,7 +681,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     if (!llvm::isa<swift::ClassType>(first_arg_type) &&
         !llvm::isa<swift::BoundGenericClassType>(first_arg_type))
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because "
           "weakly captured type is not a class type.");
 
@@ -704,7 +693,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
              "SEP:AddRequiredAliases: Failed to resolve the self archetype - "
              "could not make the $__lldb_context typealias.");
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the "
         "Swift expression parser couldn't resolve the self archetype.");
   }
@@ -718,10 +706,10 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
              "SEP:AddRequiredAliases: Failed to make the $__lldb_context "
              "typealias.");
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the "
         "Swift expression parser couldn't create a context type "
-        "alias for lldb. " + llvm::toString(type_alias_decl.takeError()));
+        "alias for lldb. " +
+        llvm::toString(type_alias_decl.takeError()));
   }
 
   return llvm::Error::success();
@@ -1152,12 +1140,10 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
   llvm::SmallVector<swift::TypeAliasDecl *> type_aliases;
   lldb::ProcessSP process_sp(stack_frame.CalculateProcess());
   if (!process_sp)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "no process");
+    return llvm::createStringError("no process");
   auto *runtime = SwiftLanguageRuntime::Get(process_sp);
   if (!runtime)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "no runtime");
+    return llvm::createStringError("no runtime");
 
   auto &typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
 
@@ -1168,8 +1154,7 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
   if (auto signature = SwiftLanguageRuntime::GetGenericSignature(
           func_name.GetStringRef(), typeref_typesystem))
     if (signature->pack_expansions.size())
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "[AddArchetypeTypeAliases] Variadic "
+      return llvm::createStringError("[AddArchetypeTypeAliases] Variadic "
                                      "generic functions are not supported.");
 
   struct MetadataPointerInfo {

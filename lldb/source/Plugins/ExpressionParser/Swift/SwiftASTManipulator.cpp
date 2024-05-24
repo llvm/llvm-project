@@ -706,8 +706,7 @@ bool SwiftASTManipulator::IsExpressionResultNonCopyable() {
 
 llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
   if (!IsValid())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Operating on invalid SwiftASTManipulator");
+    return llvm::createStringError("Operating on invalid SwiftASTManipulator");
   // Run through the result decls and figure out the return type.
 
   size_t num_results = m_result_info.size();
@@ -738,11 +737,9 @@ llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
 
   if (result_type.isNull())
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Could not find the result type for this expression.");
   if (result_type->is<swift::ErrorType>())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Result type is the error type.");
+    return llvm::createStringError("Result type is the error type.");
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
   CompilerType return_ast_type = ToCompilerType(result_type.getPointer());
@@ -755,13 +752,11 @@ llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
       AddExternalVariable(result_var_name, return_ast_type, metadata_sp);
   if (!result_var_or_err)
     return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
         "Could not add external result variable." +
-            llvm::toString(result_var_or_err.takeError()));
+        llvm::toString(result_var_or_err.takeError()));
   swift::VarDecl *result_var = *result_var_or_err;
   if (!result_var)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "null result var");
+    return llvm::createStringError("null result var");
 
   result_var->overwriteAccess(swift::AccessLevel::Public);
   result_var->overwriteSetterAccess(swift::AccessLevel::Public);
@@ -807,13 +802,11 @@ llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
 
             if (!error_var_or_err)
               return llvm::createStringError(
-                  llvm::inconvertibleErrorCode(),
                   "Could not add external error variable: " +
-                      llvm::toString(error_var_or_err.takeError()));
+                  llvm::toString(error_var_or_err.takeError()));
             swift::VarDecl *error_var = *error_var_or_err;
             if (!error_var)
-              return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                             "null error variable.");
+              return llvm::createStringError("null error variable.");
             error_var->overwriteAccess(swift::AccessLevel::Public);
             error_var->overwriteSetterAccess(
                 swift::AccessLevel::Public);
@@ -899,22 +892,19 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
       variable.m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
 
   if (!type_system_swift)
-    return llvm::make_error<llvm::StringError>("no typesystem",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("no typesystem");
 
   // When injecting a value pack or pack count into the outer
   // lldb_expr function, treat it as an opaque raw pointer.
   if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
     auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(&m_sc);
     if (!swift_ast_ctx)
-      return llvm::make_error<llvm::StringError>(
-          "no typesystem for variable " + variable.GetName().str(),
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError("no typesystem for variable " +
+                                     variable.GetName().str());
 
     auto it = m_type_aliases.find("$__lldb_builtin_ptr_t");
     if (it == m_type_aliases.end())
-      return llvm::make_error<llvm::StringError>(
-          "no $__lldb_builtin_ptr_t", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("no $__lldb_builtin_ptr_t");
 
     return swift::Type(it->second);
   }
@@ -928,8 +918,7 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   if (!swift_type_or_err)
     return swift_type_or_err.takeError();
   if (!swift_type_or_err.get())
-    return llvm::make_error<llvm::StringError>("null Swift type",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("null Swift type");
 
   // One tricky bit here is that this var may be an argument to the
   // function whose context we are emulating, and that argument might be
@@ -1247,8 +1236,7 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
                                    bool make_private,
                                    swift::DeclContext *decl_ctx) {
   if (!IsValid())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Invalid SwiftASTManipulator");
+    return llvm::createStringError("Invalid SwiftASTManipulator");
 
   // If no DeclContext was passed in make this a global typealias.
   if (!decl_ctx)
