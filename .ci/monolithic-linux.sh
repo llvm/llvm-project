@@ -73,7 +73,7 @@ if [[ "${runtimes}" != "" ]]; then
   ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
 
   RUNTIMES_BUILD_DIR="${MONOREPO_ROOT}/build-runtimes"
-  INSTALL_DIR="${RUNTIMES_BUILD_DIR}/install"
+  INSTALL_DIR="${BUILD_DIR}/install"
   mkdir -p ${RUNTIMES_BUILD_DIR}
 
   echo "--- cmake runtimes C++03"
