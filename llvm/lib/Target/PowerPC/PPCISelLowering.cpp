@@ -146,6 +146,10 @@ static cl::opt<unsigned> PPCAIXTLSModelOptUseIEForLDLimit(
     cl::desc("Set inclusive limit count of TLS local-dynamic access(es) in a "
              "function to use initial-exec"));
 
+static cl::opt<bool> AbortOnImpossibleMusttailCall(
+    "ppc-abort-on-impossible-musttailcall", cl::init(false), cl::Hidden,
+    cl::desc("Abort if any call marked as musttail is impossible."));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -5945,9 +5949,14 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  if (!isTailCall && CB && CB->isMustTailCall())
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
+  if (!isTailCall && CB && CB->isMustTailCall()) {
+    if (AbortOnImpossibleMusttailCall)
+      report_fatal_error("failed to perform tail call elimination on a call "
+                         "site marked musttail");
+    else
+      cast<CallInst>(const_cast<CallBase *>(CB))
+          ->setTailCallKind(llvm::CallInst::TCK_Tail);
+  }
 
   // When long calls (i.e. indirect calls) are always used, calls are always
   // made via function pointer. If we have a function name, first translate it

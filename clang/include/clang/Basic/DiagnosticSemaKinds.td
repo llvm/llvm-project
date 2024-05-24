@@ -3864,6 +3864,11 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it is polymorphic|"
   "it has a base of a non-trivial class type|it has a virtual base|"
   "it has a __weak field|it has a field of a non-trivial class type}1">;
+def warn_ppc_musttail_maybe_ignored: Warning<
+  "'musttail' attribute may be ignored on ppc targets">,
+  InGroup<IgnoredAttributes>;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
