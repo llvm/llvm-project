@@ -121,7 +121,7 @@ void vcall(C1 &c1) {
 // CHECK:   %7 = cir.cast(bitcast, %4 : !cir.ptr<!ty_22C122>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>>
 // CHECK:   %8 = cir.load %7 : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>
 // CHECK:   %9 = cir.vtable.address_point( %8 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>
-// CHECK:   %10 = cir.load %9 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>
+// CHECK:   %10 = cir.load align(8) %9 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>
 // CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22)>>, !cir.ptr<!ty_22C122>, !s32i, !ty_22buffy22) -> !s32i
 // CHECK:   cir.return
 // CHECK: }

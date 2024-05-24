@@ -85,16 +85,20 @@ public:
   }
 
   mlir::Value createLoad(mlir::Location loc, mlir::Value ptr,
-                         bool isVolatile = false) {
+                         bool isVolatile = false, uint64_t alignment = 0) {
+    mlir::IntegerAttr intAttr;
+    if (alignment)
+      intAttr = mlir::IntegerAttr::get(
+          mlir::IntegerType::get(ptr.getContext(), 64), alignment);
+
     return create<mlir::cir::LoadOp>(loc, ptr, /*isDeref=*/false, isVolatile,
-                                     /*alignment=*/mlir::IntegerAttr{},
+                                     /*alignment=*/intAttr,
                                      /*mem_order=*/mlir::cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
                                 uint64_t alignment) {
-    // TODO(cir): implement aligned load in CIRBaseBuilder.
-    return createLoad(loc, ptr);
+    return createLoad(loc, ptr, /*isVolatile=*/false, alignment);
   }
 
   mlir::Value createNot(mlir::Value value) {

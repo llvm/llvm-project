@@ -6,8 +6,8 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:    -fclangir -S -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s \
-// RUN: | opt -S -passes=mem2reg,simplifycfg \
-// RUN: | FileCheck --check-prefix=LLVM %s
+// RUN: | opt -S -passes=mem2reg,simplifycfg -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
@@ -8965,15 +8965,14 @@
 //   return vrsqrted_f64(a);
 // }
 
-// FIXME: alignment should be 1.
 uint8x16_t test_vld1q_u8(uint8_t const *a) {
   return vld1q_u8(a);
-  // LLVM-LABEL: @test_vld1q_u8
-  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 16
-
   // CIR-LABEL: @test_vld1q_u8
   // CIR: %[[CAST:.*]] = cir.cast(bitcast, {{.*}} : !cir.ptr<!void>), !cir.ptr<!cir.vector<!u8i x 16>>
-  // CIR: cir.load %[[CAST]] : !cir.ptr<!cir.vector<!u8i x 16>>, !cir.vector<!u8i x 16>
+  // CIR: cir.load align(1) %[[CAST]] : !cir.ptr<!cir.vector<!u8i x 16>>, !cir.vector<!u8i x 16>
+
+  // LLVM-LABEL: @test_vld1q_u8
+  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 1,
 }
 
 // NYI-LABEL: @test_vld1q_u16(

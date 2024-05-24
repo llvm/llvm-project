@@ -761,21 +761,18 @@ public:
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
-                                mlir::Value ptr,
-                                [[maybe_unused]] llvm::MaybeAlign align,
-                                [[maybe_unused]] bool isVolatile) {
-    assert(!UnimplementedFeature::volatileLoadOrStore());
-    assert(!UnimplementedFeature::alignedLoad());
-    // FIXME: create a more generic version of createLoad and rewrite this and
-    // others in terms of that. Ideally there should only be one call to
-    // create<mlir::cir::LoadOp> in all helpers.
+                                mlir::Value ptr, llvm::MaybeAlign align,
+                                bool isVolatile) {
     if (ty != ptr.getType().cast<mlir::cir::PointerType>().getPointee())
       ptr = createPtrBitcast(ptr, ty);
-    return create<mlir::cir::LoadOp>(loc, ty, ptr);
+    uint64_t alignment = align ? align->value() : 0;
+    return CIRBaseBuilderTy::createLoad(loc, ptr, isVolatile, alignment);
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align) {
+    // TODO: make sure callsites shouldn't be really passing volatile.
+    assert(!UnimplementedFeature::volatileLoadOrStore());
     return createAlignedLoad(loc, ty, ptr, align, /*isVolatile=*/false);
   }
 
