@@ -110,14 +110,6 @@ else()
   set(MLIR_ENABLE_EXECUTION_ENGINE 0)
 endif()
 
-# Build the CUDA conversions and run according tests if the NVPTX backend
-# is available
-if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_CUDA_CONVERSIONS 1)
-else()
-  set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
-endif()
-
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
 if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
