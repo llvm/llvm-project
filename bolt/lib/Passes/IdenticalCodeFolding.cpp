@@ -180,11 +180,11 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
 
   const BinaryContext &BC = A.getBinaryContext();
 
-  std::unordered_map<const BinaryBasicBlock*, unsigned> LayoutIndiciesA;
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesA;
   for (unsigned I = 0; I < OrderA.size(); I++)
     LayoutIndiciesA[OrderA[I]] = I;
 
-  std::unordered_map<const BinaryBasicBlock*, unsigned> LayoutIndiciesB;
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesB;
   for (unsigned I = 0; I < OrderB.size(); I++)
     LayoutIndiciesB[OrderB[I]] = I;
 

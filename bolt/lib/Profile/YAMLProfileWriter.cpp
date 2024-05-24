@@ -69,7 +69,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
              std::back_inserter(Order));
 
-  std::unordered_map<const BinaryBasicBlock*, unsigned> LayoutIndicies;
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndicies;
   for (unsigned I = 0; I < Order.size(); I++)
     LayoutIndicies[Order[I]] = I;
 
