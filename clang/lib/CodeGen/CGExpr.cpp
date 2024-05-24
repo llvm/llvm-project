@@ -317,8 +317,8 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
         CleanupKind CleanupKind;
         if (Lifetime == Qualifiers::OCL_Strong) {
           const ValueDecl *VD = M->getExtendingDecl();
-          bool Precise =
-              VD && isa<VarDecl>(VD) && VD->hasAttr<ObjCPreciseLifetimeAttr>();
+          bool Precise = isa_and_nonnull<VarDecl>(VD) &&
+                         VD->hasAttr<ObjCPreciseLifetimeAttr>();
           CleanupKind = CGF.getARCCleanupKind();
           Destroy = Precise ? &CodeGenFunction::destroyARCStrongPrecise
                             : &CodeGenFunction::destroyARCStrongImprecise;
@@ -4180,7 +4180,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
   // If the base is a vector type, then we are forming a vector element lvalue
   // with this subscript.
-  if (E->getBase()->getType()->isVectorType() &&
+  if (E->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(E->getBase())) {
     // Emit the vector as an lvalue to get its address.
     LValue LHS = EmitLValue(E->getBase());
@@ -4676,7 +4676,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
                                                  llvm::Value *ThisValue) {
   bool HasExplicitObjectParameter = false;
-  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl)) {
+  const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl);
+  if (MD) {
     HasExplicitObjectParameter = MD->isExplicitObjectMemberFunction();
     assert(MD->getParent()->isLambda());
     assert(MD->getParent() == Field->getParent());
@@ -4693,6 +4694,17 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
     else
       LambdaLV = MakeAddrLValue(AddrOfExplicitObject,
                                 D->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *ThisTy = D->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *LambdaTy = cast<CXXRecordDecl>(Field->getParent());
+    if (ThisTy != LambdaTy) {
+      const CXXCastPath &BasePathArray = getContext().LambdaCastPaths.at(MD);
+      Address Base = GetAddressOfBaseClass(
+          LambdaLV.getAddress(), ThisTy, BasePathArray.begin(),
+          BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
+      LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
+    }
   } else {
     QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
     LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);

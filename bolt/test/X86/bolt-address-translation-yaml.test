@@ -31,7 +31,8 @@ RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o 
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
 # Check that YAML converted from fdata matches YAML created directly with BAT.
-RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
+RUN:   2>&1 | FileCheck --check-prefix READ-BAT-FDATA-CHECK %s
 RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
 
 # Test resulting YAML profile with the original binary (no-stale mode)
@@ -40,11 +41,13 @@ RUN:   | FileCheck --check-prefix CHECK-BOLT-YAML %s
 
 WRITE-BAT-CHECK: BOLT-INFO: Wrote 5 BAT maps
 WRITE-BAT-CHECK: BOLT-INFO: Wrote 4 function and 22 basic block hashes
-WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 384
+WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 404
 
 READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
 READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
 READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
+READ-BAT-CHECK: BOLT-INFO: 5 out of 21 functions in the binary (23.8%) have non-empty execution profile
+READ-BAT-FDATA-CHECK: BOLT-INFO: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
 
 YAML-BAT-CHECK:      functions:
 # Function not covered by BAT - has insns in basic block
