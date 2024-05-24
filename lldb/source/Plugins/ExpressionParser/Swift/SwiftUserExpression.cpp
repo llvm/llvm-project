@@ -328,8 +328,7 @@ static llvm::Error AddVariableInfo(
   if (!target_type.IsValid()) {
     // Treat an invalid type for self as a fatal error.
     if (is_self)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "type for self is invalid");
+      return llvm::createStringError("type for self is invalid");
     return llvm::Error::success();
   }
 
@@ -337,15 +336,13 @@ static llvm::Error AddVariableInfo(
   if (is_self) {
     auto self_ty = ast_context.GetSwiftType(target_type);
     if (!self_ty)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "type for self cannot be reconstructed: " +
-                                         llvm::toString(self_ty.takeError()));
+      return llvm::createStringError("type for self cannot be reconstructed: " +
+                                     llvm::toString(self_ty.takeError()));
   }
 
   auto ts = target_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "type for self has no type system");
+    return llvm::createStringError("type for self has no type system");
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.

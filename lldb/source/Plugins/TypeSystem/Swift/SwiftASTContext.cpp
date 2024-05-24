@@ -949,8 +949,7 @@ llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
   // Retrieve the error message from the DiagnosticConsumer.
   DiagnosticManager diagnostic_manager;
   PrintDiagnostics(diagnostic_manager);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 diagnostic_manager.GetString());
+  return llvm::createStringError(diagnostic_manager.GetString());
 }
 
 SwiftASTContext::ScopedDiagnostics::~ScopedDiagnostics() {
@@ -4706,10 +4705,9 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
   const char *mangled_cstr = mangled_typename.AsCString();
   if (mangled_typename.IsEmpty() || !SwiftLanguageRuntime::IsSwiftMangledName(
                                         mangled_typename.GetStringRef())) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "typename \"" +
-                                       mangled_typename.GetStringRef() +
-                                       "\" is not a valid Swift mangled name");
+    return llvm::createStringError("typename \"" +
+                                   mangled_typename.GetStringRef() +
+                                   "\" is not a valid Swift mangled name");
   }
 
   LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "(\"%s\")", mangled_cstr);
@@ -4718,8 +4716,7 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
   if (!ast_ctx) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- null Swift AST Context",
                mangled_cstr);
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "null Swift AST Context");
+    return llvm::createStringError("null Swift AST Context");
   }
 
   // If we were to crash doing this, remember what type caused it.
@@ -4735,10 +4732,9 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
   if (m_negative_type_cache.Lookup(mangled_cstr)) {
     LOG_PRINTF(GetLog(LLDBLog::Types),
                "(\"%s\") -- found in the negative cache", mangled_cstr);
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "type for typename \"" +
-                                       mangled_typename.GetString() +
-                                       "\" was not found (cached)");
+    return llvm::createStringError("type for typename \"" +
+                                   mangled_typename.GetString() +
+                                   "\" was not found (cached)");
   }
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- not cached, searching",
@@ -4804,10 +4800,9 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- not found", mangled_cstr);
 
   CacheDemangledTypeFailure(mangled_typename);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "type for typename \"" +
-                                     mangled_typename.GetString() +
-                                     "\" was not found");
+  return llvm::createStringError("type for typename \"" +
+                                 mangled_typename.GetString() +
+                                 "\" was not found");
 }
 
 llvm::Expected<swift::TypeBase *>
@@ -6818,9 +6813,7 @@ llvm::Expected<uint32_t>
 SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
                                 bool omit_empty_base_classes,
                                 const ExecutionContext *exe_ctx) {
-  VALID_OR_RETURN_CHECK_TYPE(
-      type,
-      llvm::createStringError(llvm::inconvertibleErrorCode(), "invalid type"));
+  VALID_OR_RETURN_CHECK_TYPE(type, llvm::createStringError("invalid type"));
   LLDB_SCOPED_TIMER();
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -7609,9 +7602,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
           cached_enum_info->GetElementWithPayloadAtIndex(idx);
       child_name.assign(element_info->name.GetCString());
       if (!get_type_size(child_byte_size, element_info->payload_type))
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "could not get size for enum element " +
-                                           llvm::Twine(idx));
+        return llvm::createStringError("could not get size for enum element " +
+                                       llvm::Twine(idx));
       child_byte_offset = 0;
       child_bitfield_bit_size = 0;
       child_bitfield_bit_offset = 0;
@@ -7639,9 +7631,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
 
     CompilerType child_type = ToCompilerType(child.getType().getPointer());
     if (!get_type_size(child_byte_size, child_type))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "could not get size of tuple element " +
-                                         child_name);
+      return llvm::createStringError("could not get size of tuple element " +
+                                     child_name);
     child_is_base_class = false;
     child_is_deref_of_parent = false;
 
@@ -7649,9 +7640,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
     std::optional<uint64_t> offset = GetInstanceVariableOffset(
         valobj, exe_ctx, compiler_type, printed_idx.c_str(), child_type);
     if (!offset)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "could not get offset for tuple element " +
-                                         child_name);
+      return llvm::createStringError("could not get offset for tuple element " +
+                                     child_name);
 
     child_byte_offset = *offset;
     child_bitfield_bit_size = 0;
@@ -7672,8 +7662,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
 
         child_name = GetSuperclassName(superclass_type);
         if (!get_type_size(child_byte_size, superclass_type))
-          return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "could not get size of super class");
+          return llvm::createStringError("could not get size of super class");
         child_is_base_class = true;
         child_is_deref_of_parent = false;
 
@@ -7713,9 +7702,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
                 ToCompilerType(VD->getTypeInContext().getPointer());
             child_name = VD->getNameStr().str();
             if (!get_type_size(child_byte_size, child_type))
-              return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                             "could not get size of field " +
-                                                 child_name);
+              return llvm::createStringError("could not get size of field " +
+                                             child_name);
 
             child_is_base_class = false;
             child_is_deref_of_parent = false;
@@ -7724,9 +7712,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
             child_bitfield_bit_offset = 0;
             return child_type;
           }
-          return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "could not get size of field " +
-                                             child_name);
+          return llvm::createStringError("could not get size of field " +
+                                         child_name);
         }
 
     auto stored_properties = GetStoredProperties(nominal);
@@ -7741,9 +7728,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
     CompilerType child_type = ToCompilerType(child_swift_type.getPointer());
     child_name = property->getBaseName().userFacingName().str();
     if (!get_type_size(child_byte_size, child_type))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "could not get size of field " +
-                                         child_name);
+      return llvm::createStringError("could not get size of field " +
+                                     child_name);
     child_is_base_class = false;
     child_is_deref_of_parent = false;
 
@@ -7751,9 +7737,8 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
     std::optional<uint64_t> offset = GetInstanceVariableOffset(
         valobj, exe_ctx, compiler_type, child_name.c_str(), child_type);
     if (!offset)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "could not get offset of field " +
-                                         child_name);
+      return llvm::createStringError("could not get offset of field " +
+                                     child_name);
     child_byte_offset = *offset;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
@@ -7773,15 +7758,13 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
     CompilerType compiler_type = ToCompilerType(GetSwiftType(type));
     CompilerType child_type;
     if (!GetASTContext())
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "no ast context");
+      return llvm::createStringError("no ast context");
 
     std::tie(child_type, child_name) = GetExistentialTypeChild(
         *this, *GetASTContext(), compiler_type, protocol_info, idx);
     if (!get_type_size(child_byte_size, child_type))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "could not get size of field " +
-                                         llvm::Twine(idx));
+      return llvm::createStringError("could not get size of field " +
+                                     llvm::Twine(idx));
     child_byte_offset = idx * child_byte_size;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
@@ -7818,8 +7801,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
       // We have a pointer to a simple type
       if (idx == 0) {
         if (!get_type_size(child_byte_size, pointee_clang_type))
-          return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "could not get size of lvalue");
+          return llvm::createStringError("could not get size of lvalue");
         child_byte_offset = 0;
         return pointee_clang_type;
       }

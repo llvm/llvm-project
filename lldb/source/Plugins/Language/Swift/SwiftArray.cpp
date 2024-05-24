@@ -475,8 +475,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::swift::
     ArraySyntheticFrontEnd::CalculateNumChildren() {
   if (m_array_buffer)
     return m_array_buffer->GetCount();
-  return llvm::make_error<llvm::StringError>("failed to update array data",
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError("failed to update array data");
 }
 
 lldb::ValueObjectSP
