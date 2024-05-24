@@ -324,7 +324,9 @@ public:
   /// - "resolvedCommand" (string): The expanded command that was executed.
   /// - "output" (string): The output of the command. Empty ("") if no output.
   /// - "error" (string): The error of the command. Empty ("") if no error.
-  /// - "seconds" (float): The time it took to execute the command.
+  /// - "durationInSeconds" (float): The time it took to execute the command.
+  /// - "timestampInEpochSeconds" (int): The timestamp when the command is
+  ///   executed.
   SBStructuredData GetTranscript();
 
 protected:

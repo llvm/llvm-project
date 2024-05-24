@@ -624,33 +624,39 @@ class TestCase(TestBase):
         # modules with debugInfoHadVariableErrors is greater than zero
         self.assertGreater(stats["totalModuleCountWithVariableErrors"], 0)
 
+    def test_transcript(self):
+        """
+        Test "statistics dump" and the transcript information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
 
-def test_transcript(self):
-    """
-    Test "statistics dump" and the transcript information.
-    """
-    self.build()
-    exe = self.getBuildArtifact("a.out")
-    target = self.createTestTarget(file_path=exe)
-    self.runCmd("settings set target.save-transcript true")
-    self.runCmd("version")
+        # Verify the output of a first "statistics dump"
+        debug_stats = self.get_stats()
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        print("DEBUG1")
+        print(transcript)
+        self.assertEqual(len(transcript), 2)
+        self.assertEqual(transcript[0]["resolvedCommand"], "version")
+        self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
+        # The first "statistics dump" in the transcript should have no output
+        self.assertNotIn("output", transcript[1])
 
-    # Verify the output of a first "statistics dump"
-    debug_stats = self.get_stats()
-    self.assertIn("transcript", debug_stats)
-    transcript = debug_stats["transcript"]
-    self.assertEqual(len(transcript), 2)
-    self.assertEqual(transcript[0]["command"], "version")
-    self.assertEqual(transcript[1]["command"], "statistics dump")
-    self.assertEqual(transcript[1]["output"], "")
-
-    # Verify the output of a second "statistics dump"
-    debug_stats = self.get_stats()
-    self.assertIn("transcript", debug_stats)
-    transcript = debug_stats["transcript"]
-    self.assertEqual(len(transcript), 3)
-    self.assertEqual(transcript[0]["command"], "version")
-    self.assertEqual(transcript[1]["command"], "statistics dump")
-    self.assertNotEqual(transcript[1]["output"], "")
-    self.assertEqual(transcript[2]["command"], "statistics dump")
-    self.assertEqual(transcript[2]["output"], "")
+        # Verify the output of a second "statistics dump"
+        debug_stats = self.get_stats()
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        print("DEBUG2")
+        print(transcript)
+        self.assertEqual(len(transcript), 3)
+        self.assertEqual(transcript[0]["resolvedCommand"], "version")
+        self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
+        # The first "statistics dump" in the transcript should have output now
+        self.assertIn("output", transcript[1])
+        self.assertEqual(transcript[2]["resolvedCommand"], "statistics dump")
+        # The second "statistics dump" in the transcript should have no output
+        self.assertNotIn("output", transcript[2])
