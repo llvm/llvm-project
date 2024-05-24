@@ -7337,7 +7337,7 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+    Result = SemaRef.BuildCountAttributedArrayOrPointerType(InnerTy, NewCount);
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);
@@ -14125,6 +14125,13 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
                        &ArgumentChanged))
       return ExprError();
+
+    if (E->isListInitialization() && !E->isStdInitListInitialization()) {
+      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
+      if (Res.isInvalid())
+        return ExprError();
+      Args = {Res.get()};
+    }
   }
 
   if (!getDerived().AlwaysRebuild() &&
@@ -14136,12 +14143,9 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  // FIXME: We should just pass E->isListInitialization(), but we're not
-  // prepared to handle list-initialization without a child InitListExpr.
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();
   return getDerived().RebuildCXXTemporaryObjectExpr(
-      T, LParenLoc, Args, E->getEndLoc(),
-      /*ListInitialization=*/LParenLoc.isInvalid());
+      T, LParenLoc, Args, E->getEndLoc(), E->isListInitialization());
 }
 
 template<typename Derived>
