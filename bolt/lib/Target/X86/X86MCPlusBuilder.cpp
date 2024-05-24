@@ -1932,6 +1932,19 @@ public:
     //    = R_X86_64_PC32(Ln) + En - JT
     //    = R_X86_64_PC32(Ln + offsetof(En))
     //
+    auto isRIPRel = [&](X86MemOperand &MO) {
+      // NB: DispExpr should be set
+      return MO.DispExpr != nullptr &&
+             MO.BaseRegNum == RegInfo->getProgramCounter() &&
+             MO.IndexRegNum == X86::NoRegister &&
+             MO.SegRegNum == X86::NoRegister;
+    };
+    auto isIndexed = [](X86MemOperand &MO, MCPhysReg R) {
+      // NB: IndexRegNum should be set.
+      return MO.IndexRegNum != X86::NoRegister && MO.BaseRegNum == R &&
+             MO.ScaleImm == 4 && MO.DispImm == 0 &&
+             MO.SegRegNum == X86::NoRegister;
+    };
     LLVM_DEBUG(dbgs() << "Checking for PIC jump table\n");
     MCInst *MemLocInstr = nullptr;
     const MCInst *MovInstr = nullptr;
@@ -1965,9 +1978,8 @@ public:
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
-        if (MO->BaseRegNum != R1 || MO->ScaleImm != 4 ||
-            MO->IndexRegNum == X86::NoRegister || MO->DispImm != 0 ||
-            MO->SegRegNum != X86::NoRegister)
+        if (!isIndexed(*MO, R1))
+          // POSSIBLE_PIC_JUMP_TABLE
           break;
         MovInstr = &Instr;
       } else {
@@ -1986,9 +1998,7 @@ public:
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
-        if (MO->BaseRegNum != RegInfo->getProgramCounter() ||
-            MO->IndexRegNum != X86::NoRegister ||
-            MO->SegRegNum != X86::NoRegister || MO->DispExpr == nullptr)
+        if (!isRIPRel(*MO))
           break;
         MemLocInstr = &Instr;
         break;
