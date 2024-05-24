@@ -241,6 +241,14 @@ void llvm::AArch64PAuth::checkAuthenticatedRegister(
   const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MBBI->getDebugLoc();
 
+  // All terminator instructions should be grouped at the end of the machine
+  // basic block, with no non-terminator instructions between them. Depending on
+  // the method requested, we will insert some regular instructions, maybe
+  // followed by a conditional branch instruction, which is a terminator, before
+  // MBBI. Thus, MBBI is expected to be the first terminator of its MBB.
+  assert(MBBI->isTerminator() && MBBI == MBB.getFirstTerminator() &&
+         "MBBI should be the first terminator in MBB");
+
   // First, handle the methods not requiring creating extra MBBs.
   switch (Method) {
   default:
