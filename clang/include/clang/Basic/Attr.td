@@ -1062,21 +1062,21 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
 }
 static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
   switch (EnvironmentType) {
-    case llvm::Triple::EnvironmentType::Pixel: return "pixel shader";
-    case llvm::Triple::EnvironmentType::Vertex: return "vertex shader";
-    case llvm::Triple::EnvironmentType::Geometry: return "geometry shader";
-    case llvm::Triple::EnvironmentType::Hull: return "hull shader";
-    case llvm::Triple::EnvironmentType::Domain: return "domain shader";
-    case llvm::Triple::EnvironmentType::Compute: return "compute shader";
-    case llvm::Triple::EnvironmentType::RayGeneration: return "raygeneration shader";
-    case llvm::Triple::EnvironmentType::Intersection: return "intersection shader";
-    case llvm::Triple::EnvironmentType::AnyHit: return "anyhit shader";
-    case llvm::Triple::EnvironmentType::ClosestHit: return "closesthit shader";
-    case llvm::Triple::EnvironmentType::Miss: return "miss shader";
-    case llvm::Triple::EnvironmentType::Callable: return "callable shader";
-    case llvm::Triple::EnvironmentType::Mesh: return "mesh shader";
-    case llvm::Triple::EnvironmentType::Amplification: return "amplification shader";
-    case llvm::Triple::EnvironmentType::Library: return "shader library";
+    case llvm::Triple::Pixel: return "pixel shader";
+    case llvm::Triple::Vertex: return "vertex shader";
+    case llvm::Triple::Geometry: return "geometry shader";
+    case llvm::Triple::Hull: return "hull shader";
+    case llvm::Triple::Domain: return "domain shader";
+    case llvm::Triple::Compute: return "compute shader";
+    case llvm::Triple::RayGeneration: return "raygeneration shader";
+    case llvm::Triple::Intersection: return "intersection shader";
+    case llvm::Triple::AnyHit: return "anyhit shader";
+    case llvm::Triple::ClosestHit: return "closesthit shader";
+    case llvm::Triple::Miss: return "miss shader";
+    case llvm::Triple::Callable: return "callable shader";
+    case llvm::Triple::Mesh: return "mesh shader";
+    case llvm::Triple::Amplification: return "amplification shader";
+    case llvm::Triple::Library: return "shader library";
     default: return "";
   }
 }
@@ -4492,20 +4492,20 @@ def HLSLShader : InheritableAttr {
   let AdditionalMembers =
 [{static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
     switch (ShaderType) {
-      case HLSLShaderAttr::Pixel:         return llvm::Triple::EnvironmentType::Pixel;
-      case HLSLShaderAttr::Vertex:        return llvm::Triple::EnvironmentType::Vertex;
-      case HLSLShaderAttr::Geometry:      return llvm::Triple::EnvironmentType::Geometry;
-      case HLSLShaderAttr::Hull:          return llvm::Triple::EnvironmentType::Hull;
-      case HLSLShaderAttr::Domain:        return llvm::Triple::EnvironmentType::Domain;
-      case HLSLShaderAttr::Compute:       return llvm::Triple::EnvironmentType::Compute;
-      case HLSLShaderAttr::RayGeneration: return llvm::Triple::EnvironmentType::RayGeneration;
-      case HLSLShaderAttr::Intersection:  return llvm::Triple::EnvironmentType::Intersection;
-      case HLSLShaderAttr::AnyHit:        return llvm::Triple::EnvironmentType::AnyHit;
-      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::EnvironmentType::ClosestHit;
-      case HLSLShaderAttr::Miss:          return llvm::Triple::EnvironmentType::Miss;
-      case HLSLShaderAttr::Callable:      return llvm::Triple::EnvironmentType::Callable;
-      case HLSLShaderAttr::Mesh:          return llvm::Triple::EnvironmentType::Mesh;
-      case HLSLShaderAttr::Amplification: return llvm::Triple::EnvironmentType::Amplification;
+      case HLSLShaderAttr::Pixel:         return llvm::Triple::Pixel;
+      case HLSLShaderAttr::Vertex:        return llvm::Triple::Vertex;
+      case HLSLShaderAttr::Geometry:      return llvm::Triple::Geometry;
+      case HLSLShaderAttr::Hull:          return llvm::Triple::Hull;
+      case HLSLShaderAttr::Domain:        return llvm::Triple::Domain;
+      case HLSLShaderAttr::Compute:       return llvm::Triple::Compute;
+      case HLSLShaderAttr::RayGeneration: return llvm::Triple::RayGeneration;
+      case HLSLShaderAttr::Intersection:  return llvm::Triple::Intersection;
+      case HLSLShaderAttr::AnyHit:        return llvm::Triple::AnyHit;
+      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::ClosestHit;
+      case HLSLShaderAttr::Miss:          return llvm::Triple::Miss;
+      case HLSLShaderAttr::Callable:      return llvm::Triple::Callable;
+      case HLSLShaderAttr::Mesh:          return llvm::Triple::Mesh;
+      case HLSLShaderAttr::Amplification: return llvm::Triple::Amplification;
     }
   }
 }];

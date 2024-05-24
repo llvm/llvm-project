@@ -301,13 +301,13 @@ namespace {
 /// and relaxed mode
 ///
 /// The goal of this diagnostic is to emit an error or warning when an
-/// unavailable API is found in a code that is reachable from the shader
-/// entry function or from an exported function (when compiling shader
+/// unavailable API is found in code that is reachable from the shader
+/// entry function or from an exported function (when compiling a shader
 /// library).
 ///
 /// This is done by traversing the AST of all shader entry point functions
 /// and of all exported functions, and any functions that are refrenced
-/// from this AST. In other words, any function that are reachable from
+/// from this AST. In other words, any functions that are reachable from
 /// the entry points.
 class DiagnoseHLSLAvailability
     : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
@@ -317,9 +317,9 @@ class DiagnoseHLSLAvailability
   // Stack of functions to be scaned
   llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
 
-  // List of functions that were already scanned and in which environment.
+  // Tracks which environments functions have been scanned in.
   //
-  // Maps FunctionDecl to a unsigned number that represents a set of shader
+  // Maps FunctionDecl to an unsigned number that represents the set of shader
   // environments the function has been scanned for.
   // Since HLSLShaderAttr::ShaderType enum is generated from Attr.td and is
   // defined without any assigned values, it is guaranteed to be numbered
@@ -331,6 +331,8 @@ class DiagnoseHLSLAvailability
   // environment, the value will be 0x21 (100001 binary) because
   // (int)HLSLShaderAttr::ShaderType::Pixel == 1 and
   // (int)HLSLShaderAttr::ShaderType::Compute == 5.
+  // A FunctionDecl is mapped to 0 (or not included in the map) if it has not
+  // been scanned in any environment.
   llvm::DenseMap<const FunctionDecl *, unsigned> ScannedDecls;
 
   // Do not access these directly, use the get/set methods below to make
@@ -346,24 +348,23 @@ class DiagnoseHLSLAvailability
   // Helper methods for dealing with current stage context / environment
   void SetShaderStageContext(HLSLShaderAttr::ShaderType ShaderType) {
     assert((((unsigned)1) << (unsigned)ShaderType) != 0 &&
+           (((unsigned)1) << (unsigned)ShaderType) != 31 &&
            "ShaderType is too big for this bitmap");
     CurrentShaderEnvironment = HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
     CurrentShaderStageBit = (1 << ShaderType);
   }
 
   void SetUnknownShaderStageContext() {
-    CurrentShaderEnvironment =
-        llvm::Triple::EnvironmentType::UnknownEnvironment;
+    CurrentShaderEnvironment = llvm::Triple::UnknownEnvironment;
     CurrentShaderStageBit = (1 << 31);
   }
 
-  llvm::Triple::EnvironmentType GetCurrentShaderEnvironment() {
+  llvm::Triple::EnvironmentType GetCurrentShaderEnvironment() const {
     return CurrentShaderEnvironment;
   }
 
-  bool InUnknownShaderStageContext() {
-    return CurrentShaderEnvironment ==
-           llvm::Triple::EnvironmentType::UnknownEnvironment;
+  bool InUnknownShaderStageContext() const {
+    return CurrentShaderEnvironment == llvm::Triple::UnknownEnvironment;
   }
 
   // Helper methods for dealing with shader stage bitmap

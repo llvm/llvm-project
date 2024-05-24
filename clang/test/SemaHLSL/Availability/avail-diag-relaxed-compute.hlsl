@@ -4,6 +4,9 @@
 __attribute__((availability(shadermodel, introduced = 6.5)))
 float fx(float);  // #fx
 
+__attribute__((availability(shadermodel, introduced = 6.6)))
+half fx(half);  // #fx_half
+
 __attribute__((availability(shadermodel, introduced = 5.0, environment = pixel)))
 __attribute__((availability(shadermodel, introduced = 6.5, environment = compute)))
 float fy(float); // #fy
@@ -70,6 +73,22 @@ T aliveTemp(T f) {
   return 0;
 }
 
+template<typename T> T aliveTemp2(T f) {
+  // expected-warning@#aliveTemp2_fx_call {{'fx' is only available on Shader Model 6.6 or newer}}
+  // expected-note@#fx_half {{'fx' has been marked as being introduced in Shader Model 6.6 here, but the deployment target is Shader Model 6.0}}
+  // expected-warning@#aliveTemp2_fx_call {{'fx' is only available on Shader Model 6.5 or newer}}
+  // expected-note@#fx {{'fx' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
+  return fx(f); // #aliveTemp2_fx_call
+}
+
+half test(half x) {
+  return aliveTemp2(x);
+}
+
+float test(float x) {
+  return aliveTemp2(x);
+}
+
 class MyClass
 {
   float F;
@@ -94,5 +113,7 @@ float main() {
   float a = alive(f);
   float b = aliveTemp<float>(f); // #aliveTemp_inst
   float c = C.makeF();
+  float d = test((float)1.0);
+  float e = test((half)1.0);
   return a * b * c;
 }
