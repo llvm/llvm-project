@@ -540,6 +540,7 @@ namespace {
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
+    SDValue visitMCOMPRESS(SDNode *N);
     SDValue visitMLOAD(SDNode *N);
     SDValue visitMSTORE(SDNode *N);
     SDValue visitMGATHER(SDNode *N);
@@ -1960,6 +1961,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MLOAD:              return visitMLOAD(N);
   case ISD::MSCATTER:           return visitMSCATTER(N);
   case ISD::MSTORE:             return visitMSTORE(N);
+  case ISD::MCOMPRESS:          return visitMCOMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
@@ -12012,6 +12014,47 @@ SDValue DAGCombiner::visitVP_STRIDED_STORE(SDNode *N) {
                           SST->getMemOperand(), SST->getAddressingMode(),
                           SST->isTruncatingStore(), SST->isCompressingStore());
   }
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitMCOMPRESS(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Vec = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  EVT VecVT = Vec.getValueType();
+
+  APInt SplatVal;
+  if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal))
+    return SplatVal.isAllOnes() ? Vec : DAG.getUNDEF(VecVT);
+
+  if (Vec.isUndef() || Mask.isUndef())
+    return DAG.getUNDEF(VecVT);
+
+  // No need for potentially expensive compress if the mask is constant.
+  if (ISD::isBuildVectorOfConstantSDNodes(Mask.getNode())) {
+    SmallVector<SDValue, 16> Ops;
+    EVT ScalarVT = VecVT.getVectorElementType();
+    unsigned NumSelected = 0;
+    unsigned NumElmts = VecVT.getVectorNumElements();
+    for (unsigned I = 0; I < NumElmts; ++I) {
+      SDValue MaskI = Mask.getOperand(I);
+      if (MaskI.isUndef())
+        continue;
+
+      ConstantSDNode *CMaskI = cast<ConstantSDNode>(MaskI);
+      if (CMaskI->isAllOnes()) {
+        SDValue VecI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec,
+                                   DAG.getVectorIdxConstant(I, DL));
+        Ops.push_back(VecI);
+        NumSelected++;
+      }
+    }
+    for (unsigned Rest = NumSelected; Rest < NumElmts; ++Rest) {
+      Ops.push_back(DAG.getUNDEF(ScalarVT));
+    }
+    return DAG.getBuildVector(VecVT, DL, Ops);
+  }
+
   return SDValue();
 }
 
