@@ -851,7 +851,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Now do the final patch.
   PatchItem PatchItems[] = {
       // Patch the Header fields
-      {BackPatchStartOffset, HeaderOffsets.data(), HeaderOffsets.size()},
+      {BackPatchStartOffset, HeaderOffsets.data(), (int)HeaderOffsets.size()},
       // Patch the summary data.
       {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
        (int)(SummarySize / sizeof(uint64_t))},
