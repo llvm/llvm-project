@@ -638,8 +638,6 @@ class TestCase(TestBase):
         debug_stats = self.get_stats()
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
-        print("DEBUG1")
-        print(transcript)
         self.assertEqual(len(transcript), 2)
         self.assertEqual(transcript[0]["resolvedCommand"], "version")
         self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
@@ -650,8 +648,6 @@ class TestCase(TestBase):
         debug_stats = self.get_stats()
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
-        print("DEBUG2")
-        print(transcript)
         self.assertEqual(len(transcript), 3)
         self.assertEqual(transcript[0]["resolvedCommand"], "version")
         self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
