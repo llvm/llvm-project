@@ -172,12 +172,12 @@ module {
   }
   //MLIR-LABEL: @foo
   //MLIR:  %[[RES4:.*]] = llvm.mlir.addressof @Handlers : !llvm.ptr
-  //MLIR:  %[[LOAD:.*]] = llvm.load {{.*}} : !llvm.ptr -> i32
+  //MLIR:  %[[LOAD:.*]] = llvm.load {{.*}} {alignment = 4 : i64} : !llvm.ptr -> i32
   //MLIR:  %[[RES6:.*]] = llvm.getelementptr %[[RES4]][0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
   //MLIR:  %[[RES5:.*]] = llvm.sext %[[LOAD]] : i32 to i64
   //MLIR:  %[[RES7:.*]] = llvm.getelementptr %[[RES6]][%[[RES5]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
   //MLIR:  %[[RES8:.*]] = llvm.getelementptr %[[RES7]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
-  //MLIR:  %[[RES9:.*]] = llvm.load %[[RES8]] : !llvm.ptr -> !llvm.ptr
+  //MLIR:  %[[RES9:.*]] = llvm.load %[[RES8]] {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
   //MLIR:  llvm.call %[[RES9]]({{.*}}) : !llvm.ptr, (i32) -> ()
 
   cir.global external @zero_array = #cir.zero : !cir.array<!s32i x 16>

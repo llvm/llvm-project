@@ -35,7 +35,7 @@ module {
     %8 = cir.load %7 : !cir.ptr<!cir.bool>, !cir.bool
     // The bitcast it just to bypass the type checker. It will be replaced by an opaque pointer.
     // CHECK: %[[#BASE:]] = llvm.bitcast %{{.+}} : !llvm.ptr
-    // CHECK: %{{.+}} = llvm.load %[[#BASE]] : !llvm.ptr -> i8
+    // CHECK: %{{.+}} = llvm.load %[[#BASE]] {alignment = 1 : i64} : !llvm.ptr -> i8
 
     cir.return
   }
