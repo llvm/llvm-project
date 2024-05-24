@@ -400,8 +400,8 @@ void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
   set(Def, VectorValue, Instance.Part);
 }
 
-BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG,
-                                                DomTreeUpdater &DTU) {
+BasicBlock *
+VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
   // Pred stands for Predessor. Prev stands for Previous - last visited/created.
   BasicBlock *PrevBB = CFG.PrevBB;
@@ -486,7 +486,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     //    is the exiting VPBB of this region from a previous instance, or the
     //    predecessor of this region.
 
-    NewBB = createEmptyBasicBlock(State->CFG, State->DTU);
+    NewBB = createEmptyBasicBlock(State->CFG);
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
@@ -899,9 +899,9 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  State->DTU.flush();
-  assert(
-      State->DTU.getDomTree().verify(DominatorTree::VerificationLevel::Fast));
+  State->CFG.DTU.flush();
+  assert(State->CFG.DTU.getDomTree().verify(
+      DominatorTree::VerificationLevel::Fast));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
