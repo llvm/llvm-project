@@ -222,7 +222,6 @@ template <class... Types>
 #include <__tuple/tuple_like_ext.h>
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
-#include <__type_traits/apply_cv.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
@@ -1286,14 +1285,14 @@ struct __tuple_cat_return_ref_imp;
 template <class... _Types, size_t... _I0, class _Tuple0>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0> {
   typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
-  typedef tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
+  typedef tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
 };
 
 template <class... _Types, size_t... _I0, class _Tuple0, class _Tuple1, class... _Tuples>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0, _Tuple1, _Tuples...>
     : public __tuple_cat_return_ref_imp<
           tuple<_Types...,
-                __apply_cv_t<_Tuple0, typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
+                __copy_cvref_t<_Tuple0, typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
           typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
           _Tuple1,
           _Tuples...> {};
@@ -1327,7 +1326,7 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple1> _T1;
-    return __tuple_cat<tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
+    return __tuple_cat<tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
                        typename __make_tuple_indices<sizeof...(_Types) + tuple_size<_T0>::value>::type,
                        typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
         std::forward_as_tuple(

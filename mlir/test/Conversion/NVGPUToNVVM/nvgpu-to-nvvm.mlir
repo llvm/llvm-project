@@ -778,11 +778,11 @@ func.func @create_tensor_map(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : m
   %crd0 = arith.constant 64 : index
   %crd1 = arith.constant 128 : index
   %devicePtr2d_unranked = memref.cast %devicePtr2d : memref<64x128xf32> to memref<*xf32>
-  // CHECK : llvm.call @mgpuTensorMapEncodeTiledMemref
+  // CHECK: llvm.call @mgpuTensorMapEncodeTiledMemref
   %tensorMap2d = nvgpu.tma.create.descriptor %devicePtr2d_unranked box[%crd0, %crd1] : memref<*xf32> -> !tensorMap2d
 
   %devicePtr1d_unranked = memref.cast %devicePtr1d : memref<128xf32> to memref<*xf32>
-  // CHECK : llvm.call @mgpuTensorMapEncodeTiledMemref
+  // CHECK: llvm.call @mgpuTensorMapEncodeTiledMemref
   %tensorMap1d = nvgpu.tma.create.descriptor %devicePtr1d_unranked box[%crd1] : memref<*xf32> -> !tensorMap1d
   func.return
 }

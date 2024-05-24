@@ -469,6 +469,7 @@ public:
   MachineFunction &getMachineFunction() const { return *MF; }
   const Pass *getPass() const { return SDAGISelPass; }
 
+  CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
@@ -989,6 +990,11 @@ public:
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Return the expression required to zero extend the Op
+  /// value assuming it was the smaller SrcTy value.
+  SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
+                               const SDLoc &DL, EVT VT);
 
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
@@ -1526,6 +1532,9 @@ public:
                            ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
                            ISD::MemIndexType IndexType,
                            bool IsTruncating = false);
+  SDValue getMaskedHistogram(SDVTList VTs, EVT MemVT, const SDLoc &dl,
+                             ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
+                             ISD::MemIndexType IndexType);
 
   SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
                       MachineMemOperand *MMO);
@@ -1996,6 +2005,10 @@ public:
   /// is set.
   bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
 
+  /// Test if the given _fp_ value is known to be an integer power-of-2, either
+  /// positive or negative.
+  bool isKnownToBeAPowerOfTwoFP(SDValue Val, unsigned Depth = 0) const;
+
   /// Return the number of times the sign bit of the register is replicated into
   /// the other bits. We know that at least 1 bit is always equal to the sign
   /// bit (itself), but other cases can give us information. For example,
@@ -2110,6 +2123,10 @@ public:
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Test whether the given float value is known to be positive. +0.0, +inf and
+  /// +nan are considered positive, -0.0, -inf and -nan are not.
+  bool cannotBeOrderedNegativeFP(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the

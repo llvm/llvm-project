@@ -98,14 +98,10 @@ enum class AuthCheckMethod {
 /// using an I-key or D-key and which register can be used as temporary.
 /// If an explicit BRK instruction is used to generate an exception, BrkImm
 /// specifies its immediate operand.
-///
-/// \returns The machine basic block containing the code that is executed
-///          after the check succeeds.
-MachineBasicBlock &checkAuthenticatedRegister(MachineBasicBlock::iterator MBBI,
-                                              AuthCheckMethod Method,
-                                              Register AuthenticatedReg,
-                                              Register TmpReg, bool UseIKey,
-                                              unsigned BrkImm);
+void checkAuthenticatedRegister(MachineBasicBlock::iterator MBBI,
+                                AuthCheckMethod Method,
+                                Register AuthenticatedReg, Register TmpReg,
+                                bool UseIKey, unsigned BrkImm);
 
 /// Returns the number of bytes added by checkAuthenticatedRegister.
 unsigned getCheckerSizeInBytes(AuthCheckMethod Method);

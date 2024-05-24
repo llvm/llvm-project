@@ -27,6 +27,14 @@
 #include <string>
 #include <utility>
 
+namespace clang {
+namespace dataflow {
+namespace {
+AST_MATCHER(FunctionDecl, isTemplated) { return Node.isTemplated(); }
+} // namespace
+} // namespace dataflow
+} // namespace clang
+
 namespace {
 
 using namespace clang;
@@ -7414,6 +7422,33 @@ TEST(TransferTest, ConditionalRelation) {
 
         EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
       });
+}
+
+// This is a crash repro.
+// We used to crash while transferring `S().i` because Clang contained a bug
+// causing the AST to be malformed.
+TEST(TransferTest, AnonymousUnionMemberExprInTemplate) {
+  using ast_matchers::functionDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::unless;
+
+  std::string Code = R"cc(
+    struct S {
+      struct {
+        int i;
+      };
+    };
+
+    template <class>
+    void target() {
+        S().i;
+    }
+
+    template void target<int>();
+  )cc";
+  auto Matcher = functionDecl(hasName("target"), unless(isTemplated()));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code, Matcher),
+                    llvm::Succeeded());
 }
 
 } // namespace

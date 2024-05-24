@@ -62,6 +62,10 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+  terminfo and now always uses the ``TERM`` environment variable for color
+  support autodetection.
+
 Changes to TableGen
 -------------------
 
@@ -75,6 +79,11 @@ Changes to the AArch64 Backend
 
 * Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
   Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+
+* ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
+  default when the feature is enabled. The new behaviour results 
+  in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
+  is passed as part of ``-mcpu=`` options.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -124,6 +133,8 @@ Changes to the RISC-V Backend
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
+* Zaamo and Zalrsc are no longer experimental.
+* Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -133,6 +144,9 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+- Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
+  while assembly encoding/decoding supports are kept.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -184,13 +198,6 @@ Changes to the Metadata Info
 Changes to the Debug Info
 ---------------------------------
 
-* LLVM has switched from using debug intrinsics internally to using debug
-  records by default. This should happen transparently when using the DIBuilder
-  to construct debug variable information, but will require changes for any code
-  that interacts with debug intrinsics directly. Debug intrinsics will only be
-  supported on a best-effort basis from here onwards; for more information, see
-  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
-
 Changes to the LLVM tools
 ---------------------------------
 * llvm-nm and llvm-objdump can now print symbol information from linked
@@ -239,6 +246,11 @@ Changes to the LLVM tools
   `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
   documented in `--help` output and the command guide. (`#90474
   <https://github.com/llvm/llvm-project/pull/90474>`)
+
+* llvm-readobj's LLVM output format for ELF core files has been changed.
+  Similarly, the JSON format has been fixed for this case. The NT_FILE note
+  now has a map for the mapped files. (`#92835
+  <https://github.com/llvm/llvm-project/pull/92835>`).
 
 Changes to LLDB
 ---------------------------------

@@ -313,13 +313,22 @@ llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
 
 namespace {
 
-typedef std::function<bool(const MachineInstr *)> IsOpcodeFn;
-typedef std::function<std::optional<APInt>(const MachineInstr *MI)> GetAPCstFn;
-
-std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
-    Register VReg, const MachineRegisterInfo &MRI, IsOpcodeFn IsConstantOpcode,
-    GetAPCstFn getAPCstValue, bool LookThroughInstrs = true,
-    bool LookThroughAnyExt = false) {
+// This function is used in many places, and as such, it has some
+// micro-optimizations to try and make it as fast as it can be.
+//
+// - We use template arguments to avoid an indirect call caused by passing a
+// function_ref/std::function
+// - GetAPCstValue does not return std::optional<APInt> as that's expensive.
+// Instead it returns true/false and places the result in a pre-constructed
+// APInt.
+//
+// Please change this function carefully and benchmark your changes.
+template <bool (*IsConstantOpcode)(const MachineInstr *),
+          bool (*GetAPCstValue)(const MachineInstr *MI, APInt &)>
+std::optional<ValueAndVReg>
+getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
+                                  bool LookThroughInstrs = true,
+                                  bool LookThroughAnyExt = false) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
 
@@ -353,26 +362,25 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MI || !IsConstantOpcode(MI))
     return std::nullopt;
 
-  std::optional<APInt> MaybeVal = getAPCstValue(MI);
-  if (!MaybeVal)
+  APInt Val;
+  if (!GetAPCstValue(MI, Val))
     return std::nullopt;
-  APInt &Val = *MaybeVal;
-  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
-    switch (Opcode) {
+  for (auto &Pair : reverse(SeenOpcodes)) {
+    switch (Pair.first) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(Size);
+      Val = Val.trunc(Pair.second);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(Size);
+      Val = Val.sext(Pair.second);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(Size);
+      Val = Val.zext(Pair.second);
       break;
     }
   }
 
-  return ValueAndVReg{Val, VReg};
+  return ValueAndVReg{std::move(Val), VReg};
 }
 
 bool isIConstant(const MachineInstr *MI) {
@@ -394,42 +402,46 @@ bool isAnyConstant(const MachineInstr *MI) {
   return Opc == TargetOpcode::G_CONSTANT || Opc == TargetOpcode::G_FCONSTANT;
 }
 
-std::optional<APInt> getCImmAsAPInt(const MachineInstr *MI) {
+bool getCImmAsAPInt(const MachineInstr *MI, APInt &Result) {
   const MachineOperand &CstVal = MI->getOperand(1);
-  if (CstVal.isCImm())
-    return CstVal.getCImm()->getValue();
-  return std::nullopt;
+  if (!CstVal.isCImm())
+    return false;
+  Result = CstVal.getCImm()->getValue();
+  return true;
 }
 
-std::optional<APInt> getCImmOrFPImmAsAPInt(const MachineInstr *MI) {
+bool getCImmOrFPImmAsAPInt(const MachineInstr *MI, APInt &Result) {
   const MachineOperand &CstVal = MI->getOperand(1);
   if (CstVal.isCImm())
-    return CstVal.getCImm()->getValue();
-  if (CstVal.isFPImm())
-    return CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
-  return std::nullopt;
+    Result = CstVal.getCImm()->getValue();
+  else if (CstVal.isFPImm())
+    Result = CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
+  else
+    return false;
+  return true;
 }
 
 } // end anonymous namespace
 
 std::optional<ValueAndVReg> llvm::getIConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
-  return getConstantVRegValWithLookThrough(VReg, MRI, isIConstant,
-                                           getCImmAsAPInt, LookThroughInstrs);
+  return getConstantVRegValWithLookThrough<isIConstant, getCImmAsAPInt>(
+      VReg, MRI, LookThroughInstrs);
 }
 
 std::optional<ValueAndVReg> llvm::getAnyConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
     bool LookThroughAnyExt) {
-  return getConstantVRegValWithLookThrough(
-      VReg, MRI, isAnyConstant, getCImmOrFPImmAsAPInt, LookThroughInstrs,
-      LookThroughAnyExt);
+  return getConstantVRegValWithLookThrough<isAnyConstant,
+                                           getCImmOrFPImmAsAPInt>(
+      VReg, MRI, LookThroughInstrs, LookThroughAnyExt);
 }
 
 std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
-  auto Reg = getConstantVRegValWithLookThrough(
-      VReg, MRI, isFConstant, getCImmOrFPImmAsAPInt, LookThroughInstrs);
+  auto Reg =
+      getConstantVRegValWithLookThrough<isFConstant, getCImmOrFPImmAsAPInt>(
+          VReg, MRI, LookThroughInstrs);
   if (!Reg)
     return std::nullopt;
   return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
@@ -1733,11 +1745,20 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
                                    UndefPoisonKind Kind) {
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
 
+  if (auto *GMI = dyn_cast<GenericMachineInstr>(RegDef)) {
+    if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
+        GMI->hasPoisonGeneratingFlags())
+      return true;
+  } else {
+    // Conservatively return true.
+    return true;
+  }
+
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return false;
   default:
-    return true;
+    return !isa<GCastOp>(RegDef) && !isa<GBinOp>(RegDef);
   }
 }
 
@@ -1755,8 +1776,17 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     return true;
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
-  default:
-    return false;
+  default: {
+    auto MOCheck = [&](const MachineOperand &MO) {
+      if (!MO.isReg())
+        return true;
+      return ::isGuaranteedNotToBeUndefOrPoison(MO.getReg(), MRI, Depth + 1,
+                                                Kind);
+    };
+    return !::canCreateUndefOrPoison(Reg, MRI,
+                                     /*ConsiderFlagsAndMetadata=*/true, Kind) &&
+           all_of(RegDef->uses(), MOCheck);
+  }
   }
 }
 

@@ -129,8 +129,11 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
     FormatArgOffset = 1;
   }
 
+  utils::FormatStringConverter::Configuration ConverterConfig;
+  ConverterConfig.StrictMode = StrictMode;
+  ConverterConfig.AllowTrailingNewlineRemoval = true;
   utils::FormatStringConverter Converter(
-      Result.Context, Printf, FormatArgOffset, StrictMode, getLangOpts());
+      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts());
   const Expr *PrintfCall = Printf->getCallee();
   const StringRef ReplacementFunction = Converter.usePrintNewlineFunction()
                                             ? ReplacementPrintlnFunction
