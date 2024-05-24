@@ -19,10 +19,10 @@ namespace GH93068 {
     // expected-note@#A {{no known conversion from 'A<0>' to 'const A<&n[1]> &' for 1st argument}}
     // expected-note@#A {{no known conversion from 'A<0>' to 'A<&n[1]> &&' for 1st argument}}
 
-    // notree-error@#2 {{no viable conversion from 'A<n>' to 'A<(no argument)>'}}
+    // notree-error@#2 {{no viable conversion from 'A<n>' to 'A<n + 1>'}}
     /* tree-error@#2 {{no viable conversion
   A<
-    [n != (no argument)]>}}*/
+    [n != n + 1]>}}*/
 
     A<n + 1> v2 = A<n>(); // #2
     // expected-note@#A {{no known conversion from 'A<n>' to 'const A<&n[1]> &' for 1st argument}}
