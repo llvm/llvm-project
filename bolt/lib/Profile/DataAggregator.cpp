@@ -2349,11 +2349,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
 
-      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
-        YamlBB.Index = Idx;
-
-      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
-        YamlBF.Blocks[BI->second.Index].Hash = BI->second.Hash;
+      for (auto &&[Entry, YamlBB] : llvm::zip(BlockMap, YamlBF.Blocks)) {
+        const auto &Block = Entry.second;
+        YamlBB.Hash = Block.Hash;
+        YamlBB.Index = Block.Index;
+      }
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {
