@@ -13,24 +13,23 @@ namespace LIBC_NAMESPACE {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
-[[gnu::naked]]
+[[gnu::naked, gnu::target("thumb")]]
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   asm(R"(
       # Store r4, r5, r6, and r7 into buf.
       stmia r0!, {r4-r7}
 
-      # Store r8, r9, r10, and r11 into buf. Thumb(1) doesn't support the high
-      # registers > r7 in stmia, so move them into lower GPRs first.
-      mov r4, r8
-      mov r5, r9
-      mov r6, r10
-      mov r7, r11
-      stmia r0!, {r4-r7}
-
-      # Store sp into buf. Thumb(1) doesn't support sp in str, move to GPR
-      # first.
-      mov r4, sp
-      str r4, [r0]
+      # Store r8, r9, r10, r11, sp, and lr into buf. Thumb(1) doesn't support
+      # the high registers > r7 in stmia, so move them into lower GPRs first.
+      # Thumb(1) also doesn't support using str with sp or lr, move them
+      # together with the rest.
+      mov r2, r8
+      mov r3, r9
+      mov r4, r10
+      mov r5, r11
+      mov r6, sp
+      mov r7, lr
+      stmia r0!, {r2-r7}
 
       # Return 0.
       movs r0, #0
@@ -42,8 +41,15 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   asm(R"(
+      # While sp may appear in a register list for ARM mode, it may not for
+      # Thumb2 mode. Just move it into r12 then stm that, so that this code
+      # is portable between ARM and Thumb2.
       mov r12, sp
+
+      # Store r4, r5, r6, r7, r8, r9, r10, r11, sp, and lr into buf.
       stm r0, {r4-r12, lr}
+
+      # Return zero.
       mov r0, #0
       bx lr)");
 }
