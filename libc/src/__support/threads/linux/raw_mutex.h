@@ -24,6 +24,7 @@
 #endif
 
 namespace LIBC_NAMESPACE {
+struct CndVar;
 namespace internal {
 // Lock is a simple timable lock for internal usage.
 // This is separated from Mutex because this one does not need to consider
@@ -112,6 +113,7 @@ public:
     // Detect invalid unlock operation.
     return prev != UNLOCKED;
   }
+  friend struct ::LIBC_NAMESPACE::CndVar;
 };
 } // namespace internal
 } // namespace LIBC_NAMESPACE
