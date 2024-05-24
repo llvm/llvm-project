@@ -8,7 +8,6 @@ import re
 
 
 class User:
-
     THRESHOLD = 5
 
     def __init__(self, name, triage_list):
@@ -17,8 +16,8 @@ class User:
         self.merged = 0
         self.reviewed = 0
         self.triage_list = triage_list
-    
-    def add_authored(self, val = 1):
+
+    def add_authored(self, val=1):
         self.authored += val
         if self.meets_threshold():
             print(self.name, "meets the threshold with authored commits")
@@ -28,13 +27,13 @@ class User:
         self.authored = 0
         self.add_authored(val)
 
-    def add_merged(self, val = 1):
+    def add_merged(self, val=1):
         self.merged += val
         if self.meets_threshold():
             print(self.name, "meets the threshold with merged commits")
             del self.triage_list[self.name]
 
-    def add_reviewed(self, val = 1):
+    def add_reviewed(self, val=1):
         self.reviewed += val
         if self.meets_threshold():
             print(self.name, "meets the threshold with reviewed commits")
@@ -47,46 +46,59 @@ class User:
         return self.get_total() >= self.THRESHOLD
 
     def __repr__(self):
-        return "{} : a: {} m: {} r: {}".format(self.name, self.authored, self.merged, self.reviewed)
+        return "{} : a: {} m: {} r: {}".format(
+            self.name, self.authored, self.merged, self.reviewed
+        )
 
-def run_graphql_query(query: str, variables: dict, token: str, retry: bool = True) -> dict:
+
+def run_graphql_query(
+    query: str, variables: dict, token: str, retry: bool = True
+) -> dict:
     """
     This function submits a graphql query and returns the results as a
     dictionary.
     """
     s = requests.Session()
-    retries = requests.adapters.Retry(total = 8, backoff_factor = 2, status_forcelist = [504])
-    s.mount('https://', requests.adapters.HTTPAdapter(max_retries = retries))
+    retries = requests.adapters.Retry(total=8, backoff_factor=2, status_forcelist=[504])
+    s.mount("https://", requests.adapters.HTTPAdapter(max_retries=retries))
 
     headers = {
-        'Authorization' : 'bearer {}'.format(token),
+        "Authorization": "bearer {}".format(token),
         # See
         # https://github.blog/2021-11-16-graphql-global-id-migration-update/
-        'X-Github-Next-Global-ID': '1'
+        "X-Github-Next-Global-ID": "1",
     }
     request = s.post(
-        url = 'https://api.github.com/graphql',
-        json = {"query" : query, "variables" : variables },
-        headers = headers)
+        url="https://api.github.com/graphql",
+        json={"query": query, "variables": variables},
+        headers=headers,
+    )
 
-    rate_limit = request.headers.get('X-RateLimit-Remaining')
+    rate_limit = request.headers.get("X-RateLimit-Remaining")
     print(rate_limit)
     if rate_limit and int(rate_limit) < 10:
-        reset_time = int(request.headers['X-RateLimit-Reset'])
+        reset_time = int(request.headers["X-RateLimit-Reset"])
         while reset_time - int(time.time()) > 0:
             time.sleep(60)
-            print("Waiting until rate limit reset", reset_time - int(time.time()), 'seconds remaining')
+            print(
+                "Waiting until rate limit reset",
+                reset_time - int(time.time()),
+                "seconds remaining",
+            )
 
     if request.status_code == 200:
-        if 'data' not in request.json():
+        if "data" not in request.json():
             print(request.json())
             sys.exit(1)
-        return request.json()['data']
+        return request.json()["data"]
     elif retry:
         return run_graphql_query(query, variables, token, False)
     else:
         raise Exception(
-            "Failed to run graphql query\nquery: {}\nerror: {}".format(query, request.json()))
+            "Failed to run graphql query\nquery: {}\nerror: {}".format(
+                query, request.json()
+            )
+        )
 
 
 def check_manual_requests(start_date, token) -> bool:
@@ -110,15 +122,15 @@ def check_manual_requests(start_date, token) -> bool:
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-        "query" : f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infrastructure:commit-access"
+        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infrastructure:commit-access"
     }
 
     data = run_graphql_query(query, variables, token)
     users = []
-    for issue in data['search']['nodes']:
-        users.extend([user[1:] for user in re.findall('@[^ ,\n]+', issue['body'])])
+    for issue in data["search"]["nodes"]:
+        users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
         # Do we need to check comments if we are checking mentions??
-        #for comment in issue['comments']['nodes']:
+        # for comment in issue['comments']['nodes']:
         #    users.append(comment['author']['login'])
 
     return users
@@ -126,9 +138,9 @@ def check_manual_requests(start_date, token) -> bool:
 
 def get_num_commits(user, start_date, token) -> bool:
     variables = {
-        "owner" : 'llvm',
-        'user' : user,
-        'start_date' : start_date.strftime("%Y-%m-%dT%H:%M:%S")
+        "owner": "llvm",
+        "user": user,
+        "start_date": start_date.strftime("%Y-%m-%dT%H:%M:%S"),
     }
 
     user_query = """
@@ -140,7 +152,7 @@ def get_num_commits(user, start_date, token) -> bool:
     """
 
     data = run_graphql_query(user_query, variables, token)
-    variables['user_id'] = data['user']['id']
+    variables["user_id"] = data["user"]["id"]
 
     query = """
         query ($owner: String!, $user_id: ID!, $start_date: GitTimestamp!){
@@ -167,11 +179,12 @@ def get_num_commits(user, start_date, token) -> bool:
      """
     count = 0
     data = run_graphql_query(query, variables, token)
-    for repo in data['organization']['teams']['nodes'][0]['repositories']['nodes']:
-        count += int(repo['ref']['target']['history']['totalCount'])
+    for repo in data["organization"]["teams"]["nodes"][0]["repositories"]["nodes"]:
+        count += int(repo["ref"]["target"]["history"]["totalCount"])
         if count >= User.THRESHOLD:
             break
     return count
+
 
 def is_new_committer_query_user(user, start_date, token):
     user_query = """
@@ -185,9 +198,11 @@ def is_new_committer_query_user(user, start_date, token):
     data = run_graphql_query(user_query, {}, token)
     variables = {
         # We can only check one year of date at a time, so check for contribution between 3 and 4 years ago.
-        "start_date" : (start_date - datetime.timedelta(weeks = 2 * 52)).strftime("%Y-%m-%dT%H:%M:%S"),
-        "org" : data['organization']['id'],
-        "user" : user
+        "start_date": (start_date - datetime.timedelta(weeks=2 * 52)).strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        ),
+        "org": data["organization"]["id"],
+        "user": user,
     }
     query = """
         query ($user: String!, $start_date: DateTime!, $org:ID!){
@@ -200,13 +215,14 @@ def is_new_committer_query_user(user, start_date, token):
     """
 
     data = run_graphql_query(query, variables, token)
-    if int(data['user']['contributionsCollection']['totalCommitContributions']) > 0:
+    if int(data["user"]["contributionsCollection"]["totalCommitContributions"]) > 0:
         return False
     return True
 
+
 def is_new_committer_query_repo(user, start_date, token):
     variables = {
-        'user' : user,
+        "user": user,
     }
 
     user_query = """
@@ -218,9 +234,9 @@ def is_new_committer_query_repo(user, start_date, token):
     """
 
     data = run_graphql_query(user_query, variables, token)
-    variables['owner'] = 'llvm'
-    variables['user_id'] = data['user']['id']
-    variables['start_date'] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+    variables["owner"] = "llvm"
+    variables["user_id"] = data["user"]["id"]
+    variables["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
 
     query = """
         query ($owner: String!, $user_id: ID!){
@@ -243,14 +259,15 @@ def is_new_committer_query_repo(user, start_date, token):
      """
 
     data = run_graphql_query(query, variables, token)
-    repo = data['organization']['repository']
-    commits = repo['ref']['target']['history']['nodes']
+    repo = data["organization"]["repository"]
+    commits = repo["ref"]["target"]["history"]["nodes"]
     if len(commits) == 0:
         return True
-    committed_date = commits[-1]['committedDate']
+    committed_date = commits[-1]["committedDate"]
     if datetime.datetime.strptime(committed_date, "%Y-%m-%dT%H:%M:%SZ") < start_date:
         return False
     return True
+
 
 def is_new_committer_pr_author(user, start_date, token):
     query = """
@@ -262,14 +279,14 @@ def is_new_committer_pr_author(user, start_date, token):
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-        "owner" : "llvm",
-        "repo" : "llvm-project",
-        "user" : user,
-        "query" : f"type:pr author:{user} created:>{formatted_start_date} org:llvm"
+        "owner": "llvm",
+        "repo": "llvm-project",
+        "user": user,
+        "query": f"type:pr author:{user} created:>{formatted_start_date} org:llvm",
     }
 
     data = run_graphql_query(query, variables, token)
-    return int(data['search']['issueCount']) > 0
+    return int(data["search"]["issueCount"]) > 0
 
 
 def is_new_committer(user, start_date, token):
@@ -279,8 +296,8 @@ def is_new_committer(user, start_date, token):
         pass
     return True
 
-def get_review_count(user, start_date, token):
 
+def get_review_count(user, start_date, token):
     query = """
         query ($query: String!) {
           search(query: $query, type: ISSUE, first: 5) {
@@ -290,14 +307,14 @@ def get_review_count(user, start_date, token):
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-        "owner" : "llvm",
-        "repo" : "llvm-project",
-        "user" : user,
-        "query" : f"type:pr commenter:{user} -author:{user} merged:>{formatted_start_date} org:llvm"
+        "owner": "llvm",
+        "repo": "llvm-project",
+        "user": user,
+        "query": f"type:pr commenter:{user} -author:{user} merged:>{formatted_start_date} org:llvm",
     }
 
     data = run_graphql_query(query, variables, token)
-    return int(data['search']['issueCount'])
+    return int(data["search"]["issueCount"])
 
 
 def count_prs(triage_list, start_date, token):
@@ -325,47 +342,46 @@ def count_prs(triage_list, start_date, token):
     date_begin = start_date
     date_end = None
     while date_begin < datetime.datetime.now():
-        date_end = date_begin + datetime.timedelta(days = 7)
+        date_end = date_begin + datetime.timedelta(days=7)
         formatted_date_begin = date_begin.strftime("%Y-%m-%dT%H:%M:%S")
         formatted_date_end = date_end.strftime("%Y-%m-%dT%H:%M:%S")
         variables = {
-          "query" : f"type:pr is:merged merged:{formatted_date_begin}..{formatted_date_end} org:llvm",
+            "query": f"type:pr is:merged merged:{formatted_date_begin}..{formatted_date_end} org:llvm",
         }
         has_next_page = True
         while has_next_page:
             print(variables)
             data = run_graphql_query(query, variables, token)
-            for pr in data['search']['nodes']:
+            for pr in data["search"]["nodes"]:
                 # Users can be None if the user has been deleted.
-                if not pr['author']:
+                if not pr["author"]:
                     continue
-                author = pr['author']['login']
+                author = pr["author"]["login"]
                 if author in triage_list:
                     triage_list[author].add_authored()
 
-                if not pr['mergedBy']:
+                if not pr["mergedBy"]:
                     continue
-                merger = pr['mergedBy']['login']
+                merger = pr["mergedBy"]["login"]
                 if author == merger:
                     continue
                 if merger not in triage_list:
                     continue
                 triage_list[merger].add_merged()
 
-            has_next_page = data['search']['pageInfo']['hasNextPage']
+            has_next_page = data["search"]["pageInfo"]["hasNextPage"]
             if has_next_page:
-                variables['after'] = data['search']['pageInfo']['endCursor']
+                variables["after"] = data["search"]["pageInfo"]["endCursor"]
         date_begin = date_end
 
 
 def main():
-
     token = sys.argv[1]
     gh = github.Github(login_or_token=token)
-    org = gh.get_organization('llvm')
-    repo = org.get_repo('llvm-project')
-    team = org.get_team_by_slug('llvm-committers')
-    one_year_ago = datetime.datetime.now() - datetime.timedelta(days = 365)
+    org = gh.get_organization("llvm")
+    repo = org.get_repo("llvm-project")
+    team = org.get_team_by_slug("llvm-committers")
+    one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
     triage_list = {}
     for member in team.get_members():
         triage_list[member.login] = User(member.login, triage_list)
@@ -408,15 +424,15 @@ def main():
 
     # Step 4 check for new committers
     for user in list(triage_list.keys()):
-        print ("Checking", user)
+        print("Checking", user)
         if is_new_committer(user, one_year_ago, token):
             print("Removing new committer: ", user)
             del triage_list[user]
 
     print("Complete:", len(triage_list), "triagers")
 
-    filename = 'triagers.log'
-    f = open(filename, 'w')
+    filename = "triagers.log"
+    f = open(filename, "w")
     for user in triage_list:
         print(triage_list[user].__repr__())
         f.write(user + "\n")
