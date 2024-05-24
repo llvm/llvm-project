@@ -809,6 +809,7 @@ Miscellaneous Clang Crashes Fixed
 
 - Do not attempt to dump the layout of dependent types or invalid declarations
   when ``-fdump-record-layouts-complete`` is passed. Fixes #GH83684.
+- Unhandled StructuralValues in the template differ (#GH93068).
 
 OpenACC Specific Changes
 ------------------------
