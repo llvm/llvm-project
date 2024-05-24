@@ -2,7 +2,6 @@
 ; RUN: opt -S -passes=ipsccp < %s | FileCheck %s
 
 ; Make sure that constant ranges including undef are propagated correctly.
-; FIXME: All of the following are currently miscompiled.
 
 define i8 @test_binop(i1 %cond, i8 %a) {
 ; CHECK-LABEL: define i8 @test_binop(
@@ -15,7 +14,7 @@ define i8 @test_binop(i1 %cond, i8 %a) {
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[PHI]], -1
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i16 [[AND]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[AND]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
 entry:
@@ -43,7 +42,7 @@ define i8 @test_cast(i1 %cond, i8 %a) {
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i16 [[PHI]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[ZEXT]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ZEXT]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
 entry:
@@ -61,7 +60,7 @@ join:
 }
 
 define i8 @test_intrin(i1 %cond, i8 %a) {
-; CHECK-LABEL: define range(i8 42, 0) i8 @test_intrin(
+; CHECK-LABEL: define i8 @test_intrin(
 ; CHECK-SAME: i1 [[COND:%.*]], i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[JOIN:.*]]
@@ -71,7 +70,7 @@ define i8 @test_intrin(i1 %cond, i8 %a) {
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[PHI]], i16 42)
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i16 [[UMAX]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[UMAX]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
 entry:
@@ -89,7 +88,7 @@ join:
 }
 
 define i9 @test_with_overflow(i1 %cond, i8 %a) {
-; CHECK-LABEL: define range(i9 1, -255) i9 @test_with_overflow(
+; CHECK-LABEL: define i9 @test_with_overflow(
 ; CHECK-SAME: i1 [[COND:%.*]], i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[JOIN:.*]]
@@ -100,7 +99,7 @@ define i9 @test_with_overflow(i1 %cond, i8 %a) {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
 ; CHECK-NEXT:    [[WO:%.*]] = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 [[PHI]], i16 1)
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i16, i1 } [[WO]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i16 [[ADD]] to i9
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[ADD]] to i9
 ; CHECK-NEXT:    ret i9 [[TRUNC]]
 ;
 entry:

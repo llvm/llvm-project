@@ -143,6 +143,24 @@ def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
   "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
 >;
 
+def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
+  "HasMinimum3Maximum3F32",
+  "true",
+  "Has v_minimum3_f32 and v_maximum3_f32 instructions"
+>;
+
+def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
+  "HasMinimum3Maximum3F16",
+  "true",
+  "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -430,7 +448,10 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
-   FeatureF16BF16ToFP6BF6ConversionScaleInsts]
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3PKF16
+   ]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1360,7 +1381,9 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -1381,7 +1404,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureConsumePowerInst
+   FeatureConsumePowerInst, FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -1857,7 +1880,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
-   FeatureMaxHardClauseLength63
+   FeatureMaxHardClauseLength63,
+   FeatureMinimum3Maximum3PKF16
 ]>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -1905,7 +1929,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMLMathInsts,
-   FeatureVGPRIndexingRegisters
+   FeatureVGPRIndexingRegisters,
+   FeatureMinimum3Maximum3PKF16
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2248,6 +2273,19 @@ def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
+def HasMinimum3Maximum3F32 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F32)>;
+
+def HasMinimum3Maximum3F16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
+
+
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
@@ -2406,6 +2444,10 @@ def HasPkMinMax3Insts :
 def HasPkMinimumMaximum3F16Insts :
   Predicate<"Subtarget->hasPkMinimumMaximum3F16Insts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;

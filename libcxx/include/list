@@ -567,7 +567,6 @@ protected:
     return __guard.__release_ptr();
   }
 
-  template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __delete_node(__node_pointer __node) {
     // For the same reason as above, we use the allocator's destroy() method for the value_type,
     // but not for the node itself.

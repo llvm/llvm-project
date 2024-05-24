@@ -5696,6 +5696,28 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
+    constexpr const int SizeIdx = 2;
+    llvm::APSInt Size;
+    Expr *ArgExpr = TheCall->getArg(SizeIdx);
+    ExprResult R = VerifyIntegerConstantExpression(ArgExpr, &Size);
+    if (R.isInvalid())
+      return true;
+    switch (Size.getSExtValue()) {
+    case 1:
+    case 2:
+    case 4:
+      return false;
+    default:
+      Diag(ArgExpr->getExprLoc(),
+           diag::err_amdgcn_global_load_lds_size_invalid_value)
+          << ArgExpr->getSourceRange();
+      Diag(ArgExpr->getExprLoc(),
+           diag::note_amdgcn_global_load_lds_size_valid_value)
+          << ArgExpr->getSourceRange();
+      return true;
+    }
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;

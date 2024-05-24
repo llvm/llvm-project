@@ -5118,6 +5118,13 @@ public:
              Context == ExpressionEvaluationContext::UnevaluatedList;
     }
 
+    bool isPotentiallyEvaluated() const {
+      return Context == ExpressionEvaluationContext::PotentiallyEvaluated ||
+             Context ==
+                 ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed ||
+             Context == ExpressionEvaluationContext::ConstantEvaluated;
+    }
+
     bool isConstantEvaluated() const {
       return Context == ExpressionEvaluationContext::ConstantEvaluated ||
              Context == ExpressionEvaluationContext::ImmediateFunctionContext;
@@ -5150,6 +5157,12 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
+  };
+
+  const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
+    assert(ExprEvalContexts.size() >= 2 &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts[ExprEvalContexts.size() - 2];
   };
 
   bool isBoundsAttrContext() const {

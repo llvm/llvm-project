@@ -119,11 +119,6 @@ let SubtargetPredicate = isGFX12Plus in {
   defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
   defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 } // End SubtargetPredicate = isGFX12Plus
-
-let SubtargetPredicate = HasPkMinimumMaximum3F16Insts in {
-  defm V_PK_MAXIMUM3_F16 : VOP3PInst <"v_pk_maximum3_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-  defm V_PK_MINIMUM3_F16 : VOP3PInst <"v_pk_minimum3_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-} // End SubtargetPredicate = HasPkMinimumMaximum3F16Insts
 } // End ReadsModeReg = 0
 }
 
@@ -149,6 +144,11 @@ def : VOP3PSatPat<saddsat, V_PK_ADD_I16>;
 def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
+defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+}
 
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
@@ -2319,6 +2319,9 @@ defm V_DOT8_U32_U4  : VOP3P_Real_vi <0x2b>;
 defm V_DOT4_I32_I8  : VOP3P_Real_vi <0x28>;
 defm V_DOT8_I32_I4  : VOP3P_Real_vi <0x2a>;
 } // End SubtargetPredicate = isGFX8GFX9
+
+defm V_PK_MINIMUM3_F16 : VOP3P_Real_vi <0x1b>;
+defm V_PK_MAXIMUM3_F16 : VOP3P_Real_vi <0x1c>;
 
 let OtherPredicates = [HasMAIInsts] in {
 

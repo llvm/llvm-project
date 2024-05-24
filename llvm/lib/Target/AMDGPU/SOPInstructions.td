@@ -586,7 +586,6 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 } // End hasSideEffects = 1
 
 let SubtargetPredicate = isGFX13Plus in {
-  def S_GET_SHADER_CYCLES_U64 : SOP1_64_0<"s_get_shader_cycles_u64">;
   let hasSideEffects = 1 in {
     def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
   }
@@ -1712,6 +1711,12 @@ def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$
   let SubtargetPredicate = isGFX12_10Plus;
 }
 
+def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
+  [(set i64:$sdst, (readcyclecounter))]> {
+  let SubtargetPredicate = HasSGetShaderCyclesInst;
+  let hasSideEffects = 1;
+}
+
 let Uses = [EXEC, M0] in {
 def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]> {
@@ -2233,6 +2238,7 @@ defm S_SLEEP_VAR                  : SOP1_Real_gfx12_gfx13<0x058>;
 
 // GFX1210
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
+defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12

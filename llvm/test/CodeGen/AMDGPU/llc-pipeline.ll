@@ -87,6 +87,9 @@
 ; GCN-O0-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O0-NEXT:        LCSSA Verifier
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
+; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:        Function Alias Analysis Results
+; GCN-O0-NEXT:        ObjC ARC contraction
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Prepare callbr
@@ -284,6 +287,9 @@
 ; GCN-O1-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-NEXT:        LCSSA Verifier
 ; GCN-O1-NEXT:        Loop-Closed SSA Form Pass
+; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:        Function Alias Analysis Results
+; GCN-O1-NEXT:        ObjC ARC contraction
 ; GCN-O1-NEXT:      DummyCGSCCPass
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Prepare callbr
@@ -581,6 +587,9 @@
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-OPTS-NEXT:        LCSSA Verifier
 ; GCN-O1-OPTS-NEXT:        Loop-Closed SSA Form Pass
+; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:        ObjC ARC contraction
 ; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Prepare callbr
@@ -891,6 +900,11 @@
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Dominator Tree Construction
+; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:        Function Alias Analysis Results
+; GCN-O2-NEXT:        ObjC ARC contraction
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Prepare callbr
@@ -1214,6 +1228,11 @@
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Dominator Tree Construction
+; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:        Function Alias Analysis Results
+; GCN-O3-NEXT:        ObjC ARC contraction
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Prepare callbr
