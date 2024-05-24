@@ -5681,11 +5681,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // enabled.  This alias option is being used to simplify the hasFlag logic.
   OptSpecifier StrictAliasingAliasOption =
       OFastEnabled ? options::OPT_Ofast : options::OPT_fstrict_aliasing;
-  // We turn strict aliasing off by default if we're in CL mode, since MSVC
+  // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
-  bool TBAAOnByDefault = !D.IsCLMode();
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, TBAAOnByDefault))
+                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
     CmdArgs.push_back("-relaxed-aliasing");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
