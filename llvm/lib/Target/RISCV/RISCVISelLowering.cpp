@@ -18402,7 +18402,8 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
   return ArrayRef(ArgIGPRs);
 }
 
-static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
+static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI,
+                                            bool HasZicfilp) {
   // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
   // for save-restore libcall, so we don't use them.
   static const MCPhysReg FastCCIGPRs[] = {
@@ -18415,10 +18416,18 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
                                           RISCV::X13, RISCV::X14, RISCV::X15,
                                           RISCV::X7};
 
-  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
-    return ArrayRef(FastCCEGPRs);
+  // Zicfilp needs needs x7(t2) as the landing pad label register.
+  static const MCPhysReg FastCCIGPRsNonX7[] = {
+      RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15,
+      RISCV::X16, RISCV::X17, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31};
 
-  return ArrayRef(FastCCIGPRs);
+  static const MCPhysReg FastCCEGPRsNonX7[] = {
+      RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15};
+
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    return HasZicfilp ? ArrayRef(FastCCEGPRsNonX7) : ArrayRef(FastCCEGPRs);
+
+  return HasZicfilp ? ArrayRef(FastCCIGPRsNonX7) : ArrayRef(FastCCIGPRs);
 }
 
 // Pass a 2*XLEN argument that has been split into two XLEN values through
@@ -18962,14 +18971,15 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             bool IsFixed, bool IsRet, Type *OrigTy,
                             const RISCVTargetLowering &TLI,
                             RVVArgDispatcher &RVVDispatcher) {
+  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
+  bool HasZicfilp = Subtarget.hasStdExtZicfilp();
+
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI, HasZicfilp))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
-
-  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
 
   if (LocVT == MVT::f16 &&
       (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
@@ -19014,7 +19024,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
       (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI, HasZicfilp))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19049,7 +19059,8 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
           CCValAssign::getReg(ValNo, ValVT, AllocatedVReg, LocVT, LocInfo));
     } else {
       // Try and pass the address via a "fast" GPR.
-      if (unsigned GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      if (unsigned GPRReg =
+              State.AllocateReg(getFastCCArgGPRs(ABI, HasZicfilp))) {
         LocInfo = CCValAssign::Indirect;
         LocVT = TLI.getSubtarget().getXLenVT();
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
