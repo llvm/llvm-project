@@ -31,6 +31,12 @@ static_assert(ab.d == 1.0, "");
 static_assert(ab.a == 1, ""); // both-error {{not an integral constant expression}} \
                               // both-note {{read of member 'a' of union with active member 'd'}}
 
+
+namespace Empty {
+  union E {};
+  constexpr E e{};
+}
+
 namespace SimpleStore {
   union A {
     int a;
@@ -48,4 +54,14 @@ namespace SimpleStore {
     return 10;
   }
   static_assert(empty() == 10, "");
+}
+
+namespace ZeroInit {
+  struct S { int m; };
+  union Z {
+    float f;
+  };
+
+  constexpr Z z{};
+  static_assert(z.f == 0.0, "");
 }
