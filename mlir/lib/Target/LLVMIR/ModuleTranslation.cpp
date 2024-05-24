@@ -635,6 +635,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       if (child->isZeroValue()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       } else {
+        // std::vector is used here to accomodate large number of elements that
+        // exceed SmallVector capacity.
         std::vector<llvm::Constant *> constants(numElements, child);
         return llvm::ConstantArray::get(arrayType, constants);
       }
