@@ -1,0 +1,13 @@
+# Defining comment prefix name ending with directive are ok, but meaningless,
+# this line will be simply ignored.
+
+foo
+foo2
+
+; COMZ: FOO: foo
+; COMZ-NOT: FOO-NEXT: foo2
+
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=FOO -comment-prefixes=COMZ -input-file %s %s 2>&1 | \
+; RUN:   FileCheck -check-prefix=BAR %s
+
+; BAR: error: found 'FOO-NEXT' without previous 'FOO: line
