@@ -260,7 +260,7 @@ linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
 
 linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
 linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
-linux_runtimes=$(${linux_runtimes_to_test} | sort | uniq)
+linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
 windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
 windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
