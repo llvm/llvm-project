@@ -102,11 +102,14 @@ bool YAMLProfileReader::parseFunctionProfile(
   if (BF.empty())
     return true;
 
-  if (!opts::IgnoreHash &&
-      YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
-    if (opts::Verbosity >= 1)
-      errs() << "BOLT-WARNING: function hash mismatch\n";
-    ProfileMatched = false;
+  if (!opts::IgnoreHash) {
+    if (!BF.getHash())
+      BF.computeHash(IsDFSOrder, HashFunction);
+    if (YamlBF.Hash != BF.getHash()) {
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: function hash mismatch\n";
+      ProfileMatched = false;
+    }
   }
 
   if (YamlBF.NumBasicBlocks != BF.size()) {
