@@ -533,6 +533,8 @@ public:
 
   // Check if the HasNoUse predicate is set.
   bool hasNoUse() const;
+  // Check if the HasOneUse predicate is set.
+  bool hasOneUse() const;
 
   // Is the desired predefined predicate for a load?
   bool isLoad() const;

@@ -151,10 +151,6 @@
 #include <avx512vldqintrin.h>
 #endif
 
-#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX512ER__)
-#include <avx512erintrin.h>
-#endif
-
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AVX512IFMA__)
 #include <avx512ifmaintrin.h>
 #endif
@@ -184,10 +180,6 @@
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
     (defined(__AVX512VBMI2__) && defined(__AVX512VL__))
 #include <avx512vlvbmi2intrin.h>
-#endif
-
-#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX512PF__)
-#include <avx512pfintrin.h>
 #endif
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AVX512FP16__)

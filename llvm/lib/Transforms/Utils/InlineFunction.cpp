@@ -1888,29 +1888,12 @@ static void trackInlinedStores(Function::iterator Start, Function::iterator End,
 /// otherwise a function inlined more than once into the same function
 /// will cause DIAssignID to be shared by many instructions.
 static void fixupAssignments(Function::iterator Start, Function::iterator End) {
-  // Map {Old, New} metadata. Not used directly - use GetNewID.
   DenseMap<DIAssignID *, DIAssignID *> Map;
-  auto GetNewID = [&Map](Metadata *Old) {
-    DIAssignID *OldID = cast<DIAssignID>(Old);
-    if (DIAssignID *NewID = Map.lookup(OldID))
-      return NewID;
-    DIAssignID *NewID = DIAssignID::getDistinct(OldID->getContext());
-    Map[OldID] = NewID;
-    return NewID;
-  };
   // Loop over all the inlined instructions. If we find a DIAssignID
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
-    for (Instruction &I : *BBI) {
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-        if (DVR.isDbgAssign())
-          DVR.setAssignId(GetNewID(DVR.getAssignID()));
-      }
-      if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
-        I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
-      else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-        DAI->setAssignId(GetNewID(DAI->getAssignID()));
-    }
+    for (Instruction &I : *BBI)
+      at::remapAssignID(Map, I);
   }
 }
 #undef DEBUG_TYPE

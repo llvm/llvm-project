@@ -79,8 +79,8 @@ protected:
 
   bool IsLittle;
 
-  bool StreamingSVEMode;
-  bool StreamingCompatibleSVEMode;
+  bool IsStreaming;
+  bool IsStreamingCompatible;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -120,8 +120,7 @@ public:
                    StringRef FS, const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
-                   bool StreamingSVEMode = false,
-                   bool StreamingCompatibleSVEMode = false,
+                   bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
 // Getters for SubtargetFeatures defined in tablegen
@@ -165,20 +164,26 @@ public:
   bool isXRaySupported() const override { return true; }
 
   /// Returns true if the function has a streaming body.
-  bool isStreaming() const { return StreamingSVEMode; }
+  bool isStreaming() const { return IsStreaming; }
 
   /// Returns true if the function has a streaming-compatible body.
-  bool isStreamingCompatible() const;
+  bool isStreamingCompatible() const { return IsStreamingCompatible; }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
-  bool isNeonAvailable() const;
+  bool isNeonAvailable() const {
+    return hasNEON() &&
+           (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+  }
 
   /// Returns true if the target has SVE and can use the full range of SVE
   /// instructions, for example because it knows the function is known not to be
   /// in streaming-SVE mode or when the target has FEAT_FA64 enabled.
-  bool isSVEAvailable() const;
+  bool isSVEAvailable() const {
+    return hasSVE() &&
+           (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+  }
 
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because

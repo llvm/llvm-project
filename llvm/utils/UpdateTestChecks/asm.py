@@ -605,6 +605,7 @@ def add_checks(
     prefix_list,
     func_dict,
     func_name,
+    ginfo: common.GeneralizerInfo,
     global_vars_seen_dict,
     is_filtered,
 ):
@@ -617,9 +618,7 @@ def add_checks(
         func_dict,
         func_name,
         check_label_format,
-        True,
-        False,
-        1,
+        ginfo,
         global_vars_seen_dict,
         is_filtered=is_filtered,
     )
