@@ -1244,7 +1244,7 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
 
 def Arith_TruncFOp :
     Arith_Op<"truncf",
-      [Pure, SameOperandsAndResultShape,
+      [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,

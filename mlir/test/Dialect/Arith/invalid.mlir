@@ -751,6 +751,14 @@ func.func @truncf_fl_to_scalable(%arg0 : vector<4xf64>) {
 
 // -----
 
+func.func @truncf_tensor_dim(%arg0 : tensor<4xf64>) {
+  // expected-error@+1 {{'arith.truncf' op failed to verify that input and output have the same tensor dimensions}}
+  %0 = arith.truncf %arg0 : tensor<4xf64> to tensor<?xf32>
+  return
+}
+
+// -----
+
 func.func @extui_fl_to_scalable(%arg0 : vector<4xi32>) {
   // expected-error@+1 {{'arith.extui' op requires the same shape for all operands and results}}
   %0 = arith.extui %arg0 : vector<4xi32> to vector<[4]xi64>
