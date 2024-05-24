@@ -644,7 +644,7 @@ int main(int argc, const char **argv) {
         argParser, "N",
         "AST Pool size (max number of ASTs in memory), default 10", {'p'});
     args::ValueFlag<int> argCallDepth(
-        argParser, "N", "Max call depth in path-finding, default 4", {'d'});
+        argParser, "N", "Max call depth in path-finding, default 6", {'d'});
     args::ValueFlag<int> argDfsTick(
         argParser, "N",
         "DFS tick (timeout checking frequency), default 1'000'000", {"tick"});
@@ -674,7 +674,7 @@ int main(int argc, const char **argv) {
     logger.info("AST & ICFG generation method: sequential");
 
     Global.ASTPoolSize = getArgValue(argPoolSize, 10, "AST pool size");
-    Global.callDepth = getArgValue(argCallDepth, 4, "Max call depth");
+    Global.callDepth = getArgValue(argCallDepth, 6, "Max call depth");
     Global.dfsTick = getArgValue(argDfsTick, 1'000'000, "DFS tick");
     Global.dfsTimeout = getArgValue(argDfsTimeout, 30, "DFS timeout");
     Global.keepAST = getArgValue(argKeepAST, "Keep AST");
