@@ -540,6 +540,9 @@ def OMP_Unroll : Directive<"unroll"> {
 def OMP_Reverse : Directive<"reverse"> {
   let association = AS_Loop;
 }
+def OMP_Interchange : Directive<"interchange"> {
+  let association = AS_Loop;
+}
 def OMP_For : Directive<"for"> {
   let allowedClauses = [
     VersionedClause<OMPC_Private>,

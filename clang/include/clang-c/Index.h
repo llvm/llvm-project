@@ -2150,6 +2150,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPReverseDirective = 307,
 
+  /** OpenMP interchange directive.
+   */
+  CXCursor_OMPInterchangeDirective = 308,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

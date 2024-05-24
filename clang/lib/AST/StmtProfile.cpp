@@ -989,6 +989,11 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
   VisitOMPLoopDirective(S);
 }
