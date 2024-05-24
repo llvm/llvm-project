@@ -35,6 +35,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -372,7 +373,11 @@ struct VPTransformState {
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
-    CFGState() = default;
+    /// Updater for the DominatorTree.
+    DomTreeUpdater DTU;
+
+    CFGState(DominatorTree *DT)
+        : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
 
     /// Returns the BasicBlock* mapped to the pre-header of the loop region
     /// containing \p R.
@@ -381,9 +386,6 @@ struct VPTransformState {
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;
-
-  /// Hold a pointer to Dominator Tree to register new basic blocks in the loop.
-  DominatorTree *DT;
 
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilderBase &Builder;
@@ -3289,13 +3291,6 @@ public:
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
-
-private:
-  /// Add to the given dominator tree the header block and every new basic block
-  /// that was created between it and the latch block, inclusive.
-  static void updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
-                                  BasicBlock *LoopLatchBB,
-                                  BasicBlock *LoopExitBB);
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
