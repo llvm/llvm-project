@@ -76,8 +76,8 @@ static void HandleOverflow(size_t &Capacity, char *&Output,
 
 namespace {
 enum ConversionType {
-  UTFToIBM1047,
-  IBM1047ToUTF,
+  UTF8ToIBM1047,
+  IBM1047ToUTF8,
 };
 
 // Support conversion between EBCDIC 1047 and UTF-8. This class uses
@@ -98,10 +98,10 @@ public:
 std::error_code
 CharSetConverterTable::convert(StringRef Source,
                                SmallVectorImpl<char> &Result) const {
-  if (ConvType == IBM1047ToUTF) {
+  if (ConvType == IBM1047ToUTF8) {
     ConverterEBCDIC::convertToUTF8(Source, Result);
     return std::error_code();
-  } else if (ConvType == UTFToIBM1047) {
+  } else if (ConvType == UTF8ToIBM1047) {
     return ConverterEBCDIC::convertToEBCDIC(Source, Result);
   }
   llvm_unreachable("Invalid ConvType!");
@@ -109,29 +109,23 @@ CharSetConverterTable::convert(StringRef Source,
 }
 
 #ifdef HAVE_ICU
+struct UConverterDeleter {
+  void operator()(UConverter *Converter) const {
+    if (Converter)
+      ucnv_close(Converter);
+  }
+};
+using UConverterUniquePtr = std::unique_ptr<UConverter, UConverterDeleter>;
+
 class CharSetConverterICU : public details::CharSetConverterImplBase {
-  UConverter *FromConvDesc;
-  UConverter *ToConvDesc;
+  UConverterUniquePtr FromConvDesc;
+  UConverterUniquePtr ToConvDesc;
 
 public:
-  CharSetConverterICU(UConverter *Converter) {
-    UErrorCode EC = U_ZERO_ERROR;
-    FromConvDesc = nullptr;
-    ToConvDesc = ucnv_safeClone(Converter, nullptr, nullptr, &EC);
-    if (U_FAILURE(EC)) {
-      ToConvDesc = nullptr;
-    }
-  };
-
-  CharSetConverterICU(UConverter *FromConverter, UConverter *ToConverter) {
-    UErrorCode EC = U_ZERO_ERROR;
-    FromConvDesc = ucnv_safeClone(FromConverter, nullptr, nullptr, &EC);
-    if (U_FAILURE(EC))
-      FromConvDesc = nullptr;
-    ToConvDesc = ucnv_safeClone(ToConverter, nullptr, nullptr, &EC);
-    if (U_FAILURE(EC))
-      ToConvDesc = nullptr;
-  }
+  CharSetConverterICU(UConverterUniquePtr FromConverter,
+                      UConverterUniquePtr ToConverter)
+      : FromConvDesc(std::move(FromConverter)),
+        ToConvDesc(std::move(ToConverter)) {}
 
   std::error_code convert(StringRef Source,
                           SmallVectorImpl<char> &Result) const override;
@@ -140,24 +134,23 @@ public:
 std::error_code
 CharSetConverterICU::convert(StringRef Source,
                              SmallVectorImpl<char> &Result) const {
+  // Setup the input in case it has no backing data.
+  size_t InputLength = Source.size();
+  const char *In = InputLength ? const_cast<char *>(Source.data()) : "";
+
   // Setup the output. We directly write into the SmallVector.
   size_t Capacity = Result.capacity();
   size_t OutputLength = Capacity;
-  char *Output, *Out;
   Result.resize_for_overwrite(Capacity);
-
+  char *Output = static_cast<char *>(Result.data());
   UErrorCode EC = U_ZERO_ERROR;
-
   do {
     EC = U_ZERO_ERROR;
-    size_t InputLength = Source.size();
-    const char *Input =
-        InputLength ? const_cast<char *>(Source.data()) : nullptr;
-    const char *In = Input;
-    Output = static_cast<char *>(Result.data());
-    Out = Output;
-    ucnv_convertEx(ToConvDesc, FromConvDesc, &Output, Out + OutputLength,
-                   &Input, In + InputLength, /*pivotStart=*/NULL,
+    const char *Input = In;
+
+    Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
+    ucnv_convertEx(&*ToConvDesc, &*FromConvDesc, &Output, Result.end(), &Input,
+                   In + InputLength, /*pivotStart=*/NULL,
                    /*pivotSource=*/NULL, /*pivotTarget=*/NULL,
                    /*pivotLimit=*/NULL, /*reset=*/true,
                    /*flush=*/true, &EC);
@@ -166,13 +159,14 @@ CharSetConverterICU::convert(StringRef Source,
           Capacity < std::numeric_limits<size_t>::max()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         continue;
+      }
       // Some other error occured.
       return std::error_code(EILSEQ, std::generic_category());
     }
     break;
   } while (true);
 
-  Result.resize(Output - Out);
+  Result.resize(Output - Result.data());
   return std::error_code();
 }
 
@@ -247,9 +241,13 @@ CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
 
   ConversionType Conversion;
   if (CPFrom == text_encoding::id::UTF8 && CPTo == text_encoding::id::IBM1047)
-    Conversion = UTFToIBM1047;
+    Conversion = UTF8ToIBM1047;
+  else if (CPFrom == text_encoding::id::IBM1047 &&
+           CPTo == text_encoding::id::UTF8)
+    Conversion = IBM1047ToUTF8;
   else
-    Conversion = IBM1047ToUTF;
+    assert(false &&
+           "Only conversions between UTF-8 and IBM-1047 are supported");
   std::unique_ptr<details::CharSetConverterImplBase> Converter =
       std::make_unique<CharSetConverterTable>(Conversion);
 
@@ -264,16 +262,17 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
     return create(*From, *To);
 #ifdef HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
-  UConverter *FromConvDesc = ucnv_open(CSFrom.str().c_str(), &EC);
+  UConverterUniquePtr FromConvDesc(ucnv_open(CSFrom.str().c_str(), &EC));
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
-  UConverter *ToConvDesc = ucnv_open(CSTo.str().c_str(), &EC);
+  UConverterUniquePtr ToConvDesc(ucnv_open(CSTo.str().c_str(), &EC));
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
   std::unique_ptr<details::CharSetConverterImplBase> Converter =
-      std::make_unique<CharSetConverterICU>(FromConvDesc, ToConvDesc);
+      std::make_unique<CharSetConverterICU>(std::move(FromConvDesc),
+                                            std::move(ToConvDesc));
   return CharSetConverter(std::move(Converter));
 #elif defined(HAVE_ICONV)
   iconv_t ConvDesc = iconv_open(CSTo.str().c_str(), CSFrom.str().c_str());
