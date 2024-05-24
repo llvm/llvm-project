@@ -86,6 +86,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -3086,6 +3087,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return getExtQualType(TypeNode, Quals);
   else
     return QualType(TypeNode, Quals.getFastQualifiers());
+}
+
+uint16_t ASTContext::getPointerAuthVTablePointerDiscriminator(
+    const CXXRecordDecl *record) {
+  assert(record->isPolymorphic() &&
+         "Attempted to get vtable pointer discriminator on a monomorphic type");
+  std::unique_ptr<MangleContext> MC(createMangleContext());
+  SmallString<256> Str;
+  llvm::raw_svector_ostream Out(Str);
+  MC->mangleCXXVTable(record, Out);
+  return llvm::getPointerAuthStableSipHash16(Str.c_str());
 }
 
 QualType ASTContext::getObjCGCQualType(QualType T,
@@ -13811,4 +13823,78 @@ StringRef ASTContext::getCUIDHash() const {
     return StringRef();
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
+}
+
+const CXXRecordDecl *
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *thisClass) {
+  assert(thisClass);
+  assert(thisClass->isPolymorphic());
+  const CXXRecordDecl *primaryBase = thisClass;
+  while (1) {
+    assert(primaryBase);
+    assert(primaryBase->isPolymorphic());
+    auto &layout = getASTRecordLayout(primaryBase);
+    auto base = layout.getPrimaryBase();
+    if (!base || base == primaryBase || !base->isPolymorphic())
+      break;
+    primaryBase = base;
+  }
+  return primaryBase;
+}
+
+bool ASTContext::useAbbreviatedThunkName(GlobalDecl virtualMethodDecl,
+                                         StringRef mangledName) {
+  auto method = cast<CXXMethodDecl>(virtualMethodDecl.getDecl());
+  assert(method->isVirtual());
+  bool defaultIncludesPointerAuth =
+      LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
+
+  if (!defaultIncludesPointerAuth)
+    return true;
+
+  auto existing = thunksToBeAbbreviated.find(virtualMethodDecl);
+  if (existing != thunksToBeAbbreviated.end())
+    return existing->second.contains(mangledName.str());
+
+  std::unique_ptr<MangleContext> mangler(createMangleContext());
+  llvm::StringMap<llvm::SmallVector<std::string, 2>> thunks;
+  auto vtableContext = getVTableContext();
+  if (const auto *thunkInfos = vtableContext->getThunkInfo(virtualMethodDecl)) {
+    auto destructor = dyn_cast<CXXDestructorDecl>(method);
+    for (const auto &thunk : *thunkInfos) {
+      SmallString<256> elidedName;
+      llvm::raw_svector_ostream elidedNameStream(elidedName);
+      if (destructor) {
+        mangler->mangleCXXDtorThunk(destructor, virtualMethodDecl.getDtorType(),
+                                    thunk, /* elideOverrideInfo */ true,
+                                    elidedNameStream);
+      } else {
+        mangler->mangleThunk(method, thunk, /* elideOverrideInfo */ true,
+                             elidedNameStream);
+      }
+      SmallString<256> mangledName;
+      llvm::raw_svector_ostream mangledNameStream(mangledName);
+      if (destructor) {
+        mangler->mangleCXXDtorThunk(destructor, virtualMethodDecl.getDtorType(),
+                                    thunk, /* elideOverrideInfo */ false,
+                                    mangledNameStream);
+      } else {
+        mangler->mangleThunk(method, thunk, /* elideOverrideInfo */ false,
+                             mangledNameStream);
+      }
+
+      if (thunks.find(elidedName) == thunks.end()) {
+        thunks[elidedName] = {};
+      }
+      thunks[elidedName].push_back(std::string(mangledName));
+    }
+  }
+  llvm::StringSet<> simplifiedThunkNames;
+  for (auto &thunkList : thunks) {
+    llvm::sort(thunkList.second);
+    simplifiedThunkNames.insert(thunkList.second[0]);
+  }
+  bool result = simplifiedThunkNames.contains(mangledName);
+  thunksToBeAbbreviated[virtualMethodDecl] = std::move(simplifiedThunkNames);
+  return result;
 }

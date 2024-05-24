@@ -3099,3 +3099,30 @@ CodeGenFunction::EmitPointerAuthSign(const CGPointerAuthInfo &pointerAuth,
   return EmitPointerAuthCommon(*this, pointerAuth, pointer,
                                llvm::Intrinsic::ptrauth_sign);
 }
+
+static llvm::Value *EmitStrip(CodeGenFunction &CGF,
+                              const CGPointerAuthInfo &pointerAuth,
+                              llvm::Value *pointer) {
+  auto stripIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::ptrauth_strip);
+
+  auto key = CGF.Builder.getInt32(pointerAuth.getKey());
+  // Convert the pointer to intptr_t before signing it.
+  auto origType = pointer->getType();
+  pointer = CGF.EmitRuntimeCall(
+      stripIntrinsic, {CGF.Builder.CreatePtrToInt(pointer, CGF.IntPtrTy), key});
+  return CGF.Builder.CreateIntToPtr(pointer, origType);
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &pointerAuth,
+                                     llvm::Value *pointer) {
+  if (pointerAuth.shouldStrip()) {
+    return EmitStrip(*this, pointerAuth, pointer);
+  }
+  if (!pointerAuth.shouldAuth()) {
+    return pointer;
+  }
+
+  return EmitPointerAuthCommon(*this, pointerAuth, pointer,
+                               llvm::Intrinsic::ptrauth_auth);
+}

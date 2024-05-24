@@ -415,9 +415,11 @@ public:
   bool exportThunk() override { return false; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
-                                     const ThisAdjustment &TA) override;
+                                     const CXXRecordDecl *UnadjustedClass,
+                                     const ThunkInfo &TI) override;
 
   llvm::Value *performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                       const CXXRecordDecl *UnadjustedClass,
                                        const ReturnAdjustment &RA) override;
 
   void EmitThreadLocalInitFuncs(
@@ -2227,7 +2229,9 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
 
 llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
                                                     Address This,
-                                                    const ThisAdjustment &TA) {
+                                                    const CXXRecordDecl *,
+                                                    const ThunkInfo &TI) {
+  auto &TA = TI.This;
   if (TA.isEmpty())
     return This.emitRawPointer(CGF);
 
@@ -2279,6 +2283,7 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
 
 llvm::Value *
 MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                         const CXXRecordDecl *,
                                          const ReturnAdjustment &RA) {
   if (RA.isEmpty())
     return Ret.emitRawPointer(CGF);

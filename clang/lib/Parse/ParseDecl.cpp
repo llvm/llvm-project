@@ -368,6 +368,27 @@ static bool attributeIsTypeArgAttr(const IdentifierInfo &II) {
 #undef CLANG_ATTR_TYPE_ARG_LIST
 }
 
+/// Determine whether the given attribute takes identifier arguments.
+static bool attributeHasStrictIdentifierArgs(const IdentifierInfo &II) {
+#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+  return (llvm::StringSwitch<uint64_t>(normalizeAttrName(II.getName()))
+#include "clang/Parse/AttrParserStringSwitches.inc"
+              .Default(0)) != 0;
+#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+}
+
+/// Determine whether the given attribute takes an identifier argument at a
+/// specific index
+static bool attributeHasStrictIdentifierArgAtIndex(const IdentifierInfo &II,
+                                                   size_t argIndex) {
+#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+  return (llvm::StringSwitch<uint64_t>(normalizeAttrName(II.getName()))
+#include "clang/Parse/AttrParserStringSwitches.inc"
+              .Default(0)) &
+         (1ull << argIndex);
+#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+}
+
 /// Determine whether the given attribute requires parsing its arguments
 /// in an unevaluated context or not.
 static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II) {
@@ -546,7 +567,8 @@ unsigned Parser::ParseAttributeArgsCommon(
       }
       if (T.isUsable())
         TheParsedType = T.get();
-    } else if (AttributeHasVariadicIdentifierArg) {
+    } else if (AttributeHasVariadicIdentifierArg ||
+               attributeHasStrictIdentifierArgs(*AttrName)) {
       // Parse variadic identifier arg. This can either consume identifiers or
       // expressions. Variadic identifier args do not support parameter packs
       // because those are typically used for attributes with enumeration
@@ -556,6 +578,12 @@ unsigned Parser::ParseAttributeArgsCommon(
         // Interpret "kw_this" as an identifier if the attributed requests it.
         if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
           Tok.setKind(tok::identifier);
+
+        if (Tok.is(tok::identifier) && attributeHasStrictIdentifierArgAtIndex(
+                                           *AttrName, ArgExprs.size())) {
+          ArgExprs.push_back(ParseIdentifierLoc());
+          continue;
+        }
 
         ExprResult ArgExpr;
         if (Tok.is(tok::identifier)) {

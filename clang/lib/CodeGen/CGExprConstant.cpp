@@ -803,6 +803,14 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
                                                 VTableClass);
+      if (auto authentication =
+              CGM.getVTablePointerAuthentication(VTableClass)) {
+        VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
+            VTableAddressPoint, *authentication);
+        if (!VTableAddressPoint) {
+          return false;
+        }
+      }
       if (!AppendBytes(Offset, VTableAddressPoint))
         return false;
     }
@@ -1520,8 +1528,37 @@ llvm::GlobalValue *ConstantEmitter::getCurrentAddrPrivate() {
   return global;
 }
 
+static llvm::Constant *getUnfoldableValue(llvm::Constant *C) {
+  // Look through any constant expressions that might get folded
+  while (auto CE = dyn_cast<llvm::ConstantExpr>(C)) {
+    switch (CE->getOpcode()) {
+    // Simple type changes.
+    case llvm::Instruction::BitCast:
+    case llvm::Instruction::IntToPtr:
+    case llvm::Instruction::PtrToInt:
+      break;
+
+    // GEPs, if all the indices are zero.
+    case llvm::Instruction::GetElementPtr:
+      for (unsigned i = 1, e = CE->getNumOperands(); i != e; ++i)
+        if (!CE->getOperand(i)->isNullValue())
+          return C;
+      break;
+
+    default:
+      return C;
+    }
+    C = CE->getOperand(0);
+  }
+  return C;
+}
+
 void ConstantEmitter::registerCurrentAddrPrivate(llvm::Constant *signal,
                                            llvm::GlobalValue *placeholder) {
+  // Strip anything from the signal value that might get folded into other
+  // constant expressions in the final initializer.
+  signal = getUnfoldableValue(signal);
+
   assert(!PlaceholderAddresses.empty());
   assert(PlaceholderAddresses.back().first == nullptr);
   assert(PlaceholderAddresses.back().second == placeholder);
@@ -1579,7 +1616,7 @@ namespace {
       // messing around with llvm::Constant structures, which never itself
       // does anything that should be visible in compiler output.
       for (auto &entry : Locations) {
-        assert(entry.first->getParent() == nullptr && "not a placeholder!");
+        assert(entry.first->getName() == "" && "not a placeholder!");
         entry.first->replaceAllUsesWith(entry.second);
         entry.first->eraseFromParent();
       }
@@ -1741,6 +1778,44 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   auto nonMemoryDestType = getNonMemoryType(CGM, destType);
   auto C = tryEmitPrivate(value, nonMemoryDestType);
   return (C ? emitForMemory(C, destType) : nullptr);
+}
+
+/// Try to emit a constant signed pointer, given a raw pointer and the
+/// destination ptrauth qualifier.
+///
+/// This can fail if the qualifier needs address discrimination and the
+/// emitter is in an abstract mode.
+llvm::Constant *
+ConstantEmitter::tryEmitConstantSignedPointer(llvm::Constant *unsignedPointer,
+                                              PointerAuthQualifier schema) {
+  assert(schema && "applying trivial ptrauth schema");
+
+  if (schema.hasKeyNone())
+    return unsignedPointer;
+
+  auto key = schema.getKey();
+
+  // Create an address placeholder if we're using address discrimination.
+  llvm::GlobalValue *storageAddress = nullptr;
+  if (schema.isAddressDiscriminated()) {
+    // We can't do this if the emitter is in an abstract state.
+    if (isAbstract())
+      return nullptr;
+
+    storageAddress = getCurrentAddrPrivate();
+  }
+
+  // Fetch the extra discriminator.
+  llvm::Constant *otherDiscriminator =
+      llvm::ConstantInt::get(CGM.IntPtrTy, schema.getExtraDiscriminator());
+
+  auto signedPointer = CGM.getConstantSignedPointer(
+      unsignedPointer, key, storageAddress, otherDiscriminator);
+
+  if (schema.isAddressDiscriminated())
+    registerCurrentAddrPrivate(signedPointer, storageAddress);
+
+  return signedPointer;
 }
 
 llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
