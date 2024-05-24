@@ -1085,6 +1085,12 @@ def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
   "Always apply VALU throttle to VALU sequences"
 >;
 
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1881,7 +1887,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
-   FeatureMinimum3Maximum3PKF16
+   FeatureWaitXcnt,
+   FeatureMinimum3Maximum3PKF16,
 ]>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2654,6 +2661,9 @@ def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
 
 def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
   AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

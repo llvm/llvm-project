@@ -116,7 +116,6 @@ define i16 @v_mul_i16(i16 %num, i16 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = mul i16 %num, %den
@@ -242,7 +241,6 @@ define zeroext i16 @v_mul_i16_zeroext(i16 zeroext %num, i16 zeroext %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -374,7 +372,6 @@ define signext i16 @v_mul_i16_signext(i16 signext %num, i16 signext %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_bfe_i32 v0, v0, 0, 16
@@ -452,7 +449,6 @@ define i32 @v_mul_i32(i32 %num, i32 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = mul i32 %num, %den
@@ -537,7 +533,6 @@ define <2 x i32> @v_mul_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX1300-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -739,7 +734,6 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mul_u64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = mul i64 %num, %den
@@ -994,7 +988,6 @@ define i96 @v_mul_i96(i96 %num, i96 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v6, v3, 0
@@ -1469,7 +1462,6 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v8, v6, 0
@@ -3384,7 +3376,6 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v1
 ; GFX1300-NEXT:    v_mul_lo_u32 v29, v5, v10
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
@@ -3546,7 +3537,6 @@ define amdgpu_ps void @s_mul_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1300:       ; %bb.0:
 ; GFX1300-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[2:3], 0x50, v2, 0
 ; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -3676,7 +3666,6 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_load_b32 s2, s[2:3], 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    s_mov_b32 s3, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
@@ -3776,7 +3765,6 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1300:       ; %bb.0:
 ; GFX1300-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    v_mad_nc_i64_i32 v[2:3], 0x50, v2, 0
 ; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -3922,7 +3910,6 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_wait_xcnt 0x0
 ; GFX1300-NEXT:    s_ashr_i32 s3, s2, 31
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
