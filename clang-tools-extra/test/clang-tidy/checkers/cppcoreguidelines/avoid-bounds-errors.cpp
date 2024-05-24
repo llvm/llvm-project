@@ -38,23 +38,22 @@ namespace json {
 std::array<int, 3> a;
 
 auto b = a[0];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: Do not use operator[], use at() instead. [cppcoreguidelines-avoid-bounds-errors]
-// CHECK-FIXES: auto b = a.at(0);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-avoid-bounds-errors]
 auto c = a[1+1];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: Do not use operator[], use at() instead. [cppcoreguidelines-avoid-bounds-errors]
-// CHECK-FIXES: auto c = a.at(1+1);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-avoid-bounds-errors]
 constexpr int index = 1;
 auto d = a[index];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: Do not use operator[], use at() instead. [cppcoreguidelines-avoid-bounds-errors]
-// CHECK-FIXES: auto d = a.at(index);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-avoid-bounds-errors]
 
 int e(int index) {
   return a[index];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: Do not use operator[], use at() instead. [cppcoreguidelines-avoid-bounds-errors]
-// CHECK-FIXES: return a.at(index);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-avoid-bounds-errors]
 }
 
-auto f = a.at(0);
+auto f = (&a)->operator[](1);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-avoid-bounds-errors]
+
+auto g = a.at(0);
 
 std::unique_ptr<int> p;
 auto q = p[0];
