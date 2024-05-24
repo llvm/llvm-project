@@ -354,7 +354,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
 }
 
 void CGHLSLRuntime::emitFunctionProlog(const FunctionDecl *FD,
-                                      llvm::Function *Fn) {
+                                       llvm::Function *Fn) {
   if (!FD || !Fn)
     return;
 
