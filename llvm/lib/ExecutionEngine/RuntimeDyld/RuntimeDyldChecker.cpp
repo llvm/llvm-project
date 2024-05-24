@@ -370,7 +370,8 @@ private:
                               ? Checker.getSymbolLocalAddr(Symbol)
                               : Checker.getSymbolRemoteAddr(Symbol);
 
-    // ARM mode adds an offset of 4 bytes to PC
+    // ARM PC offset is 8 instead of 4, because it accounts for an additional
+    // prefetch instruction that increments PC even though it is implicit.
     auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
     uint64_t PCOffset = TT.getArch() == Triple::ArchType::arm ? 4 : 0;
 
