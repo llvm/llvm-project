@@ -3,7 +3,7 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
-; Check loops having VPWidenIntOrFpInductionRecipe.
+; Make sure we do not vectorize a loop with a widened int induction.
 define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
 ; CHECK-LABEL: define void @test_wide_integer_induction(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -80,7 +80,7 @@ for.cond.cleanup:
   ret void
 }
 
-; Check loops having VPWidenPointerInductionRecipe.
+; Make sure we do not vectorize a loop with a widened ptr induction.
 define void @test_wide_ptr_induction(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-LABEL: define void @test_wide_ptr_induction(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
