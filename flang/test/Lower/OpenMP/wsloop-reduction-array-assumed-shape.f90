@@ -84,7 +84,7 @@ end program
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_9:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 ! CHECK:             fir.store %[[VAL_3]]#1 to %[[VAL_9]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_Uxf64 %[[VAL_9]] -> %[[VAL_10:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_Uxf64 %[[VAL_9]] -> %[[VAL_10:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
 ! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = {{.*}}, uniq_name = "_QFFreduceEr"} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.ref<!fir.box<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.array<?xf64>>>)
 ! CHECK:                 fir.store %[[VAL_11]] to %[[VAL_5]]#1 : !fir.ref<i32>

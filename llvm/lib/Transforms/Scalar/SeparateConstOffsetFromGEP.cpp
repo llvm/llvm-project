@@ -972,13 +972,8 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  if (GEP->getNumIndices() != 1)
-    return false;
-
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
-    return false;
-  if (PtrGEP->getNumIndices() != 1)
     return false;
 
   bool NestedNeedsExtraction;
@@ -997,18 +992,16 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   bool PtrGEPInBounds = PtrGEP->isInBounds();
   bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
   if (IsChainInBounds) {
-    auto GEPIdx = GEP->indices().begin();
-    auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
-    IsChainInBounds &= KnownGEPIdx.isNonNegative();
-    if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
-      auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
-      IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
-    }
+    auto IsKnownNonNegative = [this](Value *V) {
+      return isKnownNonNegative(V, *DL);
+    };
+    IsChainInBounds &= all_of(GEP->indices(), IsKnownNonNegative);
+    if (IsChainInBounds)
+      IsChainInBounds &= all_of(PtrGEP->indices(), IsKnownNonNegative);
   }
 
   IRBuilder<> Builder(GEP);
-  // For trivial GEP chains, we can swap the indicies.
+  // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
       SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);

@@ -308,7 +308,7 @@ public:
   const uint32_t *IdentifierOffsets = nullptr;
 
   /// Base identifier ID for identifiers local to this module.
-  serialization::IdentID BaseIdentifierID = 0;
+  serialization::IdentifierID BaseIdentifierID = 0;
 
   /// Remapping table for identifier IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> IdentifierRemap;

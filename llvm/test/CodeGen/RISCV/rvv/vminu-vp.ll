@@ -425,8 +425,8 @@ define <vscale x 128 x i8> @vminu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %b, i32 0
@@ -988,8 +988,8 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB80_2:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
@@ -1048,8 +1048,8 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB82_2:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
@@ -1086,8 +1086,8 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, 
 ; RV64-NEXT:    slli a1, a1, 1
 ; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64-NEXT:    vminu.vx v8, v8, a0, v0.t
-; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vminu.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0

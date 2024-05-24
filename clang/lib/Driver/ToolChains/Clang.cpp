@@ -1522,7 +1522,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       auto isPAuthLR = [](const char *member) {
         llvm::AArch64::ExtensionInfo pauthlr_extension =
             llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-        return (pauthlr_extension.Feature.compare(member) == 0);
+        return pauthlr_extension.Feature == member;
       };
 
       if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
@@ -7253,16 +7253,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A =
           Args.getLastArg(options::OPT_frelaxed_template_template_args,
                           options::OPT_fno_relaxed_template_template_args)) {
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/false;
-    if (A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
+    if (A->getOption().matches(
+            options::OPT_fno_relaxed_template_template_args)) {
+      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
       CmdArgs.push_back("-fno-relaxed-template-template-args");
+    } else {
+      D.Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/false;
+    }
   }
 
-  // -fsized-deallocation is off by default, as it is an ABI-breaking change for
-  // most platforms.
-  Args.addOptInFlag(CmdArgs, options::OPT_fsized_deallocation,
-                    options::OPT_fno_sized_deallocation);
+  // -fsized-deallocation is on by default in C++14 onwards and otherwise off
+  // by default.
+  Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
+                  options::OPT_fno_sized_deallocation);
 
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.

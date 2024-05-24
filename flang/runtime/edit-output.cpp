@@ -832,8 +832,11 @@ RT_API_ATTRS bool EditLogicalOutput(
         reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
   case 'A': { // legacy extension
     int truthBits{truth};
-    return EditCharacterOutput(
-        io, edit, reinterpret_cast<char *>(&truthBits), sizeof truthBits);
+    int len{sizeof truthBits};
+    int width{edit.width.value_or(len)};
+    return EmitRepeated(io, ' ', std::max(0, width - len)) &&
+        EmitEncoded(
+            io, reinterpret_cast<char *>(&truthBits), std::min(width, len));
   }
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,

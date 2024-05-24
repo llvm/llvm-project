@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
@@ -822,6 +822,9 @@ public:
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
@@ -865,6 +868,9 @@ public:
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -961,9 +967,6 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
-
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);

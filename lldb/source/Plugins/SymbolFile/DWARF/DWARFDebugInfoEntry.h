@@ -49,7 +49,7 @@ public:
   void BuildFunctionAddressRangeTable(DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
-  bool Extract(const DWARFDataExtractor &data, const DWARFUnit *cu,
+  bool Extract(const DWARFDataExtractor &data, const DWARFUnit &cu,
                lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;

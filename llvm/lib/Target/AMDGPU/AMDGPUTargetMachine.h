@@ -52,6 +52,12 @@ public:
     return TLOF.get();
   }
 
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
+
   void registerPassBuilderCallbacks(PassBuilder &PB,
                                     bool PopulateClassToPassNames) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
@@ -67,6 +73,10 @@ public:
   getPredicatedAddrSpace(const Value *V) const override;
 
   unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const override;
+
+  bool splitModule(Module &M, unsigned NumParts,
+                   function_ref<void(std::unique_ptr<Module> MPart)>
+                       ModuleCallback) const override;
 };
 
 //===----------------------------------------------------------------------===//

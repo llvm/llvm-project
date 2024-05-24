@@ -21,6 +21,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
@@ -995,8 +996,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // arrow operator was used with a dependent non-pointer object expression,
   // build a CXXDependentScopeMemberExpr.
   if (R.wasNotFoundInCurrentInstantiation() ||
-      (IsArrow && !BaseExprType->isPointerType() &&
-       BaseExprType->isDependentType()) ||
       (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
        (SS.isSet() ? SS.getScopeRep()->isDependent()
                    : BaseExprType->isDependentType())))
@@ -1322,28 +1321,28 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     else if (const ObjCObjectPointerType *Ptr =
                  BaseType->getAs<ObjCObjectPointerType>())
       BaseType = Ptr->getPointeeType();
-    else if (!BaseType->isDependentType()) {
-      if (BaseType->isRecordType()) {
-        // Recover from arrow accesses to records, e.g.:
-        //   struct MyRecord foo;
-        //   foo->bar
-        // This is actually well-formed in C++ if MyRecord has an
-        // overloaded operator->, but that should have been dealt with
-        // by now--or a diagnostic message already issued if a problem
-        // was encountered while looking for the overloaded operator->.
-        if (!S.getLangOpts().CPlusPlus) {
-          S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
-              << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
-              << FixItHint::CreateReplacement(OpLoc, ".");
-        }
-        IsArrow = false;
-      } else if (BaseType->isFunctionType()) {
-        goto fail;
-      } else {
-        S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
-            << BaseType << BaseExpr.get()->getSourceRange();
-        return ExprError();
+    else if (BaseType->isFunctionType())
+      goto fail;
+    else if (BaseType->isDependentType())
+      BaseType = S.Context.DependentTy;
+    else if (BaseType->isRecordType()) {
+      // Recover from arrow accesses to records, e.g.:
+      //   struct MyRecord foo;
+      //   foo->bar
+      // This is actually well-formed in C++ if MyRecord has an
+      // overloaded operator->, but that should have been dealt with
+      // by now--or a diagnostic message already issued if a problem
+      // was encountered while looking for the overloaded operator->.
+      if (!S.getLangOpts().CPlusPlus) {
+        S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
+            << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
+            << FixItHint::CreateReplacement(OpLoc, ".");
       }
+      IsArrow = false;
+    } else {
+      S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
+          << BaseType << BaseExpr.get()->getSourceRange();
+      return ExprError();
     }
   }
 
@@ -1363,7 +1362,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   }
 
   // Handle field access to simple records.
-  if (BaseType->getAsRecordDecl() || BaseType->isDependentType()) {
+  if (BaseType->getAsRecordDecl()) {
     TypoExpr *TE = nullptr;
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
                                  SS, HasTemplateArgs, TemplateKWLoc, TE))
@@ -1374,6 +1373,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // failed, the lookup result will have been cleared--that combined with the
     // valid-but-null ExprResult will trigger the appropriate diagnostics.
     return ExprResult(TE);
+  } else if (BaseType->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return ExprEmpty();
   }
 
   // Handle ivar access to Objective-C objects.
@@ -1517,9 +1519,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     if (warn) {
       if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
         ObjCMethodFamily MF = MD->getMethodFamily();
-        warn = (MF != OMF_init && MF != OMF_dealloc &&
-                MF != OMF_finalize &&
-                !S.IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
+        warn = (MF != OMF_init && MF != OMF_dealloc && MF != OMF_finalize &&
+                !S.ObjC().IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
       }
       if (warn)
         S.Diag(MemberLoc, diag::warn_direct_ivar_access) << IV->getDeclName();
@@ -1657,9 +1658,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     }
 
     // Normal property access.
-    return S.HandleExprPropertyRefExpr(OPT, BaseExpr.get(), OpLoc, MemberName,
-                                       MemberLoc, SourceLocation(), QualType(),
-                                       false);
+    return S.ObjC().HandleExprPropertyRefExpr(
+        OPT, BaseExpr.get(), OpLoc, MemberName, MemberLoc, SourceLocation(),
+        QualType(), false);
   }
 
   if (BaseType->isExtVectorBoolType()) {

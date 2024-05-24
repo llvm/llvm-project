@@ -1,5 +1,8 @@
 # REQUIRES: target-aarch64 && native
 # UNSUPPORTED: system-windows
+# llvm.org/pr91610, rdar://128031075
+# XFAIL: system-darwin
+
 
 # RUN: %clang_host %S/Inputs/signal-in-leaf-function-aarch64.c -o %t
 # RUN: %lldb -s %s -o exit %t | FileCheck %s

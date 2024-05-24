@@ -1,5 +1,5 @@
 ! Offloading test checking interaction of pointer
-! and target with target where 3-D bounds have 
+! and target with target where 3-D bounds have
 ! been specified
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
@@ -15,10 +15,10 @@ program main
     integer, pointer :: outArray(:,:,:)
     integer, target :: in(3,3,3)
     integer, target :: out(3,3,3)
-    
+
     inArray => in
     outArray => out
-    
+
     do i = 1, 3
       do j = 1, 3
         do k = 1, 3

@@ -360,7 +360,7 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r1") || RegName.equals("x1");
+    return RegName == "r1" || RegName == "x1";
   }
 
   // We support __builtin_cpu_supports/__builtin_cpu_is on targets that

@@ -168,7 +168,7 @@ struct DAP {
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  std::atomic<bool> sent_terminated_event;
+  bool disconnecting = false;
   bool stop_at_entry;
   bool is_attach;
   bool enable_auto_variable_summaries;

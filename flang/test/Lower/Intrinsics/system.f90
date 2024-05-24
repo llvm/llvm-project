@@ -15,8 +15,7 @@ call system(command, exitstat)
 ! CHECK-NEXT:   %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:   %[[exitstatBox:.*]] = fir.embox %[[exitstatDeclare]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK-NEXT:   %[[true:.*]] = arith.constant true
-! CHECK-NEXT:   %[[c0_i2:.*]] = arith.constant 0 : i2
-! CHECK-NEXT:   %[[c0_i16:.*]] = fir.convert %[[c0_i2]] : (i2) -> i16
+! CHECK-NEXT:   %[[c0_i16:.*]] = arith.constant 0 : i16
 ! CHECK-NEXT:   fir.store %[[c0_i16]] to %[[cmdstatVal]] : !fir.ref<i16>
 ! CHECK-NEXT:   %[[cmdstatBox:.*]] = fir.embox %[[cmdstatVal]] : (!fir.ref<i16>) -> !fir.box<i16>
 ! CHECK-NEXT:   %[[absentBox:.*]] = fir.absent !fir.box<none>
@@ -41,8 +40,7 @@ call system(command)
 ! CHECK-NEXT:   %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:   %[[true:.*]] = arith.constant true
 ! CHECK-NEXT:   %[[absentBox:.*]] = fir.absent !fir.box<none>
-! CHECK-NEXT:   %[[c0_i2:.*]] = arith.constant 0 : i2
-! CHECK-NEXT:   %[[c0_i16:.*]] = fir.convert %[[c0_i2]] : (i2) -> i16
+! CHECK-NEXT:   %[[c0_i16:.*]] = arith.constant 0 : i16
 ! CHECK-NEXT:   fir.store %[[c0_i16]] to %[[cmdstatVal]] : !fir.ref<i16>
 ! CHECK-NEXT:   %[[cmdstatBox:.*]] = fir.embox %[[cmdstatVal]] : (!fir.ref<i16>) -> !fir.box<i16>
 ! CHECK-NEXT:   %[[absentBox2:.*]] = fir.absent !fir.box<none>

@@ -60,6 +60,7 @@ def prepare_common_structured_op(
         in [
             OperandKind.UNARY_FN_ATTR,
             OperandKind.BINARY_FN_ATTR,
+            OperandKind.TERNARY_FN_ATTR,
             OperandKind.TYPE_FN_ATTR,
         ]
     ]
@@ -179,6 +180,12 @@ def prepare_common_structured_op(
                     raise ValueError(
                         f"Attribute {fn_attr.name} needs to be of type "
                         f"BinaryFnType but got {type(attr_val)}"
+                    )
+            elif attr_kind == OperandKind.TERNARY_FN_ATTR:
+                if not isinstance(fn, TernaryFnType):
+                    raise ValueError(
+                        f"Attribute {fn_attr.name} needs to be of type "
+                        f"TernaryFnType but got {type(attr_val)}"
                     )
             else:
                 if not isinstance(fn, TypeFnType):

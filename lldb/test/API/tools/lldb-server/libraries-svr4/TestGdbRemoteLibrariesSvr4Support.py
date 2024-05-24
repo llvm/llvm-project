@@ -4,6 +4,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+# Windows does not allow quotes in file names.
+@skipIf(hostoslist=["windows"])
 class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase):
     FEATURE_NAME = "qXfer:libraries-svr4:read"
 

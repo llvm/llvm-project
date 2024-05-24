@@ -117,13 +117,13 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
 template <typename T>
 inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
     T x) {
-  if (x <= 2) {
+  if (x <= 8) {
     return 1;
-  } else if (x <= 4) {
+  } else if (x <= 16) {
     return 2;
-  } else if (x <= 9) {
+  } else if (x <= 32) {
     return 4;
-  } else if (x <= 18) {
+  } else if (x <= 64) {
     return 8;
   }
   return -1;

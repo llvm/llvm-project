@@ -994,17 +994,17 @@ TEST_F(IRBuilderTest, DIBuilder) {
     EXPECT_TRUE(verifyModule(*M));
   };
 
-  // Test in new-debug mode.
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
+  // Test in old-debug mode.
+  EXPECT_FALSE(M->IsNewDbgInfoFormat);
   RunTest();
 
-  // Test in old-debug mode.
-  // Reset the test then call convertFromNewDbgValues to flip the flag
+  // Test in new-debug mode.
+  // Reset the test then call convertToNewDbgValues to flip the flag
   // on the test's Module, Function and BasicBlock.
   TearDown();
   SetUp();
-  M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
+  M->convertToNewDbgValues();
+  EXPECT_TRUE(M->IsNewDbgInfoFormat);
   RunTest();
 }
 

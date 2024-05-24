@@ -101,10 +101,10 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v32i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    li a0, 32
+; NO-ZVBB-NEXT:    lui a1, %hi(.LCPI4_0)
+; NO-ZVBB-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; NO-ZVBB-NEXT:    lui a0, %hi(.LCPI4_0)
-; NO-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI4_0)
-; NO-ZVBB-NEXT:    vle8.v v8, (a0)
+; NO-ZVBB-NEXT:    vle8.v v8, (a1)
 ; NO-ZVBB-NEXT:    vmv.v.i v10, 0
 ; NO-ZVBB-NEXT:    vmerge.vim v10, v10, 1, v0
 ; NO-ZVBB-NEXT:    vrgather.vv v12, v10, v8
@@ -124,10 +124,10 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v64i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    li a0, 64
+; NO-ZVBB-NEXT:    lui a1, %hi(.LCPI5_0)
+; NO-ZVBB-NEXT:    addi a1, a1, %lo(.LCPI5_0)
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; NO-ZVBB-NEXT:    lui a0, %hi(.LCPI5_0)
-; NO-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI5_0)
-; NO-ZVBB-NEXT:    vle8.v v8, (a0)
+; NO-ZVBB-NEXT:    vle8.v v8, (a1)
 ; NO-ZVBB-NEXT:    vmv.v.i v12, 0
 ; NO-ZVBB-NEXT:    vmerge.vim v12, v12, 1, v0
 ; NO-ZVBB-NEXT:    vrgather.vv v16, v12, v8
@@ -147,10 +147,10 @@ define <128 x i1> @reverse_v128i1(<128 x i1> %a) {
 ; CHECK-LABEL: reverse_v128i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    lui a1, %hi(.LCPI6_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI6_0)
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI6_0)
-; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vrgather.vv v24, v16, v8

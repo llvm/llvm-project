@@ -16,17 +16,22 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 #include <cassert>
+#include <memory>
 #include <utility>
 
 #define DEBUG_TYPE "dataflow"
@@ -290,15 +295,14 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
 namespace {
 
 // Visitor that builds a map from record prvalues to result objects.
-// This traverses the body of the function to be analyzed; for each result
-// object that it encounters, it propagates the storage location of the result
-// object to all record prvalues that can initialize it.
+// For each result object that it encounters, it propagates the storage location
+// of the result object to all record prvalues that can initialize it.
 class ResultObjectVisitor : public RecursiveASTVisitor<ResultObjectVisitor> {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
-  // object. If the function being analyzed returns a record by value,
-  // `LocForRecordReturnVal` is the location to which this record should be
-  // written; otherwise, it is null.
+  // object. If this visitor will traverse a function that returns a record by
+  // value, `LocForRecordReturnVal` is the location to which this record should
+  // be written; otherwise, it is null.
   explicit ResultObjectVisitor(
       llvm::DenseMap<const Expr *, RecordStorageLocation *> &ResultObjectMap,
       RecordStorageLocation *LocForRecordReturnVal,
@@ -514,39 +518,31 @@ private:
 
 } // namespace
 
-Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx),
-      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
-
-Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtx)
-    : Environment(DACtx) {
-  CallStack.push_back(&DeclCtx);
-}
-
 void Environment::initialize() {
-  const DeclContext *DeclCtx = getDeclCtx();
-  if (DeclCtx == nullptr)
+  if (InitialTargetStmt == nullptr)
     return;
 
-  const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx);
-  if (FuncDecl == nullptr)
+  if (InitialTargetFunc == nullptr) {
+    initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetStmt));
+    ResultObjectMap =
+        std::make_shared<PrValueToResultObject>(buildResultObjectMap(
+            DACtx, InitialTargetStmt, getThisPointeeStorageLocation(),
+            /*LocForRecordReturnValue=*/nullptr));
     return;
+  }
 
-  assert(FuncDecl->doesThisDeclarationHaveABody());
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetFunc));
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
-
-  for (const auto *ParamDecl : FuncDecl->parameters()) {
+  for (const auto *ParamDecl : InitialTargetFunc->parameters()) {
     assert(ParamDecl != nullptr);
     setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
   }
 
-  if (FuncDecl->getReturnType()->isRecordType())
+  if (InitialTargetFunc->getReturnType()->isRecordType())
     LocForRecordReturnVal = &cast<RecordStorageLocation>(
-        createStorageLocation(FuncDecl->getReturnType()));
+        createStorageLocation(InitialTargetFunc->getReturnType()));
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(InitialTargetFunc)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
 
@@ -558,7 +554,7 @@ void Environment::initialize() {
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
           const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
+              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
@@ -580,18 +576,16 @@ void Environment::initialize() {
 
   // We do this below the handling of `CXXMethodDecl` above so that we can
   // be sure that the storage location for `this` has been set.
-  ResultObjectMap = std::make_shared<PrValueToResultObject>(
-      buildResultObjectMap(DACtx, FuncDecl, getThisPointeeStorageLocation(),
-                           LocForRecordReturnVal));
+  ResultObjectMap =
+      std::make_shared<PrValueToResultObject>(buildResultObjectMap(
+          DACtx, InitialTargetFunc, getThisPointeeStorageLocation(),
+          LocForRecordReturnVal));
 }
 
-// FIXME: Add support for resetting globals after function calls to enable
-// the implementation of sound analyses.
-void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
-  assert(FuncDecl->doesThisDeclarationHaveABody());
+// FIXME: Add support for resetting globals after function calls to enable the
+// implementation of sound analyses.
 
-  ReferencedDecls Referenced = getReferencedDecls(*FuncDecl);
-
+void Environment::initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced) {
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
   DACtx->addModeledFields(Referenced.Fields);
@@ -602,9 +596,9 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
 
     // We don't run transfer functions on the initializers of global variables,
     // so they won't be associated with a value or storage location. We
-    // therefore intentionally don't pass an initializer to `createObject()`;
-    // in particular, this ensures that `createObject()` will initialize the
-    // fields of record-type variables with values.
+    // therefore intentionally don't pass an initializer to `createObject()`; in
+    // particular, this ensures that `createObject()` will initialize the fields
+    // of record-type variables with values.
     setStorageLocation(*D, createObject(*D, nullptr));
   }
 
@@ -623,8 +617,8 @@ Environment Environment::fork() const {
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
-                             const DeclContext *Callee) const {
-  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
+                             const FunctionDecl *Callee) const {
+  return CallStack.size() < MaxDepth && !llvm::is_contained(CallStack, Callee);
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {
@@ -671,7 +665,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
   CallStack.push_back(FuncDecl);
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*FuncDecl));
 
   const auto *ParamIt = FuncDecl->param_begin();
 
@@ -755,6 +749,8 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
   assert(CallStack == PrevEnv.CallStack);
   assert(ResultObjectMap == PrevEnv.ResultObjectMap);
+  assert(InitialTargetFunc == PrevEnv.InitialTargetFunc);
+  assert(InitialTargetStmt == PrevEnv.InitialTargetStmt);
 
   auto Effect = LatticeEffect::Unchanged;
 
@@ -790,6 +786,8 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
   assert(EnvA.CallStack == EnvB.CallStack);
   assert(EnvA.ResultObjectMap == EnvB.ResultObjectMap);
+  assert(EnvA.InitialTargetFunc == EnvB.InitialTargetFunc);
+  assert(EnvA.InitialTargetStmt == EnvB.InitialTargetStmt);
 
   Environment JoinedEnv(*EnvA.DACtx);
 
@@ -797,14 +795,13 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.ResultObjectMap = EnvA.ResultObjectMap;
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
+  JoinedEnv.InitialTargetFunc = EnvA.InitialTargetFunc;
+  JoinedEnv.InitialTargetStmt = EnvA.InitialTargetStmt;
 
-  if (EnvA.CallStack.empty()) {
+  const FunctionDecl *Func = EnvA.getCurrentFunc();
+  if (!Func) {
     JoinedEnv.ReturnVal = nullptr;
   } else {
-    // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
-    // cast.
-    auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
-    assert(Func != nullptr);
     JoinedEnv.ReturnVal =
         joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
                    EnvB, JoinedEnv, Model);
@@ -1229,13 +1226,23 @@ Environment::PrValueToResultObject Environment::buildResultObjectMap(
     RecordStorageLocation *LocForRecordReturnVal) {
   assert(FuncDecl->doesThisDeclarationHaveABody());
 
-  PrValueToResultObject Map;
+  PrValueToResultObject Map = buildResultObjectMap(
+      DACtx, FuncDecl->getBody(), ThisPointeeLoc, LocForRecordReturnVal);
 
   ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FuncDecl))
     Visitor.TraverseConstructorInits(Ctor, ThisPointeeLoc);
-  Visitor.TraverseStmt(FuncDecl->getBody());
 
+  return Map;
+}
+
+Environment::PrValueToResultObject Environment::buildResultObjectMap(
+    DataflowAnalysisContext *DACtx, Stmt *S,
+    RecordStorageLocation *ThisPointeeLoc,
+    RecordStorageLocation *LocForRecordReturnVal) {
+  PrValueToResultObject Map;
+  ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
+  Visitor.TraverseStmt(S);
   return Map;
 }
 

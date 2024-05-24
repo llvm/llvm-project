@@ -519,6 +519,22 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
   }
 }
 
+static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
+  SmallVector<MachineInstr *, 10> ToErase;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
+        continue;
+      MIB.setInsertPt(*MI.getParent(), MI);
+      buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
+                              MI.getOperand(2).getMetadata());
+      ToErase.push_back(&MI);
+    }
+  }
+  for (MachineInstr *MI : ToErase)
+    MI->eraseFromParent();
+}
+
 // Find basic blocks of the switch and replace registers in spv_switch() by its
 // MBB equivalent.
 static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -586,8 +602,25 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         ToEraseMI.insert(Next);
     }
   }
-  for (MachineInstr *BlockAddrI : ToEraseMI)
+
+  // If we just delete G_BLOCK_ADDR instructions with BlockAddress operands,
+  // this leaves their BasicBlock counterparts in a "address taken" status. This
+  // would make AsmPrinter to generate a series of unneeded labels of a "Address
+  // of block that was removed by CodeGen" kind. Let's first ensure that we
+  // don't have a dangling BlockAddress constants by zapping the BlockAddress
+  // nodes, and only after that proceed with erasing G_BLOCK_ADDR instructions.
+  Constant *Replacement =
+      ConstantInt::get(Type::getInt32Ty(MF.getFunction().getContext()), 1);
+  for (MachineInstr *BlockAddrI : ToEraseMI) {
+    if (BlockAddrI->getOpcode() == TargetOpcode::G_BLOCK_ADDR) {
+      BlockAddress *BA = const_cast<BlockAddress *>(
+          BlockAddrI->getOperand(1).getBlockAddress());
+      BA->replaceAllUsesWith(
+          ConstantExpr::getIntToPtr(Replacement, BA->getType()));
+      BA->destroyConstant();
+    }
     BlockAddrI->eraseFromParent();
+  }
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
@@ -639,6 +672,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   processSwitches(MF, GR, MIB);
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
+  insertSpirvDecorations(MF, MIB);
 
   return true;
 }
