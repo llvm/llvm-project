@@ -5009,23 +5009,15 @@ bool InstCombinerImpl::run() {
 
         Instruction *UserInst = cast<Instruction>(User);
         // Special handling for Phi nodes - get the block the use occurs in.
-        if (PHINode *PN = dyn_cast<PHINode>(UserInst)) {
-          unsigned Num =
-              PHINode::getIncomingValueNumForOperand(U.getOperandNo());
-          assert(PN->getIncomingValue(Num) == I && "Expect from def-use chain");
-
-          // Bail out if we have uses in different blocks. We don't do any
-          // sophisticated analysis (i.e finding NearestCommonDominator of
-          // these use blocks).
-          BasicBlock *IncomingBlock = PN->getIncomingBlock(Num);
-          if (UserParent && UserParent != IncomingBlock)
-            return std::nullopt;
-          UserParent = IncomingBlock;
-        } else {
-          if (UserParent && UserParent != UserInst->getParent())
-            return std::nullopt;
-          UserParent = UserInst->getParent();
-        }
+        BasicBlock *UserBB = UserInst->getParent();
+        if (PHINode *PN = dyn_cast<PHINode>(UserInst))
+          UserBB = PN->getIncomingBlock(U);
+        // Bail out if we have uses in different blocks. We don't do any
+        // sophisticated analysis (i.e finding NearestCommonDominator of these
+        // use blocks).
+        if (UserParent && UserParent != UserBB)
+          return std::nullopt;
+        UserParent = UserBB;
 
         // Make sure these checks are done only once, naturally we do the checks
         // the first time we get the userparent, this will save compile time.
