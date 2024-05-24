@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR","LLVM-LABEL" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR","LLVM" %s
 !
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64-unknown-aix -o - | FileCheck --check-prefixes="BE-LLVMIR","LLVM-LABEL" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64-unknown-aix -o - | FileCheck --check-prefixes="BE-LLVMIR","LLVM" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------

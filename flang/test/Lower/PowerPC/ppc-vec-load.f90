@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE","LLVM-LABEL" %s
-! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -target-cpu pwr9 -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR_P9","LLVM-LABEL" %s
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE","LLVM-LABEL" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE","LLVM" %s
+! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -target-cpu pwr9 -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR_P9","LLVM" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE","LLVM" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------
