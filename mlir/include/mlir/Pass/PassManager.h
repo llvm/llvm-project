@@ -392,21 +392,22 @@ public:
   /// output of each pass to a separate file. The files will be organized into a
   /// directory tree rooted at `printTreeDir`. The directories mirror the
   /// nesting structure of the IR. For example, if the IR is congruent to the
-  /// pass-pipeline "builtin.module(passA,passB,func.func(passC,passD)))", and
-  /// `printTreeDir=/tmp/pipeline_output`, then then the tree file tree created
-  /// will look like:
+  /// pass-pipeline "builtin.module(passA,passB,func.func(passC,passD),passE)",
+  /// and `printTreeDir=/tmp/pipeline_output`, then then the tree file tree
+  /// created will look like:
   ///
   /// ```
   /// /tmp/pass_output
   /// ├── builtin_module_the_symbol_name
   /// │   ├── 0_passA.mlir
   /// │   ├── 1_passB.mlir
+  /// │   ├── 2_passE.mlir
   /// │   ├── func_func_my_func_name
-  /// │   │   ├── 2_passC.mlir
-  /// │   │   ├── 3_passD.mlir
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1__passD.mlir
   /// │   ├── func_func_my_other_func_name
-  /// │   │   ├── 4_passC.mlir
-  /// │   │   ├── 5_passD.mlir
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1_passD.mlir
   /// ```
   ///
   /// The subdirectories are given names that reflect the parent operation name
