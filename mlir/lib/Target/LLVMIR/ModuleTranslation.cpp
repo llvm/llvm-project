@@ -635,6 +635,17 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       if (child->isZeroValue()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       } else {
+        if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
+          // TODO: Handle all compatible types. This code only handle i32.
+          if (llvm::IntegerType *iTy = dyn_cast<llvm::IntegerType>(elementType)) {
+            if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
+              if (ci->getBitWidth() == 32) {
+                SmallVector<int32_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(), constants);
+              }
+            }
+          }
+        }
         // std::vector is used here to accomodate large number of elements that
         // exceed SmallVector capacity.
         std::vector<llvm::Constant *> constants(numElements, child);
