@@ -2188,6 +2188,8 @@ public:
 
   void setRangeEnd(SourceLocation E) { EndRangeLoc = E; }
 
+  void setDeclarationNameLoc(DeclarationNameLoc L) { DNLoc = L; }
+
   /// Returns the location of the ellipsis of a variadic function.
   SourceLocation getEllipsisLoc() const {
     const auto *FPT = getType()->getAs<FunctionProtoType>();

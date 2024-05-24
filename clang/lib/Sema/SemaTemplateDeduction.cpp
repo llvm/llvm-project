@@ -536,14 +536,14 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
   }
   case Decl::NonTypeTemplateParm: {
     auto *T = cast<NonTypeTemplateParmDecl>(A);
-    // FIXME: Ditto, as above for TemplateTypeParm case.
-    if (T->isParameterPack())
-      return A;
     auto *R = NonTypeTemplateParmDecl::Create(
         S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
         T->getDepth(), T->getIndex(), T->getIdentifier(), T->getType(),
-        /*ParameterPack=*/false, T->getTypeSourceInfo());
-    R->setDefaultArgument(Default.getAsExpr());
+        T->isParameterPack(), T->getTypeSourceInfo());
+    R->setDefaultArgument(S.Context,
+                          S.getTrivialTemplateArgumentLoc(
+                              Default, Default.getNonTypeTemplateArgumentType(),
+                              SourceLocation()));
     if (auto *PTC = T->getPlaceholderTypeConstraint())
       R->setPlaceholderTypeConstraint(PTC);
     return R;
@@ -4772,8 +4772,13 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       DeduceReturnType(Specialization, Info.getLocation(), false))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
+  // [C++26][expr.const]/p17
+  // An expression or conversion is immediate-escalating if it is not initially
+  // in an immediate function context and it is [...]
+  // a potentially-evaluated id-expression that denotes an immediate function.
   if (IsAddressOfFunction && getLangOpts().CPlusPlus20 &&
       Specialization->isImmediateEscalating() &&
+      parentEvaluationContext().isPotentiallyEvaluated() &&
       CheckIfFunctionSpecializationIsImmediate(Specialization,
                                                Info.getLocation()))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
