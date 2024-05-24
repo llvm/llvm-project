@@ -4856,8 +4856,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     if (D &&
         (Entry->getDLLStorageClass() ==
          llvm::GlobalVariable::DLLImportStorageClass) &&
-        !D->hasAttr<DLLImportAttr>() &&
-        !shouldMapVisibilityToDLLExport(D))
+        !D->hasAttr<DLLImportAttr>() && !shouldMapVisibilityToDLLExport(D))
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
 
     if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && D)
