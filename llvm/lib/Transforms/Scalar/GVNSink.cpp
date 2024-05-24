@@ -132,7 +132,7 @@ public:
         ActiveBlocks.remove(BB);
         continue;
       }
-      Insts.push_back(BB->getTerminator()->getPrevNode());
+      Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
     }
     if (Insts.empty())
       Fail = true;
@@ -168,7 +168,7 @@ public:
       if (Inst == &Inst->getParent()->front())
         ActiveBlocks.remove(Inst->getParent());
       else
-        NewInsts.push_back(Inst->getPrevNode());
+        NewInsts.push_back(Inst->getPrevNonDebugInstruction());
     }
     if (NewInsts.empty()) {
       Fail = true;
@@ -763,12 +763,11 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
   // try and continue making progress.
   Instruction *I0 = NewInsts[0];
 
-  // If all instructions that are going to participate don't have the same
-  // number of operands, we can't do any useful PHI analysis for all operands.
-  auto hasDifferentNumOperands = [&I0](Instruction *I) {
-    return I->getNumOperands() != I0->getNumOperands();
+  auto isNotSameOperation = [&I0](Instruction *I) {
+    return !I0->isSameOperationAs(I);
   };
-  if (any_of(NewInsts, hasDifferentNumOperands))
+
+  if (any_of(NewInsts, isNotSameOperation))
     return std::nullopt;
 
   for (unsigned OpNum = 0, E = I0->getNumOperands(); OpNum != E; ++OpNum) {
@@ -884,7 +883,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
                                   BasicBlock *BBEnd) {
   SmallVector<Instruction *, 4> Insts;
   for (BasicBlock *BB : Blocks)
-    Insts.push_back(BB->getTerminator()->getPrevNode());
+    Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
   Instruction *I0 = Insts.front();
 
   SmallVector<Value *, 4> NewOperands;

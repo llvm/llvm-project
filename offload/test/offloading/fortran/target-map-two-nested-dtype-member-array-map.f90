@@ -24,10 +24,10 @@ program main
     real(4) :: break_3
     type(array) :: nested
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   do i = 1, 10
     scalar_arr1%nested%array_z(i) = i
     scalar_arr2%nested%array_z(i) = i
@@ -37,7 +37,7 @@ program main
     do i = 3, 6
       scalar_arr2%nested%array_ix(i) = scalar_arr1%nested%array_z(i)
     end do
-    
+
     do i = 3, 6
       scalar_arr1%nested%array_ix(i) = scalar_arr2%nested%array_z(i)
     end do

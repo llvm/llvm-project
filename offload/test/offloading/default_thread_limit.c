@@ -33,7 +33,7 @@ int main() {
     optnone();
   }
 // DEFAULT: [[NT:(128|256)]] (MaxFlatWorkGroupSize: [[NT]]
-#pragma omp target 
+#pragma omp target
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();

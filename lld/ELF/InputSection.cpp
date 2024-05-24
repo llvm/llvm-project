@@ -161,6 +161,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   }
   case Regular:
   case Synthetic:
+  case Spill:
     return cast<InputSection>(this)->outSecOff + offset;
   case EHFrame: {
     // Two code paths may reach here. First, clang_rt.crtbegin.o and GCC
@@ -308,6 +309,12 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
       .str();
 }
+
+PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
+                                             InputSectionDescription &isd)
+    : InputSection(source.file, source.flags, source.type, source.addralign, {},
+                   source.name, SectionBase::Spill),
+      isd(&isd) {}
 
 InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
 
@@ -464,11 +471,7 @@ void InputSection::copyRelocations(uint8_t *buf,
         addend += sec->getFile<ELFT>()->mipsGp0;
       }
 
-      if (config->emachine == EM_LOONGARCH && type == R_LARCH_ALIGN)
-        // LoongArch psABI v2.30, the R_LARCH_ALIGN requires symbol index.
-        // If it use the section symbol, the addend should not be changed.
-        p->r_addend = addend;
-      else if (RelTy::IsRela)
+      if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       // For SHF_ALLOC sections relocated by REL, append a relocation to
       // sec->relocations so that relocateAlloc transitively called by

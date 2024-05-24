@@ -51,9 +51,25 @@ C++ Specific Potentially Breaking Changes
 - The behavior controlled by the `-frelaxed-template-template-args` flag is now
   on by default, and the flag is deprecated. Until the flag is finally removed,
   it's negative spelling can be used to obtain compatibility with previous
-  versions of clang.
+  versions of clang. The deprecation warning for the negative spelling can be
+  disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
 - Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+
+- Clang now performs semantic analysis for unary operators with dependent operands
+  that are known to be of non-class non-enumeration type prior to instantiation.
+
+  This change uncovered a bug in libstdc++ 14.1.0 which may cause compile failures
+  on systems using that version of libstdc++ and Clang 19, with an error that looks
+  something like this:
+
+  .. code-block:: text
+
+    <source>:4:5: error: expression is not assignable
+    4 |     ++this;
+      |     ^ ~~~~
+
+  To fix this, update libstdc++ to version 14.1.1 or greater.
 
 ABI Changes in This Version
 ---------------------------
@@ -114,6 +130,9 @@ Clang Frontend Potentially Breaking Changes
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
 
+- The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
+  existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -147,6 +166,11 @@ C++17 Feature Support
   the values produced by GCC, so these macros should not be used from header
   files because they may not be stable across multiple TUs (the values may vary
   based on compiler version as well as CPU tuning). #GH60174
+
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -218,6 +242,9 @@ Resolutions to C++ Defect Reports
 
 - Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
   (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
+
+- Clang now allows attributes on concepts.
+  (`CWG2428: Deprecating a concept <https://cplusplus.github.io/CWG/issues/2428.html>`_).
 
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
@@ -307,7 +334,8 @@ New Compiler Flags
 
 - ``-fexperimental-late-parse-attributes`` enables an experimental feature to
   allow late parsing certain attributes in specific contexts where they would
-  not normally be late parsed.
+  not normally be late parsed. Currently this allows late parsing the
+  `counted_by` attribute in C. See `Attribute Changes in Clang`_.
 
 - ``-fseparate-named-sections`` uses separate unique sections for global
   symbols in named special sections (i.e. symbols annotated with
@@ -392,6 +420,28 @@ Attribute Changes in Clang
 
 - Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
   is ignored when applied to a local class or a member thereof.
+
+- The ``clspv_libclc_builtin`` attribute has been added to allow clspv
+  (`OpenCL-C to Vulkan SPIR-V compiler <https://github.com/google/clspv>`_) to identify functions coming from libclc
+  (`OpenCL-C builtin library <https://libclc.llvm.org>`_).
+- The ``counted_by`` attribute is now allowed on pointers that are members of a
+  struct in C.
+
+- The ``counted_by`` attribute can now be late parsed in C when
+  ``-fexperimental-late-parse-attributes`` is passed but only when attribute is
+  used in the declaration attribute position. This allows using the
+  attribute on existing code where it previously impossible to do so without
+  re-ordering struct field declarations would break ABI as shown below.
+
+  .. code-block:: c
+
+     struct BufferTy {
+       /* Refering to `count` requires late parsing */
+       char* buffer __counted_by(count);
+       /* Swapping `buffer` and `count` to avoid late parsing would break ABI */
+       size_t count;
+     };
+
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -484,8 +534,14 @@ Improvements to Clang's diagnostics
        }
      };
 
+- Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
+  Fixes #GH20456.
+
 Improvements to Clang's time-trace
 ----------------------------------
+
+- Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
+  appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -562,6 +618,12 @@ Bug Fixes in This Version
 
 - Clang will no longer emit a duplicate -Wunused-value warning for an expression
   `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
+- Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
+  as the C standard mandates. (#GH89835)
+
+- ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
+  zero-sized arrays. Fixes (#GH54705).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -708,23 +770,47 @@ Bug Fixes to C++ Support
   expression.
 - Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 - Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
+- When partial ordering alias templates against template template parameters,
+  allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
+- Clang now ignores template parameters only used within the exception specification of candidate function
+  templates during partial ordering when deducing template arguments from a function declaration or when
+  taking the address of a function template.
+- Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
+- Fix a bug where the last argument was not considered when considering the most viable function for
+  explicit object argument member functions. Fixes (#GH92188).
+- Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
+  the ``constexpr`` specifier. Fixes (#GH61004).
+- Clang no longer transforms dependent qualified names into implicit class member access expressions
+  until it can be determined whether the name is that of a non-static member.
+- Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
+- Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
+  as implicitly ``const`` in language modes after C++11.
+- Fixed a crash when trying to emit captures in a lambda call operator with an explicit object
+  parameter that is called on a derived type of the lambda.
+  Fixes (#GH87210), (GH89541).
+- Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
+  Fixes (#GH91308).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 - The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
+- Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed an infinite recursion in ASTImporter, on return type declared inside
   body of C++11 lambda without trailing return (#GH68775).
+- Fixed declaration name source location of instantiated function definitions (GH71161).
+- Improve diagnostic output to print an expression instead of 'no argument` when comparing Values as template arguments.
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Do not attempt to dump the layout of dependent types or invalid declarations
   when ``-fdump-record-layouts-complete`` is passed. Fixes #GH83684.
+- Unhandled StructuralValues in the template differ (#GH93068).
 
 OpenACC Specific Changes
 ------------------------
@@ -737,6 +823,8 @@ AMDGPU Support
 
 X86 Support
 ^^^^^^^^^^^
+
+- Remove knl/knm specific ISA supports: AVX512PF, AVX512ER, PREFETCHWT1
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -789,6 +877,10 @@ Windows Support
   This also means that if all intrinsic features are enabled at compile time
   including STL headers will no longer slow down compile times since ``intrin.h``
   is not included from MSVC STL.
+
+- When the target triple is `*-windows-msvc` strict aliasing is now disabled by default
+  to ensure compatibility with msvc. Previously strict aliasing was only disabled if the
+  driver mode was cl.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

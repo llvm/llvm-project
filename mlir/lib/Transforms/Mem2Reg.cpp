@@ -9,6 +9,7 @@
 #include "mlir/Transforms/Mem2Reg.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
@@ -16,7 +17,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
@@ -517,7 +517,7 @@ getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
     return it->second;
 
   DenseMap<Block *, size_t> &blockIndices = it->second;
-  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(*region);
+  SetVector<Block *> topologicalOrder = getBlocksSortedByDominance(*region);
   for (auto [index, block] : llvm::enumerate(topologicalOrder))
     blockIndices[block] = index;
   return blockIndices;

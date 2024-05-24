@@ -137,6 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
     default:
@@ -557,6 +558,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::LogicalAnd: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateLogicalAnd(A, B, Name);
+  }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
@@ -688,6 +694,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::LogicalAnd:
+    O << "logical-and";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -1497,24 +1506,25 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   // Note that Mask0 is never used: lanes for which no path reaches this phi and
   // are essentially undef are taken from In0.
  VectorParts Entry(State.UF);
-  for (unsigned In = 0; In < NumIncoming; ++In) {
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      // We might have single edge PHIs (blocks) - use an identity
-      // 'select' for the first PHI operand.
-      Value *In0 = State.get(getIncomingValue(In), Part);
-      if (In == 0)
-        Entry[Part] = In0; // Initialize with the first incoming value.
-      else {
-        // Select between the current value and the previous incoming edge
-        // based on the incoming mask.
-        Value *Cond = State.get(getMask(In), Part);
-        Entry[Part] =
-            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
-      }
-    }
-  }
+ bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+ for (unsigned In = 0; In < NumIncoming; ++In) {
+   for (unsigned Part = 0; Part < State.UF; ++Part) {
+     // We might have single edge PHIs (blocks) - use an identity
+     // 'select' for the first PHI operand.
+     Value *In0 = State.get(getIncomingValue(In), Part, OnlyFirstLaneUsed);
+     if (In == 0)
+       Entry[Part] = In0; // Initialize with the first incoming value.
+     else {
+       // Select between the current value and the previous incoming edge
+       // based on the incoming mask.
+       Value *Cond = State.get(getMask(In), Part, OnlyFirstLaneUsed);
+       Entry[Part] =
+           State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+     }
+   }
+ }
   for (unsigned Part = 0; Part < State.UF; ++Part)
-    State.set(this, Entry[Part], Part);
+    State.set(this, Entry[Part], Part, OnlyFirstLaneUsed);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

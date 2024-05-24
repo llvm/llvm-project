@@ -3,10 +3,22 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+fullfp16 -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define float @frem2(float %x) {
-; CHECK-LABEL: frem2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, #2.00000000
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s1, s2, s1, s0
+; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %fmod = frem float %x, 2.0
   ret float %fmod
@@ -311,6 +323,67 @@ entry:
   ret float %fmod
 }
 
+define <4 x float> @frem2_vec(<4 x float> %x) {
+; CHECK-SD-LABEL: frem2_vec:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v1.4s, #64, lsl #24
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
+; CHECK-SD-NEXT:    fmls v3.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
+; CHECK-SD-NEXT:    bit v0.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_vec:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    .cfi_offset b9, -24
+; CHECK-GI-NEXT:    .cfi_offset b10, -32
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    fmov s0, s8
+; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    fmov s0, s9
+; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    fmov s0, s10
+; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.s[2], v2.s[0]
+; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    add sp, sp, #80
+; CHECK-GI-NEXT:    ret
+entry:
+  %fmod = frem <4 x float> %x, <float 2.0, float 2.0, float 2.0, float 2.0>
+  ret <4 x float> %fmod
+}
+
 define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_nsz_vec:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -514,10 +587,15 @@ define float @frem2_constneg_sitofp(float %x, i32 %sa) {
 ; CHECK-SD-LABEL: frem2_constneg_sitofp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    fmov s0, #-12.50000000
+; CHECK-SD-NEXT:    fmov s1, #-12.50000000
 ; CHECK-SD-NEXT:    lsl w8, w8, w0
-; CHECK-SD-NEXT:    scvtf s1, w8
-; CHECK-SD-NEXT:    b fmodf
+; CHECK-SD-NEXT:    scvtf s0, w8
+; CHECK-SD-NEXT:    fdiv s2, s1, s0
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s0, s1
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    fneg s0, s0
+; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_constneg_sitofp:
 ; CHECK-GI:       // %bb.0: // %entry

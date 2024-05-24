@@ -107,9 +107,18 @@ class CommandLineCompletionTestCase(TestBase):
             self, "// Break here", lldb.SBFileSpec("main.cpp")
         )
         err = lldb.SBError()
-        self.process().LoadImage(
-            lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err
-        )
+        local_spec = lldb.SBFileSpec(self.getBuildArtifact("libshared.so"))
+        if lldb.remote_platform:
+            self.process().LoadImage(
+                local_spec,
+                lldb.SBFileSpec(
+                    lldbutil.append_to_process_working_directory(self, "libshared.so"),
+                    False,
+                ),
+                err,
+            )
+        else:
+            self.process().LoadImage(local_spec, err)
         self.assertSuccess(err)
 
         self.complete_from_to("process unload ", "process unload 0")
@@ -473,7 +482,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
         self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     def test_completion_target_create_from_root_dir(self):
         """Tests source file completion by completing ."""
         root_dir = os.path.abspath(os.sep)
