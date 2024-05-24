@@ -874,4 +874,32 @@ entry:
   ret i32 %.
 }
 
+define i32 @ctest_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
+; CHECK-LABEL: ctest_continous_nobranch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    ctestlel {dfv=sf} %esi, %esi
+; CHECK-NEXT:    ctestsl {dfv=zf} %edx, %edx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ctest_continous_nobranch:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testl %edi, %edi
+; NDD-NEXT:    ctestlel {dfv=sf} %esi, %esi
+; NDD-NEXT:    ctestsl {dfv=zf} %edx, %edx
+; NDD-NEXT:    setg %al
+; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %a, 0
+  %cmp1 = icmp slt i32 %b, 0
+  %cmp2 = icmp sgt i32 %c, 0
+  %or1 = or i1 %cmp, %cmp1
+  %or2 =  and i1 %or1, %cmp2
+  %. = zext i1 %or2 to i32
+  ret i32 %.
+}
+
 declare dso_local void @foo(...)

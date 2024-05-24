@@ -1070,5 +1070,33 @@ entry:
   ret i32 %.
 }
 
+define i32 @ccmp_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
+; CHECK-LABEL: ccmp_continous_nobranch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl $2, %edi
+; CHECK-NEXT:    ccmpll {dfv=sf} $2, %esi
+; CHECK-NEXT:    ccmpll {dfv=sf} $4, %edx
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ccmp_continous_nobranch:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl $2, %edi
+; NDD-NEXT:    ccmpll {dfv=sf} $2, %esi
+; NDD-NEXT:    ccmpll {dfv=sf} $4, %edx
+; NDD-NEXT:    setge %al
+; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %a, 1
+  %cmp1 = icmp slt i32 %b, 2
+  %cmp2 = icmp sgt i32 %c, 3
+  %or1 = or i1 %cmp, %cmp1
+  %or2 =  and i1 %or1, %cmp2
+  %. = zext i1 %or2 to i32
+  ret i32 %.
+}
+
 declare dso_local void @foo(...)
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
