@@ -1319,16 +1319,15 @@ void VPlanTransforms::addActiveLaneMask(
 /// ...
 ///
 bool VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
-  // EVL transform doesn't support backends where EVL diffs from RuntimeVF
-  // in the second-to-last iteration.
-  // Return false if any recipes rely on RuntimeVF.
-  if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             [](VPRecipeBase &Phi) {
-               return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
-                       isa<VPWidenPointerInductionRecipe>(&Phi));
-             }))
-    return false;
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // The transform updates all users of inductions to work based on EVL, instead
+  // of the VF directly. At the moment, widened inductions cannot be updated, so
+  // bail out if the plan contains any.
+  if (any_of(Header->phis(), [](VPRecipeBase &Phi) {
+        return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+                isa<VPWidenPointerInductionRecipe>(&Phi));
+      }))
+    return false;
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
