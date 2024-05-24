@@ -244,6 +244,8 @@
 //
 // RUN: %clang -### -c -gomit-unreferenced-methods %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fdebug-types-section %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fstandalone-debug %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
 //
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
