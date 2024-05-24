@@ -65,8 +65,8 @@ struct SCFTilingOptions {
     numThreadsComputationFunction = std::move(fun);
     return *this;
   }
-  /// Convenience function to set the `tileSizeComputationFunction` to a
-  /// function that computes tile sizes at the point they are needed.
+  /// Convenience function to set the `numThreadsComputationFunction` to a
+  /// function that computes num threads at the point they are needed.
   SCFTilingOptions &setNumThreads(ArrayRef<OpFoldResult> numThreads);
 
   /// The interchange vector to reorder the tiled loops.
