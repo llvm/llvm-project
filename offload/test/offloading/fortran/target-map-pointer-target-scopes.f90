@@ -1,5 +1,5 @@
 ! Offloading test checking interaction of pointer
-! and target with target across multiple scopes 
+! and target with target across multiple scopes
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
@@ -11,48 +11,48 @@
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test
     contains
-  subroutine func_arg(arg_alloc) 
+  subroutine func_arg(arg_alloc)
     integer,  pointer, intent (inout) :: arg_alloc(:)
-  
-  !$omp target map(tofrom: arg_alloc) 
+
+  !$omp target map(tofrom: arg_alloc)
     do index = 1, 10
       arg_alloc(index) = arg_alloc(index) + index
     end do
   !$omp end target
-    
+
     print *, arg_alloc
   end subroutine func_arg
 end module
-  
-subroutine func 
-   integer,  pointer :: local_alloc(:) 
+
+subroutine func
+   integer,  pointer :: local_alloc(:)
    integer, target :: b(10)
    local_alloc => b
-  
-  !$omp target map(tofrom: local_alloc) 
+
+  !$omp target map(tofrom: local_alloc)
     do index = 1, 10
       local_alloc(index) = index
     end do
   !$omp end target
-  
+
     print *, local_alloc
-  end subroutine func 
-  
-  
-  program main 
-  use test 
-  integer,  pointer :: map_ptr(:) 
+  end subroutine func
+
+
+  program main
+  use test
+  integer,  pointer :: map_ptr(:)
   integer, target :: b(10)
-  
+
   map_ptr => b
-  
-  !$omp target map(tofrom: map_ptr) 
+
+  !$omp target map(tofrom: map_ptr)
     do index = 1, 10
       map_ptr(index) = index
     end do
   !$omp end target
-  
-   call func 
+
+   call func
 
    print *, map_ptr
 

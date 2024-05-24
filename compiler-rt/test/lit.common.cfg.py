@@ -987,3 +987,9 @@ if config.compiler_id == "GNU":
     gcc_dir = os.path.dirname(config.clang)
     libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
     push_dynamic_library_lookup_path(config, libasan_dir)
+
+
+# Help tests that make sure certain files are in-sync between compiler-rt and
+# llvm.
+config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
+config.substitutions.append(("%llvm_src", config.llvm_src_root))

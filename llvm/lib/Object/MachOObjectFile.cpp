@@ -3256,13 +3256,13 @@ MachOAbstractFixupEntry::MachOAbstractFixupEntry(Error *E,
   for (const auto &Command : O->load_commands()) {
     if (Command.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command SLC = O->getSegmentLoadCommand(Command);
-      if (StringRef(SLC.segname) == StringRef("__TEXT")) {
+      if (StringRef(SLC.segname) == "__TEXT") {
         TextAddress = SLC.vmaddr;
         break;
       }
     } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 SLC_64 = O->getSegment64LoadCommand(Command);
-      if (StringRef(SLC_64.segname) == StringRef("__TEXT")) {
+      if (StringRef(SLC_64.segname) == "__TEXT") {
         TextAddress = SLC_64.vmaddr;
         break;
       }

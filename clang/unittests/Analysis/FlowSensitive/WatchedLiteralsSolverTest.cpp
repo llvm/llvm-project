@@ -20,7 +20,7 @@ SolverTest<WatchedLiteralsSolver>::createSolverWithLowTimeout() {
 namespace {
 
 INSTANTIATE_TYPED_TEST_SUITE_P(WatchedLiteralsSolverTest, SolverTest,
-                               WatchedLiteralsSolver);
+                               WatchedLiteralsSolver, );
 
 } // namespace
 } // namespace clang::dataflow::test

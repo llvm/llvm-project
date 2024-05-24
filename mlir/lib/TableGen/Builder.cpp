@@ -52,7 +52,7 @@ Builder::Builder(const llvm::Record *record, ArrayRef<SMLoc> loc)
   // Initialize the parameters of the builder.
   const llvm::DagInit *dag = def->getValueAsDag("dagParams");
   auto *defInit = dyn_cast<llvm::DefInit>(dag->getOperator());
-  if (!defInit || !defInit->getDef()->getName().equals("ins"))
+  if (!defInit || defInit->getDef()->getName() != "ins")
     PrintFatalError(def->getLoc(), "expected 'ins' in builders");
 
   bool seenDefaultValue = false;

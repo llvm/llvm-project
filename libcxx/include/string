@@ -741,8 +741,8 @@ public:
   // is kept inside objects memory (short string optimization), instead of in allocated
   // external memory. In such cases, the destructor is responsible for unpoisoning
   // the memory to avoid triggering false positives.
-  // Therefore it's crucial to ensure the destructor is called
-  using __trivially_relocatable = false_type;
+  // Therefore it's crucial to ensure the destructor is called.
+  using __trivially_relocatable = void;
 #else
   using __trivially_relocatable = __conditional_t<
       __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
