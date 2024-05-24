@@ -64,8 +64,7 @@ int main(int, char**) {
     LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0       // AIX
                   || msg.rfind("No error information", 0) == 0 // Musl
                   || msg.rfind("Unknown error", 0) == 0        // Glibc
-                  || (is_newlib && msg.empty())
-    );
+                  || (is_newlib && msg.empty()));
     assert(errno == E2BIG);
   }
 
