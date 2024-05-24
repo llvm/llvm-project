@@ -1,5 +1,11 @@
 ; RUN: llc -debug-entry-values %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=4 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=3 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=2 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 
 ; CHECK:      "sum_all_variables(#bytes in parent scope covered by DW_OP_entry_value)": 5,
 ; CHECK-NEXT: "sum_all_params(#bytes in parent scope)": 20,

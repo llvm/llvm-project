@@ -911,8 +911,8 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
       // across CUs, we therefore need to map each CU file index to a global
       // file index, which we store here.
       DenseMap<uint64_t, uint16_t> CUFileMapping;
-      std::string File;
       for (uint64_t FileIdx = 0; FileIdx <= *LastFileIdxOpt; ++FileIdx) {
+        std::string File;
         if (LineTable->getFileNameByIndex(
                 FileIdx, CU->getCompilationDir(),
                 DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
