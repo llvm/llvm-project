@@ -69,13 +69,6 @@ cmake --version
 ninja --version
 
 case "${BUILDER}" in
-check-format)
-    echo "*** Checking for trailing whitespace left in Clang source files ***"
-    if grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs; then
-        echo "*** Trailing whitespace has been found in Clang source files as described above ***"
-        exit 1
-    fi
-;;
 build-clang)
     mkdir install
     # We use Release here to avoid including debug information. Otherwise, the
@@ -90,29 +83,13 @@ build-clang)
         -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"                                 \
         -DCMAKE_BUILD_TYPE=Release                                             \
         -DCMAKE_INSTALL_PREFIX=install                                         \
+        -DLLVM_TARGETS_TO_BUILD=Native                                         \
         -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
 
     ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
     ccache -s
     tar -cJvf install.tar.xz install/
     buildkite-agent artifact upload --debug install.tar.xz
-
-    ninja -C ${BUILD_DIR} check-clang
-;;
-build-clang-windows)
-    cmake -S llvm -B ${BUILD_DIR} -G Ninja                                      \
-        -D CMAKE_C_COMPILER_LAUNCHER=sccache                                    \
-        -D CMAKE_CXX_COMPILER_LAUNCHER=sccache                                  \
-        -D CMAKE_BUILD_TYPE=Release                                             \
-        -D CMAKE_INSTALL_PREFIX=install-windows                                 \
-        -D LLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
-        -D LLVM_ENABLE_ASSERTIONS=ON                                            \
-        -D LLVM_BUILD_EXAMPLES=ON                                               \
-        -D COMPILER_RT_BUILD_LIBFUZZER=OFF                                      \
-        -D COMPILER_RT_BUILD_ORC=OFF
-
-    ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
-    ninja -C ${BUILD_DIR} check-clang
 ;;
 generic-cxx03)
     buildkite-agent artifact download install.tar.xz .

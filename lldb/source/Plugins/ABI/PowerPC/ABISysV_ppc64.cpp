@@ -501,14 +501,12 @@ public:
                                                      CompilerType &type) {
     RegisterContext *reg_ctx = thread.GetRegisterContext().get();
     if (!reg_ctx)
-      return llvm::make_error<llvm::StringError>(
-          LOG_PREFIX "Failed to get RegisterContext",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(LOG_PREFIX
+                                     "Failed to get RegisterContext");
 
     ProcessSP process_sp = thread.GetProcess();
     if (!process_sp)
-      return llvm::make_error<llvm::StringError>(
-          LOG_PREFIX "GetProcess() failed", llvm::inconvertibleErrorCode());
+      return llvm::createStringError(LOG_PREFIX "GetProcess() failed");
 
     return ReturnValueExtractor(thread, type, reg_ctx, process_sp);
   }
