@@ -7119,6 +7119,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     return false;
   };
 
+  if (!Record->isInvalidDecl() &&
+      Record->hasAttr<VTablePointerAuthenticationAttr>()) {
+    checkIncorrectVTablePointerAuthenticationAttribute(*Record);
+  }
+
   auto CompleteMemberFunction = [&](CXXMethodDecl *M) {
     // Check whether the explicitly-defaulted members are valid.
     bool Incomplete = CheckForDefaultedFunction(M);
@@ -10500,6 +10505,47 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
         PrintDiagAndRemoveAttr(5);
         return;
       }
+  }
+}
+
+void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
+    CXXRecordDecl &RD) {
+  if (RequireCompleteType(RD.getLocation(), Context.getRecordType(&RD),
+                          diag::err_incomplete_type_vtable_pointer_auth)) {
+    return;
+  }
+
+  const CXXRecordDecl *primaryBase = &RD;
+  if (primaryBase->hasAnyDependentBases()) {
+    return;
+  }
+
+  while (1) {
+    assert(primaryBase);
+    const CXXRecordDecl *base = nullptr;
+    for (auto basePtr : primaryBase->bases()) {
+      if (!basePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
+        continue;
+      base = basePtr.getType()->getAsCXXRecordDecl();
+      break;
+    }
+    if (!base || base == primaryBase || !base->isPolymorphic())
+      break;
+    if (base->isPolymorphic()) {
+      Diag(RD.getAttr<VTablePointerAuthenticationAttr>()->getLocation(),
+           diag::err_non_top_level_vtable_pointer_auth)
+          << &RD << base;
+    } else {
+      break;
+    }
+    primaryBase = base;
+  }
+
+  if (!RD.isPolymorphic()) {
+    Diag(RD.getAttr<VTablePointerAuthenticationAttr>()->getLocation(),
+         diag::err_non_polymorphic_vtable_pointer_auth)
+        << &RD;
+    return;
   }
 }
 
