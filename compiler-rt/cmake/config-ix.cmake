@@ -182,21 +182,6 @@ check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)
 
-# Look for terminfo library, used in unittests that depend on LLVMSupport.
-if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-  set(MAYBE_REQUIRED REQUIRED)
-else()
-  set(MAYBE_REQUIRED)
-endif()
-if(LLVM_ENABLE_TERMINFO)
-  find_library(COMPILER_RT_TERMINFO_LIB NAMES terminfo tinfo curses ncurses ncursesw ${MAYBE_REQUIRED})
-endif()
-if(COMPILER_RT_TERMINFO_LIB)
-  set(LLVM_ENABLE_TERMINFO 1)
-else()
-  set(LLVM_ENABLE_TERMINFO 0)
-endif()
-
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
   # Android's libstdc++ has a dependency on libdl.
   list(APPEND CMAKE_REQUIRED_LIBRARIES dl)

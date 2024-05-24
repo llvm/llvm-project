@@ -17,6 +17,7 @@
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DynoStats.h"
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
@@ -716,6 +717,9 @@ public:
     ///   the number of blocks that have matching size but a differing hash
     uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
+
+  // Original binary execution count stats.
+  DynoStats InitialDynoStats;
 
   // Address of the first allocated segment.
   uint64_t FirstAllocAddress{std::numeric_limits<uint64_t>::max()};

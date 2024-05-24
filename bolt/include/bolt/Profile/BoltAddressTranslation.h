@@ -70,7 +70,7 @@ class BinaryFunction;
 class BoltAddressTranslation {
 public:
   // In-memory representation of the address translation table
-  using MapTy = std::map<uint32_t, uint32_t>;
+  using MapTy = std::multimap<uint32_t, uint32_t>;
 
   // List of taken fall-throughs
   using FallthroughListTy = SmallVector<std::pair<uint64_t, uint64_t>, 16>;
@@ -184,14 +184,9 @@ private:
 public:
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
-    class EntryTy {
+    struct EntryTy {
       unsigned Index;
       size_t Hash;
-
-    public:
-      unsigned getBBIndex() const { return Index; }
-      size_t getBBHash() const { return Hash; }
-      EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
     };
 
     std::map<uint32_t, EntryTy> Map;
@@ -207,15 +202,15 @@ public:
     }
 
     unsigned getBBIndex(uint32_t BBInputOffset) const {
-      return getEntry(BBInputOffset).getBBIndex();
+      return getEntry(BBInputOffset).Index;
     }
 
     size_t getBBHash(uint32_t BBInputOffset) const {
-      return getEntry(BBInputOffset).getBBHash();
+      return getEntry(BBInputOffset).Hash;
     }
 
     void addEntry(uint32_t BBInputOffset, unsigned BBIndex, size_t BBHash) {
-      Map.emplace(BBInputOffset, EntryTy(BBIndex, BBHash));
+      Map.emplace(BBInputOffset, EntryTy{BBIndex, BBHash});
     }
 
     size_t getNumBasicBlocks() const { return Map.size(); }
@@ -223,6 +218,7 @@ public:
     auto begin() const { return Map.begin(); }
     auto end() const { return Map.end(); }
     auto upper_bound(uint32_t Offset) const { return Map.upper_bound(Offset); }
+    auto size() const { return Map.size(); }
   };
 
   /// Map function output address to its hash and basic blocks hash map.
