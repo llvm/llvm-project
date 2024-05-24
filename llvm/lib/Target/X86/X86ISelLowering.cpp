@@ -42930,7 +42930,6 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     bool PoisonOnly, unsigned Depth) const {
   unsigned NumElts = DemandedElts.getBitWidth();
 
-  // TODO: Add more target shuffles.
   switch (Op.getOpcode()) {
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI: {
@@ -42966,8 +42965,12 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
-  // TODO: Add more target shuffles.
   switch (Op.getOpcode()) {
+  // SSE vector shifts handle out of bounds shift amounts.
+  case X86ISD::VSHLI:
+  case X86ISD::VSRLI:
+  case X86ISD::VSRAI:
+    return false;
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
   case X86ISD::UNPCKH:
