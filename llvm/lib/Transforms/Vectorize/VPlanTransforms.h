@@ -105,7 +105,7 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool addExplicitVectorLength(VPlan &Plan);
+  static bool tryAddExplicitVectorLength(VPlan &Plan);
 };
 
 } // namespace llvm
