@@ -486,6 +486,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
 
 // -----
+
 #file = #llvm.di_file<"test.f90" in "">
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95,
   file = #file, producer = "", isOptimized = false, emissionKind = Full>
