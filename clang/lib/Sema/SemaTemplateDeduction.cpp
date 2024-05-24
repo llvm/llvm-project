@@ -527,8 +527,8 @@ static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
     R->setDefaultArgument(
         S.Context,
         S.getTrivialTemplateArgumentLoc(Default, QualType(), SourceLocation()));
-    if (T->hasTypeConstraint()) {
-      auto *C = T->getTypeConstraint();
+    if (R->hasTypeConstraint()) {
+      auto *C = R->getTypeConstraint();
       R->setTypeConstraint(C->getConceptReference(),
                            C->getImmediatelyDeclaredConstraint());
     }
@@ -583,53 +583,37 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
       return TemplateDeductionResult::Success;
 
     auto NewDeduced = DeducedTemplateArgument(Arg);
-    // Provisional resolution for CWG2398: If Arg names a template
-    // specialization, then we deduce a synthesized template template parameter
-    // based on A, but using the TS's arguments as defaults.
-    if (DefaultArguments.size() != 0) {
+    // Provisional resolution for CWG2398: If Arg is also a template template
+    // param, and it names a template specialization, then we deduce a
+    // synthesized template template parameter based on A, but using the TS's
+    // arguments as defaults.
+    if (auto *TempArg = dyn_cast_or_null<TemplateTemplateParmDecl>(
+            Arg.getAsTemplateDecl())) {
       assert(Arg.getKind() == TemplateName::Template);
-      TemplateDecl *TempArg = Arg.getAsTemplateDecl();
+      assert(!TempArg->isExpandedParameterPack());
+
       TemplateParameterList *As = TempArg->getTemplateParameters();
-      assert(DefaultArguments.size() <= As->size());
-
-      SmallVector<NamedDecl *, 4> Params(As->size());
-      for (unsigned I = 0; I < DefaultArguments.size(); ++I)
-        Params[I] = getTemplateParameterWithDefault(S, As->getParam(I),
-                                                    DefaultArguments[I]);
-      for (unsigned I = DefaultArguments.size(); I < As->size(); ++I)
-        Params[I] = As->getParam(I);
-      // FIXME: We could unique these, and also the parameters, but we don't
-      // expect programs to contain a large enough amount of these deductions
-      // for that to be worthwhile.
-      auto *TPL = TemplateParameterList::Create(
-          S.Context, SourceLocation(), SourceLocation(), Params,
-          SourceLocation(), As->getRequiresClause());
-
-      TemplateDecl *TD;
-      switch (TempArg->getKind()) {
-      case Decl::TemplateTemplateParm: {
-        auto *A = cast<TemplateTemplateParmDecl>(TempArg);
-        assert(!A->isExpandedParameterPack());
-        TD = TemplateTemplateParmDecl::Create(
-            S.Context, A->getDeclContext(), SourceLocation(), A->getDepth(),
-            A->getPosition(), A->isParameterPack(), A->getIdentifier(),
-            A->wasDeclaredWithTypename(), TPL);
-        break;
+      if (DefaultArguments.size() != 0) {
+        assert(DefaultArguments.size() <= As->size());
+        SmallVector<NamedDecl *, 4> Params(As->size());
+        for (unsigned I = 0; I < DefaultArguments.size(); ++I)
+          Params[I] = getTemplateParameterWithDefault(S, As->getParam(I),
+                                                      DefaultArguments[I]);
+        for (unsigned I = DefaultArguments.size(); I < As->size(); ++I)
+          Params[I] = As->getParam(I);
+        // FIXME: We could unique these, and also the parameters, but we don't
+        // expect programs to contain a large enough amount of these deductions
+        // for that to be worthwhile.
+        auto *TPL = TemplateParameterList::Create(
+            S.Context, SourceLocation(), SourceLocation(), Params,
+            SourceLocation(), As->getRequiresClause());
+        NewDeduced = DeducedTemplateArgument(
+            TemplateName(TemplateTemplateParmDecl::Create(
+                S.Context, TempArg->getDeclContext(), SourceLocation(),
+                TempArg->getDepth(), TempArg->getPosition(),
+                TempArg->isParameterPack(), TempArg->getIdentifier(),
+                TempArg->wasDeclaredWithTypename(), TPL)));
       }
-      case Decl::ClassTemplate: {
-        auto *A = cast<ClassTemplateDecl>(TempArg);
-        auto *CT = ClassTemplateDecl::Create(S.Context, A->getDeclContext(),
-                                             SourceLocation(), A->getDeclName(),
-                                             TPL, A->getTemplatedDecl());
-        CT->setPreviousDecl(A);
-        TD = CT;
-        break;
-      }
-      default:
-        llvm_unreachable("Unexpected Template Kind");
-      }
-      TD->setImplicit(true);
-      NewDeduced = DeducedTemplateArgument(TemplateName(TD));
     }
 
     DeducedTemplateArgument Result = checkDeducedTemplateArguments(S.Context,
