@@ -2562,6 +2562,14 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
+  // TODO: Select this with a tablegen pattern. This is tricky because the
+  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
+  // mayLoad/mayStore and tablegen complains about the mismatch.
+  SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
+  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), Reg);
+}
+
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -2720,6 +2728,9 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     SelectDSBvhStackIntrinsic(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_pops_exiting_wave_id:
+    SelectPOPSExitingWaveID(N);
     return;
   }
 
