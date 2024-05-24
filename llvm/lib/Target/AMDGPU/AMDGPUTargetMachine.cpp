@@ -21,7 +21,6 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPURegBankSelect.h"
-#include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
@@ -814,13 +813,6 @@ AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
     return AMDGPUAS::CONSTANT_ADDRESS;
   }
   return AMDGPUAS::FLAT_ADDRESS;
-}
-
-bool AMDGPUTargetMachine::splitModule(
-    Module &M, unsigned NumParts,
-    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
-  splitAMDGPUModule(*this, M, NumParts, ModuleCallback);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
