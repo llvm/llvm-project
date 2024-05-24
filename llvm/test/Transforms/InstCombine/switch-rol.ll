@@ -61,3 +61,39 @@ default:
 trap.exit:
   ret i32 0
 }
+
+define i32 @switch_rol_negative_dense_switch(i32 %a) #0 {
+; CHECK-LABEL: define i32 @switch_rol_negative_dense_switch(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], -7
+; CHECK-NEXT:    [[ROL:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP0]], i32 [[TMP0]], i32 30)
+; CHECK-NEXT:    switch i32 [[ROL]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[TRAP_EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[TRAP_EXIT]]
+; CHECK-NEXT:      i32 2, label [[TRAP_EXIT]]
+; CHECK-NEXT:      i32 3, label [[TRAP_EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[TRAP_EXIT]]
+; CHECK:       trap.exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %1 = sub i32 %a, 7
+  %rol = call i32 @llvm.fshl.i32(i32 %1, i32 %1, i32 30)
+  switch i32 %rol, label %default [
+  i32 0, label %trap.exit
+  i32 1, label %trap.exit
+  i32 2, label %trap.exit
+  i32 3, label %trap.exit
+  ]
+
+default:
+  call void @dummy()
+  br label %trap.exit
+
+trap.exit:
+  ret i32 0
+}
