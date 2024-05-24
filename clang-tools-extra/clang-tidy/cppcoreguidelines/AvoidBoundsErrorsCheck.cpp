@@ -9,73 +9,74 @@
 #include "AvoidBoundsErrorsCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <iostream>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static bool isApplicable(const QualType &Type) {
-  const auto TypeStr = Type.getAsString();
-  bool Result = false;
-  // Only check for containers in the std namespace
-  if (TypeStr.find("std::vector") != std::string::npos) {
-    Result = true;
+const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
+                                     const CXXMethodDecl *MatchedOperator) {
+  for (const CXXMethodDecl *Method : MatchedParent->methods()) {
+    const bool CorrectName = Method->getNameInfo().getAsString() == "at";
+    if (!CorrectName)
+      continue;
+
+    const bool SameReturnType =
+        Method->getReturnType() == MatchedOperator->getReturnType();
+    if (!SameReturnType)
+      continue;
+
+    const bool SameNumberOfArguments =
+        Method->getNumParams() == MatchedOperator->getNumParams();
+    if (!SameNumberOfArguments)
+      continue;
+
+    for (unsigned a = 0; a < Method->getNumParams(); a++) {
+      const bool SameArgType =
+          Method->parameters()[a]->getOriginalType() ==
+          MatchedOperator->parameters()[a]->getOriginalType();
+      if (!SameArgType)
+        continue;
+    }
+
+    return Method;
   }
-  if (TypeStr.find("std::array") != std::string::npos) {
-    Result = true;
-  }
-  if (TypeStr.find("std::deque") != std::string::npos) {
-    Result = true;
-  }
-  if (TypeStr.find("std::map") != std::string::npos) {
-    Result = true;
-  }
-  if (TypeStr.find("std::unordered_map") != std::string::npos) {
-    Result = true;
-  }
-  if (TypeStr.find("std::flat_map") != std::string::npos) {
-    Result = true;
-  }
-  // TODO Add std::span with C++26
-  return Result;
+  return static_cast<CXXMethodDecl *>(nullptr);
 }
 
 void AvoidBoundsErrorsCheck::registerMatchers(MatchFinder *Finder) {
+  // Need a callExpr here to match CXXOperatorCallExpr ``(&a)->operator[](0)``
+  // and CXXMemberCallExpr ``a[0]``.
   Finder->addMatcher(
-      callExpr(callee(cxxMethodDecl(hasName("operator[]")).bind("f")))
-          .bind("x"),
+      callExpr(
+          callee(
+              cxxMethodDecl(hasOverloadedOperatorName("[]")).bind("operator")),
+          callee(cxxMethodDecl(hasParent(
+              cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")))))
+          .bind("caller"),
       this);
 }
 
 void AvoidBoundsErrorsCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
-  const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("x");
-  const CXXMethodDecl *MatchedFunction = Result.Nodes.getNodeAs<CXXMethodDecl>("f");
-  const QualType Type = MatchedFunction->getThisType();
-  if (!isApplicable(Type)) {
+  const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
+  const CXXMethodDecl *MatchedOperator =
+      Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
+  const CXXRecordDecl *MatchedParent =
+      Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
+
+  const CXXMethodDecl *Alternative =
+      findAlternative(MatchedParent, MatchedOperator);
+  if (!Alternative)
     return;
-  }
 
-  // Get original code.
-  const SourceLocation b(MatchedExpr->getBeginLoc());
-  const SourceLocation e(MatchedExpr->getEndLoc());
-  const std::string OriginalCode =
-      Lexer::getSourceText(CharSourceRange::getTokenRange(b, e), Source,
-                           getLangOpts())
-          .str();
-  const auto Range = SourceRange(b, e);
+  const SourceLocation AlternativeSource(Alternative->getBeginLoc());
 
-  // Build replacement.
-  std::string NewCode = OriginalCode;
-  const auto BeginOpen = NewCode.find("[");
-  NewCode.replace(BeginOpen, 1, ".at(");
-  const auto BeginClose = NewCode.find("]");
-  NewCode.replace(BeginClose, 1, ")");
-
-  diag(MatchedExpr->getBeginLoc(), "Do not use operator[], use at() instead.")
-      << FixItHint::CreateReplacement(Range, NewCode);
+  diag(MatchedExpr->getBeginLoc(),
+       "found possibly unsafe operator[], consider using at() instead");
+  diag(Alternative->getBeginLoc(), "alternative at() defined here",
+       DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::cppcoreguidelines
