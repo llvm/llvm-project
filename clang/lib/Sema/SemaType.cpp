@@ -7532,17 +7532,16 @@ Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName) {
     return std::nullopt;
   };
 
-  if (CondExpr->isTypeDependent() || CondExpr->isValueDependent()) {
-    if (CondExpr->containsUnexpandedParameterPack())
-      return BadExpr();
+  if (DiagnoseUnexpandedParameterPack(CondExpr))
+      return std::nullopt;
+  if (CondExpr->isTypeDependent() || CondExpr->isValueDependent())
     return FunctionEffectMode::Dependent;
-  }
 
   std::optional<llvm::APSInt> ConditionValue =
       CondExpr->getIntegerConstantExpr(Context);
   if (!ConditionValue)
     return BadExpr();
-  return ConditionValue->getExtValue() ? FunctionEffectMode::True
+  return !ConditionValue->isZero() ? FunctionEffectMode::True
                                        : FunctionEffectMode::False;
 }
 
