@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements semantic analysis functions specific to AIX.
+//  This file implements semantic analysis functions specific to SystemZ.
 //
 //===----------------------------------------------------------------------===//
 
