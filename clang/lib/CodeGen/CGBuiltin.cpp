@@ -2931,9 +2931,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_tanf16:
     case Builtin::BI__builtin_tanl:
     case Builtin::BI__builtin_tanf128:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::tan,
-                                   Intrinsic::experimental_constrained_tan));
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::tan, Intrinsic::experimental_constrained_tan));
 
     case Builtin::BItrunc:
     case Builtin::BItruncf:
