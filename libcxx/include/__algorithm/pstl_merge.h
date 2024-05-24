@@ -16,6 +16,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <optional>
 
@@ -34,26 +35,26 @@ template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
           class _ForwardOutIterator,
-          class _Comp                                         = std::less<>,
+          class _Comp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
 __merge(_ExecutionPolicy&&,
-        _ForwardIterator1 __first1,
-        _ForwardIterator1 __last1,
-        _ForwardIterator2 __first2,
-        _ForwardIterator2 __last2,
-        _ForwardOutIterator __result,
-        _Comp __comp = {}) noexcept {
+        _ForwardIterator1&& __first1,
+        _ForwardIterator1&& __last1,
+        _ForwardIterator2&& __first2,
+        _ForwardIterator2&& __last2,
+        _ForwardOutIterator&& __result,
+        _Comp&& __comp) noexcept {
   using _Backend = typename __select_backend<_RawPolicy>::type;
   return std::__pstl_merge<_RawPolicy>(
       _Backend{},
-      std::move(__first1),
-      std::move(__last1),
-      std::move(__first2),
-      std::move(__last2),
-      std::move(__result),
-      std::move(__comp));
+      std::forward<_ForwardIterator1>(__first1),
+      std::forward<_ForwardIterator1>(__last1),
+      std::forward<_ForwardIterator2>(__first2),
+      std::forward<_ForwardIterator2>(__last2),
+      std::forward<_ForwardOutIterator>(__result),
+      std::forward<_Comp>(__comp));
 }
 
 template <class _ExecutionPolicy,

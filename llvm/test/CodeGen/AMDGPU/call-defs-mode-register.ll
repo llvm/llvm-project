@@ -43,7 +43,7 @@ define float @asm_changes_mode(float %x, float %y) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */, implicit-def $mode
   ; CHECK-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0

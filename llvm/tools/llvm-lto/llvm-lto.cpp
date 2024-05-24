@@ -692,8 +692,9 @@ private:
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
       std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+      GVSummaryPtrSet DecSummaries;
       ThinGenerator.gatherImportedSummariesForModule(
-          *TheModule, *Index, ModuleToSummariesForIndex, *Input);
+          *TheModule, *Index, ModuleToSummariesForIndex, DecSummaries, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -703,7 +704,7 @@ private:
       std::error_code EC;
       raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::OF_None);
       error(EC, "error opening the file '" + OutputName + "'");
-      writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
+      writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex, &DecSummaries);
     }
   }
 
