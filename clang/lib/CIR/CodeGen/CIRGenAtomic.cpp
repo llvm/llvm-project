@@ -513,7 +513,8 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
     auto loadVal1 = builder.createLoad(loc, Val1);
     // FIXME(cir): add scope information.
     assert(!UnimplementedFeature::syncScopeID());
-    builder.createStore(loc, loadVal1, Ptr, E->isVolatile(), orderAttr);
+    builder.createStore(loc, loadVal1, Ptr, E->isVolatile(),
+                        /*alignment=*/mlir::IntegerAttr{}, orderAttr);
     return;
   }
 
