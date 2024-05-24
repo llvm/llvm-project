@@ -500,7 +500,6 @@ constexpr FeatureBitset ImpliedFeaturesMOVDIRI = {};
 constexpr FeatureBitset ImpliedFeaturesPCONFIG = {};
 constexpr FeatureBitset ImpliedFeaturesPOPCNT = {};
 constexpr FeatureBitset ImpliedFeaturesPKU = {};
-constexpr FeatureBitset ImpliedFeaturesPREFETCHWT1 = {};
 constexpr FeatureBitset ImpliedFeaturesPRFCHW = {};
 constexpr FeatureBitset ImpliedFeaturesPTWRITE = {};
 constexpr FeatureBitset ImpliedFeaturesRDPID = {};
