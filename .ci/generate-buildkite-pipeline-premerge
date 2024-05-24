@@ -232,17 +232,6 @@ if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cma
 EOF
 fi
 
-# If clang changed.
-if echo "$modified_dirs" | grep -q -E "^(clang)$"; then
-  cat <<EOF
-- trigger: "clang-ci"
-  build:
-    message: "${buildMessage}"
-    commit: "${BUILDKITE_COMMIT}"
-    branch: "${BUILDKITE_BRANCH}"
-EOF
-fi
-
 # Generic pipeline for projects that have not defined custom steps.
 #
 # Individual projects should instead define the pre-commit CI tests that suits their
