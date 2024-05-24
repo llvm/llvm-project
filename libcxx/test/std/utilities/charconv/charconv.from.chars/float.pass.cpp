@@ -19,7 +19,7 @@
 
 template <typename T>
 struct test_basics {
-  TEST_CONSTEXPR_CXX23 void operator()() {
+  void operator()() {
     std::from_chars_result r;
     T x;
 
@@ -57,7 +57,7 @@ struct test_basics {
   }
 };
 
-TEST_CONSTEXPR_CXX23 bool test() {
+bool test() {
   run<test_basics>(all_floats);
 
   return true;

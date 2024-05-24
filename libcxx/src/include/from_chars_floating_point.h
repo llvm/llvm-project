@@ -27,7 +27,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp, __enable_if_t<std::is_floating_point<_Tp>::value, int> = 0>
-from_chars_result from_chars_floating_point(const char* __first, const char* __last, _Tp& value, chars_format fmt) {
+from_chars_result from_chars_floating_point(const char* __first, const char* __last, _Tp& __value, chars_format __fmt) {
   using _Traits    = _Floating_type_traits<_Tp>;
   using _Uint_type = typename _Traits::_Uint_type;
   ptrdiff_t length = __last - __first;
@@ -35,7 +35,7 @@ from_chars_result from_chars_floating_point(const char* __first, const char* __l
 
   // hacky parsing code as example. Not intended for actual use. I'm just going to handle the base 10
   // chars_format::general case. Also, no sign, inf, or nan handling.
-  _LIBCPP_ASSERT_INTERNAL(fmt == std::chars_format::general, "");
+  _LIBCPP_ASSERT_INTERNAL(__fmt == std::chars_format::general, "");
 
   const char* src = __first; // rename to match the libc code copied for this section.
 
@@ -126,7 +126,7 @@ from_chars_result from_chars_floating_point(const char* __first, const char* __l
   auto result = LIBC_NAMESPACE::fputil::FPBits<_Tp>();
   result.set_mantissa(expanded_float.mantissa);
   result.set_biased_exponent(expanded_float.exponent);
-  value = result.get_val();
+  __value = result.get_val();
   return {src + index, {}};
 }
 

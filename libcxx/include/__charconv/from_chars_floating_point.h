@@ -32,10 +32,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 from_chars_result from_chars_floating_point(
-    const char* __first, const char* __last, float& value, chars_format fmt = chars_format::general);
+    const char* __first, const char* __last, float& __value, chars_format __fmt = chars_format::general);
 
 from_chars_result from_chars_floating_point(
-    const char* __first, const char* __last, double& value, chars_format fmt = chars_format::general);
+    const char* __first, const char* __last, double& __value, chars_format __fmt = chars_format::general);
 
 // template <typename _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
 // inline from_chars_result
