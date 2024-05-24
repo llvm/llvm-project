@@ -234,7 +234,7 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[LEXICAL_BLOCK_FILE:.*]] = distinct !DILexicalBlockFile(scope: ![[INNER_FUNC]], file: ![[FILE]], discriminator: 0)
 // CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]
-// CHECK-DAG  ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
+// CHECK-DAG: ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
 
 // -----
 

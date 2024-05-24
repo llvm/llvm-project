@@ -221,7 +221,7 @@ func.func @roundf_func(%a: f32) -> f32 {
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64)
 func.func @powf_func(%a: f64, %b: f64) ->f64 {
-  // CHECK-DAG = [[CST0:%.+]] = arith.constant 0.000000e+00
+  // CHECK-DAG: [[CST0:%.+]] = arith.constant 0.000000e+00
   // CHECK-DAG: [[TWO:%.+]] = arith.constant 2.000000e+00
   // CHECK-DAG: [[NEGONE:%.+]] = arith.constant -1.000000e+00
   // CHECK-DAG: [[SQR:%.+]] = arith.mulf [[ARG0]], [[ARG0]]
