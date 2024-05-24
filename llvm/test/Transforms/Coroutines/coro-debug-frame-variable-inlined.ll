@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes='module(coro-early),cgscc(inline,coro-split<reuse-storage>)' -S | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='module(coro-early),cgscc(inline,coro-split<reuse-storage>)' -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(inline,coro-split)' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='module(coro-early),cgscc(inline,coro-split)' -S | FileCheck %s
 
 ; Simplified version from pr#75104.
 ; Make sure we do not update debug location for hosited dbg.declare intrinsics when optimizing coro frame.
