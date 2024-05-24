@@ -283,17 +283,16 @@ struct [[nodiscard]] OperationCounts {
   std::size_t comparisons{};
   struct PerInput {
     std::size_t proj{};
-    std::size_t iterator_strides{};
-    std::ptrdiff_t iterator_displacement{};
+    IteratorOpCounts iterops;
 
     // IGNORES proj!
     [[nodiscard]] constexpr bool operator==(const PerInput& o) const {
-      return iterator_strides == o.iterator_strides && iterator_displacement == o.iterator_displacement;
+      return iterops.increments == o.iterops.increments && iterops.decrements == o.iterops.decrements;
     }
 
     [[nodiscard]] constexpr bool matchesExpectation(const PerInput& expect) {
-      return proj <= expect.proj && iterator_strides <= expect.iterator_strides &&
-             iterator_displacement <= expect.iterator_displacement;
+      return proj <= expect.proj &&
+             iterops.increments + iterops.decrements <= expect.iterops.increments + expect.iterops.decrements;
     }
   };
   std::array<PerInput, 2> in;
@@ -337,14 +336,11 @@ constexpr void testSetIntersectionAndReturnOpCounts(
 
   std::array<int, N3> out;
 
-  stride_counting_iterator b1(
-      In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterator_strides, &ops.in[0].iterator_displacement);
-  stride_counting_iterator e1(
-      In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterator_strides, &ops.in[0].iterator_displacement);
-  stride_counting_iterator b2(
-      In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterator_strides, &ops.in[1].iterator_displacement);
-  stride_counting_iterator e2(
-      In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterator_strides, &ops.in[1].iterator_displacement);
+  stride_counting_iterator b1(In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterops);
+  stride_counting_iterator e1(In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterops);
+
+  stride_counting_iterator b2(In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterops);
+  stride_counting_iterator e2(In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterops);
 
   std::set_intersection(b1, e1, b2, e2, Out(out.data()), comp);
 
@@ -383,14 +379,11 @@ constexpr void testRangesSetIntersectionAndReturnOpCounts(
 
   std::array<int, N3> out;
 
-  stride_counting_iterator b1(
-      In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterator_strides, &ops.in[0].iterator_displacement);
-  stride_counting_iterator e1(
-      In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterator_strides, &ops.in[0].iterator_displacement);
-  stride_counting_iterator b2(
-      In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterator_strides, &ops.in[1].iterator_displacement);
-  stride_counting_iterator e2(
-      In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterator_strides, &ops.in[1].iterator_displacement);
+  stride_counting_iterator b1(In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterops);
+  stride_counting_iterator e1(In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterops);
+
+  stride_counting_iterator b2(In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterops);
+  stride_counting_iterator e2(In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterops);
 
   std::ranges::subrange r1{b1, SentinelWorkaround<decltype(e1)>{e1}};
   std::ranges::subrange r2{b2, SentinelWorkaround<decltype(e2)>{e2}};

@@ -724,33 +724,18 @@ struct common_input_iterator {
 
 #  endif // TEST_STD_VER >= 20
 
-// Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
-// operation or an equality comparison operation called. Has three recorders:
-// * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
-// * `stride_displacement`, which records the displacement of the calls. This means that both
-//   op++/op+= will increase the displacement counter by 1, and op--/op-= will decrease the
-//   displacement counter by 1.
-// * `equals_count`, which records the total number of calls to an op== or op!=. If compared
-//   against a sentinel object, that sentinel object must call the `record_equality_comparison`
-//   function so that the comparison is counted correctly.
-template <class It,
-          class StrideCountType        = std::iter_difference_t<It>,
-          class StrideDisplacementType = std::iter_difference_t<It>>
+struct IteratorOpCounts {
+  std::size_t increments = 0; ///< Number of times the iterator moved forward (++it, it++, it+=positive, it-=negative).
+  std::size_t decrements = 0; ///< Number of times the iterator moved backward (--it, it--, it-=positive, it+=negative).
+  std::size_t zero_moves = 0; ///< Number of times a call was made to move the iterator by 0 positions (it+=0, it-=0).
+  std::size_t equal_cmps = 0; ///< Total number of calls to op== or op!=. If compared against a sentinel object, that
+                              ///  sentinel object must call the `record_equality_comparison` function so that the
+                              ///  comparison is counted correctly.
+};
+
+// Iterator adaptor that records its operation counts in a IteratorOpCounts
+template <class It>
 class stride_counting_iterator {
-  template <typename UnderlyingType>
-  struct concrete_or_ref {
-    using value_type            = std::remove_cv_t<std::remove_reference_t<UnderlyingType>>;
-    constexpr concrete_or_ref() = default;
-    explicit constexpr concrete_or_ref(UnderlyingType* c) noexcept : ptr_{c} {}
-
-    constexpr operator value_type&() noexcept { return ptr_ ? *ptr_ : val_; }
-    constexpr operator const value_type&() const noexcept { return ptr_ ? *ptr_ : val_; }
-
-  private:
-    value_type val_{};
-    value_type* ptr_{nullptr};
-  };
-
 public:
     using value_type = typename iter_value_or_void<It>::type;
     using difference_type = std::iter_difference_t<It>;
@@ -764,13 +749,12 @@ public:
     >>>>>;
     using iterator_category = iterator_concept;
 
-    stride_counting_iterator() requires std::default_initializable<It> = default;
+    stride_counting_iterator()
+      requires std::default_initializable<It>
+    = default;
 
-    constexpr explicit stride_counting_iterator(It const& it) : base_(base(it)) { }
-
-    constexpr explicit stride_counting_iterator(
-        It const& it, StrideCountType* stride_count, StrideDisplacementType* stride_displacement)
-        : base_(base(it)), stride_count_(stride_count), stride_displacement_(stride_displacement) {}
+    constexpr explicit stride_counting_iterator(It const& it, IteratorOpCounts* counts = nullptr)
+        : base_(base(it)), counts_(counts) {}
 
     constexpr stride_counting_iterator(const stride_counting_iterator& o) { *this = o; }
     constexpr stride_counting_iterator(stride_counting_iterator&& o) { *this = o; }
@@ -780,12 +764,6 @@ public:
 
     friend constexpr It base(stride_counting_iterator const& it) { return It(it.base_); }
 
-    constexpr StrideCountType stride_count() const { return stride_count_; }
-
-    constexpr StrideDisplacementType stride_displacement() const { return stride_displacement_; }
-
-    constexpr difference_type equals_count() const { return equals_count_; }
-
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
     constexpr decltype(auto) operator[](difference_type n) const { return It(base_)[n]; }
@@ -793,8 +771,7 @@ public:
     constexpr stride_counting_iterator& operator++() {
         It tmp(base_);
         base_ = base(++tmp);
-        ++stride_count_;
-        ++stride_displacement_;
+        moved_by(1);
         return *this;
     }
 
@@ -813,8 +790,7 @@ public:
     {
         It tmp(base_);
         base_ = base(--tmp);
-        ++stride_count_;
-        --stride_displacement_;
+        moved_by(-1);
         return *this;
     }
 
@@ -831,8 +807,7 @@ public:
     {
         It tmp(base_);
         base_ = base(tmp += n);
-        ++stride_count_;
-        ++stride_displacement_;
+        moved_by(n);
         return *this;
     }
 
@@ -841,8 +816,7 @@ public:
     {
         It tmp(base_);
         base_ = base(tmp -= n);
-        ++stride_count_;
-        --stride_displacement_;
+        moved_by(-n);
         return *this;
     }
 
@@ -870,7 +844,10 @@ public:
         return base(x) - base(y);
     }
 
-    constexpr void record_equality_comparison() const { ++equals_count_; }
+    constexpr void record_equality_comparison() const {
+      if (counts_ != nullptr)
+        ++counts_->equal_cmps;
+    }
 
     constexpr bool operator==(stride_counting_iterator const& other) const
         requires std::sentinel_for<It, It>
@@ -907,10 +884,19 @@ public:
     void operator,(T const &) = delete;
 
 private:
+  constexpr void moved_by(difference_type n) {
+    if (counts_ == nullptr)
+      return;
+    if (n > 0)
+      ++counts_->increments;
+    else if (n < 0)
+      ++counts_->decrements;
+    else
+      ++counts_->zero_moves;
+  }
+
     decltype(base(std::declval<It>())) base_;
-    concrete_or_ref<StrideCountType> stride_count_;
-    concrete_or_ref<StrideDisplacementType> stride_displacement_;
-    mutable difference_type equals_count_ = 0;
+    IteratorOpCounts* counts_ = nullptr;
 };
 template <class It>
 stride_counting_iterator(It) -> stride_counting_iterator<It>;
