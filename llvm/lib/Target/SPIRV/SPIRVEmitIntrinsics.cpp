@@ -140,6 +140,7 @@ public:
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
+  Instruction *visitCallInst(CallInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -627,6 +628,28 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
     if (!KeepInst)
       Worklist.pop();
   }
+}
+
+Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
+  if (!Call.isInlineAsm())
+    return &Call;
+
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
+  LLVMContext &Ctx = F->getContext();
+
+  Constant *TyC = UndefValue::get(IA->getFunctionType());
+  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  SmallVector<Value *> Args = {
+      MetadataAsValue::get(Ctx,
+                           MDNode::get(Ctx, ValueAsMetadata::getConstant(TyC))),
+      MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
+  for (unsigned OpIdx = 0; OpIdx < Call.arg_size(); OpIdx++)
+    Args.push_back(Call.getArgOperand(OpIdx));
+
+  IRBuilder<> B(Call.getParent());
+  B.SetInsertPoint(&Call);
+  B.CreateIntrinsic(Intrinsic::spv_inline_asm, {}, {Args});
+  return &Call;
 }
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {

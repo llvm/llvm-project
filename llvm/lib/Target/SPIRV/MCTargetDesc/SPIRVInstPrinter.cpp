@@ -321,14 +321,19 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     if (MI->getOperand(StrStartIndex).isReg())
       break;
 
-    std::string Str = getSPIRVStringOperand(*MI, OpNo);
+    std::string Str = getSPIRVStringOperand(*MI, StrStartIndex);
     if (StrStartIndex != OpNo)
       O << ' '; // Add a space if we're starting a new string/argument.
     O << '"';
     for (char c : Str) {
-      if (c == '"')
-        O.write('\\'); // Escape " characters (might break for complex UTF-8).
-      O.write(c);
+      // Escape ", \n characters (might break for complex UTF-8).
+      if (c == '\n') {
+        O.write("\\n", 2);
+      } else {
+        if (c == '"')
+          O.write('\\');
+        O.write(c);
+      }
     }
     O << '"';
 
