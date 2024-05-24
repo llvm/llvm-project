@@ -88,6 +88,12 @@ static cl::opt<int> BrMergingBaseCostThresh(
         "to never merge branches."),
     cl::Hidden);
 
+static cl::opt<int> BrMergingCcmpBias(
+    "x86-br-merging-ccmp-bias", cl::init(6),
+    cl::desc("Increases 'x86-br-merging-base-cost' in cases that the target "
+             "supports conditional compare instructions."),
+    cl::Hidden);
+
 static cl::opt<int> BrMergingLikelyBias(
     "x86-br-merging-likely-bias", cl::init(0),
     cl::desc("Increases 'x86-br-merging-base-cost' in cases that it is likely "
@@ -3414,7 +3420,7 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   int BaseCost = BrMergingBaseCostThresh.getValue();
   // With CCMP, branches can be merged in a more efficient way.
   if (BaseCost >= 0 && Subtarget.hasCCMP())
-    BaseCost += 6;
+    BaseCost += BrMergingCcmpBias;
   // a == b && a == c is a fast pattern on x86.
   ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&
