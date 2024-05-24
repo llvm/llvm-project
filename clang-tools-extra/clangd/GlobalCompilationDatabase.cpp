@@ -741,7 +741,7 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
   return Res->PI;
 }
 
-std::shared_ptr<ProjectModules>
+std::unique_ptr<ProjectModules>
 DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
   CDBLookupRequest Req;
   Req.FileName = File;
@@ -751,6 +751,9 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
   auto Res = lookupCDB(Req);
   if (!Res)
     return {};
+  // FIXME: Passing *this here means we won't use outer OverlayCDB, which
+  // (among other things) has the mechanism for detecting and injecting
+  // resource-dir.
   return ProjectModules::create(
       ProjectModules::ProjectModulesKind::ScanningAllFiles,
       Res->CDB->getAllFiles(), *this, Opts.TFS);
@@ -848,7 +851,7 @@ std::optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
   return Base->getProjectInfo(File);
 }
 
-std::shared_ptr<ProjectModules>
+std::unique_ptr<ProjectModules>
 DelegatingCDB::getProjectModules(PathRef File) const {
   if (!Base)
     return nullptr;

@@ -7,53 +7,65 @@
 //===----------------------------------------------------------------------===//
 
 #include "ModulesBuilder.h"
-#include "PrerequisiteModules.h"
+
+#include "Compiler.h"
 #include "support/Logger.h"
 
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+
+#include "clang/Serialization/ASTReader.h"
 
 namespace clang {
 namespace clangd {
 
 namespace {
 
-/// Get or create a path to store module files. Generally it should be:
-///
-///   project_root/.cache/clangd/module_files/{RequiredPrefixDir}/.
-///
-/// \param MainFile is used to get the root of the project from global
-/// compilation database. \param RequiredPrefixDir is used to get the user
-/// defined prefix for module files. This is useful when we want to seperate
-/// module files. e.g., we want to build module files for the same module unit
-/// `a.cppm` with 2 different users `b.cpp` and `c.cpp` and we don't want the
-/// module file for `b.cpp` be conflict with the module files for `c.cpp`. Then
-/// we can put the 2 module files into different dirs like:
-///
-///   project_root/.cache/clangd/module_files/b.cpp/a.pcm
-///   project_root/.cache/clangd/module_files/c.cpp/a.pcm
-llvm::SmallString<256> getModuleFilesPath(PathRef MainFile,
-                                          const GlobalCompilationDatabase &CDB,
-                                          StringRef RequiredPrefixDir) {
-  std::optional<ProjectInfo> PI = CDB.getProjectInfo(MainFile);
-  if (!PI)
-    return {};
+// Create a path to store module files. Generally it should be:
+//
+//   {TEMP_DIRS}/clangd/module_files/{PrefixDir}-%%-%%-%%-%%-%%-%%/.
+//
+// {TEMP_DIRS} is the temporary directory for the system, e.g., "/var/tmp"
+// or "C:/TEMP".
+//
+// '%%' means random value to make the generated path unique.
+//
+// \param MainFile is used to get the root of the project from global
+// compilation database. \param PrefixDir is used to get the user
+// defined prefix for module files. This is useful when we want to seperate
+// module files. e.g., we want to build module files for the same module unit
+// `a.cppm` with 2 different users `b.cpp` and `c.cpp` and we don't want the
+// module file for `b.cpp` be conflict with the module files for `c.cpp`. Then
+// we can put the 2 module files into different dirs like:
+//
+//   ${TEMP_DIRS}/clangd/module_files/b.cpp/a.pcm
+//   ${TEMP_DIRS}/clangd/module_files/c.cpp/a.pcm
+//
+// TODO: Move these module fils out of the temporary directory if the module
+// files are persistent.
+llvm::SmallString<256> getUniqueModuleFilesPath(PathRef MainFile,
+                                                llvm::StringRef PrefixDir) {
+  llvm::SmallString<256> ResultPattern;
 
-  // FIXME: PI->SourceRoot may be empty, depending on the CDB strategy.
-  llvm::SmallString<256> Result(PI->SourceRoot);
+  llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/true,
+                                         ResultPattern);
 
-  llvm::sys::path::append(Result, ".cache");
-  llvm::sys::path::append(Result, "clangd");
-  llvm::sys::path::append(Result, "module_files");
+  llvm::sys::path::append(ResultPattern, "clangd");
+  llvm::sys::path::append(ResultPattern, "module_files");
 
-  llvm::sys::path::append(Result, RequiredPrefixDir);
+  llvm::sys::path::append(ResultPattern, PrefixDir);
 
-  llvm::sys::fs::create_directories(Result, /*IgnoreExisting=*/true);
+  ResultPattern.append("-%%-%%-%%-%%-%%-%%");
 
+  llvm::SmallString<256> Result;
+  llvm::sys::fs::createUniquePath(ResultPattern, Result,
+                                  /*MakeAbsolute=*/false);
+
+  llvm::sys::fs::create_directories(Result);
   return Result;
 }
 
-/// Get the absolute path for the filename from the compile command.
+// Get the absolute path for the filename from the compile command.
 llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
   llvm::SmallString<128> AbsolutePath;
   if (llvm::sys::path::is_absolute(Cmd.Filename)) {
@@ -66,9 +78,9 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
   return AbsolutePath;
 }
 
-/// Get a unique module file path under \param ModuleFilesPrefix.
-std::string getUniqueModuleFilePath(StringRef ModuleName,
-                                    PathRef ModuleFilesPrefix) {
+// Get a unique module file path under \param ModuleFilesPrefix.
+std::string getModuleFilePath(llvm::StringRef ModuleName,
+                              PathRef ModuleFilesPrefix) {
   llvm::SmallString<256> ModuleFilePattern(ModuleFilesPrefix);
   auto [PrimaryModuleName, PartitionName] = ModuleName.split(':');
   llvm::sys::path::append(ModuleFilePattern, PrimaryModuleName);
@@ -77,128 +89,49 @@ std::string getUniqueModuleFilePath(StringRef ModuleName,
     ModuleFilePattern.append(PartitionName);
   }
 
-  ModuleFilePattern.append("-%%-%%-%%-%%-%%-%%");
   ModuleFilePattern.append(".pcm");
 
   llvm::SmallString<256> ModuleFilePath;
   llvm::sys::fs::createUniquePath(ModuleFilePattern, ModuleFilePath,
                                   /*MakeAbsolute=*/false);
 
-  return (std::string)ModuleFilePath;
+  return std::string(ModuleFilePath);
 }
 } // namespace
 
-bool ModulesBuilder::buildModuleFile(StringRef ModuleName,
-                                     const ThreadsafeFS *TFS,
-                                     std::shared_ptr<ProjectModules> MDB,
-                                     PathRef ModuleFilesPrefix,
-                                     PrerequisiteModules &BuiltModuleFiles) {
-  if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
-    return true;
-
-  PathRef ModuleUnitFileName = MDB->getSourceForModuleName(ModuleName);
-  /// It is possible that we're meeting third party modules (modules whose
-  /// source are not in the project. e.g, the std module may be a third-party
-  /// module for most project) or something wrong with the implementation of
-  /// ProjectModules.
-  /// FIXME: How should we treat third party modules here? If we want to ignore
-  /// third party modules, we should return true instead of false here.
-  /// Currently we simply bail out.
-  if (ModuleUnitFileName.empty())
-    return false;
-
-  for (auto &RequiredModuleName : MDB->getRequiredModules(ModuleUnitFileName)) {
-    // Return early if there are errors building the module file.
-    if (!buildModuleFile(RequiredModuleName, TFS, MDB, ModuleFilesPrefix,
-                         BuiltModuleFiles)) {
-      log("Failed to build module {0}", RequiredModuleName);
-      return false;
-    }
-  }
-
-  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
-  if (!Cmd)
-    return false;
-
-  std::string ModuleFileName =
-      getUniqueModuleFilePath(ModuleName, ModuleFilesPrefix);
-  Cmd->Output = ModuleFileName;
-
-  ParseInputs Inputs;
-  Inputs.TFS = TFS;
-  Inputs.CompileCommand = std::move(*Cmd);
-
-  IgnoreDiagnostics IgnoreDiags;
-  auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
-  if (!CI)
-    return false;
-
-  auto FS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
-  auto AbsolutePath = getAbsolutePath(Inputs.CompileCommand);
-  auto Buf = FS->getBufferForFile(AbsolutePath);
-  if (!Buf)
-    return false;
-
-  // Hash the contents of input files and store the hash value to the BMI files.
-  // So that we can check if the files are still valid when we want to reuse the
-  // BMI files.
-  CI->getHeaderSearchOpts().ValidateASTInputFilesContent = true;
-
-  BuiltModuleFiles.adjustHeaderSearchOptions(CI->getHeaderSearchOpts());
-
-  CI->getFrontendOpts().OutputFile = Inputs.CompileCommand.Output;
-  auto Clang =
-      prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
-                              std::move(*Buf), std::move(FS), IgnoreDiags);
-  if (!Clang)
-    return false;
-
-  GenerateModuleInterfaceAction Action;
-  Clang->ExecuteAction(Action);
-
-  if (Clang->getDiagnostics().hasErrorOccurred())
-    return false;
-
-  BuiltModuleFiles.addModuleFile(ModuleName, ModuleFileName);
-  return true;
-}
-
-/// FailedPrerequisiteModules - stands for the PrerequisiteModules which has
-/// errors happened during the building process.
+// FailedPrerequisiteModules - stands for the PrerequisiteModules which has
+// errors happened during the building process.
 class FailedPrerequisiteModules : public PrerequisiteModules {
 public:
   ~FailedPrerequisiteModules() override = default;
 
-  /// We shouldn't adjust the compilation commands based on
-  /// FailedPrerequisiteModules.
+  // We shouldn't adjust the compilation commands based on
+  // FailedPrerequisiteModules.
   void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {
   }
 
-  /// FailedPrerequisiteModules can never be reused.
+  // FailedPrerequisiteModules can never be reused.
   bool
   canReuse(const CompilerInvocation &CI,
            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override {
     return false;
   }
 
-  /// No module unit got built in FailedPrerequisiteModules.
-  bool isModuleUnitBuilt(StringRef ModuleName) const override { return false; }
-
-  /// We shouldn't add any module files to the FailedPrerequisiteModules.
-  void addModuleFile(StringRef ModuleName, StringRef ModuleFilePath) override {
-    assert(false && "We shouldn't operator based on failed module files");
+  // No module unit got built in FailedPrerequisiteModules.
+  bool isModuleUnitBuilt(llvm::StringRef ModuleName) const override {
+    return false;
   }
 };
 
-/// StandalonePrerequisiteModules - stands for PrerequisiteModules for which all
-/// the required modules are built successfully. All the module files
-/// are owned by the StandalonePrerequisiteModules class.
-///
-/// All the built module files won't be shared with other instances of the
-/// class. So that we can avoid worrying thread safety.
-///
-/// We don't need to worry about duplicated module names here since the standard
-/// guarantees the module names should be unique to a program.
+// StandalonePrerequisiteModules - stands for PrerequisiteModules for which all
+// the required modules are built successfully. All the module files
+// are owned by the StandalonePrerequisiteModules class.
+//
+// Any of the built module files won't be shared with other instances of the
+// class. So that we can avoid worrying thread safety.
+//
+// We don't need to worry about duplicated module names here since the standard
+// guarantees the module names should be unique to a program.
 class StandalonePrerequisiteModules : public PrerequisiteModules {
 public:
   StandalonePrerequisiteModules() = default;
@@ -222,24 +155,19 @@ public:
   bool canReuse(const CompilerInvocation &CI,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override;
 
-  bool isModuleUnitBuilt(StringRef ModuleName) const override {
-    constexpr unsigned SmallSizeThreshold = 8;
-    if (RequiredModules.size() < SmallSizeThreshold)
-      return llvm::any_of(RequiredModules, [&](auto &MF) {
-        return MF.ModuleName == ModuleName;
-      });
-
+  bool isModuleUnitBuilt(llvm::StringRef ModuleName) const override {
     return BuiltModuleNames.contains(ModuleName);
   }
 
-  void addModuleFile(StringRef ModuleName, StringRef ModuleFilePath) override {
+  void addModuleFile(llvm::StringRef ModuleName,
+                     llvm::StringRef ModuleFilePath) {
     RequiredModules.emplace_back(ModuleName, ModuleFilePath);
     BuiltModuleNames.insert(ModuleName);
   }
 
 private:
   struct ModuleFile {
-    ModuleFile(StringRef ModuleName, PathRef ModuleFilePath)
+    ModuleFile(llvm::StringRef ModuleName, PathRef ModuleFilePath)
         : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
 
     ModuleFile() = delete;
@@ -264,14 +192,108 @@ private:
   };
 
   llvm::SmallVector<ModuleFile, 8> RequiredModules;
-  /// A helper class to speedup the query if a module is built.
+  // A helper class to speedup the query if a module is built.
   llvm::StringSet<> BuiltModuleNames;
 };
 
+namespace {
+// Build a module file for module with `ModuleName`. Return false
+// when there are problem happens. Return true when the
+// module file exists or built successfully. The information of built
+// module file are stored in \param BuiltModuleFiles.
+bool buildModuleFile(llvm::StringRef ModuleName,
+                     const GlobalCompilationDatabase &CDB,
+                     const ThreadsafeFS *TFS, ProjectModules *MDB,
+                     PathRef ModuleFilesPrefix,
+                     StandalonePrerequisiteModules &BuiltModuleFiles) {
+  if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
+    return true;
+
+  PathRef ModuleUnitFileName = MDB->getSourceForModuleName(ModuleName);
+  // It is possible that we're meeting third party modules (modules whose
+  // source are not in the project. e.g, the std module may be a third-party
+  // module for most projects) or something wrong with the implementation of
+  // ProjectModules.
+  // FIXME: How should we treat third party modules here? If we want to ignore
+  // third party modules, we should return true instead of false here.
+  // Currently we simply bail out.
+  if (ModuleUnitFileName.empty()) {
+    elog("Failed to get the source for module name {0}. Maybe it is from third "
+         "party libraries or something goes wrong",
+         ModuleName);
+    return false;
+  }
+
+  for (auto &RequiredModuleName : MDB->getRequiredModules(ModuleUnitFileName)) {
+    // Return early if there are errors building the module file.
+    if (!buildModuleFile(RequiredModuleName, CDB, TFS, MDB, ModuleFilesPrefix,
+                         BuiltModuleFiles)) {
+      elog("Failed to build {0} since failed to build {1}", ModuleName,
+           RequiredModuleName);
+      return false;
+    }
+  }
+
+  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
+  if (!Cmd) {
+    elog("Failed to get compile command for {0}", ModuleName);
+    return false;
+  }
+
+  Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
+
+  ParseInputs Inputs;
+  Inputs.TFS = TFS;
+  Inputs.CompileCommand = std::move(*Cmd);
+
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
+  if (!CI) {
+    elog("Failed to build compiler invocation for {0}", ModuleName);
+    return false;
+  }
+
+  auto FS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+  auto AbsolutePath = getAbsolutePath(Inputs.CompileCommand);
+  auto Buf = FS->getBufferForFile(AbsolutePath);
+  if (!Buf) {
+    elog("Failed to create buffer for {0}", AbsolutePath);
+    return false;
+  }
+
+  // Hash the contents of input files and store the hash value to the BMI files.
+  // So that we can check if the files are still valid when we want to reuse the
+  // BMI files.
+  CI->getHeaderSearchOpts().ValidateASTInputFilesContent = true;
+
+  BuiltModuleFiles.adjustHeaderSearchOptions(CI->getHeaderSearchOpts());
+
+  CI->getFrontendOpts().OutputFile = Inputs.CompileCommand.Output;
+  auto Clang =
+      prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
+                              std::move(*Buf), std::move(FS), IgnoreDiags);
+  if (!Clang) {
+    elog("Failed to prepare compiler instance for {0}", AbsolutePath);
+    return false;
+  }
+
+  GenerateModuleInterfaceAction Action;
+  Clang->ExecuteAction(Action);
+
+  if (Clang->getDiagnostics().hasErrorOccurred()) {
+    elog("Compilation for {0} failed", AbsolutePath);
+    return false;
+  }
+
+  BuiltModuleFiles.addModuleFile(ModuleName, Inputs.CompileCommand.Output);
+  return true;
+}
+} // namespace
+
 std::unique_ptr<PrerequisiteModules>
 ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
-                                            const ThreadsafeFS *TFS) {
-  std::shared_ptr<ProjectModules> MDB = CDB.getProjectModules(File);
+                                            const ThreadsafeFS *TFS) const {
+  std::unique_ptr<ProjectModules> MDB = CDB.getProjectModules(File);
   if (!MDB)
     return {};
 
@@ -279,18 +301,25 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
   if (RequiredModuleNames.empty())
     return {};
 
+  llvm::SmallString<128> Prefix = llvm::sys::path::filename(File);
+  // There might be multiple files with the same name in a project. So appending
+  // the hash value of the full path to make sure they won't conflict.
+  Prefix += std::to_string(llvm::hash_value(File));
   llvm::SmallString<256> ModuleFilesPrefix =
-      getModuleFilesPath(File, CDB, llvm::sys::path::filename(File));
+      getUniqueModuleFilesPath(File, Prefix);
+
+  log("Trying to build required modules for {0} in {1}", File,
+      ModuleFilesPrefix);
 
   auto RequiredModules = std::make_unique<StandalonePrerequisiteModules>();
 
-  for (const std::string &RequiredModuleName : RequiredModuleNames)
+  for (llvm::StringRef RequiredModuleName : RequiredModuleNames)
     // Return early if there is any error.
-    if (!buildModuleFile(RequiredModuleName, TFS, MDB, ModuleFilesPrefix,
-                         *RequiredModules.get())) {
-      log("Failed to build module {0}", RequiredModuleName);
+    if (!buildModuleFile(RequiredModuleName, CDB, TFS, MDB.get(),
+                         ModuleFilesPrefix, *RequiredModules.get()))
       return std::make_unique<FailedPrerequisiteModules>();
-    }
+
+  log("Built required modules for {0} in {1}", File, ModuleFilesPrefix);
 
   return std::move(RequiredModules);
 }
@@ -321,13 +350,15 @@ bool StandalonePrerequisiteModules::canReuse(
 
   Clang.createASTReader();
   for (auto &RequiredModule : RequiredModules) {
-    StringRef BMIPath = RequiredModule.ModuleFilePath;
+    llvm::StringRef BMIPath = RequiredModule.ModuleFilePath;
+    // TODO: Loading BMI fully is too heavy considering something cheaply to
+    // check if we can reuse the BMI.
     auto ReadResult =
         Clang.getASTReader()->ReadAST(BMIPath, serialization::MK_MainFile,
                                       SourceLocation(), ASTReader::ARR_None);
 
     if (ReadResult != ASTReader::Success) {
-      log("Failed to reuse {0}", BMIPath);
+      elog("Failed to reuse {0} due to {1}", BMIPath, ReadResult);
       return false;
     }
   }

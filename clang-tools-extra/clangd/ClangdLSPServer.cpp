@@ -14,6 +14,7 @@
 #include "Feature.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
+#include "ModulesBuilder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -563,6 +564,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Mangler.ResourceDir = *Opts.ResourceDir;
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               std::move(Mangler));
+
+  if (Opts.ExperimentalModulesSupport)
+    ModulesManager.emplace(*CDB);
+
   {
     // Switch caller's context with LSPServer's background context. Since we
     // rather want to propagate information from LSPServer's context into the
@@ -572,7 +577,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (Opts.Encoding)
       WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
     Server.emplace(*CDB, TFS, Opts,
-                   static_cast<ClangdServer::Callbacks *>(this));
+                   static_cast<ClangdServer::Callbacks *>(this),
+                   ModulesManager ? &*ModulesManager : nullptr);
   }
 
   llvm::json::Object ServerCaps{

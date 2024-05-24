@@ -49,7 +49,8 @@ Improvements to clangd
 ----------------------
 
 - Introduced exmperimental support for C++20 Modules. The experimental support can
-  be enabled by `-experimental-modules-support` option.
+  be enabled by `-experimental-modules-support` option. It is in an early development
+  stage and may not perform efficiently in real-world scenarios.
 
 Inlay hints
 ^^^^^^^^^^^

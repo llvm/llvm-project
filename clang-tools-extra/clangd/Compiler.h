@@ -44,6 +44,8 @@ struct ParseOptions {
   bool ImportInsertions = false;
 };
 
+class ModulesBuilder;
+
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {
   tooling::CompileCommand CompileCommand;
@@ -60,6 +62,8 @@ struct ParseInputs {
   TidyProviderRef ClangTidyProvider = {};
   // Used to acquire ASTListeners when parsing files.
   FeatureModuleSet *FeatureModules = nullptr;
+  // Used to build and manage (C++) modules.
+  ModulesBuilder *ModulesManager = nullptr;
 };
 
 /// Clears \p CI from options that are not supported by clangd, like codegen or

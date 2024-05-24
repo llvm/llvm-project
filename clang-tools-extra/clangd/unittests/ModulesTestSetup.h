@@ -28,7 +28,7 @@ protected:
 public:
   // Add files to the working testing directory and repalce all the
   // `__DIR__` to TestDir.
-  void addFile(StringRef Path, StringRef Contents) {
+  void addFile(llvm::StringRef Path, llvm::StringRef Contents) {
     ASSERT_FALSE(llvm::sys::path::is_absolute(Path));
 
     SmallString<256> AbsPath(TestDir);
@@ -54,7 +54,7 @@ public:
 
   // Get the absolute path for file specified by Path under testing working
   // directory.
-  std::string getFullPath(StringRef Path) {
+  std::string getFullPath(llvm::StringRef Path) {
     SmallString<128> Result(TestDir);
     llvm::sys::path::append(Result, Path);
     EXPECT_TRUE(llvm::sys::fs::exists(Result.str()));
@@ -69,7 +69,7 @@ public:
     return std::make_unique<DirectoryBasedGlobalCompilationDatabase>(Opts);
   }
 
-  ParseInputs getInputs(StringRef FileName,
+  ParseInputs getInputs(llvm::StringRef FileName,
                         const GlobalCompilationDatabase &CDB) {
     std::string FullPathName = getFullPath(FileName);
 

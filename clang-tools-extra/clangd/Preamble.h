@@ -29,7 +29,6 @@
 #include "Headers.h"
 
 #include "ModulesBuilder.h"
-#include "PrerequisiteModules.h"
 
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"

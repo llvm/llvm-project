@@ -42,6 +42,8 @@
 
 namespace clang {
 namespace clangd {
+
+class ModulesBuilder;
 /// Manages a collection of source files and derived data (ASTs, indexes),
 /// and provides language-aware features such as code completion.
 ///
@@ -202,7 +204,8 @@ public:
   /// those arguments for subsequent reparses. However, ClangdServer will check
   /// if compilation arguments changed on calls to forceReparse().
   ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
-               const Options &Opts, Callbacks *Callbacks = nullptr);
+               const Options &Opts, Callbacks *Callbacks = nullptr,
+               ModulesBuilder *ModulesManager = nullptr);
   ~ClangdServer();
 
   /// Gets the installed feature module of a given type, if any.
@@ -480,6 +483,8 @@ private:
   std::unique_ptr<BackgroundIndex> BackgroundIdx;
   // Storage for merged views of the various indexes.
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
+  // Manage module files.
+  ModulesBuilder *ModulesManager = nullptr;
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;

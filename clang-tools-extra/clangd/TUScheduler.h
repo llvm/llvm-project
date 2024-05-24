@@ -204,8 +204,6 @@ public:
   virtual void onPreamblePublished(PathRef File) {}
 };
 
-class ModulesBuilder;
-
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
 /// preambles and ASTs) for opened files.
 /// TUScheduler is not thread-safe, only one thread should be providing updates
@@ -377,8 +375,6 @@ private:
   // running tasks asynchronously.
   std::optional<AsyncTaskRunner> PreambleTasks;
   std::optional<AsyncTaskRunner> WorkerThreads;
-  // Manages to build module files.
-  std::optional<ModulesBuilder> ModulesManager;
   // Used to create contexts for operations that are not bound to a particular
   // file (e.g. index queries).
   std::string LastActiveFile;

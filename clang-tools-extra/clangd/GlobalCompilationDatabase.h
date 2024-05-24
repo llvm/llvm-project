@@ -48,7 +48,7 @@ public:
   }
 
   /// Get the modules in the closest project to \p File
-  virtual std::shared_ptr<ProjectModules>
+  virtual std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const {
     return nullptr;
   }
@@ -84,7 +84,7 @@ public:
 
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
-  std::shared_ptr<ProjectModules>
+  std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
@@ -133,7 +133,7 @@ public:
   /// \p File's parents.
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
-  std::shared_ptr<ProjectModules>
+  std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;

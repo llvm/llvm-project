@@ -11,7 +11,6 @@
 /// code mode.
 #ifndef _WIN32
 
-#include "PrerequisiteModules.h"
 #include "ModulesBuilder.h"
 #include "ModulesTestSetup.h"
 

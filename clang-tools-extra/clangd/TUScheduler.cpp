@@ -52,7 +52,6 @@
 #include "Config.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
-#include "ModulesBuilder.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "clang-include-cleaner/Record.h"
@@ -606,8 +605,8 @@ class ASTWorker {
   ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
             TUScheduler::ASTCache &LRUCache,
             TUScheduler::HeaderIncluderCache &HeaderIncluders,
-            Semaphore &Barrier, ModulesBuilder *ModulesManager, bool RunSync,
-            const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
+            Semaphore &Barrier, bool RunSync, const TUScheduler::Options &Opts,
+            ParsingCallbacks &Callbacks);
 
 public:
   /// Create a new ASTWorker and return a handle to it.
@@ -620,8 +619,7 @@ public:
          TUScheduler::ASTCache &IdleASTs,
          TUScheduler::HeaderIncluderCache &HeaderIncluders,
          AsyncTaskRunner *Tasks, Semaphore &Barrier,
-         ModulesBuilder *ModulesManager, const TUScheduler::Options &Opts,
-         ParsingCallbacks &Callbacks);
+         const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
   ~ASTWorker();
 
   void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
@@ -656,7 +654,7 @@ public:
 
   const GlobalCompilationDatabase &getCompilationDatabase() { return CDB; }
 
-  ModulesBuilder *getModulesManager() const { return ModulesManager; }
+  ModulesBuilder *getModulesBuilder() { return FileInputs.ModulesManager; }
 
 private:
   // Details of an update request that are relevant to scheduling.
@@ -770,8 +768,6 @@ private:
 
   SynchronizedTUStatus Status;
   PreambleThread PreamblePeer;
-
-  ModulesBuilder *ModulesManager = nullptr;
 };
 
 /// A smart-pointer-like class that points to an active ASTWorker.
@@ -816,15 +812,16 @@ private:
   std::shared_ptr<ASTWorker> Worker;
 };
 
-ASTWorkerHandle ASTWorker::create(
-    PathRef FileName, const GlobalCompilationDatabase &CDB,
-    TUScheduler::ASTCache &IdleASTs,
-    TUScheduler::HeaderIncluderCache &HeaderIncluders, AsyncTaskRunner *Tasks,
-    Semaphore &Barrier, ModulesBuilder *ModulesManager,
-    const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks) {
-  std::shared_ptr<ASTWorker> Worker(new ASTWorker(
-      FileName, CDB, IdleASTs, HeaderIncluders, Barrier, ModulesManager,
-      /*RunSync=*/!Tasks, Opts, Callbacks));
+ASTWorkerHandle
+ASTWorker::create(PathRef FileName, const GlobalCompilationDatabase &CDB,
+                  TUScheduler::ASTCache &IdleASTs,
+                  TUScheduler::HeaderIncluderCache &HeaderIncluders,
+                  AsyncTaskRunner *Tasks, Semaphore &Barrier,
+                  const TUScheduler::Options &Opts,
+                  ParsingCallbacks &Callbacks) {
+  std::shared_ptr<ASTWorker> Worker(
+      new ASTWorker(FileName, CDB, IdleASTs, HeaderIncluders, Barrier,
+                    /*RunSync=*/!Tasks, Opts, Callbacks));
   if (Tasks) {
     Tasks->runAsync("ASTWorker:" + llvm::sys::path::filename(FileName),
                     [Worker]() { Worker->run(); });
@@ -838,16 +835,15 @@ ASTWorkerHandle ASTWorker::create(
 ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                      TUScheduler::ASTCache &LRUCache,
                      TUScheduler::HeaderIncluderCache &HeaderIncluders,
-                     Semaphore &Barrier, ModulesBuilder *ModulesManager,
-                     bool RunSync, const TUScheduler::Options &Opts,
+                     Semaphore &Barrier, bool RunSync,
+                     const TUScheduler::Options &Opts,
                      ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), HeaderIncluders(HeaderIncluders), RunSync(RunSync),
       UpdateDebounce(Opts.UpdateDebounce), FileName(FileName),
       ContextProvider(Opts.ContextProvider), CDB(CDB), Callbacks(Callbacks),
       Barrier(Barrier), Done(false), Status(FileName, Callbacks),
       PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
-                   Opts.PreambleThrottler, Status, HeaderIncluders, *this),
-      ModulesManager(ModulesManager) {
+                   Opts.PreambleThrottler, Status, HeaderIncluders, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
@@ -1093,7 +1089,7 @@ void PreambleThread::build(Request Req) {
   bool IsFirstPreamble = !LatestBuild;
 
   LatestBuild = clang::clangd::buildPreamble(
-      FileName, *Req.CI, Inputs, StoreInMemory, ASTPeer.getModulesManager(),
+      FileName, *Req.CI, Inputs, StoreInMemory, ASTPeer.getModulesBuilder(),
       [&](CapturedASTCtx ASTCtx,
           std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),
@@ -1654,9 +1650,6 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
     PreambleTasks.emplace();
     WorkerThreads.emplace();
   }
-
-  if (Opts.ExperimentalModulesSupport)
-    ModulesManager.emplace(CDB);
 }
 
 TUScheduler::~TUScheduler() {
@@ -1689,8 +1682,7 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::create(
         File, CDB, *IdleASTs, *HeaderIncluders,
-        WorkerThreads ? &*WorkerThreads : nullptr, Barrier,
-        ModulesManager ? &*ModulesManager : nullptr, Opts, *Callbacks);
+        WorkerThreads ? &*WorkerThreads : nullptr, Barrier, Opts, *Callbacks);
     FD = std::unique_ptr<FileData>(
         new FileData{Inputs.Contents, std::move(Worker)});
     ContentChanged = true;
