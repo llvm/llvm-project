@@ -3100,7 +3100,8 @@ def CatchParamOp : CIR_Op<"catch_param"> {
 
 def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
   let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-                       Arg<CIR_PointerType, "", [MemRead]>:$src);
+                       Arg<CIR_PointerType, "", [MemRead]>:$src,
+                       UnitAttr:$is_volatile);
   let summary = "Copies contents from a CIR pointer to another";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
@@ -3118,7 +3119,8 @@ def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
     ```
   }];
 
-  let assemblyFormat = "$src `to` $dst attr-dict `:` qualified(type($dst))";
+  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
+                        attr-dict `:` qualified(type($dst)) }];
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

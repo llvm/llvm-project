@@ -83,3 +83,12 @@ void foo6(A* a1) {
 // CHECK:   [[TMP2:%.*]] = cir.load deref [[TMP0]] : !cir.ptr<!cir.ptr<!ty_22A22>>, !cir.ptr<!ty_22A22>
 // CHECK:   cir.copy [[TMP2]] to [[TMP1]] : !cir.ptr<!ty_22A22>
 }
+
+volatile A vol_a;
+A foo7() {
+  return vol_a;
+}
+// CHECK: cir.func {{.*@foo7}}
+// CHECK:   %0 = cir.alloca
+// CHECK:   %1 = cir.get_global @vol_a
+// CHECK:   cir.copy %1 to %0 volatile

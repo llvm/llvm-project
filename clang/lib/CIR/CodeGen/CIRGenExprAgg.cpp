@@ -389,10 +389,8 @@ void AggExprEmitter::buildCopy(QualType type, const AggValueSlot &dest,
   // the two sides.
   LValue DestLV = CGF.makeAddrLValue(dest.getAddress(), type);
   LValue SrcLV = CGF.makeAddrLValue(src.getAddress(), type);
-  if (dest.isVolatile() || src.isVolatile() ||
-      UnimplementedFeature::volatileTypes())
-    llvm_unreachable("volatile is NYI");
-  CGF.buildAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(), false);
+  CGF.buildAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(),
+                         dest.isVolatile() || src.isVolatile());
 }
 
 // FIXME(cir): This function could be shared with traditional LLVM codegen
@@ -912,7 +910,18 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     // into existence.
     if (E->getSubExpr()->getType().isVolatileQualified() ||
         UnimplementedFeature::volatileTypes()) {
-      llvm_unreachable("volatile is NYI");
+      bool Destruct =
+          !Dest.isExternallyDestructed() &&
+          E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+      if (Destruct)
+        Dest.setExternallyDestructed();
+      Visit(E->getSubExpr());
+
+      if (Destruct)
+        CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Dest.getAddress(),
+                        E->getType());
+
+      return;
     }
     [[fallthrough]];
 
@@ -1598,7 +1607,7 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  builder.createCopy(DestPtr.getPointer(), SrcPtr.getPointer());
+  builder.createCopy(DestPtr.getPointer(), SrcPtr.getPointer(), isVolatile);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

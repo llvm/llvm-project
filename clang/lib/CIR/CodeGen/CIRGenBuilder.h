@@ -584,8 +584,9 @@ public:
   //
 
   /// Create a copy with inferred length.
-  mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
-    return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src);
+  mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
+                               bool isVolatile = false) {
+    return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src, isVolatile);
   }
 
   /// Create a break operation.
