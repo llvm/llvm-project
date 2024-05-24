@@ -4558,8 +4558,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       DemandedElts.clearAllBits();
       for (unsigned VF = MaxVF; VF >= MinVF; VF /= 2) {
         SmallVector<LoadsState> States;
-        for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End;
-             Cnt += VF) {
+        for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           SmallVector<unsigned> Order;
           SmallVector<Value *> PointerOps;
@@ -6225,7 +6224,7 @@ static bool gatherPossiblyVectorizableLoads(
                 Repeated.insert(Cnt);
             }
             if (NumUniques > 0 &&
-                (Loads.size() == NumUniques || /*GatheredLoads[Idx].size() == 1 ||*/
+                (Loads.size() == NumUniques ||
                  (Loads.size() - NumUniques >= 2 &&
                   Loads.size() - NumUniques >= Loads.size() / 2 &&
                   (isPowerOf2_64(Data.size() + NumUniques) ||
@@ -10946,8 +10945,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
-  DenseMap<const TreeEntry *, DenseMap<const TreeEntry *, SmallBitVector>>
-      VectToGatherIndices;
   for (ExternalUser &EU : ExternalUses) {
     // We only add extract cost once for the same scalar.
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
@@ -11082,29 +11079,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       if (CanBeUsedAsGEP) {
         ExtractCost += TTI->getInstructionCost(GEP, CostKind);
         ExternalUsesAsGEPs.insert(EU.Scalar);
-        continue;
-      }
-    }
-
-    // Try to handle the case, where the extracts are consecutive and produce
-    // subvector extract/insert sequences.
-    if (auto *SI = dyn_cast<Instruction>(EU.Scalar);
-        SI && all_of(SI->users(), [this](User *U) {
-          return ScalarToTreeEntry.contains(U);
-        })) {
-      const TreeEntry *TE = getTreeEntry(SI);
-      assert(TE && "Expected tree entry for scalar.");
-      auto &Map = VectToGatherIndices.getOrInsertDefault(TE);
-      auto It = ValueToGatherNodes.find(SI);
-      if (It != ValueToGatherNodes.end()) {
-        const SmallPtrSetImpl<const TreeEntry *> &Gathers = It->getSecond();
-        for (const TreeEntry *BV : Gathers) {
-          SmallBitVector &Uses =
-              Map.try_emplace(BV, SmallBitVector(TE->getVectorFactor()))
-                  .first->getSecond();
-          Uses.set(BV->findLaneForValue(SI));
-        }
-        __builtin_trap();
         continue;
       }
     }
