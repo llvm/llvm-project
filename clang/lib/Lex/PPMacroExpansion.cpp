@@ -1324,8 +1324,8 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   std::optional<LexEmbedParametersResult> Params =
       this->LexEmbedParameters(Tok, /*ForHasEmbed=*/true);
-  assert(Params || Tok.is(tok::eod) &&
-                       "expected success or to be at the end of the directive");
+  assert((Params || Tok.is(tok::eod)) &&
+         "expected success or to be at the end of the directive");
 
   if (!Params)
     return EmbedResult::Invalid;
@@ -1344,7 +1344,6 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
-  StringRef OriginalFilename = Filename;
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
