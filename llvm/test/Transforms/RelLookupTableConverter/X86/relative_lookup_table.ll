@@ -73,51 +73,63 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.external_linkage = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align
 
 ; Lookup table check for integer pointers that have internal linkage
-; CHECK: @reltable.internal_linkage = private unnamed_addr constant [3 x i32]
+; CHECK: @switch.table.internal_linkage = private unnamed_addr constant [3 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @reltable.internal_linkage to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @b2 to i64), i64 ptrtoint (ptr @reltable.internal_linkage to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @c2 to i64), i64 ptrtoint (ptr @reltable.internal_linkage to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @b2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @c2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage to i64)) to i32)
 ; CHECK-SAME: ], align 4
 
 ; Relative switch lookup table for strings
-; CHECK: @reltable.string_table = private unnamed_addr constant [3 x i32]
+; CHECK: @switch.table.string_table = private unnamed_addr constant [3 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @reltable.string_table to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @reltable.string_table to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @reltable.string_table to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.string_table to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table to i64)) to i32)
 ; CHECK-SAME: ], align 4
 
 ; Relative switch lookup table for strings with holes, where holes are filled with relative offset to default values
-; CHECK: @reltable.string_table_holes = private unnamed_addr constant [4 x i32]
+; CHECK: @switch.table.string_table_holes = private unnamed_addr constant [4 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @reltable.string_table_holes to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @reltable.string_table_holes to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @reltable.string_table_holes to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.4 to i64), i64 ptrtoint (ptr @reltable.string_table_holes to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table_holes to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.4 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes to i64)) to i32)
 ; CHECK-SAME: ], align 4
 
 ; Single value check
-; CHECK: @reltable.single_value = private unnamed_addr constant [3 x i32]
+; CHECK: @switch.table.single_value = private unnamed_addr constant [3 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @reltable.single_value to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @reltable.single_value to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @reltable.single_value to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.single_value to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.single_value to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.single_value to i64)) to i32)
 ; CHECK-SAME: ], align 4
 ;
 
 ; Relative lookup table for the loop hoist check test
-; CHECK: @reltable.loop_hoist = internal unnamed_addr constant [2 x i32]
+; CHECK: @table = internal constant [2 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @reltable.loop_hoist to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @reltable.loop_hoist to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table to i64)) to i32)
 ; CHECK-SAME: ], align 4
 
 ; Relative look up table for the test where gep is not immediately followed by a load check
-; CHECK: @reltable.gep_is_not_imm_followed_by_load = internal unnamed_addr constant [2 x i32]
+; CHECK: @table2 = internal constant [2 x i32]
 ; CHECK-SAME: [
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @reltable.gep_is_not_imm_followed_by_load to i64)) to i32),
-; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @reltable.gep_is_not_imm_followed_by_load to i64)) to i32)
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table2 to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table2 to i64)) to i32)
+; CHECK-SAME: ], align 4
+
+; CHECK:      @struct_table = internal constant {{.*}} {
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @struct_table to i64)) to i32),
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @struct_table to i64)) to i32),
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @struct_table to i64)) to i32)
+; CHECK-SAME: }, align 4
+
+; CHECK:      @array_table = internal constant {{.*}} [
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @array_table to i64)) to i32),
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @array_table to i64)) to i32),
+; CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @array_table to i64)) to i32)
 ; CHECK-SAME: ], align 4
 
 ; Lookup table check for integer pointers that have external linkage
@@ -154,7 +166,7 @@ define ptr @internal_linkage(i32 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 %cond, 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.internal_linkage, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.internal_linkage, i32 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret ptr @d2
@@ -180,7 +192,7 @@ define ptr @string_table(i32 %cond) {
   ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
   ; CHECK:       switch.lookup:
   ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 %cond, 2
-  ; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.string_table, i32 [[RELTABLE_SHIFT]])
+  ; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.string_table, i32 [[RELTABLE_SHIFT]])
   ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
   ; CHECK:       return:
   ; CHECK-NEXT:    ret ptr @.str.3
@@ -206,7 +218,7 @@ define ptr @string_table_holes(i32 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.string_table_holes, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.string_table_holes, i32 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret ptr @.str.3
@@ -235,7 +247,7 @@ define void @single_value(i32 %cond)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.single_value, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.single_value, i32 [[RELTABLE_SHIFT]])
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:   [[STR1:%.*]] = phi ptr [ @.str.5, %entry ], [ @.str.7, %switch.lookup ]
 ; CHECK-NEXT:   [[STR2:%.*]] = phi ptr [ @.str.6, %entry ], [ [[RELTABLE_INTRINSIC]], [[SWITCH_LOOKUP]] ]
@@ -265,7 +277,7 @@ define ptr @user_defined_lookup_table(i32 %cond)  {
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[IDX_PROM:%.*]] = sext i32 [[COND]] to i64
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[IDX_PROM]], 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @reltable.user_defined_lookup_table, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @user_defined_lookup_table.table, i64 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    br label %cond.end
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND1:%.*]] = phi ptr [ [[RELTABLE_INTRINSIC]], %cond.false ], [ @.str.3, %entry ]
@@ -296,7 +308,7 @@ define ptr @loop_hoist(i32 %x) {
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    br i1 [[TMP0]], label %if.done, label %if.false
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.loop_hoist, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @table, i32 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    br label %if.done
 ; CHECK:       if.done:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ @.str.10, %entry ], [ [[RELTABLE_INTRINSIC]], %if.false ]
@@ -327,7 +339,7 @@ define ptr @gep_is_not_imm_followed_by_load(i32 %x) {
 ; CHECK:       entry:
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @may_not_return()
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.gep_is_not_imm_followed_by_load, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @table2, i32 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
 ;
 entry:
@@ -335,6 +347,90 @@ entry:
   call void @may_not_return()
   %1 = load ptr, ptr %0
   ret ptr %1
+}
+
+@struct_table = internal constant {ptr, ptr, ptr} {
+  ptr @.str.1,
+  ptr @.str.2,
+  ptr @.str.3
+}
+
+define ptr @convert_struct() {
+;; We should correctly access the struct. Its 3rd member is 8 bytes after the start.
+; CHECK-LABEL: @convert_struct
+; CHECK:       entry:
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @llvm.load.relative.i32(ptr @struct_table, i32 8)
+; CHECK-NEXT:    ret ptr [[PTR]]
+entry:
+  %0 = getelementptr { ptr, ptr, ptr }, ptr @struct_table, i32 0, i32 2
+  %1 = load ptr, ptr %0
+  ret ptr %1
+}
+
+declare void @func(ptr %p)
+
+define void @more_than_one_use() {
+; CHECK-LABEL: @more_than_one_use
+; CHECK:       entry:
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @llvm.load.relative.i32(ptr @struct_table, i32 0)
+; CHECK-NEXT:    [[PTR2:%.*]] = call ptr @llvm.load.relative.i32(ptr @struct_table, i32 4)
+; CHECK-NEXT:    call void @func(ptr [[PTR]])
+; CHECK-NEXT:    call void @func(ptr [[PTR2]])
+entry:
+  %0 = getelementptr { ptr, ptr, ptr }, ptr @struct_table, i32 0, i32 0
+  %1 = load ptr, ptr %0
+  %2 = getelementptr { ptr, ptr, ptr }, ptr @struct_table, i32 0, i32 1
+  %3 = load ptr, ptr %2
+  call void @func(ptr %1)
+  call void @func(ptr %3)
+  ret void
+}
+
+@array_table = internal constant [3 x ptr] [
+  ptr @.str.1,
+  ptr @.str.2,
+  ptr @.str.3
+]
+
+define ptr @i8_gep_with_two_operands(i32 %x) {
+entry:
+;; Check that we can convert GEPs where the global is treated as i8 pointers.
+; CHECK-LABEL: @i8_gep_with_two_operands
+; CHECK:       entry:
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @llvm.load.relative.i32(ptr @array_table, i32 %x)
+; CHECK-NEXT:    ret ptr [[PTR]]
+  %0 = getelementptr i8, ptr @array_table, i32 %x
+  %1 = load ptr, ptr %0
+  ret ptr %1
+}
+
+define void @i32_gep_with_two_operands(i32 %x) {
+entry:
+;; Handle 2-operand GEPs with different integral sizes. If we treat the global
+;; as a pointer to a different integral size, we should adjust the byte-offset
+;; accordingly.
+; CHECK-LABEL: @i32_gep_with_two_operands
+; CHECK:       entry:
+; CHECK-NEXT:    [[OFFSET:%.*]] = shl i32 %x, 1
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @llvm.load.relative.i32(ptr @array_table, i32 [[OFFSET]])
+; CHECK-NEXT:    [[OFFSET2:%.*]] = shl i32 %x, 2
+; CHECK-NEXT:    [[PTR2:%.*]] = call ptr @llvm.load.relative.i32(ptr @array_table, i32 [[OFFSET2]])
+; CHECK-NEXT:    [[OFFSET3:%.*]] = shl i32 %x, 3
+; CHECK-NEXT:    [[PTR3:%.*]] = call ptr @llvm.load.relative.i32(ptr @array_table, i32 [[OFFSET3]])
+; CHECK-NEXT:    call void @func(ptr [[PTR]])
+; CHECK-NEXT:    call void @func(ptr [[PTR2]])
+; CHECK-NEXT:    call void @func(ptr [[PTR3]])
+; CHECK-NEXT:    ret void
+  %0 = getelementptr i16, ptr @array_table, i32 %x
+  %1 = load ptr, ptr %0
+  %2 = getelementptr i32, ptr @array_table, i32 %x
+  %3 = load ptr, ptr %2
+  %4 = getelementptr i64, ptr @array_table, i32 %x
+  %5 = load ptr, ptr %4
+  call void @func(ptr %1)
+  call void @func(ptr %3)
+  call void @func(ptr %5)
+  ret void
 }
 
 !llvm.module.flags = !{!0, !1}
