@@ -12,15 +12,57 @@
 
 namespace LIBC_NAMESPACE {
 
+#if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
+
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   asm(R"(
+      # Reload r4, r5, r6, r7.
+      ldmia r0!, {r4, r5, r6, r7}
+
+      # Reload r8, r9, r10. They cannot appear in register lists so load them
+      # into the lower registers, then move them into place.
+      ldmia r0!, {r1, r2, r3}
+      mov r8, r1
+      mov r9, r2
+      mov r10, r3
+
+      # Reload r11, sp, lr. They cannot appear in register lists so load them
+      # into the lower registers, then move them into place.
+      ldmia r0!, {r1, r2, r3}
+      mov r11, r1
+      mov sp, r2
+      mov lr, r3
+
+      # return val ?: 1;
+      movs r0, r1
+      beq .Lret_one
+      bx lr
+
+    .Lret_one:
+      movs r0, #1
+      bx lr)");
+}
+
+#else // Thumb2 or ARM
+
+[[gnu::naked]]
+LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+  asm(R"(
+      # While sp may appear in a register list for ARM mode, it may not for
+      # Thumb2 mode. Just load the previous value of sp into r12 then move it
+      # into sp, so that this code is portable between ARM and Thumb2.
+
       ldm r0, {r4-r12, lr}
       mov sp, r12
+
+      # return val ?: 1;
       movs r0, r1
       it eq
       moveq r0, #1
       bx lr)");
 }
+
+#endif
 
 } // namespace LIBC_NAMESPACE
