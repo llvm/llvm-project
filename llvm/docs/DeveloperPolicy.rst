@@ -531,9 +531,9 @@ Triage Role
 ^^^^^^^^^^^^^
 
 The `Triage Role <https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/managing-repository-roles/repository-roles-for-an-organization>`_ in GitHub gives users elevated permissions for managing issues and
-pull requests.  If you want to help triaging issues and pull requests in the
-project and don't need write access to the repository, you may request triage
-access instead of commit access when you email Chris.
+pull requests.  If you want to help triage issues and pull requests in the
+project and don't need commit access, you may request triage access instead
+of commit access when you email Chris.
 
 Also, once a month we review the list of users with commit access and ask anyone
 (via a GitHub issue) with less than 5 interactions (i.e commits, created PRs, or
