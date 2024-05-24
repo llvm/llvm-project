@@ -134,6 +134,7 @@ Changes to the RISC-V Backend
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
+* Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 
 Changes to the WebAssembly Backend
 ----------------------------------
