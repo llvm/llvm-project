@@ -143,7 +143,7 @@ uint64_t ompx_ballot_sync(uint64_t mask, int pred);
 ///{
 #define _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(TYPE, TY)                          \
   TYPE ompx_shfl_down_sync_##TY(uint64_t mask, TYPE var, unsigned delta,       \
-                                int width = __WARP_SIZE);
+                                int width);
 
 _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(int, i)
 _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(float, f)
