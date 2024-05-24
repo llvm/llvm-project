@@ -90,7 +90,6 @@ return:                                           ; preds = %if.else, %if.then
 ; Function Attrs: noinline
 ; IR-LABEL: @xyz()
 define dso_local i32 @xyz() local_unnamed_addr #0 {
-delete.end13:
   ; IR: call ptr @_Z3foob(i1 true)
   %call = tail call ptr @_Z3foob(i1 true)
   ; IR: call ptr @_Z3foob(i1 true)
@@ -103,7 +102,6 @@ delete.end13:
 }
 
 define dso_local i32 @main() local_unnamed_addr #0 {
-delete.end13:
   ; IR: call i32 @xyz()
   %call1 = tail call i32 @xyz(), !callsite !11
   ret i32 0

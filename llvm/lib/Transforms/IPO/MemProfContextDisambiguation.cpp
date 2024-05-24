@@ -1889,6 +1889,8 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CalledFunction, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
         assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
@@ -2004,6 +2006,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CallEdge.first, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
         assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
