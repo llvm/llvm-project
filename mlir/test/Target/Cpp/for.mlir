@@ -32,85 +32,103 @@ func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CPP-DECLTOP-NEXT: }
 // CPP-DECLTOP-NEXT: return;
 
-func.func @test_for_yield() {
-  %start = "emitc.constant"() <{value = 0 : index}> : () -> index
-  %stop = "emitc.constant"() <{value = 10 : index}> : () -> index
-  %step = "emitc.constant"() <{value = 1 : index}> : () -> index
-
-  %s0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
-  %p0 = "emitc.constant"() <{value = 1.0 : f32}> : () -> f32
-
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  emitc.assign %s0 : i32 to %2 : i32
-  emitc.assign %p0 : f32 to %3 : f32
-  emitc.for %iter = %start to %stop step %step {
-    %sn = emitc.call_opaque "add"(%2, %iter) : (i32, index) -> i32
-    %pn = emitc.call_opaque "mul"(%3, %iter) : (f32, index) -> f32
-    emitc.assign %sn : i32 to %2 : i32
-    emitc.assign %pn : f32 to %3 : f32
-    emitc.yield
+func.func @test_for_yield(%arg0: index, %arg1: index, %arg2: index) {
+  %0 = "emitc.constant"() <{value = 0.000000e+00 : f32}> : () -> f32
+  %1 = "emitc.constant"() <{value = 1.000000e+00 : f32}> : () -> f32
+  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<1xf32>
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<1xf32>
+  %4 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %5 = emitc.subscript %2[%4] : (!emitc.array<1xf32>, index) -> f32
+  emitc.assign %0 : f32 to %5 : f32
+  %6 = emitc.subscript %3[%4] : (!emitc.array<1xf32>, index) -> f32
+  emitc.assign %1 : f32 to %6 : f32
+  emitc.for %arg3 = %arg0 to %arg1 step %arg2 {
+    %12 = "emitc.constant"() <{value = 0 : index}> : () -> index
+    %13 = emitc.subscript %2[%12] : (!emitc.array<1xf32>, index) -> f32
+    %14 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+    emitc.assign %13 : f32 to %14 : f32
+    %15 = emitc.subscript %3[%12] : (!emitc.array<1xf32>, index) -> f32
+    %16 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+    emitc.assign %15 : f32 to %16 : f32
+    %17 = emitc.add %14, %16 : (f32, f32) -> f32
+    %18 = "emitc.constant"() <{value = 0 : index}> : () -> index
+    %19 = emitc.subscript %2[%18] : (!emitc.array<1xf32>, index) -> f32
+    emitc.assign %17 : f32 to %19 : f32
+    %20 = emitc.subscript %3[%18] : (!emitc.array<1xf32>, index) -> f32
+    emitc.assign %17 : f32 to %20 : f32
   }
-  emitc.assign %2 : i32 to %0 : i32
-  emitc.assign %3 : f32 to %1 : f32
-
+  %7 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %8 = emitc.subscript %2[%7] : (!emitc.array<1xf32>, index) -> f32
+  %9 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %8 : f32 to %9 : f32
+  %10 = emitc.subscript %3[%7] : (!emitc.array<1xf32>, index) -> f32
+  %11 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %10 : f32 to %11 : f32
   return
 }
-// CPP-DEFAULT: void test_for_yield() {
-// CPP-DEFAULT-NEXT: size_t [[START:[^ ]*]] = 0;
-// CPP-DEFAULT-NEXT: size_t [[STOP:[^ ]*]] = 10;
-// CPP-DEFAULT-NEXT: size_t [[STEP:[^ ]*]] = 1;
-// CPP-DEFAULT-NEXT: int32_t [[S0:[^ ]*]] = 0;
-// CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = 1.000000000e+00f;
-// CPP-DEFAULT-NEXT: int32_t [[SE:[^ ]*]];
-// CPP-DEFAULT-NEXT: float [[PE:[^ ]*]];
-// CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]];
-// CPP-DEFAULT-NEXT: float [[PI:[^ ]*]];
-// CPP-DEFAULT-NEXT: [[SI:[^ ]*]] = [[S0]];
-// CPP-DEFAULT-NEXT: [[PI:[^ ]*]] = [[P0]];
-// CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
-// CPP-DEFAULT-NEXT: int32_t [[SN:[^ ]*]] = add([[SI]], [[ITER]]);
-// CPP-DEFAULT-NEXT: float [[PN:[^ ]*]] = mul([[PI]], [[ITER]]);
-// CPP-DEFAULT-NEXT: [[SI]] = [[SN]];
-// CPP-DEFAULT-NEXT: [[PI]] = [[PN]];
+// CPP-DEFAULT: void test_for_yield(size_t v1, size_t v2, size_t v3) {
+// CPP-DEFAULT-NEXT: float [[V4:[^ ]*]] = 0.0e+00f;
+// CPP-DEFAULT-NEXT: float [[V5:[^ ]*]] = 1.000000000e+00f;
+// CPP-DEFAULT-NEXT: float [[V6:[^ ]*]][1];
+// CPP-DEFAULT-NEXT: float [[V7:[^ ]*]][1];
+// CPP-DEFAULT-NEXT: size_t [[V8:[^ ]*]] = 0;
+// CPP-DEFAULT-NEXT: [[V6]][[[V8]]] = [[V4]];
+// CPP-DEFAULT-NEXT: [[V7]][[[V8]]] = [[V5]];
+// CPP-DEFAULT-NEXT: for (size_t [[V9:[^ ]*]] = [[V1]]; [[V9]] < [[V2]]; [[V9]] += [[V3]]) {
+// CPP-DEFAULT-NEXT:   size_t [[V10:[^ ]*]] = 0;
+// CPP-DEFAULT-NEXT:   float [[V11:[^ ]*]];
+// CPP-DEFAULT-NEXT:   [[V11]] = [[V6]][[[V10]]];
+// CPP-DEFAULT-NEXT:   float [[V12:[^ ]*]];
+// CPP-DEFAULT-NEXT:   [[V12]] = [[V7]][[[V10]]];
+// CPP-DEFAULT-NEXT:   float [[V13:[^ ]*]] = [[V11]] + [[V12]];
+// CPP-DEFAULT-NEXT:   size_t [[V14:[^ ]*]] = 0;
+// CPP-DEFAULT-NEXT:   [[V6]][[[V14]]] = [[V13]];
+// CPP-DEFAULT-NEXT:   [[V7]][[[V14]]] = [[V13]];
 // CPP-DEFAULT-NEXT: }
-// CPP-DEFAULT-NEXT: [[SE]] = [[SI]];
-// CPP-DEFAULT-NEXT: [[PE]] = [[PI]];
+// CPP-DEFAULT-NEXT: size_t [[V15:[^ ]*]] = 0;
+// CPP-DEFAULT-NEXT: float [[V16:[^ ]*]];
+// CPP-DEFAULT-NEXT: v16 = v6[v15];
+// CPP-DEFAULT-NEXT: float [[V17:[^ ]*]];
+// CPP-DEFAULT-NEXT: v17 = v7[v15];
 // CPP-DEFAULT-NEXT: return;
 
-// CPP-DECLTOP: void test_for_yield() {
-// CPP-DECLTOP-NEXT: size_t [[START:[^ ]*]];
-// CPP-DECLTOP-NEXT: size_t [[STOP:[^ ]*]];
-// CPP-DECLTOP-NEXT: size_t [[STEP:[^ ]*]];
-// CPP-DECLTOP-NEXT: int32_t [[S0:[^ ]*]];
-// CPP-DECLTOP-NEXT: float [[P0:[^ ]*]];
-// CPP-DECLTOP-NEXT: int32_t [[SE:[^ ]*]];
-// CPP-DECLTOP-NEXT: float [[PE:[^ ]*]];
-// CPP-DECLTOP-NEXT: int32_t [[SI:[^ ]*]];
-// CPP-DECLTOP-NEXT: float [[PI:[^ ]*]];
-// CPP-DECLTOP-NEXT: int32_t [[SN:[^ ]*]];
-// CPP-DECLTOP-NEXT: float [[PN:[^ ]*]];
-// CPP-DECLTOP-NEXT: [[START]] = 0;
-// CPP-DECLTOP-NEXT: [[STOP]] = 10;
-// CPP-DECLTOP-NEXT: [[STEP]] = 1;
-// CPP-DECLTOP-NEXT: [[S0]] = 0;
-// CPP-DECLTOP-NEXT: [[P0]] = 1.000000000e+00f;
+// CPP-DECLTOP: void test_for_yield(size_t v1, size_t v2, size_t v3) {
+// CPP-DECLTOP-NEXT: float [[V4:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V5:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V6:[^ ]*]][1];
+// CPP-DECLTOP-NEXT: float [[V7:[^ ]*]][1];
+// CPP-DECLTOP-NEXT: size_t [[V8:[^ ]*]];
+// CPP-DECLTOP-NEXT: size_t [[V9:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V10:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V11:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V12:[^ ]*]];
+// CPP-DECLTOP-NEXT: size_t [[V13:[^ ]*]];
+// CPP-DECLTOP-NEXT: size_t [[V14:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V15:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[V16:[^ ]*]];
+// CPP-DECLTOP-NEXT: [[V4]] = 0.0e+00f;
+// CPP-DECLTOP-NEXT: [[V5]] = 1.000000000e+00f;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: [[SI:[^ ]*]] = [[S0]];
-// CPP-DECLTOP-NEXT: [[PI:[^ ]*]] = [[P0]];
-// CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
-// CPP-DECLTOP-NEXT: [[SN]] = add([[SI]], [[ITER]]);
-// CPP-DECLTOP-NEXT: [[PN]] = mul([[PI]], [[ITER]]);
-// CPP-DECLTOP-NEXT: [[SI]] = [[SN]];
-// CPP-DECLTOP-NEXT: [[PI]] = [[PN]];
+// CPP-DECLTOP-NEXT: [[V8]] = 0;
+// CPP-DECLTOP-NEXT: [[V6]][[[V8]]] = [[V4]];
+// CPP-DECLTOP-NEXT: [[V7]][[[V8]]] = [[V5]];
+// CPP-DECLTOP-NEXT: for (size_t [[V17:[^ ]*]] = [[V1]]; [[V17]] < [[V2]]; [[V17]] += [[V3]]) {
+// CPP-DECLTOP-NEXT:   [[V9]] = 0;
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[V10]] = [[V6]][[[V9]]];
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[V11]] = [[V7]][[[V9]]];
+// CPP-DECLTOP-NEXT:   [[V12]] = [[V10]] + [[V11]];
+// CPP-DECLTOP-NEXT:   [[V13]] = 0;
+// CPP-DECLTOP-NEXT:   [[V6]][[[V13]]] = [[V12]];
+// CPP-DECLTOP-NEXT:   [[V7]][[[V13]]] = [[V12]];
 // CPP-DECLTOP-NEXT: }
-// CPP-DECLTOP-NEXT: [[SE]] = [[SI]];
-// CPP-DECLTOP-NEXT: [[PE]] = [[PI]];
+// CPP-DECLTOP-NEXT: [[V14]] = 0;
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[V15]] = [[V6]][[[V14]]];
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[V16]] = [[V7]][[[V14]]];
 // CPP-DECLTOP-NEXT: return;
 
 func.func @test_for_yield_2() {
@@ -118,25 +136,37 @@ func.func @test_for_yield_2() {
   %stop = emitc.literal "10" : index
   %step = emitc.literal "1" : index
 
-  %s0 = emitc.literal "0" : i32
-  %p0 = emitc.literal "M_PI" : f32
-
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  emitc.assign %s0 : i32 to %2 : i32
-  emitc.assign %p0 : f32 to %3 : f32
-  emitc.for %iter = %start to %stop step %step {
-    %sn = emitc.call_opaque "add"(%2, %iter) : (i32, index) -> i32
-    %pn = emitc.call_opaque "mul"(%3, %iter) : (f32, index) -> f32
-    emitc.assign %sn : i32 to %2 : i32
-    emitc.assign %pn : f32 to %3 : f32
-    emitc.yield
+  %0 = emitc.literal "0" : f32
+  %1 = emitc.literal "M_PI" : f32
+  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<1xf32>
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<1xf32>
+  %4 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %5 = emitc.subscript %2[%4] : (!emitc.array<1xf32>, index) -> f32
+  emitc.assign %0 : f32 to %5 : f32
+  %6 = emitc.subscript %3[%4] : (!emitc.array<1xf32>, index) -> f32
+  emitc.assign %1 : f32 to %6 : f32
+  emitc.for %arg3 = %start to %stop step %step {
+    %12 = "emitc.constant"() <{value = 0 : index}> : () -> index
+    %13 = emitc.subscript %2[%12] : (!emitc.array<1xf32>, index) -> f32
+    %14 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+    emitc.assign %13 : f32 to %14 : f32
+    %15 = emitc.subscript %3[%12] : (!emitc.array<1xf32>, index) -> f32
+    %16 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+    emitc.assign %15 : f32 to %16 : f32
+    %17 = emitc.add %14, %16 : (f32, f32) -> f32
+    %18 = "emitc.constant"() <{value = 0 : index}> : () -> index
+    %19 = emitc.subscript %2[%18] : (!emitc.array<1xf32>, index) -> f32
+    emitc.assign %17 : f32 to %19 : f32
+    %20 = emitc.subscript %3[%18] : (!emitc.array<1xf32>, index) -> f32
+    emitc.assign %17 : f32 to %20 : f32
   }
-  emitc.assign %2 : i32 to %0 : i32
-  emitc.assign %3 : f32 to %1 : f32
-
+  %7 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %8 = emitc.subscript %2[%7] : (!emitc.array<1xf32>, index) -> f32
+  %9 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %8 : f32 to %9 : f32
+  %10 = emitc.subscript %3[%7] : (!emitc.array<1xf32>, index) -> f32
+  %11 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %10 : f32 to %11 : f32
   return
 }
 // CPP-DEFAULT: void test_for_yield_2() {

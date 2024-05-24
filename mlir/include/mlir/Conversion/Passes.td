@@ -976,7 +976,7 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
 def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
   let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
                 " control flow";
-  let dependentDialects = ["emitc::EmitCDialect"];
+  let dependentDialects = ["emitc::EmitCDialect", "memref::MemRefDialect"];
 }
 
 //===----------------------------------------------------------------------===//

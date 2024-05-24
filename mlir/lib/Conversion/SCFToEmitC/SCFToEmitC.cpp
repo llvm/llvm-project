@@ -14,11 +14,13 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -63,21 +65,41 @@ static SmallVector<Value> createVariablesForResults(T op,
 
   for (OpResult result : op.getResults()) {
     Type resultType = result.getType();
-    emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
-    emitc::VariableOp var =
-        rewriter.create<emitc::VariableOp>(loc, resultType, noInit);
+    SmallVector<OpFoldResult> dimensions = {rewriter.getIndexAttr(1)};
+    memref::AllocaOp var =
+        rewriter.create<memref::AllocaOp>(loc, dimensions, resultType);
     resultVariables.push_back(var);
   }
 
   return resultVariables;
 }
 
-// Create a series of assign ops assigning given values to given variables at
+// Create a series of load ops reading the values of given variables at
+// the current insertion point of given rewriter.
+static SmallVector<Value> readValues(SmallVector<Value> &variables,
+                                     PatternRewriter &rewriter, Location loc) {
+  Value zero;
+  if (variables.size() > 0)
+    zero = rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
+  SmallVector<Value> values;
+  SmallVector<Value> indices = {zero};
+  for (Value var : variables)
+    values.push_back(
+        rewriter.create<memref::LoadOp>(loc, var, indices).getResult());
+  return values;
+}
+
+// Create a series of store ops assigning given values to given variables at
 // the current insertion point of given rewriter.
 static void assignValues(ValueRange values, SmallVector<Value> &variables,
                          PatternRewriter &rewriter, Location loc) {
-  for (auto [value, var] : llvm::zip(values, variables))
-    rewriter.create<emitc::AssignOp>(loc, var, value);
+  Value zero;
+  if (variables.size() > 0)
+    zero = rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
+  for (auto [value, var] : llvm::zip(values, variables)) {
+    SmallVector<Value> indices = {zero};
+    rewriter.create<memref::StoreOp>(loc, value, var, indices);
+  }
 }
 
 static void lowerYield(SmallVector<Value> &resultVariables,
@@ -100,8 +122,6 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // Create an emitc::variable op for each result. These variables will be
   // assigned to by emitc::assign ops within the loop body.
-  SmallVector<Value> resultVariables =
-      createVariablesForResults(forOp, rewriter);
   SmallVector<Value> iterArgsVariables =
       createVariablesForResults(forOp, rewriter);
 
@@ -115,18 +135,25 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   // Erase the auto-generated terminator for the lowered for op.
   rewriter.eraseOp(loweredBody->getTerminator());
 
+  IRRewriter::InsertPoint ip = rewriter.saveInsertionPoint();
+  rewriter.setInsertionPointToEnd(loweredBody);
+  SmallVector<Value> iterArgsValues =
+      readValues(iterArgsVariables, rewriter, loc);
+  rewriter.restoreInsertionPoint(ip);
+
   SmallVector<Value> replacingValues;
   replacingValues.push_back(loweredFor.getInductionVar());
-  replacingValues.append(iterArgsVariables.begin(), iterArgsVariables.end());
+  replacingValues.append(iterArgsValues.begin(), iterArgsValues.end());
 
   rewriter.mergeBlocks(forOp.getBody(), loweredBody, replacingValues);
   lowerYield(iterArgsVariables, rewriter,
              cast<scf::YieldOp>(loweredBody->getTerminator()));
 
   // Copy iterArgs into results after the for loop.
-  assignValues(iterArgsVariables, resultVariables, rewriter, loc);
+  SmallVector<Value> resultValues =
+      readValues(iterArgsVariables, rewriter, loc);
 
-  rewriter.replaceOp(forOp, resultVariables);
+  rewriter.replaceOp(forOp, resultValues);
   return success();
 }
 
@@ -169,6 +196,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
 
   auto loweredIf =
       rewriter.create<emitc::IfOp>(loc, ifOp.getCondition(), false, false);
+  SmallVector<Value> resultValues = readValues(resultVariables, rewriter, loc);
 
   Region &loweredThenRegion = loweredIf.getThenRegion();
   lowerRegion(thenRegion, loweredThenRegion);
@@ -178,7 +206,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     lowerRegion(elseRegion, loweredElseRegion);
   }
 
-  rewriter.replaceOp(ifOp, resultVariables);
+  rewriter.replaceOp(ifOp, resultValues);
   return success();
 }
 

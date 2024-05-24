@@ -47,20 +47,24 @@ func.func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) 
 // CHECK-SAME:      %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index) -> (f32, f32) {
 // CHECK-NEXT:    %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-NEXT:    %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK-NEXT:    %[[VAL_5:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    %[[VAL_6:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    %[[VAL_7:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    %[[VAL_8:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    emitc.assign %[[VAL_3]] : f32 to %[[VAL_7]] : f32
-// CHECK-NEXT:    emitc.assign %[[VAL_4]] : f32 to %[[VAL_8]] : f32
-// CHECK-NEXT:    emitc.for %[[VAL_9:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:      %[[VAL_10:.*]] = arith.addf %[[VAL_7]], %[[VAL_8]] : f32
-// CHECK-NEXT:      emitc.assign %[[VAL_10]] : f32 to %[[VAL_7]] : f32
-// CHECK-NEXT:      emitc.assign %[[VAL_10]] : f32 to %[[VAL_8]] : f32
+// CHECK-NEXT:    %[[VAL_5:.*]] = memref.alloca() : memref<1xf32>
+// CHECK-NEXT:    %[[VAL_6:.*]] = memref.alloca() : memref<1xf32>
+// CHECK-NEXT:    %[[VAL_7:.*]] = arith.constant 0 : index
+// CHECK-NEXT:    memref.store %[[VAL_3]], %[[VAL_5]]{{\[}}%[[VAL_7]]] : memref<1xf32>
+// CHECK-NEXT:    memref.store %[[VAL_4]], %[[VAL_6]]{{\[}}%[[VAL_7]]] : memref<1xf32>
+// CHECK-NEXT:    emitc.for %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
+// CHECK-NEXT:      %[[VAL_9:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_9]]] : memref<1xf32>
+// CHECK-NEXT:      %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_9]]] : memref<1xf32>
+// CHECK-NEXT:      %[[VAL_12:.*]] = arith.addf %[[VAL_10]], %[[VAL_11]] : f32
+// CHECK-NEXT:      %[[VAL_13:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      memref.store %[[VAL_12]], %[[VAL_5]]{{\[}}%[[VAL_13]]] : memref<1xf32>
+// CHECK-NEXT:      memref.store %[[VAL_12]], %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<1xf32>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    emitc.assign %[[VAL_7]] : f32 to %[[VAL_5]] : f32
-// CHECK-NEXT:    emitc.assign %[[VAL_8]] : f32 to %[[VAL_6]] : f32
-// CHECK-NEXT:    return %[[VAL_5]], %[[VAL_6]] : f32, f32
+// CHECK-NEXT:    %[[VAL_14:.*]] = arith.constant 0 : index
+// CHECK-NEXT:    %[[VAL_15:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_14]]] : memref<1xf32>
+// CHECK-NEXT:    %[[VAL_16:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_14]]] : memref<1xf32>
+// CHECK-NEXT:    return %[[VAL_15]], %[[VAL_16]] : f32, f32
 // CHECK-NEXT:  }
 
 func.func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
@@ -77,20 +81,28 @@ func.func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 
 // CHECK-LABEL: func.func @nested_for_yield(
 // CHECK-SAME:      %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index) -> f32 {
 // CHECK-NEXT:    %[[VAL_3:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK-NEXT:    %[[VAL_4:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    %[[VAL_5:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:    emitc.assign %[[VAL_3]] : f32 to %[[VAL_5]] : f32
+// CHECK-NEXT:    %[[VAL_4:.*]] = memref.alloca() : memref<1xf32>
+// CHECK-NEXT:    %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK-NEXT:    memref.store %[[VAL_3]], %[[VAL_4]]{{\[}}%[[VAL_5]]] : memref<1xf32>
 // CHECK-NEXT:    emitc.for %[[VAL_6:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:      %[[VAL_7:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:      %[[VAL_8:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-// CHECK-NEXT:      emitc.assign %[[VAL_5]] : f32 to %[[VAL_8]] : f32
-// CHECK-NEXT:      emitc.for %[[VAL_9:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:        %[[VAL_10:.*]] = arith.addf %[[VAL_8]], %[[VAL_8]] : f32
-// CHECK-NEXT:        emitc.assign %[[VAL_10]] : f32 to %[[VAL_8]] : f32
+// CHECK-NEXT:      %[[VAL_7:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_7]]] : memref<1xf32>
+// CHECK-NEXT:      %[[VAL_9:.*]] = memref.alloca() : memref<1xf32>
+// CHECK-NEXT:      %[[VAL_10:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      memref.store %[[VAL_8]], %[[VAL_9]]{{\[}}%[[VAL_10]]] : memref<1xf32>
+// CHECK-NEXT:      emitc.for %[[VAL_11:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
+// CHECK-NEXT:        %[[VAL_12:.*]] = arith.constant 0 : index
+// CHECK-NEXT:        %[[VAL_13:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_12]]] : memref<1xf32>
+// CHECK-NEXT:        %[[VAL_14:.*]] = arith.addf %[[VAL_13]], %[[VAL_13]] : f32
+// CHECK-NEXT:        %[[VAL_15:.*]] = arith.constant 0 : index
+// CHECK-NEXT:        memref.store %[[VAL_14]], %[[VAL_9]]{{\[}}%[[VAL_15]]] : memref<1xf32>
 // CHECK-NEXT:      }
-// CHECK-NEXT:      emitc.assign %[[VAL_8]] : f32 to %[[VAL_7]] : f32
-// CHECK-NEXT:      emitc.assign %[[VAL_7]] : f32 to %[[VAL_5]] : f32
+// CHECK-NEXT:      %[[VAL_16:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      %[[VAL_17:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_16]]] : memref<1xf32>
+// CHECK-NEXT:      %[[VAL_18:.*]] = arith.constant 0 : index
+// CHECK-NEXT:      memref.store %[[VAL_17]], %[[VAL_4]]{{\[}}%[[VAL_18]]] : memref<1xf32>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    emitc.assign %[[VAL_5]] : f32 to %[[VAL_4]] : f32
-// CHECK-NEXT:    return %[[VAL_4]] : f32
+// CHECK-NEXT:    %[[VAL_19:.*]] = arith.constant 0 : index
+// CHECK-NEXT:    %[[VAL_20:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_19]]] : memref<1xf32>
+// CHECK-NEXT:    return %[[VAL_20]] : f32
 // CHECK-NEXT:  }
