@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <iterator>
 #include <set>
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 
 #include "common.h"
@@ -88,7 +88,7 @@ std::vector<T> getVectorOfRandom(size_t N) {
   return std::vector<T>(v);
 }
 
-// realistically, data won't all be nicely contiguous in a container,
+// Realistically, data won't all be nicely contiguous in a container,
 // we'll go through some effort to ensure that it's shuffled through memory
 // this is especially important for containers with non-contiguous element
 // storage, but it will affect even a std::vector, because when you copy a
@@ -110,7 +110,7 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
     return std::make_pair(move_into(src.begin(), src.begin() + size1), move_into(src.begin() + size1, src.end()));
   }
 
-  // all other overlap types will have to copy some part of the data, but if
+  // All other overlap types will have to copy some part of the data, but if
   // we copy after sorting it will likely have high locality, so we sort
   // each copy separately
   auto copy = src;
@@ -180,4 +180,5 @@ int main(int argc, char** argv) { /**/
   makeCartesianProductBenchmark<SetIntersection, AllValueTypes, AllContainerTypes, AllOverlapPositions>(
       Quantities, Quantities);
   benchmark::RunSpecifiedBenchmarks();
+  return 0;
 }

@@ -45,12 +45,11 @@ struct __set_intersection_result {
 
 // Helper for __set_intersection() with one-sided binary search: populate result and advance input iterators if they
 // haven't advanced in the last 2 calls. This function is very intimately related to the way it is used and doesn't
-// attempt to abstract that, it's not appropriate for general usage outside of its context. It would be a lambda of
-// __set_intersection() if that hadn't stumped the compiler in c++03 mode in some platforms.
+// attempt to abstract that, it's not appropriate for general usage outside of its context.
 template <class _InForwardIter1, class _InForwardIter2, class _OutIter>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_output_unless(
     bool __advanced, _InForwardIter1& __first1, _InForwardIter2& __first2, _OutIter& __result, bool& __prev_advanced) {
-  if (__advanced | __prev_advanced) {
+  if (__advanced || __prev_advanced) {
     __prev_advanced = __advanced;
   } else {
     *__result = *__first1;
@@ -70,7 +69,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_
 // reciprocal comparisons (ie 1<3, 2<3, 4<3), that extra comparison doesn't run afoul of the guarantee. Additionally,
 // this type of scenario can only happen for match distances of up to 5 elements, because 2*log2(8) is 6, and we'll
 // still be worse-off at position 5 of an 8-element set. From then onwards these scenarios can't happen. TL;DR: we'll be
-// 1 comparison worse-off compared to the classic linear- searching algorithm if matching position 3 of a set with 4
+// 1 comparison worse-off compared to the classic linear-searching algorithm if matching position 3 of a set with 4
 // elements, or position 5 if the set has 7 or 8 elements, but we'll never exceed the complexity guarantees from the
 // standard.
 template <class _AlgPolicy,

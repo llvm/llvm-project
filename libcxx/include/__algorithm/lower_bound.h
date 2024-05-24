@@ -51,10 +51,10 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __lo
 // One-sided binary search, aka meta binary search, has been in the public domain for decades, and has the general
 // advantage of being \Omega(1) rather than the classic algorithm's \Omega(log(n)), with the downside of executing at
 // most 2*log(n) comparisons vs the classic algorithm's exact log(n). There are two scenarios in which it really shines:
-// the first one is when operating over non-random iterators, because the classic algorithm requires knowing the
+// the first one is when operating over non-random-access iterators, because the classic algorithm requires knowing the
 // container's size upfront, which adds \Omega(n) iterator increments to the complexity. The second one is when you're
 // traversing the container in order, trying to fast-forward to the next value: in that case, the classic algorithm
-// would yield \Omega(n*log(n)) comparisons and, for non-random iterators, \Omega(n^2) iterator increments, whereas the
+// would yield \Omega(n*log(n)) comparisons and, for non-random-access iterators, \Omega(n^2) iterator increments, whereas the
 // one-sided version will yield O(n) operations on both counts, with a \Omega(log(n)) bound on the number of
 // comparisons.
 template <class _AlgPolicy, class _ForwardIterator, class _Sent, class _Type, class _Proj, class _Comp>
