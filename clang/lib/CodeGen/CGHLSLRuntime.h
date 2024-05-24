@@ -116,12 +116,11 @@ public:
   void addBuffer(const HLSLBufferDecl *D);
   void finishCodeGen();
 
-  void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
-
-  void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
+  void emitFunctionProlog(const FunctionDecl *FD, llvm::Function *Fn);
 
 private:
+  void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
+  void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
                                    llvm::hlsl::ResourceClass RC,
                                    llvm::hlsl::ResourceKind RK, bool IsROV,

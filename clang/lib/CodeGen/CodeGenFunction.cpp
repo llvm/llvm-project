@@ -1194,9 +1194,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (getLangOpts().OpenMP && CurCodeDecl)
     CGM.getOpenMPRuntime().emitFunctionProlog(*this, CurCodeDecl);
 
-  // Handle emitting HLSL entry functions.
-  if (D && D->hasAttr<HLSLShaderAttr>())
-    CGM.getHLSLRuntime().emitEntryFunction(FD, Fn);
+  // Emit HLSL specific initialization
+  if (getLangOpts().HLSL) {
+    CGM.getHLSLRuntime().emitFunctionProlog(FD, Fn);
+  }
 
   EmitFunctionProlog(*CurFnInfo, CurFn, Args);
 

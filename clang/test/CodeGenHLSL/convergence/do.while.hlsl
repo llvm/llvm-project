@@ -8,7 +8,7 @@ void test1() {
   do {
   } while (cond());
 }
-// CHECK: define spir_func void @_Z5test1v() [[A0:#[0-9]+]] {
+// CHECK: define internal spir_func void @_Z5test1v() [[A0:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   [[T0:%[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK: do.body:
@@ -21,7 +21,7 @@ void test2() {
     foo();
   } while (cond());
 }
-// CHECK: define spir_func void @_Z5test2v() [[A0:#[0-9]+]] {
+// CHECK: define internal spir_func void @_Z5test2v() [[A0:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   [[T0:%[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK: do.body:
@@ -36,7 +36,7 @@ void test3() {
       foo();
   } while (cond());
 }
-// CHECK: define spir_func void @_Z5test3v() [[A0:#[0-9]+]] {
+// CHECK: define internal spir_func void @_Z5test3v() [[A0:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   [[T0:%[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK: do.body:
@@ -54,7 +54,7 @@ void test4() {
     }
   } while (cond());
 }
-// CHECK: define spir_func void @_Z5test4v() [[A0:#[0-9]+]] {
+// CHECK: define internal spir_func void @_Z5test4v() [[A0:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   [[T0:%[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK: do.body:
@@ -74,7 +74,7 @@ void test5() {
     }
   } while (cond());
 }
-// CHECK: define spir_func void @_Z5test5v() [[A0:#[0-9]+]] {
+// CHECK: define internal spir_func void @_Z5test5v() [[A0:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   [[T0:%[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK: do.body:
