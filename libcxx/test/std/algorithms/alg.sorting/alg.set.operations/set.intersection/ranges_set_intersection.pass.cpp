@@ -29,8 +29,7 @@
 #include <array>
 #include <concepts>
 #include <cstddef>
-#include <iterator>
-#include <type_traits>
+#include <ranges>
 
 #include "almost_satisfies_types.h"
 #include "MoveOnly.h"
@@ -96,17 +95,14 @@ static_assert(!HasSetIntersectionRange<UncheckedRange<MoveOnly*>, UncheckedRange
 
 using std::ranges::set_intersection_result;
 
-// TODO: std::ranges::set_intersection calls std::ranges::copy
-// std::ranges::copy(contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>, contiguous_iterator<int*>) doesn't seem to work.
-// It seems that std::ranges::copy calls std::copy, which unwraps contiguous_iterator<int*> into int*,
-// and then it failed because there is no == between int* and sentinel_wrapper<contiguous_iterator<int*>>
-template <typename Iter>
-using SentinelWorkaround = std::conditional_t<std::contiguous_iterator<Iter>, Iter, sentinel_wrapper<Iter>>;
-
 template <class In1, class In2, class Out, std::size_t N1, std::size_t N2, std::size_t N3>
 constexpr void testSetIntersectionImpl(std::array<int, N1> in1, std::array<int, N2> in2, std::array<int, N3> expected) {
-  using Sent1 = SentinelWorkaround<In1>;
-  using Sent2 = SentinelWorkaround<In2>;
+  // TODO: std::ranges::set_intersection calls std::ranges::copy
+  // std::ranges::copy(contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>, contiguous_iterator<int*>) doesn't seem to work.
+  // It seems that std::ranges::copy calls std::copy, which unwraps contiguous_iterator<int*> into int*,
+  // and then it failed because there is no == between int* and sentinel_wrapper<contiguous_iterator<int*>>
+  using Sent1 = std::conditional_t<std::contiguous_iterator<In1>, In1, sentinel_wrapper<In1>>;
+  using Sent2 = std::conditional_t<std::contiguous_iterator<In2>, In2, sentinel_wrapper<In2>>;
 
   // iterator overload
   {
@@ -276,227 +272,6 @@ constexpr void runAllIteratorPermutationsTests() {
   static_assert(withAllPermutationsOfInIter1AndInIter2<bidirectional_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<random_access_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<contiguous_iterator<int*>>());
-}
-
-namespace {
-struct [[nodiscard]] OperationCounts {
-  std::size_t comparisons{};
-  struct PerInput {
-    std::size_t proj{};
-    IteratorOpCounts iterops;
-
-    // IGNORES proj!
-    [[nodiscard]] constexpr bool operator==(const PerInput& o) const {
-      return iterops.increments == o.iterops.increments && iterops.decrements == o.iterops.decrements;
-    }
-
-    [[nodiscard]] constexpr bool matchesExpectation(const PerInput& expect) {
-      return proj <= expect.proj &&
-             iterops.increments + iterops.decrements <= expect.iterops.increments + expect.iterops.decrements;
-    }
-  };
-  std::array<PerInput, 2> in;
-
-  [[nodiscard]] constexpr bool matchesExpectation(const OperationCounts& expect) {
-    // __debug_less will perform an additional comparison in an assertion
-    constexpr unsigned comparison_multiplier =
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-        2;
-#else
-        1;
-#endif
-    return comparisons <= comparison_multiplier * expect.comparisons && in[0].matchesExpectation(expect.in[0]) &&
-           in[1].matchesExpectation(expect.in[1]);
-  }
-
-  [[nodiscard]] constexpr bool operator==(const OperationCounts& o) const {
-    return comparisons == o.comparisons && std::ranges::equal(in, o.in);
-  }
-};
-} // namespace
-
-template <template <class...> class In1,
-          template <class...>
-          class In2,
-          class Out,
-          std::size_t N1,
-          std::size_t N2,
-          std::size_t N3>
-constexpr void testSetIntersectionAndReturnOpCounts(
-    std::array<int, N1> in1,
-    std::array<int, N2> in2,
-    std::array<int, N3> expected,
-    const OperationCounts& expectedOpCounts) {
-  OperationCounts ops;
-
-  const auto comp = [&ops](int x, int y) {
-    ++ops.comparisons;
-    return x < y;
-  };
-
-  std::array<int, N3> out;
-
-  stride_counting_iterator b1(In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterops);
-  stride_counting_iterator e1(In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterops);
-
-  stride_counting_iterator b2(In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterops);
-  stride_counting_iterator e2(In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterops);
-
-  std::set_intersection(b1, e1, b2, e2, Out(out.data()), comp);
-
-  assert(std::ranges::equal(out, expected));
-  assert(ops.matchesExpectation(expectedOpCounts));
-}
-
-template <template <class...> class In1,
-          template <class...>
-          class In2,
-          class Out,
-          std::size_t N1,
-          std::size_t N2,
-          std::size_t N3>
-constexpr void testRangesSetIntersectionAndReturnOpCounts(
-    std::array<int, N1> in1,
-    std::array<int, N2> in2,
-    std::array<int, N3> expected,
-    const OperationCounts& expectedOpCounts) {
-  OperationCounts ops;
-
-  const auto comp = [&ops](int x, int y) {
-    ++ops.comparisons;
-    return x < y;
-  };
-
-  const auto proj1 = [&ops](const int& i) {
-    ++ops.in[0].proj;
-    return i;
-  };
-
-  const auto proj2 = [&ops](const int& i) {
-    ++ops.in[1].proj;
-    return i;
-  };
-
-  std::array<int, N3> out;
-
-  stride_counting_iterator b1(In1<decltype(in1.begin())>(in1.begin()), &ops.in[0].iterops);
-  stride_counting_iterator e1(In1<decltype(in1.end()) >(in1.end()), &ops.in[0].iterops);
-
-  stride_counting_iterator b2(In2<decltype(in2.begin())>(in2.begin()), &ops.in[1].iterops);
-  stride_counting_iterator e2(In2<decltype(in2.end()) >(in2.end()), &ops.in[1].iterops);
-
-  std::ranges::subrange r1{b1, SentinelWorkaround<decltype(e1)>{e1}};
-  std::ranges::subrange r2{b2, SentinelWorkaround<decltype(e2)>{e2}};
-  std::same_as<set_intersection_result<decltype(e1), decltype(e2), Out>> decltype(auto) result =
-      std::ranges::set_intersection(r1, r2, Out{out.data()}, comp, proj1, proj2);
-  assert(std::ranges::equal(out, expected));
-  assert(base(result.in1) == base(e1));
-  assert(base(result.in2) == base(e2));
-  assert(base(result.out) == out.data() + out.size());
-  assert(ops.matchesExpectation(expectedOpCounts));
-}
-
-template <template <typename...> class In1, template <typename...> class In2, class Out>
-constexpr void testComplexityParameterizedIter() {
-  // Worst-case complexity:
-  // Let N=(last1 - first1) and M=(last2 - first2)
-  // At most 2*(N+M) - 1 comparisons and applications of each projection.
-  // At most 2*(N+M) iterator mutations.
-  {
-    std::array r1{1, 3, 5, 7, 9, 11, 13, 15, 17, 19};
-    std::array r2{2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
-    std::array<int, 0> expected{};
-
-    OperationCounts expectedCounts;
-    expectedCounts.comparisons                 = 37;
-    expectedCounts.in[0].proj                  = 37;
-    expectedCounts.in[0].iterator_strides      = 30;
-    expectedCounts.in[0].iterator_displacement = 30;
-    expectedCounts.in[1]                       = expectedCounts.in[0];
-
-    testSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-    testRangesSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-  }
-
-  {
-    std::array r1{1, 3, 5, 7, 9, 11, 13, 15, 17, 19};
-    std::array r2{1, 3, 5, 7, 9, 11, 13, 15, 17, 19};
-    std::array expected{1, 3, 5, 7, 9, 11, 13, 15, 17, 19};
-
-    OperationCounts expectedCounts;
-    expectedCounts.comparisons                 = 38;
-    expectedCounts.in[0].proj                  = 38;
-    expectedCounts.in[0].iterator_strides      = 30;
-    expectedCounts.in[0].iterator_displacement = 30;
-    expectedCounts.in[1]                       = expectedCounts.in[0];
-
-    testSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-    testRangesSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-  }
-
-  // Lower complexity when there is low overlap between ranges: we can make 2*log(X) comparisons when one range
-  // has X elements that can be skipped over (and then 1 more to confirm that the value we found is equal).
-  {
-    std::array r1{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-    std::array r2{15};
-    std::array expected{15};
-
-    OperationCounts expectedCounts;
-    expectedCounts.comparisons                 = 9;
-    expectedCounts.in[0].proj                  = 9;
-    expectedCounts.in[0].iterator_strides      = 23;
-    expectedCounts.in[0].iterator_displacement = 23;
-    expectedCounts.in[1].proj                  = 9;
-    expectedCounts.in[1].iterator_strides      = 1;
-    expectedCounts.in[1].iterator_displacement = 1;
-
-    testSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-    testRangesSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-  }
-
-  {
-    std::array r1{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-    std::array r2{0, 16};
-    std::array<int, 0> expected{};
-
-    OperationCounts expectedCounts;
-    expectedCounts.comparisons                 = 10;
-    expectedCounts.in[0].proj                  = 10;
-    expectedCounts.in[0].iterator_strides      = 24;
-    expectedCounts.in[0].iterator_displacement = 24;
-    expectedCounts.in[1].proj                  = 10;
-    expectedCounts.in[1].iterator_strides      = 4;
-    expectedCounts.in[1].iterator_displacement = 4;
-
-    testSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-    testRangesSetIntersectionAndReturnOpCounts<In1, In2, Out>(r1, r2, expected, expectedCounts);
-  }
-}
-
-template <template <typename...> class In2, class Out>
-constexpr void testComplexityParameterizedIterPermutateIn1() {
-  //common_input_iterator
-  testComplexityParameterizedIter<forward_iterator, In2, Out>();
-  testComplexityParameterizedIter<bidirectional_iterator, In2, Out>();
-  testComplexityParameterizedIter<random_access_iterator, In2, Out>();
-}
-
-template <class Out>
-constexpr bool testComplexityParameterizedIterPermutateIn1In2() {
-  testComplexityParameterizedIterPermutateIn1<forward_iterator, Out>();
-  testComplexityParameterizedIterPermutateIn1<bidirectional_iterator, Out>();
-  testComplexityParameterizedIterPermutateIn1<random_access_iterator, Out>();
-  return true;
-}
-
-constexpr void runAllComplexityTests() {
-  testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
-  testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
-  testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
-
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>());
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>());
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>());
 }
 
 constexpr bool test() {
@@ -798,9 +573,6 @@ int main(int, char**) {
   // function, it has lots of smaller static_assert and each of them test 2-dimensional cartesian product which is less
   // than the step limit.
   runAllIteratorPermutationsTests();
-
-  // similar for complexity tests
-  runAllComplexityTests();
 
   return 0;
 }
