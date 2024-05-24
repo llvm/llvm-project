@@ -81,11 +81,11 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(grid_dim, 1)
   static inline RETTY ompx_##NAME(ARGS) { BODY; }
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block, int Ordering,
-                                      _Pragma("omp barrier"));
+                                      _Pragma("omp barrier"))
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block_acq_rel, void,
-                                      ompx_sync_block(ompx_acq_rel));
+                                      ompx_sync_block(ompx_acq_rel))
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block_divergent, int Ordering,
-                                      ompx_sync_block(Ordering));
+                                      ompx_sync_block(Ordering))
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C
 ///}
 
@@ -116,9 +116,9 @@ _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(double, d)
 #define _TGT_KERNEL_LANGUAGE_DECL_SYNC_C(RETTY, NAME, ARGS)         \
   RETTY ompx_##NAME(ARGS);
 
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block, int Ordering);
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_acq_rel, void);
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_divergent, int Ordering);
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block, int Ordering)
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_acq_rel, void)
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_divergent, int Ordering)
 #undef _TGT_KERNEL_LANGUAGE_DECL_SYNC_C
 ///}
 
@@ -198,9 +198,9 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(grid_dim)
   }
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX(void, sync_block, int Ordering = acc_rel,
-                                        Ordering);
+                                        Ordering)
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX(void, sync_block_divergent,
-                                        int Ordering = acc_rel, Ordering);
+                                        int Ordering = acc_rel, Ordering)
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX
 ///}
 
