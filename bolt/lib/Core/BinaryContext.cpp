@@ -934,10 +934,13 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
   uint64_t Offset = 0;
   if (const JumpTable *JT = BF.getJumpTableContainingAddress(Address)) {
     Offset = Address - JT->getAddress();
-    auto Itr = JT->Labels.find(Offset);
-    if (Itr != JT->Labels.end())
-      return std::string(Itr->second->getName());
-    Id = JumpTableIds.at(JT->getAddress());
+    auto JTLabelsIt = JT->Labels.find(Offset);
+    if (JTLabelsIt != JT->Labels.end())
+      return std::string(JTLabelsIt->second->getName());
+
+    auto JTIdsIt = JumpTableIds.find(JT->getAddress());
+    assert(JTIdsIt != JumpTableIds.end());
+    Id = JTIdsIt->second;
   } else {
     Id = JumpTableIds[Address] = BF.JumpTables.size();
   }

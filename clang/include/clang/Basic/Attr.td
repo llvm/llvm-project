@@ -1640,10 +1640,11 @@ def Unlikely : StmtAttr {
 def : MutualExclusions<[Likely, Unlikely]>;
 
 def CXXAssume : StmtAttr {
-  let Spellings = [CXX11<"", "assume", 202207>];
+  let Spellings = [CXX11<"", "assume", 202207>, Clang<"assume">];
   let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
   let Args = [ExprArgument<"Assumption">];
   let Documentation = [CXXAssumeDocs];
+  let HasCustomParsing = 1;
 }
 
 def NoMerge : DeclOrStmtAttr {
@@ -4255,7 +4256,7 @@ def OMPDeclareVariant : InheritableAttr {
 }
 
 def OMPAssume : InheritableAttr {
-  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
+  let Spellings = [CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];

@@ -141,7 +141,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
-      .minScalarSameAs(1, 0);
+      .minScalarSameAs(1, 0)
+      .widenScalarToNextPow2(1);
 
   auto &ExtActions =
       getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
@@ -347,6 +348,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .clampScalar(0, sXLen, sDoubleXLen)
         .widenScalarToNextPow2(0);
   }
+
+  // TODO: Use libcall for sDoubleXLen.
+  getActionDefinitionsBuilder({G_UDIVREM, G_SDIVREM}).lower();
 
   auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
   if (ST.hasStdExtZbb())

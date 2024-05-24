@@ -146,6 +146,9 @@ endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
 
+set(LIBOMPTARGET_DLOPEN_PLUGINS "${LIBOMPTARGET_PLUGINS_TO_BUILD}" CACHE STRING
+    "Semicolon-separated list of plugins to use 'dlopen' for runtime linking")
+
 set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
   set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS

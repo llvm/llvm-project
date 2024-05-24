@@ -101,6 +101,10 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
     Pointer FieldPtr = BasePtr.atField(F.Offset);
     QualType FieldType = F.Decl->getType();
 
+    // Don't check inactive union members.
+    if (R->isUnion() && !FieldPtr.isActive())
+      continue;
+
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, Loc, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isIncompleteArrayType()) {
@@ -115,10 +119,6 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       DiagnoseUninitializedSubobject(S, Loc, F.Decl);
       Result = false;
     }
-
-    // Only the first member of a union needs to be initialized.
-    if (R->isUnion())
-      break;
   }
 
   // Check Fields in all bases

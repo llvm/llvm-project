@@ -59,6 +59,18 @@ C++ Specific Potentially Breaking Changes
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
 
+  This change uncovered a bug in libstdc++ 14.1.0 which may cause compile failures
+  on systems using that version of libstdc++ and Clang 19, with an error that looks
+  something like this:
+
+  .. code-block:: text
+
+    <source>:4:5: error: expression is not assignable
+    4 |     ++this;
+      |     ^ ~~~~
+
+  To fix this, update libstdc++ to version 14.1.1 or greater.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -766,6 +778,7 @@ Miscellaneous Bug Fixes
 
 - Fixed an infinite recursion in ASTImporter, on return type declared inside
   body of C++11 lambda without trailing return (#GH68775).
+- Fixed declaration name source location of instantiated function definitions (GH71161).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

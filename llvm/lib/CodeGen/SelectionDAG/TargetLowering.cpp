@@ -2814,10 +2814,16 @@ bool TargetLowering::SimplifyDemandedBits(
     unsigned DemandedBitsLZ = DemandedBits.countl_zero();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
     KnownBits KnownOp0, KnownOp1;
-    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, KnownOp0, TLO,
+    auto GetDemandedBitsLHSMask = [&](APInt Demanded,
+                                      const KnownBits &KnownRHS) {
+      if (Op.getOpcode() == ISD::MUL)
+        Demanded.clearHighBits(KnownRHS.countMinTrailingZeros());
+      return Demanded;
+    };
+    if (SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
                              Depth + 1) ||
-        SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
-                             Depth + 1) ||
+        SimplifyDemandedBits(Op0, GetDemandedBitsLHSMask(LoMask, KnownOp1),
+                             DemandedElts, KnownOp0, TLO, Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
       if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
