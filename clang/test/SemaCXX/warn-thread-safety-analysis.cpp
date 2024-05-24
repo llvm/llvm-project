@@ -5838,12 +5838,12 @@ class Foo5 {
 
 
 class Foo6 {
-  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu1'}}
-  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu2'}}
-  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu3'}}
+  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu1'}}
+  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu2'}}
+  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu3'}}
 
-  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_b'}}
-  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_a'}}
+  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_b'}}
+  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_a'}}
 
   void test0() {
     mu_a.Lock();

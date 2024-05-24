@@ -90,8 +90,7 @@ def PREFETCHW : I<0x0D, MRM1m, (outs), (ins i8mem:$addr), "prefetchw\t$addr",
                   TB, Requires<[HasPrefetchW]>;
 
 def PREFETCHWT1 : I<0x0D, MRM2m, (outs), (ins i8mem:$addr), "prefetchwt1\t$addr",
-                    [(prefetch addr:$addr, (i32 1), (i32 PrefetchWT1Level), (i32 1))]>,
-                    TB, Requires<[HasPREFETCHWT1]>;
+                    []>, TB;
 }
 
 // "3DNowA" instructions

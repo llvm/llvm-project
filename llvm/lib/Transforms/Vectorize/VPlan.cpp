@@ -219,9 +219,9 @@ VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
                                    LLVMContext &Ctx)
-    : VF(VF), UF(UF), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx),
-      DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
+    : VF(VF), UF(UF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
+      LVer(nullptr),
+      TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (Def->isLiveIn())
@@ -437,7 +437,7 @@ BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG,
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
-    DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
+    CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
   return NewBB;
 }
@@ -499,7 +499,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
       NewBB->getTerminator()->eraseFromParent();
       State->Builder.SetInsertPoint(NewBB->getTerminator());
     }
-    State->DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
+    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
                SingleHPred->getExitingBasicBlock() == PrevVPBB &&
@@ -911,7 +911,9 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
 
-  State->DTU.applyUpdates(
+  // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
+  State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   // Generate code in the loop pre-header and body.
@@ -976,9 +978,10 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  State->DTU.flush();
-  assert(
-      State->DTU.getDomTree().verify(DominatorTree::VerificationLevel::Fast));
+  State->CFG.DTU.flush();
+  // DT is currently updated for non-native path only.
+  assert(EnableVPlanNativePath || State->CFG.DTU.getDomTree().verify(
+                                      DominatorTree::VerificationLevel::Fast));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

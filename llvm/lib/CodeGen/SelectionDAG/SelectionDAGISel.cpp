@@ -680,9 +680,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     }
   }
 
-  // Determine if there is a call to setjmp in the machine function.
-  MF->setExposesReturnsTwice(Fn.callsFunctionThatReturnsTwice());
-
   // Determine if floating point is used for msvc
   computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, MF->getMMI());
 

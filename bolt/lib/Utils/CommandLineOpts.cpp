@@ -179,6 +179,10 @@ cl::opt<bool> TimeOpts("time-opts",
                        cl::desc("print time spent in each optimization"),
                        cl::cat(BoltOptCategory));
 
+cl::opt<bool> TimeRewrite("time-rewrite",
+                          cl::desc("print time spent in rewriting passes"),
+                          cl::Hidden, cl::cat(BoltCategory));
+
 cl::opt<bool> UseOldText(
     "use-old-text",
     cl::desc("re-use space in old .text if possible (relocation mode)"),

@@ -802,6 +802,11 @@ def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
                   (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
                   "$res = OpGroupNonUniformRotateKHR $type $scope $value $delta">;
 
+// SPV_KHR_shader_clock
+def OpReadClockKHR: Op<5056, (outs ID:$res),
+                  (ins TYPE:$type, ID:$scope),
+                  "$res = OpReadClockKHR $type $scope">;
+
 // 3.49.7, Constant-Creation Instructions
 
 //  - SPV_INTEL_function_pointers
