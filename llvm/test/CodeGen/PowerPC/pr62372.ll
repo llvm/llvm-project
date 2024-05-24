@@ -1,4 +1,5 @@
-; RUN: llc -ppc-asm-full-reg-names -mcpu=pwr10 -mtriple powerpc64le-unknown-linux-gnu -o - %s| FileCheck %s
+; RUN: llc -ppc-asm-full-reg-names -mcpu=pwr10 -mtriple powerpc64le-unknown-linux-gnu \
+; RUN: -o - %s | FileCheck %s
 
 @bar = dso_local global i32 0, align 4
 
