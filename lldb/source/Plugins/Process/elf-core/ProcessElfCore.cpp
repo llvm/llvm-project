@@ -276,10 +276,8 @@ Status ProcessElfCore::DoLoadCore() {
 }
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
-  if (!m_nt_file_entries.empty()) {
-    for (NT_FILE_Entry &entry : m_nt_file_entries) {
-      entry.uuid = FindBuidIdInCoreMemory(entry.start);
-    }
+  for (NT_FILE_Entry &entry : m_nt_file_entries) {
+    entry.uuid = FindBuidIdInCoreMemory(entry.start);
   }
 }
 
@@ -585,6 +583,7 @@ llvm::Expected<std::vector<CoreNote>>
 ProcessElfCore::parseSegment(const DataExtractor &segment) {
   lldb::offset_t offset = 0;
   std::vector<CoreNote> result;
+
   while (offset < segment.GetByteSize()) {
     ELFNote note = ELFNote();
     if (!note.Parse(segment, &offset))
