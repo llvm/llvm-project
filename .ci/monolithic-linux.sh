@@ -18,6 +18,7 @@ set -o pipefail
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
+INSTALL_DIR="${BUILD_DIR}/install"
 rm -rf "${BUILD_DIR}"
 
 ccache --zero-stats
@@ -49,7 +50,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
-      -D MLIR_ENABLE_BINDINGS_PYTHON=ON
+      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
@@ -65,6 +67,10 @@ if [[ "${runtimes}" != "" ]]; then
     echo "Runtimes to build are specified, but targets are not."
   fi
 
+  echo "--- ninja install-clang"
+
+  ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
+
   RUNTIMES_BUILD_DIR="${MONOREPO_ROOT}/build-runtimes"
   INSTALL_DIR="${RUNTIMES_BUILD_DIR}/install"
   mkdir -p ${RUNTIMES_BUILD_DIR}
@@ -72,8 +78,8 @@ if [[ "${runtimes}" != "" ]]; then
   echo "--- cmake runtimes C++03"
 
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -89,8 +95,8 @@ if [[ "${runtimes}" != "" ]]; then
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -106,8 +112,8 @@ if [[ "${runtimes}" != "" ]]; then
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
