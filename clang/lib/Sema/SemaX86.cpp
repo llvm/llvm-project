@@ -70,15 +70,9 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvttph2udq512_mask:
   case X86::BI__builtin_ia32_vcvttph2qq512_mask:
   case X86::BI__builtin_ia32_vcvttph2uqq512_mask:
-  case X86::BI__builtin_ia32_exp2pd_mask:
-  case X86::BI__builtin_ia32_exp2ps_mask:
   case X86::BI__builtin_ia32_getexppd512_mask:
   case X86::BI__builtin_ia32_getexpps512_mask:
   case X86::BI__builtin_ia32_getexpph512_mask:
-  case X86::BI__builtin_ia32_rcp28pd_mask:
-  case X86::BI__builtin_ia32_rcp28ps_mask:
-  case X86::BI__builtin_ia32_rsqrt28pd_mask:
-  case X86::BI__builtin_ia32_rsqrt28ps_mask:
   case X86::BI__builtin_ia32_vcomisd:
   case X86::BI__builtin_ia32_vcomiss:
   case X86::BI__builtin_ia32_vcomish:
@@ -105,16 +99,12 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_minsd_round_mask:
   case X86::BI__builtin_ia32_minss_round_mask:
   case X86::BI__builtin_ia32_minsh_round_mask:
-  case X86::BI__builtin_ia32_rcp28sd_round_mask:
-  case X86::BI__builtin_ia32_rcp28ss_round_mask:
   case X86::BI__builtin_ia32_reducepd512_mask:
   case X86::BI__builtin_ia32_reduceps512_mask:
   case X86::BI__builtin_ia32_reduceph512_mask:
   case X86::BI__builtin_ia32_rndscalepd_mask:
   case X86::BI__builtin_ia32_rndscaleps_mask:
   case X86::BI__builtin_ia32_rndscaleph_mask:
-  case X86::BI__builtin_ia32_rsqrt28sd_round_mask:
-  case X86::BI__builtin_ia32_rsqrt28ss_round_mask:
     ArgNum = 4;
     break;
   case X86::BI__builtin_ia32_fixupimmpd512_mask:
@@ -324,16 +314,6 @@ bool SemaX86::CheckBuiltinGatherScatterScale(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return false;
-  case X86::BI__builtin_ia32_gatherpfdpd:
-  case X86::BI__builtin_ia32_gatherpfdps:
-  case X86::BI__builtin_ia32_gatherpfqpd:
-  case X86::BI__builtin_ia32_gatherpfqps:
-  case X86::BI__builtin_ia32_scatterpfdpd:
-  case X86::BI__builtin_ia32_scatterpfdps:
-  case X86::BI__builtin_ia32_scatterpfqpd:
-  case X86::BI__builtin_ia32_scatterpfqps:
-    ArgNum = 3;
-    break;
   case X86::BI__builtin_ia32_gatherd_pd:
   case X86::BI__builtin_ia32_gatherd_pd256:
   case X86::BI__builtin_ia32_gatherq_pd:
@@ -868,18 +848,6 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     i = 3;
     l = 0;
     u = 255;
-    break;
-  case X86::BI__builtin_ia32_gatherpfdpd:
-  case X86::BI__builtin_ia32_gatherpfdps:
-  case X86::BI__builtin_ia32_gatherpfqpd:
-  case X86::BI__builtin_ia32_gatherpfqps:
-  case X86::BI__builtin_ia32_scatterpfdpd:
-  case X86::BI__builtin_ia32_scatterpfdps:
-  case X86::BI__builtin_ia32_scatterpfqpd:
-  case X86::BI__builtin_ia32_scatterpfqps:
-    i = 4;
-    l = 2;
-    u = 3;
     break;
   case X86::BI__builtin_ia32_reducesd_mask:
   case X86::BI__builtin_ia32_reducess_mask:
