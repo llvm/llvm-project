@@ -676,8 +676,7 @@ def CV_HI5: SDNodeXForm<imm, [{
 }]>;
 
 def positive : PatFrags<(ops node:$value),
-                        [(abs node:$value), (and node:$value, 0x7FFFFFFF),
-                         (lshr (shl node:$value, (XLenVT 1)), (XLenVT 1)]>;
+                        [(abs node:$value), (and node:$value, 0x7FFFFFFF)]>;
 def between : PatFrags<(ops node:$lowerBound, node:$upperBound, node:$value),
                        [(smin (smax node:$value, node:$lowerBound), node:$upperBound),
                         (smax (smin node:$value, node:$upperBound), node:$lowerBound)]>;
