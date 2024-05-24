@@ -1370,9 +1370,18 @@ func.func @simple_constant() -> (i32, i32) {
         `builtin.module` ops.
     *   The subdirectories are given names that reflect the parent op names and
         the symbol names for those ops (if present).
+    *   The printer keeps a counter associated with ops that are targeted by
+        passes and their isolated-from-above parents. Each filename is given a
+        numeric prefix using the counter value for the op that the pass is
+        targeting. The counter values for each parent are then prepended. This
+        gives a naming where it is easy to distinguish which passes may have run
+        concurrently versus which have a clear ordering. In the below example,for
+        both `1_1_pass4.mlir` files, the first 1 refers to the counter for the
+        parent op, and the second refers to the counter for the respective
+        function.
 
 ```
-$ pipeline="builtin.module(pass1,pass2,func.func(pass3,pass4))"
+$ pipeline="builtin.module(pass1,pass2,func.func(pass3,pass4),pass5)"
 $ mlir-opt foo.mlir -pass-pipeline="$pipeline" -mlir-print-ir-tree-dir=/tmp/pipeline_output
 $ tree /tmp/pipeline_output
 
@@ -1380,12 +1389,13 @@ $ tree /tmp/pipeline_output
 ├── builtin_module_the_symbol_name
 │   ├── 0_pass1.mlir
 │   ├── 1_pass2.mlir
+│   ├── 2_pass5.mlir
 │   ├── func_func_my_func_name
-│   │   ├── 2_pass3.mlir
-│   │   ├── 3_pass4.mlir
+│   │   ├── 1_0_pass3.mlir
+│   │   ├── 1_1_pass4.mlir
 │   ├── func_func_my_other_func_name
-│   │   ├── 4_pass3.mlir
-│   │   ├── 5_pass4.mlir
+│   │   ├── 1_0_pass3.mlir
+│   │   ├── 1_1_pass4.mlir
 ```
 
 ## Crash and Failure Reproduction
