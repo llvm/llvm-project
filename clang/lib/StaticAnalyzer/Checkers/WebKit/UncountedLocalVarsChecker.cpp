@@ -264,7 +264,14 @@ public:
       Report->addRange(Value->getSourceRange());
       BR->emitReport(std::move(Report));
     } else {
-      Os << "Local variable ";
+      if (V->hasLocalStorage())
+        Os << "Local variable ";
+      else if (V->isStaticLocal())
+        Os << "Static local variable ";
+      else if (V->hasGlobalStorage())
+        Os << "Global variable ";
+      else
+        Os << "Variable ";
       printQuotedQualifiedName(Os, V);
       Os << " is uncounted and unsafe.";
 
