@@ -298,7 +298,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[Type, Type, Any Integer]`
      - Inserts an element into an aggregate type at a specified index. Allows for building and modifying arrays and vectors.
    * - `int_spv_const_composite`
-     - 32-bit Integer
+     - Type
      - `[Vararg]`
      - Constructs a composite type from given elements. Key for creating arrays, structs, and vectors from individual components.
    * - `int_spv_bitcast`

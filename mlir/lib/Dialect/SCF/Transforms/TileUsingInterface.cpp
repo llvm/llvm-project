@@ -182,6 +182,9 @@ static LogicalResult generateLoopNestUsingForOp(
   if (loops.empty())
     return success();
 
+  assert(tiledResults.size() == destinationTensors.size() &&
+         "Number of results of body should be equal to number of iter args");
+
   // 6. Yield all the results of the tiled operation.
   SmallVector<Value> yieldedValues;
   for (auto [tiledValue, destinationTensor, resultOffset, resultSize] :
@@ -694,9 +697,6 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
     tileSizesVector.append(iterationDomain.size() - tileSizesVector.size(),
                            zero);
   }
-  if (op->getNumResults() != 1)
-    return b.notifyMatchFailure(
-        op, "don't support ops with multiple results for now");
   SmallVector<utils::IteratorType> iterators =
       tilingInterfaceOp.getLoopIteratorTypes();
 
@@ -708,12 +708,13 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   }
 
   // 2. create the inital tensor value.
-  FailureOr<Operation *> identityTensor =
+  FailureOr<SmallVector<Value>> maybeInitTensors =
       op.generateInitialTensorForPartialReduction(b, loc, tileSizesVector,
                                                   reductionDims);
-  if (failed(identityTensor))
-    return b.notifyMatchFailure(op,
-                                "cannot create a tensor of identity value.");
+  if (failed(maybeInitTensors)) {
+    return b.notifyMatchFailure(op, "Failed to create initial tensors.");
+  }
+  SmallVector<Value> &initTensors = maybeInitTensors.value();
 
   // 3. Define the callback to use for generating the inner most tile loop body.
   Operation *parallelOp = nullptr;
@@ -753,29 +754,26 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
     tiledResult.append(parallelOp->result_begin(), parallelOp->result_end());
     // 4d. Compute the offsets and sizes needed to insert the result of the
     // tiled value back into destination before yielding the destination.
-    SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
-    resultOffsets.emplace_back(std::move(outOffsets));
+    for (int resultIdx : llvm::seq<int>(0, parallelOp->getNumResults())) {
+      SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
+      resultOffsets.emplace_back(std::move(outOffsets));
 
-    SmallVector<OpFoldResult> outSizes;
-    for (size_t i = 0; i < offsets.size(); i++) {
-      outSizes.push_back(
-          tensor::getMixedSize(b, loc, parallelOp->getResult(0), i));
+      SmallVector<OpFoldResult> outSizes;
+      for (size_t i = 0; i < offsets.size(); i++) {
+        outSizes.push_back(
+            tensor::getMixedSize(b, loc, parallelOp->getResult(resultIdx), i));
+      }
+      resultSizes.emplace_back(std::move(outSizes));
     }
-    resultSizes.emplace_back(std::move(outSizes));
     return success();
   };
 
   // 5. Generate the tiled implementation using the destination tensors.
-  SmallVector<Value> destinationTensors =
-      llvm::map_to_vector(identityTensor.value()->getResults(),
-                          [](OpResult res) -> Value { return res; });
-
   SmallVector<LoopLikeOpInterface> loops;
   scf::SCFTilingOptions options;
   options.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
   if (failed(generateLoopNest(b, loc, options, iterationDomain, tileSizesVector,
-                              destinationTensors, innerYieldTiledValuesFn,
-                              loops)))
+                              initTensors, innerYieldTiledValuesFn, loops)))
     return b.notifyMatchFailure(op, "failed to tile for parallel reduction");
 
   SmallVector<Value> replacements = llvm::map_to_vector(
@@ -787,7 +785,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   b.replaceOp(op, mergeOp->getResults());
 
   SCFReductionTilingResult results;
-  results.initialOp = *identityTensor;
+  results.initialValues = initTensors;
   results.loops = loops;
   results.parallelTiledOp = parallelOp;
   results.mergeOp = mergeOp;

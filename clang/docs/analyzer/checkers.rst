@@ -1179,6 +1179,47 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+security.SetgidSetuidOrder (C)
+""""""""""""""""""""""""""""""
+When dropping user-level and group-level privileges in a program by using
+``setuid`` and ``setgid`` calls, it is important to reset the group-level
+privileges (with ``setgid``) first. Function ``setgid`` will likely fail if
+the superuser privileges are already dropped.
+
+The checker checks for sequences of ``setuid(getuid())`` and
+``setgid(getgid())`` calls (in this order). If such a sequence is found and
+there is no other privilege-changing function call (``seteuid``, ``setreuid``,
+``setresuid`` and the GID versions of these) in between, a warning is
+generated. The checker finds only exactly ``setuid(getuid())`` calls (and the
+GID versions), not for example if the result of ``getuid()`` is stored in a
+variable.
+
+.. code-block:: c
+
+ void test1() {
+   // ...
+   // end of section with elevated privileges
+   // reset privileges (user and group) to normal user
+   if (setuid(getuid()) != 0) {
+     handle_error();
+     return;
+   }
+   if (setgid(getgid()) != 0) { // warning: A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail
+     handle_error();
+     return;
+   }
+   // user-ID and group-ID are reset to normal user now
+   // ...
+ }
+
+In the code above the problem is that ``setuid(getuid())`` removes superuser
+privileges before ``setgid(getgid())`` is called. To fix the problem the
+``setgid(getgid())`` should be called first. Further attention is needed to
+avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
+this) and always check the return value of these calls.
+
+This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
+
 .. _unix-checkers:
 
 unix

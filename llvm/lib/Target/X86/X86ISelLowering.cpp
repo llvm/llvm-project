@@ -3292,7 +3292,7 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
@@ -33849,18 +33849,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ADDSUB)
   NODE_NAME_CASE(RCP14)
   NODE_NAME_CASE(RCP14S)
-  NODE_NAME_CASE(RCP28)
-  NODE_NAME_CASE(RCP28_SAE)
-  NODE_NAME_CASE(RCP28S)
-  NODE_NAME_CASE(RCP28S_SAE)
-  NODE_NAME_CASE(EXP2)
-  NODE_NAME_CASE(EXP2_SAE)
   NODE_NAME_CASE(RSQRT14)
   NODE_NAME_CASE(RSQRT14S)
-  NODE_NAME_CASE(RSQRT28)
-  NODE_NAME_CASE(RSQRT28_SAE)
-  NODE_NAME_CASE(RSQRT28S)
-  NODE_NAME_CASE(RSQRT28S_SAE)
   NODE_NAME_CASE(FADD_RND)
   NODE_NAME_CASE(FADDS)
   NODE_NAME_CASE(FADDS_RND)
@@ -43694,14 +43684,14 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     return combinevXi1ConstantToInteger(N0, DAG);
   }
 
-  if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() &&
-      VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      isa<ConstantSDNode>(N0)) {
-    auto *C = cast<ConstantSDNode>(N0);
-    if (C->isAllOnes())
-      return DAG.getConstant(1, SDLoc(N0), VT);
-    if (C->isZero())
-      return DAG.getConstant(0, SDLoc(N0), VT);
+  if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i1) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N0)) {
+      if (C->isAllOnes())
+        return DAG.getConstant(1, SDLoc(N0), VT);
+      if (C->isZero())
+        return DAG.getConstant(0, SDLoc(N0), VT);
+    }
   }
 
   // Look for MOVMSK that is maybe truncated and then bitcasted to vXi1.
@@ -56802,12 +56792,12 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
     assert(!IsStrict && "Strict FP doesn't support BF16");
     if (VT.getVectorElementType() == MVT::f64) {
-      MVT TmpVT = VT.getSimpleVT().changeVectorElementType(MVT::f32);
+      EVT TmpVT = VT.changeVectorElementType(MVT::f32);
       return DAG.getNode(ISD::FP_EXTEND, dl, VT,
                          DAG.getNode(ISD::FP_EXTEND, dl, TmpVT, Src));
     }
     assert(VT.getVectorElementType() == MVT::f32 && "Unexpected fpext");
-    MVT NVT = SrcVT.getSimpleVT().changeVectorElementType(MVT::i32);
+    EVT NVT = SrcVT.changeVectorElementType(MVT::i32);
     Src = DAG.getBitcast(SrcVT.changeTypeToInteger(), Src);
     Src = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Src);
     Src = DAG.getNode(ISD::SHL, dl, NVT, Src, DAG.getConstant(16, dl, NVT));
