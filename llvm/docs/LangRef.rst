@@ -19226,8 +19226,8 @@ The mask holds an entry for each vector lane, and is used to select elements to 
 The number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
 The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the remainder of the vector may
 contain undefined values.
-This allows for branchless code and better optimization for all targets that do not support the explicit semantics of
-:ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations (e.g., ARM SVE and RISCV V)
+This allows for branchless code and better optimization for all targets that do not support or have inefficient instructions
+of the explicit semantics of :ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations.
 The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
 vector, but without requiring branches to avoid writes where the mask is ``false``.
 
