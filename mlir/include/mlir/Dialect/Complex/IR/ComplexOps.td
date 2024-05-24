@@ -25,7 +25,9 @@ class Complex_Op<string mnemonic, list<Trait> traits = []>
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [Pure, SameOperandsAndResultType,
     Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>, DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]> {
-  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs, 
+  let arguments = (ins 
+        Complex<AnyFloat>:$lhs,
+        Complex<AnyFloat>:$rhs, 
         DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
         DefaultValuedAttr<Arith_IntegerOverflowAttr,"::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs Complex<AnyFloat>:$result);
