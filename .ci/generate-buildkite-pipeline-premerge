@@ -94,6 +94,7 @@ function compute-runtimes-to-test() {
       for p in libcxx libcxxabi libunwind; do
         echo $p
       done
+    ;;
     *)
       # Nothing to do
     ;;
