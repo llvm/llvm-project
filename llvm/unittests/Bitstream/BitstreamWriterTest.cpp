@@ -63,6 +63,8 @@ TEST(BitstreamWriterTest, emitBlob4ByteAligned) {
 
 class BitstreamWriterFlushTest : public ::testing::TestWithParam<int> {
 protected:
+  // Any value after bitc::FIRST_APPLICATION_BLOCKID is good, but let's pick a
+  // distinctive one.
   const unsigned BlkID = bitc::FIRST_APPLICATION_BLOCKID + 17;
 
   void write(StringRef TestFilePath, int FlushThreshold,

@@ -93,6 +93,8 @@ class BitstreamWriter {
 
   /// If the related file stream supports reading, seeking and writing, flush
   /// the buffer if its size is above a threshold.
+  /// If \p OnClosing is true, and if a stream is provided, flushing happens
+  /// regardless of thresholds.
   void FlushToFile(bool OnClosing = false) {
     if (!FS || Out.empty())
       return;
