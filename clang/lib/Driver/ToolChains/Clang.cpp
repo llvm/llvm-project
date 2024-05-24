@@ -1030,7 +1030,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
       // If user provided -o, that is the dependency target, except
       // when we are only generating a dependency file.
-      Arg *OutputOpt = Args.getLastArg(options::OPT_o);
+      Arg *OutputOpt = Args.getLastArg(options::OPT_o, options::OPT__SLASH_Fo);
       if (OutputOpt && Output.getType() != types::TY_Dependencies) {
         DepTarget = OutputOpt->getValue();
       } else {
