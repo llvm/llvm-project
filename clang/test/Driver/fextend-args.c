@@ -5,7 +5,7 @@
 // RUN: | FileCheck -check-prefix=CHECK-64 %s
 
 // Unsupported target
-// RUN: not %clang -target aarch64-unknown-windows-msvc -fextend-arguments=32 %s 2>&1 \
+// RUN: not %clang --target=aarch64-unknown-windows-msvc -fextend-arguments=32 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=UNSUPPORTED-TARGET %s
 
 // Invalid option value
