@@ -19,7 +19,6 @@
 
 set -eu
 set -o pipefail
-set -x
 
 # Environment variables script works with:
 
