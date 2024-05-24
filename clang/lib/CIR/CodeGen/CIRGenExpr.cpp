@@ -2585,9 +2585,7 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
                                             mlir::cir::CastKind::bitcast, Ptr);
   }
 
-  mlir::cir::LoadOp Load =
-      builder.create<mlir::cir::LoadOp>(Loc, ElemTy, Ptr, /* deref */ false,
-                                        Volatile, ::mlir::cir::MemOrderAttr{});
+  mlir::Value Load = builder.CIRBaseBuilderTy::createLoad(Loc, Ptr, Volatile);
 
   if (isNontemporal) {
     llvm_unreachable("NYI");

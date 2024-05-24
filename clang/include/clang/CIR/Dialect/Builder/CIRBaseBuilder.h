@@ -84,9 +84,10 @@ public:
     return getPointerTo(::mlir::cir::VoidType::get(getContext()), addressSpace);
   }
 
-  mlir::Value createLoad(mlir::Location loc, mlir::Value ptr) {
-    return create<mlir::cir::LoadOp>(loc, ptr, /*isDeref=*/false,
-                                     /*is_volatile=*/false,
+  mlir::Value createLoad(mlir::Location loc, mlir::Value ptr,
+                         bool isVolatile = false) {
+    return create<mlir::cir::LoadOp>(loc, ptr, /*isDeref=*/false, isVolatile,
+                                     /*alignment=*/mlir::IntegerAttr{},
                                      /*mem_order=*/mlir::cir::MemOrderAttr{});
   }
 
@@ -176,11 +177,12 @@ public:
 
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                                  mlir::Value dst, bool _volatile = false,
+                                 ::mlir::IntegerAttr align = {},
                                  ::mlir::cir::MemOrderAttr order = {}) {
     if (dst.getType().cast<mlir::cir::PointerType>().getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
-    return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, order);
+    return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, align, order);
   }
 
   mlir::Value createAlloca(mlir::Location loc, mlir::cir::PointerType addrType,
