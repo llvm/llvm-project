@@ -14105,8 +14105,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     // variable may be expanded later. Preserve the
     // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
     // pattern.
-    LSI->ContainsUnexpandedParameterPack |=
-        cast<VarDecl>(CapturedVar)->isParameterPack();
+    if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
+      LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
 
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
