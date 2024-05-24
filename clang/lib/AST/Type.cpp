@@ -5308,8 +5308,12 @@ LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
 }
 
 FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
-  if (QualType Pointee = QT->getPointeeType(); !Pointee.isNull())
+  while (true) {
+    QualType Pointee = QT->getPointeeType();
+    if (Pointee.isNull())
+      break;
     QT = Pointee;
+  }
   if (const auto *FPT = QT->getAs<FunctionProtoType>())
     return FPT->getFunctionEffects();
   return {};
