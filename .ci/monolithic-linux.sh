@@ -65,6 +65,7 @@ runtime_targets="${4}"
 if [[ "${runtimes}" != "" ]]; then
   if [[ "${runtime_targets}" == "" ]]; then
     echo "Runtimes to build are specified, but targets are not."
+    exit 1
   fi
 
   echo "--- ninja install-clang"
