@@ -208,6 +208,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the meminfo nodes.
   const uint64_t NumNodes =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.AllocSites.reserve(NumNodes);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     Node.CSId = endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
@@ -219,6 +220,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the callsite information.
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.CallSiteIds.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
         endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
