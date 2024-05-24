@@ -154,10 +154,35 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
   }
 }
 
+void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                                             const LangOptions &LangOpts,
+                                             CodeGenOptions &CGOpts) {
+  // TODO: Figure out better way to set options to their default value.
+  if (ProgramAction == frontend::GenerateModule) {
+    CGOpts.MainFileName.clear();
+    CGOpts.DwarfDebugFlags.clear();
+  }
+  if (ProgramAction == frontend::GeneratePCH ||
+      (ProgramAction == frontend::GenerateModule && !LangOpts.ModulesCodegen)) {
+    CGOpts.DebugCompilationDir.clear();
+    CGOpts.CoverageCompilationDir.clear();
+    CGOpts.CoverageDataFile.clear();
+    CGOpts.CoverageNotesFile.clear();
+    CGOpts.ProfileInstrumentUsePath.clear();
+    CGOpts.SampleProfileFile.clear();
+    CGOpts.ProfileRemappingFile.clear();
+  }
+}
+
 static CowCompilerInvocation
 makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.resetNonModularOptions();
   CI.clearImplicitModuleBuildOptions();
+
+  // The scanner takes care to avoid passing non-affecting module maps to the
+  // explicit compiles. No need to do extra work just to find out there are no
+  // module map files to prune.
+  CI.getHeaderSearchOpts().ModulesPruneNonAffectingModuleMaps = false;
 
   // Remove options incompatible with explicit module build or are likely to
   // differ between identical modules discovered from different translation
@@ -167,18 +192,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
-  // TODO: Figure out better way to set options to their default value.
-  CI.getCodeGenOpts().MainFileName.clear();
-  CI.getCodeGenOpts().DwarfDebugFlags.clear();
-  if (!CI.getLangOpts().ModulesCodegen) {
-    CI.getCodeGenOpts().DebugCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageDataFile.clear();
-    CI.getCodeGenOpts().CoverageNotesFile.clear();
-    CI.getCodeGenOpts().ProfileInstrumentUsePath.clear();
-    CI.getCodeGenOpts().SampleProfileFile.clear();
-    CI.getCodeGenOpts().ProfileRemappingFile.clear();
-  }
+  resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
+                            CI.getCodeGenOpts());
 
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
@@ -342,6 +357,8 @@ static bool needsModules(FrontendInputFile FIF) {
 
 void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
+  resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
+                            CI.getLangOpts(), CI.getCodeGenOpts());
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();

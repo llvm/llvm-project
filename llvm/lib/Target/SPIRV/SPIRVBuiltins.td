@@ -58,6 +58,7 @@ def LoadStore : BuiltinGroup;
 def IntelSubgroups : BuiltinGroup;
 def AtomicFloating : BuiltinGroup;
 def GroupUniform : BuiltinGroup;
+def KernelClock : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -585,9 +586,9 @@ defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecC
 
 // Async Copy and Prefetch builtin records:
 defm : DemangledNativeBuiltin<"async_work_group_copy", OpenCL_std, AsyncCopy, 4, 4, OpGroupAsyncCopy>;
-defm : DemangledNativeBuiltin<"__spirv_GroupAsyncCopy", OpenCL_std, AsyncCopy, 4, 4, OpGroupAsyncCopy>;
+defm : DemangledNativeBuiltin<"__spirv_GroupAsyncCopy", OpenCL_std, AsyncCopy, 6, 6, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"wait_group_events", OpenCL_std, AsyncCopy, 2, 2, OpGroupWaitEvents>;
-defm : DemangledNativeBuiltin<"__spirv_GroupWaitEvents", OpenCL_std, AsyncCopy, 2, 2, OpGroupWaitEvents>;
+defm : DemangledNativeBuiltin<"__spirv_GroupWaitEvents", OpenCL_std, AsyncCopy, 3, 3, OpGroupWaitEvents>;
 
 // Load and store builtin records:
 defm : DemangledNativeBuiltin<"__spirv_Load", OpenCL_std, LoadStore, 1, 3, OpLoad>;
@@ -951,6 +952,14 @@ defm : DemangledGroupBuiltin<"group_reduce_logical_or", OnlyWork, OpGroupLogical
 defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 defm : DemangledGroupBuiltin<"group_reduce_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
+
+// cl_khr_kernel_clock / SPV_KHR_shader_clock
+defm : DemangledNativeBuiltin<"clock_read_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.

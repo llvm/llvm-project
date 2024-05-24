@@ -221,7 +221,6 @@ private:
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI);
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
-  bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -2862,8 +2861,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         Order != AtomicOrdering::Unordered &&
         Order != AtomicOrdering::Monotonic) {
       assert(!isa<GZExtLoad>(LdSt));
-      if (MemSizeInBytes > 64)
-        return false;
+      assert(MemSizeInBytes <= 8 &&
+             "128-bit atomics should already be custom-legalized");
 
       if (isa<GLoad>(LdSt)) {
         static constexpr unsigned LDAPROpcodes[] = {
@@ -3403,7 +3402,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_ICMP: {
     if (Ty.isVector())
-      return selectVectorICmp(I, MRI);
+      return false;
 
     if (Ty != LLT::scalar(32)) {
       LLVM_DEBUG(dbgs() << "G_ICMP result has type: " << Ty
@@ -3648,177 +3647,6 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   MIB.buildCopy(I.getOperand(0).getReg(), Register(AArch64::X0));
   RBI.constrainGenericRegister(I.getOperand(0).getReg(), AArch64::GPR64RegClass,
                                MRI);
-  I.eraseFromParent();
-  return true;
-}
-
-bool AArch64InstructionSelector::selectVectorICmp(
-    MachineInstr &I, MachineRegisterInfo &MRI) {
-  Register DstReg = I.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  Register SrcReg = I.getOperand(2).getReg();
-  Register Src2Reg = I.getOperand(3).getReg();
-  LLT SrcTy = MRI.getType(SrcReg);
-
-  unsigned SrcEltSize = SrcTy.getElementType().getSizeInBits();
-  unsigned NumElts = DstTy.getNumElements();
-
-  // First index is element size, 0 == 8b, 1 == 16b, 2 == 32b, 3 == 64b
-  // Second index is num elts, 0 == v2, 1 == v4, 2 == v8, 3 == v16
-  // Third index is cc opcode:
-  // 0 == eq
-  // 1 == ugt
-  // 2 == uge
-  // 3 == ult
-  // 4 == ule
-  // 5 == sgt
-  // 6 == sge
-  // 7 == slt
-  // 8 == sle
-  // ne is done by negating 'eq' result.
-
-  // This table below assumes that for some comparisons the operands will be
-  // commuted.
-  // ult op == commute + ugt op
-  // ule op == commute + uge op
-  // slt op == commute + sgt op
-  // sle op == commute + sge op
-  unsigned PredIdx = 0;
-  bool SwapOperands = false;
-  CmpInst::Predicate Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
-  switch (Pred) {
-  case CmpInst::ICMP_NE:
-  case CmpInst::ICMP_EQ:
-    PredIdx = 0;
-    break;
-  case CmpInst::ICMP_UGT:
-    PredIdx = 1;
-    break;
-  case CmpInst::ICMP_UGE:
-    PredIdx = 2;
-    break;
-  case CmpInst::ICMP_ULT:
-    PredIdx = 3;
-    SwapOperands = true;
-    break;
-  case CmpInst::ICMP_ULE:
-    PredIdx = 4;
-    SwapOperands = true;
-    break;
-  case CmpInst::ICMP_SGT:
-    PredIdx = 5;
-    break;
-  case CmpInst::ICMP_SGE:
-    PredIdx = 6;
-    break;
-  case CmpInst::ICMP_SLT:
-    PredIdx = 7;
-    SwapOperands = true;
-    break;
-  case CmpInst::ICMP_SLE:
-    PredIdx = 8;
-    SwapOperands = true;
-    break;
-  default:
-    llvm_unreachable("Unhandled icmp predicate");
-    return false;
-  }
-
-  // This table obviously should be tablegen'd when we have our GISel native
-  // tablegen selector.
-
-  static const unsigned OpcTable[4][4][9] = {
-      {
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {AArch64::CMEQv8i8, AArch64::CMHIv8i8, AArch64::CMHSv8i8,
-           AArch64::CMHIv8i8, AArch64::CMHSv8i8, AArch64::CMGTv8i8,
-           AArch64::CMGEv8i8, AArch64::CMGTv8i8, AArch64::CMGEv8i8},
-          {AArch64::CMEQv16i8, AArch64::CMHIv16i8, AArch64::CMHSv16i8,
-           AArch64::CMHIv16i8, AArch64::CMHSv16i8, AArch64::CMGTv16i8,
-           AArch64::CMGEv16i8, AArch64::CMGTv16i8, AArch64::CMGEv16i8}
-      },
-      {
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {AArch64::CMEQv4i16, AArch64::CMHIv4i16, AArch64::CMHSv4i16,
-           AArch64::CMHIv4i16, AArch64::CMHSv4i16, AArch64::CMGTv4i16,
-           AArch64::CMGEv4i16, AArch64::CMGTv4i16, AArch64::CMGEv4i16},
-          {AArch64::CMEQv8i16, AArch64::CMHIv8i16, AArch64::CMHSv8i16,
-           AArch64::CMHIv8i16, AArch64::CMHSv8i16, AArch64::CMGTv8i16,
-           AArch64::CMGEv8i16, AArch64::CMGTv8i16, AArch64::CMGEv8i16},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */}
-      },
-      {
-          {AArch64::CMEQv2i32, AArch64::CMHIv2i32, AArch64::CMHSv2i32,
-           AArch64::CMHIv2i32, AArch64::CMHSv2i32, AArch64::CMGTv2i32,
-           AArch64::CMGEv2i32, AArch64::CMGTv2i32, AArch64::CMGEv2i32},
-          {AArch64::CMEQv4i32, AArch64::CMHIv4i32, AArch64::CMHSv4i32,
-           AArch64::CMHIv4i32, AArch64::CMHSv4i32, AArch64::CMGTv4i32,
-           AArch64::CMGEv4i32, AArch64::CMGTv4i32, AArch64::CMGEv4i32},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */}
-      },
-      {
-          {AArch64::CMEQv2i64, AArch64::CMHIv2i64, AArch64::CMHSv2i64,
-           AArch64::CMHIv2i64, AArch64::CMHSv2i64, AArch64::CMGTv2i64,
-           AArch64::CMGEv2i64, AArch64::CMGTv2i64, AArch64::CMGEv2i64},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */},
-          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
-           0 /* invalid */}
-      },
-  };
-  unsigned EltIdx = Log2_32(SrcEltSize / 8);
-  unsigned NumEltsIdx = Log2_32(NumElts / 2);
-  unsigned Opc = OpcTable[EltIdx][NumEltsIdx][PredIdx];
-  if (!Opc) {
-    LLVM_DEBUG(dbgs() << "Could not map G_ICMP to cmp opcode");
-    return false;
-  }
-
-  const RegisterBank &VecRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-  const TargetRegisterClass *SrcRC =
-      getRegClassForTypeOnBank(SrcTy, VecRB, true);
-  if (!SrcRC) {
-    LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
-    return false;
-  }
-
-  unsigned NotOpc = Pred == ICmpInst::ICMP_NE ? AArch64::NOTv8i8 : 0;
-  if (SrcTy.getSizeInBits() == 128)
-    NotOpc = NotOpc ? AArch64::NOTv16i8 : 0;
-
-  if (SwapOperands)
-    std::swap(SrcReg, Src2Reg);
-
-  auto Cmp = MIB.buildInstr(Opc, {SrcRC}, {SrcReg, Src2Reg});
-  constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
-
-  // Invert if we had a 'ne' cc.
-  if (NotOpc) {
-    Cmp = MIB.buildInstr(NotOpc, {DstReg}, {Cmp});
-    constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
-  } else {
-    MIB.buildCopy(DstReg, Cmp.getReg(0));
-  }
-  RBI.constrainGenericRegister(DstReg, *SrcRC, MRI);
   I.eraseFromParent();
   return true;
 }

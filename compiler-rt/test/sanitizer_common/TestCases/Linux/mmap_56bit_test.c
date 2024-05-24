@@ -1,5 +1,8 @@
-// RUN: %clangxx %s -pie -fPIE -o %t && %run %t
+// RUN: %clang %s -pie -fPIE -o %t && %run %t
 // REQUIRES: x86_64-target-arch
+
+// FIXME: Fails Asan, as expected, with 5lvl page tables.
+// UNSUPPORTED: x86_64-target-arch
 
 #include <assert.h>
 #include <stdio.h>

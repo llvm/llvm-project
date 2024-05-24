@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #  include <__algorithm/ranges_lower_bound.h>
 #  include <__chrono/leap_second.h>
@@ -57,14 +57,14 @@ struct tzdb {
     return nullptr;
   }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const time_zone* locate_zone(string_view __name) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const time_zone* locate_zone(string_view __name) const {
     if (const time_zone* __result = __locate_zone(__name))
       return __result;
 
     std::__throw_runtime_error("tzdb: requested time zone not found");
   }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI const time_zone* current_zone() const {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI const time_zone* current_zone() const {
     return __current_zone();
   }
 
@@ -89,6 +89,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_TZDB_H

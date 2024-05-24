@@ -155,6 +155,10 @@ public:
   void enableDebugTypeODRUniquing();
   void disableDebugTypeODRUniquing();
 
+  /// generateMachineFunctionNum - Get a unique number for MachineFunction
+  /// that associated with the given Function.
+  unsigned generateMachineFunctionNum(Function &);
+
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
   using YieldCallbackTy = void (*)(LLVMContext *Context, void *OpaqueHandle);
@@ -332,7 +336,7 @@ private:
   void addModule(Module*);
 
   /// removeModule - Unregister a module from this context.
-  void removeModule(Module*);
+  void removeModule(Module *);
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

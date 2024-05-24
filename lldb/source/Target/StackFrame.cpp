@@ -1203,26 +1203,23 @@ bool StackFrame::IsArtificial() const {
   return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
-lldb::LanguageType StackFrame::GetLanguage() {
+SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
     return cu->GetLanguage();
-  return lldb::eLanguageTypeUnknown;
+  return {};
 }
 
-lldb::LanguageType StackFrame::GuessLanguage() {
-  LanguageType lang_type = GetLanguage();
+SourceLanguage StackFrame::GuessLanguage() {
+  SourceLanguage lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
-                                        | eSymbolContextSymbol);
-    if (sc.function) {
-      lang_type = sc.function->GetMangled().GuessLanguage();
-    }
+    SymbolContext sc =
+        GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
+    if (sc.function)
+      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
-    {
-      lang_type = sc.symbol->GetMangled().GuessLanguage();
-    }
+      lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
 
   return lang_type;
@@ -1302,7 +1299,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();

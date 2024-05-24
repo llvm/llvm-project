@@ -374,24 +374,10 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    rolw $8, %di
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $3855, %eax # imm = 0xF0F
-; GFNI-NEXT:    shll $4, %eax
-; GFNI-NEXT:    shrl $4, %edi
-; GFNI-NEXT:    andl $3855, %edi # imm = 0xF0F
-; GFNI-NEXT:    orl %eax, %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNI-NEXT:    shrl $2, %edi
-; GFNI-NEXT:    andl $13107, %edi # imm = 0x3333
-; GFNI-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNI-NEXT:    shrl %eax
-; GFNI-NEXT:    andl $21845, %eax # imm = 0x5555
-; GFNI-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    rolw $8, %ax
 ; GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNI-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -446,19 +432,10 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ;
 ; GFNI-LABEL: test_bitreverse_i8:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    rolb $4, %dil
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andb $51, %al
-; GFNI-NEXT:    shlb $2, %al
-; GFNI-NEXT:    shrb $2, %dil
-; GFNI-NEXT:    andb $51, %dil
-; GFNI-NEXT:    orb %dil, %al
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andb $85, %cl
-; GFNI-NEXT:    addb %cl, %cl
-; GFNI-NEXT:    shrb %al
-; GFNI-NEXT:    andb $85, %al
-; GFNI-NEXT:    orb %cl, %al
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNI-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -514,19 +491,11 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ;
 ; GFNI-LABEL: test_bitreverse_i4:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andb $8, %al
-; GFNI-NEXT:    leal (%rdi,%rdi), %ecx
-; GFNI-NEXT:    andb $4, %cl
-; GFNI-NEXT:    leal (,%rdi,8), %edx
-; GFNI-NEXT:    andb $8, %dl
-; GFNI-NEXT:    orb %cl, %dl
-; GFNI-NEXT:    shrb %dil
-; GFNI-NEXT:    andb $2, %dil
-; GFNI-NEXT:    orb %dil, %dl
-; GFNI-NEXT:    shrb $3, %al
-; GFNI-NEXT:    orb %dl, %al
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    shrb $4, %al
+; GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNI-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 %a)
   ret i4 %b

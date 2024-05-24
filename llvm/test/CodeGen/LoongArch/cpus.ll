@@ -1,9 +1,9 @@
 ;; This tests that llc accepts all valid LoongArch CPUs.
 ;; Note the 'generic' names have been tested in cpu-name-generic.ll.
 
-; RUN: llc < %s --mtriple=loongarch64 --mcpu=loongarch64 2>&1 | FileCheck %s
-; RUN: llc < %s --mtriple=loongarch64 --mcpu=la464 2>&1 | FileCheck %s
-; RUN: llc < %s --mtriple=loongarch64 2>&1 | FileCheck %s
+; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=loongarch64 2>&1 | FileCheck %s
+; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=la464 2>&1 | FileCheck %s
+; RUN: llc < %s --mtriple=loongarch64 -mattr=+d 2>&1 | FileCheck %s
 
 ; CHECK-NOT: {{.*}} is not a recognized processor for this target
 

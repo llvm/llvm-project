@@ -2,6 +2,10 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
   "Compile Fortran runtime as CUDA sources (experimental)" OFF
   )
 
+option(FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS
+  "Do not compile global variables' definitions when producing PTX library" OFF
+  )
+
 set(FLANG_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
 
 set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
@@ -10,7 +14,7 @@ set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
 set(FLANG_OMP_DEVICE_ARCHITECTURES "all" CACHE STRING
   "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
 
-macro(enable_cuda_compilation files)
+macro(enable_cuda_compilation name files)
   if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
     if (BUILD_SHARED_LIBS)
       message(FATAL_ERROR
@@ -51,6 +55,15 @@ macro(enable_cuda_compilation files)
       # for all files of F18 runtime.
       include_directories(AFTER ${FLANG_LIBCUDACXX_PATH}/include)
       add_compile_definitions(RT_USE_LIBCUDACXX=1)
+    endif()
+
+    # Add an OBJECT library consisting of CUDA PTX.
+    llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
+    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    if (FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
+      target_compile_definitions(obj.${name}PTX
+        PRIVATE FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+        )
     endif()
   endif()
 endmacro()

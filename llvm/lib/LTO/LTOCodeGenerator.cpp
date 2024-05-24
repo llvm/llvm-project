@@ -137,10 +137,6 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 
   Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
-  Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
-    PM.add(createObjCARCContractPass());
-  };
-
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
 }
@@ -571,6 +567,9 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
 bool LTOCodeGenerator::optimize() {
   if (!this->determineTarget())
     return false;
+
+  // libLTO parses options late, so re-set them here.
+  Context.setDiscardValueNames(LTODiscardValueNames);
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,

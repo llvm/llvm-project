@@ -32,7 +32,7 @@ namespace {
 struct MatMulOpSharding
     : public ShardingInterface::ExternalModel<MatMulOpSharding, MatMulOp> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
 
@@ -48,7 +48,7 @@ struct MatMulOpSharding
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
     MLIRContext *ctx = op->getContext();
@@ -79,7 +79,7 @@ void mlir::tosa::registerShardingInterfaceExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, TosaDialect *dialect) {
     registerElemwiseAll<
         ClampOp, SigmoidOp, TanhOp, AddOp, ArithmeticRightShiftOp, BitwiseAndOp,
-        BitwiseOrOp, BitwiseXorOp, DivOp, LogicalAndOp, LogicalLeftShiftOp,
+        BitwiseOrOp, BitwiseXorOp, IntDivOp, LogicalAndOp, LogicalLeftShiftOp,
         LogicalRightShiftOp, LogicalOrOp, LogicalXorOp, MaximumOp, MinimumOp,
         MulOp, PowOp, SubOp, AbsOp, BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp,
         LogOp, LogicalNotOp, NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp,

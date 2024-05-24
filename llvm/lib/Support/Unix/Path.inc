@@ -1191,6 +1191,15 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
   if (ssize_t(NumRead) == -1)
     return errorCodeToError(errnoAsErrorCode());
+// The underlying operation on these platforms allow opening directories
+// for reading in more cases than other platforms.
+#if defined(__MVS__) || defined(_AIX)
+  struct stat Status;
+  if (fstat(FD, &Status) == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  if (S_ISDIR(Status.st_mode))
+    return errorCodeToError(make_error_code(errc::is_a_directory));
+#endif
   return NumRead;
 }
 

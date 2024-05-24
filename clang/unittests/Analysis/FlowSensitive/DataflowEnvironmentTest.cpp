@@ -9,6 +9,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -148,56 +150,6 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   auto &SLoc = cast<RecordStorageLocation>(Env.createObject(Ty));
   PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(&SLoc, *R, Env));
   EXPECT_THAT(PV, NotNull());
-}
-
-TEST_F(EnvironmentTest, JoinRecords) {
-  using namespace ast_matchers;
-
-  std::string Code = R"cc(
-    struct S {};
-    // Need to use the type somewhere so that the `QualType` gets created;
-    S s;
-  )cc";
-
-  auto Unit =
-      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
-  auto &Context = Unit->getASTContext();
-
-  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
-
-  auto Results =
-      match(qualType(hasDeclaration(recordDecl(hasName("S")))).bind("SType"),
-            Context);
-  const QualType *TyPtr = selectFirst<QualType>("SType", Results);
-  ASSERT_THAT(TyPtr, NotNull());
-  QualType Ty = *TyPtr;
-  ASSERT_FALSE(Ty.isNull());
-
-  auto *ConstructExpr = CXXConstructExpr::CreateEmpty(Context, 0);
-  ConstructExpr->setType(Ty);
-  ConstructExpr->setValueKind(VK_PRValue);
-
-  // Two different `RecordValue`s with the same location are joined into a
-  // third `RecordValue` with that same location.
-  {
-    Environment Env1(DAContext);
-    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
-    RecordStorageLocation &Loc = Val1.getLoc();
-    Env1.setValue(Loc, Val1);
-
-    Environment Env2(DAContext);
-    auto &Val2 = Env2.create<RecordValue>(Loc);
-    Env2.setValue(Loc, Val2);
-    Env2.setValue(Loc, Val2);
-
-    Environment::ValueModel Model;
-    Environment EnvJoined =
-        Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
-    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(Loc));
-    EXPECT_NE(JoinedVal, &Val1);
-    EXPECT_NE(JoinedVal, &Val2);
-    EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
-  }
 }
 
 TEST_F(EnvironmentTest, DifferentReferenceLocInJoin) {
@@ -453,35 +405,35 @@ TEST_F(EnvironmentTest,
               Contains(Member));
 }
 
-TEST_F(EnvironmentTest, RefreshRecordValue) {
+TEST_F(EnvironmentTest, Stmt) {
   using namespace ast_matchers;
 
   std::string Code = R"cc(
-     struct S {};
-     void target () {
-       S s;
-       s;
-     }
-  )cc";
-
+      struct S { int i; };
+      void foo() {
+        S AnS = S{1};
+      }
+    )cc";
   auto Unit =
       tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
   auto &Context = Unit->getASTContext();
 
   ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
 
-  auto Results = match(functionDecl(hasName("target")).bind("target"), Context);
-  const auto *Target = selectFirst<FunctionDecl>("target", Results);
-  ASSERT_THAT(Target, NotNull());
+  auto *DeclStatement = const_cast<DeclStmt *>(selectFirst<DeclStmt>(
+      "d", match(declStmt(hasSingleDecl(varDecl(hasName("AnS")))).bind("d"),
+                 Context)));
+  ASSERT_THAT(DeclStatement, NotNull());
+  auto *Init = (cast<VarDecl>(*DeclStatement->decl_begin()))->getInit();
+  ASSERT_THAT(Init, NotNull());
 
-  Results = match(declRefExpr(to(varDecl(hasName("s")))).bind("s"), Context);
-  const auto *DRE = selectFirst<DeclRefExpr>("s", Results);
-  ASSERT_THAT(DRE, NotNull());
-
-  Environment Env(DAContext, *Target);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), IsNull());
-  refreshRecordValue(*DRE, Env);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), NotNull());
+  // Verify that we can retrieve the result object location for the initializer
+  // expression when we analyze the DeclStmt for `AnS`.
+  Environment Env(DAContext, *DeclStatement);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And don't crash when retrieving the result object location.
+  Env.getResultObjectLocation(*Init);
 }
 
 } // namespace

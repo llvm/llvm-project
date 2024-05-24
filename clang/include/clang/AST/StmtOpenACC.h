@@ -93,6 +93,10 @@ protected:
   }
 
 public:
+  static bool classof(const Stmt *T) {
+    return false;
+  }
+
   child_range children() {
     if (getAssociatedStmt())
       return child_range(&AssociatedStmt, &AssociatedStmt + 1);
@@ -142,9 +146,7 @@ class OpenACCComputeConstruct final
                           Stmt *StructuredBlock)
       : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass, K, Start,
                                        End, StructuredBlock) {
-    assert((K == OpenACCDirectiveKind::Parallel ||
-            K == OpenACCDirectiveKind::Serial ||
-            K == OpenACCDirectiveKind::Kernels) &&
+    assert(isOpenACCComputeDirectiveKind(K) &&
            "Only parallel, serial, and kernels constructs should be "
            "represented by this type");
 

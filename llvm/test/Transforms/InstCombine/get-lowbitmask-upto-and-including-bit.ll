@@ -41,36 +41,36 @@ define <2 x i8> @t2_vec(<2 x i8> %x) {
   %mask = or <2 x i8> %lowbitmask, %bitmask
   ret <2 x i8> %mask
 }
-define <3 x i8> @t3_vec_undef0(<3 x i8> %x) {
-; CHECK-LABEL: @t3_vec_undef0(
+define <3 x i8> @t3_vec_poison0(<3 x i8> %x) {
+; CHECK-LABEL: @t3_vec_poison0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
-  %bitmask = shl <3 x i8> <i8 1, i8 undef, i8 1>, %x
+  %bitmask = shl <3 x i8> <i8 1, i8 poison, i8 1>, %x
   %lowbitmask = add <3 x i8> %bitmask, <i8 -1, i8 -1, i8 -1>
   %mask = or <3 x i8> %lowbitmask, %bitmask
   ret <3 x i8> %mask
 }
-define <3 x i8> @t4_vec_undef1(<3 x i8> %x) {
-; CHECK-LABEL: @t4_vec_undef1(
+define <3 x i8> @t4_vec_poison1(<3 x i8> %x) {
+; CHECK-LABEL: @t4_vec_poison1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 1, i8 1>, %x
-  %lowbitmask = add <3 x i8> %bitmask, <i8 -1, i8 undef, i8 -1>
+  %lowbitmask = add <3 x i8> %bitmask, <i8 -1, i8 poison, i8 -1>
   %mask = or <3 x i8> %lowbitmask, %bitmask
   ret <3 x i8> %mask
 }
-define <3 x i8> @t5_vec_undef2(<3 x i8> %x) {
-; CHECK-LABEL: @t5_vec_undef2(
+define <3 x i8> @t5_vec_poison2(<3 x i8> %x) {
+; CHECK-LABEL: @t5_vec_poison2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
-  %bitmask = shl <3 x i8> <i8 1, i8 1, i8 undef>, %x
-  %lowbitmask = add <3 x i8> %bitmask, <i8 -1, i8 undef, i8 -1>
+  %bitmask = shl <3 x i8> <i8 1, i8 1, i8 poison>, %x
+  %lowbitmask = add <3 x i8> %bitmask, <i8 -1, i8 poison, i8 -1>
   %mask = or <3 x i8> %lowbitmask, %bitmask
   ret <3 x i8> %mask
 }

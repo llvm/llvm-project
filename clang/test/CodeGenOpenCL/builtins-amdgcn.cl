@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -837,6 +837,18 @@ unsigned test_wavefrontsize() {
 
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
   return __builtin_amdgcn_wavefrontsize();
+}
+
+// CHECK-LABEL test_flt_rounds(
+unsigned test_flt_rounds() {
+
+  // CHECK: call i32 @llvm.get.rounding()
+  unsigned mode = __builtin_flt_rounds();
+
+  // CHECK: call void @llvm.set.rounding(i32 %0)
+  __builtin_set_flt_rounds(mode);
+
+  return mode;
 }
 
 // CHECK-LABEL test_get_fpenv(

@@ -151,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = std::make_unique<LinkerScript>();
+  script = ScriptWrapper();
 
   symAux.emplace_back();
 
@@ -442,6 +442,8 @@ static void checkOptions() {
       error("-r and -pie may not be used together");
     if (config->exportDynamic)
       error("-r and --export-dynamic may not be used together");
+    if (config->debugNames)
+      error("-r and --debug-names may not be used together");
   }
 
   if (config->executeOnly) {
@@ -464,6 +466,10 @@ static void checkOptions() {
       error("-z bti-report only supported on AArch64");
     if (config->zPauthReport != "none")
       error("-z pauth-report only supported on AArch64");
+    if (config->zGcsReport != "none")
+      error("-z gcs-report only supported on AArch64");
+    if (config->zGcs != GcsPolicy::Implicit)
+      error("-z gcs only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -553,6 +559,25 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
       else
         error("unknown -z start-stop-visibility= value: " +
               StringRef(kv.second));
+    }
+  }
+  return ret;
+}
+
+static GcsPolicy getZGcs(opt::InputArgList &args) {
+  GcsPolicy ret = GcsPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs") {
+      arg->claim();
+      if (kv.second == "implicit")
+        ret = GcsPolicy::Implicit;
+      else if (kv.second == "never")
+        ret = GcsPolicy::Never;
+      else if (kv.second == "always")
+        ret = GcsPolicy::Always;
+      else
+        error("unknown -z gcs= value: " + kv.second);
     }
   }
   return ret;
@@ -1234,6 +1259,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
+  config->debugNames = args.hasFlag(OPT_debug_names, OPT_no_debug_names, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
   config->dependentLibraries = args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
@@ -1247,6 +1273,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
+  config->enableNonContiguousRegions =
+      args.hasArg(OPT_enable_non_contiguous_regions);
   config->entry = args.getLastArgValue(OPT_entry);
 
   errorHandler().errorHandlingScript =
@@ -1433,6 +1461,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zForceBti = hasZOption(args, "force-bti");
   config->zForceIbt = hasZOption(args, "force-ibt");
+  config->zGcs = getZGcs(args);
   config->zGlobal = hasZOption(args, "global");
   config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
@@ -1505,6 +1534,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
                   std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("gcs-report", &config->zGcsReport),
                   std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -1530,9 +1560,17 @@ static void readConfigs(opt::InputArgList &args) {
             ": parse error, not 'section-glob=[none|zlib|zstd]'");
       continue;
     }
-    auto type = getCompressionType(fields[1], arg->getSpelling());
+    auto [typeStr, levelStr] = fields[1].split(':');
+    auto type = getCompressionType(typeStr, arg->getSpelling());
+    unsigned level = 0;
+    if (fields[1].size() != typeStr.size() &&
+        !llvm::to_integer(levelStr, level)) {
+      error(arg->getSpelling() +
+            ": expected a non-negative integer compression level, but got '" +
+            levelStr + "'");
+    }
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
-      config->compressSections.emplace_back(std::move(*pat), type);
+      config->compressSections.emplace_back(std::move(*pat), type, level);
     } else {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
       continue;
@@ -1853,8 +1891,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // Iterate over argv to process input files and positional arguments.
+  std::optional<MemoryBufferRef> defaultScript;
   InputFile::isInGroup = false;
-  bool hasInput = false;
+  bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -1876,9 +1915,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
     case OPT_script:
+    case OPT_default_script:
       if (std::optional<std::string> path = searchScript(arg->getValue())) {
-        if (std::optional<MemoryBufferRef> mb = readFile(*path))
-          readLinkerScript(*mb);
+        if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+          if (arg->getOption().matches(OPT_default_script)) {
+            defaultScript = mb;
+          } else {
+            readLinkerScript(*mb);
+            hasScript = true;
+          }
+        }
         break;
       }
       error(Twine("cannot find linker script ") + arg->getValue());
@@ -1958,6 +2004,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     }
   }
 
+  if (defaultScript && !hasScript)
+    readLinkerScript(*defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
@@ -2655,6 +2703,11 @@ static void readSecurityNotes() {
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
+        config->zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        toString(f) + ": -z gcs-report: file does not have "
+                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+
+    checkAndReportMissingFeature(
         config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_IBT property");
@@ -2706,6 +2759,12 @@ static void readSecurityNotes() {
   // Force enable Shadow Stack.
   if (config->zShstk)
     config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+
+  // Force enable/disable GCS
+  if (config->zGcs == GcsPolicy::Always)
+    config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  else if (config->zGcs == GcsPolicy::Never)
+    config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -3064,7 +3123,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections();
+        osd->osec.finalizeInputSections(&script.s);
   }
 
   // Two input sections with different output sections should not be folded.

@@ -11,11 +11,11 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -53,7 +53,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 for_each(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "for_each requires ForwardIterators");
   if (!std::__for_each(__policy, std::move(__first), std::move(__last), std::move(__func)))
     std::__throw_bad_alloc();
 }
@@ -93,7 +93,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 for_each_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __size, _Function __func) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "for_each_n requires a ForwardIterator");
   auto __res = std::__for_each_n(__policy, std::move(__first), std::move(__size), std::move(__func));
   if (!__res)
     std::__throw_bad_alloc();

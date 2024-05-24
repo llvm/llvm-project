@@ -275,6 +275,13 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
                                      TemplateArgs->asArray(),
                                      /*Final=*/false);
 
+    if (RelativeToPrimary &&
+        (Function->getTemplateSpecializationKind() ==
+             TSK_ExplicitSpecialization ||
+         (Function->getFriendObjectKind() &&
+          !Function->getPrimaryTemplate()->getFriendObjectKind())))
+      return Response::UseNextDecl(Function);
+
     // If this function was instantiated from a specialized member that is
     // a function template, we're done.
     assert(Function->getPrimaryTemplate() && "No function template?");
@@ -1612,11 +1619,6 @@ namespace {
       case TemplateArgument::Pack:
         // Literally rewrite the template argument pack, instead of unpacking
         // it.
-        assert(
-            SemaRef.CodeSynthesisContexts.back().Kind ==
-                Sema::CodeSynthesisContext::BuildingDeductionGuides &&
-            "Transforming a template argument pack is only allowed in building "
-            "deduction guide");
         for (auto &pack : Arg.getPackAsArray()) {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
@@ -2150,13 +2152,26 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
     return LH;
 
   // Generate error if there is a problem with the value.
-  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation()))
+  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation(),
+                                  LH->getSemanticSpelling() ==
+                                      LoopHintAttr::Pragma_unroll))
     return LH;
+
+  LoopHintAttr::OptionType Option = LH->getOption();
+  LoopHintAttr::LoopHintState State = LH->getState();
+
+  llvm::APSInt ValueAPS =
+      TransformedExpr->EvaluateKnownConstInt(getSema().getASTContext());
+  // The values of 0 and 1 block any unrolling of the loop.
+  if (ValueAPS.isZero() || ValueAPS.isOne()) {
+    Option = LoopHintAttr::Unroll;
+    State = LoopHintAttr::Disable;
+  }
 
   // Create new LoopHintValueAttr with integral expression in place of the
   // non-type template parameter.
-  return LoopHintAttr::CreateImplicit(getSema().Context, LH->getOption(),
-                                      LH->getState(), TransformedExpr, *LH);
+  return LoopHintAttr::CreateImplicit(getSema().Context, Option, State,
+                                      TransformedExpr, *LH);
 }
 const NoInlineAttr *TemplateInstantiator::TransformStmtNoInlineAttr(
     const Stmt *OrigS, const Stmt *InstS, const NoInlineAttr *A) {
@@ -2501,10 +2516,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
-      assert(isa<TemplateTypeParmType>(NewT) &&
-             "type parm not rewritten to type parm");
-      auto NewTL = TLB.push<TemplateTypeParmTypeLoc>(NewT);
-      NewTL.setNameLoc(TL.getNameLoc());
+      TLB.pushTrivial(SemaRef.Context, NewT, TL.getNameLoc());
       return NewT;
     }
 
@@ -4358,9 +4370,9 @@ Sema::SubstStmt(Stmt *S, const MultiLevelTemplateArgumentList &TemplateArgs) {
 bool Sema::SubstTemplateArgument(
     const TemplateArgumentLoc &Input,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentLoc &Output) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
-                                    DeclarationName());
+    TemplateArgumentLoc &Output, SourceLocation Loc,
+    const DeclarationName &Entity) {
+  TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, Entity);
   return Instantiator.TransformTemplateArgument(Input, Output);
 }
 

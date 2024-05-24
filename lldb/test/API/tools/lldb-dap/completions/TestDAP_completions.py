@@ -19,6 +19,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             self.assertNotIn(not_expected_item, actual_list)
 
     @skipIfWindows
+    @skipIfRemote
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test_completions(self):
         """

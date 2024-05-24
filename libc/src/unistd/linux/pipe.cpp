@@ -10,6 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -23,6 +24,7 @@ LLVM_LIBC_FUNCTION(int, pipe, (int pipefd[2])) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_pipe2, reinterpret_cast<long>(pipefd), 0);
 #endif
+  MSAN_UNPOISON(pipefd, sizeof(int) * 2);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

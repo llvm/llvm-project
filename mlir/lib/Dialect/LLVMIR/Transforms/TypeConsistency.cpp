@@ -475,7 +475,7 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
     }
   }
 
-  auto destructurableType = typeHint.dyn_cast<DestructurableTypeInterface>();
+  auto destructurableType = dyn_cast<DestructurableTypeInterface>(typeHint);
   if (!destructurableType)
     return failure();
 

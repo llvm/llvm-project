@@ -165,7 +165,7 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*PtrAuthData=*/std::nullopt,
+      attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
       /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
@@ -406,6 +406,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    // If the caller scope is not translatable, the overall callsite cannot be
+    // represented in LLVM (the callee scope may not match the parent function).
+    if (!callerLoc) {
+      // If there is an inlinedAt scope (an outer caller), skip to that
+      // directly. Otherwise, cannot translate.
+      if (!inlinedAt)
+        return nullptr;
+      callerLoc = inlinedAt;
+    }
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)

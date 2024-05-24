@@ -134,9 +134,9 @@ size_t Scalar::GetByteSize() const {
   case e_void:
     break;
   case e_int:
-    return (m_integer.getBitWidth() / 8);
+    return (m_integer.getBitWidth() + 7) / 8;
   case e_float:
-    return m_float.bitcastToAPInt().getBitWidth() / 8;
+    return (m_float.bitcastToAPInt().getBitWidth() + 7) / 8;
   }
   return 0;
 }

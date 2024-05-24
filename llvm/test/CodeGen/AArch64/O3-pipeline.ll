@@ -103,6 +103,10 @@
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Merge internal globals
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       ObjC ARC contraction
 ; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
@@ -167,6 +171,7 @@
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler
+; CHECK-NEXT:       AArch64 Post Coalescer pass
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Debug Variable Analysis
 ; CHECK-NEXT:       Live Stack Slot Analysis

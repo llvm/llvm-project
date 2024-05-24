@@ -110,6 +110,9 @@ class VarTemplateDecl;
 class VTableContextBase;
 class XRayFunctionFilter;
 
+/// A simple array of base specifiers.
+typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
+
 namespace Builtin {
 
 class Context;
@@ -455,7 +458,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// initialization of another module).
   struct PerModuleInitializers {
     llvm::SmallVector<Decl*, 4> Initializers;
-    llvm::SmallVector<uint32_t, 4> LazyInitializers;
+    llvm::SmallVector<GlobalDeclID, 4> LazyInitializers;
 
     void resolve(ASTContext &Ctx);
   };
@@ -1059,7 +1062,7 @@ public:
   /// or an ImportDecl nominating another module that has initializers.
   void addModuleInitializer(Module *M, Decl *Init);
 
-  void addLazyModuleInitializers(Module *M, ArrayRef<uint32_t> IDs);
+  void addLazyModuleInitializers(Module *M, ArrayRef<GlobalDeclID> IDs);
 
   /// Get the initializations to perform when importing a module, if any.
   ArrayRef<Decl*> getModuleInitializers(Module *M);
@@ -1116,7 +1119,8 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
-  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
+  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
+      UnknownAnyTy;
   CanQualType BuiltinFnTy;
   CanQualType PseudoObjectTy, ARCUnbridgedCastTy;
   CanQualType ObjCBuiltinIdTy, ObjCBuiltinClassTy, ObjCBuiltinSelTy;
@@ -1127,7 +1131,8 @@ public:
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLReserveIDTy;
   CanQualType IncompleteMatrixIdxTy;
-  CanQualType OMPArraySectionTy, OMPArrayShapingTy, OMPIteratorTy;
+  CanQualType ArraySectionTy;
+  CanQualType OMPArrayShapingTy, OMPIteratorTy;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   CanQualType Id##Ty;
 #include "clang/Basic/OpenCLExtensionTypes.def"
@@ -1167,6 +1172,12 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// For capturing lambdas with an explicit object parameter whose type is
+  /// derived from the lambda type, we need to perform derived-to-base
+  /// conversion so we can access the captures; the cast paths for that
+  /// are stored here.
+  llvm::DenseMap<const CXXMethodDecl *, CXXCastPath> LambdaCastPaths;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
@@ -2196,6 +2207,16 @@ public:
     return getQualifiedType(type.getUnqualifiedType(), Qs);
   }
 
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType Ty, PointerAuthQualifier PointerAuth) {
+    assert(!Ty.getPointerAuth());
+    assert(PointerAuth);
+
+    Qualifiers Qs;
+    Qs.setPointerAuth(PointerAuth);
+    return getQualifiedType(Ty, Qs);
+  }
+
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
   llvm::FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
@@ -2599,7 +2620,7 @@ public:
   ///
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
-  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals);
+  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.

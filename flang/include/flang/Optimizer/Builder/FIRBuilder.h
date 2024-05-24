@@ -254,13 +254,13 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -708,6 +708,13 @@ mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

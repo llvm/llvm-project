@@ -392,7 +392,7 @@ public:
           *command_output, // Pass nullptr if you don't want the command output
       const Timeout<std::micro> &timeout);
 
-  bool CalculateMD5(const FileSpec &file_spec, uint64_t &high, uint64_t &low);
+  llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);
 
   lldb::DataBufferSP ReadRegister(
       lldb::tid_t tid,

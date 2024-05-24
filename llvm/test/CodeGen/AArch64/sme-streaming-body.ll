@@ -247,15 +247,11 @@ define double @call_to_intrinsic_without_chain(double %x) nounwind "aarch64_psta
 ; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload

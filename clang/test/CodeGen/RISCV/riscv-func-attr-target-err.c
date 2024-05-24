@@ -1,6 +1,6 @@
 // REQUIRES: riscv-registered-target
 // RUN: not %clang_cc1 -triple riscv64 -target-feature +zifencei -target-feature +m -target-feature +a \
-// RUN:  -emit-llvm %s 2>&1 | FileCheck %s
+// RUN:  -emit-llvm-only %s 2>&1 | FileCheck %s
 
 #include <riscv_vector.h>
 

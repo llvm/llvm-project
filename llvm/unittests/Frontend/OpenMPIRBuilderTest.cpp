@@ -2097,7 +2097,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   }));
 }
 
-TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
+TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
   MapVector<Value *, Value *> AlignedVars;
@@ -4982,8 +4982,10 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
       {SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction},
       {XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}};
+  bool ReduceVariableByRef[] = {false, false};
 
-  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos);
+  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos,
+                              ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -5230,12 +5232,16 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
       /* NumThreads */ nullptr, OMP_PROC_BIND_default,
       /* IsCancellable */ false);
 
+  bool ReduceVariableByRef[] = {false};
+
   OMPBuilder.createReductions(
       FirstBodyIP, FirstBodyAllocaIP,
-      {{SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}});
+      {{SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}},
+      ReduceVariableByRef);
   OMPBuilder.createReductions(
       SecondBodyIP, SecondBodyAllocaIP,
-      {{XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}});
+      {{XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}},
+      ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();

@@ -711,7 +711,7 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   for (int64_t i = 0; i < map.getNumDims(); ++i) {
     if (auto attr = operands[i].dyn_cast<Attribute>()) {
       dimReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+          b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       dimReplacements.push_back(b.getAffineDimExpr(numDims++));
       remainingValues.push_back(operands[i].get<Value>());
@@ -721,7 +721,7 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
     if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
       symReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+          b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
       remainingValues.push_back(operands[i + map.getNumDims()].get<Value>());

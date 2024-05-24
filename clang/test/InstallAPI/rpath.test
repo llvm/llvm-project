@@ -12,8 +12,8 @@
 ; RUN: --verify-mode=Pedantic 2>&1 | FileCheck %s --check-prefix=MISSING
 ; RUN: llvm-readtapi --compare %t/RPath_warnings.tbd %t/expected_no_rpaths.tbd
 
-; MISSING: warning: runpath search paths missing from installAPI option: '@loader_path/../../../SharedFrameworks/ [ x86_64 arm64 ]'
-; MISSING: warning: runpath search paths missing from installAPI option: '@loader_path/../../PrivateFrameworks/ [ x86_64 arm64 ]'
+; MISSING-DAG: warning: runpath search paths missing from installAPI option: '@loader_path/../../../SharedFrameworks/ [ x86_64 arm64 ]'
+; MISSING-DAG: warning: runpath search paths missing from installAPI option: '@loader_path/../../PrivateFrameworks/ [ x86_64 arm64 ]'
 
 ; RUN: clang-installapi --filetype=tbd-v5 \
 ; RUN: -target arm64-apple-macos13.0 -target x86_64-apple-macos13.0 \

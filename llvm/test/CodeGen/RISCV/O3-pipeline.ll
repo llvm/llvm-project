@@ -74,6 +74,10 @@
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     A No-Op Barrier Pass
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       ObjC ARC contraction
 ; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
@@ -115,8 +119,6 @@
 ; RV64-NEXT:        RISC-V Optimize W Instructions
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
-; CHECK-NEXT:       RISC-V Insert VSETVLI pass
-; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
 ; CHECK-NEXT:       Detect Dead Lanes
@@ -143,6 +145,9 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Greedy Register Allocator
 ; CHECK-NEXT:       Virtual Register Rewriter
+; CHECK-NEXT:       RISC-V Insert VSETVLI pass
+; CHECK-NEXT:       RISC-V Coalesce VSETVLI pass
+; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       Virtual Register Map
 ; CHECK-NEXT:       Live Register Matrix
 ; CHECK-NEXT:       Greedy Register Allocator

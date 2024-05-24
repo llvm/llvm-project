@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -272,8 +273,9 @@ expandValue(RewriterBase &rewriter, Location loc, Value result, Value origDest,
   assert(rankReductionStrategy ==
              ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape &&
          "unknown rank reduction strategy");
-  return rewriter.create<tensor::ExpandShapeOp>(loc, origResultType, result,
-                                                reassociation);
+  return rewriter
+      .create<tensor::ExpandShapeOp>(loc, origResultType, result, reassociation)
+      .getResult();
 }
 
 /// Collapse the given `value` so that the type matches the type of
@@ -536,9 +538,10 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
       resultReplacements.push_back(result);
       continue;
     }
-    resultReplacements.push_back(expandValue(rewriter, loc, result, origDest,
-                                             reassociations[opOperandIndex],
-                                             options.rankReductionStrategy));
+    Value expandedValue = expandValue(rewriter, loc, result, origDest,
+                                      reassociations[opOperandIndex],
+                                      options.rankReductionStrategy);
+    resultReplacements.push_back(expandedValue);
   }
 
   rewriter.replaceOp(genericOp, resultReplacements);

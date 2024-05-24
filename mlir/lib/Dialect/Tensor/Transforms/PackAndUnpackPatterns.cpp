@@ -52,12 +52,16 @@ static LogicalResult isPackOn1D(RewriterBase &rewriter, Operation *op,
 struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
 
-  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
-                     Type newOperandType, ArrayAttr reassociation) const {
+  FailureOr<Value>
+  insertExpand(RewriterBase &rewriter, Location loc, Value operand,
+               Type newOperandType,
+               ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                                  reassociation);
+    return rewriter
+        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
+                                       reassociation)
+        .getResult();
   }
 
   /// Returns success() if it is only packing on the innermost dimension.
@@ -96,10 +100,14 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
       return failure();
-    Value expanded = insertExpand(
-        rewriter, packOp.getLoc(), packOp.getSource(), destType,
-        getReassociationIndicesAttribute(rewriter, *reassociation));
-    rewriter.replaceOp(packOp, expanded);
+    FailureOr<Value> expanded =
+        insertExpand(rewriter, packOp.getLoc(), packOp.getSource(), destType,
+                     *reassociation);
+    if (failed(expanded)) {
+      return rewriter.notifyMatchFailure(
+          packOp, "unable to expand source of tensor.pack");
+    }
+    rewriter.replaceOp(packOp, *expanded);
     return success();
   }
 };
@@ -366,13 +374,10 @@ struct FoldProducerUnPackWithConsumerLinalgTransposeOp
     for (auto dim : innerDimsPos)
       newInnerDimsPosVec.push_back(transposePermutation[dim]);
 
-    Value output = unPackOp.createDestinationTensor(
-        rewriter, transposeOp.getLoc(), unPackOp.getSource(),
-        unPackOp.getMixedTiles(), newInnerDimsPosVec, newOuterDimsPermVec);
-
+    // Reuse the destination of the transpose op.
     rewriter.replaceOpWithNewOp<UnPackOp>(
-        transposeOp, unPackOp.getSource(), output, newInnerDimsPosVec,
-        unPackOp.getMixedTiles(), newOuterDimsPermVec);
+        transposeOp, unPackOp.getSource(), transposeOp.getDpsInits()[0],
+        newInnerDimsPosVec, unPackOp.getMixedTiles(), newOuterDimsPermVec);
 
     return success();
   }

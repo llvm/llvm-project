@@ -54,6 +54,18 @@ define float @returned_poison() {
   ret float poison
 }
 
+; Know nothing
+define float @returned_freeze_poison() {
+; CHECK-LABEL: define noundef float @returned_freeze_poison() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[FREEZE_POISON:%.*]] = freeze float poison
+; CHECK-NEXT:    ret float [[FREEZE_POISON]]
+;
+  call void @unknown()
+  %freeze.poison = freeze float poison
+  ret float %freeze.poison
+}
+
 define double @returned_snan() {
 ; CHECK-LABEL: define noundef nofpclass(qnan inf zero sub norm) double @returned_snan() {
 ; CHECK-NEXT:    call void @unknown()
@@ -102,7 +114,7 @@ define <2 x double> @returned_strange_constant_vector_elt() {
 
 ; Test a vector element that's undef
 define <3 x double> @returned_undef_constant_vector_elt() {
-; CHECK-LABEL: define nofpclass(nan inf sub norm) <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define <3 x double> @returned_undef_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double 0.000000e+00, double undef>
 ;
@@ -1530,9 +1542,9 @@ define <4 x float> @insertelement_non_constant_chain(i32 %idx) {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
-; CHECK-NEXT:    [[INS_4:%.*]] = insertelement <4 x float> [[INS_2]], float 3.000000e+00, i32 3
-; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 4.000000e+00, i32 [[IDX]]
-; CHECK-NEXT:    ret <4 x float> [[INS_3]]
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[INS_4:%.*]] = insertelement <4 x float> [[INS_2]], float 4.000000e+00, i32 [[IDX]]
+; CHECK-NEXT:    ret <4 x float> [[INS_4]]
 ;
   %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
   %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1

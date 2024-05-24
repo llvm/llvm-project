@@ -78,68 +78,16 @@ define <vscale x 2 x i1> @whilege_d_xx(i64 %a, i64 %b) {
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilege_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
-; CHECK-LABEL: whilege_d_ii_dont_fold_to_ptrue_larger_than_minvec:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    whilege p0.d, x8, xzr
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilege.nxv2i1.i64(i64 3, i64 0)
-  ret <vscale x 2 x i1> %out
-}
-
+; Ensure we don't convert constant decrementing while instructions to ptrue.
 define <vscale x 16 x i1> @whilege_b_ii() {
 ; CHECK-LABEL: whilege_b_ii:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b, vl6
+; CHECK-NEXT:    mov w8, #-2 // =0xfffffffe
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    whilege p0.b, w9, w8
 ; CHECK-NEXT:    ret
 entry:
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i32(i32 3, i32 -2)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilege_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
-; CHECK-LABEL: whilege_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    whilege p0.b, x8, xzr
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i64(i64 9, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilege_b_ii_vl_maximum() vscale_range(16, 16) {
-; CHECK-LABEL: whilege_b_ii_vl_maximum:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i64(i64 255, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilege_b_ii_dont_fold_to_ptrue_overflow() {
-; CHECK-LABEL: whilege_b_ii_dont_fold_to_ptrue_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    movk w8, #32768, lsl #16
-; CHECK-NEXT:    whilege p0.b, w9, w8
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i32(i32 2147483647, i32 -2147483646)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilege_b_ii_dont_fold_to_ptrue_increment_overflow() {
-; CHECK-LABEL: whilege_b_ii_dont_fold_to_ptrue_increment_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    mov w9, #-2147483641
-; CHECK-NEXT:    whilege p0.b, w9, w8
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i32(i32 -2147483641, i32 2147483647)
   ret <vscale x 16 x i1> %out
 }
 
@@ -219,66 +167,16 @@ define <vscale x 2 x i1> @whilehs_d_xx(i64 %a, i64 %b) {
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilehs_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
-; CHECK-LABEL: whilehs_d_ii_dont_fold_to_ptrue_larger_than_minvec:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    whilehs p0.d, x8, xzr
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilehs.nxv2i1.i64(i64 3, i64 0)
-  ret <vscale x 2 x i1> %out
-}
-
+; Ensure we don't convert constant decrementing while instructions to ptrue.
 define <vscale x 16 x i1> @whilehs_b_ii() {
 ; CHECK-LABEL: whilehs_b_ii:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b, vl7
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    whilehs p0.b, x9, x8
 ; CHECK-NEXT:    ret
 entry:
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i64(i64 8, i64 2)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehs_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
-; CHECK-LABEL: whilehs_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    whilehs p0.b, x8, xzr
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i64(i64 9, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehs_b_ii_vl_maximum() vscale_range(16, 16) {
-; CHECK-LABEL: whilehs_b_ii_vl_maximum:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i64(i64 255, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehs_b_ii_dont_fold_to_ptrue_overflow() {
-; CHECK-LABEL: whilehs_b_ii_dont_fold_to_ptrue_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    mov w9, #6
-; CHECK-NEXT:    whilehs p0.b, w9, w8
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i32(i32 6, i32 4294967295)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehs_b_ii_dont_fold_to_ptrue_increment_overflow() {
-; CHECK-LABEL: whilehs_b_ii_dont_fold_to_ptrue_increment_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    whilehs p0.b, w8, wzr
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i32(i32 4294967295, i32 0)
   ret <vscale x 16 x i1> %out
 }
 
@@ -358,55 +256,16 @@ define <vscale x 2 x i1> @whilegt_d_xx(i64 %a, i64 %b) {
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilegt_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
-; CHECK-LABEL: whilegt_d_ii_dont_fold_to_ptrue_larger_than_minvec:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    whilegt p0.d, x8, xzr
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilegt.nxv2i1.i64(i64 3, i64 0)
-  ret <vscale x 2 x i1> %out
-}
-
+; Ensure we don't convert constant decrementing while instructions to ptrue.
 define <vscale x 16 x i1> @whilegt_b_ii() {
 ; CHECK-LABEL: whilegt_b_ii:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b, vl5
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilegt.nxv16i1.i32(i32 3, i32 -2)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilegt_b_ii_fold_to_ptrue_nonexistent_vl9() {
-; CHECK-LABEL: whilegt_b_ii_fold_to_ptrue_nonexistent_vl9:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    whilegt p0.b, x8, xzr
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilegt.nxv16i1.i64(i64 9, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilegt_b_ii_vl_maximum() vscale_range(16, 16) {
-; CHECK-LABEL: whilegt_b_ii_vl_maximum:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilegt.nxv16i1.i64(i64 256, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilegt_b_ii_dont_fold_to_ptrue_overflow() {
-; CHECK-LABEL: whilegt_b_ii_dont_fold_to_ptrue_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    mov w9, #-2147483641
+; CHECK-NEXT:    mov w8, #-2 // =0xfffffffe
+; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    whilegt p0.b, w9, w8
 ; CHECK-NEXT:    ret
 entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilegt.nxv16i1.i32(i32 -2147483641, i32 2147483647)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilegt.nxv16i1.i32(i32 3, i32 -2)
   ret <vscale x 16 x i1> %out
 }
 
@@ -486,55 +345,16 @@ define <vscale x 2 x i1> @whilehi_d_xx(i64 %a, i64 %b) {
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilehi_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
-; CHECK-LABEL: whilehi_d_ii_dont_fold_to_ptrue_larger_than_minvec:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    whilehi p0.d, x8, xzr
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilehi.nxv2i1.i64(i64 3, i64 0)
-  ret <vscale x 2 x i1> %out
-}
-
+; Ensure we don't convert constant decrementing while instructions to ptrue.
 define <vscale x 16 x i1> @whilehi_b_ii() {
 ; CHECK-LABEL: whilehi_b_ii:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b, vl6
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    whilehi p0.b, x9, x8
 ; CHECK-NEXT:    ret
 entry:
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehi.nxv16i1.i64(i64 8, i64 2)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehi_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
-; CHECK-LABEL: whilehi_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    whilehi p0.b, x8, xzr
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehi.nxv16i1.i64(i64 9, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilehi_b_ii_vl_maximum() vscale_range(16, 16) {
-; CHECK-LABEL: whilehi_b_ii_vl_maximum:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehi.nxv16i1.i64(i64 256, i64 0)
-  ret <vscale x 16 x i1> %out
-}
-
-define <vscale x 16 x i1> @whilelhi_b_ii_dont_fold_to_ptrue_overflow() {
-; CHECK-LABEL: whilelhi_b_ii_dont_fold_to_ptrue_overflow:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    mov w9, #7
-; CHECK-NEXT:    whilehi p0.b, w9, w8
-; CHECK-NEXT:    ret
-entry:
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehi.nxv16i1.i32(i32 7, i32 4294967295)
   ret <vscale x 16 x i1> %out
 }
 

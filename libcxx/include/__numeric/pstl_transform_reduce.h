@@ -9,11 +9,12 @@
 #ifndef _LIBCPP___NUMERIC_PSTL_TRANSFORM_REDUCE_H
 #define _LIBCPP___NUMERIC_PSTL_TRANSFORM_REDUCE_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/cpp17_iterator_concepts.h>
 #include <__numeric/transform_reduce.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <optional>
@@ -72,6 +73,8 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
     _Tp __init,
     _BinaryOperation1 __reduce,
     _BinaryOperation2 __transform) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "transform_reduce requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform_reduce requires ForwardIterators");
   auto __res = std::__transform_reduce(
       __policy,
       std::move(__first1),
@@ -99,6 +102,8 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
     _ForwardIterator1 __last1,
     _ForwardIterator2 __first2,
     _Tp __init) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "transform_reduce requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform_reduce requires ForwardIterators");
   return std::transform_reduce(__policy, __first1, __last1, __first2, __init, plus{}, multiplies{});
 }
 
@@ -140,6 +145,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
     _Tp __init,
     _BinaryOperation __reduce,
     _UnaryOperation __transform) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "transform_reduce requires ForwardIterators");
   auto __res = std::__transform_reduce(
       __policy, std::move(__first), std::move(__last), std::move(__init), std::move(__reduce), std::move(__transform));
   if (!__res)

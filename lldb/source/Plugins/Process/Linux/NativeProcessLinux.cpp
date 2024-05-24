@@ -1089,6 +1089,10 @@ Status NativeProcessLinux::Detach() {
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     return error;
 
+  // Cancel out any SIGSTOPs we may have sent while stopping the process.
+  // Otherwise, the process may stop as soon as we detach from it.
+  kill(GetID(), SIGCONT);
+
   for (const auto &thread : m_threads) {
     Status e = Detach(thread->GetID());
     if (e.Fail())

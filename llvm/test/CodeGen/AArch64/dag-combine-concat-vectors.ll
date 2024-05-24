@@ -9,8 +9,8 @@ define fastcc i8 @allocno_reload_assign() {
 ; CHECK-LABEL: allocno_reload_assign:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z16.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
@@ -48,12 +48,12 @@ define fastcc i8 @allocno_reload_assign() {
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    st1b { z2.d }, p4, [z16.d]
-; CHECK-NEXT:    punpklo p4.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    st1b { z3.d }, p3, [z16.d]
-; CHECK-NEXT:    punpklo p3.h, p4.b
-; CHECK-NEXT:    st1b { z4.d }, p3, [z16.d]
-; CHECK-NEXT:    punpkhi p3.h, p4.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    st1b { z4.d }, p4, [z16.d]
 ; CHECK-NEXT:    st1b { z5.d }, p3, [z16.d]
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b

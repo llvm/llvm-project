@@ -193,6 +193,9 @@
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -ffast-math \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC32 %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -ffp-model=fast \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC32 %s
 // CHECK-CRTFASTMATH-SPARC32: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-CRTFASTMATH-SPARC32: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2{{/|\\\\}}crtfastmath.o"
 // CHECK-NOCRTFASTMATH-SPARC32-NOT: crtfastmath.o

@@ -9,12 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_REPLACE_H
 #define _LIBCPP___ALGORITHM_PSTL_REPLACE_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__algorithm/pstl_transform.h>
 #include <__config>
+#include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
@@ -74,6 +75,7 @@ replace_if(_ExecutionPolicy&& __policy,
            _ForwardIterator __last,
            _Pred __pred,
            const _Tp& __new_value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "replace_if requires ForwardIterators");
   auto __res = std::__replace_if(__policy, std::move(__first), std::move(__last), std::move(__pred), __new_value);
   if (!__res)
     std::__throw_bad_alloc();
@@ -89,8 +91,8 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
 __replace(_ExecutionPolicy&& __policy,
-          _ForwardIterator __first,
-          _ForwardIterator __last,
+          _ForwardIterator&& __first,
+          _ForwardIterator&& __last,
           const _Tp& __old_value,
           const _Tp& __new_value) noexcept {
   return std::__pstl_frontend_dispatch(
@@ -104,8 +106,8 @@ __replace(_ExecutionPolicy&& __policy,
             [&](__iter_reference<_ForwardIterator> __element) { return __element == __g_old_value; },
             __g_new_value);
       },
-      std::move(__first),
-      std::move(__last),
+      std::forward<_ForwardIterator>(__first),
+      std::forward<_ForwardIterator>(__last),
       __old_value,
       __new_value);
 }
@@ -121,6 +123,7 @@ replace(_ExecutionPolicy&& __policy,
         _ForwardIterator __last,
         const _Tp& __old_value,
         const _Tp& __new_value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "replace requires ForwardIterators");
   if (!std::__replace(__policy, std::move(__first), std::move(__last), __old_value, __new_value))
     std::__throw_bad_alloc();
 }
@@ -141,7 +144,7 @@ template <class _ExecutionPolicy,
     _ForwardIterator&& __last,
     _ForwardOutIterator&& __result,
     _Pred&& __pred,
-    const _Tp& __new_value) {
+    const _Tp& __new_value) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy_if, _RawPolicy),
       [&__policy](_ForwardIterator __g_first,
@@ -177,6 +180,11 @@ _LIBCPP_HIDE_FROM_ABI void replace_copy_if(
     _ForwardOutIterator __result,
     _Pred __pred,
     const _Tp& __new_value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "replace_copy_if requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "replace_copy_if requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "replace_copy_if requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, const _Tp&, "replace_copy requires an OutputIterator");
   if (!std::__replace_copy_if(
           __policy, std::move(__first), std::move(__last), std::move(__result), std::move(__pred), __new_value))
     std::__throw_bad_alloc();
@@ -233,6 +241,11 @@ _LIBCPP_HIDE_FROM_ABI void replace_copy(
     _ForwardOutIterator __result,
     const _Tp& __old_value,
     const _Tp& __new_value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "replace_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "replace_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "replace_copy requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, const _Tp&, "replace_copy requires an OutputIterator");
   if (!std::__replace_copy(
           __policy, std::move(__first), std::move(__last), std::move(__result), __old_value, __new_value))
     std::__throw_bad_alloc();

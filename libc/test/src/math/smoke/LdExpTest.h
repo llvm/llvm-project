@@ -12,13 +12,14 @@
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
 template <typename T>
-class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
   using StorageType = typename FPBits::StorageType;

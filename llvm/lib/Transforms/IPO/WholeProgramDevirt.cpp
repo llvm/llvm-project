@@ -1196,8 +1196,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // function pointer to the devirtualized target. In case of a mismatch,
       // fall back to indirect call.
       if (DevirtCheckMode == WPDCheckMode::Fallback) {
-        MDNode *Weights =
-            MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
+        MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
         // site will be executed.

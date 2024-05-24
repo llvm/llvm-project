@@ -743,14 +743,10 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   }
 
   // Visit the template arguments used in the specialization.
-  if (TypeSourceInfo *SpecType = D->getTypeAsWritten()) {
-    TypeLoc TL = SpecType->getTypeLoc();
-    if (TemplateSpecializationTypeLoc TSTLoc =
-            TL.getAs<TemplateSpecializationTypeLoc>()) {
-      for (unsigned I = 0, N = TSTLoc.getNumArgs(); I != N; ++I)
-        if (VisitTemplateArgumentLoc(TSTLoc.getArgLoc(I)))
-          return true;
-    }
+  if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {
+    for (const TemplateArgumentLoc &Arg : ArgsWritten->arguments())
+      if (VisitTemplateArgumentLoc(Arg))
+        return true;
   }
 
   return ShouldVisitBody && VisitCXXRecordDecl(D);
@@ -780,10 +776,9 @@ bool CursorVisitor::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   // Visit the default argument.
-  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (TypeSourceInfo *DefArg = D->getDefaultArgumentInfo())
-      if (Visit(DefArg->getTypeLoc()))
-        return true;
+  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited() &&
+      VisitTemplateArgumentLoc(D->getDefaultArgument()))
+    return true;
 
   return false;
 }
@@ -950,8 +945,9 @@ bool CursorVisitor::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return true;
 
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (Expr *DefArg = D->getDefaultArgument())
-      return Visit(MakeCXCursor(DefArg, StmtParent, TU, RegionOfInterest));
+    if (D->hasDefaultArgument() &&
+        VisitTemplateArgumentLoc(D->getDefaultArgument()))
+      return true;
 
   return false;
 }
@@ -2782,6 +2778,11 @@ class OpenACCClauseEnqueue : public OpenACCClauseVisitor<OpenACCClauseEnqueue> {
 public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
+  void VisitVarList(const OpenACCClauseWithVarList &C) {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
+
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
@@ -2790,6 +2791,73 @@ public:
 void OpenACCClauseEnqueue::VisitDefaultClause(const OpenACCDefaultClause &C) {}
 void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
+}
+void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
+  if (C.hasConditionExpr())
+    Visitor.AddStmt(C.getConditionExpr());
+}
+void OpenACCClauseEnqueue::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
+  for (Expr *IE : C.getIntExprs())
+    Visitor.AddStmt(IE);
+}
+
+void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
+  if (const Expr *DevNumExpr = C.getDevNumExpr())
+    Visitor.AddStmt(DevNumExpr);
+  for (Expr *QE : C.getQueueIdExprs())
+    Visitor.AddStmt(QE);
+}
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
+void OpenACCClauseEnqueue::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  VisitVarList(C);
 }
 } // namespace
 
@@ -5599,16 +5667,19 @@ CXString clang_getCursorDisplayName(CXCursor C) {
 
   if (const ClassTemplateSpecializationDecl *ClassSpec =
           dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    // If the type was explicitly written, use that.
-    if (TypeSourceInfo *TSInfo = ClassSpec->getTypeAsWritten())
-      return cxstring::createDup(TSInfo->getType().getAsString(Policy));
-
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    printTemplateArgumentList(
-        OS, ClassSpec->getTemplateArgs().asArray(), Policy,
-        ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    // If the template arguments were written explicitly, use them..
+    if (const auto *ArgsWritten = ClassSpec->getTemplateArgsAsWritten()) {
+      printTemplateArgumentList(
+          OS, ArgsWritten->arguments(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    } else {
+      printTemplateArgumentList(
+          OS, ClassSpec->getTemplateArgs().asArray(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    }
     return cxstring::createDup(OS.str());
   }
 
@@ -5697,8 +5768,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("UnaryOperator");
   case CXCursor_ArraySubscriptExpr:
     return cxstring::createRef("ArraySubscriptExpr");
-  case CXCursor_OMPArraySectionExpr:
-    return cxstring::createRef("OMPArraySectionExpr");
+  case CXCursor_ArraySectionExpr:
+    return cxstring::createRef("ArraySectionExpr");
   case CXCursor_OMPArrayShapingExpr:
     return cxstring::createRef("OMPArrayShapingExpr");
   case CXCursor_OMPIteratorExpr:

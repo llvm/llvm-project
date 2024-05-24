@@ -11,6 +11,7 @@ import lldbdap_testcase
 
 
 class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfRemote
     def test_startDebugging(self):
         """
         Tests the "startDebugging" reverse request. It makes sure that the IDE can

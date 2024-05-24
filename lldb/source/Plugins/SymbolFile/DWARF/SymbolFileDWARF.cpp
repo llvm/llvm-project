@@ -1555,8 +1555,10 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
     Log *log = GetLog(DWARFLog::DebugInfo);
     if (log)
       GetObjectFile()->GetModule()->LogMessage(
-          log, "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} '{2}'",
-          die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          log,
+          "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} ({2}) '{3}'",
+          die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+          die.GetName());
 
     // We might be coming in in the middle of a type tree (a class within a
     // class, an enum within a class), so parse any needed parent DIEs before
@@ -1572,11 +1574,10 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
           if (log)
             GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) "
-                "{1} '{2}' "
-                "resolve parent forward type for {3:x16})",
-                die.GetOffset(), die.GetTagAsCString(), die.GetName(),
-                decl_ctx_die.GetOffset());
+                "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} ({2}) "
+                "'{3}' resolve parent forward type for {4:x16})",
+                die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                die.GetName(), decl_ctx_die.GetOffset());
         } break;
 
         default:
@@ -1644,9 +1645,9 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
     if (log)
       GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-          log, "{0:x8}: {1} '{2}' resolving forward declaration...",
-          dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
-          type->GetName().AsCString());
+          log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+          dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
+          dwarf_die.Tag(), type->GetName().AsCString());
     assert(compiler_type);
     if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
       return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
@@ -1665,8 +1666,9 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
         return type;
 
       GetObjectFile()->GetModule()->ReportError(
-          "Parsing a die that is being parsed die: {0:x16}: {1} {2}",
-          die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          "Parsing a die that is being parsed die: {0:x16}: {1} ({2}) {3}",
+          die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+          die.GetName());
 
     } else
       return type;
@@ -3134,9 +3136,9 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
     if (log) {
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-          "name='{1}')",
-          DW_TAG_value_to_name(tag), die.GetName());
+          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag={0} "
+          "({1}), name='{2}')",
+          DW_TAG_value_to_name(tag), tag, die.GetName());
     }
 
     // Get the type system that we are looking to find a type for. We will
@@ -3184,10 +3186,10 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
           GetObjectFile()->GetModule()->LogMessage(
               log,
               "SymbolFileDWARF::"
-              "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-              "name='{1}') ignoring die={2:x16} ({3})",
-              DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
-              type_die.GetName());
+              "FindDefinitionTypeForDWARFDeclContext(tag={0} ({1}), "
+              "name='{2}') ignoring die={3:x16} ({4})",
+              DW_TAG_value_to_name(tag), tag, die.GetName(),
+              type_die.GetOffset(), type_die.GetName());
         }
         return true;
       }
@@ -3197,9 +3199,9 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
-            "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-            "name='{1}') trying die={2:x16} ({3})",
-            DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
+            "FindDefinitionTypeForDWARFDeclContext(tag={0} ({1}), name='{2}') "
+            "trying die={3:x16} ({4})",
+            DW_TAG_value_to_name(tag), tag, die.GetName(), type_die.GetOffset(),
             type_dwarf_decl_ctx.GetQualifiedName());
       }
 
@@ -3650,8 +3652,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         StreamString strm;
         location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
         GetObjectFile()->GetModule()->ReportError(
-            "{0:x16}: {1} has an invalid location: {2}", die.GetOffset(),
-            die.GetTagAsCString(), strm.GetData());
+            "{0:x16}: {1} ({2}) has an invalid location: {3}", die.GetOffset(),
+            DW_TAG_value_to_name(die.Tag()), die.Tag(), strm.GetData());
       }
       if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
         is_static_lifetime = true;
@@ -3839,10 +3841,11 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
       variable_list_sp = sc.comp_unit->GetVariableList(false);
     } else {
       GetObjectFile()->GetModule()->ReportError(
-          "parent {0:x8} {1} with no valid compile unit in "
-          "symbol context for {2:x8} {3}.\n",
-          sc_parent_die.GetID(), sc_parent_die.GetTagAsCString(), die.GetID(),
-          die.GetTagAsCString());
+          "parent {0:x8} {1} ({2}) with no valid compile unit in "
+          "symbol context for {3:x8} {4} ({5}).\n",
+          sc_parent_die.GetID(), DW_TAG_value_to_name(sc_parent_die.Tag()),
+          sc_parent_die.Tag(), die.GetID(), DW_TAG_value_to_name(die.Tag()),
+          die.Tag());
       return;
     }
     break;
@@ -3850,8 +3853,8 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
   default:
     GetObjectFile()->GetModule()->ReportError(
         "didn't find appropriate parent DIE for variable list for {0:x8} "
-        "{1}.\n",
-        die.GetID(), die.GetTagAsCString());
+        "{1} ({2}).\n",
+        die.GetID(), DW_TAG_value_to_name(die.Tag()), die.Tag());
     return;
   }
 

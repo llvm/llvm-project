@@ -528,7 +528,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // So if |y| > 151 * 2^24, and x is finite:
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
-  if (LIBC_UNLIKELY((y_abs & 0x007f'ffff) == 0) || (y_abs > 0x4f170000)) {
+  if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
     // Exceptional exponents.
     switch (y_abs) {
     case 0x0000'0000: { // y = +-0.0f
@@ -571,6 +571,26 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // TODO: Enable special case speed-up for x^(-1/2) when rsqrt is ready.
         // case 0xbf00'0000:  // pow(x, -1/2) = rsqrt(x)
         //   return rsqrt(x);
+      }
+      if (is_integer(y) && (y_u > 0x4000'0000) && (y_u <= 0x41c0'0000)) {
+        // Check for exact cases when 2 < y < 25 and y is an integer.
+        int msb =
+            (x_abs == 0) ? (FloatBits::TOTAL_LEN - 2) : cpp::countl_zero(x_abs);
+        msb = (msb > FloatBits::EXP_LEN) ? msb : FloatBits::EXP_LEN;
+        int lsb = (x_abs == 0) ? 0 : cpp::countr_zero(x_abs);
+        lsb = (lsb > FloatBits::FRACTION_LEN) ? FloatBits::FRACTION_LEN : lsb;
+        int extra_bits = FloatBits::TOTAL_LEN - 2 - lsb - msb;
+        int iter = static_cast<int>(y);
+
+        if (extra_bits * iter <= FloatBits::FRACTION_LEN + 2) {
+          // The result is either exact or exactly half-way.
+          // But it is exactly representable in double precision.
+          double x_d = static_cast<double>(x);
+          double result = x_d;
+          for (int i = 1; i < iter; ++i)
+            result *= x_d;
+          return static_cast<float>(result);
+        }
       }
       if (y_abs > 0x4f17'0000) {
         if (y_abs > 0x7f80'0000) {
@@ -834,7 +854,6 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   return static_cast<float>(
              powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd)) +
          0.0f;
-  // return static_cast<float>(r);
 }
 
 } // namespace LIBC_NAMESPACE

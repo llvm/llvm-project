@@ -32,14 +32,11 @@ module m
   real, shared, target :: mst
   !ERROR: Object 'msa' with ATTRIBUTES(SHARED) must be declared in a device subprogram
   real, shared :: msa(*)
-  !ERROR: Object 'mm' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed :: mm
-  !ERROR: Object 'mmi' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed :: mmi = 1.
+  real, managed :: mm ! ok
+  real, managed :: mmi = 1. ! ok
   real, managed, allocatable :: mml ! ok
-  !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed, pointer :: mmp ! ok
-  !ERROR: Object 'mmt' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument
+  real, managed, pointer :: mmp(:)
   real, managed, target :: mmt
   !WARNING: Object 'mp' with ATTRIBUTES(PINNED) should also be allocatable
   real, pinned :: mp
@@ -60,8 +57,7 @@ module m
  contains
   attributes(device) subroutine devsubr(n,da)
     integer, intent(in) :: n
-    !ERROR: Object 'da' with ATTRIBUTES(DEVICE) may not be assumed size
-    real, device :: da(*)
+    real, device :: da(*) ! ok
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
@@ -85,6 +81,15 @@ module m
     real, unified :: ru ! ok
     type(t1), unified :: tu ! ok
     type(t2) :: t ! ok
+
+    block
+      real, device :: a(100) ! ok
+    end block
   end subroutine
 
+
 end module
+
+program p
+  real, unified :: um ! ok
+end program

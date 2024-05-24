@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple s390x-ibm-zos -mcpu=z15 -asm-verbose=true < %s | FileCheck %s
-; REQUIRES: systemz-registered-target
 
 ; CHECK:    .section    ".ppa2"
 ; CHECK: L#PPA2:

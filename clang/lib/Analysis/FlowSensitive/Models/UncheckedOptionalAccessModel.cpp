@@ -339,17 +339,6 @@ void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
   Env.setValue(locForHasValue(OptionalLoc), HasValueVal);
 }
 
-/// Creates a symbolic value for an `optional` value at an existing storage
-/// location. Uses `HasValueVal` as the symbolic value of the "has_value"
-/// property.
-RecordValue &createOptionalValue(RecordStorageLocation &Loc,
-                                 BoolValue &HasValueVal, Environment &Env) {
-  auto &OptionalVal = Env.create<RecordValue>(Loc);
-  Env.setValue(Loc, OptionalVal);
-  setHasValue(Loc, HasValueVal, Env);
-  return OptionalVal;
-}
-
 /// Returns the symbolic value that represents the "has_value" property of the
 /// optional at `OptionalLoc`. Returns null if `OptionalLoc` is null.
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
@@ -413,9 +402,8 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  State.Env.setValue(
-      *E, createOptionalValue(State.Env.getResultObjectLocation(*E),
-                              State.Env.getBoolLiteralValue(true), State.Env));
+  setHasValue(State.Env.getResultObjectLocation(*E),
+              State.Env.getBoolLiteralValue(true), State.Env);
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -483,9 +471,6 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
 void transferCallReturningOptional(const CallExpr *E,
                                    const MatchFinder::MatchResult &Result,
                                    LatticeTransferState &State) {
-  if (State.Env.getValue(*E) != nullptr)
-    return;
-
   RecordStorageLocation *Loc = nullptr;
   if (E->isPRValue()) {
     Loc = &State.Env.getResultObjectLocation(*E);
@@ -497,16 +482,16 @@ void transferCallReturningOptional(const CallExpr *E,
     }
   }
 
-  RecordValue &Val =
-      createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
-  if (E->isPRValue())
-    State.Env.setValue(*E, Val);
+  if (State.Env.getValue(locForHasValue(*Loc)) != nullptr)
+    return;
+
+  setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
                             BoolValue &HasValueVal) {
   RecordStorageLocation &Loc = Env.getResultObjectLocation(E);
-  Env.setValue(E, createOptionalValue(Loc, HasValueVal, Env));
+  setHasValue(Loc, HasValueVal, Env);
 }
 
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
@@ -555,7 +540,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
   assert(E->getNumArgs() > 0);
 
   if (auto *Loc = State.Env.get<RecordStorageLocation>(*E->getArg(0))) {
-    createOptionalValue(*Loc, HasValueVal, State.Env);
+    setHasValue(*Loc, HasValueVal, State.Env);
 
     // Assign a storage location for the whole expression.
     State.Env.setStorageLocation(*E, *Loc);
@@ -587,11 +572,11 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
 
   if (Loc1 == nullptr) {
     if (Loc2 != nullptr)
-      createOptionalValue(*Loc2, Env.makeAtomicBoolValue(), Env);
+      setHasValue(*Loc2, Env.makeAtomicBoolValue(), Env);
     return;
   }
   if (Loc2 == nullptr) {
-    createOptionalValue(*Loc1, Env.makeAtomicBoolValue(), Env);
+    setHasValue(*Loc1, Env.makeAtomicBoolValue(), Env);
     return;
   }
 
@@ -609,8 +594,8 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
   if (BoolVal2 == nullptr)
     BoolVal2 = &Env.makeAtomicBoolValue();
 
-  createOptionalValue(*Loc1, *BoolVal2, Env);
-  createOptionalValue(*Loc2, *BoolVal1, Env);
+  setHasValue(*Loc1, *BoolVal2, Env);
+  setHasValue(*Loc2, *BoolVal1, Env);
 }
 
 void transferSwapCall(const CXXMemberCallExpr *E,
@@ -806,8 +791,7 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(true),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
             }
           })
 
@@ -818,8 +802,8 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(false),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(false),
+                          State.Env);
             }
           })
 

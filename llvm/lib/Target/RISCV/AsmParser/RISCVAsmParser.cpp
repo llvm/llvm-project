@@ -38,7 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 #include <limits>
 
@@ -83,7 +83,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
-  bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureRVE); }
+  bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureStdExtE); }
+  bool enableExperimentalExtension() const {
+    return getSTI().hasFeature(RISCV::Experimental);
+  }
 
   RISCVTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
@@ -117,7 +120,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  bool parseVTypeToken(StringRef Identifier, VTypeState &State, unsigned &Sew,
+  bool parseVTypeToken(const AsmToken &Tok, VTypeState &State, unsigned &Sew,
                        unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
                        bool &MaskAgnostic);
   bool generateVTypeError(SMLoc ErrorLoc);
@@ -2125,10 +2128,15 @@ ParseStatus RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
   return parseImmediate(Operands);
 }
 
-bool RISCVAsmParser::parseVTypeToken(StringRef Identifier, VTypeState &State,
+bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
                                      unsigned &Sew, unsigned &Lmul,
                                      bool &Fractional, bool &TailAgnostic,
                                      bool &MaskAgnostic) {
+  if (Tok.isNot(AsmToken::Identifier))
+    return true;
+
+  StringRef Identifier = Tok.getIdentifier();
+
   switch (State) {
   case VTypeState_SEW:
     if (!Identifier.consume_front("e"))
@@ -2187,24 +2195,14 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
   VTypeState State = VTypeState_SEW;
 
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Identifier = getTok().getIdentifier();
-
-  if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+  if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
                       MaskAgnostic))
     return ParseStatus::NoMatch;
 
   getLexer().Lex();
 
   while (parseOptionalToken(AsmToken::Comma)) {
-    if (getLexer().isNot(AsmToken::Identifier))
-      break;
-
-    Identifier = getTok().getIdentifier();
-
-    if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+    if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
                         MaskAgnostic))
       break;
 
@@ -2227,7 +2225,7 @@ bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   return Error(
       ErrorLoc,
       "operand must be "
-      "e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+      "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
 }
 
 ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
@@ -2596,9 +2594,8 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
   unsigned Spimm = 0;
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
-  bool IsEABI = isRVE();
   if (Negative != ExpectNegative ||
-      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64(), IsEABI))
+      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64()))
     return ParseStatus::NoMatch;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();
@@ -2830,17 +2827,19 @@ bool RISCVAsmParser::parseDirectiveOption() {
         break;
       }
 
-      auto Ext = llvm::lower_bound(RISCVFeatureKV, Arch);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Arch ||
-          !RISCVISAInfo::isSupportedExtension(Arch)) {
-        if (isDigit(Arch.back()))
-          return Error(
-              Loc,
-              "Extension version number parsing not currently implemented");
-        return Error(Loc, "unknown extension feature");
-      }
+      if (isDigit(Arch.back()))
+        return Error(
+            Loc, "extension version number parsing not currently implemented");
 
-      Args.emplace_back(Type, Ext->Key);
+      std::string Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
+      if (!enableExperimentalExtension() &&
+          StringRef(Feature).starts_with("experimental-"))
+        return Error(Loc, "unexpected experimental extensions");
+      auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature)
+        return Error(Loc, "unknown extension feature");
+
+      Args.emplace_back(Type, Arch.str());
 
       if (Type == RISCVOptionArchArgType::Plus) {
         FeatureBitset OldFeatureBits = STI->getFeatureBits();
@@ -2867,10 +2866,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
         for (auto &Feature : RISCVFeatureKV) {
           if (getSTI().hasFeature(Feature.Value) &&
               Feature.Implies.test(Ext->Value))
-            return Error(Loc,
-                         Twine("Can't disable ") + Ext->Key + " extension, " +
-                             Feature.Key + " extension requires " + Ext->Key +
-                             " extension be enabled");
+            return Error(Loc, Twine("can't disable ") + Ext->Key +
+                                  " extension; " + Feature.Key +
+                                  " extension requires " + Ext->Key +
+                                  " extension");
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
@@ -3383,8 +3382,8 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     unsigned TempReg = Inst.getOperand(1).getReg();
     if (DestReg == TempReg) {
       SMLoc Loc = Operands.back()->getStartLoc();
-      return Error(Loc, "The temporary vector register cannot be the same as "
-                        "the destination register.");
+      return Error(Loc, "the temporary vector register cannot be the same as "
+                        "the destination register");
     }
   }
 
@@ -3396,8 +3395,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
     if (Rs1 == Rd1 && Rs1 == Rd2) {
       SMLoc Loc = Operands[1]->getStartLoc();
-      return Error(Loc, "The source register and destination registers "
-                        "cannot be equal.");
+      return Error(Loc, "rs1, rd1, and rd2 cannot all be the same");
     }
   }
 
@@ -3406,7 +3404,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     unsigned Rd2 = Inst.getOperand(1).getReg();
     if (Rd1 == Rd2) {
       SMLoc Loc = Operands[1]->getStartLoc();
-      return Error(Loc, "'rs1' and 'rs2' must be different.");
+      return Error(Loc, "rs1 and rs2 must be different");
     }
   }
 
@@ -3417,10 +3415,10 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   // depending on the data width.
   if (IsTHeadMemPair32 && Inst.getOperand(4).getImm() != 3) {
     SMLoc Loc = Operands.back()->getStartLoc();
-    return Error(Loc, "Operand must be constant 3.");
+    return Error(Loc, "operand must be constant 3");
   } else if (IsTHeadMemPair64 && Inst.getOperand(4).getImm() != 4) {
     SMLoc Loc = Operands.back()->getStartLoc();
-    return Error(Loc, "Operand must be constant 4.");
+    return Error(Loc, "operand must be constant 4");
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);
@@ -3435,14 +3433,14 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     if (MCID.TSFlags & RISCVII::VS1Constraint) {
       unsigned VCIXRs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
       if (VCIXDst == VCIXRs1)
-        return Error(VCIXDstLoc, "The destination vector register group cannot"
-                                 " overlap the source vector register group.");
+        return Error(VCIXDstLoc, "the destination vector register group cannot"
+                                 " overlap the source vector register group");
     }
     if (MCID.TSFlags & RISCVII::VS2Constraint) {
       unsigned VCIXRs2 = Inst.getOperand(Inst.getNumOperands() - 2).getReg();
       if (VCIXDst == VCIXRs2)
-        return Error(VCIXDstLoc, "The destination vector register group cannot"
-                                 " overlap the source vector register group.");
+        return Error(VCIXDstLoc, "the destination vector register group cannot"
+                                 " overlap the source vector register group");
     }
     return false;
   }
@@ -3458,14 +3456,14 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
     unsigned CheckReg = Inst.getOperand(Offset + 1).getReg();
     if (DestReg == CheckReg)
-      return Error(Loc, "The destination vector register group cannot overlap"
-                        " the source vector register group.");
+      return Error(Loc, "the destination vector register group cannot overlap"
+                        " the source vector register group");
   }
   if ((MCID.TSFlags & RISCVII::VS1Constraint) && Inst.getOperand(Offset + 2).isReg()) {
     unsigned CheckReg = Inst.getOperand(Offset + 2).getReg();
     if (DestReg == CheckReg)
-      return Error(Loc, "The destination vector register group cannot overlap"
-                        " the source vector register group.");
+      return Error(Loc, "the destination vector register group cannot overlap"
+                        " the source vector register group");
   }
   if ((MCID.TSFlags & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
@@ -3475,7 +3473,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
         Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||
         Opcode == RISCV::VMERGE_VIM || Opcode == RISCV::VMERGE_VVM ||
         Opcode == RISCV::VMERGE_VXM)
-      return Error(Loc, "The destination vector register group cannot be V0.");
+      return Error(Loc, "the destination vector register group cannot be V0");
 
     // Regardless masked or unmasked version, the number of operands is the
     // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
@@ -3486,8 +3484,8 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
            "Unexpected register for mask operand");
 
     if (DestReg == CheckReg)
-      return Error(Loc, "The destination vector register group cannot overlap"
-                        " the mask register.");
+      return Error(Loc, "the destination vector register group cannot overlap"
+                        " the mask register");
   }
   return false;
 }

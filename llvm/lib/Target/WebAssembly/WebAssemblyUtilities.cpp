@@ -13,7 +13,7 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
@@ -178,4 +178,16 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
   default:
     llvm_unreachable("Unexpected register class");
   }
+}
+
+bool WebAssembly::canLowerMultivalueReturn(
+    const WebAssemblySubtarget *Subtarget) {
+  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
+      Subtarget->getTargetLowering()->getTargetMachine());
+  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+}
+
+bool WebAssembly::canLowerReturn(size_t ResultSize,
+                                 const WebAssemblySubtarget *Subtarget) {
+  return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
 }

@@ -49,23 +49,26 @@ program wsloop_collapse
 !CHECK:           %[[VAL_30:.*]] = arith.constant 1 : i32
 !CHECK:           %[[VAL_31:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_32:.*]] = arith.constant 1 : i32
-!CHECK:           omp.wsloop   for  (%[[VAL_33:.*]], %[[VAL_34:.*]], %[[VAL_35:.*]]) : i32 = (%[[VAL_24]], %[[VAL_27]], %[[VAL_30]]) to (%[[VAL_25]], %[[VAL_28]], %[[VAL_31]]) inclusive step (%[[VAL_26]], %[[VAL_29]], %[[VAL_32]]) {
+!CHECK:           omp.wsloop {
+!CHECK-NEXT:        omp.loop_nest (%[[VAL_33:.*]], %[[VAL_34:.*]], %[[VAL_35:.*]]) : i32 = (%[[VAL_24]], %[[VAL_27]], %[[VAL_30]]) to (%[[VAL_25]], %[[VAL_28]], %[[VAL_31]]) inclusive step (%[[VAL_26]], %[[VAL_29]], %[[VAL_32]]) {
   !$omp do collapse(3)
   do i = 1, a
      do j= 1, b
         do k = 1, c
-!CHECK:             fir.store %[[VAL_33]] to %[[VAL_5]]#1 : !fir.ref<i32>
-!CHECK:             fir.store %[[VAL_34]] to %[[VAL_3]]#1 : !fir.ref<i32>
-!CHECK:             fir.store %[[VAL_35]] to %[[VAL_1]]#1 : !fir.ref<i32>
-!CHECK:             %[[VAL_36:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
-!CHECK:             %[[VAL_37:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-!CHECK:             %[[VAL_38:.*]] = arith.addi %[[VAL_36]], %[[VAL_37]] : i32
-!CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
-!CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32
-!CHECK:             %[[VAL_41:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
-!CHECK:             %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i32
-!CHECK:             hlfir.assign %[[VAL_42]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
-!CHECK:             omp.yield
+!CHECK:               fir.store %[[VAL_33]] to %[[VAL_5]]#1 : !fir.ref<i32>
+!CHECK:               fir.store %[[VAL_34]] to %[[VAL_3]]#1 : !fir.ref<i32>
+!CHECK:               fir.store %[[VAL_35]] to %[[VAL_1]]#1 : !fir.ref<i32>
+!CHECK:               %[[VAL_36:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
+!CHECK:               %[[VAL_37:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
+!CHECK:               %[[VAL_38:.*]] = arith.addi %[[VAL_36]], %[[VAL_37]] : i32
+!CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
+!CHECK:               %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32
+!CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
+!CHECK:               %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i32
+!CHECK:               hlfir.assign %[[VAL_42]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
+!CHECK:               omp.yield
+!CHECK-NEXT:        }
+!CHECK-NEXT:        omp.terminator
            x = x + i + j + k
         end do
      end do

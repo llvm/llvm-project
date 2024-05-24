@@ -236,11 +236,10 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
         ", const MatcherState &State) "
         "const override;\n"
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
-     << "  void runCustomAction(unsigned FnID, const MatcherState &State, "
+     << "  bool runCustomAction(unsigned FnID, const MatcherState &State, "
         "NewMIVector &OutMIs) "
-        "const override;\n";
-  emitAdditionalTemporariesDecl(OS, "  ");
-  OS << "#endif // ifdef " << IfDefName << "\n\n";
+        "const override;\n"
+     << "#endif // ifdef " << IfDefName << "\n\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitTemporariesInit(

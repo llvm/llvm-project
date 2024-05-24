@@ -99,7 +99,7 @@ public:
     Value extsiLhs;
     Value extsiRhs;
     if (auto lhsExtInType =
-            origLhsExtOp.getIn().getType().dyn_cast<mlir::VectorType>()) {
+            dyn_cast<mlir::VectorType>(origLhsExtOp.getIn().getType())) {
       if (lhsExtInType.getElementTypeBitWidth() <= 8) {
         Type targetLhsExtTy =
             matchContainerType(rewriter.getI8Type(), lhsExtInType);
@@ -108,7 +108,7 @@ public:
       }
     }
     if (auto rhsExtInType =
-            origRhsExtOp.getIn().getType().dyn_cast<mlir::VectorType>()) {
+            dyn_cast<mlir::VectorType>(origRhsExtOp.getIn().getType())) {
       if (rhsExtInType.getElementTypeBitWidth() <= 8) {
         Type targetRhsExtTy =
             matchContainerType(rewriter.getI8Type(), rhsExtInType);
@@ -133,6 +133,9 @@ public:
       smmlaShape.insert(smmlaShape.begin(), isVecmat ? 1 : 2);
       loopOrder.push_back(2);
     }
+
+    // Keep track of the previous accumulator when tiling over K.
+    Value kAcc;
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(unrolledSize, smmlaShape, loopOrder)) {
       // Helper to compute the new shape of each operand and extract the slice.
@@ -161,9 +164,9 @@ public:
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
       auto inputElementType =
-          tiledLhs.getType().cast<ShapedType>().getElementType();
+          cast<ShapedType>(tiledLhs.getType()).getElementType();
       auto accElementType =
-          tiledAcc.getType().cast<ShapedType>().getElementType();
+          cast<ShapedType>(tiledAcc.getType()).getElementType();
       auto inputExpandedType = VectorType::get({2, 8}, inputElementType);
       auto outputExpandedType = VectorType::get({2, 2}, accElementType);
 
@@ -175,9 +178,9 @@ public:
           auto emptyOperand = rewriter.create<arith::ConstantOp>(
               loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
           SmallVector<int64_t> offsets(
-              emptyOperand.getType().cast<ShapedType>().getRank(), 0);
+              cast<ShapedType>(emptyOperand.getType()).getRank(), 0);
           SmallVector<int64_t> strides(
-              tiledOperand.getType().cast<ShapedType>().getRank(), 1);
+              cast<ShapedType>(tiledOperand.getType()).getRank(), 1);
           return rewriter.createOrFold<vector::InsertStridedSliceOp>(
               loc, tiledOperand, emptyOperand, offsets, strides);
         };
@@ -194,19 +197,26 @@ public:
           tiledRhs.getLoc(), collapsedInputType, tiledRhs);
       auto collapsedOutputType =
           VectorType::get(outputExpandedType.getNumElements(), accElementType);
-      auto collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
-          tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
+
+      bool initialKAcc = offsets.back() == 0;
+      Value collapsedRes;
+      if (!initialKAcc) {
+        collapsedRes = kAcc;
+      } else {
+        collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
+            tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
+      }
 
       // Insert contract op
-      auto smmlaOp = rewriter.createOrFold<arm_neon::SmmlaOp>(
+      kAcc = rewriter.createOrFold<arm_neon::SmmlaOp>(
           op.getLoc(), collapsedRes.getType(), collapsedRes, collapsedLhs,
           collapsedRhs);
 
       // Reshape output back to 2D
       Value tiledRes = rewriter.createOrFold<vector::ShapeCastOp>(
-          smmlaOp.getLoc(), tiledAcc.getType(), smmlaOp);
+          kAcc.getLoc(), tiledAcc.getType(), kAcc);
 
-      // With vecmat, only one row of tiled ACC can be inserted inot file result
+      // With vecmat, only one row of tiled ACC can be inserted into file result
       if (isVecmat) {
         tiledRes = rewriter.createOrFold<vector::ExtractOp>(loc, tiledRes, 0);
       }
@@ -214,7 +224,7 @@ public:
       // Insert the tiled result back into the non tiled result of the
       // contract op.
       SmallVector<int64_t> strides(
-          tiledRes.getType().cast<ShapedType>().getRank(), 1);
+          cast<ShapedType>(tiledRes.getType()).getRank(), 1);
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, tiledRes, result, accOffsets, strides);
     }

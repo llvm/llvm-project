@@ -462,9 +462,12 @@ bool DataInitializationCompiler<DSV>::InitElement(
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
       } else if (status == evaluate::InitialImage::LengthMismatch) {
-        exprAnalyzer_.Say(
-            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
-            folded.AsFortran(), DescribeElement());
+        if (exprAnalyzer_.context().ShouldWarn(
+                common::UsageWarning::DataLength)) {
+          exprAnalyzer_.Say(
+              "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+              folded.AsFortran(), DescribeElement());
+        }
         return true;
       } else if (status == evaluate::InitialImage::TooManyElems) {
         exprAnalyzer_.Say("DATA statement has too many elements"_err_en_US);
@@ -900,7 +903,13 @@ void ConstructInitializer(const Symbol &symbol,
       if (const auto *procDesignator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
         CHECK(!procDesignator->GetComponent());
-        mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        if (const auto *intrin{procDesignator->GetSpecificIntrinsic()}) {
+          const Symbol *intrinSymbol{
+              symbol.owner().FindSymbol(SourceName{intrin->name})};
+          mutableProc.set_init(DEREF(intrinSymbol));
+        } else {
+          mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        }
       } else {
         CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);

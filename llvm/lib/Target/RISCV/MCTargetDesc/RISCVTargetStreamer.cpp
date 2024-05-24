@@ -16,7 +16,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 

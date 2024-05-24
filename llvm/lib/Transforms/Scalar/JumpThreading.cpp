@@ -868,7 +868,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
       for (const auto &LHSVal : LHSVals) {
         Constant *V = LHSVal.first;
-        Constant *Folded = ConstantExpr::getCompare(Pred, V, CmpConst);
+        Constant *Folded =
+            ConstantFoldCompareInstOperands(Pred, V, CmpConst, DL);
         if (Constant *KC = getKnownConstant(Folded, WantInteger))
           Result.emplace_back(KC, LHSVal.second);
       }
@@ -1278,9 +1279,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // only happen in dead loops.
     if (AvailableVal == LoadI)
       AvailableVal = PoisonValue::get(LoadI->getType());
-    if (AvailableVal->getType() != LoadI->getType())
+    if (AvailableVal->getType() != LoadI->getType()) {
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI->getIterator());
+      cast<Instruction>(AvailableVal)->setDebugLoc(LoadI->getDebugLoc());
+    }
     LoadI->replaceAllUsesWith(AvailableVal);
     LoadI->eraseFromParent();
     return true;
@@ -1509,7 +1512,8 @@ findMostPopularDest(BasicBlock *BB,
 // BB->getSinglePredecessor() and then on to BB.
 Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
                                                        BasicBlock *PredPredBB,
-                                                       Value *V) {
+                                                       Value *V,
+                                                       const DataLayout &DL) {
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");
 
@@ -1534,11 +1538,12 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
       Constant *Op0 =
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0));
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL);
       Constant *Op1 =
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1));
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL);
       if (Op0 && Op1) {
-        return ConstantExpr::getCompare(CondCmp->getPredicate(), Op0, Op1);
+        return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
+                                               Op1, DL);
       }
     }
     return nullptr;
@@ -1876,7 +1881,7 @@ bool JumpThreadingPass::processBranchOnXOR(BinaryOperator *BO) {
 static void addPHINodeEntriesForMappedBlock(BasicBlock *PHIBB,
                                             BasicBlock *OldPred,
                                             BasicBlock *NewPred,
-                                     DenseMap<Instruction*, Value*> &ValueMap) {
+                                            ValueToValueMapTy &ValueMap) {
   for (PHINode &PN : PHIBB->phis()) {
     // Ok, we have a PHI node.  Figure out what the incoming value was for the
     // DestBlock.
@@ -1884,7 +1889,7 @@ static void addPHINodeEntriesForMappedBlock(BasicBlock *PHIBB,
 
     // Remap the value if necessary.
     if (Instruction *Inst = dyn_cast<Instruction>(IV)) {
-      DenseMap<Instruction*, Value*>::iterator I = ValueMap.find(Inst);
+      ValueToValueMapTy::iterator I = ValueMap.find(Inst);
       if (I != ValueMap.end())
         IV = I->second;
     }
@@ -1945,9 +1950,8 @@ bool JumpThreadingPass::maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
 
 /// Update the SSA form.  NewBB contains instructions that are copied from BB.
 /// ValueMapping maps old values in BB to new ones in NewBB.
-void JumpThreadingPass::updateSSA(
-    BasicBlock *BB, BasicBlock *NewBB,
-    DenseMap<Instruction *, Value *> &ValueMapping) {
+void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
+                                  ValueToValueMapTy &ValueMapping) {
   // If there were values defined in BB that are used outside the block, then we
   // now have to update all uses of the value to use either the original value,
   // the cloned value, or some PHI derived value.  This can require arbitrary
@@ -2008,14 +2012,15 @@ void JumpThreadingPass::updateSSA(
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
-DenseMap<Instruction *, Value *>
-JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
-                                     BasicBlock::iterator BE, BasicBlock *NewBB,
-                                     BasicBlock *PredBB) {
+
+void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
+                                          BasicBlock::iterator BI,
+                                          BasicBlock::iterator BE,
+                                          BasicBlock *NewBB,
+                                          BasicBlock *PredBB) {
   // We are going to have to map operands from the source basic block to the new
   // copy of the block 'NewBB'.  If there are PHI nodes in the source basic
   // block, evaluate them to account for entry from PredBB.
-  DenseMap<Instruction *, Value *> ValueMapping;
 
   // Retargets llvm.dbg.value to any renamed variables.
   auto RetargetDbgValueIfPossible = [&](Instruction *NewInst) -> bool {
@@ -2103,7 +2108,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
       if (Instruction *Inst = dyn_cast<Instruction>(New->getOperand(i))) {
-        DenseMap<Instruction *, Value *>::iterator I = ValueMapping.find(Inst);
+        ValueToValueMapTy::iterator I = ValueMapping.find(Inst);
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
@@ -2120,7 +2125,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
       RetargetDbgVariableRecordIfPossible(&DVR);
   }
 
-  return ValueMapping;
+  return;
 }
 
 /// Attempt to thread through two successive basic blocks.
@@ -2191,12 +2196,13 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   unsigned OneCount = 0;
   BasicBlock *ZeroPred = nullptr;
   BasicBlock *OnePred = nullptr;
+  const DataLayout &DL = BB->getModule()->getDataLayout();
   for (BasicBlock *P : predecessors(PredBB)) {
     // If PredPred ends with IndirectBrInst, we can't handle it.
     if (isa<IndirectBrInst>(P->getTerminator()))
       continue;
     if (ConstantInt *CI = dyn_cast_or_null<ConstantInt>(
-            evaluateOnPredecessorEdge(BB, P, Cond))) {
+            evaluateOnPredecessorEdge(BB, P, Cond, DL))) {
       if (CI->isZero()) {
         ZeroCount++;
         ZeroPred = P;
@@ -2295,8 +2301,9 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   // We are going to have to map operands from the original BB block to the new
   // copy of the block 'NewBB'.  If there are PHI nodes in PredBB, evaluate them
   // to account for entry from PredPredBB.
-  DenseMap<Instruction *, Value *> ValueMapping =
-      cloneInstructions(PredBB->begin(), PredBB->end(), NewBB, PredPredBB);
+  ValueToValueMapTy ValueMapping;
+  cloneInstructions(ValueMapping, PredBB->begin(), PredBB->end(), NewBB,
+                    PredPredBB);
 
   // Copy the edge probabilities from PredBB to NewBB.
   if (BPI)
@@ -2419,8 +2426,9 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   }
 
   // Copy all the instructions from BB to NewBB except the terminator.
-  DenseMap<Instruction *, Value *> ValueMapping =
-      cloneInstructions(BB->begin(), std::prev(BB->end()), NewBB, PredBB);
+  ValueToValueMapTy ValueMapping;
+  cloneInstructions(ValueMapping, BB->begin(), std::prev(BB->end()), NewBB,
+                    PredBB);
 
   // We didn't copy the terminator from BB over to NewBB, because there is now
   // an unconditional jump to SuccBB.  Insert the unconditional jump.
@@ -2675,7 +2683,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // We are going to have to map operands from the original BB block into the
   // PredBB block.  Evaluate PHI nodes in BB.
-  DenseMap<Instruction*, Value*> ValueMapping;
+  ValueToValueMapTy ValueMapping;
 
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
@@ -2689,10 +2697,13 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
       if (Instruction *Inst = dyn_cast<Instruction>(New->getOperand(i))) {
-        DenseMap<Instruction*, Value*>::iterator I = ValueMapping.find(Inst);
+        ValueToValueMapTy::iterator I = ValueMapping.find(Inst);
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
+
+    // Remap debug variable operands.
+    remapDebugVariable(ValueMapping, New);
 
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
@@ -2978,6 +2989,7 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI->getIterator());
     NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
     NewPN->addIncoming(SI->getFalseValue(), BB);
+    NewPN->setDebugLoc(SI->getDebugLoc());
     SI->replaceAllUsesWith(NewPN);
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.
@@ -3115,6 +3127,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
       PHINode *NewPN = PHINode::Create(Inst->getType(), 2);
       NewPN->addIncoming(UnguardedMapping[Inst], UnguardedBlock);
       NewPN->addIncoming(GuardedMapping[Inst], GuardedBlock);
+      NewPN->setDebugLoc(Inst->getDebugLoc());
       NewPN->insertBefore(InsertionPoint);
       Inst->replaceAllUsesWith(NewPN);
     }

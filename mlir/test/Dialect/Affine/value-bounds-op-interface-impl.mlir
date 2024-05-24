@@ -74,7 +74,7 @@ func.func @composed_affine_apply(%i1 : index) -> (index) {
   %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
   %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
   %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
-  %reified = "test.reify_constant_bound"(%s) {type = "EQ"} : (index) -> (index)
+  %reified = "test.reify_bound"(%s) {type = "EQ", constant} : (index) -> (index)
   return %reified : index
 }
 
@@ -129,5 +129,29 @@ func.func @compare_affine_min(%a: index, %b: index) {
   "test.compare"(%0, %a) {cmp = "LT"} : (index, index) -> ()
   // expected-remark @below{{true}}
   "test.compare"(%0, %a) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @compare_const_map() {
+  %c5 = arith.constant 5 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%c5) {cmp = "GT", rhs_map = affine_map<() -> (4)>}
+      : (index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%c5) {cmp = "LT", lhs_map = affine_map<() -> (4)>}
+      : (index) -> ()
+  return
+}
+
+// -----
+
+func.func @compare_maps(%a: index, %b: index) {
+  // expected-remark @below{{true}}
+  "test.compare"(%a, %b, %b, %a)
+      {cmp = "GT", lhs_map = affine_map<(d0, d1) -> (1 + d0 + d1)>,
+       rhs_map = affine_map<(d0, d1) -> (d0 + d1)>}
+      : (index, index, index, index) -> ()
   return
 }

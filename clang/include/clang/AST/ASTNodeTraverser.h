@@ -695,7 +695,7 @@ public:
     if (const auto *TC = D->getTypeConstraint())
       Visit(TC->getImmediatelyDeclaredConstraint());
     if (D->hasDefaultArgument())
-      Visit(D->getDefaultArgument(), SourceRange(),
+      Visit(D->getDefaultArgument().getArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
             D->defaultArgumentWasInherited() ? "inherited from" : "previous");
   }
@@ -704,9 +704,9 @@ public:
     if (const auto *E = D->getPlaceholderTypeConstraint())
       Visit(E);
     if (D->hasDefaultArgument())
-      Visit(D->getDefaultArgument(), SourceRange(),
-            D->getDefaultArgStorage().getInheritedFrom(),
-            D->defaultArgumentWasInherited() ? "inherited from" : "previous");
+      dumpTemplateArgumentLoc(
+          D->getDefaultArgument(), D->getDefaultArgStorage().getInheritedFrom(),
+          D->defaultArgumentWasInherited() ? "inherited from" : "previous");
   }
 
   void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D) {
@@ -844,11 +844,23 @@ public:
     }
   }
 
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *E) {
+    if (E->hasExplicitTemplateArgs())
+      for (auto Arg : E->template_arguments())
+        Visit(Arg.getArgument());
+  }
+
   void VisitRequiresExpr(const RequiresExpr *E) {
     for (auto *D : E->getLocalParameters())
       Visit(D);
     for (auto *R : E->getRequirements())
       Visit(R);
+  }
+
+  void VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    // Argument types are not children of the TypeTraitExpr.
+    for (auto *A : E->getArgs())
+      Visit(A->getType());
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {

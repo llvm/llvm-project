@@ -18,6 +18,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/APSInt.h"
@@ -76,18 +77,15 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     } else {
       S.FFDiag(E);
     }
-  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getType().isConstQualified()) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return false;
-    }
-
-    // const, but no initializer.
-    if (!VD->getAnyInitializer()) {
-      diagnoseMissingInitializer(S, OpPC, VD);
-      return false;
-    }
+    return false;
   }
+
+  if (!D->getType().isConstQualified())
+    diagnoseNonConstVariable(S, OpPC, D);
+  else if (const auto *VD = dyn_cast<VarDecl>(D);
+           VD && !VD->getAnyInitializer())
+    diagnoseMissingInitializer(S, OpPC, VD);
+
   return false;
 }
 
@@ -103,6 +101,11 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     diagnoseMissingInitializer(S, OpPC, VD);
     return;
   }
+
+  // Rather random, but this is to match the diagnostic output of the current
+  // interpreter.
+  if (isa<ObjCIvarDecl>(VD))
+    return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
@@ -302,7 +305,9 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
     QualType T = VD->getType();
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return T->isSignedIntegerOrEnumerationType() || T->isUnsignedIntegerOrEnumerationType();
+      return (T->isSignedIntegerOrEnumerationType() ||
+              T->isUnsignedIntegerOrEnumerationType()) &&
+             T.isConstQualified();
 
     if (T.isConstQualified())
       return true;
@@ -316,12 +321,10 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
   };
 
-  if (const auto *D = Desc->asValueDecl()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && !IsConstType(VD)) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return S.inConstantContext();
-    }
+  if (const auto *D = Desc->asVarDecl();
+      D && D->hasGlobalStorage() && !IsConstType(D)) {
+    diagnoseNonConstVariable(S, OpPC, D);
+    return S.inConstantContext();
   }
 
   return true;
@@ -460,9 +463,9 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Read))
     return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
-    return false;
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
     return false;

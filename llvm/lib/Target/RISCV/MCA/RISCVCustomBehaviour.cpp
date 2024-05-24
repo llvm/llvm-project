@@ -20,26 +20,6 @@
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
-// This brings in a table with primary key of
-// base instruction opcode and lmul and maps
-// to the opcode of the pseudo instruction.
-namespace RISCVVInversePseudosTable {
-using namespace llvm;
-using namespace llvm::RISCV;
-
-struct PseudoInfo {
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
-};
-
-#define GET_RISCVVInversePseudosTable_IMPL
-#define GET_RISCVVInversePseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // end namespace RISCVVInversePseudosTable
-
 namespace llvm {
 namespace mca {
 

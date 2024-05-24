@@ -884,6 +884,9 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // If set to true, a predicate is added that checks for the absence of use of
   // the first result.
   bit HasNoUse = ?;
+  // If set to true, a predicate is added that checks for the sole use of
+  // the first result.
+  bit HasOneUse = ?;
 
   // Is the desired pre-packaged predicate for a load?
   bit IsLoad = ?;
@@ -1979,6 +1982,7 @@ class Pattern<dag patternToMatch, list<dag> resultInstrs> {
   list<dag>       ResultInstrs    = resultInstrs;
   list<Predicate> Predicates      = [];  // See class Instruction in Target.td.
   int             AddedComplexity = 0;   // See class Instruction in Target.td.
+  bit           GISelShouldIgnore = 0;
 }
 
 // Pat - A simple (but common) form of a pattern, which produces a simple result

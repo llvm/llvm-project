@@ -107,3 +107,36 @@ define void @test_4_trunc_i24_to_i16(i24 %x, ptr %A) {
   store i16 %t, ptr %gep.3, align 1
   ret void
 }
+
+%struct.d = type { [3 x i8], [3 x i8], [2 x i8] }
+
+; Test case for https://github.com/llvm/llvm-project/issues/88640.
+define void @test_access_i24_directly(ptr %src, ptr noalias %dst) "target-cpu"="btver2" {
+; CHECK-LABEL: define void @test_access_i24_directly(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i24
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds [[STRUCT_D:%.*]], ptr [[SRC]], i64 0, i32 1
+; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[GEP_SRC]], align 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i24 [[TMP1]], 8388607
+; CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i24 [[BF_LOAD]], -8388608
+; CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i24 [[BF_CLEAR]], [[BF_VALUE]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds [[STRUCT_D]], ptr [[DST]], i64 0, i32 1
+; CHECK-NEXT:    store i24 [[BF_SET]], ptr [[GEP_DST]], align 1
+; CHECK-NEXT:    store i24 0, ptr [[DST]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i64, ptr %src, align 8
+  %1 = trunc i64 %0 to i24
+  %gep.src = getelementptr inbounds %struct.d, ptr %src, i64 0, i32 1
+  %bf.load = load i24, ptr %gep.src, align 1
+  %bf.value = and i24 %1, 8388607
+  %bf.clear = and i24 %bf.load, -8388608
+  %bf.set = or disjoint i24 %bf.clear, %bf.value
+  %gep.dst = getelementptr inbounds %struct.d, ptr %dst, i64 0, i32 1
+  store i24 %bf.set, ptr %gep.dst, align 1
+  store i24 0, ptr %dst, align 8
+  ret void
+}

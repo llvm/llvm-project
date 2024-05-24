@@ -84,48 +84,70 @@ private:
   parser::CharBlock source_;
 };
 
-class OmpCycleChecker {
+class OmpCycleAndExitChecker {
 public:
-  OmpCycleChecker(SemanticsContext &context, std::int64_t cycleLevel)
-      : context_{context}, cycleLevel_{cycleLevel} {}
+  OmpCycleAndExitChecker(SemanticsContext &context, std::int64_t level)
+      : context_{context}, level_{level} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
   bool Pre(const parser::DoConstruct &dc) {
-    cycleLevel_--;
-    const auto &labelName{std::get<0>(std::get<0>(dc.t).statement.t)};
-    if (labelName) {
-      labelNamesandLevels_.emplace(labelName.value().ToString(), cycleLevel_);
+    level_--;
+    const auto &constructName{std::get<0>(std::get<0>(dc.t).statement.t)};
+    if (constructName) {
+      constructNamesAndLevels_.emplace(
+          constructName.value().ToString(), level_);
     }
     return true;
   }
+
+  void Post(const parser::DoConstruct &dc) { level_++; }
 
   bool Pre(const parser::CycleStmt &cyclestmt) {
     std::map<std::string, std::int64_t>::iterator it;
     bool err{false};
     if (cyclestmt.v) {
-      it = labelNamesandLevels_.find(cyclestmt.v->source.ToString());
-      err = (it != labelNamesandLevels_.end() && it->second > 0);
+      it = constructNamesAndLevels_.find(cyclestmt.v->source.ToString());
+      err = (it != constructNamesAndLevels_.end() && it->second > 0);
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ > 0;
     }
-    if (cycleLevel_ > 0 || err) {
-      context_.Say(*cycleSource_,
+    if (err) {
+      context_.Say(*source_,
           "CYCLE statement to non-innermost associated loop of an OpenMP DO "
           "construct"_err_en_US);
     }
     return true;
   }
 
+  bool Pre(const parser::ExitStmt &exitStmt) {
+    std::map<std::string, std::int64_t>::iterator it;
+    bool err{false};
+    if (exitStmt.v) {
+      it = constructNamesAndLevels_.find(exitStmt.v->source.ToString());
+      err = (it != constructNamesAndLevels_.end() && it->second >= 0);
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ >= 0;
+    }
+    if (err) {
+      context_.Say(*source_,
+          "EXIT statement terminates associated loop of an OpenMP DO "
+          "construct"_err_en_US);
+    }
+    return true;
+  }
+
   bool Pre(const parser::Statement<parser::ActionStmt> &actionstmt) {
-    cycleSource_ = &actionstmt.source;
+    source_ = &actionstmt.source;
     return true;
   }
 
 private:
   SemanticsContext &context_;
-  const parser::CharBlock *cycleSource_;
-  std::int64_t cycleLevel_;
-  std::map<std::string, std::int64_t> labelNamesandLevels_;
+  const parser::CharBlock *source_;
+  std::int64_t level_;
+  std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
 
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
@@ -258,7 +280,8 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
       violation = true;
     } else {
       // `distribute` region has to be strictly nested inside `teams`
-      if (!llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
+      if (!OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}
+               .test(GetContextParent().directive)) {
         violation = true;
       }
     }
@@ -652,8 +675,8 @@ std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
 void OmpStructureChecker::CheckCycleConstraints(
     const parser::OpenMPLoopConstruct &x) {
   std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
-  OmpCycleChecker ompCycleChecker{context_, ordCollapseLevel};
-  parser::Walk(x, ompCycleChecker);
+  OmpCycleAndExitChecker checker{context_, ordCollapseLevel};
+  parser::Walk(x, checker);
 }
 
 void OmpStructureChecker::CheckDistLinear(
@@ -1020,10 +1043,12 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                         ContextDirectiveAsFortran());
                   else if (GetContext().directive ==
                       llvm::omp::Directive::OMPD_declare_target)
-                    context_.Say(name->source,
-                        "The entity with PARAMETER attribute is used in a %s "
-                        "directive"_warn_en_US,
-                        ContextDirectiveAsFortran());
+                    if (context_.ShouldWarn(
+                            common::UsageWarning::OpenMPUsage)) {
+                      context_.Say(name->source,
+                          "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
+                          ContextDirectiveAsFortran());
+                    }
                 } else if (FindCommonBlockContaining(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot be an element of a "
@@ -1048,7 +1073,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       name->symbol->GetUltimate().owner();
                   if (!curScope.IsTopLevel()) {
                     const semantics::Scope &declScope =
-                        GetProgramUnitContaining(curScope);
+                        GetProgramUnitOrBlockConstructContaining(curScope);
                     const semantics::Symbol *sym{
                         declScope.parent().FindSymbol(name->symbol->name())};
                     if (sym &&
@@ -1190,7 +1215,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at lease one ENTER clause or LINK clause"_err_en_US);
     }
-    if (toClause) {
+    if (toClause && context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
       context_.Say(toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
     }
@@ -2285,11 +2310,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (CheckReductionOperators(x)) {
     CheckReductionTypeList(x);
   }
+  CheckReductionModifier(x);
 }
+
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
 
-  const auto &definedOp{std::get<0>(x.v.t)};
+  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
   bool ok = false;
   common::visit(
       common::visitors{
@@ -2355,6 +2382,74 @@ void OmpStructureChecker::CheckReductionTypeList(
   // is not private in the parallel region that it binds to.
   if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
     CheckSharedBindingInOuterContext(ompObjectList);
+  }
+
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(ompObjectList, symbols);
+  for (auto &[symbol, source] : symbols) {
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
+          symbol->name());
+    }
+  }
+}
+
+void OmpStructureChecker::CheckReductionModifier(
+    const parser::OmpClause::Reduction &x) {
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+  const auto &maybeModifier{std::get<std::optional<ReductionModifier>>(x.v.t)};
+  if (!maybeModifier || *maybeModifier == ReductionModifier::Default) {
+    // No modifier, or the default one is always ok.
+    return;
+  }
+  ReductionModifier modifier{*maybeModifier};
+  const DirectiveContext &dirCtx{GetContext()};
+  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
+    // [5.2:257:33-34]
+    // If a reduction-modifier is specified in a reduction clause that
+    // appears on the directive, then the reduction modifier must be
+    // default.
+    context_.Say(GetContext().clauseSource,
+        "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
+  }
+  if (modifier == ReductionModifier::Task) {
+    // "Task" is only allowed on worksharing or "parallel" directive.
+    static llvm::omp::Directive worksharing[]{
+        llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_sections,
+        // There are more worksharing directives, but they do not apply:
+        // "for" is C++ only,
+        // "single" and "workshare" don't allow reduction clause,
+        // "loop" has different restrictions (checked above).
+    };
+    if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
+        !llvm::is_contained(worksharing, dirCtx.directive)) {
+      context_.Say(GetContext().clauseSource,
+          "Modifier 'TASK' on REDUCTION clause is only allowed with "
+          "PARALLEL or worksharing directive"_err_en_US);
+    }
+  } else if (modifier == ReductionModifier::Inscan) {
+    // "Inscan" is only allowed on worksharing-loop, worksharing-loop simd,
+    // or "simd" directive.
+    // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
+    // former is allowed in Fortran.
+    switch (dirCtx.directive) {
+    case llvm::omp::Directive::OMPD_do: // worksharing-loop
+    case llvm::omp::Directive::OMPD_do_simd: // worksharing-loop simd
+    case llvm::omp::Directive::OMPD_simd: // "simd"
+      break;
+    default:
+      context_.Say(GetContext().clauseSource,
+          "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
+          "worksharing-loop, worksharing-loop simd, "
+          "or SIMD directive"_err_en_US);
+    }
+  } else {
+    // Catch-all for potential future modifiers to make sure that this
+    // function is up-to-date.
+    context_.Say(GetContext().clauseSource,
+        "Unexpected modifier on REDUCTION clause"_err_en_US);
   }
 }
 
@@ -2460,11 +2555,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_shared);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_private);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_private);
 }
 
@@ -2502,7 +2597,8 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 }
 
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
+    const parser::CharBlock &source, const parser::OmpObjectList &objList,
+    llvm::StringRef clause) {
   for (const auto &ompObject : objList.v) {
     common::visit(
         common::visitors{
@@ -2528,7 +2624,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
                     context_.Say(source,
                         "A variable that is part of another variable (as an "
                         "array or structure element) cannot appear in a "
-                        "PRIVATE or SHARED clause"_err_en_US);
+                        "%s clause"_err_en_US,
+                        clause.data());
                   }
                 }
               }
@@ -2541,6 +2638,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_firstprivate);
+
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
@@ -2877,6 +2976,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_lastprivate);
 
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "LASTPRIVATE");
+
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -2947,9 +3048,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
       if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            context_.Say(itr->second->source,
-                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
-                name->ToString());
+            if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+              context_.Say(itr->second->source,
+                  "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
+                  name->ToString());
+            }
           } else {
             useDevicePtrNameList.push_back(*name);
           }
@@ -3006,16 +3109,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
             "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
             source.ToString());
       } else if (!(IsDummy(*symbol))) {
-        context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
-            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-            source.ToString());
+        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+          context_.Say(itr->second->source,
+              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
+              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+              source.ToString());
+        }
       } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
-        context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
-            "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
-            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-            source.ToString());
+        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+          context_.Say(itr->second->source,
+              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
+              "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
+              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+              source.ToString());
+        }
       }
     }
   }

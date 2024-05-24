@@ -136,6 +136,8 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
 
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
@@ -375,9 +377,13 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
+    // `-import` specifies the `<filename,function-name>` pairs to import as
+    // definition, so make the import type definition directly.
+    // FIXME: A follow-up patch should add test coverage for import declaration
+    // in `llvm-link` CLI (e.g., by introducing a new command line option).
     auto &Entry =
         ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    Entry[F->getGUID()] = GlobalValueSummary::Definition;
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
@@ -545,10 +551,18 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
+  auto SetFormat = [&](bool NewFormat) {
+    Composite->setIsNewDbgInfoFormat(NewFormat);
+    if (NewFormat)
+      Composite->removeDebugIntrinsicDeclarations();
+  };
   if (OutputAssembly) {
+    SetFormat(WriteNewDbgInfoFormat);
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
+    SetFormat(WriteNewDbgInfoFormatToBitcode);
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+  }
 
   // Declare success.
   Out.keep();

@@ -470,6 +470,12 @@ public:
   /// expanded using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
 
+  /// Return the minimum number of bits required to hold the maximum possible
+  /// number of trailing zero vector elements.
+  unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
+                                      bool ZeroIsPoison,
+                                      const ConstantRange *VScaleRange) const;
+
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
   virtual bool shouldReassociateReduction(unsigned RedOpc, EVT VT) const {
@@ -2805,6 +2811,12 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  /// Returns true if the targets addressing mode can target thread local
+  /// storage (TLS).
+  virtual bool addressingModeSupportsTLS(const GlobalValue &) const {
+    return false;
+  }
+
   /// Return the prefered common base offset.
   virtual int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
                                                  int64_t MaxOffset) const {
@@ -3140,7 +3152,7 @@ public:
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.deinterleave2
+  /// llvm.vector.deinterleave2
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
@@ -3151,7 +3163,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.interleave2
+  /// llvm.vector.interleave2
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
@@ -4873,6 +4885,11 @@ public:
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
 
+#ifndef NDEBUG
+  /// Check the given SDNode.  Aborts if it is invalid.
+  virtual void verifyTargetSDNode(const SDNode *N) const {};
+#endif
+
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
@@ -5227,6 +5244,9 @@ public:
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand fminimum/fmaximum into multiple comparison with selects.
+  SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
@@ -5292,6 +5312,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

@@ -24,6 +24,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <format>
 #include <memory>
 #include <thread>
 

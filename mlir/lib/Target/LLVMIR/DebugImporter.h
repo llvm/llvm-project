@@ -29,7 +29,7 @@ namespace detail {
 
 class DebugImporter {
 public:
-  DebugImporter(ModuleOp mlirModule);
+  DebugImporter(ModuleOp mlirModule, bool dropDICompositeTypeElements);
 
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
@@ -184,6 +184,12 @@ private:
 
   MLIRContext *context;
   ModuleOp mlirModule;
+
+  /// An option to control if DICompositeTypes should always be imported without
+  /// converting their elements. If set, the option avoids the recursive
+  /// traversal of composite type debug information, which can be expensive for
+  /// adversarial inputs.
+  bool dropDICompositeTypeElements;
 };
 
 } // namespace detail

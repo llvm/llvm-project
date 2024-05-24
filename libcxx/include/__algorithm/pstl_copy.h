@@ -10,16 +10,16 @@
 #define _LIBCPP___ALGORITHM_PSTL_COPY_H
 
 #include <__algorithm/copy_n.h>
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__algorithm/pstl_transform.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/concepts.h>
+#include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_execution_policy.h>
-#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <optional>
@@ -67,6 +67,12 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
 copy(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardIterator, "copy(first, last, result) requires [first, last) to be ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardOutIterator, "copy(first, last, result) requires result to be a ForwardIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "copy(first, last, result) requires result to be an OutputIterator");
   auto __res = std::__copy(__policy, std::move(__first), std::move(__last), std::move(__result));
   if (!__res)
     std::__throw_bad_alloc();
@@ -88,10 +94,12 @@ template <class _ExecutionPolicy,
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_copy_n, _RawPolicy),
       [&__policy](
           _ForwardIterator __g_first, _Size __g_n, _ForwardOutIterator __g_result) -> optional<_ForwardIterator> {
-        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value)
+        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
           return std::__copy(__policy, std::move(__g_first), std::move(__g_first + __g_n), std::move(__g_result));
-        else
+        } else {
+          (void)__policy;
           return std::copy_n(__g_first, __g_n, __g_result);
+        }
       },
       std::move(__first),
       std::move(__n),
@@ -106,6 +114,12 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
 copy_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n, _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardIterator, "copy_n(first, n, result) requires first to be a ForwardIterator");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
+      _ForwardOutIterator, "copy_n(first, n, result) requires result to be a ForwardIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "copy_n(first, n, result) requires result to be an OutputIterator");
   auto __res = std::__copy_n(__policy, std::move(__first), std::move(__n), std::move(__result));
   if (!__res)
     std::__throw_bad_alloc();

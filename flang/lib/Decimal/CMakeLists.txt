@@ -55,7 +55,7 @@ set(sources
 )
 
 include(AddFlangOffloadRuntime)
-enable_cuda_compilation("${sources}")
+enable_cuda_compilation(FortranDecimal "${sources}")
 enable_omp_offload_compilation("${sources}")
 
 add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN ${sources})

@@ -25,7 +25,7 @@ namespace {
 /// according to LLVM's encoding:
 /// https://lists.llvm.org/pipermail/llvm-dev/2020-October/145850.html
 static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
-  VectorType vt = type.cast<VectorType>();
+  VectorType vt = cast<VectorType>(type);
   // To simplify test pass, avoid multi-dimensional vectors.
   if (!vt || vt.getRank() != 1)
     return {0, nullptr};
@@ -39,7 +39,7 @@ static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
     sew = 32;
   else if (eltTy.isF64())
     sew = 64;
-  else if (auto intTy = eltTy.dyn_cast<IntegerType>())
+  else if (auto intTy = dyn_cast<IntegerType>(eltTy))
     sew = intTy.getWidth();
   else
     return {0, nullptr};

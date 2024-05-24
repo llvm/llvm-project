@@ -10,6 +10,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   error_category.cpp
   exception.cpp
+  expected.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
@@ -326,7 +327,7 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
+if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
     )

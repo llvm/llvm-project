@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 --std=c++20 -fexceptions -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=EH %s
+// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=NOEH,CHECK %s
 
 struct Printy {
   Printy(const char *name) : name(name) {}
@@ -300,12 +301,21 @@ void LambdaInit() {
                              })]() { return a; };
 }
 
+struct PrintyRefBind {
+  const Printy &a;
+  const Printy &b;
+};
+
+struct Temp {
+  Temp();
+  ~Temp();
+};
+Temp CreateTemp();
+Printy CreatePrinty();
+Printy CreatePrinty(const Temp&);
+
 void LifetimeExtended() {
   // CHECK-LABEL: define dso_local void @_Z16LifetimeExtendedv
-  struct PrintyRefBind {
-    const Printy &a;
-    const Printy &b;
-  };
   PrintyRefBind ps = {Printy("a"), ({
                         if (foo()) {
                           return;
@@ -315,6 +325,41 @@ void LifetimeExtended() {
                         }
                         Printy("b");
                       })};
+}
+
+void ConditionalLifetimeExtended() {
+  // CHECK-LABEL: @_Z27ConditionalLifetimeExtendedv()
+
+  // Verify that we create two cleanup flags.
+  //  1. First for the cleanup which is deactivated after full expression.
+  //  2. Second for the life-ext cleanup which is activated if the branch is taken.
+
+  // Note: We use `CreateTemp()` to ensure that life-ext destroy cleanup is not at
+  // the top of EHStack on deactivation. This ensures using active flags.
+
+  Printy* p1 = nullptr;
+  // CHECK:       store i1 false, ptr [[BRANCH1_DEFERRED:%cleanup.cond]], align 1
+  // CHECK-NEXT:  store i1 false, ptr [[BRANCH1_LIFEEXT:%cleanup.cond.*]], align 1
+  PrintyRefBind ps = {
+      p1 != nullptr ? static_cast<const Printy&>(CreatePrinty())
+      // CHECK:       cond.true:
+      // CHECK-NEXT:    call void @_Z12CreatePrintyv
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_LIFEEXT]], align 1
+      // CHECK-NEXT:    br label %{{.*}}
+      : foo() ? static_cast<const Printy&>(CreatePrinty(CreateTemp()))
+              : *p1,
+      ({
+        if (foo()) return;
+        Printy("c");
+        // CHECK:       if.end:
+        // CHECK-NEXT:    call void @_ZN6PrintyC1EPKc
+        // CHECK-NEXT:    store ptr
+      })};
+      // CHECK-NEXT:      store i1 false, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:      store i32 0, ptr %cleanup.dest.slot, align 4
+      // CHECK-NEXT:      br label %cleanup
+
 }
 
 void NewArrayInit() {
@@ -349,6 +394,34 @@ void NewArrayInit() {
   // CHECK-NEXT:    br label %return
 }
 
+void DestroyInConditionalCleanup() {
+  // EH-LABEL: DestroyInConditionalCleanupv()
+  // NOEH-LABEL: DestroyInConditionalCleanupv()
+  struct A {
+    A() {}
+    ~A() {}
+  };
+
+  struct Value {
+    Value(A) {}
+    ~Value() {}
+  };
+
+  struct V2 {
+    Value K;
+    Value V;
+  };
+  // Verify we use conditional cleanups.
+  (void)(foo() ? V2{A(), A()} : V2{A(), A()});
+  // NOEH:   cond.true:
+  // NOEH:      call void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // NOEH:      store ptr %{{.*}}, ptr %cond-cleanup.save
+
+  // EH:   cond.true:
+  // EH:        invoke void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // EH:        store ptr %{{.*}}, ptr %cond-cleanup.save
+}
+
 void ArrayInitWithContinue() {
   // CHECK-LABEL: @_Z21ArrayInitWithContinuev
   // Verify that we start to emit the array destructor.
@@ -362,3 +435,88 @@ void ArrayInitWithContinue() {
                      })};
   }
 }
+
+struct [[clang::trivial_abi]] HasTrivialABI {
+  HasTrivialABI();
+  ~HasTrivialABI();
+};
+void AcceptTrivialABI(HasTrivialABI, int);
+void TrivialABI() {
+  // CHECK-LABEL: define dso_local void @_Z10TrivialABIv()
+  AcceptTrivialABI(HasTrivialABI(), ({
+                     if (foo()) return;
+                     // CHECK:      if.then:
+                     // CHECK-NEXT:   call void @_ZN13HasTrivialABID1Ev
+                     // CHECK-NEXT:   br label %return
+                     0;
+                   }));
+}
+
+namespace CleanupFlag {
+struct A {
+  A() {}
+  ~A() {}
+};
+
+struct B {
+  B(const A&) {}
+  B() {}
+  ~B() {}
+};
+
+struct S {
+  A a;
+  B b;
+};
+
+int AcceptS(S s);
+
+void Accept2(int x, int y);
+
+void InactiveNormalCleanup() {
+  // CHECK-LABEL: define {{.*}}InactiveNormalCleanupEv()
+  
+  // The first A{} below is an inactive normal cleanup which
+  // is not popped from EHStack on deactivation. This needs an
+  // "active" cleanup flag.
+
+  // CHECK: [[ACTIVE:%cleanup.isactive.*]] = alloca i1, align 1
+  // CHECK: call void [[A_CTOR:@.*AC1Ev]]
+  // CHECK: store i1 true, ptr [[ACTIVE]], align 1
+  // CHECK: call void [[A_CTOR]]
+  // CHECK: call void [[B_CTOR:@.*BC1ERKNS_1AE]]
+  // CHECK: store i1 false, ptr [[ACTIVE]], align 1
+  // CHECK: call noundef i32 [[ACCEPTS:@.*AcceptSENS_1SE]]
+  Accept2(AcceptS({.a = A{}, .b = A{}}), ({
+            if (foo()) return;
+            // CHECK: if.then:
+            // CHECK:   br label %cleanup
+            0;
+            // CHECK: if.end:
+            // CHECK:   call void [[ACCEPT2:@.*Accept2Eii]]
+            // CHECK:   br label %cleanup
+          }));
+  // CHECK: cleanup:
+  // CHECK:   call void [[S_DTOR:@.*SD1Ev]]
+  // CHECK:   call void [[A_DTOR:@.*AD1Ev]]
+  // CHECK:   %cleanup.is_active = load i1, ptr [[ACTIVE]]
+  // CHECK:   br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done
+
+  // CHECK: cleanup.action:
+  // CHECK:   call void [[A_DTOR]]
+
+  // The "active" cleanup flag is not required for unused cleanups.
+  Accept2(AcceptS({.a = A{}, .b = A{}}), 0);
+  // CHECK: cleanup.cont:
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK-NOT: store i1 true
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK:   call void [[B_CTOR]]
+  // CHECK-NOT: store i1 false
+  // CHECK:   call noundef i32 [[ACCEPTS]]
+  // CHECK:   call void [[ACCEPT2]]
+  // CHECK:   call void [[S_DTOR]]
+  // CHECK:   call void [[A_DTOR]]
+  // CHECK:   br label %return
+}
+}  // namespace CleanupFlag

@@ -5,12 +5,12 @@
 ! on some DiagnosticsEngine).
 
 ! Test with -E (i.e. PrintPreprocessedAction, stops after prescanning)
-! RUN: %flang -E -I %S/Inputs/ %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -E -I %S/Inputs/ %s 2>&1 | FileCheck %s
+! RUN: %flang -pedantic -E -I %S/Inputs/ %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -pedantic -E -I %S/Inputs/ %s 2>&1 | FileCheck %s
 
 ! Test with -fsyntax-only (i.e. ParseSyntaxOnlyAction, stops after semantic checks)
-! RUN: %flang -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
+! RUN: %flang -pedantic -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -pedantic -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 
 ! CHECK: prescanner-diag.f90:[[#@LINE+3]]:10: portability: #include: extra stuff ignored after file name
 ! CHECK: prescanner-diag.f90:[[#@LINE+3]]:10: portability: #include: extra stuff ignored after file name

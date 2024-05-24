@@ -963,11 +963,10 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
   let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
 
-class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string opcode, string renamed,
+class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string renamed,
                                   RegisterClass DataRC, int num_addrs,
                                   bit enableDisasm = 0>
-   : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>,
-     MnemonicAlias<opcode, renamed>, Requires<[isGFX12Plus, HasImageInsts]>;
+  : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>;
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
@@ -998,7 +997,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
         else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1, enableDasm>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1023,7 +1022,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, 0>;
         else
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 2, 0>;
+          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 2, 0>;
       }
     }
     let VAddrDwords = 3 in {
@@ -1048,7 +1047,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, 0>;
         else
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 3, 0>;
+          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 3, 0>;
       }
     }
     let VAddrDwords = 4 in {
@@ -1073,10 +1072,17 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
         else
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 4, enableDasm>;
+          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 4, enableDasm>;
       }
     }
   }
+  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
+    def : AMDGPUMnemonicAlias<asm, renamed> {
+      let AssemblerPredicate = isGFX12Plus;
+      bit IsAtomicRet; // Unused
+      MIMGBaseOpcode BaseOpcode; // Unused
+      int VDataDwords; // Unused
+    }
 }
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,

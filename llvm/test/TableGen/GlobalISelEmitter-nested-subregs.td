@@ -33,10 +33,10 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ANYEXT),
 // CHECK-NEXT: // MIs[0] DstI[dst]
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s16,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::A0RegClassID),
+// CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s16,
+// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::A0RegClassID),
 // CHECK-NEXT: // MIs[0] src
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s8,
+// CHECK-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s8,
 // CHECK-NEXT: // (anyext:{ *:[i16] } i8:{ *:[i8] }:$src)  =>  (EXTRACT_SUBREG:{ *:[i16] } (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), A0b:{ *:[i8] }:$src, lo8:{ *:[i32] }), lo16:{ *:[i32] })
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
@@ -51,12 +51,13 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, GIMT_Encode2(MyTarget::A0RegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(MyTarget::A0RegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/2, GIMT_Encode2(MyTarget::A0bRegClassID),
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
+// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddTempSubRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(0), GIMT_Encode2(MyTarget::lo16),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(MyTarget::A0wRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(MyTarget::A0RegClassID),
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT: // GIR_Coverage
+// CHECK-NEXT: GIR_EraseRootFromParent_Done,
 def : Pat<(i16 (anyext i8:$src)),
           (i16 (EXTRACT_SUBREG
                  (i32 (INSERT_SUBREG

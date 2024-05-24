@@ -55,11 +55,11 @@ class MacroFusionPredicatorEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
 
-  void emitMacroFusionDecl(std::vector<Record *> Fusions, PredicateExpander &PE,
+  void emitMacroFusionDecl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
                            raw_ostream &OS);
-  void emitMacroFusionImpl(std::vector<Record *> Fusions, PredicateExpander &PE,
+  void emitMacroFusionImpl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
                            raw_ostream &OS);
-  void emitPredicates(std::vector<Record *> &FirstPredicate, bool IsCommutable,
+  void emitPredicates(ArrayRef<Record *> FirstPredicate, bool IsCommutable,
                       PredicateExpander &PE, raw_ostream &OS);
   void emitFirstPredicate(Record *SecondPredicate, bool IsCommutable,
                           PredicateExpander &PE, raw_ostream &OS);
@@ -76,7 +76,7 @@ public:
 } // End anonymous namespace.
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
-    std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
   OS << "namespace llvm {\n";
@@ -93,7 +93,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
-    std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
   OS << "namespace llvm {\n";
@@ -121,9 +121,10 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
   OS << "\n#endif\n";
 }
 
-void MacroFusionPredicatorEmitter::emitPredicates(
-    std::vector<Record *> &Predicates, bool IsCommutable, PredicateExpander &PE,
-    raw_ostream &OS) {
+void MacroFusionPredicatorEmitter::emitPredicates(ArrayRef<Record *> Predicates,
+                                                  bool IsCommutable,
+                                                  PredicateExpander &PE,
+                                                  raw_ostream &OS) {
   for (Record *Predicate : Predicates) {
     Record *Target = Predicate->getValueAsDef("Target");
     if (Target->getName() == "first_fusion_target")

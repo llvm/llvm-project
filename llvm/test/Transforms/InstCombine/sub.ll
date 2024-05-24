@@ -130,44 +130,44 @@ define <2 x i32> @neg_nsw_sub_nsw_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @neg_sub_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @neg_sub_vec_undef(
+define <2 x i32> @neg_sub_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @neg_sub_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = sub <2 x i32> <i32 0, i32 undef>, %x
+  %neg = sub <2 x i32> <i32 0, i32 poison>, %x
   %r = sub <2 x i32> %y, %neg
   ret <2 x i32> %r
 }
 
-define <2 x i32> @neg_nsw_sub_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @neg_nsw_sub_vec_undef(
+define <2 x i32> @neg_nsw_sub_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @neg_nsw_sub_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = sub nsw <2 x i32> <i32 undef, i32 0>, %x
+  %neg = sub nsw <2 x i32> <i32 poison, i32 0>, %x
   %r = sub <2 x i32> %y, %neg
   ret <2 x i32> %r
 }
 
-define <2 x i32> @neg_sub_nsw_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @neg_sub_nsw_vec_undef(
+define <2 x i32> @neg_sub_nsw_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @neg_sub_nsw_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = sub <2 x i32> <i32 undef, i32 0>, %x
+  %neg = sub <2 x i32> <i32 poison, i32 0>, %x
   %r = sub nsw <2 x i32> %y, %neg
   ret <2 x i32> %r
 }
 
 ; This should not drop 'nsw'.
 
-define <2 x i32> @neg_nsw_sub_nsw_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @neg_nsw_sub_nsw_vec_undef(
+define <2 x i32> @neg_nsw_sub_nsw_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @neg_nsw_sub_nsw_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = sub nsw <2 x i32> <i32 0, i32 undef>, %x
+  %neg = sub nsw <2 x i32> <i32 0, i32 poison>, %x
   %r = sub nsw <2 x i32> %y, %neg
   ret <2 x i32> %r
 }
@@ -205,13 +205,13 @@ define <2 x i8> @notnotsub_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %sub
 }
 
-define <2 x i8> @notnotsub_vec_undef_elts(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @notnotsub_vec_undef_elts(
+define <2 x i8> @notnotsub_vec_poison_elts(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @notnotsub_vec_poison_elts(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
-  %nx = xor <2 x i8> %x, <i8 undef, i8 -1>
-  %ny = xor <2 x i8> %y, <i8 -1, i8 undef>
+  %nx = xor <2 x i8> %x, <i8 poison, i8 -1>
+  %ny = xor <2 x i8> %y, <i8 -1, i8 poison>
   %sub = sub <2 x i8> %nx, %ny
   ret <2 x i8> %sub
 }
@@ -1123,7 +1123,8 @@ define i64 @test58(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test59(ptr %foo, i64 %i) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO:%.*]], i64 0, i64 42, i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4200
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
@@ -1142,13 +1143,12 @@ define i64 @test59(ptr %foo, i64 %i) {
 
 define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO:%.*]], i64 0, i64 [[J:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
-; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint ptr [[GEP1]] to i64
-; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint ptr [[GEP2]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[CAST1]], [[CAST2]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[GEP1_OFFS]], -4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
 ; gep1 has a non-constant index and more than one uses. Shouldn't duplicate the arithmetic.
   %gep1 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 %j, i64 %i
@@ -1162,13 +1162,12 @@ define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 4200
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO]], i64 0, i64 [[J:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint ptr [[GEP1]] to i64
-; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint ptr [[GEP2]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[CAST1]], [[CAST2]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 4200, [[GEP2_OFFS]]
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
 ; gep2 has a non-constant index and more than one uses. Shouldn't duplicate the arithmetic.
   %gep1 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 0
@@ -1177,6 +1176,24 @@ define i64 @test61(ptr %foo, i64 %i, i64 %j) {
   %cast2 = ptrtoint ptr %gep2 to i64
   %sub = sub i64 %cast1, %cast2
   store ptr %gep2, ptr @dummy_global2
+  ret i64 %sub
+}
+
+declare void @use.ptr(ptr)
+
+define i64 @test_sub_ptradd_multiuse(ptr %p, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @test_sub_ptradd_multiuse(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[P1]])
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 [[IDX1]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 %idx1
+  call void @use.ptr(ptr %p1)
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %idx2
+  %p1.int = ptrtoint ptr %p1 to i64
+  %p2.int = ptrtoint ptr %p2 to i64
+  %sub = sub i64 %p1.int, %p2.int
   ret i64 %sub
 }
 
@@ -2351,12 +2368,12 @@ define <2 x i8> @sub_to_and_vector1(<2 x i8> %x) {
 
 define <2 x i8> @sub_to_and_vector2(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 poison>, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
 ; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 77, i8 77>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %sub = sub nuw <2 x i8> <i8 71, i8 undef>, %x
+  %sub = sub nuw <2 x i8> <i8 71, i8 poison>, %x
   %and = and <2 x i8> %sub, <i8 120, i8 120>
   %r = sub <2 x i8>  <i8 77, i8 77>, %and
   ret <2 x i8> %r
@@ -2366,12 +2383,12 @@ define <2 x i8> @sub_to_and_vector2(<2 x i8> %x) {
 define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 undef>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 poison>
 ; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 44, i8 44>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
-  %and = and <2 x i8> %sub, <i8 120, i8 undef>
+  %and = and <2 x i8> %sub, <i8 120, i8 poison>
   %r = sub <2 x i8>  <i8 44, i8 44>, %and
   ret <2 x i8> %r
 }
@@ -2381,12 +2398,12 @@ define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector4(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 88, i8 undef>, [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 88, i8 poison>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
   %and = and <2 x i8> %sub, <i8 120, i8 120>
-  %r = sub <2 x i8>  <i8 88, i8 undef>, %and
+  %r = sub <2 x i8>  <i8 88, i8 poison>, %and
   ret <2 x i8> %r
 }
 

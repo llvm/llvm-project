@@ -1,3 +1,12 @@
+BOLT:
+  - bolt/**/*
+
+ClangIR:
+  - clang/include/clang/CIR/**/*
+  - clang/lib/CIR/**/*
+  - clang/tools/cir-*/**/*
+  - clang/test/CIR/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -230,7 +239,7 @@ mlir:dlti:
   - mlir/**/DLTI/**
 
 mlir:emitc:
-  - mlir/**/EmitC/**
+  - mlir/**/*EmitC*/**
   - mlir/lib/Target/Cpp/**
 
 mlir:func:
@@ -297,7 +306,7 @@ mlir:tensor:
   - mlir/**/Tensor/**
 
 mlir:tosa:
-  - mlir/**/Tosa/**
+  - mlir/**/*Tosa*/**
 
 mlir:ub:
   - mlir/**/UB/**
@@ -461,6 +470,7 @@ backend:m68k:
 
 libc++:
   - libcxx/**
+  - .github/workflows/libcxx-*
 
 libc++abi:
   - libcxxabi/**
@@ -938,3 +948,6 @@ openmp:libomptarget:
 
 bazel:
   - utils/bazel/**
+
+offload:
+  - offload/**
