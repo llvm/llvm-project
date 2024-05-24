@@ -10,8 +10,7 @@ define void @PR93000(ptr %a0, ptr %a1, ptr %a2, <32 x i16> %a3) {
 ; CHECK-NEXT:  .LBB0_1: # %Loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    kmovd %eax, %k2
+; CHECK-NEXT:    knotd %k1, %k2
 ; CHECK-NEXT:    vpblendmw (%rsi), %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu16 (%rdx), %zmm1 {%k2}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, (%rsi)
