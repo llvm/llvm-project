@@ -17,7 +17,7 @@
 
 namespace LIBC_NAMESPACE {
 
-struct CndVar {
+class CndVar {
   enum CndWaiterStatus : uint32_t {
     WS_Waiting = 0xE,
     WS_Signalled = 0x5,
@@ -30,15 +30,16 @@ struct CndVar {
 
   CndWaiter *waitq_front;
   CndWaiter *waitq_back;
-  internal::RawMutex qmtx;
+  RawMutex qmtx;
 
-  static int init(CndVar *cv) {
+public:
+  LIBC_INLINE static int init(CndVar *cv) {
     cv->waitq_front = cv->waitq_back = nullptr;
-    internal::RawMutex::init(&cv->qmtx);
+    RawMutex::init(&cv->qmtx);
     return 0;
   }
 
-  static void destroy(CndVar *cv) {
+  LIBC_INLINE static void destroy(CndVar *cv) {
     cv->waitq_front = cv->waitq_back = nullptr;
   }
 

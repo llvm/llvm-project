@@ -19,7 +19,7 @@
 #include <sys/syscall.h>
 
 TEST(LlvmLibcSupportThreadsRawMutexTest, SmokeTest) {
-  LIBC_NAMESPACE::internal::RawMutex mutex;
+  LIBC_NAMESPACE::RawMutex mutex;
   ASSERT_TRUE(mutex.lock());
   ASSERT_TRUE(mutex.unlock());
   ASSERT_TRUE(mutex.try_lock());
@@ -29,7 +29,7 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, SmokeTest) {
 }
 
 TEST(LlvmLibcSupportThreadsRawMutexTest, Timeout) {
-  LIBC_NAMESPACE::internal::RawMutex mutex;
+  LIBC_NAMESPACE::RawMutex mutex;
   ASSERT_TRUE(mutex.lock());
   timespec ts;
   LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -37,18 +37,21 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, Timeout) {
   // Timeout will be respected when deadlock happens.
   auto timeout = LIBC_NAMESPACE::internal::AbsTimeout::from_timespec(ts, false);
   ASSERT_TRUE(timeout.has_value());
+  // The following will timeout
   ASSERT_FALSE(mutex.lock(*timeout));
   ASSERT_TRUE(mutex.unlock());
-  ASSERT_TRUE(mutex.lock(*timeout));
+  // Test that the mutex works after the timeout.
+  ASSERT_TRUE(mutex.lock());
   ASSERT_TRUE(mutex.unlock());
   // If a lock can be acquired directly, expired timeout will not count.
+  // Notice that the timeout is already reached during preivous deadlock.
   ASSERT_TRUE(mutex.lock(*timeout));
   ASSERT_TRUE(mutex.unlock());
 }
 
 TEST(LlvmLibcSupportThreadsRawMutexTest, PSharedLock) {
   struct SharedData {
-    LIBC_NAMESPACE::internal::RawMutex mutex;
+    LIBC_NAMESPACE::RawMutex mutex;
     LIBC_NAMESPACE::cpp::Atomic<size_t> finished;
     int data;
   };
@@ -58,7 +61,7 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, PSharedLock) {
   ASSERT_NE(addr, MAP_FAILED);
   auto *shared = reinterpret_cast<SharedData *>(addr);
   shared->data = 0;
-  LIBC_NAMESPACE::internal::RawMutex::init(&shared->mutex);
+  LIBC_NAMESPACE::RawMutex::init(&shared->mutex);
   // Avoid pull in our own implementation of pthread_t.
   long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_fork);
   for (int i = 0; i < 10000; ++i) {
@@ -68,7 +71,7 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, PSharedLock) {
   }
   // Mark the thread as finished.
   shared->finished.fetch_add(1);
-  // early exit to avoid output pollution
+  // let the child exit early to avoid output pollution
   if (pid == 0)
     LIBC_NAMESPACE::exit(0);
   while (shared->finished.load() != 2)

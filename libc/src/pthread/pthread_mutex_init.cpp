@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
                     const pthread_mutexattr_t *__restrict attr)) {
   auto mutexattr = attr == nullptr ? DEFAULT_MUTEXATTR : *attr;
   auto err =
-      Mutex::init(reinterpret_cast<Mutex *>(m), /* timeout is supported */ true,
+      Mutex::init(reinterpret_cast<Mutex *>(m), /*is_timed=*/true,
                   get_mutexattr_type(mutexattr) & PTHREAD_MUTEX_RECURSIVE,
                   get_mutexattr_robust(mutexattr) & PTHREAD_MUTEX_ROBUST,
                   get_mutexattr_pshared(mutexattr) & PTHREAD_PROCESS_SHARED);

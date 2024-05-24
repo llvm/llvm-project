@@ -34,7 +34,9 @@ class AtForkCallbackManager {
 
 public:
   constexpr AtForkCallbackManager()
-      : mtx(false, false, false, false), next_index(0) {}
+      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+            /*pshared=*/false),
+        next_index(0) {}
 
   bool register_triple(const ForkCallbackTriple &triple) {
     cpp::lock_guard lock(mtx);

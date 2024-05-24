@@ -8,24 +8,31 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H
 
-#include "futex_word.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/linux/abs_timeout.h"
-#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+
+#ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
+#warning "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY is not defined, defaulting to 1"
+#endif
+
+#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/linux/monotonicity.h"
 #endif
 
 #ifndef LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT
 #define LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT 100
+#warning                                                                       \
+    "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT is not defined, defaulting to 100"
 #endif
 
 namespace LIBC_NAMESPACE {
-struct CndVar;
-namespace internal {
 // Lock is a simple timable lock for internal usage.
 // This is separated from Mutex because this one does not need to consider
 // robustness and reentrancy. Also, this one has spin optimization for shorter
@@ -37,7 +44,8 @@ protected:
   LIBC_INLINE_VAR static constexpr FutexWordType LOCKED = 0b01;
   LIBC_INLINE_VAR static constexpr FutexWordType IN_CONTENTION = 0b10;
 
-  LIBC_INLINE FutexWordType spin(uint_fast32_t spin_count) {
+private:
+  LIBC_INLINE FutexWordType spin(int spin_count) {
     FutexWordType result;
     for (;;) {
       result = futex.load(cpp::MemoryOrder::RELAXED);
@@ -56,16 +64,16 @@ protected:
 
   // Return true if the lock is acquired. Return false if timeout happens before
   // the lock is acquired.
-  [[gnu::cold]] LIBC_INLINE bool
-  lock_slow(cpp::optional<Futex::Timeout> timeout, bool is_pshared,
-            uint_fast32_t spin_count) {
+  LIBC_INLINE bool lock_slow(cpp::optional<Futex::Timeout> timeout,
+                             bool is_pshared, int spin_count) {
     FutexWordType state = spin(spin_count);
     // Before go into contention state, try to grab the lock.
     if (state == UNLOCKED &&
         futex.compare_exchange_strong(state, LOCKED, cpp::MemoryOrder::ACQUIRE,
                                       cpp::MemoryOrder::RELAXED))
       return true;
-#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+    /* ADL should kick in */
     if (timeout)
       ensure_monotonicity(*timeout);
 #endif
@@ -83,14 +91,12 @@ protected:
     }
   }
 
-  [[gnu::cold]] LIBC_INLINE void wake(bool is_pshared) {
-    futex.notify_one(is_pshared);
-  }
+  LIBC_INLINE void wake(bool is_pshared) { futex.notify_one(is_pshared); }
 
 public:
   LIBC_INLINE static void init(RawMutex *mutex) { mutex->futex = UNLOCKED; }
   LIBC_INLINE constexpr RawMutex() : futex(UNLOCKED) {}
-  LIBC_INLINE bool try_lock() {
+  [[nodiscard]] LIBC_INLINE bool try_lock() {
     FutexWordType expected = UNLOCKED;
     // Use strong version since this is a one-time operation.
     return futex.compare_exchange_strong(
@@ -99,23 +105,25 @@ public:
   LIBC_INLINE bool
   lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        bool is_shared = false,
-       uint_fast32_t spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
+       int spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
     // Timeout will not be checked if immediate lock is possible.
-    if (try_lock())
+    if (LIBC_LIKELY(try_lock()))
       return true;
     return lock_slow(timeout, is_shared, spin_count);
   }
   LIBC_INLINE bool unlock(bool is_pshared = false) {
     FutexWordType prev = futex.exchange(UNLOCKED, cpp::MemoryOrder::RELEASE);
     // if there is someone waiting, wake them up
-    if (prev == IN_CONTENTION)
+    if (LIBC_UNLIKELY(prev == IN_CONTENTION))
       wake(is_pshared);
     // Detect invalid unlock operation.
     return prev != UNLOCKED;
   }
-  friend struct ::LIBC_NAMESPACE::CndVar;
+  LIBC_INLINE void static destroy([[maybe_unused]] RawMutex *lock) {
+    LIBC_ASSERT(lock->futex == UNLOCKED && "Mutex destroyed while used.");
+  }
+  friend class CndVar;
 };
-} // namespace internal
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H

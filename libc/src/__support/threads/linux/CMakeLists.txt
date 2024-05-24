@@ -24,7 +24,9 @@ add_header_library(
 
 set(raw_mutex_additional_flags)
 if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY)
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
+else()
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
 endif()
 
 add_header_library(
