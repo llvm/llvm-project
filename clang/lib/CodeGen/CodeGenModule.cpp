@@ -4559,7 +4559,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         (Entry->getDLLStorageClass() ==
          llvm::GlobalVariable::DLLImportStorageClass) &&
         !D->hasAttr<DLLImportAttr>() &&
-        !shouldMapVisibilityToDLLExport(cast_or_null<NamedDecl>(D))) {
+        !shouldMapVisibilityToDLLExport(cast<NamedDecl>(D))) {
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
       setDSOLocal(Entry);
     }
@@ -4857,7 +4857,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
         (Entry->getDLLStorageClass() ==
          llvm::GlobalVariable::DLLImportStorageClass) &&
         !D->hasAttr<DLLImportAttr>() &&
-        !shouldMapVisibilityToDLLExport(cast_or_null<NamedDecl>(D)))
+        !shouldMapVisibilityToDLLExport(D))
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
 
     if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && D)
