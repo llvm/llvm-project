@@ -176,7 +176,7 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       DIFlags(flags), sizeInBits, alignInBits,
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
                           [](Attribute a) { return cast<DINodeAttr>(a); }),
-      cast<DIExpressionAttr>(unwrap(location)),
+      cast<DIExpressionAttr>(unwrap(dataLocation)),
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
       cast<DIExpressionAttr>(unwrap(associated))));

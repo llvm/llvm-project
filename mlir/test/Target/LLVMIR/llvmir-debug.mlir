@@ -513,10 +513,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 llvm.func @fn_with_composite() {
   llvm.return
 }loc(fused<#sp0>["foo.mlir":1:1])
-// CHECK: !DISubprogram(name: "fn_with_composite"{{.*}}type: ![[TY1:[0-9]+]]{{.*}})
-// CHECK: [[TY1]] = !DISubroutineType({{.*}}types: ![[TYPES:[0-9]+]])
-// CHECK: ![[TYPES]] = !{null, ![[COMPTY:[0-9]+]]}
-// CHECK: ![[COMPTY]] = !DICompositeType
+// CHECK: !DICompositeType(tag: DW_TAG_array_type
 // CHECK-SAME: dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 // CHECK-SAME: associated: !DIExpression(DW_OP_lit0, DW_OP_eq)
 // CHECK-SAME: allocated: !DIExpression(DW_OP_lit0, DW_OP_ne)
