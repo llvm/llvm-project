@@ -109,7 +109,77 @@ inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
 	     nullptr, nullptr, nullptr,   nullptr,
 	     0,      {0,0,0},       {1, 0, 0}, {1, 0, 0}, 0};
 
+using llvm::SmallVector;
 struct DeviceTy;
+class AsyncInfoTy;
+
+/// A class manages private arguments in a target region.
+class PrivateArgumentManagerTy {
+  /// A data structure for the information of first-private arguments. We can
+  /// use this information to optimize data transfer by packing all
+  /// first-private arguments and transfer them all at once.
+  struct FirstPrivateArgInfoTy {
+    /// Host pointer begin
+    char *HstPtrBegin;
+    /// Host pointer end
+    char *HstPtrEnd;
+    /// The index of the element in \p TgtArgs corresponding to the argument
+    int Index;
+    /// Alignment of the entry (base of the entry, not after the entry).
+    uint32_t Alignment;
+    /// Size (without alignment, see padding)
+    uint32_t Size;
+    /// Padding used to align this argument entry, if necessary.
+    uint32_t Padding;
+    /// Host pointer name
+    map_var_info_t HstPtrName = nullptr;
+
+    FirstPrivateArgInfoTy(int Index, void *HstPtr, uint32_t Size,
+                          uint32_t Alignment, uint32_t Padding,
+                          map_var_info_t HstPtrName = nullptr)
+        : HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
+          HstPtrEnd(HstPtrBegin + Size), Index(Index), Alignment(Alignment),
+          Size(Size), Padding(Padding), HstPtrName(HstPtrName) {}
+  };
+
+  /// A vector of target pointers for all private arguments
+  SmallVector<void *> TgtPtrs;
+
+  /// A vector of information of all first-private arguments to be packed
+  SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
+  /// Host buffer for all arguments to be packed
+  SmallVector<char> FirstPrivateArgBuffer;
+  /// The total size of all arguments to be packed
+  int64_t FirstPrivateArgSize = 0;
+
+  /// A reference to the \p DeviceTy object
+  DeviceTy &Device;
+  /// A pointer to a \p AsyncInfoTy object
+  AsyncInfoTy &AsyncInfo;
+
+  // TODO: What would be the best value here? Should we make it configurable?
+  // If the size is larger than this threshold, we will allocate and transfer it
+  // immediately instead of packing it.
+  static constexpr const int64_t FirstPrivateArgSizeThreshold = 1024;
+
+public:
+  /// Constructor
+  PrivateArgumentManagerTy(DeviceTy &Dev, AsyncInfoTy &AsyncInfo)
+      : Device(Dev), AsyncInfo(AsyncInfo) {}
+
+  /// Add a private argument
+  int addArg(void *HstPtr, int64_t ArgSize, int64_t ArgOffset,
+             bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex,
+             map_var_info_t HstPtrName = nullptr,
+             const bool AllocImmediately = false);
+
+  /// Pack first-private arguments, replace place holder pointers in \p TgtArgs,
+  /// and start the transfer.
+  int packAndTransfer(SmallVector<void *> &TgtArgs);
+
+  /// Free all target memory allocated for private arguments
+  int free();
+};
 
 /// The libomptarget wrapper around a __tgt_async_info object directly
 /// associated with a libomptarget layer device. RAII semantics to avoid
@@ -136,8 +206,11 @@ public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
+  PrivateArgumentManagerTy PrivateArgumentManager;
+
   AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
-      : Device(Device), SyncType(SyncType) {}
+      : Device(Device), SyncType(SyncType),
+        PrivateArgumentManager(Device, *this) {}
   ~AsyncInfoTy() { synchronize(); }
 
   /// Implicit conversion to the __tgt_async_info which is used in the

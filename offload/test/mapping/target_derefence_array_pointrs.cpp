@@ -6,6 +6,7 @@
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvptx64-nvidia-cuda-mpi
 
 #include <stdio.h>
 #include <stdlib.h>

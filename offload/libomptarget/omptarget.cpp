@@ -131,6 +131,155 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
   return MaxAlignment < BaseAlignment ? MaxAlignment : BaseAlignment;
 }
 
+/// Add a private argument
+int PrivateArgumentManagerTy::addArg(void *HstPtr, int64_t ArgSize,
+                                     int64_t ArgOffset, bool IsFirstPrivate,
+                                     void *&TgtPtr, int TgtArgsIndex,
+                                     map_var_info_t HstPtrName,
+                                     const bool AllocImmediately) {
+  // If the argument is not first-private, or its size is greater than a
+  // predefined threshold, we will allocate memory and issue the transfer
+  // immediately.
+  if (ArgSize > FirstPrivateArgSizeThreshold || !IsFirstPrivate ||
+      AllocImmediately) {
+    TgtPtr = Device.allocData(ArgSize, HstPtr);
+    if (!TgtPtr) {
+      DP("Data allocation for %sprivate array " DPxMOD " failed.\n",
+         (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtr));
+      return OFFLOAD_FAIL;
+    }
+#ifdef OMPTARGET_DEBUG
+    void *TgtPtrBase = (void *)((intptr_t)TgtPtr + ArgOffset);
+    DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD
+       " for %sprivate array " DPxMOD " - pushing target argument " DPxMOD "\n",
+       ArgSize, DPxPTR(TgtPtr), (IsFirstPrivate ? "first-" : ""),
+       DPxPTR(HstPtr), DPxPTR(TgtPtrBase));
+#endif
+    // If first-private, copy data from host
+    if (IsFirstPrivate) {
+      DP("Submitting firstprivate data to the device.\n");
+      int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, AsyncInfo);
+      if (Ret != OFFLOAD_SUCCESS) {
+        DP("Copying data to device failed, failed.\n");
+        return OFFLOAD_FAIL;
+      }
+    }
+    TgtPtrs.push_back(TgtPtr);
+  } else {
+    DP("Firstprivate array " DPxMOD " of size %" PRId64 " will be packed\n",
+       DPxPTR(HstPtr), ArgSize);
+    // When reach this point, the argument must meet all following
+    // requirements:
+    // 1. Its size does not exceed the threshold (see the comment for
+    // FirstPrivateArgSizeThreshold);
+    // 2. It must be first-private (needs to be mapped to target device).
+    // We will pack all this kind of arguments to transfer them all at once
+    // to reduce the number of data transfer. We will not take
+    // non-first-private arguments, aka. private arguments that doesn't need
+    // to be mapped to target device, into account because data allocation
+    // can be very efficient with memory manager.
+
+    // Placeholder value
+    TgtPtr = nullptr;
+    auto *LastFPArgInfo =
+        FirstPrivateArgInfo.empty() ? nullptr : &FirstPrivateArgInfo.back();
+
+    // Compute the start alignment of this entry, add padding if necessary.
+    // TODO: Consider sorting instead.
+    uint32_t Padding = 0;
+    uint32_t StartAlignment =
+        LastFPArgInfo ? LastFPArgInfo->Alignment : MaxAlignment;
+    if (LastFPArgInfo) {
+      // Check if we keep the start alignment or if it is shrunk due to the
+      // size of the last element.
+      uint32_t Offset = LastFPArgInfo->Size % StartAlignment;
+      if (Offset)
+        StartAlignment = Offset;
+      // We only need as much alignment as the host pointer had (since we
+      // don't know the alignment information from the source we might end up
+      // overaligning accesses but not too much).
+      uint32_t RequiredAlignment =
+          llvm::bit_floor(getPartialStructRequiredAlignment(HstPtr));
+      if (RequiredAlignment > StartAlignment) {
+        Padding = RequiredAlignment - StartAlignment;
+        StartAlignment = RequiredAlignment;
+      }
+    }
+
+    FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize,
+                                     StartAlignment, Padding, HstPtrName);
+    FirstPrivateArgSize += Padding + ArgSize;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+/// Pack first-private arguments, replace place holder pointers in \p TgtArgs,
+/// and start the transfer.
+int PrivateArgumentManagerTy::packAndTransfer(SmallVector<void *> &TgtArgs) {
+  if (!FirstPrivateArgInfo.empty()) {
+    assert(FirstPrivateArgSize != 0 &&
+           "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
+    FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
+    auto *Itr = FirstPrivateArgBuffer.begin();
+    // Copy all host data to this buffer
+    for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
+      // First pad the pointer as we (have to) pad it on the device too.
+      Itr = std::next(Itr, Info.Padding);
+      std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
+      Itr = std::next(Itr, Info.Size);
+    }
+    // Allocate target memory
+    void *TgtPtr =
+        Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+    if (TgtPtr == nullptr) {
+      DP("Failed to allocate target memory for private arguments.\n");
+      return OFFLOAD_FAIL;
+    }
+    TgtPtrs.push_back(TgtPtr);
+    DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD "\n",
+       FirstPrivateArgSize, DPxPTR(TgtPtr));
+    // Transfer data to target device
+    int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+                                FirstPrivateArgSize, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      DP("Failed to submit data of private arguments.\n");
+      return OFFLOAD_FAIL;
+    }
+    // Fill in all placeholder pointers
+    auto TP = reinterpret_cast<uintptr_t>(TgtPtr);
+    for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
+      void *&Ptr = TgtArgs[Info.Index];
+      assert(Ptr == nullptr && "Target pointer is already set by mistaken");
+      // Pad the device pointer to get the right alignment.
+      TP += Info.Padding;
+      Ptr = reinterpret_cast<void *>(TP);
+      TP += Info.Size;
+      DP("Firstprivate array " DPxMOD " of size %" PRId64 " mapped to " DPxMOD
+         "\n",
+         DPxPTR(Info.HstPtrBegin), Info.HstPtrEnd - Info.HstPtrBegin,
+         DPxPTR(Ptr));
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+/// Free all target memory allocated for private arguments
+int PrivateArgumentManagerTy::free() {
+  for (void *P : TgtPtrs) {
+    int Ret = Device.deleteData(P);
+    if (Ret != OFFLOAD_SUCCESS) {
+      DP("Deallocation of (first-)private arrays failed.\n");
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  TgtPtrs.clear();
+
+  return OFFLOAD_SUCCESS;
+}
+
 void handleTargetOutcome(bool Success, ident_t *Loc) {
   switch (OffloadPolicy::get(*PM).Kind) {
   case OffloadPolicy::DISABLED:
@@ -993,210 +1142,6 @@ TableMap *getTableMap(void *HostPtr) {
   return nullptr;
 }
 
-/// A class manages private arguments in a target region.
-class PrivateArgumentManagerTy {
-  /// A data structure for the information of first-private arguments. We can
-  /// use this information to optimize data transfer by packing all
-  /// first-private arguments and transfer them all at once.
-  struct FirstPrivateArgInfoTy {
-    /// Host pointer begin
-    char *HstPtrBegin;
-    /// Host pointer end
-    char *HstPtrEnd;
-    /// The index of the element in \p TgtArgs corresponding to the argument
-    int Index;
-    /// Alignment of the entry (base of the entry, not after the entry).
-    uint32_t Alignment;
-    /// Size (without alignment, see padding)
-    uint32_t Size;
-    /// Padding used to align this argument entry, if necessary.
-    uint32_t Padding;
-    /// Host pointer name
-    map_var_info_t HstPtrName = nullptr;
-
-    FirstPrivateArgInfoTy(int Index, void *HstPtr, uint32_t Size,
-                          uint32_t Alignment, uint32_t Padding,
-                          map_var_info_t HstPtrName = nullptr)
-        : HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
-          HstPtrEnd(HstPtrBegin + Size), Index(Index), Alignment(Alignment),
-          Size(Size), Padding(Padding), HstPtrName(HstPtrName) {}
-  };
-
-  /// A vector of target pointers for all private arguments
-  SmallVector<void *> TgtPtrs;
-
-  /// A vector of information of all first-private arguments to be packed
-  SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
-  /// Host buffer for all arguments to be packed
-  SmallVector<char> FirstPrivateArgBuffer;
-  /// The total size of all arguments to be packed
-  int64_t FirstPrivateArgSize = 0;
-
-  /// A reference to the \p DeviceTy object
-  DeviceTy &Device;
-  /// A pointer to a \p AsyncInfoTy object
-  AsyncInfoTy &AsyncInfo;
-
-  // TODO: What would be the best value here? Should we make it configurable?
-  // If the size is larger than this threshold, we will allocate and transfer it
-  // immediately instead of packing it.
-  static constexpr const int64_t FirstPrivateArgSizeThreshold = 1024;
-
-public:
-  /// Constructor
-  PrivateArgumentManagerTy(DeviceTy &Dev, AsyncInfoTy &AsyncInfo)
-      : Device(Dev), AsyncInfo(AsyncInfo) {}
-
-  /// Add a private argument
-  int addArg(void *HstPtr, int64_t ArgSize, int64_t ArgOffset,
-             bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex,
-             map_var_info_t HstPtrName = nullptr,
-             const bool AllocImmediately = false) {
-    // If the argument is not first-private, or its size is greater than a
-    // predefined threshold, we will allocate memory and issue the transfer
-    // immediately.
-    if (ArgSize > FirstPrivateArgSizeThreshold || !IsFirstPrivate ||
-        AllocImmediately) {
-      TgtPtr = Device.allocData(ArgSize, HstPtr);
-      if (!TgtPtr) {
-        DP("Data allocation for %sprivate array " DPxMOD " failed.\n",
-           (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtr));
-        return OFFLOAD_FAIL;
-      }
-#ifdef OMPTARGET_DEBUG
-      void *TgtPtrBase = (void *)((intptr_t)TgtPtr + ArgOffset);
-      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD
-         " for %sprivate array " DPxMOD " - pushing target argument " DPxMOD
-         "\n",
-         ArgSize, DPxPTR(TgtPtr), (IsFirstPrivate ? "first-" : ""),
-         DPxPTR(HstPtr), DPxPTR(TgtPtrBase));
-#endif
-      // If first-private, copy data from host
-      if (IsFirstPrivate) {
-        DP("Submitting firstprivate data to the device.\n");
-        int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, AsyncInfo);
-        if (Ret != OFFLOAD_SUCCESS) {
-          DP("Copying data to device failed, failed.\n");
-          return OFFLOAD_FAIL;
-        }
-      }
-      TgtPtrs.push_back(TgtPtr);
-    } else {
-      DP("Firstprivate array " DPxMOD " of size %" PRId64 " will be packed\n",
-         DPxPTR(HstPtr), ArgSize);
-      // When reach this point, the argument must meet all following
-      // requirements:
-      // 1. Its size does not exceed the threshold (see the comment for
-      // FirstPrivateArgSizeThreshold);
-      // 2. It must be first-private (needs to be mapped to target device).
-      // We will pack all this kind of arguments to transfer them all at once
-      // to reduce the number of data transfer. We will not take
-      // non-first-private arguments, aka. private arguments that doesn't need
-      // to be mapped to target device, into account because data allocation
-      // can be very efficient with memory manager.
-
-      // Placeholder value
-      TgtPtr = nullptr;
-      auto *LastFPArgInfo =
-          FirstPrivateArgInfo.empty() ? nullptr : &FirstPrivateArgInfo.back();
-
-      // Compute the start alignment of this entry, add padding if necessary.
-      // TODO: Consider sorting instead.
-      uint32_t Padding = 0;
-      uint32_t StartAlignment =
-          LastFPArgInfo ? LastFPArgInfo->Alignment : MaxAlignment;
-      if (LastFPArgInfo) {
-        // Check if we keep the start alignment or if it is shrunk due to the
-        // size of the last element.
-        uint32_t Offset = LastFPArgInfo->Size % StartAlignment;
-        if (Offset)
-          StartAlignment = Offset;
-        // We only need as much alignment as the host pointer had (since we
-        // don't know the alignment information from the source we might end up
-        // overaligning accesses but not too much).
-        uint32_t RequiredAlignment =
-            llvm::bit_floor(getPartialStructRequiredAlignment(HstPtr));
-        if (RequiredAlignment > StartAlignment) {
-          Padding = RequiredAlignment - StartAlignment;
-          StartAlignment = RequiredAlignment;
-        }
-      }
-
-      FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize,
-                                       StartAlignment, Padding, HstPtrName);
-      FirstPrivateArgSize += Padding + ArgSize;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }
-
-  /// Pack first-private arguments, replace place holder pointers in \p TgtArgs,
-  /// and start the transfer.
-  int packAndTransfer(SmallVector<void *> &TgtArgs) {
-    if (!FirstPrivateArgInfo.empty()) {
-      assert(FirstPrivateArgSize != 0 &&
-             "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
-      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
-      auto *Itr = FirstPrivateArgBuffer.begin();
-      // Copy all host data to this buffer
-      for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
-        // First pad the pointer as we (have to) pad it on the device too.
-        Itr = std::next(Itr, Info.Padding);
-        std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
-        Itr = std::next(Itr, Info.Size);
-      }
-      // Allocate target memory
-      void *TgtPtr =
-          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
-      if (TgtPtr == nullptr) {
-        DP("Failed to allocate target memory for private arguments.\n");
-        return OFFLOAD_FAIL;
-      }
-      TgtPtrs.push_back(TgtPtr);
-      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD "\n",
-         FirstPrivateArgSize, DPxPTR(TgtPtr));
-      // Transfer data to target device
-      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
-                                  FirstPrivateArgSize, AsyncInfo);
-      if (Ret != OFFLOAD_SUCCESS) {
-        DP("Failed to submit data of private arguments.\n");
-        return OFFLOAD_FAIL;
-      }
-      // Fill in all placeholder pointers
-      auto TP = reinterpret_cast<uintptr_t>(TgtPtr);
-      for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
-        void *&Ptr = TgtArgs[Info.Index];
-        assert(Ptr == nullptr && "Target pointer is already set by mistaken");
-        // Pad the device pointer to get the right alignment.
-        TP += Info.Padding;
-        Ptr = reinterpret_cast<void *>(TP);
-        TP += Info.Size;
-        DP("Firstprivate array " DPxMOD " of size %" PRId64 " mapped to " DPxMOD
-           "\n",
-           DPxPTR(Info.HstPtrBegin), Info.HstPtrEnd - Info.HstPtrBegin,
-           DPxPTR(Ptr));
-      }
-    }
-
-    return OFFLOAD_SUCCESS;
-  }
-
-  /// Free all target memory allocated for private arguments
-  int free() {
-    for (void *P : TgtPtrs) {
-      int Ret = Device.deleteData(P);
-      if (Ret != OFFLOAD_SUCCESS) {
-        DP("Deallocation of (first-)private arrays failed.\n");
-        return OFFLOAD_FAIL;
-      }
-    }
-
-    TgtPtrs.clear();
-
-    return OFFLOAD_SUCCESS;
-  }
-};
-
 /// Process data before launching the kernel, including calling targetDataBegin
 /// to map and transfer data to target device, transferring (first-)private
 /// variables.
@@ -1413,7 +1358,8 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   SmallVector<void *> TgtArgs;
   SmallVector<ptrdiff_t> TgtOffsets;
 
-  PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
+  PrivateArgumentManagerTy &PrivateArgumentManager =
+      AsyncInfo.PrivateArgumentManager;
 
   int NumClangLaunchArgs = KernelArgs.NumArgs;
   int Ret = OFFLOAD_SUCCESS;

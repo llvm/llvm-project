@@ -7,6 +7,7 @@
 
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvptx64-nvidia-cuda-mpi
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
