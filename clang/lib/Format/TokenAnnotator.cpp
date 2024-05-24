@@ -1427,10 +1427,6 @@ private:
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
         Tok->setType(TT_ObjCMethodExpr);
-      } else if (Contexts.back().ContextKind == tok::l_paren &&
-                 !Line.InPragmaDirective && Style.isTableGen() &&
-                 Contexts.back().IsTableGenDAGArg) {
-        Tok->setType(TT_TableGenDAGArgListColon);
       }
       break;
     case tok::pipe:
