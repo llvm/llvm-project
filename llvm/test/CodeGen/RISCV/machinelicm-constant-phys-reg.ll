@@ -8,13 +8,13 @@ define i32 @test(ptr %a, i64 %n)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a0)
+; CHECK-NEXT:    vl1re32.v v9, (a0)
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a3, v8
+; CHECK-NEXT:    vredsum.vs v9, v9, v8
+; CHECK-NEXT:    vmv.x.s a3, v9
 ; CHECK-NEXT:    addw a3, a3, a3
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 8
