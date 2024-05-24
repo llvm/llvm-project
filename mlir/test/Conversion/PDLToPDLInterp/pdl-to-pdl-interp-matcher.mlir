@@ -588,7 +588,7 @@ module @variadic_results_all {
   // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
   // CHECK-DAG: pdl_interp.foreach %[[OP:.*]] : !pdl.operation in %[[OPS]]
   // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands of %[[OP]]
-  // CHECK-DAG:    pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:    pdl_interp.are_equal %[[OPERANDS]], %[[VALS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
   // CHECK-DAG:   pdl_interp.is_not_null %[[OP]]
   // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is 0
   pdl.pattern @variadic_results_all : benefit(1) {
