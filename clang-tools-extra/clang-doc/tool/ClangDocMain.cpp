@@ -155,6 +155,10 @@ Example usage for a project using a compile commands database:
     return 1;
   }
 
+  // add option to customize url fragment
+  // such as
+  // https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-doc/ClangDocMain.cpp#L1
+
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
   llvm::outs() << "Emiting docs in " << Format << " format.\n";
@@ -179,7 +183,7 @@ Example usage for a project using a compile commands database:
       SourceRoot,
       RepositoryUrl,
       {UserStylesheets.begin(), UserStylesheets.end()},
-      {"index.js", "index_json.js"}};
+      {"index.js"}};
 
   if (Format == "html") {
     void *MainAddr = (void *)(intptr_t)GetExecutablePath;

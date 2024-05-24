@@ -82,6 +82,7 @@ function createIndex(Index) {
 document.addEventListener("DOMContentLoaded", function() {
   // JsonIndex is a variable from another file that contains the index
   // in JSON format
-  var Index = JSON.parse(JsonIndex);
-  createIndex(Index);
+  fetch("/index.json")
+      .then((response) => response.json())
+      .then((Index) => { createIndex(Index); });
 });

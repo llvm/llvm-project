@@ -491,6 +491,7 @@ struct ClangDocContext {
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if
                             // the file is in this dir.
+
   // URL of repository that hosts code used for links to definition locations.
   std::optional<std::string> RepositoryUrl;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to

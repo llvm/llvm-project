@@ -964,7 +964,7 @@ static llvm::Error SerializeIndex(ClangDocContext &CDCtx) {
   std::error_code FileErr;
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
-  llvm::sys::path::append(FilePath, "index_json.js");
+  llvm::sys::path::append(FilePath, "index.json");
   llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -985,9 +985,7 @@ static llvm::Error SerializeIndex(ClangDocContext &CDCtx) {
       });
     });
   };
-  OS << "var JsonIndex = `\n";
   IndexToJSON(CDCtx.Idx);
-  OS << "`;\n";
   return llvm::Error::success();
 }
 
@@ -1049,31 +1047,33 @@ static llvm::Error CopyFile(StringRef FilePath, StringRef OutDirectory) {
   std::error_code FileErr = llvm::sys::fs::copy_file(PathRead, PathWrite);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "error creating file " +
-                                       llvm::sys::path::filename(FilePath) +
-                                       ": " + FileErr.message() + "\n");
+                                   "error creating file " + FilePath + ": " +
+                                       FileErr.message() + "\n");
   }
   return llvm::Error::success();
 }
 
 llvm::Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
-  auto Err = SerializeIndex(CDCtx);
-  if (Err)
+  if (auto Err = SerializeIndex(CDCtx)) {
     return Err;
-  Err = GenIndex(CDCtx);
-  if (Err)
+  }
+
+  if (auto Err = GenIndex(CDCtx)) {
     return Err;
+  }
 
   for (const auto &FilePath : CDCtx.UserStylesheets) {
-    Err = CopyFile(FilePath, CDCtx.OutDirectory);
-    if (Err)
+    if (auto Err = CopyFile(FilePath, CDCtx.OutDirectory)) {
       return Err;
+    }
   }
+
   for (const auto &FilePath : CDCtx.FilesToCopy) {
-    Err = CopyFile(FilePath, CDCtx.OutDirectory);
-    if (Err)
+    if (auto Err = CopyFile(FilePath, CDCtx.OutDirectory)) {
       return Err;
+    }
   }
+
   return llvm::Error::success();
 }
 
