@@ -18,6 +18,7 @@
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 
 using namespace mlir;
 
@@ -30,7 +31,7 @@ void registerToLLVMIRTranslation() {
         auto llvmModule = translateModuleToLLVMIR(op, llvmContext);
         if (!llvmModule)
           return failure();
-
+        llvm::verifyModule(*llvmModule);
         llvmModule->print(output, nullptr);
         return success();
       },

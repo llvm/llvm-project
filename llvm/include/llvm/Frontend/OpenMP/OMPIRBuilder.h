@@ -592,11 +592,7 @@ public:
   /// (filename, line, column, ...).
   struct LocationDescription {
     LocationDescription(const IRBuilderBase &IRB)
-        : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {
-      llvm::errs() << "In LocationDescription(const IRBuilderBase &), "
-                      "IRB.GetInsertBlock() = "
-                   << *IRB.GetInsertBlock() << "\n";
-    }
+        : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
     LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
         : IP(IP), DL(DL) {}
@@ -1522,12 +1518,7 @@ public:
   std::forward_list<CanonicalLoopInfo> LoopInfos;
 
   /// Add a new region that will be outlined later.
-  void addOutlineInfo(OutlineInfo &&OI) {
-    llvm::errs() << "Adding outline info\n";
-    llvm::errs() << "OI.EntryBB = ";
-    OI.EntryBB->dump();
-    OutlineInfos.emplace_back(OI);
-  }
+  void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
@@ -1770,10 +1761,11 @@ public:
       const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
-  InsertPointTy emitTargetTask(Function *OutlinedFn, Value *OutlinedFnID,
-                               EmitFallbackCallbackTy EmitTargetCallFallbackCB,
-                               TargetKernelArgs &Args, Value *DeviceID,
-                               Value *RTLoc, InsertPointTy AllocaIP);
+  InsertPointTy emitTargetTask(
+      Function *OutlinedFn, Value *OutlinedFnID,
+      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP,
+      SmallVector<OpenMPIRBuilder::DependData> &Dependencies, bool HasNoWait);
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead

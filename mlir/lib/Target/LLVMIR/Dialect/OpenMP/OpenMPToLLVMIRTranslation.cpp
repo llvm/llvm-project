@@ -731,7 +731,6 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   if (!taskOp.getDependVars().empty() && taskOp.getDepends())
     buildDependData(taskOp.getDepends(), taskOp.getDependVars(),
                     moduleTranslation, dds);
-  llvm::errs() << "# Dependencies in task op = " << dds.size() << "\n";
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
@@ -3097,7 +3096,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOp.getDependVars().empty() && targetOp.getDepends())
     buildDependData(targetOp.getDepends(), targetOp.getDependVars(),
                     moduleTranslation, dds);
-  llvm::errs() << "# Dependencies in target op = " << dds.size() << "\n";
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->newCreateTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,

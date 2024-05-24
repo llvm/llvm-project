@@ -539,8 +539,10 @@ std::string Module::getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
 // has "dropped all references", except operator delete.
 //
 void Module::dropAllReferences() {
-  for (Function &F : *this)
+  for (Function &F : *this) {
+    // llvm::errs() << "Dropping all references in " << F.getName() << "\n";
     F.dropAllReferences();
+  }
 
   for (GlobalVariable &GV : globals())
     GV.dropAllReferences();

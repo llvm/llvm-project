@@ -64,6 +64,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include <cassert>
@@ -71,10 +72,10 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#define DEBUG_TYPE "pranav"
 
 using namespace llvm;
 using ProfileCount = Function::ProfileCount;
-
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
@@ -550,10 +551,15 @@ void Function::stealArgumentListFrom(Function &Src) {
 
 void Function::deleteBodyImpl(bool ShouldDrop) {
   setIsMaterializable(false);
-
-  for (BasicBlock &BB : *this)
+  bool OldDebugFlag = DebugFlag;
+  if (this->getName() == "_QQmain..omp_par.1") {
+    DebugFlag = true;
+  }
+  for (BasicBlock &BB : *this) {
+    LLVM_DEBUG(dbgs() << "Dropping all references in " << BB << "\n");
     BB.dropAllReferences();
-
+    LLVM_DEBUG(dbgs() << "After Dropping all references in " << BB << "\n");
+  }
   // Delete all basic blocks. They are now unused, except possibly by
   // blockaddresses, but BasicBlock's destructor takes care of those.
   while (!BasicBlocks.empty())
@@ -573,7 +579,7 @@ void Function::deleteBodyImpl(bool ShouldDrop) {
     }
     setValueSubclassData(getSubclassDataFromValue() & ~0xe);
   }
-
+  DebugFlag = OldDebugFlag;
   // Metadata is stored in a side-table.
   clearMetadata();
 }
