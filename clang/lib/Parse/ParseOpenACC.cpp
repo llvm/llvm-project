@@ -571,6 +571,7 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::Loop:
     return true;
   }
   llvm_unreachable("Unhandled directive->assoc stmt");
@@ -1447,13 +1448,14 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
+                                                DirInfo.DirKind);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
-    AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(DirInfo.DirKind,
-                                                           ParseStatement());
+    AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
+        DirInfo.StartLoc, DirInfo.DirKind, ParseStatement());
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(
