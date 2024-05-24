@@ -16,8 +16,10 @@ class ASTFromFile {
     ASTFromFile(const std::string &file);
 
     ~ASTFromFile() {
-        // 删除对应的 AST dump 文件
-        llvm::sys::fs::remove(ASTDumpFile);
+        if (!Global.keepAST) {
+            // 删除对应的 AST dump 文件
+            llvm::sys::fs::remove(ASTDumpFile);
+        }
     }
 
     // 可能为空

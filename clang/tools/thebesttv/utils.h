@@ -214,6 +214,7 @@ struct GlobalStat {
     int callDepth;
     int dfsTick;
     int dfsTimeout;
+    bool keepAST;
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);

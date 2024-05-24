@@ -622,6 +622,15 @@ int getArgValue(args::ValueFlag<int> &arg, const int defaultValue,
     return v;
 }
 
+bool getArgValue(args::Flag &arg, const std::string &name) {
+    bool v = false;
+    if (arg) {
+        v = true;
+    }
+    logger.info("{}: {}", name, v);
+    return v;
+}
+
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
@@ -641,6 +650,8 @@ int main(int argc, const char **argv) {
         "DFS tick (timeout checking frequency), default 1'000'000", {"tick"});
     args::ValueFlag<int> argDfsTimeout(
         argParser, "N", "DFS timeout in seconds, default 30", {'t'});
+    args::Flag argKeepAST(argParser, "keep-ast", "Keep AST dumps on disk",
+                          {"keep-ast"});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -666,6 +677,7 @@ int main(int argc, const char **argv) {
     Global.callDepth = getArgValue(argCallDepth, 4, "Max call depth");
     Global.dfsTick = getArgValue(argDfsTick, 1'000'000, "DFS tick");
     Global.dfsTimeout = getArgValue(argDfsTimeout, 30, "DFS timeout");
+    Global.keepAST = getArgValue(argKeepAST, "Keep AST");
 
     setClangPath(argv[0]);
 
