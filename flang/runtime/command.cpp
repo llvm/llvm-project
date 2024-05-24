@@ -19,12 +19,17 @@
 #include "flang/Common/windows-include.h"
 #include <direct.h>
 #define getcwd _getcwd
+#define PATH_MAX MAX_PATH
 
 // On Windows GetCurrentProcessId returns a DWORD aka uint32_t
 #include <processthreadsapi.h>
 inline pid_t getpid() { return GetCurrentProcessId(); }
 #else
 #include <unistd.h> //getpid()
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 #endif
 
 namespace Fortran::runtime {
@@ -247,8 +252,9 @@ std::int32_t RTNAME(GetCwd)(
 
   RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
 
-  char *buf{getcwd(nullptr, 0)};
-  if (!buf) {
+  char *buf{(char *)AllocateMemoryOrCrash(terminator, PATH_MAX)};
+
+  if (!getcwd(buf, PATH_MAX)) {
     return StatMissingCurrentWorkDirectory;
   }
 
