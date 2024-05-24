@@ -76,7 +76,7 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMovImm:
     return expandMovImm(MBB, MBBI);
-  case RISCV::PseudoLIaddr:
+  case RISCV::PseudoMovAddr:
     return expandLIaddr(MBB, MBBI);
   default:
     return false;

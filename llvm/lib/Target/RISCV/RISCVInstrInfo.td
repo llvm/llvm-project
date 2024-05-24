@@ -1311,21 +1311,24 @@ def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
 
 /// HI and ADD_LO address nodes.
 
+// Pseudo for a rematerializable LUI+ADDI sequence for loading an address.
+// It will be expanded after register allocation.
+// FIXME: The scheduling information does not reflect the multiple instructions.
 let Size = 8, isReMaterializable = 1 in
-def PseudoLIaddr : Pseudo<(outs GPR:$dst), (ins uimm20_lui:$hi, simm12:$lo), []>,
-                   Sched<[WriteIALU]>;
+def PseudoMovAddr : Pseudo<(outs GPR:$dst), (ins uimm20_lui:$hi, simm12:$lo), []>,
+                    Sched<[WriteIALU]>;
 
-def LUIADDI : PatFrag<(ops node:$hi, node:$lo),
-                      (riscv_add_lo (riscv_hi node:$hi), node:$lo)>;
+def addr_hi_lo : PatFrag<(ops node:$hi, node:$lo),
+                         (riscv_add_lo (riscv_hi node:$hi), node:$lo)>;
 
-def : Pat<(LUIADDI tglobaladdr:$hi, tglobaladdr:$lo),
-          (PseudoLIaddr tglobaladdr:$hi, tglobaladdr:$lo)>;
-def : Pat<(LUIADDI tblockaddress:$hi, tblockaddress:$lo),
-          (PseudoLIaddr tblockaddress:$hi, tblockaddress:$lo)>;
-def : Pat<(LUIADDI tjumptable:$hi, tjumptable:$lo),
-          (PseudoLIaddr tjumptable:$hi, tjumptable:$lo)>;
-def : Pat<(LUIADDI tconstpool:$hi, tconstpool:$lo),
-          (PseudoLIaddr tconstpool:$hi, tconstpool:$lo)>;
+def : Pat<(addr_hi_lo tglobaladdr:$hi, tglobaladdr:$lo),
+          (PseudoMovAddr tglobaladdr:$hi, tglobaladdr:$lo)>;
+def : Pat<(addr_hi_lo tblockaddress:$hi, tblockaddress:$lo),
+          (PseudoMovAddr tblockaddress:$hi, tblockaddress:$lo)>;
+def : Pat<(addr_hi_lo tjumptable:$hi, tjumptable:$lo),
+          (PseudoMovAddr tjumptable:$hi, tjumptable:$lo)>;
+def : Pat<(addr_hi_lo tconstpool:$hi, tconstpool:$lo),
+          (PseudoMovAddr tconstpool:$hi, tconstpool:$lo)>;
 
 def : Pat<(riscv_hi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
 def : Pat<(riscv_hi tblockaddress:$in), (LUI tblockaddress:$in)>;

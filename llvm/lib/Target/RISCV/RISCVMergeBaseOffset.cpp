@@ -85,7 +85,7 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
                                              MachineInstr *&Lo) {
   if (Hi.getOpcode() != RISCV::LUI && Hi.getOpcode() != RISCV::AUIPC &&
-      Hi.getOpcode() != RISCV::PseudoLIaddr)
+      Hi.getOpcode() != RISCV::PseudoMovAddr)
     return false;
 
   const MachineOperand &HiOp1 = Hi.getOperand(1);
@@ -98,9 +98,9 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
       HiOp1.getOffset() != 0)
     return false;
 
-  if (Hi.getOpcode() == RISCV::PseudoLIaddr) {
+  if (Hi.getOpcode() == RISCV::PseudoMovAddr) {
     // Most of the code should handle it correctly without modification by
-    // setting Lo and Hi both point to PseudoLIaddr
+    // setting Lo and Hi both point to PseudoMovAddr
     Lo = &Hi;
   } else {
     Register HiDestReg = Hi.getOperand(0).getReg();
@@ -113,7 +113,7 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
   }
 
   const MachineOperand &LoOp2 = Lo->getOperand(2);
-  if (Hi.getOpcode() == RISCV::LUI || Hi.getOpcode() == RISCV::PseudoLIaddr) {
+  if (Hi.getOpcode() == RISCV::LUI || Hi.getOpcode() == RISCV::PseudoMovAddr) {
     if (LoOp2.getTargetFlags() != RISCVII::MO_LO ||
         !(LoOp2.isGlobal() || LoOp2.isCPI() || LoOp2.isBlockAddress()) ||
         LoOp2.getOffset() != 0)
@@ -473,8 +473,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp = Lo.getOperand(2);
-  // Expand PseudoLIaddr into LUI
-  if (Hi.getOpcode() == RISCV::PseudoLIaddr) {
+  // Expand PseudoMovAddr into LUI
+  if (Hi.getOpcode() == RISCV::PseudoMovAddr) {
     auto *TII = ST->getInstrInfo();
     Hi.setDesc(TII->get(RISCV::LUI));
     Hi.removeOperand(2);
@@ -515,7 +515,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     }
   }
 
-  // Prevent Lo (originally PseudoLIaddr, which is also pointed by Hi) from
+  // Prevent Lo (originally PseudoMovAddr, which is also pointed by Hi) from
   // being erased
   if (&Lo == &Hi)
     return true;
