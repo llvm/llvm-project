@@ -58,11 +58,12 @@ class ThreadLocalCache {
   /// ValueT. We use a weak reference here so that the object can be destroyed
   /// without needing to lock access to the cache itself.
   struct CacheType
-      : public llvm::SmallDenseMap<PerInstanceState *, std::weak_ptr<ValueT>> {
+      : public llvm::SmallDenseMap<PerInstanceState *,
+                                   std::pair<std::weak_ptr<ValueT>, ValueT *>> {
     ~CacheType() {
       // Remove the values of this cache that haven't already expired.
       for (auto &it : *this)
-        if (std::shared_ptr<ValueT> value = it.second.lock())
+        if (std::shared_ptr<ValueT> value = it.second.first.lock())
           it.first->remove(value.get());
     }
 
@@ -71,7 +72,7 @@ class ThreadLocalCache {
     void clearExpiredEntries() {
       for (auto it = this->begin(), e = this->end(); it != e;) {
         auto curIt = it++;
-        if (curIt->second.expired())
+        if (curIt->second.first.expired())
           this->erase(curIt);
       }
     }
@@ -88,22 +89,27 @@ public:
   ValueT &get() {
     // Check for an already existing instance for this thread.
     CacheType &staticCache = getStaticCache();
-    std::weak_ptr<ValueT> &threadInstance = staticCache[perInstanceState.get()];
-    if (std::shared_ptr<ValueT> value = threadInstance.lock())
+    std::pair<std::weak_ptr<ValueT>, ValueT *> &threadInstance =
+        staticCache[perInstanceState.get()];
+    if (ValueT *value = threadInstance.second)
       return *value;
 
     // Otherwise, create a new instance for this thread.
-    llvm::sys::SmartScopedLock<true> threadInstanceLock(
-        perInstanceState->instanceMutex);
-    perInstanceState->instances.push_back(std::make_unique<ValueT>());
-    ValueT *instance = perInstanceState->instances.back().get();
-    threadInstance = std::shared_ptr<ValueT>(perInstanceState, instance);
+    {
+      llvm::sys::SmartScopedLock<true> threadInstanceLock(
+          perInstanceState->instanceMutex);
+      threadInstance.second =
+          perInstanceState->instances.emplace_back(std::make_unique<ValueT>())
+              .get();
+    }
+    threadInstance.first =
+        std::shared_ptr<ValueT>(perInstanceState, threadInstance.second);
 
     // Before returning the new instance, take the chance to clear out any used
     // entries in the static map. The cache is only cleared within the same
     // thread to remove the need to lock the cache itself.
     staticCache.clearExpiredEntries();
-    return *instance;
+    return *threadInstance.second;
   }
   ValueT &operator*() { return get(); }
   ValueT *operator->() { return &get(); }
