@@ -1335,16 +1335,19 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   return true;
 }
 
 inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   return true;
 }
 
@@ -1369,9 +1372,6 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   assert(D);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-  if (Ptr.isDummy()) // FIXME: Once we have type info for dummy pointers, this
-                     // needs to go.
     return false;
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }

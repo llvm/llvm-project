@@ -328,7 +328,7 @@ inline void createHLFIRToFIRPassPipeline(
         pm, hlfir::createOptimizedBufferization);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
-  pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());
+  pm.addPass(hlfir::createLowerHLFIRIntrinsics());
   pm.addPass(hlfir::createBufferizeHLFIRPass());
   pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
 }

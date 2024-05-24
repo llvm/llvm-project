@@ -14,7 +14,7 @@
 ! CHECK-FC1-OPENMP: "-fc1"
 ! CHECK-FC1-OPENMP: "-fopenmp"
 !
-! CHECK-WARNING: warning: The library '-fopenmp=={{.*}}' is not supported, openmp is not be enabled
+! CHECK-WARNING: warning: the library '-fopenmp=={{.*}}' is not supported, OpenMP will not be enabled
 ! CHECK-FC1-NO-OPENMP: "-fc1"
 ! CHECK-FC1-NO-OPENMP-NOT: "-fopenmp"
 !

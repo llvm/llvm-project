@@ -282,6 +282,7 @@ private:
 #else /* LLPC_BUILD_GFX12 */
   void SelectDSBvhStackIntrinsic(SDNode *N);
 #endif /* LLPC_BUILD_GFX12 */
+  void SelectPOPSExitingWaveID(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
 #if LLPC_BUILD_GFX12
