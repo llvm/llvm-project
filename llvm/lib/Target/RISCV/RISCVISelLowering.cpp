@@ -688,7 +688,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_ADD,         ISD::VP_SUB,         ISD::VP_MUL,
         ISD::VP_SDIV,        ISD::VP_UDIV,        ISD::VP_SREM,
         ISD::VP_UREM,        ISD::VP_AND,         ISD::VP_OR,
-        ISD::VP_XOR,         ISD::VP_ASHR,        ISD::VP_LSHR,
+        ISD::VP_XOR,         ISD::VP_SRA,         ISD::VP_SRL,
         ISD::VP_SHL,         ISD::VP_REDUCE_ADD,  ISD::VP_REDUCE_AND,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
@@ -5341,7 +5341,7 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   SDValue Exp;
   // Restore back to original type. Truncation after SRL is to generate vnsrl.
   if (Op->isVPOpcode()) {
-    Exp = DAG.getNode(ISD::VP_LSHR, DL, IntVT, Bitcast,
+    Exp = DAG.getNode(ISD::VP_SRL, DL, IntVT, Bitcast,
                       DAG.getConstant(ShiftAmt, DL, IntVT), Mask, VL);
     Exp = DAG.getVPZExtOrTrunc(DL, VT, Exp, Mask, VL);
   } else {
@@ -5923,9 +5923,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_SELECT:
   case ISD::VP_MERGE:
     return RISCVISD::VMERGE_VL;
-  case ISD::VP_ASHR:
+  case ISD::VP_SRA:
     return RISCVISD::SRA_VL;
-  case ISD::VP_LSHR:
+  case ISD::VP_SRL:
     return RISCVISD::SRL_VL;
   case ISD::VP_SQRT:
     return RISCVISD::FSQRT_VL;
@@ -7010,8 +7010,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVPOp(Op, DAG);
     [[fallthrough]];
-  case ISD::VP_ASHR:
-  case ISD::VP_LSHR:
+  case ISD::VP_SRA:
+  case ISD::VP_SRL:
   case ISD::VP_SHL:
     return lowerVPOp(Op, DAG);
   case ISD::VP_IS_FPCLASS:
