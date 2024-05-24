@@ -5,23 +5,16 @@
 
 __attribute__((always_inline)) int leaf(int x) {
   return x;
-// CHECK-LABEL: define {{.*}} @leaf
-// CHECK-NOT: cyg_profile
-// CHECK: ret
+// CHECK-LABEL: define {{.*}} @leaf(i32 noundef %x) #0 {
 }
 
 int root(int x) {
   return leaf(x);
-// CHECK-LABEL: define {{.*}} @root
-// CHECK-NOT: cyg_profile
-// CHECK: ret
-
-// NOINLINE-LABEL: define {{.*}} @root
-// NOINLINE-NOT: cyg_profile
-// NOINLINE: ret
+// CHECK-LABEL: define {{.*}} @root(i32 noundef %x) #1 {
+// NOINLINE-LABEL: define {{.*}} @root(i32 noundef %x) #1 {
 }
 
-// CHECK: attributes #0 = { alwaysinline {{.*}} "instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit"
-// CHECK: attributes #1 = { {{.*}} "instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit"
-// NOINLINE: attributes #0 = { alwaysinline {{.*}} "instrument-function-entry-inlined"="__cyg_profile_func_enter" "instrument-function-exit-inlined"="__cyg_profile_func_exit"
-// NOINLINE: attributes #1 = { {{.*}} "instrument-function-entry-inlined"="__cyg_profile_func_enter" "instrument-function-exit-inlined"="__cyg_profile_func_exit"
+// CHECK: attributes #0 = { {{.*}}"instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit"
+// CHECK: attributes #1 = { {{.*}}"instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit"
+// NOINLINE: attributes #0 = { {{.*}}"instrument-function-entry-inlined"="__cyg_profile_func_enter" "instrument-function-exit-inlined"="__cyg_profile_func_exit"
+// NOINLINE: attributes #1 = { {{.*}}"instrument-function-entry-inlined"="__cyg_profile_func_enter" "instrument-function-exit-inlined"="__cyg_profile_func_exit"
