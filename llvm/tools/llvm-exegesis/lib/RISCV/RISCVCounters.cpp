@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file defines RISC-V perf counters.
+//
+//===----------------------------------------------------------------------===//
 
 #include "RISCVCounters.h"
 
@@ -45,6 +49,9 @@ RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
   StartValue = getRISCVCpuCyclesCount();
   EndValue = getRISCVCpuCyclesCount();
   MeasurementCycles = EndValue - StartValue;
+  // If values of two calls CpuCyclesCounters don`t differ
+  // it means that counters don`t configured properly, report error.
+  // MeasurementCycles the smallest interval between two counter calls.
   if (MeasurementCycles == 0) {
     report_fatal_error("MeasurementCycles == 0, "
                        "performance counters are not configured.");

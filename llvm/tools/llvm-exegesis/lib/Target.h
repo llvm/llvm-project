@@ -92,7 +92,7 @@ public:
   }
 
   // Find register by name, NoRegister if not found.
-  virtual unsigned findRegisterByName(const StringRef RegName) const {
+  virtual MCRegister findRegisterByName(const StringRef RegName) const {
     return MCRegister::NoRegister;
   }
 

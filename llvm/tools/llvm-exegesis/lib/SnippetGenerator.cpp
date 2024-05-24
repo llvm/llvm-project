@@ -211,7 +211,6 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
     if (AssignedValue.isValid()) {
       // TODO don't re-assign register operands which are already "locked"
       //  by Target in corresponding InstructionTemplate
-      // assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
       return;
     }
     AssignedValue = MCOperand::createReg(ROV.Reg);

@@ -60,7 +60,7 @@ public:
   bool checkOpcodeSupported(int Opcode,
                             const MCSubtargetInfo &SI) const override;
 
-  unsigned findRegisterByName(const StringRef RegName) const override;
+  MCRegister findRegisterByName(const StringRef RegName) const override;
 
   bool matchesArch(Triple::ArchType Arch) const override;
 
@@ -123,9 +123,9 @@ bool ExegesisRISCVTarget::checkOpcodeSupported(
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
 
-unsigned
+MCRegister
 ExegesisRISCVTarget::findRegisterByName(const StringRef RegName) const {
-  unsigned Reg;
+  MCRegister Reg;
   if ((Reg = MatchRegisterName(RegName)))
     return Reg;
   if ((Reg = MatchRegisterAltName(RegName)))
