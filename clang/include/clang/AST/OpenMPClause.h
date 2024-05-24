@@ -893,10 +893,9 @@ class OMPPermutationClause final
 
   /// Sets the permutation index expressions.
   void setArgRefs(ArrayRef<Expr *> VL) {
-    assert(VL.size() == NumLoops);
-    std::copy(VL.begin(), VL.end(),
-              static_cast<OMPPermutationClause *>(this)
-                  ->template getTrailingObjects<Expr *>());
+    assert(VL.size() == NumLoops && "Expecting one expression per loop");
+    llvm::copy(VL, static_cast<OMPPermutationClause *>(this)
+                       ->template getTrailingObjects<Expr *>());
   }
 
   /// Build an empty clause.

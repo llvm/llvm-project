@@ -944,6 +944,14 @@ struct PartialT {
   OPT(UnrollFactor) v;
 };
 
+// V6.0:  `permutation` clause
+template <typename T, typename I, typename E> //
+struct PermutationT {
+  using ArgList = ListT<E>;
+  using WrapperTrait = std::true_type;
+  ArgList v;
+};
+
 // V5.2: [12.4] `priority` clause
 template <typename T, typename I, typename E> //
 struct PriorityT {
@@ -1065,14 +1073,6 @@ struct SizesT {
   using SizeList = ListT<E>;
   using WrapperTrait = std::true_type;
   SizeList v;
-};
-
-// V6.0:  `permutation` clause
-template <typename T, typename I, typename E> //
-struct PermutationT {
-  using ArgList = ListT<E>;
-  using WrapperTrait = std::true_type;
-  ArgList v;
 };
 
 // V5.2: [5.5.9] `task_reduction` clause

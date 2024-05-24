@@ -1795,13 +1795,9 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
 
 void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
   OS << "permutation(";
-  bool First = true;
-  for (Expr *Size : Node->getArgsRefs()) {
-    if (!First)
-      OS << ", ";
-    Size->printPretty(OS, nullptr, Policy, 0);
-    First = false;
-  }
+  llvm::interleaveComma(Node->getArgsRefs(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy, 0);
+  });
   OS << ")";
 }
 
