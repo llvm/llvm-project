@@ -6289,10 +6289,9 @@ public:
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
     if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InLifetimeExtendingContext) {
+        parentEvaluationContext().InLifetimeExtendingContext) {
       auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      auto &PrevRecord = parentEvaluationContext();
       LastRecord.InLifetimeExtendingContext =
           PrevRecord.InLifetimeExtendingContext;
     }
