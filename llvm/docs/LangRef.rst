@@ -15761,8 +15761,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Return the same value as a corresponding libm '``fma``' function but without
-trapping or setting ``errno``.
+Return the same value as the IEEE-754 fusedMultiplyAdd operation. This
+is assumed to not trap or set ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
