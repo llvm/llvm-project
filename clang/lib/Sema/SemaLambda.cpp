@@ -12,6 +12,7 @@
 #include "clang/Sema/SemaLambda.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -386,30 +387,69 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
 //  parameter, if any, of the lambda's function call operator (possibly
 //  instantiated from a function call operator template) shall be either:
 //  - the closure type,
-//  - class type derived from the closure type, or
+//  - class type publicly and unambiguously derived from the closure type, or
 //  - a reference to a possibly cv-qualified such type.
-void Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
-    CXXMethodDecl *Method) {
+bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
+    CXXMethodDecl *Method, SourceLocation CallLoc) {
   if (!isLambdaCallWithExplicitObjectParameter(Method))
-    return;
+    return false;
   CXXRecordDecl *RD = Method->getParent();
   if (Method->getType()->isDependentType())
-    return;
+    return false;
   if (RD->isCapturelessLambda())
-    return;
-  QualType ExplicitObjectParameterType = Method->getParamDecl(0)
-                                             ->getType()
+    return false;
+
+  ParmVarDecl *Param = Method->getParamDecl(0);
+  QualType ExplicitObjectParameterType = Param->getType()
                                              .getNonReferenceType()
                                              .getUnqualifiedType()
                                              .getDesugaredType(getASTContext());
   QualType LambdaType = getASTContext().getRecordType(RD);
   if (LambdaType == ExplicitObjectParameterType)
-    return;
-  if (IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType))
-    return;
-  Diag(Method->getParamDecl(0)->getLocation(),
-       diag::err_invalid_explicit_object_type_in_lambda)
-      << ExplicitObjectParameterType;
+    return false;
+
+  // Don't check the same instantiation twice.
+  //
+  // If this call operator is ill-formed, there is no point in issuing
+  // a diagnostic every time it is called because the problem is in the
+  // definition of the derived type, not at the call site.
+  //
+  // FIXME: Move this check to where we instantiate the method? This should
+  // be possible, but the naive approach of just marking the method as invalid
+  // leads to us emitting more diagnostics than we should have to for this case
+  // (1 error here *and* 1 error about there being no matching overload at the
+  // call site). It might be possible to avoid that by also checking if there
+  // is an empty cast path for the method stored in the context (signalling that
+  // we've already diagnosed it) and then just not building the call, but that
+  // doesn't really seem any simpler than diagnosing it at the call site...
+  if (auto It = Context.LambdaCastPaths.find(Method);
+      It != Context.LambdaCastPaths.end())
+    return It->second.empty();
+
+  CXXCastPath &Path = Context.LambdaCastPaths[Method];
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+  if (!IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType,
+                     Paths)) {
+    Diag(Param->getLocation(), diag::err_invalid_explicit_object_type_in_lambda)
+        << ExplicitObjectParameterType;
+    return true;
+  }
+
+  if (Paths.isAmbiguous(LambdaType->getCanonicalTypeUnqualified())) {
+    std::string PathsDisplay = getAmbiguousPathsDisplayString(Paths);
+    Diag(CallLoc, diag::err_explicit_object_lambda_ambiguous_base)
+        << LambdaType << PathsDisplay;
+    return true;
+  }
+
+  if (CheckBaseClassAccess(CallLoc, LambdaType, ExplicitObjectParameterType,
+                           Paths.front(),
+                           diag::err_explicit_object_lambda_inaccessible_base))
+    return true;
+
+  BuildBasePathArray(Paths, Path);
+  return false;
 }
 
 void Sema::handleLambdaNumbering(
