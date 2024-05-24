@@ -32,7 +32,8 @@ define void @callee() nounwind {
 ; ILP32-NEXT:    flw fa4, %lo(var+4)(a0)
 ; ILP32-NEXT:    flw fa3, %lo(var+8)(a0)
 ; ILP32-NEXT:    flw fa2, %lo(var+12)(a0)
-; ILP32-NEXT:    addi a1, a0, %lo(var)
+; ILP32-NEXT:    lui a1, %hi(var)
+; ILP32-NEXT:    addi a1, a1, %lo(var)
 ; ILP32-NEXT:    flw fa1, 16(a1)
 ; ILP32-NEXT:    flw fa0, 20(a1)
 ; ILP32-NEXT:    flw ft0, 24(a1)
@@ -102,7 +103,8 @@ define void @callee() nounwind {
 ; ILP32E-NEXT:    flw fa4, %lo(var+4)(a0)
 ; ILP32E-NEXT:    flw fa3, %lo(var+8)(a0)
 ; ILP32E-NEXT:    flw fa2, %lo(var+12)(a0)
-; ILP32E-NEXT:    addi a1, a0, %lo(var)
+; ILP32E-NEXT:    lui a1, %hi(var)
+; ILP32E-NEXT:    addi a1, a1, %lo(var)
 ; ILP32E-NEXT:    flw fa1, 16(a1)
 ; ILP32E-NEXT:    flw fa0, 20(a1)
 ; ILP32E-NEXT:    flw ft0, 24(a1)
@@ -172,7 +174,8 @@ define void @callee() nounwind {
 ; LP64-NEXT:    flw fa4, %lo(var+4)(a0)
 ; LP64-NEXT:    flw fa3, %lo(var+8)(a0)
 ; LP64-NEXT:    flw fa2, %lo(var+12)(a0)
-; LP64-NEXT:    addi a1, a0, %lo(var)
+; LP64-NEXT:    lui a1, %hi(var)
+; LP64-NEXT:    addi a1, a1, %lo(var)
 ; LP64-NEXT:    flw fa1, 16(a1)
 ; LP64-NEXT:    flw fa0, 20(a1)
 ; LP64-NEXT:    flw ft0, 24(a1)
@@ -242,7 +245,8 @@ define void @callee() nounwind {
 ; LP64E-NEXT:    flw fa4, %lo(var+4)(a0)
 ; LP64E-NEXT:    flw fa3, %lo(var+8)(a0)
 ; LP64E-NEXT:    flw fa2, %lo(var+12)(a0)
-; LP64E-NEXT:    addi a1, a0, %lo(var)
+; LP64E-NEXT:    lui a1, %hi(var)
+; LP64E-NEXT:    addi a1, a1, %lo(var)
 ; LP64E-NEXT:    flw fa1, 16(a1)
 ; LP64E-NEXT:    flw fa0, 20(a1)
 ; LP64E-NEXT:    flw ft0, 24(a1)
@@ -325,7 +329,8 @@ define void @callee() nounwind {
 ; ILP32F-NEXT:    flw fa4, %lo(var+4)(a0)
 ; ILP32F-NEXT:    flw fa3, %lo(var+8)(a0)
 ; ILP32F-NEXT:    flw fa2, %lo(var+12)(a0)
-; ILP32F-NEXT:    addi a1, a0, %lo(var)
+; ILP32F-NEXT:    lui a1, %hi(var)
+; ILP32F-NEXT:    addi a1, a1, %lo(var)
 ; ILP32F-NEXT:    flw fa1, 16(a1)
 ; ILP32F-NEXT:    flw fa0, 20(a1)
 ; ILP32F-NEXT:    flw ft0, 24(a1)
@@ -421,7 +426,8 @@ define void @callee() nounwind {
 ; LP64F-NEXT:    flw fa4, %lo(var+4)(a0)
 ; LP64F-NEXT:    flw fa3, %lo(var+8)(a0)
 ; LP64F-NEXT:    flw fa2, %lo(var+12)(a0)
-; LP64F-NEXT:    addi a1, a0, %lo(var)
+; LP64F-NEXT:    lui a1, %hi(var)
+; LP64F-NEXT:    addi a1, a1, %lo(var)
 ; LP64F-NEXT:    flw fa1, 16(a1)
 ; LP64F-NEXT:    flw fa0, 20(a1)
 ; LP64F-NEXT:    flw ft0, 24(a1)
@@ -517,7 +523,8 @@ define void @callee() nounwind {
 ; ILP32D-NEXT:    flw fa4, %lo(var+4)(a0)
 ; ILP32D-NEXT:    flw fa3, %lo(var+8)(a0)
 ; ILP32D-NEXT:    flw fa2, %lo(var+12)(a0)
-; ILP32D-NEXT:    addi a1, a0, %lo(var)
+; ILP32D-NEXT:    lui a1, %hi(var)
+; ILP32D-NEXT:    addi a1, a1, %lo(var)
 ; ILP32D-NEXT:    flw fa1, 16(a1)
 ; ILP32D-NEXT:    flw fa0, 20(a1)
 ; ILP32D-NEXT:    flw ft0, 24(a1)
@@ -613,7 +620,8 @@ define void @callee() nounwind {
 ; LP64D-NEXT:    flw fa4, %lo(var+4)(a0)
 ; LP64D-NEXT:    flw fa3, %lo(var+8)(a0)
 ; LP64D-NEXT:    flw fa2, %lo(var+12)(a0)
-; LP64D-NEXT:    addi a1, a0, %lo(var)
+; LP64D-NEXT:    lui a1, %hi(var)
+; LP64D-NEXT:    addi a1, a1, %lo(var)
 ; LP64D-NEXT:    flw fa1, 16(a1)
 ; LP64D-NEXT:    flw fa0, 20(a1)
 ; LP64D-NEXT:    flw ft0, 24(a1)
@@ -716,7 +724,8 @@ define void @caller() nounwind {
 ; ILP32-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
 ; ILP32-NEXT:    flw fa5, %lo(var+12)(s0)
 ; ILP32-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
-; ILP32-NEXT:    addi s1, s0, %lo(var)
+; ILP32-NEXT:    lui s1, %hi(var)
+; ILP32-NEXT:    addi s1, s1, %lo(var)
 ; ILP32-NEXT:    flw fa5, 16(s1)
 ; ILP32-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
 ; ILP32-NEXT:    flw fa5, 20(s1)
@@ -859,7 +868,8 @@ define void @caller() nounwind {
 ; ILP32E-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
 ; ILP32E-NEXT:    flw fa5, %lo(var+12)(s0)
 ; ILP32E-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
-; ILP32E-NEXT:    addi s1, s0, %lo(var)
+; ILP32E-NEXT:    lui s1, %hi(var)
+; ILP32E-NEXT:    addi s1, s1, %lo(var)
 ; ILP32E-NEXT:    flw fa5, 16(s1)
 ; ILP32E-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
 ; ILP32E-NEXT:    flw fa5, 20(s1)
@@ -1002,7 +1012,8 @@ define void @caller() nounwind {
 ; LP64-NEXT:    fsw fa5, 124(sp) # 4-byte Folded Spill
 ; LP64-NEXT:    flw fa5, %lo(var+12)(s0)
 ; LP64-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
-; LP64-NEXT:    addi s1, s0, %lo(var)
+; LP64-NEXT:    lui s1, %hi(var)
+; LP64-NEXT:    addi s1, s1, %lo(var)
 ; LP64-NEXT:    flw fa5, 16(s1)
 ; LP64-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
 ; LP64-NEXT:    flw fa5, 20(s1)
@@ -1145,7 +1156,8 @@ define void @caller() nounwind {
 ; LP64E-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
 ; LP64E-NEXT:    flw fa5, %lo(var+12)(s0)
 ; LP64E-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
-; LP64E-NEXT:    addi s1, s0, %lo(var)
+; LP64E-NEXT:    lui s1, %hi(var)
+; LP64E-NEXT:    addi s1, s1, %lo(var)
 ; LP64E-NEXT:    flw fa5, 16(s1)
 ; LP64E-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
 ; LP64E-NEXT:    flw fa5, 20(s1)
@@ -1300,7 +1312,8 @@ define void @caller() nounwind {
 ; ILP32F-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
 ; ILP32F-NEXT:    flw fa5, %lo(var+12)(s0)
 ; ILP32F-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    addi s1, s0, %lo(var)
+; ILP32F-NEXT:    lui s1, %hi(var)
+; ILP32F-NEXT:    addi s1, s1, %lo(var)
 ; ILP32F-NEXT:    flw fa5, 16(s1)
 ; ILP32F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
 ; ILP32F-NEXT:    flw fa5, 20(s1)
@@ -1443,7 +1456,8 @@ define void @caller() nounwind {
 ; LP64F-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
 ; LP64F-NEXT:    flw fa5, %lo(var+12)(s0)
 ; LP64F-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    addi s1, s0, %lo(var)
+; LP64F-NEXT:    lui s1, %hi(var)
+; LP64F-NEXT:    addi s1, s1, %lo(var)
 ; LP64F-NEXT:    flw fa5, 16(s1)
 ; LP64F-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
 ; LP64F-NEXT:    flw fa5, 20(s1)
@@ -1586,7 +1600,8 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
 ; ILP32D-NEXT:    flw fa5, %lo(var+12)(s0)
 ; ILP32D-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
-; ILP32D-NEXT:    addi s1, s0, %lo(var)
+; ILP32D-NEXT:    lui s1, %hi(var)
+; ILP32D-NEXT:    addi s1, s1, %lo(var)
 ; ILP32D-NEXT:    flw fa5, 16(s1)
 ; ILP32D-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
 ; ILP32D-NEXT:    flw fa5, 20(s1)
@@ -1729,7 +1744,8 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
 ; LP64D-NEXT:    flw fa5, %lo(var+12)(s0)
 ; LP64D-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
-; LP64D-NEXT:    addi s1, s0, %lo(var)
+; LP64D-NEXT:    lui s1, %hi(var)
+; LP64D-NEXT:    addi s1, s1, %lo(var)
 ; LP64D-NEXT:    flw fa5, 16(s1)
 ; LP64D-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
 ; LP64D-NEXT:    flw fa5, 20(s1)

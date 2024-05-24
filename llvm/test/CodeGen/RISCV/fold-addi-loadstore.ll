@@ -59,10 +59,10 @@ entry:
 define dso_local i64 @load_g_1() nounwind {
 ; RV32I-LABEL: load_g_1:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a1, %hi(g_1)
-; RV32I-NEXT:    lw a0, %lo(g_1)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_1)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lui a0, %hi(g_1)
+; RV32I-NEXT:    lw a0, %lo(g_1)(a0)
+; RV32I-NEXT:    lui a1, %hi(g_1+4)
+; RV32I-NEXT:    lw a1, %lo(g_1+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: load_g_1:
@@ -94,10 +94,10 @@ entry:
 define dso_local i64 @load_g_2() nounwind {
 ; RV32I-LABEL: load_g_2:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a1, %hi(g_2)
-; RV32I-NEXT:    lw a0, %lo(g_2)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_2)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lui a0, %hi(g_2)
+; RV32I-NEXT:    lw a0, %lo(g_2)(a0)
+; RV32I-NEXT:    lui a1, %hi(g_2+4)
+; RV32I-NEXT:    lw a1, %lo(g_2+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: load_g_2:
@@ -129,10 +129,10 @@ entry:
 define dso_local i64 @load_g_4() nounwind {
 ; RV32I-LABEL: load_g_4:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a1, %hi(g_4)
-; RV32I-NEXT:    lw a0, %lo(g_4)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_4)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lui a0, %hi(g_4)
+; RV32I-NEXT:    lw a0, %lo(g_4)(a0)
+; RV32I-NEXT:    lui a1, %hi(g_4+4)
+; RV32I-NEXT:    lw a1, %lo(g_4+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: load_g_4:
@@ -232,10 +232,10 @@ entry:
 define dso_local void @store_g_4() nounwind {
 ; RV32I-LABEL: store_g_4:
 ; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, %hi(g_4+4)
+; RV32I-NEXT:    sw zero, %lo(g_4+4)(a0)
 ; RV32I-NEXT:    lui a0, %hi(g_4)
 ; RV32I-NEXT:    sw zero, %lo(g_4)(a0)
-; RV32I-NEXT:    addi a0, a0, %lo(g_4)
-; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: store_g_4:
@@ -389,8 +389,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 define dso_local i64 @load_ga_8() nounwind {
 ; RV32I-LABEL: load_ga_8:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, %hi(ga_8)
-; RV32I-NEXT:    addi a1, a0, %lo(ga_8)
+; RV32I-NEXT:    lui a1, %hi(ga_8)
+; RV32I-NEXT:    addi a1, a1, %lo(ga_8)
 ; RV32I-NEXT:    lw a0, 8(a1)
 ; RV32I-NEXT:    lw a1, 12(a1)
 ; RV32I-NEXT:    ret

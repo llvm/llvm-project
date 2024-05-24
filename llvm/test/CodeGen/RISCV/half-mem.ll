@@ -113,10 +113,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZFH-NEXT:    fadd.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    lui a0, %hi(G)
 ; CHECKIZFH-NEXT:    flh fa5, %lo(G)(a0)
-; CHECKIZFH-NEXT:    addi a1, a0, %lo(G)
+; CHECKIZFH-NEXT:    lui a1, %hi(G+18)
 ; CHECKIZFH-NEXT:    fsh fa0, %lo(G)(a0)
-; CHECKIZFH-NEXT:    flh fa5, 18(a1)
-; CHECKIZFH-NEXT:    fsh fa0, 18(a1)
+; CHECKIZFH-NEXT:    flh fa5, %lo(G+18)(a1)
+; CHECKIZFH-NEXT:    fsh fa0, %lo(G+18)(a1)
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: flh_fsh_global:
@@ -124,10 +124,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    lui a1, %hi(G)
 ; CHECKIZHINX-NEXT:    lh zero, %lo(G)(a1)
-; CHECKIZHINX-NEXT:    addi a2, a1, %lo(G)
+; CHECKIZHINX-NEXT:    lui a2, %hi(G+18)
 ; CHECKIZHINX-NEXT:    sh a0, %lo(G)(a1)
-; CHECKIZHINX-NEXT:    lh zero, 18(a2)
-; CHECKIZHINX-NEXT:    sh a0, 18(a2)
+; CHECKIZHINX-NEXT:    lh zero, %lo(G+18)(a2)
+; CHECKIZHINX-NEXT:    sh a0, %lo(G+18)(a2)
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: flh_fsh_global:
@@ -138,10 +138,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    lui a0, %hi(G)
 ; CHECKIZFHMIN-NEXT:    flh fa5, %lo(G)(a0)
-; CHECKIZFHMIN-NEXT:    addi a1, a0, %lo(G)
+; CHECKIZFHMIN-NEXT:    lui a1, %hi(G+18)
 ; CHECKIZFHMIN-NEXT:    fsh fa0, %lo(G)(a0)
-; CHECKIZFHMIN-NEXT:    flh fa5, 18(a1)
-; CHECKIZFHMIN-NEXT:    fsh fa0, 18(a1)
+; CHECKIZFHMIN-NEXT:    flh fa5, %lo(G+18)(a1)
+; CHECKIZFHMIN-NEXT:    fsh fa0, %lo(G+18)(a1)
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: flh_fsh_global:
@@ -152,10 +152,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, %hi(G)
 ; CHECKIZHINXMIN-NEXT:    lh zero, %lo(G)(a1)
-; CHECKIZHINXMIN-NEXT:    addi a2, a1, %lo(G)
+; CHECKIZHINXMIN-NEXT:    lui a2, %hi(G+18)
 ; CHECKIZHINXMIN-NEXT:    sh a0, %lo(G)(a1)
-; CHECKIZHINXMIN-NEXT:    lh zero, 18(a2)
-; CHECKIZHINXMIN-NEXT:    sh a0, 18(a2)
+; CHECKIZHINXMIN-NEXT:    lh zero, %lo(G+18)(a2)
+; CHECKIZHINXMIN-NEXT:    sh a0, %lo(G+18)(a2)
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = load volatile half, ptr @G

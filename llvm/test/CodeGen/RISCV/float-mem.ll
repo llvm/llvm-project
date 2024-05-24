@@ -65,10 +65,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; CHECKIF-NEXT:    fadd.s fa0, fa0, fa1
 ; CHECKIF-NEXT:    lui a0, %hi(G)
 ; CHECKIF-NEXT:    flw fa5, %lo(G)(a0)
-; CHECKIF-NEXT:    addi a1, a0, %lo(G)
+; CHECKIF-NEXT:    lui a1, %hi(G+36)
 ; CHECKIF-NEXT:    fsw fa0, %lo(G)(a0)
-; CHECKIF-NEXT:    flw fa5, 36(a1)
-; CHECKIF-NEXT:    fsw fa0, 36(a1)
+; CHECKIF-NEXT:    flw fa5, %lo(G+36)(a1)
+; CHECKIF-NEXT:    fsw fa0, %lo(G+36)(a1)
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: flw_fsw_global:
@@ -76,10 +76,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; CHECKIZFINX-NEXT:    fadd.s a0, a0, a1
 ; CHECKIZFINX-NEXT:    lui a1, %hi(G)
 ; CHECKIZFINX-NEXT:    lw zero, %lo(G)(a1)
-; CHECKIZFINX-NEXT:    addi a2, a1, %lo(G)
+; CHECKIZFINX-NEXT:    lui a2, %hi(G+36)
 ; CHECKIZFINX-NEXT:    sw a0, %lo(G)(a1)
-; CHECKIZFINX-NEXT:    lw zero, 36(a2)
-; CHECKIZFINX-NEXT:    sw a0, 36(a2)
+; CHECKIZFINX-NEXT:    lw zero, %lo(G+36)(a2)
+; CHECKIZFINX-NEXT:    sw a0, %lo(G+36)(a2)
 ; CHECKIZFINX-NEXT:    ret
   %1 = fadd float %a, %b
   %2 = load volatile float, ptr @G

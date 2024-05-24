@@ -54,10 +54,10 @@ define bfloat @flh_fsh_global(bfloat %a, bfloat %b) nounwind {
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    lui a0, %hi(G)
 ; CHECK-NEXT:    flh fa5, %lo(G)(a0)
-; CHECK-NEXT:    addi a1, a0, %lo(G)
+; CHECK-NEXT:    lui a1, %hi(G+18)
 ; CHECK-NEXT:    fsh fa0, %lo(G)(a0)
-; CHECK-NEXT:    flh fa5, 18(a1)
-; CHECK-NEXT:    fsh fa0, 18(a1)
+; CHECK-NEXT:    flh fa5, %lo(G+18)(a1)
+; CHECK-NEXT:    fsh fa0, %lo(G+18)(a1)
 ; CHECK-NEXT:    ret
   %1 = fadd bfloat %a, %b
   %2 = load volatile bfloat, ptr @G

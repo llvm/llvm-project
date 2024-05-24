@@ -306,7 +306,8 @@ define void @self_store() {
 ; RV32-LABEL: self_store:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(f)
-; RV32-NEXT:    addi a1, a0, %lo(f)
+; RV32-NEXT:    lui a1, %hi(f)
+; RV32-NEXT:    addi a1, a1, %lo(f)
 ; RV32-NEXT:    sw a1, %lo(f+4)(a0)
 ; RV32-NEXT:    ret
 ;
