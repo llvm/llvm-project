@@ -29,7 +29,7 @@
 # CHECK-INSTR: 	0000000c <call_target_arm>
 # CHECK-INSTR: 	00000010 <call_target_thumb>
 # jitlink-check: decode_operand(call_site + 0, 0) = call_target_arm   - next_pc(call_site)
-# jitlink-check: decode_operand(call_site + 4, 0) = call_target_thumb - next_pc(call_site + 4)
+# jitlink-check: decode_operand(call_site + 4, 0) = call_target_thumb - (call_site + 12)
 	.globl	call_site
 	.type	call_site,%function
 	.p2align	2
