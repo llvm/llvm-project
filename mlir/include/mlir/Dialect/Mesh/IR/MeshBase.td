@@ -151,7 +151,9 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
   let extraClassDeclaration = [{
     bool operator==(::mlir::Attribute rhs) const;
+    bool operator!=(::mlir::Attribute rhs) const;
     bool operator==(::mlir::mesh::MeshShardingAttr rhs) const;
+    bool operator!=(::mlir::mesh::MeshShardingAttr rhs) const;
   }];
 
   let genVerifyDecl = 1;

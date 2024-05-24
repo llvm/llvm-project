@@ -16042,8 +16042,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
                     PreInits);
   }
 
-  SmallVector<VarDecl *> PermutedIndVars;
-  PermutedIndVars.resize(NumLoops);
+  SmallVector<VarDecl *> PermutedIndVars(NumLoops);
   CaptureVars CopyTransformer(SemaRef);
 
   // Create the permuted loops from the inside to the outside of the

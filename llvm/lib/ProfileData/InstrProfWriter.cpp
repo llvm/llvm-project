@@ -660,6 +660,37 @@ uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
   return BackPatchStartOffset;
 }
 
+Error InstrProfWriter::writeVTableNames(ProfOStream &OS) {
+  std::vector<std::string> VTableNameStrs;
+  for (StringRef VTableName : VTableNames.keys())
+    VTableNameStrs.push_back(VTableName.str());
+
+  std::string CompressedVTableNames;
+  if (!VTableNameStrs.empty())
+    if (Error E = collectGlobalObjectNameStrings(
+            VTableNameStrs, compression::zlib::isAvailable(),
+            CompressedVTableNames))
+      return E;
+
+  const uint64_t CompressedStringLen = CompressedVTableNames.length();
+
+  // Record the length of compressed string.
+  OS.write(CompressedStringLen);
+
+  // Write the chars in compressed strings.
+  for (auto &c : CompressedVTableNames)
+    OS.writeByte(static_cast<uint8_t>(c));
+
+  // Pad up to a multiple of 8.
+  // InstrProfReader could read bytes according to 'CompressedStringLen'.
+  const uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
+
+  for (uint64_t K = CompressedStringLen; K < PaddedLength; K++)
+    OS.writeByte(0);
+
+  return Error::success();
+}
+
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   using namespace support;
@@ -682,7 +713,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the header.
   IndexedInstrProf::Header Header;
-  Header.Magic = IndexedInstrProf::Magic;
   Header.Version = WritePrevVersion
                        ? IndexedInstrProf::ProfVersion::Version11
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
@@ -705,14 +735,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     Header.Version |= VARIANT_MASK_MEMPROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     Header.Version |= VARIANT_MASK_TEMPORAL_PROF;
-
-  Header.Unused = 0;
-  Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
-  Header.HashOffset = 0;
-  Header.MemProfOffset = 0;
-  Header.BinaryIdOffset = 0;
-  Header.TemporalProfTracesOffset = 0;
-  Header.VTableNamesOffset = 0;
 
   const uint64_t BackPatchStartOffset =
       writeHeader(Header, WritePrevVersion, OS);
@@ -784,34 +806,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
-  if (!WritePrevVersion) {
-    std::vector<std::string> VTableNameStrs;
-    for (StringRef VTableName : VTableNames.keys())
-      VTableNameStrs.push_back(VTableName.str());
-
-    std::string CompressedVTableNames;
-    if (!VTableNameStrs.empty())
-      if (Error E = collectGlobalObjectNameStrings(
-              VTableNameStrs, compression::zlib::isAvailable(),
-              CompressedVTableNames))
-        return E;
-
-    const uint64_t CompressedStringLen = CompressedVTableNames.length();
-
-    // Record the length of compressed string.
-    OS.write(CompressedStringLen);
-
-    // Write the chars in compressed strings.
-    for (auto &c : CompressedVTableNames)
-      OS.writeByte(static_cast<uint8_t>(c));
-
-    // Pad up to a multiple of 8.
-    // InstrProfReader could read bytes according to 'CompressedStringLen'.
-    const uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
-
-    for (uint64_t K = CompressedStringLen; K < PaddedLength; K++)
-      OS.writeByte(0);
-  }
+  if (!WritePrevVersion)
+    if (Error E = writeVTableNames(OS))
+      return E;
 
   uint64_t TemporalProfTracesSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile)) {

@@ -3447,8 +3447,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OMP_REVERSE_DIRECTIVE: {
       assert(Record[ASTStmtReader::NumStmtFields] == 1 &&
              "Reverse directive accepts only a single loop");
-      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
-      S = OMPReverseDirective::CreateEmpty(Context, NumClauses);
+      assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
+             "Reverse directive has no clauses");
+      S = OMPReverseDirective::CreateEmpty(Context);
       break;
     }
 

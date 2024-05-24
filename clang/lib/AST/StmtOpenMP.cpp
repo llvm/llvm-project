@@ -460,11 +460,10 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   return Dir;
 }
 
-OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
-                                                      unsigned NumClauses) {
+OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C) {
   return createEmptyDirective<OMPReverseDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
-      SourceLocation(), SourceLocation());
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
+      TransformedStmtOffset + 1, SourceLocation(), SourceLocation());
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(
