@@ -4562,7 +4562,7 @@ QualType ASTContext::getFunctionTypeInternal(
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
       Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
-      FunctionEffect, FunctionEffectCondition, Qualifiers>(
+      FunctionEffect, EffectConditionExpr, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,

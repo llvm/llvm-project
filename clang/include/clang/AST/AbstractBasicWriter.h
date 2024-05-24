@@ -226,7 +226,7 @@ public:
     asImpl().writeUInt32(E.toOpaqueInt32());
   }
 
-  void writeFunctionEffectCondition(FunctionEffectCondition CE) {
+  void writeEffectConditionExpr(EffectConditionExpr CE) {
     asImpl().writeExprRef(CE.getCondition());
   }
 

@@ -6291,7 +6291,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
           break;
         case FunctionEffectMode::Dependent:
           EC.Effect = Effect;
-          EC.Cond = FunctionEffectCondition(NewExpr.get());
+          EC.Cond = EffectConditionExpr(NewExpr.get());
           break;
         case FunctionEffectMode::None:
           llvm_unreachable(

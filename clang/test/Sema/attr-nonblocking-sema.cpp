@@ -135,7 +135,7 @@ void f4() [[clang::nonblocking(__builtin_memset)]] {} // expected-error {{'nonbl
 #ifdef __cplusplus
 // Unexpanded parameter pack
 template <bool ...val>
-void f5() [[clang::nonblocking(val /* NO ... here */)]] {} // expected-error {{'nonblocking' attribute requires an integer constant}}
+void f5() [[clang::nonblocking(val /* NO ... here */)]] {} // expected-error {{expression contains unexpanded parameter pack 'val'}}
 
 void f6() { f5<true, false>(); }
 #endif // __cplusplus

@@ -355,7 +355,7 @@ let Class = FunctionProtoType in {
   def : Property<"functionEffects", Array<FunctionEffect>> {
     let Read = [{ node->getFunctionEffectsWithoutConditions() }];
   }
-  def : Property<"functionEffectConds", Array<FunctionEffectCondition>> {
+  def : Property<"functionEffectConds", Array<EffectConditionExpr>> {
     let Read = [{ node->getFunctionEffectConditions() }];
   }
 

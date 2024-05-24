@@ -3672,14 +3672,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     auto *DestFX = getTrailingObjects<FunctionEffect>();
     std::uninitialized_copy(SrcFX.begin(), SrcFX.end(), DestFX);
 
-    ArrayRef<FunctionEffectCondition> SrcConds =
-        epi.FunctionEffects.conditions();
+    ArrayRef<EffectConditionExpr> SrcConds = epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
       ExtraBits.EffectsHaveConditions = true;
-      auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
+      auto *DestConds = getTrailingObjects<EffectConditionExpr>();
       std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
       assert(std::any_of(SrcConds.begin(), SrcConds.end(),
-                         [](const FunctionEffectCondition &EC) {
+                         [](const EffectConditionExpr &EC) {
                            if (const Expr *E = EC.getCondition())
                              return E->isTypeDependent() ||
                                     E->isValueDependent();
@@ -5229,7 +5228,7 @@ void FunctionEffectSet::replaceItem(unsigned Idx,
   Conditions[Idx] = Item.Cond;
 
   // Maintain invariant: If all conditions are null, the vector should be empty.
-  if (llvm::all_of(Conditions, [](const FunctionEffectCondition &C) {
+  if (llvm::all_of(Conditions, [](const EffectConditionExpr &C) {
         return C.getCondition() == nullptr;
       })) {
     Conditions.clear();
@@ -5318,7 +5317,7 @@ FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
 
 FunctionEffectsRef
 FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
-                           ArrayRef<FunctionEffectCondition> Conds) {
+                           ArrayRef<EffectConditionExpr> Conds) {
   assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
   assert((Conds.empty() || Conds.size() == FX.size()) &&
          "effects size should match conditions size");

@@ -4728,7 +4728,6 @@ public:
 
   /// Return true if the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl.
-  /// This is only used if the effect has FE_InferrableOnCallees flag set.
   /// Example: This allows nonblocking(false) to prevent inference for the
   /// function.
   bool canInferOnFunction(const Decl &Callee) const;
@@ -4753,16 +4752,16 @@ public:
 
 /// Wrap a function effect's condition expression in another struct so
 /// that FunctionProtoType's TrailingObjects can treat it separately.
-class FunctionEffectCondition {
+class EffectConditionExpr {
   Expr *Cond = nullptr; // if null, unconditional.
 
 public:
-  FunctionEffectCondition() = default;
-  FunctionEffectCondition(Expr *E) : Cond(E) {} // non-explicit is OK.
+  EffectConditionExpr() = default;
+  EffectConditionExpr(Expr *E) : Cond(E) {}
 
   Expr *getCondition() const { return Cond; }
 
-  bool operator==(const FunctionEffectCondition &RHS) const {
+  bool operator==(const EffectConditionExpr &RHS) const {
     return Cond == RHS.Cond;
   }
 };
@@ -4772,11 +4771,11 @@ public:
 /// expression when present, is dependent.
 struct FunctionEffectWithCondition {
   FunctionEffect Effect;
-  FunctionEffectCondition Cond;
+  EffectConditionExpr Cond;
 
   FunctionEffectWithCondition() = default;
   FunctionEffectWithCondition(const FunctionEffect &E,
-                              const FunctionEffectCondition &C)
+                              const EffectConditionExpr &C)
       : Effect(E), Cond(C) {}
 
   /// Return a textual description of the effect, and its condition, if any.
@@ -4784,7 +4783,7 @@ struct FunctionEffectWithCondition {
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
-/// FunctionEffectCondition containers.
+/// EffectConditionExpr containers.
 template <typename Container> class FunctionEffectIterator {
   friend Container;
 
@@ -4806,14 +4805,12 @@ public:
     return *this;
   }
 
-  const FunctionEffectWithCondition operator*() const {
-    // Returns a const struct because storing into it would not accomplish
-    // anything.
+  FunctionEffectWithCondition operator*() const {
     assert(Outer != nullptr && "invalid FunctionEffectIterator");
     bool HasConds = !Outer->Conditions.empty();
     return FunctionEffectWithCondition{Outer->Effects[Idx],
                                        HasConds ? Outer->Conditions[Idx]
-                                                : FunctionEffectCondition()};
+                                                : EffectConditionExpr()};
   }
 };
 
@@ -4843,14 +4840,14 @@ class FunctionEffectsRef {
   friend FunctionEffectSet;
 
   ArrayRef<FunctionEffect> Effects;
-  ArrayRef<FunctionEffectCondition> Conditions;
+  ArrayRef<EffectConditionExpr> Conditions;
 
   // The arrays are expected to have been sorted by the caller, with the
   // effects in order. The conditions array must be empty or the same size
   // as the effects array, since the conditions are associated with the effects
   // at the same array indices.
   FunctionEffectsRef(ArrayRef<FunctionEffect> FX,
-                     ArrayRef<FunctionEffectCondition> Conds)
+                     ArrayRef<EffectConditionExpr> Conds)
       : Effects(FX), Conditions(Conds) {}
 
 public:
@@ -4860,7 +4857,7 @@ public:
 
   /// Asserts invariants.
   static FunctionEffectsRef create(ArrayRef<FunctionEffect> FX,
-                                   ArrayRef<FunctionEffectCondition> Conds);
+                                   ArrayRef<EffectConditionExpr> Conds);
 
   FunctionEffectsRef() = default;
 
@@ -4868,7 +4865,7 @@ public:
   size_t size() const { return Effects.size(); }
 
   ArrayRef<FunctionEffect> effects() const { return Effects; }
-  ArrayRef<FunctionEffectCondition> conditions() const { return Conditions; }
+  ArrayRef<EffectConditionExpr> conditions() const { return Conditions; }
 
   using iterator = FunctionEffectIterator<FunctionEffectsRef>;
   friend iterator;
@@ -4897,7 +4894,7 @@ class FunctionEffectSet {
   template <typename> friend class TreeTransform;
 
   SmallVector<FunctionEffect> Effects;
-  SmallVector<FunctionEffectCondition> Conditions;
+  SmallVector<EffectConditionExpr> Conditions;
 
 public:
   FunctionEffectSet() = default;
@@ -4962,7 +4959,7 @@ class FunctionProtoType final
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          FunctionEffect, FunctionEffectCondition, Qualifiers> {
+          FunctionEffect, EffectConditionExpr, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -4996,7 +4993,7 @@ class FunctionProtoType final
   // * Optionally, an array of getNumFunctionEffects() FunctionEffect.
   //   Present only when getNumFunctionEffects() > 0
   //
-  // * Optionally, an array of getNumFunctionEffects() FunctionEffectCondition.
+  // * Optionally, an array of getNumFunctionEffects() EffectConditionExpr.
   //   Present only when getNumFunctionEffectConditions() > 0.
   //
   // * Optionally a Qualifiers object to represent extra qualifiers that can't
@@ -5128,7 +5125,7 @@ private:
     return getNumFunctionEffects();
   }
 
-  unsigned numTrailingObjects(OverloadToken<FunctionEffectCondition>) const {
+  unsigned numTrailingObjects(OverloadToken<EffectConditionExpr>) const {
     return getNumFunctionEffectConditions();
   }
 
@@ -5473,11 +5470,11 @@ public:
   }
 
   // For serialization.
-  ArrayRef<FunctionEffectCondition> getFunctionEffectConditions() const {
+  ArrayRef<EffectConditionExpr> getFunctionEffectConditions() const {
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->EffectsHaveConditions)
-        return {getTrailingObjects<FunctionEffectCondition>(),
+        return {getTrailingObjects<EffectConditionExpr>(),
                 Bitfields->NumFunctionEffects};
     }
     return {};
@@ -5494,7 +5491,7 @@ public:
         return FunctionEffectsRef(
             {getTrailingObjects<FunctionEffect>(),
              Bitfields->NumFunctionEffects},
-            {NumConds ? getTrailingObjects<FunctionEffectCondition>() : nullptr,
+            {NumConds ? getTrailingObjects<EffectConditionExpr>() : nullptr,
              NumConds});
       }
     }

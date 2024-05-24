@@ -7525,24 +7525,21 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
 
 std::optional<FunctionEffectMode>
 Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName) {
-  auto BadExpr = [&]() {
-    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
-        << ("'" + AttributeName.str() + "'") << AANT_ArgumentIntegerConstant
-        << CondExpr->getSourceRange();
-    return std::nullopt;
-  };
-
   if (DiagnoseUnexpandedParameterPack(CondExpr))
-      return std::nullopt;
+    return std::nullopt;
   if (CondExpr->isTypeDependent() || CondExpr->isValueDependent())
     return FunctionEffectMode::Dependent;
 
   std::optional<llvm::APSInt> ConditionValue =
       CondExpr->getIntegerConstantExpr(Context);
-  if (!ConditionValue)
-    return BadExpr();
+  if (!ConditionValue) {
+    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
+        << ("'" + AttributeName.str() + "'") << AANT_ArgumentIntegerConstant
+        << CondExpr->getSourceRange();
+    return std::nullopt;
+  }
   return !ConditionValue->isZero() ? FunctionEffectMode::True
-                                       : FunctionEffectMode::False;
+                                   : FunctionEffectMode::False;
 }
 
 static bool
@@ -7609,7 +7606,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
           : (IsNonBlocking ? FunctionEffect::Kind::NonBlocking
                            : FunctionEffect::Kind::NonAllocating);
   const FunctionEffectWithCondition NewEC{FunctionEffect(FEKind),
-                                          FunctionEffectCondition(CondExpr)};
+                                          EffectConditionExpr(CondExpr)};
 
   // Diagnose the newly parsed attribute as incompatible with a previous one.
   auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {

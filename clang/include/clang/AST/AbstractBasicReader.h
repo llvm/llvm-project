@@ -249,8 +249,8 @@ public:
     return FunctionEffect::fromOpaqueInt32(value);
   }
 
-  FunctionEffectCondition readFunctionEffectCondition() {
-    return FunctionEffectCondition{asImpl().readExprRef()};
+  EffectConditionExpr readEffectConditionExpr() {
+    return EffectConditionExpr{asImpl().readExprRef()};
   }
 
   NestedNameSpecifier *readNestedNameSpecifier() {
