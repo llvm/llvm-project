@@ -38,6 +38,13 @@ multiclass RELAXED_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             asmstr_s, simdop, HasRelaxedSIMD>;
 }
 
+multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
+                            list<dag> pattern_r, string asmstr_r = "",
+                            string asmstr_s = "", bits<32> simdop = -1> {
+  defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
+                            asmstr_s, simdop, HasHalfPrecision>;
+}
+
 
 defm "" : ARGUMENT<V128, v16i8>;
 defm "" : ARGUMENT<V128, v8i16>;
@@ -590,6 +597,14 @@ defm "" : Splat<I32x4, 17>;
 defm "" : Splat<I64x2, 18>;
 defm "" : Splat<F32x4, 19>;
 defm "" : Splat<F64x2, 20>;
+
+// Half values are not fully supported so an intrinsic is used instead of a
+// regular Splat pattern as above.
+defm SPLAT_F16x8 :
+  HALF_PRECISION_I<(outs V128:$dst), (ins F32:$x),
+                   (outs), (ins),
+                   [(set (v8f16 V128:$dst), (int_wasm_splat_f16x8 F32:$x))],
+                   "f16x8.splat\t$dst, $x", "f16x8.splat", 0x120>;
 
 // scalar_to_vector leaves high lanes undefined, so can be a splat
 foreach vec = AllVecs in
