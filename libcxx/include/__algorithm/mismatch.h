@@ -57,10 +57,18 @@ __mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Pred& __pred, _Pro
 #if _LIBCPP_VECTORIZE_ALGORITHMS
 
 template <class _ValueType>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long long, 2>
+__reverse_vector(__simd_vector<long long, 2>& __cmp_res) {
+#  if defined(_LIBCPP_BIG_ENDIAN)
+  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 1, 0);
+#  endif
+  return __cmp_res;
+}
+
+template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long, 2>
 __reverse_vector(__simd_vector<long, 2>& __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<long> == 2, "The __native_vector_size has to be 2");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 1, 0);
 #  endif
   return __cmp_res;
@@ -70,7 +78,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long, 4>
 __reverse_vector(__simd_vector<long, 4>& __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<long> == 4, "The __native_vector_size has to be 4");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 3, 2, 1, 0);
 #  endif
   return __cmp_res;
@@ -80,7 +87,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<int, 8>
 __reverse_vector(__simd_vector<int, 8>& __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<int> == 8, "The __native_vector_size has to be 8");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 7, 6, 5, 4, 3, 2, 1, 0);
 #  endif
   return __cmp_res;
@@ -90,7 +96,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<int, 4>
 __reverse_vector(__simd_vector<int, 4>& __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<int> == 4, "The __native_vector_size has to be 4");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 3, 2, 1, 0);
 #  endif
   return __cmp_res;
@@ -100,7 +105,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 8>
 __reverse_vector(__simd_vector<_ValueType, 8>& __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<_ValueType> == 8, "The __native_vector_size has to be 8");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 7, 6, 5, 4, 3, 2, 1, 0);
 #  endif
   return __cmp_res;
@@ -110,7 +114,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 16>
 __reverse_vector(__simd_vector<_ValueType, 16> __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<_ValueType> == 16, "The __native_vector_size has to be 16");
   __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 #  endif
   return __cmp_res;
@@ -120,7 +123,6 @@ template <class _ValueType>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 32>
 __reverse_vector(__simd_vector<_ValueType, 32> __cmp_res) {
 #  if defined(_LIBCPP_BIG_ENDIAN)
-  static_assert(__native_vector_size<_ValueType> == 32, "The __native_vector_size has to be 32");
   __cmp_res = __builtin_shufflevector(
       __cmp_res,
       __cmp_res,
