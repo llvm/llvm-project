@@ -1216,7 +1216,7 @@ static bool isRemark(const Record &Diag) {
 // Presumes the text has been split at the first whitespace or hyphen.
 static bool isExemptAtStart(StringRef Text) {
   // Fast path, the first character is lowercase or not alphanumeric.
-  if (isLower(Text[0]) || !isAlnum(Text[0]))
+  if (Text.empty() || isLower(Text[0]) || !isAlnum(Text[0]))
     return true;
 
   // If the text is all uppercase (or numbers, +, or _), then we assume it's an
