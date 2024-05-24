@@ -65,10 +65,13 @@ namespace class_template {
   template <class T3> struct B;
 
   template <template <class T4> class TT1, class T5> struct B<TT1<T5>>;
+  // new-note@-1 {{partial specialization matches}}
 
   template <class T6, class T7> struct B<A<T6, T7>> {};
+  // new-note@-1 {{partial specialization matches}}
 
   template struct B<A<int>>;
+  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace class_template
 
 namespace type_pack1 {
