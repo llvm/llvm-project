@@ -72,14 +72,14 @@ if [[ "${runtimes}" != "" ]]; then
   echo "--- cmake runtimes C++03"
 
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -DCMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -DCMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
-      -DLLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -DLIBCXX_CXX_ABI=libcxxabi \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -DLIBCXX_TEST_PARAMS="std=c++03" \
-      -DLIBCXXABI_TEST_PARAMS="std=c++03"
+      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LIBCXX_CXX_ABI=libcxxabi \
+      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+      -D LIBCXX_TEST_PARAMS="std=c++03" \
+      -D LIBCXXABI_TEST_PARAMS="std=c++03"
 
   echo "--- ninja runtimes C++03"
 
@@ -89,14 +89,14 @@ if [[ "${runtimes}" != "" ]]; then
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -DCMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -DCMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
-      -DLLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -DLIBCXX_CXX_ABI=libcxxabi \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -DLIBCXX_TEST_PARAMS="std=c++26" \
-      -DLIBCXXABI_TEST_PARAMS="std=c++26"
+      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LIBCXX_CXX_ABI=libcxxabi \
+      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+      -D LIBCXX_TEST_PARAMS="std=c++26" \
+      -D LIBCXXABI_TEST_PARAMS="std=c++26"
 
   echo "--- ninja runtimes C++26"
 
@@ -106,14 +106,14 @@ if [[ "${runtimes}" != "" ]]; then
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -DCMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
-      -DCMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
-      -DLLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -DLIBCXX_CXX_ABI=libcxxabi \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -DLIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -DLIBCXXABI_TEST_PARAMS="enable_modules=clang"
+      -D CMAKE_C_COMPILER="${BUILD_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${BUILD_DIR}/bin/clang++" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LIBCXX_CXX_ABI=libcxxabi \
+      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+      -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
+      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
 
   echo "--- ninja runtimes clang modules"
   
