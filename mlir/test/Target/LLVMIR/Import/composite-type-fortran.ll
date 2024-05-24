@@ -23,5 +23,3 @@ define void @fn_with_composite() !dbg !3 {
 ; CHECK-SAME: rank = <[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>
 ; CHECK-SAME: allocated = <[DW_OP_lit0, DW_OP_ne]>
 ; CHECK-SAME: associated = <[DW_OP_lit0, DW_OP_eq]>
-
-
