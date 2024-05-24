@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <cstdlib>
 #include <iterator>
 #include <set>
-#include <cstdlib>
 #include <vector>
 
 #include "common.h"
