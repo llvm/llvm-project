@@ -18,7 +18,6 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-class TypeConverter;
 
 #define GEN_PASS_DECL_TOSATOLINALG
 #define GEN_PASS_DECL_TOSATOLINALGNAMED
@@ -52,8 +51,6 @@ void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
 void populateTosaToLinalgNamedConversionPatterns(
     RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options);
-
-void populateTosaToLinalgTypeConversion(TypeConverter &converter);
 
 } // namespace tosa
 } // namespace mlir
