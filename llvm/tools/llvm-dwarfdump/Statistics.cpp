@@ -868,7 +868,9 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // abstract_origin.
   FunctionDIECUTyMap AbstractOriginFnCUs;
   CrossCUReferencingDIELocationTy CrossCUReferencesToBeResolved;
-  // Line, Col, File
+  // Tuple representing a single source code position in the line table. Fields
+  // are respectively: Line, Col, File, where 'File' is an index into the Files
+  // vector below.
   using LineTuple = std::tuple<uint32_t, uint16_t, uint16_t>;
   SmallVector<std::string> Files;
   DenseSet<LineTuple> UniqueLines;
@@ -900,31 +902,31 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
         CrossCUReferencesToBeResolved.push_back(
             DIELocation(CUDie.getDwarfUnit(), CrossCUReferencingDIEOffset));
     }
-    if (const auto *LineTable = DICtx.getLineTableForUnit(CU.get())) {
-      auto LastFileIdxOpt = LineTable->getLastValidFileIndex();
+    const auto *LineTable = DICtx.getLineTableForUnit(CU.get());
+    std::optional<uint64_t> LastFileIdxOpt;
+    if (LineTable)
+      LastFileIdxOpt = LineTable->getLastValidFileIndex();
+    if (LastFileIdxOpt) {
       // Each CU has its own file index; in order to track unique line entries
       // across CUs, we therefore need to map each CU file index to a global
       // file index, which we store here.
       DenseMap<uint64_t, uint16_t> CUFileMapping;
-      if (LastFileIdxOpt) {
-        std::string File;
-        for (uint64_t FileIdx = 0; FileIdx <= *LastFileIdxOpt; ++FileIdx) {
-          if (LineTable->getFileNameByIndex(
-                  FileIdx, CU->getCompilationDir(),
-                  DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                  File)) {
-            auto ExistingFile = llvm::find(Files, File);
-            if (ExistingFile != Files.end()) {
-              CUFileMapping[FileIdx] =
-                  std::distance(Files.begin(), ExistingFile);
-            } else {
-              CUFileMapping[FileIdx] = Files.size();
-              Files.push_back(File);
-            }
+      std::string File;
+      for (uint64_t FileIdx = 0; FileIdx <= *LastFileIdxOpt; ++FileIdx) {
+        if (LineTable->getFileNameByIndex(
+                FileIdx, CU->getCompilationDir(),
+                DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                File)) {
+          auto ExistingFile = llvm::find(Files, File);
+          if (ExistingFile != Files.end()) {
+            CUFileMapping[FileIdx] = std::distance(Files.begin(), ExistingFile);
+          } else {
+            CUFileMapping[FileIdx] = Files.size();
+            Files.push_back(File);
           }
         }
       }
-      for (auto Seq : LineTable->Sequences) {
+      for (const auto &Seq : LineTable->Sequences) {
         LnStats.NumBytes += Seq.HighPC - Seq.LowPC;
         // Ignore the `end_sequence` entry, since it's not interesting for us.
         LnStats.NumEntries += Seq.LastRowIndex - Seq.FirstRowIndex - 1;
