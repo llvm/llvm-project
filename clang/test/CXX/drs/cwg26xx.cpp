@@ -1,16 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++11 -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11,until-cxx23-pedantic
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++14 -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,until-cxx23-pedantic
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,until-cxx23-pedantic
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++20 -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,until-cxx23-pedantic
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++23 -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -pedantic -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -54,16 +48,13 @@ namespace cwg2627 { // cwg2627: 19
 #if __cplusplus >= 202002L
 struct C {
   long long i : 8;
-  friend auto operator<=>(C, C) = default; // #cwg2627-3way-def
+  friend auto operator<=>(C, C) = default;
 };
 
 void f() {
   C x{1}, y{2};
   static_cast<void>(x <=> y);
-// until-cxx23-pedantic-warning@#cwg2627-3way-def 2 {{narrowing non-constant-expression from 'long long' bit-field of width 8 to 'int' is a C++23 extension}}
-// until-cxx23-pedantic-note@-2 {{in defaulted three-way comparison operator for 'C' first required here}}
   static_cast<void>(x.i <=> y.i);
-// until-cxx23-pedantic-warning@-1 2 {{narrowing non-constant-expression from 'long long' bit-field of width 8 to 'int' is a C++23 extension}}
 }
 
 template<typename T>
@@ -76,8 +67,8 @@ template<typename T>
 concept three_way_comparable = requires(T t) { { t <=> t }; };
 template<typename T>
 concept bf_three_way_comparable = requires(T t) { { t.i <=> t.i }; };
-static_assert(three_way_comparable<CDependent<long long>> == (__cplusplus >= 202302L));
-static_assert(bf_three_way_comparable<CDependent<long long>> == (__cplusplus >= 202302L));
+static_assert(three_way_comparable<CDependent<long long>>);
+static_assert(bf_three_way_comparable<CDependent<long long>>);
 #endif
 
 #if __cplusplus >= 201103L
@@ -92,13 +83,7 @@ std::int64_t f(D<W> d) {
 }
 
 template std::int64_t f(D<63>);
-// until-cxx23-pedantic-warning-re@#cwg2627-f {{narrowing non-constant-expression from '__int128' bit-field of width 63 to 'std::int64_t' (aka '{{.+}}') is a C++23 extension}}
-//   until-cxx23-pedantic-note@-2 {{in instantiation of function template specialization 'cwg2627::f<63>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-f {{insert an explicit cast to silence this issue}}
 template std::int64_t f(D<64>);
-// until-cxx23-pedantic-warning-re@#cwg2627-f {{narrowing non-constant-expression from '__int128' bit-field of width 64 to 'std::int64_t' (aka '{{.+}}') is a C++23 extension}}
-//   until-cxx23-pedantic-note@-2 {{in instantiation of function template specialization 'cwg2627::f<64>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-f {{insert an explicit cast to silence this issue}}
 template std::int64_t f(D<65>);
 // since-cxx11-error-re@#cwg2627-f {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka '{{.+}}') in initializer list}}
 //   since-cxx11-note@-2 {{in instantiation of function template specialization 'cwg2627::f<65>' requested here}}
@@ -115,30 +100,18 @@ struct E {
 };
 
 template std::int16_t g(E<int, 16>);
-// until-cxx23-pedantic-warning-re@#cwg2627-g {{narrowing non-constant-expression from 'int' bit-field of width 16 to '{{.+}}' is a C++23 extension}}
-//   until-cxx23-pedantic-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<int, 16>>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 template std::int16_t g(E<unsigned, 15>);
-// until-cxx23-pedantic-warning-re@#cwg2627-g {{narrowing non-constant-expression from 'unsigned int' bit-field of width 15 to '{{.+}}' is a C++23 extension}}
-//   until-cxx23-pedantic-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<unsigned int, 15>>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 template std::int16_t g(E<unsigned, 16>);
 // since-cxx11-error-re@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'unsigned int' to '{{.+}}' in initializer list}}
 //   since-cxx11-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<unsigned int, 16>>' requested here}}
 //   since-cxx11-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 template std::uint16_t g(E<unsigned, 16>);
-// until-cxx23-pedantic-warning-re@#cwg2627-g {{narrowing non-constant-expression from 'unsigned int' bit-field of width 16 to '{{.+}}' is a C++23 extension}}
-//   until-cxx23-pedantic-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<unsigned int, 16>>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 template std::uint16_t g(E<int, 1>);
 // since-cxx11-error-re@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'int' to '{{.+}}' in initializer list}}
 //   since-cxx11-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<int, 1>>' requested here}}
 //   since-cxx11-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 
 template bool g(E<unsigned, 1>);
-// until-cxx23-pedantic-warning@#cwg2627-g {{narrowing non-constant-expression from 'unsigned int' bit-field of width 1 to 'bool' is a C++23 extension}}
-//   until-cxx23-pedantic-note@-2 {{in instantiation of function template specialization 'cwg2627::g<bool, cwg2627::E<unsigned int, 1>>' requested here}}
-//   until-cxx23-pedantic-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
 template bool g(E<int, 1>);
 // since-cxx11-error@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'int' to 'bool' in initializer list}}
 //   since-cxx11-note@-2 {{in instantiation of function template specialization 'cwg2627::g<bool, cwg2627::E<int, 1>>' requested here}}
@@ -149,14 +122,22 @@ constexpr decltype(Target{ std::declval<Source>().i }, false) is_narrowing(int) 
 template<typename Target, typename Source>
 constexpr bool is_narrowing(long) { return true; }
 
-constexpr bool is_cxx23 = __cplusplus >= 202302L;
-static_assert(is_narrowing<std::int16_t, E<int, 16>>(0) == !is_cxx23, "");
-static_assert(is_narrowing<std::int16_t, E<unsigned, 15>>(0) == !is_cxx23, "");
+static_assert(!is_narrowing<std::int16_t, E<int, 16>>(0), "");
+static_assert(!is_narrowing<std::int16_t, E<unsigned, 15>>(0), "");
 static_assert(is_narrowing<std::int16_t, E<unsigned, 16>>(0), "");
-static_assert(is_narrowing<std::uint16_t, E<unsigned, 16>>(0) == !is_cxx23, "");
+static_assert(!is_narrowing<std::uint16_t, E<unsigned, 16>>(0), "");
 static_assert(is_narrowing<std::uint16_t, E<int, 1>>(0), "");
-static_assert(is_narrowing<bool, E<unsigned, 1>>(0) == !is_cxx23, "");
+static_assert(!is_narrowing<bool, E<unsigned, 1>>(0), "");
 static_assert(is_narrowing<bool, E<int, 1>>(0), "");
+
+template<int N>
+struct F {
+  signed int x : N;
+  decltype(std::int16_t{ x }) dependent_narrowing;
+  decltype(unsigned{ x }) always_narrowing;
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'unsigned int' in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+};
 #endif
 }
 

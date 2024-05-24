@@ -6279,9 +6279,6 @@ def ext_init_list_variable_narrowing_const_reference : ExtWarn<
 def ext_init_list_constant_narrowing : ExtWarn<
   "constant expression evaluates to %0 which cannot be narrowed to type %1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
-def ext_bit_field_narrowing : Extension<
-  "narrowing non-constant-expression from %0 bit-field of width %2 to %1 is a C++23 extension">,
-  InGroup<CXX20CompatPedantic>, SFINAEFailure;
 def ext_init_list_constant_narrowing_const_reference : ExtWarn<
   ext_init_list_constant_narrowing.Summary>,
   InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;

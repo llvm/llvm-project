@@ -332,14 +332,11 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
 ///        value of the expression prior to the narrowing conversion.
 /// \param ConstantType  If this is an NK_Constant_Narrowing conversion, the
 ///        type of the expression prior to the narrowing conversion.
-/// \param BitFieldWidth  If this is an NK_BitField_Not_Narrowing conversion,
-///        the width of the source bit-field.
 /// \param IgnoreFloatToIntegralConversion If true type-narrowing conversions
 ///        from floating point types to integral types should be ignored.
 NarrowingKind StandardConversionSequence::getNarrowingKind(
     ASTContext &Ctx, const Expr *Converted, APValue &ConstantValue,
-    QualType &ConstantType, unsigned &BitFieldWidth,
-    bool IgnoreFloatToIntegralConversion) const {
+    QualType &ConstantType, bool IgnoreFloatToIntegralConversion) const {
   assert((Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) &&
          "narrowing check outside C++");
 
@@ -467,8 +464,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
 
   // -- from an integer type or unscoped enumeration type to an integer type
   //    that cannot represent all the values of the original type, except where
-  //    (C++23) -- the source is a bit-field whose width w is less than that of
-  //    its type (or, for an enumeration type, its underlying type) and the
+  //    (CWG2627) -- the source is a bit-field whose width w is less than that
+  //    of its type (or, for an enumeration type, its underlying type) and the
   //    target type can represent all the values of a hypothetical extended
   //    integer type with width w and with the same signedness as the original
   //    type or
@@ -480,7 +477,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     assert(FromType->isIntegralOrUnscopedEnumerationType());
     assert(ToType->isIntegralOrUnscopedEnumerationType());
     const bool FromSigned = FromType->isSignedIntegerOrEnumerationType();
-    const unsigned FromWidth = Ctx.getIntWidth(FromType);
+    unsigned FromWidth = Ctx.getIntWidth(FromType);
     const bool ToSigned = ToType->isSignedIntegerOrEnumerationType();
     const unsigned ToWidth = Ctx.getIntWidth(ToType);
 
@@ -496,6 +493,24 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     // Not all values of FromType can be represented in ToType.
     const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
 
+    bool DependentBitField = false;
+    if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
+      if (BitField->getBitWidth()->isValueDependent())
+        DependentBitField = true;
+      else {
+        unsigned BitFieldWidth = BitField->getBitWidthValue(Ctx);
+        if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth)) {
+          assert(BitFieldWidth < FromWidth &&
+                 "Oversized bit-field can fit in target type but smaller field "
+                 "type couldn't?");
+          return NK_Not_Narrowing;
+        }
+
+        // The initializer will be truncated to the bit-field width
+        FromWidth = BitFieldWidth;
+      }
+    }
+
     // If it's value-dependent, we can't tell whether it's narrowing.
     if (Initializer->isValueDependent())
       return NK_Dependent_Narrowing;
@@ -503,23 +518,11 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     std::optional<llvm::APSInt> OptInitializerValue =
         Initializer->getIntegerConstantExpr(Ctx);
     if (!OptInitializerValue) {
-      // Check for bit-field whose width means that this would not be narrowing
-      // (This check is after checking for constant expressions because
-      // a constant expression that fits is never narrowing but a non-constant
-      // expression that comes from a bit-field is only not narrowing before
-      // C++23 as an extension)
-      if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
-        if (BitField->getBitWidth()->isValueDependent())
-          return NK_Dependent_Narrowing;
-
-        BitFieldWidth = BitField->getBitWidthValue(Ctx);
-        if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth)) {
-          assert(BitFieldWidth < FromWidth &&
-                 "Oversized bit-field can represent all but smaller field type "
-                 "couldn't?");
-          return NK_BitField_Not_Narrowing;
-        }
-      }
+      // If the bit-field width was dependent, it might end up being small
+      // enough to fit in the target type (unless the target type is unsigned
+      // and the source type is signed, in which case it will never fit)
+      if (DependentBitField && (FromSigned <= ToSigned))
+        return NK_Dependent_Narrowing;
 
       // Otherwise, such a conversion is always narrowing
       return NK_Variable_Narrowing;
@@ -6245,18 +6248,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   // Check for a narrowing implicit conversion.
   bool ReturnPreNarrowingValue = false;
   QualType PreNarrowingType;
-  unsigned BitFieldWidth;
   switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,
-                                PreNarrowingType, BitFieldWidth)) {
+                                PreNarrowingType)) {
   case NK_Dependent_Narrowing:
     // Implicit conversion to a narrower type, but the expression is
     // value-dependent so we can't tell whether it's actually narrowing.
   case NK_Variable_Narrowing:
     // Implicit conversion to a narrower type, and the value is not a constant
     // expression. We'll diagnose this in a moment.
-  case NK_BitField_Not_Narrowing:
-    // Implicit conversion where the source is a bit-field and not a constant
-    // expression.
   case NK_Not_Narrowing:
     break;
 

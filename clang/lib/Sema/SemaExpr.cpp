@@ -11968,21 +11968,13 @@ static bool checkThreeWayNarrowingConversion(Sema &S, QualType ToType, Expr *E,
 
   APValue PreNarrowingValue;
   QualType PreNarrowingType;
-  unsigned BitFieldWidth;
   switch (SCS.getNarrowingKind(S.Context, E, PreNarrowingValue,
-                               PreNarrowingType, BitFieldWidth,
+                               PreNarrowingType,
                                /*IgnoreFloatToIntegralConversion*/ true)) {
   case NK_Dependent_Narrowing:
     // Implicit conversion to a narrower type, but the expression is
     // value-dependent so we can't tell whether it's actually narrowing.
   case NK_Not_Narrowing:
-    return false;
-
-  case NK_BitField_Not_Narrowing:
-    if (!S.getLangOpts().CPlusPlus23) {
-      return S.Diag(E->getBeginLoc(), diag::ext_bit_field_narrowing)
-             << FromType << ToType << BitFieldWidth;
-    }
     return false;
 
   case NK_Constant_Narrowing:

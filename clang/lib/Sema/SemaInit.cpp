@@ -10531,26 +10531,12 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
-  unsigned BitFieldWidth;
   switch (SCS->getNarrowingKind(S.Context, PostInit, ConstantValue,
-                                ConstantType, BitFieldWidth)) {
+                                ConstantType)) {
   case NK_Not_Narrowing:
   case NK_Dependent_Narrowing:
     // No narrowing occurred.
     return;
-
-  case NK_BitField_Not_Narrowing:
-    // A bit-field was "narrowed" to an integer type which is wider than the
-    // bit-field but the declared type of the bit-field is wider than the target
-    // type. This is not considered narrowing in C++23.
-    if (S.getLangOpts().CPlusPlus23)
-      return;
-    if (!(S.Diag(PostInit->getBeginLoc(), diag::ext_bit_field_narrowing)
-          << PreNarrowingType
-          << EntityType.getNonReferenceType().getLocalUnqualifiedType()
-          << BitFieldWidth))
-      return;
-    break;
 
   case NK_Type_Narrowing: {
     // This was a floating-to-integer conversion, which is always considered a
@@ -10628,10 +10614,9 @@ static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
 
   APValue Value;
   QualType PreNarrowingType;
-  unsigned BitFieldWidth;
   // Reuse C++ narrowing check.
   switch (ICS.Standard.getNarrowingKind(
-      S.Context, Init, Value, PreNarrowingType, BitFieldWidth,
+      S.Context, Init, Value, PreNarrowingType,
       /*IgnoreFloatToIntegralConversion*/ false)) {
   // The value doesn't fit.
   case NK_Constant_Narrowing:
@@ -10647,7 +10632,6 @@ static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
 
   // Since we only reuse narrowing check for C23 constexpr variables here, we're
   // not really interested in these cases.
-  case NK_BitField_Not_Narrowing:
   case NK_Dependent_Narrowing:
   case NK_Variable_Narrowing:
   case NK_Not_Narrowing:
