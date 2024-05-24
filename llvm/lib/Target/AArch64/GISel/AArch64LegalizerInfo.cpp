@@ -341,20 +341,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   if (ST.hasSVE()) {
     LoadActions.legalForTypesWithMemDesc({
         // 128 bit base sizes
-        {nxv16s8, p0, nxv16s8, 128},
-        {nxv8s16, p0, nxv8s16, 128},
-        {nxv4s32, p0, nxv4s32, 128},
-        {nxv2s64, p0, nxv2s64, 128},
-        {nxv2p0, p0, nxv2p0, 128},
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+        {nxv2p0, p0, nxv2p0, 8},
     });
 
     StoreActions.legalForTypesWithMemDesc({
         // 128 bit base sizes
-        {nxv16s8, p0, nxv16s8, 128},
-        {nxv8s16, p0, nxv8s16, 128},
-        {nxv4s32, p0, nxv4s32, 128},
-        {nxv2s64, p0, nxv2s64, 128},
-        {nxv2p0, p0, nxv2p0, 128},
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+        {nxv2p0, p0, nxv2p0, 8},
     });
   }
 
