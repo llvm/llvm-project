@@ -16019,9 +16019,9 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   }
 
   // Nothing to transform with trivial permutation.
-  if (NumLoops <= 1 || llvm::all_of(llvm::enumerate(Permutation), [](auto p) {
-        auto [Idx, Arg] = p;
-        return Idx == Arg;
+  if (NumLoops <= 1 || llvm::all_of(llvm::enumerate(Permutation), [](auto P) {
+    auto [Idx, Arg] = P;
+    return Idx == Arg;
       }))
     return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                            NumLoops, AStmt, AStmt, nullptr);
