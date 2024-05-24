@@ -294,10 +294,36 @@ public:
     return SM.getLocForEndOfFile(SM.getFileID(Loc));
   }
 
-  /// Find out where the current file is included or macro is expanded.
-  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc) {
-    return Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getBegin()
-                           : SM.getIncludeLoc(SM.getFileID(Loc));
+  /// Find out where a macro is expanded. If the immediate result is a
+  /// <scratch space>, keep looking until the result isn't. Return a pair of
+  /// \c SourceLocation. The first object is always the begin sloc of found
+  /// result. The second should be checked by the caller: if it has value, it's
+  /// the end sloc of the found result. Otherwise the while loop didn't get
+  /// executed, which means the location wasn't changed and the caller has to
+  /// learn the end sloc from somewhere else.
+  std::pair<SourceLocation, std::optional<SourceLocation>>
+  getNonScratchExpansionLoc(SourceLocation Loc) {
+    std::optional<SourceLocation> EndLoc = std::nullopt;
+    while (Loc.isMacroID() &&
+           SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+      auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+      Loc = ExpansionRange.getBegin();
+      EndLoc = ExpansionRange.getEnd();
+    }
+    return std::make_pair(Loc, EndLoc);
+  }
+
+  /// Find out where the current file is included or macro is expanded. If
+  /// \c AcceptScratch is set to false, keep looking for expansions until the
+  /// found sloc is not a <scratch space>.
+  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc,
+                                          bool AcceptScratch = true) {
+    if (!Loc.isMacroID())
+      return SM.getIncludeLoc(SM.getFileID(Loc));
+    Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    if (AcceptScratch)
+      return Loc;
+    return getNonScratchExpansionLoc(Loc).first;
   }
 
   /// Return true if \c Loc is a location in a built-in macro.
@@ -343,6 +369,15 @@ public:
     SmallVector<std::pair<SourceLocation, unsigned>, 8> FileLocs;
     for (auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getBeginLoc();
+
+      // Replace Region with its definition if it is in <scratch space>.
+      auto NonScratchExpansionLoc = getNonScratchExpansionLoc(Loc);
+      auto EndLoc = NonScratchExpansionLoc.second;
+      if (EndLoc.has_value()) {
+        Loc = NonScratchExpansionLoc.first;
+        Region.setStartLoc(Loc);
+        Region.setEndLoc(EndLoc.value());
+      }
 
       // Replace Loc with FileLoc if it is expanded with system headers.
       if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
@@ -538,7 +573,7 @@ public:
     SourceRegionFilter Filter;
     for (const auto &FM : FileIDMapping) {
       SourceLocation ExpandedLoc = FM.second.second;
-      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc);
+      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc, false);
       if (ParentLoc.isInvalid())
         continue;
 
