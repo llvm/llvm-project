@@ -833,11 +833,31 @@ struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
     return success();
   }
 };
+
+struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+
+  static bool isEmptyMemRef(BaseMemRefType type) {
+    return type.hasRank() &&
+           llvm::any_of(type.getShape(), [](int64_t x) { return x == 0; });
+  }
+
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (isEmptyMemRef(copyOp.getSource().getType()) ||
+        isEmptyMemRef(copyOp.getTarget().getType())) {
+      rewriter.eraseOp(copyOp);
+      return success();
+    }
+
+    return failure();
+  }
+};
 } // namespace
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldCopyOfCast, FoldSelfCopy>(context);
+  results.add<FoldCopyOfCast, FoldEmptyCopy, FoldSelfCopy>(context);
 }
 
 LogicalResult CopyOp::fold(FoldAdaptor adaptor,

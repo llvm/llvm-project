@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 !XFAIL: *
 ! OpenMP version 5.0.0
 ! 2.8.1 sections construct

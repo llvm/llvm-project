@@ -223,13 +223,6 @@ def FeatureSVE : Extension<"sve", "SVE",
   "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16],
   "FEAT_SVE", "+sve,+fullfp16,+fp-armv8,+neon", 310>;
 
-def FeatureFPMR : Extension<"fpmr", "FPMR",
-  "Enable FPMR Register (FEAT_FPMR)">;
-
-let FMVDependencies = "+fpmr" in
-def FeatureFP8 : Extension<"fp8", "FP8",
-  "Enable FP8 instructions (FEAT_FP8)">;
-
 // This flag is currently still labeled as Experimental, but when fully
 // implemented this should tell the compiler to use the zeroing pseudos to
 // benefit from the reverse instructions (e.g. SUB vs SUBR) if the inactive
@@ -667,40 +660,43 @@ def FeatureSME2p1 : Extension<"sme2p1", "SME2p1",
 def FeatureFAMINMAX: Extension<"faminmax", "FAMINMAX",
    "Enable FAMIN and FAMAX instructions (FEAT_FAMINMAX)">;
 
-let FMVDependencies = "+fpmr" in
+def FeatureLUT: Extension<"lut", "LUT",
+   "Enable Lookup Table instructions (FEAT_LUT)">;
+   
+def FeatureFP8 : Extension<"fp8", "FP8",
+  "Enable FP8 instructions (FEAT_FP8)", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
+  
 def FeatureFP8FMA : Extension<"fp8fma", "FP8FMA",
-  "Enable fp8 multiply-add instructions (FEAT_FP8FMA)">;
+  "Enable fp8 multiply-add instructions (FEAT_FP8FMA)", [FeatureFP8]>;
 
 let FMVDependencies = "+sme2" in
 def FeatureSSVE_FP8FMA : Extension<"ssve-fp8fma", "SSVE_FP8FMA",
-  "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2]>;
-
-def FeatureFP8DOT2: Extension<"fp8dot2", "FP8DOT2",
-   "Enable fp8 2-way dot instructions (FEAT_FP8DOT2)">;
-
-let FMVDependencies = "+sme2" in
-def FeatureSSVE_FP8DOT2 : Extension<"ssve-fp8dot2", "SSVE_FP8DOT2",
-  "Enable SVE2 fp8 2-way dot product instructions (FEAT_SSVE_FP8DOT2)", [FeatureSME2]>;
+  "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: Extension<"fp8dot4", "FP8DOT4",
-   "Enable fp8 4-way dot instructions (FEAT_FP8DOT4)">;
+   "Enable fp8 4-way dot instructions (FEAT_FP8DOT4)", [FeatureFP8FMA]>;
+  
+def FeatureFP8DOT2: Extension<"fp8dot2", "FP8DOT2",
+   "Enable fp8 2-way dot instructions (FEAT_FP8DOT2)", [FeatureFP8DOT4]>;
 
 let FMVDependencies = "+sme2" in
 def FeatureSSVE_FP8DOT4 : Extension<"ssve-fp8dot4", "SSVE_FP8DOT4",
-  "Enable SVE2 fp8 4-way dot product instructions (FEAT_SSVE_FP8DOT4)", [FeatureSME2]>;
-def FeatureLUT: Extension<"lut", "LUT",
-   "Enable Lookup Table instructions (FEAT_LUT)">;
+  "Enable SVE2 fp8 4-way dot product instructions (FEAT_SSVE_FP8DOT4)", [FeatureSSVE_FP8FMA]>;
+
+let FMVDependencies = "+sme2" in
+def FeatureSSVE_FP8DOT2 : Extension<"ssve-fp8dot2", "SSVE_FP8DOT2",
+  "Enable SVE2 fp8 2-way dot product instructions (FEAT_SSVE_FP8DOT2)", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : Extension<"sme-lutv2", "SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions (FEAT_SME_LUTv2)">;
 
-let FMVDependencies = "+fp8,+sme2" in
-def FeatureSMEF8F16 : Extension<"sme-f8f16", "SMEF8F16",
-  "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSME2, FeatureFP8]>;
-
 let FMVDependencies = "+sme2,+fp8" in
 def FeatureSMEF8F32 : Extension<"sme-f8f32", "SMEF8F32",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions (FEAT_SME_F8F32)", [FeatureSME2, FeatureFP8]>;
+
+let FMVDependencies = "+fp8,+sme2" in
+def FeatureSMEF8F16 : Extension<"sme-f8f16", "SMEF8F16",
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSMEF8F32]>;
 
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
@@ -869,7 +865,7 @@ def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
     FeatureRASv2])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
-  !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA])>;
+  !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

@@ -1889,15 +1889,17 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CalledFunction, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
         }
         FoundSingleCalleeChain = true;
         SaveCallsiteInfo(&I, CalleeFunc);
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 
@@ -2004,8 +2006,9 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CallEdge.first, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
@@ -2015,7 +2018,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 

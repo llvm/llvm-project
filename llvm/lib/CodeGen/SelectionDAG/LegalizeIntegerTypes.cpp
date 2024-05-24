@@ -1511,10 +1511,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
     SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
     Hi = DAG.getNode(ISD::VP_SHL, DL, VT, Hi, HiShift, Mask, EVL);
-    APInt Imm = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
-                                     OldVT.getScalarSizeInBits());
-    Lo = DAG.getNode(ISD::VP_AND, DL, VT, Lo, DAG.getConstant(Imm, DL, VT),
-                     Mask, EVL);
+    Lo = DAG.getVPZeroExtendInReg(Lo, Mask, EVL, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::VP_OR, DL, VT, Hi, Lo, Mask, EVL);
     Res = DAG.getNode(IsFSHR ? ISD::VP_LSHR : ISD::VP_SHL, DL, VT, Res, Amt,
                       Mask, EVL);
@@ -2377,10 +2374,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
   // FIXME: There is no VP_ANY_EXTEND yet.
   Op = DAG.getNode(ISD::VP_ZERO_EXTEND, dl, VT, Op, N->getOperand(1),
                    N->getOperand(2));
-  APInt Imm = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
-                                   N->getOperand(0).getScalarValueSizeInBits());
-  return DAG.getNode(ISD::VP_AND, dl, VT, Op, DAG.getConstant(Imm, dl, VT),
-                     N->getOperand(1), N->getOperand(2));
+  return DAG.getVPZeroExtendInReg(Op, N->getOperand(1), N->getOperand(2), dl,
+                                  N->getOperand(0).getValueType());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_FIX(SDNode *N) {
