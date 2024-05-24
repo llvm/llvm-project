@@ -1,0 +1,222 @@
+// RUN: cir-opt %s -cir-to-mlir --canonicalize | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir --canonicalize -cir-mlir-to-llvm | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.array<!s32i x 100>
+
+  // MLIR-LABEL: func.func @constantLoopBound()
+  // LLVM-LABEL: define void @constantLoopBound()
+  cir.func @constantLoopBound() {
+    // MLIR: %[[C3:.*]] = arith.constant 3 : i32
+    // MLIR: %[[C1:.*]] = arith.constant 1 : i32
+    // MLIR: %[[C100:.*]] = arith.constant 100 : i32
+    // MLIR: %[[C0:.*]] = arith.constant 0 : i32
+    // MLIR: scf.for %[[I:.*]] = %[[C0]] to %[[C100]] step %[[C1]] : i32 {
+    // MLIR:   %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR:   %[[INDEX:.*]] = arith.index_cast %[[I]] : i32 to index
+    // MLIR:   memref.store %[[C3]], %[[BASE]][%[[INDEX]]] : memref<100xi32>
+    // MLIR: }
+
+    // LLVM: %[[I:.*]] = phi i32 [ %[[I_INC:.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[PREHEADER:.*]] ]
+    // LLVM: %[[COND:.*]] = icmp slt i32 %[[I]], 100
+    // LLVM: br i1 %[[COND]], label %[[LOOP_LATCH]], label %[[LOOP_EXIT:.*]]
+    // LLVM: %[[I64:.*]] = sext i32 %[[I]] to i64
+    // LLVM: %[[ADDR:.*]] = getelementptr i32, ptr @a, i64 %[[I64]]
+    // LLVM: store i32 3, ptr %[[ADDR]], align 4
+    // LLVM: %[[I_INC]] = add i32 %[[I]], 1
+    // LLVM: br label %[[LOOP_HEADER:.*]]
+
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      %2 = cir.const #cir.int<100> : !s32i
+      cir.for : cond {
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %4 = cir.cmp(lt, %3, %2) : !s32i, !s32i
+        %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
+        cir.condition(%5)
+      } body {
+        %3 = cir.const #cir.int<3> : !s32i
+        %4 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cast(array_to_ptrdecay, %4 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %7 = cir.ptr_stride(%6 : !cir.ptr<!s32i>, %5 : !s32i), !cir.ptr<!s32i>
+        cir.store %3, %7 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %4 = cir.unary(inc, %3) : !s32i, !s32i
+        cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // MLIR-LABEL: func.func @constantLoopBound_LE()
+  // LLVM-LABEL: define void @constantLoopBound_LE()
+  cir.func @constantLoopBound_LE() {
+    // MLIR: %[[C3:.*]] = arith.constant 3 : i32
+    // MLIR: %[[C1:.*]] = arith.constant 1 : i32
+    // MLIR: %[[C0:.*]] = arith.constant 0 : i32
+    // MLIR: %[[C101:.*]] = arith.constant 101 : i32
+    // MLIR: scf.for %[[I:.*]] = %[[C0]] to %[[C101]] step %[[C1]] : i32 {
+    // MLIR:   %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR:   %[[INDEX:.*]] = arith.index_cast %[[I]] : i32 to index
+    // MLIR:   memref.store %[[C3]], %[[BASE]][%[[INDEX]]] : memref<100xi32>
+    // MLIR: }
+
+    // LLVM: %[[I:.*]] = phi i32 [ %[[I_INC:.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[PREHEADER:.*]] ]
+    // LLVM: %[[COND:.*]] = icmp slt i32 %[[I]], 101
+    // LLVM: br i1 %[[COND]], label %[[LOOP_LATCH]], label %[[LOOP_EXIT:.*]]
+    // LLVM: %[[I64:.*]] = sext i32 %[[I]] to i64
+    // LLVM: %[[ADDR:.*]] = getelementptr i32, ptr @a, i64 %[[I64]]
+    // LLVM: store i32 3, ptr %[[ADDR]], align 4
+    // LLVM: %[[I_INC]] = add i32 %[[I]], 1
+    // LLVM: br label %[[LOOP_HEADER:.*]]
+
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      %2 = cir.const #cir.int<100> : !s32i
+      cir.for : cond {
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %4 = cir.cmp(le, %3, %2) : !s32i, !s32i
+        %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
+        cir.condition(%5)
+      } body {
+        %3 = cir.const #cir.int<3> : !s32i
+        %4 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cast(array_to_ptrdecay, %4 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %7 = cir.ptr_stride(%6 : !cir.ptr<!s32i>, %5 : !s32i), !cir.ptr<!s32i>
+        cir.store %3, %7 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %4 = cir.unary(inc, %3) : !s32i, !s32i
+        cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // MLIR-LABEL: func.func @variableLoopBound(%arg0: i32, %arg1: i32)
+  // LLVM-LABEL: define void @variableLoopBound(i32 %0, i32 %1)
+  cir.func @variableLoopBound(%arg0: !s32i, %arg1: !s32i) {
+    // MLIR: %[[C3:.*]] = arith.constant 3 : i32
+    // MLIR: %[[C1:.*]] = arith.constant 1 : i32
+    // MLIR: memref.store %arg0, %alloca[] : memref<i32>
+    // MLIR: memref.store %arg1, %alloca_0[] : memref<i32>
+    // MLIR: %[[LOWER:.*]] = memref.load %alloca[] : memref<i32>
+    // MLIR: %[[UPPER:.*]] = memref.load %alloca_0[] : memref<i32>
+    // MLIR: scf.for %[[I:.*]] = %[[LOWER]] to %[[UPPER]] step %[[C1]] : i32 {
+    // MLIR:   %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR:   %[[INDEX:.*]] = arith.index_cast %[[I]] : i32 to index
+    // MLIR:   memref.store %[[C3]], %[[BASE]][%[[INDEX]]] : memref<100xi32>
+    // MLIR: }
+
+    // LLVM: %[[I:.*]] = phi i32 [ %[[I_INC:.*]], %[[LOOP_LATCH:.*]] ], [ %[[LOWER:.*]], %[[PREHEADER:.*]] ]
+    // LLVM: %[[COND:.*]] = icmp slt i32 %[[I]], %[[UPPER:.*]]
+    // LLVM: br i1 %[[COND]], label %[[LOOP_LATCH]], label %[[LOOP_EXIT:.*]]
+    // LLVM: %[[I64:.*]] = sext i32 %[[I]] to i64
+    // LLVM: %[[ADDR:.*]] = getelementptr i32, ptr @a, i64 %[[I64]]
+    // LLVM: store i32 3, ptr %[[ADDR]], align 4
+    // LLVM: %[[I_INC]] = add i32 %[[I]], 1
+    // LLVM: br label %[[LOOP_HEADER:.*]]
+
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+      %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+      cir.for : cond {
+        %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cmp(lt, %5, %4) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        %5 = cir.const #cir.int<3> : !s32i
+        %6 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %7 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %8 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %9 = cir.ptr_stride(%8 : !cir.ptr<!s32i>, %7 : !s32i), !cir.ptr<!s32i>
+        cir.store %5, %9 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.unary(inc, %5) : !s32i, !s32i
+        cir.store %6, %2 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // MLIR-LABEL: func.func @variableLoopBound_LE(%arg0: i32, %arg1: i32)
+  // LLVM-LABEL: define void @variableLoopBound_LE(i32 %0, i32 %1)
+  cir.func @variableLoopBound_LE(%arg0: !s32i, %arg1: !s32i) {
+    // MLIR: %[[C3:.*]] = arith.constant 3 : i32
+    // MLIR: %[[C4:.*]] = arith.constant 4 : i32
+    // MLIR: %[[C1:.*]] = arith.constant 1 : i32
+    // MLIR: memref.store %arg0, %alloca[] : memref<i32>
+    // MLIR: memref.store %arg1, %alloca_0[] : memref<i32>
+    // MLIR: %[[LOWER:.*]] = memref.load %alloca[] : memref<i32>
+    // MLIR: %[[UPPER_DEC_1:.*]] = memref.load %alloca_0[] : memref<i32>
+    // MLIR: %[[UPPER:.*]] = arith.addi %[[UPPER_DEC_1]], %[[C1]] : i32
+    // MLIR: scf.for %[[I:.*]] = %[[LOWER]] to %[[UPPER]] step %[[C4]] : i32 {
+    // MLIR:   %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR:   %[[INDEX:.*]] = arith.index_cast %[[I]] : i32 to index
+    // MLIR:   memref.store %[[C3]], %[[BASE]][%[[INDEX]]] : memref<100xi32>
+    // MLIR: }
+
+    // LLVM: %[[I:.*]] = phi i32 [ %[[I_INC:.*]], %[[LOOP_LATCH:.*]] ], [ %[[LOWER:.*]], %[[PREHEADER:.*]] ]
+    // LLVM: %[[COND:.*]] = icmp slt i32 %[[I]], %[[UPPER:.*]]
+    // LLVM: br i1 %[[COND]], label %[[LOOP_LATCH]], label %[[LOOP_EXIT:.*]]
+    // LLVM: %[[I64:.*]] = sext i32 %[[I]] to i64
+    // LLVM: %[[ADDR:.*]] = getelementptr i32, ptr @a, i64 %[[I64]]
+    // LLVM: store i32 3, ptr %[[ADDR]], align 4
+    // LLVM: %[[I_INC]] = add i32 %[[I]], 4
+    // LLVM: br label %[[LOOP_HEADER:.*]]
+
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+      %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+      cir.for : cond {
+        %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.cmp(le, %5, %4) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        %5 = cir.const #cir.int<3> : !s32i
+        %6 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+        %7 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %8 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+        %9 = cir.ptr_stride(%8 : !cir.ptr<!s32i>, %7 : !s32i), !cir.ptr<!s32i>
+        cir.store %5, %9 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      } step {
+        %5 = cir.const #cir.int<4> : !s32i
+        %6 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %7 = cir.binop(add, %6, %5) : !s32i
+        cir.store %7, %2 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+}

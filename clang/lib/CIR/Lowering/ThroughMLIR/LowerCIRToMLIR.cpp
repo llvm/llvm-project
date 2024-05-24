@@ -40,6 +40,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/LowerToMLIR.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -802,7 +803,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto *parentOp = op->getParentOp();
     return llvm::TypeSwitch<mlir::Operation *, mlir::LogicalResult>(parentOp)
-        .Case<mlir::scf::IfOp>([&](auto) {
+        .Case<mlir::scf::IfOp, mlir::scf::ForOp>([&](auto) {
           rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(
               op, adaptor.getOperands());
           return mlir::success();
@@ -1199,6 +1200,7 @@ void ConvertCIRToMLIRPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
+  populateCIRLoopToSCFConversionPatterns(patterns, converter);
   populateCIRToMLIRConversionPatterns(patterns, converter);
 
   mlir::ConversionTarget target(getContext());
