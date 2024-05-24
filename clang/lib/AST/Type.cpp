@@ -5188,7 +5188,9 @@ bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
   unsigned Idx = 0;
   for (const FunctionEffectWithCondition &EC : *this) {
     if (EC.Effect.kind() == NewEC.Effect.kind()) {
-      if (Conditions[Idx].getCondition() != NewEC.Cond.getCondition())
+      const Expr *PrevCond =
+          Conditions.empty() ? nullptr : Conditions[Idx].getCondition();
+      if (PrevCond != NewEC.Cond.getCondition())
         Errs.push_back({EC, NewEC});
       return false;
     }
