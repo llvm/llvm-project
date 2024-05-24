@@ -15998,7 +15998,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   // Allow some_promise_type::get_return_object().
   if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
-  if (!FD->hasAttr<CoroWrapperAttr>())
+  if (!FD->hasAttr<CoroWrapperAttr>() &&
+      !RD->getUnderlyingDecl()->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
