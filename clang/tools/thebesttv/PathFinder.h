@@ -383,7 +383,7 @@ struct DfsPathFinder : public ICFGPathFinder {
             if (bfs.reachable(target)) {
                 dfs(target, callDepth);
             }
-        } else {
+        } else if (callDepth < maxCallDepth) {
             /**
              * 过程间
              * 做两遍最短路（可达性 + 反图最短路）
@@ -449,18 +449,16 @@ struct DfsPathFinder : public ICFGPathFinder {
                     }
                 }
 
-                if (callDepth < maxCallDepth) {
-                    if (node.v == u) {
-                        // node.v 和 u 相同时，意味着可以直接从 u 出发，
-                        // 走一步 node.e 到达新的函数
-                        dfs(node.edge.target, callDepth + 1);
-                    } else {
-                        // 需要先过程内从 u 走到 node.v
-                        // 然后再走一步 node.e 到达新的函数
-                        path.push_back(node.v);
-                        dfs(node.edge.target, callDepth + 1);
-                        path.pop_back();
-                    }
+                if (node.v == u) {
+                    // node.v 和 u 相同时，意味着可以直接从 u 出发，
+                    // 走一步 node.e 到达新的函数
+                    dfs(node.edge.target, callDepth + 1);
+                } else {
+                    // 需要先过程内从 u 走到 node.v
+                    // 然后再走一步 node.e 到达新的函数
+                    path.push_back(node.v);
+                    dfs(node.edge.target, callDepth + 1);
+                    path.pop_back();
                 }
 
                 callStack = oldCallStack;
