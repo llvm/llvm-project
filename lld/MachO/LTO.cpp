@@ -48,6 +48,9 @@ static lto::Config createConfig() {
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.DiagHandler = diagnosticHandler;
+  c.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
+    pm.add(createObjCARCContractPass());
+  };
 
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
