@@ -106,7 +106,8 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
 
     vtableElemTy = mlir::cir::IntType::get(builder.getContext(), ptrdiffTyWidth,
                                            ptrdiffTyIsSigned);
-    vtableElemAlign = targetInfo.getPointerAlign(clang::LangAS::Default);
+    vtableElemAlign =
+        llvm::divideCeil(targetInfo.getPointerAlign(clang::LangAS::Default), 8);
   }
 
   // Access vtable to get the offset from the given object to its containing
