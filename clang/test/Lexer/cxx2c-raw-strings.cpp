@@ -3,10 +3,10 @@
 
 int main() {
   (void) R"abc`@$(foobar)abc`@$";
-  //expected-warning@-1 {{'`'in a raw string literal delimiter is a C++2c extension}}
-  //expected-warning@-2 {{'@'in a raw string literal delimiter is a C++2c extension}}
-  //expected-warning@-3 {{'$'in a raw string literal delimiter is a C++2c extension}}
-  //cxx26-warning@-4 {{'`'in a raw string literal delimiter is incompatible with standards before C++2c}}
-  //cxx26-warning@-5 {{'@'in a raw string literal delimiter is incompatible with standards before C++2c}}
-  //cxx26-warning@-6 {{'$'in a raw string literal delimiter is incompatible with standards before C++2c}}
+  //expected-warning@-1 {{'`' in a raw string literal delimiter is a C++2c extension}}
+  //expected-warning@-2 {{'@' in a raw string literal delimiter is a C++2c extension}}
+  //expected-warning@-3 {{'$' in a raw string literal delimiter is a C++2c extension}}
+  //cxx26-warning@-4 {{'`' in a raw string literal delimiter is incompatible with standards before C++2c}}
+  //cxx26-warning@-5 {{'@' in a raw string literal delimiter is incompatible with standards before C++2c}}
+  //cxx26-warning@-6 {{'$' in a raw string literal delimiter is incompatible with standards before C++2c}}
 }

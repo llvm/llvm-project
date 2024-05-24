@@ -112,11 +112,11 @@ def warn_cxx98_compat_raw_string_literal : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 
 def warn_cxx26_compat_raw_string_literal_character_set : Warning<
-  "'%0'in a raw string literal delimiter is incompatible "
+  " '%0' in a raw string literal delimiter is incompatible "
   "with standards before C++2c">,
   InGroup<CXXPre26Compat>, DefaultIgnore;
 def ext_cxx26_raw_string_literal_character_set : Extension<
-  "'%0'in a raw string literal delimiter is a C++2c extension">,
+  " '%0' in a raw string literal delimiter is a C++2c extension">,
   InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
