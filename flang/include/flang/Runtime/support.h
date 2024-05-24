@@ -23,7 +23,11 @@ namespace typeInfo {
 class DerivedType;
 }
 
-enum LowerBoundModifier : int { Preserve = 0, SetToOnes = 1, SetToZeroes = 2 };
+enum class LowerBoundModifier : int {
+  Preserve = 0,
+  SetToOnes = 1,
+  SetToZeroes = 2
+};
 
 extern "C" {
 
