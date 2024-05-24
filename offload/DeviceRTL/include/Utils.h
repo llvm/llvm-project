@@ -25,6 +25,8 @@ int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
 
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width);
 
+uint64_t ballotSync(uint64_t Mask, int32_t Pred);
+
 /// Return \p LowBits and \p HighBits packed into a single 64 bit value.
 uint64_t pack(uint32_t LowBits, uint32_t HighBits);
 
