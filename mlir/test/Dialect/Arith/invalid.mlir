@@ -1,9 +1,17 @@
 // RUN: mlir-opt -split-input-file %s -verify-diagnostics
 
 func.func @test_index_cast_shape_error(%arg0 : tensor<index>) -> tensor<2xi64> {
-  // expected-error @+1 {{'arith.index_cast' op requires the same shape for all operands and results}}
+  // expected-error @+1 {{'arith.index_cast' op failed to verify that input and output have the same tensor dimensions}}
   %0 = arith.index_cast %arg0 : tensor<index> to tensor<2xi64>
   return %0 : tensor<2xi64>
+}
+
+// -----
+
+func.func @test_index_cast_shape_dim_error(%arg0 : tensor<2xindex>) -> tensor<?xi64> {
+  // expected-error @+1 {{'arith.index_cast' op failed to verify that input and output have the same tensor dimensions}}
+  %0 = arith.index_cast %arg0 : tensor<2xindex> to tensor<?xi64>
+  return %0 : tensor<?xi64>
 }
 
 // -----
@@ -655,6 +663,14 @@ func.func @extsi_scalable_to_fl(%arg0 : vector<[4]xi32>) {
 
 // -----
 
+func.func @extsi_tesor_dim(%arg0 : tensor<4xi32>) {
+  // expected-error@+1 {{'arith.extsi' op failed to verify that input and output have the same tensor dimensions}}
+  %0 = arith.extsi %arg0 : tensor<4xi32> to tensor<?xi64>
+  return
+}
+
+// -----
+
 func.func @extf_scalable_to_fl(%arg0 : vector<[4]xf32>) {
   // expected-error@+1 {{'arith.extf' op requires the same shape for all operands and results}}
   %0 = arith.extf %arg0 : vector<[4]xf32> to vector<4xf64>
@@ -698,6 +714,14 @@ func.func @sitofp_scalable_to_fl(%arg0 : vector<[4]xi32>) {
 func.func @bitcast_scalable_to_fl(%arg0 : vector<[4]xf32>) {
   // expected-error@+1 {{'arith.bitcast' op requires the same shape for all operands and results}}
   %0 = arith.bitcast %arg0 : vector<[4]xf32> to vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @bitcast_tensor_dim(%arg0 : tensor<4xf32>) {
+  // expected-error@+1 {{'arith.bitcast' op failed to verify that input and output have the same tensor dimensions}}
+  %0 = arith.bitcast %arg0 : tensor<4xf32> to tensor<?xi32>
   return
 }
 
