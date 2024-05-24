@@ -1000,15 +1000,16 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   const size_t elf_header_size = addr_size == 4 ? sizeof(llvm::ELF::Elf32_Ehdr)
                                                 : sizeof(llvm::ELF::Elf64_Ehdr);
 
-  // 80 bytes buffer is larger enough for the ELF header or program headers
-  unsigned char buf[80];
+  std::vector<uint8_t> elf_header_bytes;
+  elf_header_bytes.resize(elf_header_size);
   Status error;
-  size_t byte_read = ReadMemory(address, buf, elf_header_size, error);
-  if (byte_read != elf_header_size || !elf::ELFHeader::MagicBytesMatch(buf))
+  size_t byte_read =
+      ReadMemory(address, elf_header_bytes.data(), elf_header_size, error);
+  if (byte_read != elf_header_size ||
+      !elf::ELFHeader::MagicBytesMatch(elf_header_bytes.data()))
     return invalid_uuid;
-  assert(sizeof(buf) >= elf_header_size);
-  DataExtractor elf_header_data(buf, elf_header_size, GetByteOrder(),
-                                addr_size);
+  DataExtractor elf_header_data(elf_header_bytes.data(), elf_header_size,
+                                GetByteOrder(), addr_size);
   lldb::offset_t offset = 0;
 
   elf::ELFHeader elf_header;
@@ -1016,13 +1017,14 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
 
   const lldb::addr_t ph_addr = address + elf_header.e_phoff;
 
+  std::vector<uint8_t> ph_bytes;
+  ph_bytes.resize(elf_header.e_phentsize);
   for (unsigned int i = 0; i < elf_header.e_phnum; ++i) {
-    byte_read = ReadMemory(ph_addr + i * elf_header.e_phentsize, buf,
-                           elf_header.e_phentsize, error);
+    byte_read = ReadMemory(ph_addr + i * elf_header.e_phentsize,
+                           ph_bytes.data(), elf_header.e_phentsize, error);
     if (byte_read != elf_header.e_phentsize)
       break;
-    assert(sizeof(buf) >= elf_header.e_phentsize);
-    DataExtractor program_header_data(buf, elf_header.e_phentsize,
+    DataExtractor program_header_data(ph_bytes.data(), elf_header.e_phentsize,
                                       GetByteOrder(), addr_size);
     offset = 0;
     elf::ELFProgramHeader program_header;
@@ -1037,7 +1039,6 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
                            program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)
       continue;
-    assert(sizeof(buf) >= program_header.p_memsz);
     DataExtractor segment_data(note_bytes.data(), note_bytes.size(),
                                GetByteOrder(), addr_size);
     auto notes_or_error = parseSegment(segment_data);
@@ -1045,11 +1046,10 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
       return invalid_uuid;
     for (const CoreNote &note : *notes_or_error) {
       if (note.info.n_namesz == 4 &&
-          note.info.n_type == llvm::ELF::NT_GNU_BUILD_ID) {
-        if ("GNU" == note.info.n_name)
-          return UUID(llvm::ArrayRef<uint8_t>(
-              note.data.GetDataStart(), note.info.n_descsz /*byte size*/));
-      }
+          note.info.n_type == llvm::ELF::NT_GNU_BUILD_ID &&
+          "GNU" == note.info.n_name &&
+          note.data.ValidOffsetForDataOfSize(0, note.info.n_descsz))
+        return UUID(note.data.GetData().take_front(note.info.n_descsz));
     }
   }
   return invalid_uuid;
