@@ -89,7 +89,6 @@ function compute-projects-to-test() {
 function compute-runtimes-to-test() {
   projects=${@}
   for project in ${projects}; do
-    echo "${project}"
     case ${project} in
     clang)
       for p in libcxx libcxxabi libunwind; do
