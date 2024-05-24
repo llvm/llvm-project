@@ -2588,6 +2588,12 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   // the same addr space. Note that this might not be LLVM address space 0.
   VTableField = VTableField.withElementType(PtrTy);
 
+  if (auto authenticationInfo = CGM.getVTablePointerAuthInfo(
+          this, Vptr.Base.getBase(), VTableField.emitRawPointer(*this))) {
+    VTableAddressPoint =
+        EmitPointerAuthSign(*authenticationInfo, VTableAddressPoint);
+  }
+
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(PtrTy);
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
@@ -2681,11 +2687,34 @@ void CodeGenFunction::InitializeVTablePointers(const CXXRecordDecl *RD) {
 
 llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
                                            llvm::Type *VTableTy,
-                                           const CXXRecordDecl *RD) {
+                                           const CXXRecordDecl *RD,
+                                           VTableAuthMode authMode) {
   Address VTablePtrSrc = This.withElementType(VTableTy);
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
+
+  if (auto authenticationInfo =
+            CGM.getVTablePointerAuthInfo(this, RD, This.emitRawPointer(*this))) {
+    if (authMode != VTableAuthMode::UnsafeUbsanStrip) {
+      VTable = cast<llvm::Instruction>(
+          EmitPointerAuthAuth(*authenticationInfo, VTable));
+      if (authMode == VTableAuthMode::MustTrap) {
+        // This is clearly suboptimal but until we have an ability
+        // to rely on the authentication intrinsic trapping and force
+        // an authentication to occur we don't really have a choice.
+        VTable =
+            cast<llvm::Instruction>(Builder.CreateBitCast(VTable, Int8PtrTy));
+        Builder.CreateLoad(RawAddress(VTable, Int8Ty, CGM.getPointerAlign()),
+                           /* IsVolatile */ true);
+      }
+    } else {
+      VTable = cast<llvm::Instruction>(EmitPointerAuthAuth(
+          CGPointerAuthInfo(0, PointerAuthenticationMode::Strip, false, false,
+                            nullptr),
+          VTable));
+    }
+  }
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers)

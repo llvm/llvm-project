@@ -2453,10 +2453,20 @@ public:
 
   void InitializeVTablePointers(const CXXRecordDecl *ClassDecl);
 
+  // VTableTrapMode - whether we guarantee that loading the
+  // vtable is guaranteed to trap on authentication failure,
+  // even if the resulting vtable pointer is unused.
+  enum class VTableAuthMode {
+    Authenticate,
+    MustTrap,
+    UnsafeUbsanStrip // Should only be used for Vptr UBSan check
+  };
   /// GetVTablePtr - Return the Value of the vtable pointer member pointed
   /// to by This.
-  llvm::Value *GetVTablePtr(Address This, llvm::Type *VTableTy,
-                            const CXXRecordDecl *VTableClass);
+  llvm::Value *
+  GetVTablePtr(Address This, llvm::Type *VTableTy,
+               const CXXRecordDecl *VTableClass,
+               VTableAuthMode authMode = VTableAuthMode::Authenticate);
 
   enum CFITypeCheckKind {
     CFITCK_VCall,
@@ -4416,6 +4426,19 @@ public:
   }
 
   bool isPointerKnownNonNull(const Expr *E);
+
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *storageAddress,
+                                                 llvm::Value *discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
+                                        llvm::Value *storageAddress,
+                                        GlobalDecl calleeDecl,
+                                        QualType calleeType);
+  llvm::Value *EmitPointerAuthSign(QualType pointeeType, llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
 
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,

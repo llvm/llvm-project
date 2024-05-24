@@ -609,6 +609,13 @@ private:
   std::pair<std::unique_ptr<CodeGenFunction>, const TopLevelStmtDecl *>
       GlobalTopLevelStmtBlockInFlight;
 
+  llvm::DenseMap<GlobalDecl, uint16_t> PtrAuthDiscriminatorHashes;
+
+  llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
+      VTablePtrAuthInfos;
+  std::optional<PointerAuthQualifier>
+  computeVTPointerAuthentication(const CXXRecordDecl *thisClass);
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -961,6 +968,21 @@ public:
   getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                            llvm::Constant *StorageAddress,
                            llvm::ConstantInt *OtherDiscriminator);
+
+  llvm::ConstantInt *
+  getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
+                                   GlobalDecl schemaDecl, QualType schemaType);
+
+  uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
+  std::optional<CGPointerAuthInfo>
+  getVTablePointerAuthInfo(CodeGenFunction *context,
+                           const CXXRecordDecl *record,
+                           llvm::Value *storageAddress);
+
+  std::optional<PointerAuthQualifier>
+  getVTablePointerAuthentication(const CXXRecordDecl *thisClass);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
