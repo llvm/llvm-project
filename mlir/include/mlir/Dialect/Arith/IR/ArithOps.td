@@ -1540,6 +1540,18 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+class AnyBooleanTypeMatch<list<string> names> :
+    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
+                          "scalar type">;
+
+class ScalarConditionOrMatchingShape<list<string> names> :
+    PredOpTrait<
+        !head(names) # " is scalar or has matching shape",
+        Or<[AnyBooleanTypeMatch<[!head(names)]>.predicate,
+            AllShapesMatch<names>.predicate]>> {
+  list<string> values = names;
+}
+
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     ScalarConditionOrMatchingShape<["condition", "result"]>,
@@ -1548,16 +1560,16 @@ def SelectOp : Arith_Op<"select", [Pure,
   let summary = "select operation";
   let description = [{
     The `arith.select` operation chooses one value based on a binary condition
-    supplied as its first operand. 
-    
-    If the value of the first operand (the condition) is `1`, then the second 
-    operand is returned, and the third operand is ignored, even if it was poison. 
-    
-    If the value of the first operand (the condition) is `0`, then the third 
-    operand is returned, and the second operand is ignored, even if it was poison. 
-    
-    If the value of the first operand (the condition) is poison, then the 
-    operation returns poison. 
+    supplied as its first operand.
+
+    If the value of the first operand (the condition) is `1`, then the second
+    operand is returned, and the third operand is ignored, even if it was poison.
+
+    If the value of the first operand (the condition) is `0`, then the third
+    operand is returned, and the second operand is ignored, even if it was poison.
+
+    If the value of the first operand (the condition) is poison, then the
+    operation returns poison.
 
     The operation applies to vectors and tensors elementwise given the _shape_
     of all operands is identical. The choice is made for each element
