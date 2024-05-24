@@ -310,15 +310,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VNNI = true;
     } else if (Feature == "+avx512bf16") {
       HasAVX512BF16 = true;
-    } else if (Feature == "+avx512er") {
-      HasAVX512ER = true;
-      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
       HasLegalHalfType = true;
-    } else if (Feature == "+avx512pf") {
-      HasAVX512PF = true;
-      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -375,9 +369,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasWBNOINVD = true;
     } else if (Feature == "+prefetchi") {
       HasPREFETCHI = true;
-    } else if (Feature == "+prefetchwt1") {
-      HasPREFETCHWT1 = true;
-      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {
@@ -840,12 +831,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VNNI__");
   if (HasAVX512BF16)
     Builder.defineMacro("__AVX512BF16__");
-  if (HasAVX512ER)
-    Builder.defineMacro("__AVX512ER__");
   if (HasAVX512FP16)
     Builder.defineMacro("__AVX512FP16__");
-  if (HasAVX512PF)
-    Builder.defineMacro("__AVX512PF__");
   if (HasAVX512DQ)
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
@@ -897,8 +884,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SM4__");
   if (HasPREFETCHI)
     Builder.defineMacro("__PREFETCHI__");
-  if (HasPREFETCHWT1)
-    Builder.defineMacro("__PREFETCHWT1__");
   if (HasCLZERO)
     Builder.defineMacro("__CLZERO__");
   if (HasKL)
@@ -1084,9 +1069,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vpopcntdq", true)
       .Case("avx512vnni", true)
       .Case("avx512bf16", true)
-      .Case("avx512er", true)
       .Case("avx512fp16", true)
-      .Case("avx512pf", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
       .Case("avx512bw", true)
@@ -1134,7 +1117,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pku", true)
       .Case("popcnt", true)
       .Case("prefetchi", true)
-      .Case("prefetchwt1", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
       .Case("raoint", true)
@@ -1201,9 +1183,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512vpopcntdq", HasAVX512VPOPCNTDQ)
       .Case("avx512vnni", HasAVX512VNNI)
       .Case("avx512bf16", HasAVX512BF16)
-      .Case("avx512er", HasAVX512ER)
       .Case("avx512fp16", HasAVX512FP16)
-      .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
       .Case("avx512bw", HasAVX512BW)
@@ -1253,7 +1233,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
       .Case("prefetchi", HasPREFETCHI)
-      .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
       .Case("ptwrite", HasPTWRITE)
       .Case("raoint", HasRAOINT)
