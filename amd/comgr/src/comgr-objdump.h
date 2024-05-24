@@ -48,51 +48,50 @@
 
 namespace llvm {
 class StringRef;
+}
 
-namespace object {
+namespace llvm::object {
 class COFFObjectFile;
 class COFFImportFile;
 class MachOObjectFile;
 class ObjectFile;
 class Archive;
 class RelocationRef;
-} // namespace object
+} // end namespace object
 
+namespace COMGR {
 class DisassemHelper {
 private:
-  raw_ostream &OutS;
-  raw_ostream &ErrS;
+  llvm::raw_ostream &OutS;
+  llvm::raw_ostream &ErrS;
 
-  void DisassembleObject(const object::ObjectFile *Obj, bool InlineRelocs);
-  void PrintUnwindInfo(const object::ObjectFile *o);
-  void printExportsTrie(const object::ObjectFile *o);
-  void printRebaseTable(object::ObjectFile *o);
-  void printBindTable(object::ObjectFile *o);
-  void printLazyBindTable(object::ObjectFile *o);
-  void printWeakBindTable(object::ObjectFile *o);
-  void printRawClangAST(const object::ObjectFile *o);
-  void PrintRelocations(const object::ObjectFile *o);
-  void PrintSectionHeaders(const object::ObjectFile *o);
-  void PrintSectionContents(const object::ObjectFile *o);
-  void PrintSymbolTable(const object::ObjectFile *o, StringRef ArchiveName,
-                        StringRef ArchitectureName = StringRef());
-  void printFaultMaps(const object::ObjectFile *Obj);
-  void printPrivateFileHeaders(const object::ObjectFile *o, bool onlyFirst);
+  void DisassembleObject(const llvm::object::ObjectFile *Obj,
+                         bool InlineRelocs);
+  void printRawClangAST(const llvm::object::ObjectFile *o);
+  void PrintRelocations(const llvm::object::ObjectFile *o);
+  void PrintSectionHeaders(const llvm::object::ObjectFile *o);
+  void PrintSectionContents(const llvm::object::ObjectFile *o);
+  void PrintSymbolTable(const llvm::object::ObjectFile *o,
+                        llvm::StringRef ArchiveName,
+                        llvm::StringRef ArchitectureName = llvm::StringRef());
+  void printFaultMaps(const llvm::object::ObjectFile *Obj);
+  void printPrivateFileHeaders(const llvm::object::ObjectFile *o,
+                               bool onlyFirst);
 
-  void DumpObject(object::ObjectFile *o, const object::Archive *a);
-  void DumpArchive(const object::Archive *a);
-  void DumpInput(StringRef file);
+  void DumpObject(llvm::object::ObjectFile *o, const llvm::object::Archive *a);
+  void DumpArchive(const llvm::object::Archive *a);
+  void DumpInput(llvm::StringRef file);
 
-  void printELFFileHeader(const object::ObjectFile *Obj);
+  void printELFFileHeader(const llvm::object::ObjectFile *Obj);
 
 public:
-  DisassemHelper(raw_ostream &OutS, raw_ostream &ErrS)
+  DisassemHelper(llvm::raw_ostream &OutS, llvm::raw_ostream &ErrS)
       : OutS(OutS), ErrS(ErrS) {}
 
-  amd_comgr_status_t disassembleAction(StringRef Input,
-                                       ArrayRef<std::string> Options);
+  amd_comgr_status_t disassembleAction(llvm::StringRef Input,
+                                       llvm::ArrayRef<std::string> Options);
 }; // DisassemHelper
 
-} // end namespace llvm
+} // end namespace COMGR
 
 #endif

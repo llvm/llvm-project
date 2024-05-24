@@ -44,7 +44,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using llvm::DisassemHelper;
+using COMGR::DisassemHelper;
 
 template <class ELFT>
 void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
@@ -112,7 +112,7 @@ void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
   OS << "\n";
 }
 
-void llvm::DisassemHelper::printELFFileHeader(const object::ObjectFile *Obj) {
+void COMGR::DisassemHelper::printELFFileHeader(const object::ObjectFile *Obj) {
   // Little-endian 32-bit
   if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj)) {
     printProgramHeaders(ELFObj->getELFFile(), OutS);

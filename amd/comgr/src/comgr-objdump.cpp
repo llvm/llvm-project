@@ -92,6 +92,7 @@
 using namespace llvm;
 using namespace object;
 
+namespace {
 cl::opt<bool> Disassemble(
     "disassemble",
     cl::desc("Display assembler mnemonics for the machine instructions"));
@@ -136,19 +137,6 @@ cl::opt<bool> SymbolTable("syms", cl::desc("Display the symbol table"));
 static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
                                   cl::NotHidden, cl::aliasopt(SymbolTable));
 
-cl::opt<bool> ExportsTrie("exports-trie",
-                          cl::desc("Display mach-o exported symbols"));
-
-cl::opt<bool> Rebase("rebase", cl::desc("Display mach-o rebasing info"));
-
-cl::opt<bool> Bind("bind", cl::desc("Display mach-o binding info"));
-
-cl::opt<bool> LazyBind("lazy-bind",
-                       cl::desc("Display mach-o lazy binding info"));
-
-cl::opt<bool> WeakBind("weak-bind",
-                       cl::desc("Display mach-o weak binding info"));
-
 cl::opt<bool> RawClangAST(
     "raw-clang-ast",
     cl::desc("Dump the raw binary contents of the clang AST section"));
@@ -191,11 +179,6 @@ cl::opt<bool> NoShowRawInsn("no-show-raw-insn",
                                      "the instruction bytes."));
 cl::opt<bool> NoLeadingAddr("no-leading-addr",
                             cl::desc("Print no leading address"));
-
-cl::opt<bool> UnwindInfo("unwind-info", cl::desc("Display unwind information"));
-
-static cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
-                                 cl::aliasopt(UnwindInfo));
 
 cl::opt<bool> PrivateHeaders("private-headers",
                              cl::desc("Display format specific file headers"));
@@ -256,7 +239,6 @@ cl::opt<unsigned long long> StopAddress("stop-address",
                                         cl::init(UINT64_MAX));
 static StringRef ToolName = "DisassemblerAction";
 
-namespace {
 typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
 
 class SectionFilterIterator {
@@ -322,7 +304,6 @@ SectionFilter toolSectionFilter(llvm::object::ObjectFile const &O) {
       },
       O);
 }
-} // namespace
 
 static void error(std::error_code EC) {
   if (!EC) {
@@ -449,7 +430,6 @@ static bool relocAddressLess(RelocationRef A, RelocationRef B) {
   return A.getOffset() < B.getOffset();
 }
 
-namespace {
 class SourcePrinter {
 protected:
   DILineInfo OldLineInfo;
@@ -722,7 +702,6 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return BPFPrettyPrinterInst;
   }
 }
-} // namespace
 
 template <class ELFT>
 static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
@@ -1259,8 +1238,9 @@ addDynamicElfSymbols(const ObjectFile *Obj,
     llvm_unreachable("Unsupported binary format");
   }
 }
+} // end anonymous namespace
 
-void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
+void COMGR::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
                                              bool InlineRelocs) {
   if (StartAddress > StopAddress) {
     error("Start address should be less than stop address");
@@ -1812,7 +1792,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
   }
 }
 
-void llvm::DisassemHelper::PrintRelocations(const ObjectFile *Obj) {
+void COMGR::DisassemHelper::PrintRelocations(const ObjectFile *Obj) {
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
   // Regular objdump doesn't print relocations in non-relocatable object
   // files.
@@ -1843,7 +1823,7 @@ void llvm::DisassemHelper::PrintRelocations(const ObjectFile *Obj) {
   }
 }
 
-void llvm::DisassemHelper::PrintSectionHeaders(const ObjectFile *Obj) {
+void COMGR::DisassemHelper::PrintSectionHeaders(const ObjectFile *Obj) {
   OutS << "Sections:\n"
           "Idx Name          Size      Address          Type\n";
   unsigned I = 0;
@@ -1862,7 +1842,7 @@ void llvm::DisassemHelper::PrintSectionHeaders(const ObjectFile *Obj) {
   }
 }
 
-void llvm::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
+void COMGR::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
   std::error_code EC;
   for (const SectionRef &Section : toolSectionFilter(*Obj)) {
     StringRef Contents;
@@ -1918,17 +1898,11 @@ void llvm::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
   }
 }
 
-void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *O,
+void COMGR::DisassemHelper::PrintSymbolTable(const ObjectFile *O,
                                             StringRef ArchiveName,
                                             StringRef ArchitectureName) {
   OutS << "SYMBOL TABLE:\n";
 
-#ifdef NOT_LIBCOMGR
-  if (const COFFObjectFile *coff = dyn_cast<const COFFObjectFile>(o)) {
-    printCOFFSymbolTable(coff);
-    return;
-  }
-#endif
   for (const SymbolRef &Symbol : O->symbols()) {
     Expected<uint64_t> AddressOrError = Symbol.getAddress();
     if (!AddressOrError) {
@@ -2034,103 +2008,9 @@ void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *O,
   }
 }
 
-void llvm::DisassemHelper::PrintUnwindInfo(const ObjectFile *O) {
-  OutS << "Unwind info:\n\n";
-
-#ifdef NOT_LIBCOMGR
-  if (const COFFObjectFile *coff = dyn_cast<COFFObjectFile>(o)) {
-    printCOFFUnwindInfo(coff);
-  } else if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOUnwindInfo(MachO);
-  else {
-#endif
-    // TODO: Extract DWARF dump tool to objdump.
-    ErrS << "This operation is only currently supported "
-            "for COFF and MachO object files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
-void llvm::DisassemHelper::printExportsTrie(const ObjectFile *O) {
-  OutS << "Exports trie:\n";
-#ifdef NOT_LIBCOMGR
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOExportsTrie(MachO);
-  else {
-#endif
-    ErrS << "This operation is only currently supported "
-            "for Mach-O executable files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
-void llvm::DisassemHelper::printRebaseTable(ObjectFile *O) {
-  OutS << "Rebase table:\n";
-#ifdef NOT_LIBCOMGR
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachORebaseTable(MachO);
-  else {
-#endif
-    ErrS << "This operation is only currently supported "
-            "for Mach-O executable files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
-void llvm::DisassemHelper::printBindTable(ObjectFile *O) {
-  OutS << "Bind table:\n";
-#ifdef NOT_LIBCOMGR
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOBindTable(MachO);
-  else {
-#endif
-    ErrS << "This operation is only currently supported "
-            "for Mach-O executable files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
-void llvm::DisassemHelper::printLazyBindTable(ObjectFile *O) {
-  OutS << "Lazy bind table:\n";
-#ifdef NOT_LIBCOMGR
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOLazyBindTable(MachO);
-  else {
-#endif
-    ErrS << "This operation is only currently supported "
-            "for Mach-O executable files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
-void llvm::DisassemHelper::printWeakBindTable(ObjectFile *O) {
-  OutS << "Weak bind table:\n";
-#ifdef NOT_LIBCOMGR
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printMachOWeakBindTable(MachO);
-  else {
-#endif
-    ErrS << "This operation is only currently supported "
-            "for Mach-O executable files.\n";
-    return;
-#ifdef NOT_LIBCOMGR
-  }
-#endif
-}
-
 /// Dump the raw contents of the __clangast section so the output can be piped
 /// into llvm-bcanalyzer.
-void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
+void COMGR::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
   if (OutS.is_displayed()) {
     ErrS << "The -raw-clang-ast option will dump the raw binary contents of "
             "the clang ast section.\n"
@@ -2174,7 +2054,7 @@ void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
   OutS.write(ClangASTContents.data(), ClangASTContents.size());
 }
 
-void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
+void COMGR::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
   const char *FaultMapSectionName = nullptr;
 
   if (isa<ELFObjectFileBase>(Obj)) {
@@ -2225,27 +2105,15 @@ void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
   OutS << FMP;
 }
 
-void llvm::DisassemHelper::printPrivateFileHeaders(const ObjectFile *O,
+void COMGR::DisassemHelper::printPrivateFileHeaders(const ObjectFile *O,
                                                    bool OnlyFirst) {
   if (O->isELF()) {
     return printELFFileHeader(O);
   }
-#ifdef NOT_LIBCOMGR
-  if (o->isCOFF())
-    return printCOFFFileHeader(o);
-  if (o->isWasm())
-    return printWasmFileHeader(o);
-  if (o->isMachO()) {
-    printMachOFileHeader(o);
-    if (!onlyFirst)
-      printMachOLoadCommands(o);
-    return;
-  }
-#endif
   reportError(O->getFileName(), "Invalid/Unsupported object file format");
 }
 
-void llvm::DisassemHelper::DumpObject(ObjectFile *O,
+void COMGR::DisassemHelper::DumpObject(ObjectFile *O,
                                       const Archive *A = nullptr) {
   StringRef ArchiveName = A != nullptr ? A->getFileName() : "";
   // Avoid other output when using a raw option.
@@ -2274,26 +2142,8 @@ void llvm::DisassemHelper::DumpObject(ObjectFile *O,
   if (SymbolTable) {
     PrintSymbolTable(O, ArchiveName);
   }
-  if (UnwindInfo) {
-    PrintUnwindInfo(O);
-  }
   if (PrivateHeaders || FirstPrivateHeader) {
     printPrivateFileHeaders(O, FirstPrivateHeader);
-  }
-  if (ExportsTrie) {
-    printExportsTrie(O);
-  }
-  if (Rebase) {
-    printRebaseTable(O);
-  }
-  if (Bind) {
-    printBindTable(O);
-  }
-  if (LazyBind) {
-    printLazyBindTable(O);
-  }
-  if (WeakBind) {
-    printWeakBindTable(O);
   }
   if (RawClangAST) {
     printRawClangAST(O);
@@ -2310,25 +2160,9 @@ void llvm::DisassemHelper::DumpObject(ObjectFile *O,
   }
 }
 
-#ifdef NOT_LIBCOMGR
-void llvm::DisassemHelper::DumpObject(const COFFImportFile *I,
-                                      const Archive *A) {
-  StringRef ArchiveName = A ? A->getFileName() : "";
-
-  // Avoid other output when using a raw option.
-  if (!RawClangAST)
-    OutS << '\n'
-         << ArchiveName << "(" << I->getFileName() << ")"
-         << ":\tfile format COFF-import-file"
-         << "\n\n";
-
-  if (SymbolTable)
-    printCOFFSymbolTable(I);
-}
-#endif
 
 /// @brief Dump each object file in \a a;
-void llvm::DisassemHelper::DumpArchive(const Archive *A) {
+void COMGR::DisassemHelper::DumpArchive(const Archive *A) {
   Error Err = Error::success();
   for (auto &C : A->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -2340,10 +2174,6 @@ void llvm::DisassemHelper::DumpArchive(const Archive *A) {
     }
     if (ObjectFile *O = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
       DumpObject(O, A);
-#ifdef NOT_LIBCOMGR
-      else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
-          DumpObject(I, a);
-#endif
     } else {
       reportError(A->getFileName(), object_error::invalid_file_type);
     }
@@ -2354,7 +2184,7 @@ void llvm::DisassemHelper::DumpArchive(const Archive *A) {
 }
 
 /// @brief Open file and figure out how to dump it.
-void llvm::DisassemHelper::DumpInput(StringRef File) {
+void COMGR::DisassemHelper::DumpInput(StringRef File) {
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
@@ -2385,7 +2215,7 @@ void llvm::DisassemHelper::DumpInput(StringRef File) {
 // DisassemHelper.
 // ------------------------------------------------------------------------------------
 amd_comgr_status_t
-llvm::DisassemHelper::disassembleAction(StringRef Input,
+COMGR::DisassemHelper::disassembleAction(StringRef Input,
                                         ArrayRef<std::string> Options) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
