@@ -14,7 +14,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
-; IF-EVL-NEXT: Live-in vp<[[BETC:%[0-9]+]]> = backedge-taken count
 ; IF-EVL-NEXT: Live-in ir<%N> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL:      vector.ph:
@@ -23,9 +22,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: <x1> vector loop: {
 ; IF-EVL-NEXT:  vector.body:
 ; IF-EVL-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>
-; IF-EVL-NEXT:    EMIT vp<[[VIV:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[IV]]>
-; IF-EVL-NEXT:    EMIT vp<[[MASK:%[0-9]+]]> = icmp ule vp<[[VIV]]>, vp<[[BETC]]>
+; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
+; IF-EVL-NEXT:    EMIT vp<[[MASK:.*]]> = active lane mask vp<[[ST]]>, ir<%N>
 ; IF-EVL-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>, vp<[[MASK]]>
