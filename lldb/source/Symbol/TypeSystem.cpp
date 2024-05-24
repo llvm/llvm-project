@@ -340,9 +340,9 @@ bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
   if (language == eLanguageTypeUnknown)
     return false;
 
-  LanguageSet plugins =
+  LanguageSet languages =
       PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
-  if (plugins.Empty())
+  if (languages.Empty())
     return false;
   return plugins[language];
 }

@@ -61,31 +61,29 @@ DAP::DAP()
 DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
+  exception_breakpoints = {};
   if (debugger.SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus});
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus});
   }
   if (debugger.SupportsLanguage(lldb::eLanguageTypeObjC)) {
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC});
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC});
   }
   if (debugger.SupportsLanguage(lldb::eLanguageTypeSwift)) {
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift});
-    exception_breakpoints.emplace_back(
+    exception_breakpoints->emplace_back(
         {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift});
   }
-
-  bp_initted = true;
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
-  assert(bp_initted);
-  for (auto &bp : exception_breakpoints) {
+  for (auto &bp : *exception_breakpoints) {
     if (bp.filter == filter)
       return &bp;
   }
@@ -93,8 +91,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  assert(bp_initted);
-  for (auto &bp : exception_breakpoints) {
+  for (auto &bp : *exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
       return &bp;
   }

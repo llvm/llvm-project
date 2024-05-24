@@ -156,7 +156,7 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
-  std::vector<ExceptionBreakpoint> exception_breakpoints;
+  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> post_run_commands;
@@ -333,7 +333,6 @@ private:
   // "Content-Length:" field followed by the length, followed by the raw
   // JSON bytes.
   void SendJSON(const std::string &json_str);
-  bool bp_initted;
 };
 
 extern DAP g_dap;
