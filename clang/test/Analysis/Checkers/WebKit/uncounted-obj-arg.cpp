@@ -237,9 +237,12 @@ public:
   unsigned mutuallyRecursiveFunction2(int n) { return n < 0 ? 1 : (n % 3 ? mutuallyRecursiveFunction2(n - 3) : mutuallyRecursiveFunction1(n - 2)); }
   unsigned mutuallyRecursiveFunction3(int n) { return n < 0 ? 1 : (n % 5 ? mutuallyRecursiveFunction3(n - 5) : mutuallyRecursiveFunction4(n - 3)); }
   unsigned mutuallyRecursiveFunction4(int n) { return n < 0 ? 1 : (n % 7 ? otherFunction() : mutuallyRecursiveFunction3(n - 3)); }
-  unsigned mutuallyRecursiveFunction5(unsigned n) { return n > 100 ? 2 : (n % 2 ? mutuallyRecursiveFunction5(n + 1) : mutuallyRecursiveFunction6(n + 2)); }
-  unsigned mutuallyRecursiveFunction6(unsigned n) { return n > 100 ? 3 : (n % 2 ? mutuallyRecursiveFunction6(n % 7) : mutuallyRecursiveFunction7(n % 5)); }
-  unsigned mutuallyRecursiveFunction7(unsigned n) { return n > 100 ? 5 : mutuallyRecursiveFunction7(n * 5); }
+  unsigned recursiveFunction5(unsigned n) { return n > 100 ? 2 : (n % 2 ? recursiveFunction5(n + 1) : recursiveFunction6(n + 2)); }
+  unsigned recursiveFunction6(unsigned n) { return n > 100 ? 3 : (n % 2 ? recursiveFunction6(n % 7) : recursiveFunction7(n % 5)); }
+  unsigned recursiveFunction7(unsigned n) { return n > 100 ? 5 : recursiveFunction7(n * 5); }
+
+  void mutuallyRecursive8() { mutuallyRecursive9(); someFunction(); }
+  void mutuallyRecursive9() { mutuallyRecursive8(); }
 
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
@@ -516,9 +519,14 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().mutuallyRecursiveFunction4(19);
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
-    getFieldTrivial().mutuallyRecursiveFunction5(23); // no-warning
-    getFieldTrivial().mutuallyRecursiveFunction6(29); // no-warning
-    getFieldTrivial().mutuallyRecursiveFunction7(31); // no-warning
+    getFieldTrivial().recursiveFunction5(23); // no-warning
+    getFieldTrivial().recursiveFunction6(29); // no-warning
+    getFieldTrivial().recursiveFunction7(31); // no-warning
+
+    getFieldTrivial().mutuallyRecursive8();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().mutuallyRecursive9();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
 
     getFieldTrivial().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
