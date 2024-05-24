@@ -133,17 +133,19 @@ class CommandInterpreterAPICase(TestBase):
             self.assertIn("resolvedCommand", command)
             self.assertIn("output", command)
             self.assertIn("error", command)
-            self.assertIn("seconds", command)
+            self.assertIn("durationInSeconds", command)
+            self.assertIn("timestampInEpochSeconds", command)
 
         # The following validates individual commands in the transcript.
         #
         # Notes:
         # 1. Some of the asserts rely on the exact output format of the
         #    commands. Hopefully we are not changing them any time soon.
-        # 2. We are removing the "seconds" field from each command, so that
-        #    some of the validations below can be easier / more readable.
+        # 2. We are removing the time-related fields from each command, so
+        #    that some of the validations below can be easier / more readable.
         for command in transcript:
-            del(command["seconds"])
+            del command["durationInSeconds"]
+            del command["timestampInEpochSeconds"]
 
         # (lldb) version
         self.assertEqual(transcript[0]["command"], "version")
@@ -152,17 +154,22 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(transcript[0]["error"], "")
 
         # (lldb) an-unknown-command
-        self.assertEqual(transcript[1],
+        self.assertEqual(
+            transcript[1],
             {
                 "command": "an-unknown-command",
                 "resolvedCommand": "an-unknown-command",
                 "output": "",
                 "error": "error: 'an-unknown-command' is not a valid command.\n",
-            })
+            },
+        )
 
         # (lldb) br s -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "br s -f main.c -l %d" % self.line)
-        self.assertEqual(transcript[2]["resolvedCommand"], "breakpoint set -f main.c -l %d" % self.line)
+        self.assertEqual(
+            transcript[2]["resolvedCommand"],
+            "breakpoint set -f main.c -l %d" % self.line,
+        )
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
         self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
         self.assertEqual(transcript[2]["error"], "")
@@ -176,13 +183,15 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(transcript[3]["error"], "")
 
         # (lldb) p a
-        self.assertEqual(transcript[4],
+        self.assertEqual(
+            transcript[4],
             {
                 "command": "p a",
                 "resolvedCommand": "dwim-print -- a",
                 "output": "(int) 123\n",
                 "error": "",
-            })
+            },
+        )
 
         # (lldb) statistics dump
         self.assertEqual(transcript[5]["command"], "statistics dump")
@@ -202,7 +211,10 @@ class CommandInterpreterAPICase(TestBase):
         res = lldb.SBCommandReturnObject()
 
         # The setting's default value should be "false"
-        self.runCmd("settings show interpreter.save-transcript", "interpreter.save-transcript (boolean) = false\n")
+        self.runCmd(
+            "settings show interpreter.save-transcript",
+            "interpreter.save-transcript (boolean) = false\n",
+        )
 
     def test_save_transcript_setting_off(self):
         ci = self.buildAndCreateTarget()
@@ -247,17 +259,37 @@ class CommandInterpreterAPICase(TestBase):
         structured_data_1 = ci.GetTranscript()
         self.assertTrue(structured_data_1.IsValid())
         self.assertEqual(structured_data_1.GetSize(), 1)
-        self.assertEqual(structured_data_1.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
+        self.assertEqual(
+            structured_data_1.GetItemAtIndex(0)
+            .GetValueForKey("command")
+            .GetStringValue(100),
+            "version",
+        )
 
         # Run some more commands and get the transcript as structured data again
         self.runCmd("help")
         structured_data_2 = ci.GetTranscript()
         self.assertTrue(structured_data_2.IsValid())
         self.assertEqual(structured_data_2.GetSize(), 2)
-        self.assertEqual(structured_data_2.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
-        self.assertEqual(structured_data_2.GetItemAtIndex(1).GetValueForKey("command").GetStringValue(100), "help")
+        self.assertEqual(
+            structured_data_2.GetItemAtIndex(0)
+            .GetValueForKey("command")
+            .GetStringValue(100),
+            "version",
+        )
+        self.assertEqual(
+            structured_data_2.GetItemAtIndex(1)
+            .GetValueForKey("command")
+            .GetStringValue(100),
+            "help",
+        )
 
         # Now, the first structured data should remain unchanged
         self.assertTrue(structured_data_1.IsValid())
         self.assertEqual(structured_data_1.GetSize(), 1)
-        self.assertEqual(structured_data_1.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
+        self.assertEqual(
+            structured_data_1.GetItemAtIndex(0)
+            .GetValueForKey("command")
+            .GetStringValue(100),
+            "version",
+        )

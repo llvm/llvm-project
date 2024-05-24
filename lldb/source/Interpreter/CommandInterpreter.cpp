@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <memory>
@@ -1909,6 +1910,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item = std::make_shared<StructuredData::Dictionary>();
     transcript_item->AddStringItem("command", command_line);
+    transcript_item->AddIntegerItem(
+        "timestampInEpochSeconds",
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
     m_transcript.AddItem(transcript_item);
   }
 
@@ -2078,7 +2084,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item->AddStringItem("output", result.GetOutputData());
     transcript_item->AddStringItem("error", result.GetErrorData());
-    transcript_item->AddFloatItem("seconds", execute_time.get().count());
+    transcript_item->AddFloatItem("durationInSeconds",
+                                  execute_time.get().count());
   }
 
   return result.Succeeded();
