@@ -25,8 +25,8 @@ using namespace ento;
 
 namespace {
 
-class DerefAnalysisVisitor
-    : public ConstStmtVisitor<DerefAnalysisVisitor, bool> {
+class DerefFuncDeleteExprVisitor
+    : public ConstStmtVisitor<DerefFuncDeleteExprVisitor, bool> {
   // Returns true if any of child statements return true.
   bool VisitChildren(const Stmt *S) {
     for (const Stmt *Child : S->children()) {
@@ -48,11 +48,12 @@ class DerefAnalysisVisitor
   }
 
 public:
-  DerefAnalysisVisitor(const TemplateArgumentList &ArgList,
-                       const CXXRecordDecl *ClassDecl)
+  DerefFuncDeleteExprVisitor(const TemplateArgumentList &ArgList,
+                             const CXXRecordDecl *ClassDecl)
       : ArgList(&ArgList), ClassDecl(ClassDecl) {}
 
-  DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl) : ClassDecl(ClassDecl) {}
+  DerefFuncDeleteExprVisitor(const CXXRecordDecl *ClassDecl)
+      : ClassDecl(ClassDecl) {}
 
   std::optional<bool> HasSpecializedDelete(CXXMethodDecl *Decl) {
     if (auto *Body = Decl->getBody())
@@ -63,27 +64,10 @@ public:
   }
 
   bool VisitCallExpr(const CallExpr *CE) {
-    auto *Callee = CE->getCallee();
-    while (auto *Expr = dyn_cast<CastExpr>(Callee))
-      Callee = Expr->getSubExpr();
-    if (auto *DeclRef = dyn_cast<DeclRefExpr>(Callee)) {
-      auto *Decl = DeclRef->getDecl();
-      if (auto *VD = dyn_cast<VarDecl>(Decl)) {
-        if (auto *Init = VD->getInit()) {
-          if (auto *Lambda = dyn_cast<LambdaExpr>(Init))
-            return VisitBody(Lambda->getBody());
-        }
-      } else if (auto *FD = dyn_cast<FunctionDecl>(Decl))
-        return VisitBody(FD->getBody());
-    }
+    const Decl *D = CE->getCalleeDecl();
+    if (D && D->hasBody())
+      return VisitBody(D->getBody());
     return false;
-  }
-
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
-    auto *Callee = MCE->getMethodDecl();
-    if (!Callee)
-      return false;
-    return VisitBody(Callee->getBody());
   }
 
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
@@ -189,11 +173,10 @@ public:
             continue;
 
           if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
-            auto &Args = CTSD->getTemplateArgs();
-            for (unsigned i = 0; i < Args.size(); ++i) {
-              if (Args[i].getKind() != TemplateArgument::Type)
+            for (auto& Arg : CTSD->getTemplateArgs().asArray()) {
+              if (Arg.getKind() != TemplateArgument::Type)
                 continue;
-              auto TemplT = Args[i].getAsType();
+              auto TemplT = Arg.getAsType();
               if (TemplT.isNull())
                 continue;
 
@@ -351,9 +334,9 @@ public:
     if (auto *ClsTmplSpDecl = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
       for (auto *MethodDecl : C->methods()) {
         if (safeGetName(MethodDecl) == "deref") {
-          DerefAnalysisVisitor DerefAnalysis(ClsTmplSpDecl->getTemplateArgs(),
+          DerefFuncDeleteExprVisitor Visitor(ClsTmplSpDecl->getTemplateArgs(),
                                              DerivedClass);
-          auto Result = DerefAnalysis.HasSpecializedDelete(MethodDecl);
+          auto Result = Visitor.HasSpecializedDelete(MethodDecl);
           if (!Result || *Result)
             return Result;
         }
@@ -362,8 +345,8 @@ public:
     }
     for (auto *MethodDecl : C->methods()) {
       if (safeGetName(MethodDecl) == "deref") {
-        DerefAnalysisVisitor DerefAnalysis(DerivedClass);
-        auto Result = DerefAnalysis.HasSpecializedDelete(MethodDecl);
+        DerefFuncDeleteExprVisitor Visitor(DerivedClass);
+        auto Result = Visitor.HasSpecializedDelete(MethodDecl);
         if (!Result || *Result)
           return Result;
       }
