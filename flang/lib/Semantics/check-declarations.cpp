@@ -2430,16 +2430,18 @@ void CheckHelper::CheckProcBinding(
                   "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
             }
           } else if (!context_.HasError(binding.symbol())) {
-            int passIndex{bindingChars->FindPassIndex(binding.passName())};
-            int overriddenPassIndex{
+            auto passIndex{bindingChars->FindPassIndex(binding.passName())};
+            auto overriddenPassIndex{
                 overriddenChars->FindPassIndex(overriddenBinding->passName())};
-            if (passIndex != overriddenPassIndex) {
-              SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
-            } else if (!bindingChars->CanOverride(
-                           *overriddenChars, passIndex)) {
-              SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
+            if (passIndex && overriddenPassIndex) {
+              if (*passIndex != *overriddenPassIndex) {
+                SayWithDeclaration(*overridden,
+                    "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
+              } else if (!bindingChars->CanOverride(
+                             *overriddenChars, passIndex)) {
+                SayWithDeclaration(*overridden,
+                    "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
+              }
             }
           }
         }
