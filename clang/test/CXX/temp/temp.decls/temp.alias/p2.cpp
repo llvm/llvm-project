@@ -28,14 +28,13 @@ namespace StdExample {
     { /* ... */ }
 
   template<template<class> class TT>
-    void f(TT<int>);
+    void f(TT<int>); // expected-note {{candidate template ignored}}
 
   template<template<class,class> class TT>
     void g(TT<int, Alloc<int>>);
 
   int h() {
-    f(v); // OK: TT = vector, Alloc<int> is used as the default argument for the
-          // second parameter.
+    f(v); // expected-error {{no matching function for call to 'f'}}
     g(v); // OK: TT = vector
   }
 
