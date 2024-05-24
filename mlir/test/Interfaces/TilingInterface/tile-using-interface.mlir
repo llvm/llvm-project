@@ -259,15 +259,15 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-// CHECK: #[[MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK: @indexed_semantics
-// CHECK:   scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
-// CHECK:     scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
-// CHECK:       %[[INDEX0:.+]] = linalg.index 0
-// CHECK:       %[[INDEX0_AMENDED:.+]] = affine.apply #[[MAP_ADD]](%[[INDEX0]], %[[I0]])
-// CHECK:       %[[INDEX1:.+]] = linalg.index 1
-// CHECK:       %[[INDEX1_AMENDED:.+]] = affine.apply #[[MAP_ADD]](%[[INDEX1]], %[[I1]])
-// CHECK:       arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
+//       CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-LABEL: @indexed_semantics
+//       CHECK:   scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+//       CHECK:     scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+//       CHECK:       %[[INDEX0:.+]] = linalg.index 0
+//       CHECK:       %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
+//       CHECK:       %[[INDEX1:.+]] = linalg.index 1
+//       CHECK:       %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
+//       CHECK:       arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
 
 // -----
 
