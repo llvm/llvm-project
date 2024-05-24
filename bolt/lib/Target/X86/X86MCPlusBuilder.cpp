@@ -2115,13 +2115,15 @@ public:
       return IndirectBranchType::POSSIBLE_FIXED_BRANCH;
     }
 
-    if (Type == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE &&
-        (MO->ScaleImm != 1 || MO->BaseRegNum != RIPRegister))
-      return IndirectBranchType::UNKNOWN;
-
-    if (Type != IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE &&
-        MO->ScaleImm != PtrSize)
-      return IndirectBranchType::UNKNOWN;
+    switch (Type) {
+    case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
+      if (MO->ScaleImm != 1 || MO->BaseRegNum != RIPRegister)
+        return IndirectBranchType::UNKNOWN;
+      break;
+    default:
+      if (MO->ScaleImm != PtrSize)
+        return IndirectBranchType::UNKNOWN;
+    }
 
     MemLocInstrOut = MemLocInstr;
 
