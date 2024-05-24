@@ -265,8 +265,9 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     }
   }
 
-  // FIXME: observer must be aware of dropping
-  //  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+  Observer.changingInstr(*OrigDef);
+  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+  Observer.changedInstr(*OrigDef);
 
   // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {
