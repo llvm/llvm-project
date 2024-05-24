@@ -11791,9 +11791,9 @@ BoUpSLP::isGatherShuffledEntry(
   if (TE == VectorizableTree.front().get() &&
       (GatheredLoadsEntriesFirst == NoGatheredLoads ||
        none_of(ArrayRef(VectorizableTree).drop_front(),
-              [](const std::unique_ptr<TreeEntry> &TE) {
-                return TE->State != TreeEntry::NeedToGather;
-              })))
+               [](const std::unique_ptr<TreeEntry> &TE) {
+                 return TE->State != TreeEntry::NeedToGather;
+               })))
     return {};
   // FIXME: Gathering for non-power-of-2 nodes not implemented yet.
   if (TE->isNonPowOf2Vec())
