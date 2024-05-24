@@ -635,7 +635,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       if (child->isZeroValue()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       } else {
-        llvm::SmallVector<llvm::Constant *, 8> constants(numElements, child);
+        std::vector<llvm::Constant *> constants(numElements, child);
         return llvm::ConstantArray::get(arrayType, constants);
       }
     }
