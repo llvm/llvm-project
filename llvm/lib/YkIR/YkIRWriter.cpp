@@ -723,7 +723,6 @@ private:
     // Eventually we will have to encode the alignment of the load into our IR
     // and have the trace code generator split up the loads where necessary.
     // The same will have to be done for store instructions.
-    DataLayout DL(&M);
     if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() != DL.getPrefTypeAlign(I->getType()))) {
@@ -752,7 +751,6 @@ private:
     //
     // See the comment in `serialiseLoadInst()` for context on misaligned memory
     // accesses.
-    DataLayout DL(&M);
     if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() !=
@@ -1019,7 +1017,6 @@ private:
     // - vector casts
     std::optional<CastKind> CK = getCastKind(I->getOpcode());
     if (isa<PtrToIntInst>(I)) {
-      DataLayout DL(&M);
       TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
       TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
       if (DstSize < SrcSize) {
@@ -1237,7 +1234,6 @@ private:
   void serialiseStructType(StructType *STy) {
     serialiseTypeKind(TypeKindStruct);
     unsigned NumFields = STy->getNumElements();
-    DataLayout DL(&M);
     const StructLayout *SL = DL.getStructLayout(STy);
     // num_fields:
     OutStreamer.emitSizeT(NumFields);
@@ -1312,7 +1308,6 @@ private:
     // ty_idx:
     OutStreamer.emitSizeT(typeIndex(NP->getType()));
     // num_bytes:
-    DataLayout DL(&M);
     assert(DL.getPointerSize(NP->getType()->getAddressSpace()) ==
            sizeof(size_t));
     OutStreamer.emitSizeT(sizeof(size_t));
