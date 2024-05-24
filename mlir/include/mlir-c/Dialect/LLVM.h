@@ -240,7 +240,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
     MlirAttribute file, uint32_t line, MlirAttribute scope,
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
-    MlirAttribute location, MlirAttribute rank, MlirAttribute allocated,
+    MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
     MlirAttribute associated);
 
 /// Creates a LLVM DIDerivedType attribute.  Note that `dwarfAddressSpace` is an
