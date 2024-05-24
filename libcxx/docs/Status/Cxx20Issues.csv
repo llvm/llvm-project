@@ -70,7 +70,7 @@
 "`3041 <https://wg21.link/LWG3041>`__","Unnecessary ``decay``\  in ``reference_wrapper``\ ","Jacksonville","|Complete|",""
 "`3042 <https://wg21.link/LWG3042>`__","``is_literal_type_v``\  should be inline","Jacksonville","|Complete|",""
 "`3043 <https://wg21.link/LWG3043>`__","Bogus postcondition for ``filesystem_error``\  constructor","Jacksonville","|Complete|",""
-"`3045 <https://wg21.link/LWG3045>`__","``atomic<floating-point>``\  doesn't have ``value_type``\  or ``difference_type``\ ","Jacksonville","",""
+"`3045 <https://wg21.link/LWG3045>`__","``atomic<floating-point>``\  doesn't have ``value_type``\  or ``difference_type``\ ","Jacksonville","|Complete|","18.0"
 "`3048 <https://wg21.link/LWG3048>`__","``transform_reduce(exec, first1, last1, first2, init)``\  discards execution policy","Jacksonville","|Complete|","17.0"
 "`3051 <https://wg21.link/LWG3051>`__","Floating point classifications were inadvertently changed in P0175","Jacksonville","|Nothing To Do|",""
 "`3075 <https://wg21.link/LWG3075>`__","``basic_string``\  needs deduction guides from ``basic_string_view``\ ","Jacksonville","|Complete|",""
