@@ -653,9 +653,6 @@ static bool LinearizeExprTree(Instruction *I,
     Ops.push_back(std::make_pair(V, Weight));
     if (Opcode == Instruction::Add && Flags.AllKnownNonNegative &&
         Flags.HasNSW) {
-      // Note: AllKnownNegative can be true in a case where one of the operands
-      // is negative, but one the operators is not NSW. AllKnownNegative should
-      // not be used independently of HasNSW
       Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
     }
   }
