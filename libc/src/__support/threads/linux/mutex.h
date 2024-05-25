@@ -129,9 +129,8 @@ public:
     case LockState::Locked:
       if (recursive && this == owner) {
         lock_count++;
-        return MutexError::NONE;
       }
-
+      return MutexError::NONE;
     case LockState::Free:
       // If it was LockState::Free, we shouldn't be here at all.
       return MutexError::BAD_LOCK_STATE;
