@@ -443,14 +443,14 @@ endforeach( f )
 function(add_header_target target_name file_list)
   add_library(${target_name} INTERFACE ${file_list})
   set_target_properties(${target_name} PROPERTIES
-    FOLDER "Misc"
+    FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
 # The catch-all clang-resource-headers target
 add_library(clang-resource-headers INTERFACE ${out_files})
 set_target_properties("clang-resource-headers" PROPERTIES
-  FOLDER "Misc"
+  FOLDER "Clang/Resources"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 add_dependencies("clang-resource-headers"
                  "core-resource-headers"
