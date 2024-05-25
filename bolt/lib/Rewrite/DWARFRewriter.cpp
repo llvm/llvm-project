@@ -73,8 +73,7 @@ static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   DWARFDataExtractor DebugInfoData = DU.getDebugInfoExtractor();
   DWARFDebugInfoEntry DIEEntry;
   if (DIEEntry.extractFast(DU, &DIEOffset, DebugInfoData, NextCUOffset, 0)) {
-    if (const DWARFAbbreviationDeclaration *AbbrDecl =
-            DIEEntry.getAbbreviationDeclarationPtr()) {
+    if (DIEEntry.getAbbreviationDeclarationPtr()) {
       DWARFDie DDie(&DU, &DIEEntry);
       printDie(DDie);
     } else {
