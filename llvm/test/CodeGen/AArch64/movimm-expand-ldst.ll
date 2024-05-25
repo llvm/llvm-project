@@ -93,3 +93,127 @@ define i64 @testuu0xf555f555f555f555() {
 ; CHECK-NEXT:    ret
   ret i64 u0xf555f555f555f555
 }
+
+define void @test_store_0x1234567812345678(ptr %x) {
+; CHECK-LABEL: test_store_0x1234567812345678:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #22136 // =0x5678
+; CHECK-NEXT:    movk x8, #4660, lsl #16
+; CHECK-NEXT:    orr x8, x8, x8, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x1234567812345678, ptr %x
+  ret void
+}
+
+define void @test_store_0xff3456ffff3456ff(ptr %x) {
+; CHECK-LABEL: test_store_0xff3456ffff3456ff:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #22271 // =0x56ff
+; CHECK-NEXT:    movk x8, #65332, lsl #16
+; CHECK-NEXT:    orr x8, x8, x8, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0xff3456ffff3456ff, ptr %x
+  ret void
+}
+
+define void @test_store_0x00345600345600(ptr %x) {
+; CHECK-LABEL: test_store_0x00345600345600:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #22016 // =0x5600
+; CHECK-NEXT:    movk x8, #52, lsl #16
+; CHECK-NEXT:    movk x8, #13398, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x00345600345600, ptr %x
+  ret void
+}
+
+define void @test_store_0x5555555555555555(ptr %x) {
+; CHECK-LABEL: test_store_0x5555555555555555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x5555555555555555, ptr %x
+  ret void
+}
+
+define void @test_store_0x5055555550555555(ptr %x) {
+; CHECK-LABEL: test_store_0x5055555550555555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
+; CHECK-NEXT:    and x8, x8, #0xf0fffffff0ffffff
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x5055555550555555, ptr %x
+  ret void
+}
+
+define void @test_store_0x0000555555555555(ptr %x) {
+; CHECK-LABEL: test_store_0x0000555555555555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
+; CHECK-NEXT:    movk x8, #0, lsl #48
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x0000555555555555, ptr %x
+  ret void
+}
+
+define void @test_store_0x0000555500005555(ptr %x) {
+; CHECK-LABEL: test_store_0x0000555500005555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #21845 // =0x5555
+; CHECK-NEXT:    movk x8, #21845, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x0000555500005555, ptr %x
+  ret void
+}
+
+define void @test_store_0x5555000055550000(ptr %x) {
+; CHECK-LABEL: test_store_0x5555000055550000:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #1431633920 // =0x55550000
+; CHECK-NEXT:    movk x8, #21845, lsl #48
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0x5555000055550000, ptr %x
+  ret void
+}
+
+define void @test_store_u0xffff5555ffff5555(ptr %x) {
+; CHECK-LABEL: test_store_u0xffff5555ffff5555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-43691 // =0xffffffffffff5555
+; CHECK-NEXT:    movk x8, #21845, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0xffff5555ffff5555, ptr %x
+  ret void
+}
+
+define void @test_store_uu0xfffff555f555f555(ptr %x) {
+; CHECK-LABEL: test_store_uu0xfffff555f555f555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-2731 // =0xfffffffffffff555
+; CHECK-NEXT:    movk x8, #62805, lsl #16
+; CHECK-NEXT:    movk x8, #62805, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0xfffff555f555f555, ptr %x
+  ret void
+}
+
+define void @test_store_uu0xf555f555f555f555(ptr %x) {
+; CHECK-LABEL: test_store_uu0xf555f555f555f555:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
+; CHECK-NEXT:    orr x8, x8, #0xe001e001e001e001
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+  store i64 u0xf555f555f555f555, ptr %x
+  ret void
+}
