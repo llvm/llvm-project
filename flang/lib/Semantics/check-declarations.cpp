@@ -2430,16 +2430,18 @@ void CheckHelper::CheckProcBinding(
                   "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
             }
           } else if (!context_.HasError(binding.symbol())) {
-            int passIndex{bindingChars->FindPassIndex(binding.passName())};
-            int overriddenPassIndex{
+            auto passIndex{bindingChars->FindPassIndex(binding.passName())};
+            auto overriddenPassIndex{
                 overriddenChars->FindPassIndex(overriddenBinding->passName())};
-            if (passIndex != overriddenPassIndex) {
-              SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
-            } else if (!bindingChars->CanOverride(
-                           *overriddenChars, passIndex)) {
-              SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
+            if (passIndex && overriddenPassIndex) {
+              if (*passIndex != *overriddenPassIndex) {
+                SayWithDeclaration(*overridden,
+                    "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
+              } else if (!bindingChars->CanOverride(
+                             *overriddenChars, passIndex)) {
+                SayWithDeclaration(*overridden,
+                    "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
+              }
             }
           }
         }
@@ -2960,32 +2962,6 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
   return msgs;
 }
 
-static UnorderedSymbolSet CollectEntryPointsWithDummy(const Symbol &dummy) {
-  UnorderedSymbolSet entries;
-  const Scope &subpScope{dummy.owner()};
-  for (const auto &[_, ref] : subpScope.parent()) {
-    const Symbol &x{*ref};
-    if (const auto *subp{x.detailsIf<SubprogramDetails>()}) {
-      if (x.scope() == &subpScope || subp->entryScope() == &dummy.owner()) {
-        if (std::find(subp->dummyArgs().begin(), subp->dummyArgs().end(),
-                &dummy) != subp->dummyArgs().end()) {
-          entries.insert(x);
-        }
-      }
-    }
-  }
-  return entries;
-}
-
-static bool AnyNonBindCEntry(const Symbol &dummy) {
-  for (const Symbol &subp : CollectEntryPointsWithDummy(dummy)) {
-    if (!subp.attrs().test(Attr::BIND_C)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 parser::Messages CheckHelper::WhyNotInteroperableObject(
     const Symbol &symbol, bool isError) {
   parser::Messages msgs;
@@ -2998,14 +2974,14 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   examinedByWhyNotInteroperable_.insert(symbol);
   CHECK(symbol.has<ObjectEntityDetails>());
   if (isExplicitBindC && !symbol.owner().IsModule()) {
-    messages_.Say(symbol.name(),
+    msgs.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
   }
   auto shape{evaluate::GetShape(foldingContext_, symbol)};
   if (shape) {
     if (evaluate::GetRank(*shape) == 0) { // 18.3.4
       if (IsAllocatableOrPointer(symbol) && !IsDummy(symbol)) {
-        messages_.Say(symbol.name(),
+        msgs.Say(symbol.name(),
             "A scalar interoperable variable may not be ALLOCATABLE or POINTER"_err_en_US);
       }
     } else if (auto extents{
@@ -3026,33 +3002,26 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     if (derived) {
       if (derived->typeSymbol().attrs().test(Attr::BIND_C)) {
       } else if (isError) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
-          msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-        }
-        context_.SetError(symbol);
+        msgs.Say(symbol.name(),
+                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)
+            .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       } else if (auto bad{WhyNotInteroperableDerivedType(
                      derived->typeSymbol(), /*isError=*/false)};
                  bad.AnyFatalError()) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)}) {
-          msg->Attach(
-              derived->typeSymbol().name(), "Non-interoperable type"_en_US);
-          bad.AttachTo(*msg, parser::Severity::None);
-        }
+        bad.AttachTo(
+            msgs.Say(symbol.name(),
+                    "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)
+                .Attach(derived->typeSymbol().name(),
+                    "Non-interoperable type"_en_US),
+            parser::Severity::None);
       } else {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of an interoperable object should be BIND(C)"_warn_en_US)}) {
-          msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-        }
+        msgs.Say(symbol.name(),
+                "The derived type of an interoperable object should be BIND(C)"_warn_en_US)
+            .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       }
     }
     if (type->IsAssumedType()) { // ok
     } else if (IsAssumedLengthCharacter(symbol)) {
-      if (AnyNonBindCEntry(symbol)) {
-        msgs.Say(symbol.name(),
-            "An assumed-length dummy argument must not appear in a non-BIND(C) entry in a subprogram with an entry that must be interoperable"_err_en_US);
-      }
     } else if (IsAllocatableOrPointer(symbol) &&
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
@@ -3082,12 +3051,6 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   if (IsOptional(symbol) && !symbol.attrs().test(Attr::VALUE)) {
     msgs.Say(symbol.name(),
         "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
-  }
-  if (symbol.attrs().test(Attr::VALUE)) {
-    if (AnyNonBindCEntry(symbol)) {
-      msgs.Say(symbol.name(),
-          "A VALUE dummy argument must not appear in a non-BIND(C) entry of a subprogram with an entry that must be interoperable"_err_en_US);
-    }
   }
   if (IsDescriptor(symbol) && IsPointer(symbol) &&
       symbol.attrs().test(Attr::CONTIGUOUS)) {
