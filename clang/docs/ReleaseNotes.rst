@@ -878,6 +878,10 @@ Windows Support
   including STL headers will no longer slow down compile times since ``intrin.h``
   is not included from MSVC STL.
 
+- When the target triple is `*-windows-msvc` strict aliasing is now disabled by default
+  to ensure compatibility with msvc. Previously strict aliasing was only disabled if the
+  driver mode was cl.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
