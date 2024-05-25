@@ -1563,6 +1563,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_InlineASMSymbolicNameLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
