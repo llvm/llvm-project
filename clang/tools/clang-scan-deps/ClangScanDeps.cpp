@@ -94,6 +94,8 @@ static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool PrintTiming;
+static llvm::BumpPtrAllocator Alloc;
+static llvm::StringSaver Saver{Alloc};
 static std::vector<const char *> CommandLine;
 static bool EmitCASCompDB;
 static std::string OnDiskCASPath;
@@ -115,8 +117,6 @@ static bool RoundTripArgs = DoRoundTripDefault;
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
   llvm::StringRef ToolName = argv[0];
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver{Alloc};
   llvm::opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -1067,6 +1067,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   llvm::cl::PrintOptionValues();
+
+  // Expand response files in advance, so that we can "see" all the arguments
+  // when adjusting below.
+  Compilations = expandResponseFiles(std::move(Compilations),
+                                     llvm::vfs::getRealFileSystem());
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
