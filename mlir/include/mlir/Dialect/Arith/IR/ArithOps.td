@@ -1540,21 +1540,14 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-class AnyBooleanTypeMatch<list<string> names> :
-    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
-                          "scalar type">;
-
-class ScalarConditionOrMatchingShape<list<string> names> :
+class BooleanConditionOrMatchingShape<list<string> names> :
     PredOpTrait<
-        !head(names) # " is scalar or has matching shape",
-        Or<[AnyBooleanTypeMatch<[!head(names)]>.predicate,
-            AllShapesMatch<names>.predicate]>> {
-  list<string> values = names;
-}
+        !head(names) # " is signless i1 or has matching shape",
+        Or<[TypeIsPred<!head(names), I1>, AllShapesMatch<names>.predicate]>>;
 
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
-    ScalarConditionOrMatchingShape<["condition", "result"]>,
+    BooleanConditionOrMatchingShape<["condition", "result"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";
