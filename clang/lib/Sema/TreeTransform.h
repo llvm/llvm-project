@@ -29,8 +29,10 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
@@ -7216,7 +7218,46 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
       return QualType();
   }
 
-  QualType NamedT = getDerived().TransformType(TLB, TL.getNamedTypeLoc());
+  QualType NamedT;
+  if (0 && SemaRef.getLangOpts().CPlusPlus20 && QualifierLoc && isa<TemplateSpecializationType>(TL.getNamedTypeLoc().getType())) {
+    const TemplateSpecializationType *TST = TL.getNamedTypeLoc().getType()->getAs<TemplateSpecializationType>();
+    TemplateSpecializationTypeLoc SpecTL =
+        TL.getNamedTypeLoc().castAs<TemplateSpecializationTypeLoc>();
+    // TemplateArgumentListInfo NewTemplateArgs;
+    // NewTemplateArgs.setLAngleLoc(SpecTL.getLAngleLoc());
+    // NewTemplateArgs.setRAngleLoc(SpecTL.getRAngleLoc());
+
+    // typedef TemplateArgumentLocContainerIterator<
+    // TemplateSpecializationTypeLoc> ArgIterator;
+    // if (getDerived().TransformTemplateArguments(ArgIterator(SpecTL, 0),
+    //                                             ArgIterator(SpecTL, SpecTL.getNumArgs()),
+    //                                             NewTemplateArgs))
+    //   return QualType();
+
+    CXXScopeSpec SS;
+    SS.Adopt(QualifierLoc);
+    TemplateName InstName = getDerived().RebuildTemplateName(
+        SS, TL.getTemplateKeywordLoc(), *TST->getTemplateName().getAsTemplateDecl()->getIdentifier(), TL.getNamedTypeLoc().getBeginLoc(), QualType(), nullptr,
+        false);
+
+    if (InstName.isNull())
+      return QualType();
+
+    // If it's still dependent, make a dependent specialization.
+    // if (InstName.getAsDependentTemplateName())
+    //   return SemaRef.Context.getDependentTemplateSpecializationType(
+    //       Keyword, QualifierLoc.getNestedNameSpecifier(), Name,
+    //       Args.arguments());
+
+    // Otherwise, make an elaborated type wrapping a non-dependent
+    // specialization.
+    // NamedT = getDerived().RebuildTemplateSpecializationType(InstName, TL.getNamedTypeLoc().getBeginLoc(), NewTemplateArgs);
+    NamedT = TransformTemplateSpecializationType(TLB, SpecTL, InstName);
+  } else {
+    NamedT = getDerived().TransformType(TLB, TL.getNamedTypeLoc());
+    
+  }
+
   if (NamedT.isNull())
     return QualType();
 
