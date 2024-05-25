@@ -185,21 +185,6 @@ struct MapInfoOpConversion : public ConvertOpToLLVMPattern<omp::MapInfoOp> {
   }
 };
 
-struct ReductionOpConversion : public ConvertOpToLLVMPattern<omp::ReductionOp> {
-  using ConvertOpToLLVMPattern<omp::ReductionOp>::ConvertOpToLLVMPattern;
-  LogicalResult
-  matchAndRewrite(omp::ReductionOp curOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (isa<MemRefType>(curOp.getAccumulator().getType())) {
-      // TODO: Support memref type in variable operands
-      return rewriter.notifyMatchFailure(curOp, "memref is not supported yet");
-    }
-    rewriter.replaceOpWithNewOp<omp::ReductionOp>(
-        curOp, TypeRange(), adaptor.getOperands(), curOp->getAttrs());
-    return success();
-  }
-};
-
 template <typename OpType>
 struct MultiRegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
   using ConvertOpToLLVMPattern<OpType>::ConvertOpToLLVMPattern;
@@ -246,9 +231,6 @@ void mlir::configureOpenMPToLLVMConversionLegality(
         return typeConverter.isLegal(op->getOperandTypes()) &&
                typeConverter.isLegal(op->getResultTypes());
       });
-  target.addDynamicallyLegalOp<mlir::omp::ReductionOp>([&](Operation *op) {
-    return typeConverter.isLegal(op->getOperandTypes());
-  });
   target.addDynamicallyLegalOp<
       mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::TargetOp,
       mlir::omp::TargetDataOp, mlir::omp::LoopNestOp,
@@ -275,11 +257,11 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       [&](omp::MapBoundsType type) -> Type { return type; });
 
   patterns.add<
-      AtomicReadOpConversion, MapInfoOpConversion, ReductionOpConversion,
+      AtomicReadOpConversion, MapInfoOpConversion,
       MultiRegionOpConversion<omp::DeclareReductionOp>,
       MultiRegionOpConversion<omp::PrivateClauseOp>,
       RegionOpConversion<omp::CriticalOp>, RegionOpConversion<omp::LoopNestOp>,
-      RegionOpConversion<omp::MasterOp>, ReductionOpConversion,
+      RegionOpConversion<omp::MasterOp>,
       RegionOpConversion<omp::OrderedRegionOp>,
       RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsloopOp>,
       RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,

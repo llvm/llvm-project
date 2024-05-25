@@ -1410,6 +1410,13 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
   }
 }
 
+static bool isAltOperator(const FormatToken &Tok) {
+  return isalpha(Tok.TokenText[0]) &&
+         Tok.isOneOf(tok::ampamp, tok::ampequal, tok::amp, tok::pipe,
+                     tok::tilde, tok::exclaim, tok::exclaimequal, tok::pipepipe,
+                     tok::pipeequal, tok::caret, tok::caretequal);
+}
+
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
@@ -1689,9 +1696,15 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
-  const bool InRequiresExpression =
-      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-  do {
+  for (const bool InRequiresExpression =
+           OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+       !eof();) {
+    if (IsCpp && isAltOperator(*FormatTok)) {
+      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
+          Next && Next->isBinaryOperator()) {
+        FormatTok->Tok.setKind(tok::identifier);
+      }
+    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -2122,7 +2135,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-  } while (!eof());
+  }
 }
 
 bool UnwrappedLineParser::tryToParsePropertyAccessor() {

@@ -50,7 +50,9 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -212,7 +214,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
+      RISCVPtr(std::make_unique<SemaRISCV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
+      X86Ptr(std::make_unique<SemaX86>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
       MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
@@ -2051,7 +2055,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      checkRVVTypeSupport(Ty, Loc, D, CallerFeatureMap);
+      RISCV().checkRVVTypeSupport(Ty, Loc, D, CallerFeatureMap);
     }
 
     // Don't allow SVE types in functions without a SVE target.
