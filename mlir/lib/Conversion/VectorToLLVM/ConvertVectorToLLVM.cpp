@@ -523,7 +523,7 @@ static Value getOrCreateAccumulator(ConversionPatternRewriter &rewriter,
                                      llvmType);
 }
 
-/// Creates a constant value with the 1-D vector shape provided in `llvmType`.
+/// Creates a value with the 1-D vector shape provided in `llvmType`.
 /// This is used as effective vector length by some intrinsics supporting
 /// dynamic vector lengths at runtime.
 static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
@@ -532,9 +532,19 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
   auto vShape = vType.getShape();
   assert(vShape.size() == 1 && "Unexpected multi-dim vector type");
 
-  return rewriter.create<LLVM::ConstantOp>(
+  Value vLen = rewriter.create<LLVM::ConstantOp>(
       loc, rewriter.getI32Type(),
       rewriter.getIntegerAttr(rewriter.getI32Type(), vShape[0]));
+
+  if (!vType.getScalableDims()[0])
+    return vLen;
+
+  // Create VScale*vShape[0] and return it as vector length.
+  Value vScale = rewriter.create<vector::VectorScaleOp>(loc);
+  vScale = rewriter.create<arith::IndexCastOp>(
+      loc, rewriter.getI32Type(), vScale);
+  vLen = rewriter.create<arith::MulIOp>(loc, vLen, vScale);
+  return vLen;
 }
 
 /// Helper method to lower a `vector.reduction` op that performs an arithmetic
