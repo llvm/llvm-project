@@ -40,7 +40,9 @@ class Builder:
         """Returns the invocation for GNU make.
         The first argument is a tuple of the relative path to the testcase
         and its filename stem."""
-        if platform.system() == "FreeBSD" or platform.system() == "NetBSD":
+        if configuration.make_path is not None:
+            make = configuration.make_path
+        elif platform.system() == "FreeBSD" or platform.system() == "NetBSD":
             make = "gmake"
         else:
             make = "make"

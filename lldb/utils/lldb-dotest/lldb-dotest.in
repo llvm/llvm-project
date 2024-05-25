@@ -19,6 +19,7 @@ has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+make_executable = "@Make_EXECUTABLE@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -46,6 +47,8 @@ if __name__ == '__main__':
         cmd.extend(['--framework', lldb_framework_dir])
     if lldb_build_intel_pt == "1":
         cmd.extend(['--enable-plugin', 'intel-pt'])
+    if make_executable:
+        cmd.extend(['--make', make_executable])
     cmd.extend(['--lldb-obj-root', lldb_obj_root])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.

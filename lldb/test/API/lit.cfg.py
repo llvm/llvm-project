@@ -227,6 +227,9 @@ if is_configured("clang_module_cache"):
 if is_configured("lldb_executable"):
     dotest_cmd += ["--executable", config.lldb_executable]
 
+if is_configured("make_executable"):
+    dotest_cmd += ["--make", config.make_executable]
+
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
 

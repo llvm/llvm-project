@@ -9,6 +9,16 @@ if (NOT DEFINED Python3_EXECUTABLE)
     "`LLDB_INCLUDE_TESTS=OFF`.")
 endif()
 
+if (NOT DEFINED Make_EXECUTABLE)
+  find_program(Make_EXECUTABLE NAMES make
+               PATH_SUFFIXES bin
+               DOC "Make build tool"
+               # Avoid searching with CMAKE_SYSROOT for the target platform.
+               # The target platform could be a binary incompatible.
+               NO_CMAKE_FIND_ROOT_PATH
+               REQUIRED)
+endif()
+
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
