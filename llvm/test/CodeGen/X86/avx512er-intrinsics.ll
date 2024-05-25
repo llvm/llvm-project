@@ -3,55 +3,1034 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512er --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64
 
 define <16 x float> @test_rsqrt28_ps(<16 x float> %a0) {
-; CHECK-LABEL: test_rsqrt28_ps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcc,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_rsqrt28_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $65535, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0xff,0xff,0x00,0x00]
+; X86-NEXT:    # imm = 0xFFFF
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x7c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x78,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x74,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x70,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x6c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x68,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x64,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x60,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x5c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x58,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x54,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x50,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x4c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x48,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x44,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_rsqrt28_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $65535, %edi # encoding: [0xbf,0xff,0xff,0x00,0x00]
+; X64-NEXT:    # imm = 0xFFFF
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
   ret <16 x float> %res
 }
 
 define <16 x float> @test1_rsqrt28_ps(<16 x float> %a0, <16 x float> %a1) {
-; CHECK-LABEL: test1_rsqrt28_ps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
-; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcc,0xc8]
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test1_rsqrt28_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $384, %esp # encoding: [0x81,0xec,0x80,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x180
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds 76(%ebp) # encoding: [0xd9,0x45,0x4c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    flds 80(%ebp) # encoding: [0xd9,0x45,0x50]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    flds 84(%ebp) # encoding: [0xd9,0x45,0x54]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    flds 88(%ebp) # encoding: [0xd9,0x45,0x58]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    flds 92(%ebp) # encoding: [0xd9,0x45,0x5c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    flds 96(%ebp) # encoding: [0xd9,0x45,0x60]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    flds 100(%ebp) # encoding: [0xd9,0x45,0x64]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    flds 104(%ebp) # encoding: [0xd9,0x45,0x68]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    flds 108(%ebp) # encoding: [0xd9,0x45,0x6c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    flds 112(%ebp) # encoding: [0xd9,0x45,0x70]
+; X86-NEXT:    flds 116(%ebp) # encoding: [0xd9,0x45,0x74]
+; X86-NEXT:    flds 120(%ebp) # encoding: [0xd9,0x45,0x78]
+; X86-NEXT:    flds 124(%ebp) # encoding: [0xd9,0x45,0x7c]
+; X86-NEXT:    flds 128(%ebp) # encoding: [0xd9,0x85,0x80,0x00,0x00,0x00]
+; X86-NEXT:    flds 132(%ebp) # encoding: [0xd9,0x85,0x84,0x00,0x00,0x00]
+; X86-NEXT:    flds 136(%ebp) # encoding: [0xd9,0x85,0x88,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x9c,0x24,0x80,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x7c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x78]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x74]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x70]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x6c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x68]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x64]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x60]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x5c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x58]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x54]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x50]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x4c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x48]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x44]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0x00,0x01,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $6, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0x06,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x00,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x04,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x08,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x0c,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x10,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x14,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x18,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x1c,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x20,0x01,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x24,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x28,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x2c,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x30,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x34,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x38,0x01,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0x3c,0x01,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test1_rsqrt28_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl $6, %edi # encoding: [0xbf,0x06,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> %a1, i16 6, i32 8)
   ret <16 x float> %res
 }
 
 define <16 x float> @test2_rsqrt28_ps(<16 x float> %a0) {
-; CHECK-LABEL: test2_rsqrt28_ps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
-; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; CHECK-NEXT:    vrsqrt28ps %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0xcc,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test2_rsqrt28_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; X86-NEXT:    movl $6, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0x06,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test2_rsqrt28_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl $6, %edi # encoding: [0xbf,0x06,0x00,0x00,0x00]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> undef, i16 6, i32 4)
   ret <16 x float> %res
 }
 
 define <16 x float> @test3_rsqrt28_ps(<16 x float> %a0) {
-; CHECK-LABEL: test3_rsqrt28_ps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
-; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; CHECK-NEXT:    vrsqrt28ps %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0xcc,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test3_rsqrt28_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; X86-NEXT:    movl $6, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0x06,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x7c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x78,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x74,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x70,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x6c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x68,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x64,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x60,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x5c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x58,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x54,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x50,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x4c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x48,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x44,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test3_rsqrt28_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $6, %edi # encoding: [0xbf,0x06,0x00,0x00,0x00]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 6, i32 4)
   ret <16 x float> %res
 }
 
 define <16 x float> @test4_rsqrt28_ps(<16 x float> %a0) {
-; CHECK-LABEL: test4_rsqrt28_ps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
-; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcc,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test4_rsqrt28_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $6, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0x06,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test4_rsqrt28_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl $6, %edi # encoding: [0xbf,0x06,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> undef, i16 6, i32 8)
   ret <16 x float> %res
 }
@@ -59,60 +1038,756 @@ define <16 x float> @test4_rsqrt28_ps(<16 x float> %a0) {
 declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <16 x float> @test_rcp28_ps_512(<16 x float> %a0) {
-; CHECK-LABEL: test_rcp28_ps_512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrcp28ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xca,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_rcp28_ps_512:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $65535, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0xff,0xff,0x00,0x00]
+; X86-NEXT:    # imm = 0xFFFF
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x7c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x78,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x74,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x70,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x6c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x68,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x64,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x60,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x5c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x58,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x54,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x50,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x4c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x48,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x44,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rcp28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_rcp28_ps_512:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $65535, %edi # encoding: [0xbf,0xff,0xff,0x00,0x00]
+; X64-NEXT:    # imm = 0xFFFF
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rcp28.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
   ret <16 x float> %res
 }
 declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <8 x double> @test_rcp28_pd_512(<8 x double> %a0) {
-; CHECK-LABEL: test_rcp28_pd_512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrcp28pd {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x18,0xca,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_rcp28_pd_512:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    fldl 12(%ebp) # encoding: [0xdd,0x45,0x0c]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fldl 20(%ebp) # encoding: [0xdd,0x45,0x14]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fldl 28(%ebp) # encoding: [0xdd,0x45,0x1c]
+; X86-NEXT:    fldl 36(%ebp) # encoding: [0xdd,0x45,0x24]
+; X86-NEXT:    fldl 44(%ebp) # encoding: [0xdd,0x45,0x2c]
+; X86-NEXT:    fldl 52(%ebp) # encoding: [0xdd,0x45,0x34]
+; X86-NEXT:    fldl 60(%ebp) # encoding: [0xdd,0x45,0x3c]
+; X86-NEXT:    fldl 68(%ebp) # encoding: [0xdd,0x45,0x44]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x7c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x74]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x6c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x64]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x5c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x54]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x4c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x44]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x3c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x34]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x2c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x24]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x1c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x14]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x0c]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0xff,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rcp28.pd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.pd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    fstpl 56(%esi) # encoding: [0xdd,0x5e,0x38]
+; X86-NEXT:    fstpl 48(%esi) # encoding: [0xdd,0x5e,0x30]
+; X86-NEXT:    fstpl 40(%esi) # encoding: [0xdd,0x5e,0x28]
+; X86-NEXT:    fstpl 32(%esi) # encoding: [0xdd,0x5e,0x20]
+; X86-NEXT:    fstpl 24(%esi) # encoding: [0xdd,0x5e,0x18]
+; X86-NEXT:    fstpl 16(%esi) # encoding: [0xdd,0x5e,0x10]
+; X86-NEXT:    fstpl 8(%esi) # encoding: [0xdd,0x5e,0x08]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl (%esi) # encoding: [0xdd,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_rcp28_pd_512:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rcp28.pd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.pd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double> %a0, <8 x double> zeroinitializer, i8 -1, i32 8)
   ret <8 x double> %res
 }
 declare <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double>, <8 x double>, i8, i32) nounwind readnone
 
 define <16 x float> @test_exp2_ps_512(<16 x float> %a0) {
-; CHECK-LABEL: test_exp2_ps_512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vexp2ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xc8,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_exp2_ps_512:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    flds 60(%ebp) # encoding: [0xd9,0x45,0x3c]
+; X86-NEXT:    flds 64(%ebp) # encoding: [0xd9,0x45,0x40]
+; X86-NEXT:    flds 68(%ebp) # encoding: [0xd9,0x45,0x44]
+; X86-NEXT:    flds 72(%ebp) # encoding: [0xd9,0x45,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x34]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $65535, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0xff,0xff,0x00,0x00]
+; X86-NEXT:    # imm = 0xFFFF
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x7c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x78,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x74,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x70,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x6c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x68,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x64,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x60,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x5c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x58,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x54,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x50,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x4c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x48,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x44,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.exp2.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.exp2.ps@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xcc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd4,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xdc,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x9c,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xec,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf4,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x84,0x24,0xfc,0x00,0x00,0x00]
+; X86-NEXT:    fstps 60(%esi) # encoding: [0xd9,0x5e,0x3c]
+; X86-NEXT:    fstps 56(%esi) # encoding: [0xd9,0x5e,0x38]
+; X86-NEXT:    fstps 52(%esi) # encoding: [0xd9,0x5e,0x34]
+; X86-NEXT:    fstps 48(%esi) # encoding: [0xd9,0x5e,0x30]
+; X86-NEXT:    fstps 44(%esi) # encoding: [0xd9,0x5e,0x2c]
+; X86-NEXT:    fstps 40(%esi) # encoding: [0xd9,0x5e,0x28]
+; X86-NEXT:    fstps 36(%esi) # encoding: [0xd9,0x5e,0x24]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0x9c,0x00,0x00,0x00]
+; X86-NEXT:    fstps 32(%esi) # encoding: [0xd9,0x5e,0x20]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 28(%esi) # encoding: [0xd9,0x5e,0x1c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 24(%esi) # encoding: [0xd9,0x5e,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xa8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 20(%esi) # encoding: [0xd9,0x5e,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xac,0x00,0x00,0x00]
+; X86-NEXT:    fstps 16(%esi) # encoding: [0xd9,0x5e,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb4,0x00,0x00,0x00]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x84,0x24,0xbc,0x00,0x00,0x00]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_exp2_ps_512:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $65535, %edi # encoding: [0xbf,0xff,0xff,0x00,0x00]
+; X64-NEXT:    # imm = 0xFFFF
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.exp2.ps@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.exp2.ps@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.exp2.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
   ret <16 x float> %res
 }
 declare <16 x float> @llvm.x86.avx512.exp2.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <8 x double> @test_exp2_pd_512(<8 x double> %a0) {
-; CHECK-LABEL: test_exp2_pd_512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vexp2pd {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x18,0xc8,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_exp2_pd_512:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-64, %esp # encoding: [0x83,0xe4,0xc0]
+; X86-NEXT:    subl $320, %esp # encoding: [0x81,0xec,0x40,0x01,0x00,0x00]
+; X86-NEXT:    # imm = 0x140
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    fldl 12(%ebp) # encoding: [0xdd,0x45,0x0c]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fldl 20(%ebp) # encoding: [0xdd,0x45,0x14]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fldl 28(%ebp) # encoding: [0xdd,0x45,0x1c]
+; X86-NEXT:    fldl 36(%ebp) # encoding: [0xdd,0x45,0x24]
+; X86-NEXT:    fldl 44(%ebp) # encoding: [0xdd,0x45,0x2c]
+; X86-NEXT:    fldl 52(%ebp) # encoding: [0xdd,0x45,0x34]
+; X86-NEXT:    fldl 60(%ebp) # encoding: [0xdd,0x45,0x3c]
+; X86-NEXT:    fldl 68(%ebp) # encoding: [0xdd,0x45,0x44]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x7c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x74]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x6c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x64]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x5c]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x54]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x4c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x44]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x3c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x34]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x2c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x24]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x1c]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x14]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb8,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x0c]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x88,0x00,0x00,0x00,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x84,0x24,0x84,0x00,0x00,0x00,0xff,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.exp2.pd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.exp2.pd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xc0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    # encoding: [0xdd,0x9c,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xc8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xd0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xd8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xe0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xe8,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xf0,0x00,0x00,0x00]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x84,0x24,0xf8,0x00,0x00,0x00]
+; X86-NEXT:    fstpl 56(%esi) # encoding: [0xdd,0x5e,0x38]
+; X86-NEXT:    fstpl 48(%esi) # encoding: [0xdd,0x5e,0x30]
+; X86-NEXT:    fstpl 40(%esi) # encoding: [0xdd,0x5e,0x28]
+; X86-NEXT:    fstpl 32(%esi) # encoding: [0xdd,0x5e,0x20]
+; X86-NEXT:    fstpl 24(%esi) # encoding: [0xdd,0x5e,0x18]
+; X86-NEXT:    fstpl 16(%esi) # encoding: [0xdd,0x5e,0x10]
+; X86-NEXT:    fstpl 8(%esi) # encoding: [0xdd,0x5e,0x08]
+; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    # encoding: [0xdd,0x84,0x24,0xb0,0x00,0x00,0x00]
+; X86-NEXT:    fstpl (%esi) # encoding: [0xdd,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_exp2_pd_512:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm4, %xmm4 # encoding: [0x0f,0x57,0xe4]
+; X64-NEXT:    xorps %xmm5, %xmm5 # encoding: [0x0f,0x57,0xed]
+; X64-NEXT:    xorps %xmm6, %xmm6 # encoding: [0x0f,0x57,0xf6]
+; X64-NEXT:    xorps %xmm7, %xmm7 # encoding: [0x0f,0x57,0xff]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.exp2.pd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.exp2.pd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.exp2.pd(<8 x double> %a0, <8 x double> zeroinitializer, i8 -1, i32 8)
   ret <8 x double> %res
 }
 declare <8 x double> @llvm.x86.avx512.exp2.pd(<8 x double>, <8 x double>, i8, i32) nounwind readnone
 
 define <4 x float> @test_rsqrt28_ss(<4 x float> %a0) {
-; CHECK-LABEL: test_rsqrt28_ss:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcd,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_rsqrt28_ss:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $96, %esp # encoding: [0x83,0xec,0x60]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x20]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x1c]
+; X86-NEXT:    fxch %st(2) # encoding: [0xd9,0xca]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(3) # encoding: [0xd9,0xcb]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x14]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x40]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0xff,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x30,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x2c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x28,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x24,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_rsqrt28_ss:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1, i32 8) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
 
 define <4 x float> @test_rcp28_ss(<4 x float> %a0) {
-; CHECK-LABEL: test_rcp28_ss:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrcp28ss {sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcb,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-LABEL: test_rcp28_ss:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $96, %esp # encoding: [0x83,0xec,0x60]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x20]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x1c]
+; X86-NEXT:    fxch %st(2) # encoding: [0xd9,0xca]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(3) # encoding: [0xd9,0xcb]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x14]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x40]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0xff,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x30,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x2c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x28,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x24,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rcp28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+;
+; X64-LABEL: test_rcp28_ss:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rcp28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1, i32 8) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -121,13 +1796,70 @@ declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x flo
 define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; X86-LABEL: test_rcp28_ss_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vrcp28ss (%eax), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcb,0x00]
-; X86-NEXT:    retl # encoding: [0xc3]
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $96, %esp # encoding: [0x83,0xec,0x60]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    movl 28(%ebp), %eax # encoding: [0x8b,0x45,0x1c]
+; X86-NEXT:    flds (%eax) # encoding: [0xd9,0x00]
+; X86-NEXT:    flds 4(%eax) # encoding: [0xd9,0x40,0x04]
+; X86-NEXT:    flds 8(%eax) # encoding: [0xd9,0x40,0x08]
+; X86-NEXT:    flds 12(%eax) # encoding: [0xd9,0x40,0x0c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x40]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x04,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0xff,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rcp28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
 ;
 ; X64-LABEL: test_rcp28_ss_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrcp28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcb,0x07]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movaps (%rdi), %xmm1 # encoding: [0x0f,0x28,0x0f]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rcp28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %a1 = load <4 x float>, <4 x float>* %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
@@ -137,13 +1869,70 @@ define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; X86-LABEL: test_rsqrt28_ss_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vrsqrt28ss (%eax), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcd,0x00]
-; X86-NEXT:    retl # encoding: [0xc3]
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $96, %esp # encoding: [0x83,0xec,0x60]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    movl 28(%ebp), %eax # encoding: [0x8b,0x45,0x1c]
+; X86-NEXT:    flds (%eax) # encoding: [0xd9,0x00]
+; X86-NEXT:    flds 4(%eax) # encoding: [0xd9,0x40,0x04]
+; X86-NEXT:    flds 8(%eax) # encoding: [0xd9,0x40,0x08]
+; X86-NEXT:    flds 12(%eax) # encoding: [0xd9,0x40,0x0c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x40]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x04,0x00,0x00,0x00]
+; X86-NEXT:    movl $255, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0xff,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
 ;
 ; X64-LABEL: test_rsqrt28_ss_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrsqrt28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcd,0x07]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movaps (%rdi), %xmm1 # encoding: [0x0f,0x28,0x0f]
+; X64-NEXT:    movl $255, %edi # encoding: [0xbf,0xff,0x00,0x00,0x00]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %a1 = load <4 x float>, <4 x float>* %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
@@ -153,15 +1942,72 @@ define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_ss_maskz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcd,0xc0]
-; X86-NEXT:    retl # encoding: [0xc3]
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $96, %esp # encoding: [0x83,0xec,0x60]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    movl 28(%ebp), %eax # encoding: [0x8b,0x45,0x1c]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x34]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x20]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x1c]
+; X86-NEXT:    fxch %st(2) # encoding: [0xd9,0xca]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(3) # encoding: [0xd9,0xcb]
+; X86-NEXT:    fsts {{[0-9]+}}(%esp) # encoding: [0xd9,0x54,0x24,0x14]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x40]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x30,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x2c,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x28,0x00,0x00,0x00,0x00]
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x24,0x00,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
 ;
 ; X64-LABEL: test_rsqrt28_ss_maskz:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcd,0xc0]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 %mask, i32 8) ;
   ret <4 x float> %res
@@ -170,17 +2016,92 @@ define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_ss_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrsqrt28ss {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcd,0xd1]
-; X86-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
-; X86-NEXT:    retl # encoding: [0xc3]
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi # encoding: [0x56]
+; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
+; X86-NEXT:    subl $112, %esp # encoding: [0x83,0xec,0x70]
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl 8(%ebp), %esi # encoding: [0x8b,0x75,0x08]
+; X86-NEXT:    flds 12(%ebp) # encoding: [0xd9,0x45,0x0c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x4c]
+; X86-NEXT:    flds 16(%ebp) # encoding: [0xd9,0x45,0x10]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x48]
+; X86-NEXT:    flds 20(%ebp) # encoding: [0xd9,0x45,0x14]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x44]
+; X86-NEXT:    flds 24(%ebp) # encoding: [0xd9,0x45,0x18]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x40]
+; X86-NEXT:    flds 28(%ebp) # encoding: [0xd9,0x45,0x1c]
+; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    # encoding: [0xd9,0x5c,0x24,0x3c]
+; X86-NEXT:    flds 32(%ebp) # encoding: [0xd9,0x45,0x20]
+; X86-NEXT:    flds 36(%ebp) # encoding: [0xd9,0x45,0x24]
+; X86-NEXT:    flds 40(%ebp) # encoding: [0xd9,0x45,0x28]
+; X86-NEXT:    flds 44(%ebp) # encoding: [0xd9,0x45,0x2c]
+; X86-NEXT:    flds 48(%ebp) # encoding: [0xd9,0x45,0x30]
+; X86-NEXT:    flds 52(%ebp) # encoding: [0xd9,0x45,0x34]
+; X86-NEXT:    flds 56(%ebp) # encoding: [0xd9,0x45,0x38]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x30]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x2c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x28]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x24]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x20]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x1c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x18]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x3c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x14]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x40]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x10]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x44]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x0c]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x48]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x08]
+; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    # encoding: [0xd9,0x44,0x24,0x4c]
+; X86-NEXT:    fstps {{[0-9]+}}(%esp) # encoding: [0xd9,0x5c,0x24,0x04]
+; X86-NEXT:    movl 60(%ebp), %eax # encoding: [0x8b,0x45,0x3c]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x34]
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax # encoding: [0x8d,0x44,0x24,0x50]
+; X86-NEXT:    movl %eax, (%esp) # encoding: [0x89,0x04,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x38,0x08,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x50]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x54]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x58]
+; X86-NEXT:    flds {{[0-9]+}}(%esp) # encoding: [0xd9,0x44,0x24,0x5c]
+; X86-NEXT:    fstps 12(%esi) # encoding: [0xd9,0x5e,0x0c]
+; X86-NEXT:    fstps 8(%esi) # encoding: [0xd9,0x5e,0x08]
+; X86-NEXT:    fstps 4(%esi) # encoding: [0xd9,0x5e,0x04]
+; X86-NEXT:    fstps (%esi) # encoding: [0xd9,0x1e]
+; X86-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; X86-NEXT:    leal -4(%ebp), %esp # encoding: [0x8d,0x65,0xfc]
+; X86-NEXT:    popl %esi # encoding: [0x5e]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
 ;
 ; X64-LABEL: test_rsqrt28_ss_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vrsqrt28ss {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcd,0xd1]
-; X64-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.ss@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.ss@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask, i32 8) ;
   ret <4 x float> %res
@@ -189,17 +2110,41 @@ define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x 
 define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1ptr, <2 x double> %a2, i8 %mask) {
 ; X86-LABEL: test_rcp28_sd_mask_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
-; X86-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x50]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x58]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x60]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x04,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rcp28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rcp28_sd_mask_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
-; X64-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
-; X64-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl %esi, %edi # encoding: [0x89,0xf7]
+; X64-NEXT:    movaps %xmm1, %xmm2 # encoding: [0x0f,0x28,0xd1]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rcp28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rcp28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %a1 = load <2 x double>, <2 x double>* %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> %a2, i8 %mask, i32 4) ;
@@ -210,15 +2155,40 @@ declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x 
 define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* %a1ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x50]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x04,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rsqrt28_sd_maskz_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
-; X64-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl %esi, %edi # encoding: [0x89,0xf7]
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %a1 = load <2 x double>, <2 x double>* %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
@@ -228,15 +2198,39 @@ define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* 
 define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrsqrt28sd {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0xcd,0xc0]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x4c]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x18]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x10]
+; X86-NEXT:    fxch %st(1) # encoding: [0xd9,0xc9]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x08,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rsqrt28_sd_maskz:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vrsqrt28sd {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0xcd,0xc0]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 %mask, i32 8) ;
   ret <2 x double> %res
@@ -245,17 +2239,38 @@ define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vrsqrt28sd {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0xcd,0xd1]
-; X86-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x4c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x54]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x5c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x64]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x6c]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x18]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x10]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x08,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rsqrt28_sd_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vrsqrt28sd {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0xcd,0xd1]
-; X64-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movl $8, %esi # encoding: [0xbe,0x08,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask, i32 8) ;
   ret <2 x double> %res
@@ -266,16 +2281,40 @@ declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 
 define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vrsqrt28sd (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x00]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x4c]
+; X86-NEXT:    fldl (%eax) # encoding: [0xdd,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x50]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x10]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x04,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rsqrt28_sd_maskz_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
-; X64-NEXT:    vrsqrt28sd (%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x07]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    # encoding: [0xf2,0x0f,0x10,0x0f]
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movl %esi, %edi # encoding: [0x89,0xf7]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %mem = load double , double * %ptr, align 8
   %mem_v = insertelement <2 x double> undef, double %mem, i32 0
@@ -286,16 +2325,40 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i
 define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem_offset:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vrsqrt28sd 144(%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x40,0x12]
+; X86-NEXT:    subl $56, %esp # encoding: [0x83,0xec,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 60
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x3c]
+; X86-NEXT:    fldl {{[0-9]+}}(%esp) # encoding: [0xdd,0x44,0x24,0x44]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x4c]
+; X86-NEXT:    fldl 144(%eax) # encoding: [0xdd,0x80,0x90,0x00,0x00,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x50]
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x89,0x44,0x24,0x30]
+; X86-NEXT:    fldz # encoding: [0xd9,0xee]
+; X86-NEXT:    fstl {{[0-9]+}}(%esp) # encoding: [0xdd,0x54,0x24,0x28]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x20]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x10]
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp) # encoding: [0xdd,0x5c,0x24,0x08]
+; X86-NEXT:    fstpl (%esp) # encoding: [0xdd,0x1c,0x24]
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp) # encoding: [0xc7,0x44,0x24,0x34,0x04,0x00,0x00,0x00]
+; X86-NEXT:    calll llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X86-NEXT:    addl $56, %esp # encoding: [0x83,0xc4,0x38]
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_rsqrt28_sd_maskz_mem_offset:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
-; X64-NEXT:    vrsqrt28sd 144(%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x47,0x12]
+; X64-NEXT:    pushq %rax # encoding: [0x50]
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    # encoding: [0xf2,0x0f,0x10,0x8f,0x90,0x00,0x00,0x00]
+; X64-NEXT:    xorps %xmm2, %xmm2 # encoding: [0x0f,0x57,0xd2]
+; X64-NEXT:    movl %esi, %edi # encoding: [0x89,0xf7]
+; X64-NEXT:    movl $4, %esi # encoding: [0xbe,0x04,0x00,0x00,0x00]
+; X64-NEXT:    callq llvm.x86.avx512.rsqrt28.sd@PLT # encoding: [0xe8,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.avx512.rsqrt28.sd@PLT-4, kind: FK_PCRel_4
+; X64-NEXT:    popq %rax # encoding: [0x58]
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq # encoding: [0xc3]
   %ptr1 = getelementptr double, double* %ptr, i32 18
   %mem = load double , double * %ptr1, align 8
@@ -304,3 +2367,5 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* 
   ret <2 x double> %res
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

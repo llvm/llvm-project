@@ -2974,10 +2974,12 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVILoc = DVI.getDebugLoc();
+      if (ILoc && DVILoc &&
+          DVILoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
         DVI.setDebugLoc(I->getDebugLoc());
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
@@ -3014,11 +3016,13 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
-        DVR.setDebugLoc(I->getDebugLoc());
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVRLoc = DVR.getDebugLoc();
+      if (ILoc && DVRLoc &&
+          DVRLoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
+        DVR.setDebugLoc(ILoc);
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {

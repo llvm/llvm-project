@@ -1117,7 +1117,7 @@ def err_availability_expected_environment : Error<
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
-  "expected a related ObjectiveC class name, e.g., 'NSColor'">;
+  "expected a related Objective-C class name, e.g., 'NSColor'">;
 def err_objcbridge_related_selector_name : Error<
   "expected a class method selector with single argument, e.g., 'colorWithCGColor:'">;
 

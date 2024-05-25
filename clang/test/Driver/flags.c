@@ -25,11 +25,11 @@
 // RUN: %clang -target armv7-apple-darwin10 -### -S -mno-implicit-float -mimplicit-float %s 2>&1 | FileCheck -check-prefix=TEST8 %s
 // TEST8-NOT: "-no-implicit-float"
 
-// RUN: %clang -target x86_64-linux-gnu -### -c -fclang-abi-compat=3.2 %s 2>&1 | FileCheck -check-prefix=TEST9 %s
+// RUN: %clang --target=x86_64-linux-gnu -### -c -fclang-abi-compat=3.2 %s 2>&1 | FileCheck -check-prefix=TEST9 %s
 // TEST9: "-fclang-abi-compat=3.2"
 //
-// RUN: %clang -target riscv32 -### -S -mno-implicit-float %s 2>&1 | FileCheck -check-prefix=TEST10 %s
+// RUN: %clang --target=riscv32 -### -S -mno-implicit-float %s 2>&1 | FileCheck -check-prefix=TEST10 %s
 // TEST10: "-no-implicit-float"
 //
-// RUN: %clang -target riscv64 -### -S -mno-implicit-float %s 2>&1 | FileCheck -check-prefix=TEST11 %s
+// RUN: %clang --target=riscv64 -### -S -mno-implicit-float %s 2>&1 | FileCheck -check-prefix=TEST11 %s
 // TEST11: "-no-implicit-float"
