@@ -1540,14 +1540,15 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-class BooleanConditionOrMatchingShape<list<string> names> :
+class BooleanConditionOrMatchingShape<string condition, string result> :
     PredOpTrait<
-        !head(names) # " is signless i1 or has matching shape",
-        Or<[TypeIsPred<!head(names), I1>, AllShapesMatch<names>.predicate]>>;
+      condition # " is signless i1 or has matching shape",
+      Or<[TypeIsPred<condition, I1>,
+          AllShapesMatch<[condition, result]>.predicate]>>;
 
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
-    BooleanConditionOrMatchingShape<["condition", "result"]>,
+    BooleanConditionOrMatchingShape<"condition", "result">,
     DeclareOpInterfaceMethods<InferIntRangeInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";
