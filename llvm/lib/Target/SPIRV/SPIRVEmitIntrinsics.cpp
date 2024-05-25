@@ -56,7 +56,6 @@ class SPIRVEmitIntrinsics
   SPIRVTargetMachine *TM = nullptr;
   SPIRVGlobalRegistry *GR = nullptr;
   Function *F = nullptr;
-  bool TrackConstants = true;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
@@ -101,7 +100,8 @@ class SPIRVEmitIntrinsics
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
-  void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
+  void insertTrackConstantsInstr(Instruction *I, IRBuilder<> &B);
+  void insertAssignNameInstr(Instruction *I, IRBuilder<> &B);
   void insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B);
   void insertAssignTypeIntrs(Instruction *I, IRBuilder<> &B);
   void insertAssignTypeInstrForTargetExtTypes(TargetExtType *AssignedType,
@@ -906,7 +906,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
         !isa<TypedPointerType>(ArgOperand->getType()))
       continue;
 
-    // Constants (nulls/undefs) are handled in insertAssignPtrTypeIntrs()
+    // Constants (nulls/undefs) are handled in insertAssignTypeIntrs()
     if (!isa<Instruction>(ArgOperand) && !isa<Argument>(ArgOperand)) {
       // However, we may have assumptions about the formal argument's type and
       // may have a need to insert a ptr cast for the actual parameter of this
@@ -1000,7 +1000,6 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
     return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, F->getParent()->getDataLayout());
@@ -1017,7 +1016,6 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getStoreMemOperandFlags(I, F->getParent()->getDataLayout());
@@ -1044,7 +1042,6 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   }
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  TrackConstants = false;
   Type *PtrTy = I.getType();
   auto *NewI =
       ArraySize ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
@@ -1165,11 +1162,22 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
   }
 }
 
-void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
+void SPIRVEmitIntrinsics::insertTrackConstantsInstr(Instruction *I,
                                                  IRBuilder<> &B) {
-  auto *II = dyn_cast<IntrinsicInst>(I);
-  if (II && II->getIntrinsicID() == Intrinsic::spv_const_composite &&
-      TrackConstants) {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+
+  // Constants related to some instructions do not require tracking, they always
+  // appear directly in the instructions both in LLVM IR and SPIR-V or are
+  // removed in later passes.
+  if (isa<PHINode>(I) || isa<SwitchInst>(I) ||
+      (II && (II->getIntrinsicID() == Intrinsic::spv_load ||
+              II->getIntrinsicID() == Intrinsic::spv_store ||
+              II->getIntrinsicID() == Intrinsic::spv_alloca_array ||
+              II->getIntrinsicID() == Intrinsic::spv_alloca)))
+    return;
+
+  // Composite-specific handling:
+  if (II && II->getIntrinsicID() == Intrinsic::spv_const_composite) {
     B.SetInsertPoint(I->getNextNode());
     auto t = AggrConsts.find(I);
     assert(t != AggrConsts.end());
@@ -1179,33 +1187,55 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     I->replaceAllUsesWith(NewOp);
     NewOp->setArgOperand(0, I);
   }
+
+  // Handle any instruction's operands:
   for (const auto &Op : I->operands()) {
-    if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
-        isa<PHINode>(I) || isa<SwitchInst>(I))
-      TrackConstants = false;
-    if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
-      unsigned OpNo = Op.getOperandNo();
-      if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-                 (II->paramHasAttr(OpNo, Attribute::ImmArg))))
-        continue;
-      B.SetInsertPoint(I);
-      Value *OpTyVal = Op;
-      if (Op->getType()->isTargetExtTy())
-        OpTyVal = Constant::getNullValue(
-            IntegerType::get(I->getContext(), GR->getPointerSize()));
-      auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
-                                    {Op->getType(), OpTyVal->getType()}, Op,
-                                    OpTyVal, {}, B);
-      I->setOperand(OpNo, NewOp);
+    if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()))
+      return;
+
+    if (!isa<ConstantData>(Op) && !isa<ConstantExpr>(Op))
+      continue;
+
+    unsigned OpNo = Op.getOperandNo();
+    if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
+               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+      continue;
+
+    B.SetInsertPoint(I);
+
+    Value *OpTyVal = Op;
+    Value *Const = Op;
+
+    // Special handling for operands of builtin type.
+    CallInst *CI = dyn_cast<CallInst>(I);
+    if (Op->getType()->isPointerTy() && CI && CI->getCalledFunction()) {
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CI->getCalledFunction()->getName());
+      Type *BuiltinTy = SPIRV::parseBuiltinCallArgumentBaseType(
+          DemangledName, OpNo, I->getContext());
+      if (BuiltinTy && BuiltinTy->isTargetExtTy())
+        Const = Constant::getNullValue(BuiltinTy);
+    } else if (Op->getType()->isTargetExtTy()) {
+      OpTyVal = Constant::getNullValue(
+          IntegerType::get(I->getContext(), GR->getPointerSize()));
     }
+
+    auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
+                                  {Op->getType(), OpTyVal->getType()}, Const,
+                                  OpTyVal, {}, B);
+    I->setOperand(OpNo, NewOp);
   }
-  if (I->hasName()) {
-    reportFatalOnTokenType(I);
-    setInsertPointSkippingPhis(B, I->getNextNode());
-    std::vector<Value *> Args = {I};
-    addStringImm(I->getName(), B, Args);
-    B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
-  }
+}
+
+void SPIRVEmitIntrinsics::insertAssignNameInstr(llvm::Instruction *I, IRBuilder<> &B) {
+  if (!I->hasName())
+    return;
+
+  reportFatalOnTokenType(I);
+  setInsertPointSkippingPhis(B, I->getNextNode());
+  std::vector<Value *> Args = {I};
+  addStringImm(I->getName(), B, Args);
+  B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
 }
 
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,
@@ -1343,7 +1373,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     deduceOperandElementType(&I);
 
   for (auto *I : Worklist) {
-    TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       B.SetInsertPoint(I->getNextNode());
     // Visitors return either the original/newly created instruction for further
@@ -1351,7 +1380,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     I = visit(*I);
     if (!I)
       continue;
-    processInstrAfterVisit(I, B);
+    insertTrackConstantsInstr(I, B);
+    insertAssignNameInstr(I, B);
   }
 
   return true;
