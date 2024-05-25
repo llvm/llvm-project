@@ -15,7 +15,7 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"

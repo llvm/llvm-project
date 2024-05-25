@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "clang/Basic/ASTSourceDescriptor.h"
+#include "clang/Basic/Module/ASTSourceDescriptor.h"
 #include <optional>
 
 namespace clang {

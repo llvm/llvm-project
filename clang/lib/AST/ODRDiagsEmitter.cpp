@@ -11,7 +11,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/Basic/DiagnosticAST.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 
 using namespace clang;
 

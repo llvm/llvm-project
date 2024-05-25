@@ -11,7 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"

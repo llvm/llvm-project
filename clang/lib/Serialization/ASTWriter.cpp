@@ -43,7 +43,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OpenCLOptions.h"
