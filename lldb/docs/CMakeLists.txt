@@ -13,6 +13,7 @@ if(DOXYGEN_FOUND)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating LLDB C++ API reference with Doxygen" VERBATIM
   )
+  set_target_properties(lldb-cpp-doc PROPERTIES FOLDER "LLDB/Docs")
 endif()
 
 if (LLVM_ENABLE_SPHINX)
