@@ -1458,6 +1458,39 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
+bool CompilerInvocation::setDefaultPointerAuthOptions(
+    PointerAuthOptions &Opts, const LangOptions &LangOpts,
+    const llvm::Triple &Triple) {
+  if (Triple.getArch() == llvm::Triple::aarch64) {
+    if (LangOpts.PointerAuthCalls) {
+      using Key = PointerAuthSchema::ARM8_3Key;
+      using Discrimination = PointerAuthSchema::Discrimination;
+      // If you change anything here, be sure to update <ptrauth.h>.
+      Opts.FunctionPointers =
+          PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+    }
+    return true;
+  }
+
+  return false;
+}
+
+static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
+                                    ArgList &Args,
+                                    const LangOptions &LangOpts,
+                                    const llvm::Triple &Triple,
+                                    DiagnosticsEngine &Diags) {
+  if (!LangOpts.PointerAuthCalls)
+    return true;
+
+  if (CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple))
+    return true;
+
+  Diags.Report(diag::err_drv_ptrauth_not_supported)
+    << Triple.str();
+  return false;
+}
+
 void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
                                                  ArgumentConsumer Consumer,
                                                  const llvm::Triple &T,
@@ -2152,6 +2185,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                       Opts.SanitizeTrap);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
+
+  if (!LangOpts->CUDAIsDevice)
+    parsePointerAuthOptions(Opts.PointerAuth, Args, *LangOpts, T, Diags);
 
   if (Args.hasArg(options::OPT_ffinite_loops))
     Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Always;

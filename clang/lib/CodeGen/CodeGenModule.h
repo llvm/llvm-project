@@ -25,6 +25,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
@@ -69,6 +70,7 @@ class Expr;
 class Stmt;
 class StringLiteral;
 class NamedDecl;
+class PointerAuthSchema;
 class ValueDecl;
 class VarDecl;
 class LangOptions;
@@ -937,10 +939,41 @@ public:
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  llvm::Constant *getRawFunctionPointer(GlobalDecl GD,
+                                        llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  llvm::Constant *getFunctionPointer(GlobalDecl GD, llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, but will only cache the result if \p FD is passed.
+  llvm::Constant *getFunctionPointer(llvm::Constant *pointer,
+                                     QualType functionType,
+                                     GlobalDecl GD = GlobalDecl());
+
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType functionType);
+
+  CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
+
+  CGPointerAuthInfo getPointerAuthInfoForType(QualType type);
+
+  llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
+                                           const PointerAuthSchema &schema,
+                                           llvm::Constant *storageAddress,
+                                           GlobalDecl schemaDecl,
+                                           QualType schemaType);
   llvm::Constant *
   getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                            llvm::Constant *StorageAddress,
                            llvm::ConstantInt *OtherDiscriminator);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
