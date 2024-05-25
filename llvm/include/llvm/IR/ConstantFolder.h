@@ -95,7 +95,7 @@ public:
     return nullptr;
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
@@ -200,15 +200,6 @@ public:
   Constant *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
                                                 Type *DestTy) const override {
     return ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return ConstantExpr::getCompare(P, LHS, RHS);
   }
 };
 

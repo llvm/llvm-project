@@ -39,5 +39,6 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRTilingInterface
   MLIRTransforms
   MLIRVectorDialect
+  MLIRVectorUtils
   MLIRValueBoundsOpInterface
 )

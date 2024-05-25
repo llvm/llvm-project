@@ -3121,7 +3121,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
   if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
-        X86::isCFCMOVCC(Opcode)))
+        X86::isCFCMOVCC(Opcode) || X86::isCCMPCC(Opcode) ||
+        X86::isCTESTCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3155,6 +3156,12 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
 X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
   return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                          : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
+  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,

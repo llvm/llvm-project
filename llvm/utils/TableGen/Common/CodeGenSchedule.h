@@ -277,6 +277,9 @@ struct CodeGenProcModel {
 
   bool isUnsupported(const CodeGenInstruction &Inst) const;
 
+  // Return true if the given write record is referenced by a ReadAdvance.
+  bool hasReadOfWrite(Record *WriteDef) const;
+
 #ifndef NDEBUG
   void dump() const;
 #endif
@@ -535,9 +538,6 @@ public:
   }
 
   unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
-
-  // Return true if the given write record is referenced by a ReadAdvance.
-  bool hasReadOfWrite(Record *WriteDef) const;
 
   // Get a SchedClass from its index.
   CodeGenSchedClass &getSchedClass(unsigned Idx) {

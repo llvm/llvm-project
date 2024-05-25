@@ -281,8 +281,8 @@ define <256 x i8> @vmaxu_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zer
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB22_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
@@ -324,8 +324,8 @@ define <256 x i8> @vmaxu_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) 
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a1)
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
@@ -1020,8 +1020,8 @@ declare <32 x i64> @llvm.vp.umax.v32i64(<32 x i64>, <32 x i64>, <32 x i1>, i32)
 define <32 x i64> @vmaxu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vmaxu_vx_v32i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    li a2, 16
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v7, v0, 2
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    bltu a0, a2, .LBB74_2
@@ -1037,15 +1037,15 @@ define <32 x i64> @vmaxu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV32-NEXT:    sltu a0, a0, a1
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vmv1r.v v0, v7
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vmaxu.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_v32i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v0, 2
 ; RV64-NEXT:    mv a1, a0
 ; RV64-NEXT:    bltu a0, a2, .LBB74_2
@@ -1059,8 +1059,8 @@ define <32 x i64> @vmaxu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    sltu a0, a0, a1
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vmaxu.vx v16, v16, a2, v0.t
 ; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.umax.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 %evl)

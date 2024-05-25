@@ -925,6 +925,10 @@ bool SymbolGraphSerializer::visitObjCInterfaceRecord(
 
 bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     const ObjCCategoryRecord *Record) {
+  if (SkipSymbolsInCategoriesToExternalTypes &&
+      !API.findRecordForUSR(Record->Interface.USR))
+    return true;
+
   auto *CurrentModule = ModuleForCurrentSymbol;
   if (Record->isExtendingExternalModule())
     ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
@@ -1040,8 +1044,11 @@ void SymbolGraphSerializer::serializeGraphToStream(
 void SymbolGraphSerializer::serializeMainSymbolGraph(
     raw_ostream &OS, const APISet &API, const APIIgnoresList &IgnoresList,
     SymbolGraphSerializerOption Options) {
-  SymbolGraphSerializer Serializer(API, IgnoresList,
-                                   Options.EmitSymbolLabelsForTesting);
+  SymbolGraphSerializer Serializer(
+      API, IgnoresList, Options.EmitSymbolLabelsForTesting,
+      /*ForceEmitToMainModule=*/true,
+      /*SkipSymbolsInCategoriesToExternalTypes=*/true);
+
   Serializer.traverseAPISet();
   Serializer.serializeGraphToStream(OS, Options, API.ProductName,
                                     std::move(Serializer.MainModule));

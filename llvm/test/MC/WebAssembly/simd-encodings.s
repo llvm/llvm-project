@@ -845,4 +845,10 @@ main:
     # CHECK: f32.store_f16 32 # encoding: [0xfc,0x31,0x01,0x20]
     f32.store_f16 32
 
+    # CHECK: f16x8.splat # encoding: [0xfd,0xa0,0x02]
+    f16x8.splat
+
+    # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
+    f16x8.extract_lane 1
+
     end_function

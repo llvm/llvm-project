@@ -15,29 +15,11 @@
 
 #include <linux/errno.h>
 
-#ifndef ERFKILL
-#define ERFKILL 132
-#endif // ERFKILL
-
-#ifndef EOWNERDEAD
-#define EOWNERDEAD 130
-#endif // EOWNERDEAD
-
-#ifndef EHWPOISON
-#define EHWPOISON 133
-#endif // EHWPOISON
-
-#ifndef ECANCELED
-#define ECANCELED 125
-#endif // ECANCELED
-
 #ifndef ENOTSUP
 #define ENOTSUP EOPNOTSUPP
 #endif // ENOTSUP
 
-#ifndef ENOTRECOVERABLE
-#define ENOTRECOVERABLE 131
-#endif // ENOTRECOVERABLE
+#include "llvm-libc-macros/linux/error-number-macros.h"
 
 #else // __linux__
 #include "llvm-libc-macros/generic-error-number-macros.h"

@@ -50,7 +50,7 @@ template<typename T> T Foo = T(3.14);
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",

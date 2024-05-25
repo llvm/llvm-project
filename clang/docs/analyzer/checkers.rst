@@ -1179,6 +1179,47 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+security.SetgidSetuidOrder (C)
+""""""""""""""""""""""""""""""
+When dropping user-level and group-level privileges in a program by using
+``setuid`` and ``setgid`` calls, it is important to reset the group-level
+privileges (with ``setgid``) first. Function ``setgid`` will likely fail if
+the superuser privileges are already dropped.
+
+The checker checks for sequences of ``setuid(getuid())`` and
+``setgid(getgid())`` calls (in this order). If such a sequence is found and
+there is no other privilege-changing function call (``seteuid``, ``setreuid``,
+``setresuid`` and the GID versions of these) in between, a warning is
+generated. The checker finds only exactly ``setuid(getuid())`` calls (and the
+GID versions), not for example if the result of ``getuid()`` is stored in a
+variable.
+
+.. code-block:: c
+
+ void test1() {
+   // ...
+   // end of section with elevated privileges
+   // reset privileges (user and group) to normal user
+   if (setuid(getuid()) != 0) {
+     handle_error();
+     return;
+   }
+   if (setgid(getgid()) != 0) { // warning: A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail
+     handle_error();
+     return;
+   }
+   // user-ID and group-ID are reset to normal user now
+   // ...
+ }
+
+In the code above the problem is that ``setuid(getuid())`` removes superuser
+privileges before ``setgid(getgid())`` is called. To fix the problem the
+``setgid(getgid())`` should be called first. Further attention is needed to
+avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
+this) and always check the return value of these calls.
+
+This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
+
 .. _unix-checkers:
 
 unix
@@ -2792,6 +2833,31 @@ Warn on mmap() calls that are both writable and executable.
    //       code
  }
 
+.. _alpha-security-putenv-stack-array:
+
+alpha.security.PutenvStackArray (C)
+"""""""""""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
+(automatic) array as the argument. Function ``putenv`` does not copy the passed
+string, only a pointer to the data is stored and this data can be read even by
+other threads. Content of a stack-allocated array is likely to be overwritten
+after returning from the parent function.
+
+The problem can be solved by using a static array variable or dynamically
+allocated memory. Even better is to avoid using ``putenv`` (it has other
+problems related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char env[] = "NAME=value";
+    return putenv(env); // putenv function should not be called with stack-allocated string
+  }
+
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -2817,55 +2883,6 @@ alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
 SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-.. _alpha-security-cert-pos-checkers:
-
-alpha.security.cert.pos
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
-
-.. _alpha-security-cert-pos-34c:
-
-alpha.security.cert.pos.34c
-"""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-
-.. code-block:: c
-
-  int func(const char *var) {
-    char env[1024];
-    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
-    if (retval < 0 || (size_t)retval >= sizeof(env)) {
-        /* Handle error */
-    }
-
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-
-Limitations:
-
-   - Technically, one can pass automatic variables to ``putenv``,
-     but one needs to ensure that the given environment key stays
-     alive until it's removed or overwritten.
-     Since the analyzer cannot keep track of which envvars get overwritten
-     and when, it needs to be slightly more aggressive and warn for such
-     cases too, leading in some cases to false-positive reports like this:
-
-     .. code-block:: c
-
-        void baz() {
-          char env[] = "NAME=value";
-          putenv(env); // false-positive warning: putenv function should not be called...
-          // More code...
-          putenv((char *)"NAME=anothervalue");
-          // This putenv call overwrites the previous entry, thus that can no longer dangle.
-        } // 'env' array becomes dead only here.
-
-alpha.security.cert.env
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
 
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^

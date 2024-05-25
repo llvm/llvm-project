@@ -1225,7 +1225,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
 
   uint32_t permissions = source_file.get()->GetPermissions(error);
   if (permissions == 0)
-    permissions = lldb::eFilePermissionsFileDefault;
+    permissions = lldb::eFilePermissionsUserRWX;
 
   lldb::user_id_t dest_file = OpenFile(
       destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |

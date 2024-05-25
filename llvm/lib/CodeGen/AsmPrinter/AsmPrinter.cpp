@@ -2463,11 +2463,15 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitGlobalIFunc(M, IFunc);
 
   // Finalize debug and EH information.
+  // Defer MCAssembler based constant folding due to a performance issue. The
+  // label differences will be evaluated at write time.
+  OutStreamer->setUseAssemblerInfoForParsing(false);
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endModule();
   }
+  OutStreamer->setUseAssemblerInfoForParsing(true);
 
   // This deletes all the ephemeral handlers that AsmPrinter added, while
   // keeping all the user-added handlers alive until the AsmPrinter is
@@ -3501,7 +3505,7 @@ static void emitGlobalConstantStruct(const DataLayout &DL,
                                      const Constant *BaseCV, uint64_t Offset,
                                      AsmPrinter::AliasMapTy *AliasList) {
   // Print the fields in successive locations. Pad to align if needed!
-  unsigned Size = DL.getTypeAllocSize(CS->getType());
+  uint64_t Size = DL.getTypeAllocSize(CS->getType());
   const StructLayout *Layout = DL.getStructLayout(CS->getType());
   uint64_t SizeSoFar = 0;
   for (unsigned I = 0, E = CS->getNumOperands(); I != E; ++I) {
