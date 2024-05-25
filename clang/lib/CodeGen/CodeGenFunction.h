@@ -4406,6 +4406,16 @@ public:
   }
 
   bool isPointerKnownNonNull(const Expr *E);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
+                                        llvm::Value *storageAddress,
+                                        GlobalDecl calleeDecl,
+                                        QualType calleeType);
+  llvm::Value *EmitPointerAuthSign(QualType pointeeType, llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  void EmitPointerAuthOperandBundle(
+      const CGPointerAuthInfo &info,
+      SmallVectorImpl<llvm::OperandBundleDef> &bundles);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.

@@ -859,6 +859,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
       SanOpts.Mask &= ~SanitizerKind::Null;
 
+  // Add pointer authentication attributes.
+  const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
+  if (CodeGenOpts.PointerAuth.FunctionPointers)
+    Fn->addFnAttr("ptrauth-calls");
+
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
@@ -3040,4 +3045,57 @@ llvm::Value *CodeGenFunction::emitBoolVecConversion(llvm::Value *SrcVec,
     ShuffleMask[MaskIdx] = MaskIdx;
 
   return Builder.CreateShuffleVector(SrcVec, ShuffleMask, Name);
+}
+
+void CodeGenFunction::EmitPointerAuthOperandBundle(
+    const CGPointerAuthInfo &pointerAuth,
+    SmallVectorImpl<llvm::OperandBundleDef> &bundles) {
+  if (!pointerAuth.isSigned())
+    return;
+
+  auto key = Builder.getInt32(pointerAuth.getKey());
+
+  llvm::Value *discriminator = pointerAuth.getDiscriminator();
+  if (!discriminator) {
+    discriminator = Builder.getSize(0);
+  }
+
+  llvm::Value *args[] = {key, discriminator};
+  bundles.emplace_back("ptrauth", args);
+}
+
+static llvm::Value *EmitPointerAuthCommon(CodeGenFunction &CGF,
+                                          const CGPointerAuthInfo &pointerAuth,
+                                          llvm::Value *pointer,
+                                          unsigned intrinsicID) {
+  if (!pointerAuth)
+    return pointer;
+
+  auto key = CGF.Builder.getInt32(pointerAuth.getKey());
+
+  llvm::Value *discriminator = pointerAuth.getDiscriminator();
+  if (!discriminator) {
+    discriminator = CGF.Builder.getSize(0);
+  }
+
+  // Convert the pointer to intptr_t before signing it.
+  auto origType = pointer->getType();
+  pointer = CGF.Builder.CreatePtrToInt(pointer, CGF.IntPtrTy);
+
+  // call i64 @llvm.ptrauth.sign.i64(i64 %pointer, i32 %key, i64 %discriminator)
+  auto intrinsic = CGF.CGM.getIntrinsic(intrinsicID);
+  pointer = CGF.EmitRuntimeCall(intrinsic, {pointer, key, discriminator});
+
+  // Convert back to the original type.
+  pointer = CGF.Builder.CreateIntToPtr(pointer, origType);
+  return pointer;
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthSign(const CGPointerAuthInfo &pointerAuth,
+                                     llvm::Value *pointer) {
+  if (!pointerAuth.shouldSign())
+    return pointer;
+  return EmitPointerAuthCommon(*this, pointerAuth, pointer,
+                               llvm::Intrinsic::ptrauth_sign);
 }
