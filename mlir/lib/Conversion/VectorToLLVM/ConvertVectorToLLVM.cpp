@@ -541,8 +541,8 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
 
   // Create VScale*vShape[0] and return it as vector length.
   Value vScale = rewriter.create<vector::VectorScaleOp>(loc);
-  vScale = rewriter.create<arith::IndexCastOp>(
-      loc, rewriter.getI32Type(), vScale);
+  vScale =
+      rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), vScale);
   vLen = rewriter.create<arith::MulIOp>(loc, vLen, vScale);
   return vLen;
 }
