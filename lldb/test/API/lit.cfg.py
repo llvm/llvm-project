@@ -313,3 +313,22 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+# Transfer some environment variables into the tests on Windows build host.
+if platform.system() == "Windows":
+    for v in [
+        "SystemDrive",
+        "SystemRoot",
+        "ALLUSERSPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "USERDNSDOMAIN",
+        "USERDOMAIN",
+        "USERNAME",
+        "USERPROFILE",
+        "USERDOMAIN_ROAMINGPROFILE",
+        "COMPUTERNAME",
+        "ProgramData",
+    ]:
+        if v in os.environ:
+            config.environment[v] = os.environ[v]
