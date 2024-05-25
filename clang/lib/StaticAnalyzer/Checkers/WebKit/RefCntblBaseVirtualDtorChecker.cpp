@@ -88,10 +88,8 @@ public:
             if (ArgList) {
               auto ParmIndex = ParmType->getIndex();
               auto Type = ArgList->get(ParmIndex).getAsType();
-              if (auto *RD = dyn_cast<RecordType>(Type)) {
-                if (RD->getDecl() == ClassDecl)
-                  return true;
-              }
+              if (Type->getAsCXXRecordDecl() == ClassDecl)
+                return true;
             }
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
             if (RD->getDecl() == ClassDecl)
