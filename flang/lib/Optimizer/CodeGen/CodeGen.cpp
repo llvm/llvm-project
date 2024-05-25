@@ -171,11 +171,12 @@ genAllocationScaleSize(OP op, mlir::Type ity,
 }
 
 namespace {
-struct DeclareOpConversion : public fir::FIROpConversion<fir::cg::XDeclareOp> {
-public:
-  using FIROpConversion::FIROpConversion;
+template <typename OP>
+struct DeclareCommonConversion : public fir::FIROpConversion<OP> {
+  using fir::FIROpConversion<OP>::FIROpConversion;
+  using OpAdaptor = typename OP::Adaptor;
   mlir::LogicalResult
-  matchAndRewrite(fir::cg::XDeclareOp declareOp, OpAdaptor adaptor,
+  matchAndRewrite(OP declareOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto memRef = adaptor.getOperands()[0];
     if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(declareOp.getLoc())) {
@@ -3752,19 +3753,21 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, DTEntryOpConversion, DeclareOpConversion,
-      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
-      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
-      GlobalOpConversion, HasValueOpConversion, InsertOnRangeOpConversion,
-      InsertValueOpConversion, IsPresentOpConversion, LenParamIndexOpConversion,
-      LoadOpConversion, MulcOpConversion, NegcOpConversion,
-      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
-      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
-      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      CoordinateOpConversion, DTEntryOpConversion,
+      DeclareCommonConversion<fir::cg::XDeclareOp>,
+      DeclareCommonConversion<fir::DeclareOp>, DivcOpConversion,
+      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      HasValueOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
+      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+      UndefOpConversion, UnreachableOpConversion,
       UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
       XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
                                                                 options);
