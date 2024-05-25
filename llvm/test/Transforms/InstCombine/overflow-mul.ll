@@ -346,12 +346,9 @@ define i32 @extra_and_use_mask_too_large(i32 %x, i32 %y) {
 
 define i32 @smul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[MUL]], -2147483648
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], -4294967296
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV3]]
 ;
   %conv = sext i32 %a to i64
@@ -365,11 +362,9 @@ define i32 @smul(i32 %a, i32 %b) {
 
 define i32 @smul2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul2(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[MUL]], 2147483647
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 4294967295
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV3]]
 ;
@@ -377,7 +372,7 @@ define i32 @smul2(i32 %a, i32 %b) {
   %conv1 = sext i32 %b to i64
   %mul = mul nsw i64 %conv1, %conv
   %cmp = icmp sle i64 %mul, 2147483647
-  %cmp2 = icmp sgt i64 %mul, -2147483648
+  %cmp2 = icmp sge i64 %mul, -2147483648
   %1 = select i1 %cmp, i1 %cmp2, i1 false
   %conv3 = zext i1 %1 to i32
   ret i32 %conv3
