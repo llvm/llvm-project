@@ -688,6 +688,10 @@ public:
     this->set_size(this->size() + NumInputs);
   }
 
+  template <typename RangeTy> void append_range(RangeTy &&R) {
+    this->append(R.begin(), R.end());
+  }
+
   /// Append \p NumInputs copies of \p Elt to the end.
   void append(size_type NumInputs, ValueParamT Elt) {
     const T *EltPtr = this->reserveForParamAndGetAddress(Elt, NumInputs);
