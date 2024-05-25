@@ -24,7 +24,6 @@ namespace hlfir {
 
 std::unique_ptr<mlir::Pass> createConvertHLFIRtoFIRPass();
 std::unique_ptr<mlir::Pass> createBufferizeHLFIRPass();
-std::unique_ptr<mlir::Pass> createLowerHLFIRIntrinsicsPass();
 
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"

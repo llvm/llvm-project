@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -276,6 +277,20 @@ struct StructuredOpShardingInterface
     }
 
     return res;
+  }
+
+  SmallVector<ReductionKind>
+  getReductionLoopIteratorKinds(Operation *op) const {
+    LinalgOp linalgOp = llvm::cast<LinalgOp>(op);
+    SmallVector<utils::IteratorType> iteratorTypes =
+        linalgOp.getIteratorTypesArray();
+    unsigned reductionItersCount = std::accumulate(
+        iteratorTypes.begin(), iteratorTypes.end(), 0,
+        [](unsigned count, utils::IteratorType iter) {
+          return count + (iter == utils::IteratorType::reduction);
+        });
+    mesh::ReductionKind reductionKind = getReductionKindOfLinalgOp(linalgOp);
+    return SmallVector<ReductionKind>(reductionItersCount, reductionKind);
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,

@@ -776,9 +776,6 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "curl", LLVM_ENABLE_CURL,
-      "A boolean value that indicates if CURL support is enabled in LLDB");
-  AddBoolConfigEntry(
       *config_up, "curses", LLDB_ENABLE_CURSES,
       "A boolean value that indicates if curses support is enabled in LLDB");
   AddBoolConfigEntry(
@@ -1727,20 +1724,20 @@ SBDebugger::LoadTraceFromFile(SBError &error,
 
 void SBDebugger::RequestInterrupt() {
   LLDB_INSTRUMENT_VA(this);
-
+  
   if (m_opaque_sp)
-    m_opaque_sp->RequestInterrupt();
+    m_opaque_sp->RequestInterrupt();  
 }
 void SBDebugger::CancelInterruptRequest()  {
   LLDB_INSTRUMENT_VA(this);
-
+  
   if (m_opaque_sp)
-    m_opaque_sp->CancelInterruptRequest();
+    m_opaque_sp->CancelInterruptRequest();  
 }
 
 bool SBDebugger::InterruptRequested()   {
   LLDB_INSTRUMENT_VA(this);
-
+  
   if (m_opaque_sp)
     return m_opaque_sp->InterruptRequested();
   return false;

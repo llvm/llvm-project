@@ -18,6 +18,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/APSInt.h"
@@ -100,6 +101,11 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     diagnoseMissingInitializer(S, OpPC, VD);
     return;
   }
+
+  // Rather random, but this is to match the diagnostic output of the current
+  // interpreter.
+  if (isa<ObjCIvarDecl>(VD))
+    return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;

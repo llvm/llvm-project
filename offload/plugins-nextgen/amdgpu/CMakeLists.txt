@@ -21,11 +21,6 @@ else()
   find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 endif()
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  message(STATUS "Not building AMDGPU NextGen plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
-  return()
-endif()
-
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.amdgpu AMDGPU)
 
