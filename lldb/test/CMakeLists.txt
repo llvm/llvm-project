@@ -91,10 +91,11 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNT
 
 # Create a custom target to track test dependencies.
 add_custom_target(lldb-test-depends)
-set_target_properties(lldb-test-depends PROPERTIES FOLDER "lldb misc")
+set_target_properties(lldb-test-depends PROPERTIES FOLDER "LLDB/Tests")
 
 # Create an alias for the legacy name of lldb-test-depends
 add_custom_target(lldb-test-deps)
+set_target_properties(lldb-test-deps PROPERTIES FOLDER "LLDB/Tests")
 add_dependencies(lldb-test-deps lldb-test-depends)
 
 function(add_lldb_test_dependency)
@@ -279,7 +280,6 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-api-test-deps
     lldb-shell-test-deps
     lldb-unit-test-deps)
-set_target_properties(check-lldb PROPERTIES FOLDER "lldb tests")
 
 # BEGIN SWIFT MOD
 add_lit_testsuite(check-lldb-swift
