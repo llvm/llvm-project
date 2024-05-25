@@ -1705,14 +1705,14 @@ def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCPlusA
 ]>;
 
-def freeze_of_not_undef_and_poison : GICombineRule<
+def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
    (match (G_FREEZE $root, $src),
           [{ return isGuaranteedNotToBeUndefOrPoison(${src}.getReg(), MRI); }]),
    (apply (GIReplaceReg $root, $src))>;
 
 def freeze_combines: GICombineGroup<[
-  freeze_of_not_undef_and_poison,
+  freeze_of_non_undef_non_poison,
   push_freeze_to_prevent_poison_from_propagating
 ]>;
 

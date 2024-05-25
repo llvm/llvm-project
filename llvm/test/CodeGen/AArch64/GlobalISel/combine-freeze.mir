@@ -16,8 +16,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
-    %2:_(s64) = G_FREEZE %0
-    $x0 = COPY %2(s64)
+    %1:_(s64) = G_FREEZE %0
+    $x0 = COPY %1(s64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -33,7 +33,6 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
     ; CHECK-NEXT: $x0 = COPY [[C]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 9
     %2:_(s64) = G_FREEZE %1
     $x0 = COPY %2(s64)
@@ -52,7 +51,6 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 9.000000e+00
     ; CHECK-NEXT: $x0 = COPY [[C]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
     %1:_(s64) = G_FCONSTANT double 9.0
     %2:_(s64) = G_FREEZE %1
     $x0 = COPY %2(s64)
@@ -71,7 +69,6 @@ body:             |
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[DEF]]
     ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
     %1:_(s64) = G_IMPLICIT_DEF
     %2:_(s64) = G_FREEZE %1
     $x0 = COPY %2(s64)
