@@ -9,9 +9,6 @@
 
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT This test should not require std::to_chars(floating-point)
-// XFAIL: availability-fp_to_chars-missing
-
 // <vector>
 
 // template<class T, class charT>

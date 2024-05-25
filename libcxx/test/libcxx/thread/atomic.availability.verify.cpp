@@ -19,59 +19,61 @@ void f() {
         std::atomic<int> i(3);
         std::memory_order m = std::memory_order_relaxed;
 
-        i.wait(4); // expected-error {{is unavailable}}
-        i.wait(4, m); // expected-error {{is unavailable}}
-        i.notify_one(); // expected-error {{is unavailable}}
-        i.notify_all(); // expected-error {{is unavailable}}
+        i.wait(4); // expected-warning {{'wait' is only available on}}
+        i.wait(4, m); // expected-warning {{'wait' is only available on}}
+        i.notify_one(); // expected-warning {{'notify_one' is only available on}}
+        i.notify_all(); // expected-warning {{'notify_all' is only available on}}
 
-        std::atomic_wait(&i, 4); // expected-error {{is unavailable}}
-        std::atomic_wait_explicit(&i, 4, m); // expected-error {{is unavailable}}
-        std::atomic_notify_one(&i); // expected-error {{is unavailable}}
-        std::atomic_notify_all(&i); // expected-error {{is unavailable}}
+        std::atomic_wait(&i, 4); // expected-warning {{'atomic_wait<int>' is only available on}}
+        std::atomic_wait_explicit(&i, 4, m); // expected-warning {{'atomic_wait_explicit<int>' is only available on}}
+        std::atomic_notify_one(&i); // expected-warning {{'atomic_notify_one<int>' is only available on}}
+        std::atomic_notify_all(&i); // expected-warning {{'atomic_notify_all<int>' is only available on}}
     }
 
     {
         std::atomic<int> volatile i(3);
         std::memory_order m = std::memory_order_relaxed;
 
-        i.wait(4); // expected-error {{is unavailable}}
-        i.wait(4, m); // expected-error {{is unavailable}}
-        i.notify_one(); // expected-error {{is unavailable}}
-        i.notify_all(); // expected-error {{is unavailable}}
+        i.wait(4); // expected-warning {{'wait' is only available on}}
+        i.wait(4, m); // expected-warning {{'wait' is only available on}}
+        i.notify_one(); // expected-warning {{'notify_one' is only available on}}
+        i.notify_all(); // expected-warning {{'notify_all' is only available on}}
 
-        std::atomic_wait(&i, 4); // expected-error {{is unavailable}}
-        std::atomic_wait_explicit(&i, 4, m); // expected-error {{is unavailable}}
-        std::atomic_notify_one(&i); // expected-error {{is unavailable}}
-        std::atomic_notify_all(&i); // expected-error {{is unavailable}}
+        std::atomic_wait(&i, 4); // expected-warning {{'atomic_wait<int>' is only available on}}
+        std::atomic_wait_explicit(&i, 4, m); // expected-warning {{'atomic_wait_explicit<int>' is only available on}}
+        std::atomic_notify_one(&i); // expected-warning {{'atomic_notify_one<int>' is only available on}}
+        std::atomic_notify_all(&i); // expected-warning {{'atomic_notify_all<int>' is only available on}}
     }
 
     {
         std::atomic_flag flag;
         bool b = false;
         std::memory_order m = std::memory_order_relaxed;
-        flag.wait(b); // expected-error {{is unavailable}}
-        flag.wait(b, m); // expected-error {{is unavailable}}
-        flag.notify_one(); // expected-error {{is unavailable}}
-        flag.notify_all(); // expected-error {{is unavailable}}
 
-        std::atomic_flag_wait(&flag, b); // expected-error {{is unavailable}}
-        std::atomic_flag_wait_explicit(&flag, b, m); // expected-error {{is unavailable}}
-        std::atomic_flag_notify_one(&flag); // expected-error {{is unavailable}}
-        std::atomic_flag_notify_all(&flag); // expected-error {{is unavailable}}
+        flag.wait(b); // expected-warning {{'wait' is only available on}}
+        flag.wait(b, m); // expected-warning {{'wait' is only available on}}
+        flag.notify_one(); // expected-warning {{'notify_one' is only available on}}
+        flag.notify_all(); // expected-warning {{'notify_all' is only available on}}
+
+        std::atomic_flag_wait(&flag, b); // expected-warning {{'atomic_flag_wait' is only available on}}
+        std::atomic_flag_wait_explicit(&flag, b, m); // expected-warning {{'atomic_flag_wait_explicit' is only available on}}
+        std::atomic_flag_notify_one(&flag); // expected-warning {{'atomic_flag_notify_one' is only available on}}
+        std::atomic_flag_notify_all(&flag); // expected-warning {{'atomic_flag_notify_all' is only available on}}
     }
 
     {
         std::atomic_flag volatile flag;
         bool b = false;
         std::memory_order m = std::memory_order_relaxed;
-        flag.wait(b); // expected-error {{is unavailable}}
-        flag.wait(b, m); // expected-error {{is unavailable}}
-        flag.notify_one(); // expected-error {{is unavailable}}
-        flag.notify_all(); // expected-error {{is unavailable}}
 
-        std::atomic_flag_wait(&flag, b); // expected-error {{is unavailable}}
-        std::atomic_flag_wait_explicit(&flag, b, m); // expected-error {{is unavailable}}
-        std::atomic_flag_notify_one(&flag); // expected-error {{is unavailable}}
-        std::atomic_flag_notify_all(&flag); // expected-error {{is unavailable}}
+        flag.wait(b); // expected-warning {{'wait' is only available on}}
+        flag.wait(b, m); // expected-warning {{'wait' is only available on}}
+        flag.notify_one(); // expected-warning {{'notify_one' is only available on}}
+        flag.notify_all(); // expected-warning {{'notify_all' is only available on}}
+
+        std::atomic_flag_wait(&flag, b); // expected-warning {{'atomic_flag_wait' is only available on}}
+        std::atomic_flag_wait_explicit(&flag, b, m); // expected-warning {{'atomic_flag_wait_explicit' is only available on}}
+        std::atomic_flag_notify_one(&flag); // expected-warning {{'atomic_flag_notify_one' is only available on}}
+        std::atomic_flag_notify_all(&flag); // expected-warning {{'atomic_flag_notify_all' is only available on}}
     }
 }

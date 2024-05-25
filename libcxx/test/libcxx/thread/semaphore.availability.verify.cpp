@@ -18,31 +18,31 @@ void f() {
     {
         // Tests for std::counting_semaphore with non-default template argument
         std::counting_semaphore<20> sem(10);
-        sem.release(); // expected-error {{is unavailable}}
-        sem.release(5); // expected-error {{is unavailable}}
-        sem.acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-error 1-2 {{is unavailable}}
-        sem.try_acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-error 1-2 {{is unavailable}}
+        sem.release(); // expected-warning {{'release' is only available on}}
+        sem.release(5); // expected-warning {{'release' is only available on}}
+        sem.acquire(); // expected-warning {{'acquire' is only available on}}
+        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-warning-re {{'try_acquire_for<{{.+}}>' is only available on}}
+        sem.try_acquire(); // expected-warning {{'try_acquire' is only available on}}
+        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-warning-re {{'try_acquire_until<{{.+}}>' is only available on}}
     }
     {
         // Tests for std::counting_semaphore with default template argument
         std::counting_semaphore<> sem(10);
-        sem.release(); // expected-error {{is unavailable}}
-        sem.release(5); // expected-error {{is unavailable}}
-        sem.acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-error 1-2 {{is unavailable}}
-        sem.try_acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-error 1-2 {{is unavailable}}
+        sem.release(); // expected-warning {{'release' is only available on}}
+        sem.release(5); // expected-warning {{'release' is only available on}}
+        sem.acquire(); // expected-warning {{'acquire' is only available on}}
+        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-warning-re {{'try_acquire_for<{{.+}}>' is only available on}}
+        sem.try_acquire(); // expected-warning {{'try_acquire' is only available on}}
+        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-warning-re {{'try_acquire_until<{{.+}}>' is only available on}}
     }
     {
         // Tests for std::binary_semaphore
         std::binary_semaphore sem(10);
-        sem.release(); // expected-error {{is unavailable}}
-        sem.release(5); // expected-error {{is unavailable}}
-        sem.acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-error 1-2 {{is unavailable}}
-        sem.try_acquire(); // expected-error {{is unavailable}}
-        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-error 1-2 {{is unavailable}}
+        sem.release(); // expected-warning {{'release' is only available on}}
+        sem.release(5); // expected-warning {{'release' is only available on}}
+        sem.acquire(); // expected-warning {{'acquire' is only available on}}
+        sem.try_acquire_for(std::chrono::milliseconds{3}); // expected-warning-re {{'try_acquire_for<{{.+}}>' is only available on}}
+        sem.try_acquire(); // expected-warning {{'try_acquire' is only available on}}
+        sem.try_acquire_until(std::chrono::steady_clock::now()); // expected-warning-re {{'try_acquire_until<{{.+}}>' is only available on}}
     }
 }

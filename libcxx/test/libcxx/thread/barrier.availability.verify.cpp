@@ -21,21 +21,21 @@ struct CompletionF {
 void f() {
     // Availability markup on std::barrier<>
     {
-        std::barrier<> b(10); // expected-error {{is unavailable}}
-        auto token = b.arrive(); // expected-error {{is unavailable}}
-        (void)b.arrive(10); // expected-error {{is unavailable}}
-        b.wait(std::move(token)); // expected-error {{is unavailable}}
-        b.arrive_and_wait(); // expected-error {{is unavailable}}
-        b.arrive_and_drop(); // expected-error {{is unavailable}}
+        std::barrier<> b(10);
+        auto token = b.arrive(); // expected-warning {{'arrive' is only available on}}
+        (void)b.arrive(10); // expected-warning {{'arrive' is only available on}}
+        b.wait(std::move(token)); // expected-warning {{'wait' is only available on}}
+        b.arrive_and_wait(); // expected-warning {{'arrive_and_wait' is only available on}}
+        b.arrive_and_drop(); // expected-warning {{'arrive_and_drop' is only available on}}
     }
 
     // Availability markup on std::barrier<CompletionF> with non-default CompletionF
     {
-        std::barrier<CompletionF> b(10); // expected-error {{is unavailable}}
-        auto token = b.arrive(); // expected-error {{is unavailable}}
-        (void)b.arrive(10); // expected-error {{is unavailable}}
-        b.wait(std::move(token)); // expected-error {{is unavailable}}
-        b.arrive_and_wait(); // expected-error {{is unavailable}}
-        b.arrive_and_drop(); // expected-error {{is unavailable}}
+        std::barrier<CompletionF> b(10);
+        auto token = b.arrive(); // expected-warning {{'arrive' is only available on}}
+        (void)b.arrive(10); // expected-warning {{'arrive' is only available on}}
+        b.wait(std::move(token)); // expected-warning {{'wait' is only available on}}
+        b.arrive_and_wait(); // expected-warning {{'arrive_and_wait' is only available on}}
+        b.arrive_and_drop(); // expected-warning {{'arrive_and_drop' is only available on}}
     }
 }

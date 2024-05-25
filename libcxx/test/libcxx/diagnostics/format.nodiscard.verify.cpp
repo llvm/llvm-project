@@ -8,9 +8,6 @@
 
 // Check that format functions are marked [[nodiscard]] as a conforming extension
 
-// TODO FMT This test should not require std::to_chars(floating-point)
-// XFAIL: availability-fp_to_chars-missing
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <format>

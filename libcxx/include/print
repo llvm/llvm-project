@@ -211,7 +211,6 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream)
 #  endif
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
 __vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
@@ -234,7 +233,6 @@ __vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool 
 // terminal when the output is redirected. Typically during testing the
 // output is redirected to be able to capture it. This makes it hard to
 // test this code path.
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
 __vprint_unicode_posix(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
   // TODO PRINT Should flush errors throw too?
@@ -245,7 +243,6 @@ __vprint_unicode_posix(FILE* __stream, string_view __fmt, format_args __args, bo
 }
 
 #    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
 __vprint_unicode_windows(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
   if (!__is_terminal)
@@ -284,7 +281,6 @@ __vprint_unicode_windows(FILE* __stream, string_view __fmt, format_args __args, 
 }
 #    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
 __vprint_unicode([[maybe_unused]] FILE* __stream,
                  [[maybe_unused]] string_view __fmt,
@@ -358,10 +354,8 @@ _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt
 #  endif // _LIBCPP_HAS_NO_UNICODE
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void println(FILE* __stream) { std::print(__stream, "\n"); }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void println() { println(stdout); }
 
 template <class... _Args>
@@ -370,24 +364,20 @@ _LIBCPP_HIDE_FROM_ABI void println(format_string<_Args...> __fmt, _Args&&... __a
 }
 
 #  ifndef _LIBCPP_HAS_NO_UNICODE
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(FILE* __stream, string_view __fmt, format_args __args) {
   __print::__vprint_unicode(__stream, __fmt, __args, false);
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args __args) {
   std::vprint_unicode(stdout, __fmt, __args);
 }
 
 #  endif // _LIBCPP_HAS_NO_UNICODE
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args) {
   __print::__vprint_nonunicode(__stream, __fmt, __args, false);
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_args __args) {
   std::vprint_nonunicode(stdout, __fmt, __args);
 }
