@@ -170,6 +170,7 @@ constexpr T saturate_cast(U x) noexcept;                    // freestanding, Sin
 #include <__numeric/partial_sum.h>
 #include <__numeric/pstl_reduce.h>
 #include <__numeric/pstl_transform_reduce.h>
+#include <__numeric/ranges_iota.h>
 #include <__numeric/reduce.h>
 #include <__numeric/saturation_arithmetic.h>
 #include <__numeric/transform_exclusive_scan.h>

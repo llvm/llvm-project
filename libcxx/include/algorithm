@@ -42,6 +42,9 @@ namespace ranges {
   template <class I>
     struct in_found_result;              // since C++20
 
+  template <class O, class T>
+    struct out_value_result;             // since C++23
+
   template <class I, class T>
     struct in_value_result;              // since C++23
 
@@ -1842,6 +1845,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/next_permutation.h>
 #include <__algorithm/none_of.h>
 #include <__algorithm/nth_element.h>
+#include <__algorithm/out_value_result.h>
 #include <__algorithm/partial_sort.h>
 #include <__algorithm/partial_sort_copy.h>
 #include <__algorithm/partition.h>
