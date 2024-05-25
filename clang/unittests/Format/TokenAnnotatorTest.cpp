@@ -1499,31 +1499,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_InlineASMBrace);
 
-  Tokens = annotate("asm{\n"
-                    "\"a\":\n"
-                    ": x\n"
-                    ":};");
-  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_InlineASMBrace);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_InlineASMBrace);
-
-  Tokens = annotate("__asm__{\n"
-                    "\"a\":\n"
-                    ": x\n"
-                    ":};");
-  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_InlineASMBrace);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_InlineASMBrace);
-
-  Tokens = annotate("__asm (\n"
+  Tokens = annotate("__asm(\n"
                     "\"a\":\n"
                     ": x\n"
                     ":);");
@@ -1532,37 +1508,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("asm (\n"
-                    "\"a\":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm__ (\n"
-                    "\"a\":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm volatile (\n"
-                    "\"a_label:\"\n"
-                    ":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
 
   Tokens = annotate("asm volatile (\n"
                     "\"a_label:\"\n"
@@ -1575,40 +1520,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
 
-  Tokens = annotate("__asm__ volatile (\n"
-                    "\"a_label:\"\n"
-                    ":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm (\n"
-                    "\"a_label:\"\n"
-                    ": x\n"
-                    ":\n"
-                    ": y);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("asm (\n"
-                    "\"a_label:\"\n"
-                    ": x\n"
-                    ":\n"
-                    ": y);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm__ (\n"
+  Tokens = annotate("__asm__(\n"
                     "\"a_label:\"\n"
                     ": x\n"
                     ":\n"
@@ -1631,43 +1543,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
 
-  Tokens = annotate("__asm volatile (\n"
-                    "\"a_label:\"\n"
-                    "\"a b c(%%x)\"\n"
-                    ":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("asm volatile (\n"
-                    "\"a_label:\"\n"
-                    "\"a b c(%%x)\"\n"
-                    ":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm__ volatile (\n"
-                    "\"a_label:\"\n"
-                    "\"a b c(%%x)\"\n"
-                    ":\n"
-                    ": x\n"
-                    ":);");
-  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm (\n"
+  Tokens = annotate("asm(\n"
                     "\"insn\"\n"
                     ": \"=r\" (var1), \"=&r\" (value)\n"
                     ":\n"
@@ -1677,48 +1553,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[13], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[14], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("asm (\n"
-                    "\"insn\"\n"
-                    ": \"=r\" (var1), \"=&r\" (value)\n"
-                    ":\n"
-                    ": \"memory\");");
-  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[13], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[14], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm__ (\n"
-                    "\"insn\"\n"
-                    ": \"=r\" (var1), \"=&r\" (value)\n"
-                    ":\n"
-                    ": \"memory\");");
-  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[13], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[14], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("__asm volatile (\n"
-                    "\"ldr r1, [r0, %%[sym]]\"\n"
-                    ":\n"
-                    ": [sym] \"J\" (aaaaa(aaaa, aaaa))\n"
-                    ");");
-  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-
-  Tokens = annotate("asm volatile (\n"
-                    "\"ldr r1, [r0, %%[sym]]\"\n"
-                    ":\n"
-                    ": [sym] \"J\" (aaaaa(aaaa, aaaa))\n"
-                    ");");
-  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
 
   Tokens = annotate("__asm__ volatile (\n"
                     "\"ldr r1, [r0, %%[sym]]\"\n"
