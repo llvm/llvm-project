@@ -468,13 +468,6 @@ class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
   void runOnOperation() override {
-    // TODO: make this a pass operating on FuncOp. The issue is that
-    // FirOpBuilder helpers may generate new FuncOp because of runtime/llvm
-    // intrinsics calls creation. This may create race conflict if the pass is
-    // scheduled on FuncOp. A solution could be to provide an optional mutex
-    // when building a FirOpBuilder and locking around FuncOp and GlobalOp
-    // creation, but this needs a bit more thinking, so at this point the pass
-    // is scheduled on the moduleOp.
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
@@ -504,7 +497,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createLowerHLFIRIntrinsicsPass() {
-  return std::make_unique<LowerHLFIRIntrinsics>();
-}

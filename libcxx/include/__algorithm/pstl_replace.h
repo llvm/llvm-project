@@ -91,8 +91,8 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
 __replace(_ExecutionPolicy&& __policy,
-          _ForwardIterator __first,
-          _ForwardIterator __last,
+          _ForwardIterator&& __first,
+          _ForwardIterator&& __last,
           const _Tp& __old_value,
           const _Tp& __new_value) noexcept {
   return std::__pstl_frontend_dispatch(
@@ -106,8 +106,8 @@ __replace(_ExecutionPolicy&& __policy,
             [&](__iter_reference<_ForwardIterator> __element) { return __element == __g_old_value; },
             __g_new_value);
       },
-      std::move(__first),
-      std::move(__last),
+      std::forward<_ForwardIterator>(__first),
+      std::forward<_ForwardIterator>(__last),
       __old_value,
       __new_value);
 }
@@ -144,7 +144,7 @@ template <class _ExecutionPolicy,
     _ForwardIterator&& __last,
     _ForwardOutIterator&& __result,
     _Pred&& __pred,
-    const _Tp& __new_value) {
+    const _Tp& __new_value) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy_if, _RawPolicy),
       [&__policy](_ForwardIterator __g_first,

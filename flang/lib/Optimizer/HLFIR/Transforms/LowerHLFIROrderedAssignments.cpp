@@ -1383,6 +1383,9 @@ class LowerHLFIROrderedAssignments
     : public hlfir::impl::LowerHLFIROrderedAssignmentsBase<
           LowerHLFIROrderedAssignments> {
 public:
+  using LowerHLFIROrderedAssignmentsBase<
+      LowerHLFIROrderedAssignments>::LowerHLFIROrderedAssignmentsBase;
+
   void runOnOperation() override {
     // Running on a ModuleOp because this pass may generate FuncOp declaration
     // for runtime calls. This could be a FuncOp pass otherwise.
@@ -1409,7 +1412,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createLowerHLFIROrderedAssignmentsPass() {
-  return std::make_unique<LowerHLFIROrderedAssignments>();
-}

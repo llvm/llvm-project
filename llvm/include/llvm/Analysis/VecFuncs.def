@@ -12,11 +12,6 @@
 // This .def file also allows creating an array of vector functions supported in
 // the specified framework or library.
 
-#if defined(TLI_DEFINE_MASSV_VECFUNCS_NAMES)
-#define TLI_DEFINE_MASSV_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) VEC,
-#endif
-
 #define FIXED(NL) ElementCount::getFixed(NL)
 #define SCALABLE(NL) ElementCount::getScalable(NL)
 #define NOMASK false
@@ -1276,14 +1271,3 @@ TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs4_cbrtf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 #undef FIXED
 
 #undef TLI_DEFINE_VECFUNC
-#undef TLI_DEFINE_ACCELERATE_VECFUNCS
-#undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
-#undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
-#undef TLI_DEFINE_MASSV_VECFUNCS
-#undef TLI_DEFINE_SVML_VECFUNCS
-#undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
-#undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
-#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
-#undef TLI_DEFINE_MASSV_VECFUNCS_NAMES
-#undef TLI_DEFINE_ARMPL_VECFUNCS
-#undef TLI_DEFINE_AMDLIBM_VECFUNCS

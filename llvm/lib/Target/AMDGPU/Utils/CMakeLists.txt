@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMAMDGPUUtils
   CodeGenTypes
   Core
   MC
+  MCParser
   Support
   TargetParser
 
