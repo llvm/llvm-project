@@ -917,3 +917,4 @@ func.func @test_cmpf_propagates(%a: f32, %b: f32) -> index {
   %2 = test.reflect_bounds %1 : index
   func.return %2 : index
 }
+

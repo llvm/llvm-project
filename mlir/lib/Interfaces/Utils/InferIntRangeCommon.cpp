@@ -36,23 +36,6 @@ using namespace mlir;
 using ConstArithFn =
     function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
 
-std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>
-mlir::intrange::inferFromIntegerValueRange(intrange::InferRangeFn inferFn) {
-  return [inferFn = std::move(inferFn)](
-             ArrayRef<IntegerValueRange> args) -> IntegerValueRange {
-    llvm::SmallVector<ConstantIntRanges> unpacked;
-    unpacked.reserve(args.size());
-
-    for (const IntegerValueRange &arg : args) {
-      if (arg.isUninitialized())
-        return {};
-      unpacked.push_back(arg.getValue());
-    }
-
-    return IntegerValueRange{inferFn(unpacked)};
-  };
-}
-
 /// Compute op(minLeft, minRight) and op(maxLeft, maxRight) if possible,
 /// If either computation overflows, make the result unbounded.
 static ConstantIntRanges computeBoundsBy(ConstArithFn op, const APInt &minLeft,

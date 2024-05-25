@@ -10,6 +10,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
+#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
@@ -22,13 +23,13 @@ using namespace mlir::intrange;
 // Constants
 //===----------------------------------------------------------------------===//
 
-void ConstantOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                    SetIntRangeFn setResultRange) {
   const APInt &value = getValue();
   setResultRange(getResult(), ConstantIntRanges::constant(value));
 }
 
-void BoolConstantOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void BoolConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
   bool value = getValue();
   APInt asInt(/*numBits=*/1, value);
@@ -48,215 +49,129 @@ void BoolConstantOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
 // the inference function without any `OverflowFlags`.
 static std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>
 inferWithoutOverflowFlags(InferRangeWithOvfFlagsFn inferWithOvfFn) {
-  return [inferWithOvfFn](
-             ArrayRef<ConstantIntRanges> argRanges) -> ConstantIntRanges {
+  return [inferWithOvfFn](ArrayRef<ConstantIntRanges> argRanges) {
     return inferWithOvfFn(argRanges, OverflowFlags::None);
   };
 }
 
-void AddOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void AddOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferWithoutOverflowFlags(inferAdd), ranges,
-                            CmpMode::Both);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferAdd),
+                                           argRanges, CmpMode::Both));
 }
 
-void SubOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void SubOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferWithoutOverflowFlags(inferSub), ranges,
-                            CmpMode::Both);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferSub),
+                                           argRanges, CmpMode::Both));
 }
 
-void MulOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void MulOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferWithoutOverflowFlags(inferMul), ranges,
-                            CmpMode::Both);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferMul),
+                                           argRanges, CmpMode::Both));
 }
 
-void DivUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void DivUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferWithoutOverflowFlags(inferSub), ranges,
-                            CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferDivU, argRanges, CmpMode::Unsigned));
 }
 
-void DivSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void DivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferDivS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferDivS, argRanges, CmpMode::Signed));
 }
 
-void CeilDivUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void CeilDivUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                    SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferCeilDivU, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferCeilDivU, argRanges, CmpMode::Unsigned));
 }
 
-void CeilDivSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void CeilDivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                    SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferCeilDivS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferCeilDivS, argRanges, CmpMode::Signed));
 }
 
-void FloorDivSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void FloorDivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                     SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferFloorDivS, ranges, CmpMode::Signed);
-      });
-
-  return setResultRange(getResult(), infer(argRanges));
+  return setResultRange(
+      getResult(), inferIndexOp(inferFloorDivS, argRanges, CmpMode::Signed));
 }
 
-void RemSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void RemSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferRemS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferRemS, argRanges, CmpMode::Signed));
 }
 
-void RemUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void RemUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferRemU, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferRemU, argRanges, CmpMode::Unsigned));
 }
 
-void MaxSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void MaxSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferMaxS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferMaxS, argRanges, CmpMode::Signed));
 }
 
-void MaxUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void MaxUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferMaxU, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferMaxU, argRanges, CmpMode::Unsigned));
 }
 
-void MinSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void MinSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferMinS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferMinS, argRanges, CmpMode::Signed));
 }
 
-void MinUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void MinUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferMinU, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferMinU, argRanges, CmpMode::Unsigned));
 }
 
-void ShlOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void ShlOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferWithoutOverflowFlags(inferShl), ranges,
-                            CmpMode::Both);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferShl),
+                                           argRanges, CmpMode::Both));
 }
 
-void ShrSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void ShrSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferShrS, ranges, CmpMode::Signed);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferShrS, argRanges, CmpMode::Signed));
 }
 
-void ShrUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void ShrUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferShrU, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferShrU, argRanges, CmpMode::Unsigned));
 }
 
-void AndOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void AndOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferAnd, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferAnd, argRanges, CmpMode::Unsigned));
 }
 
-void OrOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void OrOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                              SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferOr, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferOr, argRanges, CmpMode::Unsigned));
 }
 
-void XOrOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void XOrOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([](ArrayRef<ConstantIntRanges> ranges) {
-        return inferIndexOp(inferXor, ranges, CmpMode::Unsigned);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  setResultRange(getResult(),
+                 inferIndexOp(inferXor, argRanges, CmpMode::Unsigned));
 }
 
 //===----------------------------------------------------------------------===//
@@ -293,76 +208,56 @@ static ConstantIntRanges inferIndexCast(const ConstantIntRanges &range,
   return ret;
 }
 
-void CastSOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void CastSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                 SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([this](ArrayRef<ConstantIntRanges> ranges) {
-        Type sourceType = getOperand().getType();
-        Type destType = getResult().getType();
-
-        return inferIndexCast(ranges[0], sourceType, destType,
-                              /*isSigned=*/true);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  Type sourceType = getOperand().getType();
+  Type destType = getResult().getType();
+  setResultRange(getResult(), inferIndexCast(argRanges[0], sourceType, destType,
+                                             /*isSigned=*/true));
 }
 
-void CastUOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void CastUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                 SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([this](ArrayRef<ConstantIntRanges> ranges) {
-        Type sourceType = getOperand().getType();
-        Type destType = getResult().getType();
-
-        return inferIndexCast(ranges[0], sourceType, destType,
-                              /*isSigned=*/false);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  Type sourceType = getOperand().getType();
+  Type destType = getResult().getType();
+  setResultRange(getResult(), inferIndexCast(argRanges[0], sourceType, destType,
+                                             /*isSigned=*/false));
 }
 
 //===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
 
-void CmpOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  auto infer =
-      inferFromIntegerValueRange([this](ArrayRef<ConstantIntRanges> ranges) {
-        index::IndexCmpPredicate indexPred = getPred();
-        intrange::CmpPredicate pred =
-            static_cast<intrange::CmpPredicate>(indexPred);
-        const ConstantIntRanges &lhs = ranges[0], &rhs = ranges[1];
+  index::IndexCmpPredicate indexPred = getPred();
+  intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(indexPred);
+  const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-        APInt min = APInt::getZero(1);
-        APInt max = APInt::getAllOnes(1);
+  APInt min = APInt::getZero(1);
+  APInt max = APInt::getAllOnes(1);
 
-        std::optional<bool> truthValue64 =
-            intrange::evaluatePred(pred, lhs, rhs);
+  std::optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
 
-        ConstantIntRanges lhsTrunc = truncRange(lhs, indexMinWidth),
-                          rhsTrunc = truncRange(rhs, indexMinWidth);
-        std::optional<bool> truthValue32 =
-            intrange::evaluatePred(pred, lhsTrunc, rhsTrunc);
+  ConstantIntRanges lhsTrunc = truncRange(lhs, indexMinWidth),
+                    rhsTrunc = truncRange(rhs, indexMinWidth);
+  std::optional<bool> truthValue32 =
+      intrange::evaluatePred(pred, lhsTrunc, rhsTrunc);
 
-        if (truthValue64 == truthValue32) {
-          if (truthValue64.has_value() && *truthValue64)
-            min = max;
-          else if (truthValue64.has_value() && !(*truthValue64))
-            max = min;
-        }
-
-        return ConstantIntRanges::fromUnsigned(min, max);
-      });
-
-  setResultRange(getResult(), infer(argRanges));
+  if (truthValue64 == truthValue32) {
+    if (truthValue64.has_value() && *truthValue64)
+      min = max;
+    else if (truthValue64.has_value() && !(*truthValue64))
+      max = min;
+  }
+  setResultRange(getResult(), ConstantIntRanges::fromUnsigned(min, max));
 }
 
 //===----------------------------------------------------------------------===//
 // SizeOf, which is bounded between the two supported bitwidth (32 and 64).
 //===----------------------------------------------------------------------===//
 
-void SizeOfOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void SizeOfOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                  SetIntRangeFn setResultRange) {
   unsigned storageWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());

@@ -84,18 +84,18 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
   return std::nullopt;
 }
 
-void ClusterDimOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                      SetIntRangeFn setResultRange) {
   setResultRange(getResult(), getIndexRange(1, kMaxClusterDim));
 }
 
-void ClusterIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                     SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
 }
 
-void BlockDimOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
   std::optional<uint64_t> knownVal =
       getKnownLaunchDim(*this, LaunchDims::Block);
@@ -105,13 +105,13 @@ void BlockDimOp::inferResultRanges(ArrayRef<IntegerValueRange>,
     setResultRange(getResult(), getIndexRange(1, kMaxDim));
 }
 
-void BlockIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                   SetIntRangeFn setResultRange) {
   uint64_t max = getKnownLaunchDim(*this, LaunchDims::Grid).value_or(kMaxDim);
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
 }
 
-void GridDimOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void GridDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                   SetIntRangeFn setResultRange) {
   std::optional<uint64_t> knownVal = getKnownLaunchDim(*this, LaunchDims::Grid);
   if (knownVal)
@@ -120,23 +120,23 @@ void GridDimOp::inferResultRanges(ArrayRef<IntegerValueRange>,
     setResultRange(getResult(), getIndexRange(1, kMaxDim));
 }
 
-void ThreadIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void ThreadIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
   uint64_t max = getKnownLaunchDim(*this, LaunchDims::Block).value_or(kMaxDim);
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
 }
 
-void LaneIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void LaneIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                  SetIntRangeFn setResultRange) {
   setResultRange(getResult(), getIndexRange(0, kMaxSubgroupSize - 1ULL));
 }
 
-void SubgroupIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void SubgroupIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                      SetIntRangeFn setResultRange) {
   setResultRange(getResult(), getIndexRange(0, kMaxDim - 1ULL));
 }
 
-void GlobalIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void GlobalIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
   uint64_t blockDimMax =
       getKnownLaunchDim(*this, LaunchDims::Block).value_or(kMaxDim);
@@ -146,29 +146,24 @@ void GlobalIdOp::inferResultRanges(ArrayRef<IntegerValueRange>,
                  getIndexRange(0, (blockDimMax * gridDimMax) - 1ULL));
 }
 
-void NumSubgroupsOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void NumSubgroupsOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                        SetIntRangeFn setResultRange) {
   setResultRange(getResult(), getIndexRange(1, kMaxDim));
 }
 
-void SubgroupSizeOp::inferResultRanges(ArrayRef<IntegerValueRange>,
+void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                        SetIntRangeFn setResultRange) {
   setResultRange(getResult(), getIndexRange(1, kMaxSubgroupSize));
 }
 
-void LaunchOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                  SetIntRangeFn setResultRange) {
-  auto setRange = [&](const IntegerValueRange &argRange, Value dimResult,
+  auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
                       Value idxResult) {
-    if (argRange.isUninitialized())
+    if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
       return;
-
-    const ConstantIntRanges &constRange = argRange.getValue();
-    if (constRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
-      return;
-
     ConstantIntRanges dimRange =
-        constRange.intersection(getIndexRange(1, kMaxDim));
+        argRange.intersection(getIndexRange(1, kMaxDim));
     setResultRange(dimResult, dimRange);
     ConstantIntRanges idxRange =
         getIndexRange(0, dimRange.umax().getZExtValue() - 1);

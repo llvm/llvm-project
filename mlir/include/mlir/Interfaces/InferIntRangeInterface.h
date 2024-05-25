@@ -158,7 +158,30 @@ raw_ostream &operator<<(raw_ostream &, const IntegerValueRange &);
 /// The type of the `setResultRanges` callback provided to ops implementing
 /// InferIntRangeInterface. It should be called once for each integer result
 /// value and be passed the ConstantIntRanges corresponding to that value.
-using SetIntRangeFn = function_ref<void(Value, const IntegerValueRange &)>;
+using SetIntRangeFn =
+    llvm::function_ref<void(Value, const ConstantIntRanges &)>;
+
+/// Similar to SetIntRangeFn, but operating on IntegerValueRange lattice values.
+/// This is the `setResultRanges` callback for the IntegerValueRange based
+/// interface method.
+using SetIntLatticeFn =
+    llvm::function_ref<void(Value, const IntegerValueRange &)>;
+
+class InferIntRangeInterface;
+
+namespace intrange::detail {
+/// Default implementation of `inferResultRanges` which dispatches to the
+/// `inferResultRangesFromOptional`.
+void defaultInferResultRanges(InferIntRangeInterface interface,
+                              ArrayRef<IntegerValueRange> argRanges,
+                              SetIntLatticeFn setResultRanges);
+
+/// Default implementation of `inferResultRangesFromOptional` which dispatches
+/// to the `inferResultRanges`.
+void defaultInferResultRangesFromOptional(InferIntRangeInterface interface,
+                                          ArrayRef<ConstantIntRanges> argRanges,
+                                          SetIntRangeFn setResultRanges);
+} // end namespace intrange::detail
 } // end namespace mlir
 
 #include "mlir/Interfaces/InferIntRangeInterface.h.inc"

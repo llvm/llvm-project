@@ -648,10 +648,9 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
 
-void TestWithBoundsOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), ConstantIntRanges{getUmin(), getUmax(),
-                                                 getSmin(), getSmax()});
+  setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
 }
 
 //===----------------------------------------------------------------------===//
@@ -682,37 +681,29 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
 }
 
 void TestWithBoundsRegionOp::inferResultRanges(
-    ArrayRef<IntegerValueRange> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
   Value arg = getRegion().getArgument(0);
-  setResultRanges(
-      arg, ConstantIntRanges{getUmin(), getUmax(), getSmin(), getSmax()});
+  setResultRanges(arg, {getUmin(), getUmax(), getSmin(), getSmax()});
 }
 
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
 
-void TestIncrementOp::inferResultRanges(ArrayRef<IntegerValueRange> argRanges,
+void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRanges) {
-  if (argRanges[0].isUninitialized())
-    return;
-
-  const ConstantIntRanges &range = argRanges[0].getValue();
+  const ConstantIntRanges &range = argRanges[0];
   APInt one(range.umin().getBitWidth(), 1);
-  setResultRanges(getResult(), ConstantIntRanges{range.umin().uadd_sat(one),
-                                                 range.umax().uadd_sat(one),
-                                                 range.smin().sadd_sat(one),
-                                                 range.smax().sadd_sat(one)});
+  setResultRanges(getResult(),
+                  {range.umin().uadd_sat(one), range.umax().uadd_sat(one),
+                   range.smin().sadd_sat(one), range.smax().sadd_sat(one)});
 }
 
 //===----------------------------------------------------------------------===//
 // TestReflectBoundsOp
 
 void TestReflectBoundsOp::inferResultRanges(
-    ArrayRef<IntegerValueRange> argRanges, SetIntRangeFn setResultRanges) {
-  if (argRanges[0].isUninitialized())
-    return;
-
-  const ConstantIntRanges &range = argRanges[0].getValue();
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+  const ConstantIntRanges &range = argRanges[0];
   MLIRContext *ctx = getContext();
   Builder b(ctx);
   Type sIntTy, uIntTy;

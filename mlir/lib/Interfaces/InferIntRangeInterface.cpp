@@ -143,3 +143,34 @@ raw_ostream &mlir::operator<<(raw_ostream &os, const IntegerValueRange &range) {
   range.print(os);
   return os;
 }
+
+void mlir::intrange::detail::defaultInferResultRanges(
+    InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
+    SetIntLatticeFn setResultRanges) {
+  llvm::SmallVector<ConstantIntRanges> unpacked;
+  unpacked.reserve(argRanges.size());
+
+  for (const IntegerValueRange &range : argRanges) {
+    if (range.isUninitialized())
+      return;
+    unpacked.push_back(range.getValue());
+  }
+
+  interface.inferResultRanges(
+      unpacked,
+      [&setResultRanges](Value value, const ConstantIntRanges &argRanges) {
+        setResultRanges(value, IntegerValueRange{argRanges});
+      });
+}
+
+void mlir::intrange::detail::defaultInferResultRangesFromOptional(
+    InferIntRangeInterface interface, ArrayRef<ConstantIntRanges> argRanges,
+    SetIntRangeFn setResultRanges) {
+  auto ranges = llvm::to_vector_of<IntegerValueRange>(argRanges);
+  interface.inferResultRangesFromOptional(
+      ranges,
+      [&setResultRanges](Value value, const IntegerValueRange &argRanges) {
+        if (!argRanges.isUninitialized())
+          setResultRanges(value, argRanges.getValue());
+      });
+}
