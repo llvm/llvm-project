@@ -6855,6 +6855,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
       State.getMachineFunction().getSubtarget());
   const bool IsPPC64 = Subtarget.isPPC64();
+  const unsigned PtrSize = IsPPC64 ? 8 : 4;
   const Align PtrAlign(PtrSize);
   const Align StackAlign(16);
   const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
@@ -6881,7 +6882,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (ArgFlags.isByVal()) {
     const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
-    if (ArgFlags.getNonZeroByValAlign() > PtrAlign)
+    if (ByValAlign > StackAlign)
       report_fatal_error("Pass-by-value arguments with alignment greater than "
                          "16 are not supported.");
 

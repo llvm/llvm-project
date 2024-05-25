@@ -13,33 +13,33 @@
 define i32 @caller() {
   ; 32BIT-LABEL: name: caller
   ; 32BIT: bb.0.entry:
-  ; 32BIT:   renamable $r3 = LWZ 28, %stack.0.vs :: (load (s32) from unknown-address + 4)
-  ; 32BIT:   STW killed renamable $r3, 60, $r1 :: (store (s32) into unknown-address + 4, basealign 16)
-  ; 32BIT:   renamable $r3 = LWZ 24, %stack.0.vs :: (load (s32) from %stack.0.vs + 24, align 8, basealign 16)
-  ; 32BIT:   STW killed renamable $r3, 56, $r1 :: (store (s32), align 16)
-  ; 32BIT:   ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
-  ; 32BIT:   renamable $r10 = LWZ 20, %stack.0.vs :: (load (s32) from %stack.0.vs + 20)
-  ; 32BIT:   renamable $r9 = LWZ 16, %stack.0.vs :: (load (s32) from %stack.0.vs + 16, align 16)
-  ; 32BIT:   renamable $r8 = LWZ 12, %stack.0.vs :: (load (s32) from %stack.0.vs + 12)
-  ; 32BIT:   renamable $r7 = LWZ 8, %stack.0.vs :: (load (s32) from %stack.0.vs + 8, align 8)
-  ; 32BIT:   renamable $r6 = LWZ 4, %stack.0.vs :: (load (s32) from %stack.0.vs + 4)
-  ; 32BIT:   renamable $r5 = LWZ 0, %stack.0.vs :: (load (s32) from %stack.0.vs, align 16)
-  ; 32BIT:   $r3 = LI 0
-  ; 32BIT:   BL_NOP <mcsymbol .vec_struct_test[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def $r3
-  ; 32BIT:   ADJCALLSTACKUP 64, 0, implicit-def dead $r1, implicit $r1
-  ; 32BIT:   BLR implicit $lr, implicit $rm, implicit $r3
-
+  ; 32BIT-NEXT:   renamable $r3 = LWZ 28, %stack.0.vs :: (load (s32) from unknown-address + 4)
+  ; 32BIT-NEXT:   STW killed renamable $r3, 60, $r1 :: (store (s32) into unknown-address + 4, basealign 16)
+  ; 32BIT-NEXT:   renamable $r3 = LWZ 24, %stack.0.vs :: (load (s32) from %stack.0.vs + 24, align 8, basealign 16)
+  ; 32BIT-NEXT:   STW killed renamable $r3, 56, $r1 :: (store (s32), align 16)
+  ; 32BIT-NEXT:   ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
+  ; 32BIT-NEXT:   renamable $r10 = LWZ 20, %stack.0.vs :: (load (s32) from %stack.0.vs + 20)
+  ; 32BIT-NEXT:   renamable $r9 = LWZ 16, %stack.0.vs :: (load (s32) from %stack.0.vs + 16, align 16)
+  ; 32BIT-NEXT:   renamable $r8 = LWZ 12, %stack.0.vs :: (load (s32) from %stack.0.vs + 12)
+  ; 32BIT-NEXT:   renamable $r7 = LWZ 8, %stack.0.vs :: (load (s32) from %stack.0.vs + 8, align 8)
+  ; 32BIT-NEXT:   renamable $r6 = LWZ 4, %stack.0.vs :: (load (s32) from %stack.0.vs + 4)
+  ; 32BIT-NEXT:   renamable $r5 = LWZ 0, %stack.0.vs :: (load (s32) from %stack.0.vs, align 16)
+  ; 32BIT-NEXT:   $r3 = LI 0
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .vec_struct_test[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def $r3
+  ; 32BIT-NEXT:   ADJCALLSTACKUP 64, 0, implicit-def dead $r1, implicit $r1
+  ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
+  ;
   ; 64BIT-LABEL: name: caller
   ; 64BIT: bb.0.entry:
-  ; 64BIT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
-  ; 64BIT:   renamable $x8 = LD 24, %stack.0.vs :: (load (s64) from %stack.0.vs + 24)
-  ; 64BIT:   renamable $x7 = LD 16, %stack.0.vs :: (load (s64) from %stack.0.vs + 16, align 16)
-  ; 64BIT:   renamable $x6 = LD 8, %stack.0.vs :: (load (s64) from %stack.0.vs + 8)
-  ; 64BIT:   renamable $x5 = LD 0, %stack.0.vs :: (load (s64) from %stack.0.vs, align 16)
-  ; 64BIT:   $x3 = LI8 0
-  ; 64BIT:   BL8_NOP <mcsymbol .vec_struct_test[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x2, implicit-def $r1, implicit-def $x3
-  ; 64BIT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
-  ; 64BIT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+  ; 64BIT-NEXT:   renamable $x8 = LD 24, %stack.0.vs :: (load (s64) from %stack.0.vs + 24)
+  ; 64BIT-NEXT:   renamable $x7 = LD 16, %stack.0.vs :: (load (s64) from %stack.0.vs + 16, align 16)
+  ; 64BIT-NEXT:   renamable $x6 = LD 8, %stack.0.vs :: (load (s64) from %stack.0.vs + 8)
+  ; 64BIT-NEXT:   renamable $x5 = LD 0, %stack.0.vs :: (load (s64) from %stack.0.vs, align 16)
+  ; 64BIT-NEXT:   $x3 = LI8 0
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .vec_struct_test[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x2, implicit-def $r1, implicit-def $x3
+  ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+  ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
   entry:
   %vs = alloca %struct.B, align 16
   %call = tail call i32 @vec_struct_test(i32 0, %struct.B* nonnull byval(%struct.B) align 16 %vs)
