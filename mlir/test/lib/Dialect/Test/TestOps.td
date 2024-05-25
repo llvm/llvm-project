@@ -3113,6 +3113,11 @@ def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
 }
 
+def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Dataflow
 //===----------------------------------------------------------------------===//
