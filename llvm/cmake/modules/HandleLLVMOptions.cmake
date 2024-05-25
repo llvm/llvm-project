@@ -1214,7 +1214,7 @@ endif()
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
 option(LLVM_INDIVIDUAL_TEST_COVERAGE "Emit individual coverage file for each test case." OFF)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
-append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\" -fcoverage-mapping"
+append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\" -fcoverage-mapping -fcoverage-mcdc"
   CMAKE_CXX_FLAGS
   CMAKE_C_FLAGS
   CMAKE_EXE_LINKER_FLAGS
