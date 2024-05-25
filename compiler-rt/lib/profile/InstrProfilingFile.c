@@ -1344,8 +1344,7 @@ int __llvm_write_custom_profile(const char *Target,
   forceTruncateFile(TargetFilename);
 
   /* Open target-specific PGO file */
-  MergeDone = 0;
-  FILE *OutputFile = getMergeFileObject(TargetFilename, &MergeDone);
+  FILE *OutputFile = getFileObject(TargetFilename);
 
   if (!OutputFile) {
     PROF_ERR("Failed to open file : %s\n", TargetFilename);
@@ -1356,15 +1355,11 @@ int __llvm_write_custom_profile(const char *Target,
 
   FreeHook = &free;
   setupIOBuffer();
-  ProfDataWriter fileWriter;
-  initFileWriter(&fileWriter, OutputFile);
 
-  /* Write custom data to the file */
-  ReturnValue =
-      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
-                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
-                         NULL, NULL, NULL, NamesBegin, NamesEnd, MergeDone);
-
+  /* Write custom data */
+  ReturnValue = __llvm_profile_write_buffer_internal(
+      OutputFile, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
+      NamesBegin, NamesEnd);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.
