@@ -23,19 +23,16 @@ def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let constructor = "hlfir::createBufferizeHLFIRPass()";
 }
 
-def OptimizedBufferization : Pass<"opt-bufferization", "::mlir::func::FuncOp"> {
+def OptimizedBufferization : Pass<"opt-bufferization"> {
   let summary = "Special cases for hlfir.expr bufferization where we can avoid a temporary which would be created by the generic bufferization pass";
-  let constructor = "hlfir::createOptimizedBufferizationPass()";
 }
 
 def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR transformational intrinsic operations";
-  let constructor = "hlfir::createLowerHLFIRIntrinsicsPass()";
 }
 
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
-  let constructor = "hlfir::createLowerHLFIROrderedAssignmentsPass()";
   let options = [
     Option<"tryFusingAssignments", "fuse-assignments",
            "bool", /*default=*/"false",

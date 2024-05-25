@@ -78,6 +78,7 @@ class InstrBuilder {
 
   bool FirstCallInst;
   bool FirstReturnInst;
+  unsigned CallLatency;
 
   using InstRecycleCallback = std::function<Instruction *(const InstrDesc &)>;
   InstRecycleCallback InstRecycleCB;
@@ -98,7 +99,7 @@ class InstrBuilder {
 public:
   InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
-               const InstrumentManager &IM);
+               const InstrumentManager &IM, unsigned CallLatency);
 
   void clear() {
     Descriptors.clear();
