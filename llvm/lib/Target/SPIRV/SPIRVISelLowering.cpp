@@ -82,6 +82,28 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
+std::pair<unsigned, const TargetRegisterClass *>
+SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                  StringRef Constraint,
+                                                  MVT VT) const {
+  const TargetRegisterClass *RC = nullptr;
+  if (Constraint.starts_with("{"))
+    return std::make_pair(0u, RC);
+
+  if (VT.isFloatingPoint())
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::fID64RegClass
+                                                        : &SPIRV::fIDRegClass);
+  else if (VT.isInteger())
+    RC = VT.isVector() ? &SPIRV::vIDRegClass
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::ID64RegClass
+                                                        : &SPIRV::IDRegClass);
+  else
+    RC = &SPIRV::IDRegClass;
+
+  return std::make_pair(0u, RC);
+}
+
 // Insert a bitcast before the instruction to keep SPIR-V code valid
 // when there is a type mismatch between results and operand types.
 static void validatePtrTypes(const SPIRVSubtarget &STI,

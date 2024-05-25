@@ -50,6 +50,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   case MVT::v8i16:
   case MVT::v4i32:
   case MVT::v2i64:
+  case MVT::v8f16:
   case MVT::v4f32:
   case MVT::v2f64:
     return wasm::ValType::V128;
