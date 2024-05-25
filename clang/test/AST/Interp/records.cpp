@@ -1335,8 +1335,6 @@ namespace UnnamedBitFields {
   static_assert(a.c == 'a', "");
 }
 
-/// FIXME: This still doesn't work in the new interpreter because
-/// we lack type information for dummy pointers.
 namespace VirtualBases {
   /// This used to crash.
   namespace One {
@@ -1346,7 +1344,7 @@ namespace VirtualBases {
     };
     class B : public virtual A {
     public:
-      int getX() { return x; } // ref-note {{declared here}}
+      int getX() { return x; } // both-note {{declared here}}
     };
 
     class DV : virtual public B{};
@@ -1354,7 +1352,7 @@ namespace VirtualBases {
     void foo() {
       DV b;
       int a[b.getX()]; // both-warning {{variable length arrays}} \
-                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+                       // both-note {{non-constexpr function 'getX' cannot be used}}
     }
   }
 

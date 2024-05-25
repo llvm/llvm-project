@@ -41,17 +41,20 @@ template <class _ExecutionPolicy,
           class _Comp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty> __sort(
-    _ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+__sort(_ExecutionPolicy&& __policy,
+       _RandomAccessIterator&& __first,
+       _RandomAccessIterator&& __last,
+       _Comp&& __comp) noexcept {
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_sort, _RawPolicy),
       [&__policy](_RandomAccessIterator __g_first, _RandomAccessIterator __g_last, _Comp __g_comp) {
         std::stable_sort(__policy, std::move(__g_first), std::move(__g_last), std::move(__g_comp));
         return optional<__empty>{__empty{}};
       },
-      std::move(__first),
-      std::move(__last),
-      std::move(__comp));
+      std::forward<_RandomAccessIterator>(__first),
+      std::forward<_RandomAccessIterator>(__last),
+      std::forward<_Comp>(__comp));
 }
 
 template <class _ExecutionPolicy,
@@ -73,7 +76,8 @@ template <class _ExecutionPolicy,
 _LIBCPP_HIDE_FROM_ABI void
 sort(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last) {
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "sort requires RandomAccessIterators");
-  std::sort(std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), less{});
+  if (!std::__sort(__policy, std::move(__first), std::move(__last), less{}))
+    std::__throw_bad_alloc();
 }
 
 _LIBCPP_END_NAMESPACE_STD
