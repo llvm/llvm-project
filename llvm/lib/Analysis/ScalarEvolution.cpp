@@ -14746,8 +14746,12 @@ void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
 
 void SCEVUnionPredicate::add(const SCEVPredicate *N) {
   if (const auto *Set = dyn_cast<SCEVUnionPredicate>(N)) {
-    for (const auto *Pred : Set->Preds)
+    for (const auto *Pred : Set->Preds) {
+      // Skip predicates already implied by this union predicate.
+      if (implies(Pred))
+        continue;
       add(Pred);
+    }
     return;
   }
 
