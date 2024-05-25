@@ -168,7 +168,7 @@ function(add_public_tablegen_target target)
     add_dependencies(${target} ${LLVM_COMMON_DEPENDS})
   endif()
   get_subproject_title(subproject_title)
-  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning/Targets")
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning")
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} ${target} PARENT_SCOPE)
 endfunction()
 
@@ -180,8 +180,6 @@ macro(add_tablegen target project)
 
   add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
     ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
-  get_subproject_title(subproject_title)
-  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning")
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
   set(${project}_TABLEGEN_DEFAULT "${target}")

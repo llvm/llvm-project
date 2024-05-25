@@ -2950,6 +2950,14 @@ func.func @unsignedExtendConstantResource() -> tensor<i16> {
   return %ext : tensor<i16>
 }
 
+// Just checks that this doesn't crash.
+// CHECK-LABEL: @signedExtendSplatAsDynamicShape
+func.func @signedExtendSplatAsDynamicShape() -> tensor<?xi64> {
+  %splat = arith.constant dense<5> : tensor<2xi16>
+  %extsplat = arith.extsi %splat : tensor<2xi16> to tensor<?xi64>
+  return %extsplat : tensor<?xi64>
+}
+
 // CHECK-LABEL: @extsi_i0
 //       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
 //       CHECK:   return %[[ZERO]] : i16

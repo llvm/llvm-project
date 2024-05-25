@@ -56,7 +56,9 @@ std::deque<BinaryFunction *> BinaryFunctionCallGraph::buildTraversalOrder() {
   std::stack<NodeId> Worklist;
 
   for (BinaryFunction *Func : Funcs) {
-    const NodeId Id = FuncToNodeId.at(Func);
+    auto It = FuncToNodeId.find(Func);
+    assert(It != FuncToNodeId.end());
+    const NodeId Id = It->second;
     Worklist.push(Id);
     NodeStatus[Id] = NEW;
   }
