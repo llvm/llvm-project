@@ -137,6 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractRecurrenceResult:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -300,6 +301,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExtractRecurrenceResult:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -558,6 +560,27 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractRecurrenceResult: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
+    // Extract the second last element in the middle block for users outside the
+    // loop.
+    Value *Res;
+    if (State.VF.isVector()) {
+      Res = State.get(
+          getOperand(0),
+          VPIteration(State.UF - 1, VPLane::getLastLaneForVF(State.VF, 2)));
+    } else {
+      assert(State.UF > 1 && "VF and UF cannot both be 1");
+      // When loop is unrolled without vectorizing, retrieve the value just
+      // prior to the final unrolled value. This is analogous to the vectorized
+      // case above: extracting the second last element when VF > 1.
+      Res = State.get(getOperand(0), State.UF - 2);
+    }
+    Res->setName(Name);
+    return Res;
+  }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0), Part);
     Value *B = State.get(getOperand(1), Part);
@@ -598,6 +621,7 @@ void VPInstruction::execute(VPTransformState &State) {
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
+       getOpcode() == VPInstruction::ExtractRecurrenceResult ||
        getOpcode() == VPInstruction::ComputeReductionResult);
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -691,6 +715,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
+    break;
+  case VPInstruction::ExtractRecurrenceResult:
+    O << "extract-recurrence-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";

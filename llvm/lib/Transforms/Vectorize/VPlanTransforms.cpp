@@ -812,6 +812,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
+  VPBuilder MiddleBuilder(
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor()));
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
@@ -843,6 +845,12 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
+
+    auto *Result = cast<VPInstruction>(MiddleBuilder.createNaryOp(
+        VPInstruction::ExtractRecurrenceResult, {FOR->getBackedgeValue()}, {},
+        "vector.recur.extract.for.phi"));
+    RecurSplice->replaceUsesWithIf(
+        Result, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
   }
   return true;
 }

@@ -167,8 +167,8 @@ public:
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
-  static VPLane getLastLaneForVF(const ElementCount &VF) {
-    unsigned LaneOffset = VF.getKnownMinValue() - 1;
+  static VPLane getLastLaneForVF(const ElementCount &VF, unsigned Offset = 1) {
+    unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())
       // In this case 'LaneOffset' refers to the offset from the start of the
@@ -1182,6 +1182,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    ExtractRecurrenceResult,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -3657,7 +3658,8 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+    return VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+           VPI->getOpcode() == VPInstruction::ExtractRecurrenceResult;
   return false;
 }
 } // end namespace vputils
