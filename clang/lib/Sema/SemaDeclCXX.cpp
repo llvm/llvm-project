@@ -17580,11 +17580,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       if (Invalid)
         return true;
 
-      return CheckClassTemplate(S, TagSpec, TUK_Friend, TagLoc, SS, Name,
-                                NameLoc, Attr, TemplateParams, AS_public,
+      return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
+                                Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
                                 FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data()).get();
+                                TempParamLists.data())
+          .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
@@ -17612,8 +17613,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (SS.isEmpty()) {
       bool Owned = false;
       bool IsDependent = false;
-      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc, Attr,
-                      AS_public,
+      return ActOnTag(S, TagSpec, TagUseKind::Friend, TagLoc, SS, Name, NameLoc,
+                      Attr, AS_public,
                       /*ModulePrivateLoc=*/SourceLocation(),
                       MultiTemplateParamsArg(), Owned, IsDependent,
                       /*ScopedEnumKWLoc=*/SourceLocation(),
@@ -17728,7 +17729,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   // Try to convert the decl specifier to a type.  This works for
   // friend templates because ActOnTag never produces a ClassTemplateDecl
-  // for a TUK_Friend.
+  // for a TagUseKind::Friend.
   Declarator TheDeclarator(DS, ParsedAttributesView::none(),
                            DeclaratorContext::Member);
   TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator);
