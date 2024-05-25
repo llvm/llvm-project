@@ -269,6 +269,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::Untyped:   return "MVT::Untyped";
   case MVT::funcref:   return "MVT::funcref";
   case MVT::externref: return "MVT::externref";
+  case MVT::exnref:    return "MVT::exnref";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
