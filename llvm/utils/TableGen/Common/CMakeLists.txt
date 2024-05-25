@@ -40,6 +40,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
 
   DEPENDS
   vt_gen
+  intrinsics_gen
   )
 
 # Users may include its headers as "Common/*.h"
