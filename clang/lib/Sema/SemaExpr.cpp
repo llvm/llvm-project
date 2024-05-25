@@ -17695,9 +17695,8 @@ void Sema::PopExpressionEvaluationContext() {
   if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
       PrevRecord.InLifetimeExtendingContext &&
       !Rec.ForRangeLifetimeExtendTemps.empty()) {
-    const_cast<SmallVector<MaterializeTemporaryExpr *, 8> &>(
-        PrevRecord.ForRangeLifetimeExtendTemps)
-        .append(Rec.ForRangeLifetimeExtendTemps);
+    PrevRecord.ForRangeLifetimeExtendTemps.append(
+        Rec.ForRangeLifetimeExtendTemps);
   }
 
   WarnOnPendingNoDerefs(Rec);

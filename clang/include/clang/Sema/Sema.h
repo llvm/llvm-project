@@ -5153,6 +5153,12 @@ public:
     return ExprEvalContexts.back();
   };
 
+  ExpressionEvaluationContextRecord &parentEvaluationContext() {
+    assert(ExprEvalContexts.size() >= 2 &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts[ExprEvalContexts.size() - 2];
+  };
+
   const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
