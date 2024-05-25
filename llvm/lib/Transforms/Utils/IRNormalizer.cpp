@@ -446,7 +446,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: "
                       << BB.getName() << "\n");
     // Find the source nodes of the DAG of instructions in this basic block.
-    // Source nodes are instructions that have side effects, are terminators, or 
+    // Source nodes are instructions that have side effects, are terminators, or
     // don't have a parent in the DAG of instructions.
     //
     // We must iterate from the first to the last instruction otherwise side
@@ -467,9 +467,9 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       // Process the remaining instructions.
       //
       // TODO: Do more a intelligent sorting of these instructions. For example,
-      // seperate between dead instructinos and instructions used in another 
-      // block. Use properties of the CFG the order instructions that are used 
-      // in another block. 
+      // seperate between dead instructinos and instructions used in another
+      // block. Use properties of the CFG the order instructions that are used
+      // in another block.
       if (Visited.contains(&I))
         continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
