@@ -526,8 +526,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::UWTable)) {
     UWTableKind Kind = getUWTableKind();
-    assert(Kind != UWTableKind::None &&
-           "uwtable attribute should not be none");
+    assert(Kind != UWTableKind::None && "uwtable attribute should not be none");
     return Kind == UWTableKind::Default ? "uwtable" : "uwtable(sync)";
   }
 
