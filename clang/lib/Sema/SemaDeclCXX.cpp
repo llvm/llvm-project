@@ -7948,7 +7948,13 @@ public:
 
     case DefaultedComparisonKind::Equal:
     case DefaultedComparisonKind::ThreeWay:
+      assert(
+          AnonymousStructs.empty() &&
+          "Anonymous structs stack should be empty before visiting subobjects");
       getDerived().visitSubobjects(Results, RD, ParamLvalType.getQualifiers());
+      assert(AnonymousStructs.empty() &&
+             "Anonymous structs stack should become empty again after visiting "
+             "subobjects");
       return Results;
 
     case DefaultedComparisonKind::NotEqual:
@@ -7985,6 +7991,7 @@ protected:
         continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
+        AnonymousStructContextRAII R(*this, Field);
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
                             Quals))
           return true;
@@ -8027,6 +8034,30 @@ protected:
   FunctionDecl *FD;
   DefaultedComparisonKind DCK;
   UnresolvedSet<16> Fns;
+  std::vector<FieldDecl *> AnonymousStructs;
+
+private:
+  struct AnonymousStructContextRAII {
+    DefaultedComparisonVisitor &Self;
+#ifndef NDEBUG
+    FieldDecl *FD;
+#endif
+    AnonymousStructContextRAII(AnonymousStructContextRAII &&) = delete;
+    explicit AnonymousStructContextRAII(DefaultedComparisonVisitor &Self,
+                                        FieldDecl *FD)
+        : Self(Self) {
+#ifndef NDEBUG
+      this->FD = FD;
+#endif
+      Self.AnonymousStructs.push_back(FD);
+    }
+    ~AnonymousStructContextRAII() {
+      assert(!Self.AnonymousStructs.empty() &&
+             Self.AnonymousStructs.back() == FD &&
+             "Invalid stack of anonymous structs");
+      Self.AnonymousStructs.pop_back();
+    }
+  };
 };
 
 /// Information about a defaulted comparison, as determined by
@@ -8535,6 +8566,8 @@ private:
   }
 
   ExprPair getBase(CXXBaseSpecifier *Base) {
+    assert(AnonymousStructs.empty() &&
+           "Visiting base class while inside an anonymous struct?");
     ExprPair Obj = getCompleteObject();
     if (Obj.first.isInvalid() || Obj.second.isInvalid())
       return {ExprError(), ExprError()};
@@ -8550,12 +8583,30 @@ private:
     if (Obj.first.isInvalid() || Obj.second.isInvalid())
       return {ExprError(), ExprError()};
 
-    DeclAccessPair Found = DeclAccessPair::make(Field, Field->getAccess());
-    DeclarationNameInfo NameInfo(Field->getDeclName(), Loc);
-    return {S.BuildFieldReferenceExpr(Obj.first.get(), /*IsArrow=*/false, Loc,
-                                      CXXScopeSpec(), Field, Found, NameInfo),
-            S.BuildFieldReferenceExpr(Obj.second.get(), /*IsArrow=*/false, Loc,
-                                      CXXScopeSpec(), Field, Found, NameInfo)};
+    auto Reference = [&](FieldDecl *FD) -> bool {
+      DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
+      DeclarationNameInfo NameInfo(FD->getDeclName(), Loc);
+
+      Obj.first =
+          S.BuildFieldReferenceExpr(Obj.first.get(), /*IsArrow=*/false, Loc,
+                                    CXXScopeSpec(), FD, Found, NameInfo);
+      Obj.second =
+          S.BuildFieldReferenceExpr(Obj.second.get(), /*IsArrow=*/false, Loc,
+                                    CXXScopeSpec(), FD, Found, NameInfo);
+      if (Obj.first.isInvalid() || Obj.second.isInvalid()) {
+        Obj.first = Obj.second = ExprError();
+        return true;
+      }
+      return false;
+    };
+
+    for (FieldDecl *AnonFD : AnonymousStructs) {
+      if (Reference(AnonFD))
+        return Obj;
+    }
+
+    Reference(Field);
+    return Obj;
   }
 
   // FIXME: When expanding a subobject, register a note in the code synthesis

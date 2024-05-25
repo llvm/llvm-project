@@ -3,6 +3,18 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
+namespace std {
+#if __cplusplus >= 202002L
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less{-1},
+      strong_ordering::equal{0}, strong_ordering::greater{1};
+#endif
+}
+
 struct S {
   S();
 #if __cplusplus <= 199711L
@@ -191,7 +203,7 @@ typedef struct { // expected-warning {{anonymous non-C-compatible type}}
 } A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
 }
 
-#if __cplusplus > 201103L
+#if __cplusplus >= 201103L
 namespace GH58800 {
 struct A {
   union {
@@ -205,5 +217,70 @@ A GetA() {
   A result{};
   return result;
 }
+}
+#endif
+
+#if __cplusplus >= 202002L
+namespace GH92497 {
+struct S {
+  struct {
+    bool b;
+  };
+
+  constexpr bool operator==(const S&) const noexcept;
+};
+constexpr bool S::operator==(const S&) const noexcept = default;
+bool f(S const& a, S const& b) { return a == b; }
+static_assert(S{} == S{});
+
+template<typename T>
+struct A {
+  struct {
+    T x;
+  };
+  friend constexpr bool operator==(const A&, const A&) = default;
+// expected-note@-1 2 {{candidate function has been implicitly deleted}}
+  friend constexpr bool operator<=>(const A&, const A&) = default;
+// expected-note@-1 2 {{candidate function has been implicitly deleted}}
+};
+
+static_assert(A<int>{} == A<int>{});
+static_assert(A<int>{} <= A<int>{});
+
+struct eq_but_not_cmp {
+  constexpr bool operator==(eq_but_not_cmp) const { return true; }
+};
+static_assert(A<eq_but_not_cmp>{} == A<eq_but_not_cmp>{});
+static_assert(A<eq_but_not_cmp>{} <=> A<eq_but_not_cmp>{});
+// expected-error@-1 {{overload resolution selected deleted operator '<=>'}}
+
+struct cmp_but_not_eq {
+  constexpr bool operator==(cmp_but_not_eq) = delete;
+  constexpr std::strong_ordering operator<=>(cmp_but_not_eq) const { return std::strong_ordering::equal; }
+};
+static_assert(A<cmp_but_not_eq>{} == A<cmp_but_not_eq>{});
+// expected-error@-1 {{overload resolution selected deleted operator '=='}}
+static_assert((A<cmp_but_not_eq>{} <=> A<cmp_but_not_eq>{}) == std::strong_ordering::equal);
+
+struct neither {};
+static_assert(A<neither>{} == A<neither>{});
+// expected-error@-1 {{overload resolution selected deleted operator '=='}}
+static_assert(A<neither>{} <=> A<neither>{});
+// expected-error@-1 {{overload resolution selected deleted operator '<=>'}}
+
+struct B {
+  struct {
+    struct {
+      struct {
+        bool b;
+      };
+    };
+  };
+  friend constexpr bool operator==(const B&, const B&) = default;
+  friend constexpr bool operator<=>(const B&, const B&) = default;
+};
+
+static_assert(B{} == B{});
+static_assert(B{} <= B{});
 }
 #endif
