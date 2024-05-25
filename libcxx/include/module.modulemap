@@ -1580,6 +1580,8 @@ module std_private_numeric_transform_exclusive_scan [system] { header "__numeric
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
 
+module std_private_optional_cooperate [system] { header "__optional/cooperate.h" }
+
 module std_private_pstl_backends_libdispatch       [system] { header "__pstl/backends/libdispatch.h" }
 module std_private_pstl_backends_serial            [system] { header "__pstl/backends/serial.h" }
 module std_private_pstl_backends_std_thread        [system] { header "__pstl/backends/std_thread.h" }

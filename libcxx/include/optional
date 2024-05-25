@@ -189,6 +189,7 @@ namespace std {
 #include <__fwd/functional.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__optional/cooperate.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
@@ -274,11 +275,20 @@ inline constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secre
 
 struct __optional_construct_from_invoke_tag {};
 
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+template <class _Tp, bool = is_trivially_destructible<_Tp>::value, bool = __optional::__cooperate<_Tp>::__do_cooperate()>
+#else
 template <class _Tp, bool = is_trivially_destructible<_Tp>::value>
+#endif
 struct __optional_destruct_base;
 
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+template <class _Tp>
+struct __optional_destruct_base<_Tp, false, false> {
+#else
 template <class _Tp>
 struct __optional_destruct_base<_Tp, false> {
+#endif
   typedef _Tp value_type;
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
@@ -311,10 +321,17 @@ struct __optional_destruct_base<_Tp, false> {
       __engaged_ = false;
     }
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__engaged_; }
 };
 
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+template <class _Tp>
+struct __optional_destruct_base<_Tp, true, false> {
+#else
 template <class _Tp>
 struct __optional_destruct_base<_Tp, true> {
+#endif
   typedef _Tp value_type;
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
@@ -341,7 +358,118 @@ struct __optional_destruct_base<_Tp, true> {
       __engaged_ = false;
     }
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__engaged_; }
 };
+
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+template <class _Tp>
+struct __optional_destruct_base<_Tp, false, true> {
+  using value_type = _Tp;
+  static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
+  union {
+    value_type __val_;
+    value_type __disengaged_state_;
+  };
+
+#if __has_builtin(__builtin_is_within_lifetime)
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get_disengaged() & { return __disengaged_state_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const value_type& __get_disengaged() const& { return __disengaged_state_; }
+#else
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get_disengaged() & { return __val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const value_type& __get_disengaged() const& { return __val_; }
+#endif
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__optional_destruct_base() {
+    if (has_value())
+      __val_.~value_type();
+  }
+
+#if __has_builtin(__builtin_is_within_lifetime)
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base() noexcept : __disengaged_state_(__optional::__disengaged_construct(), __optional::__disengaged_construct()) {}
+#else
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base() noexcept : __val_(__optional::__disengaged_construct(), __optional::__disengaged_construct()) {}
+#endif
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
+      : __val_(std::forward<_Args>(__args)...) {}
+
+#  if _LIBCPP_STD_VER >= 23
+  template <class _Fp, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base(
+      __optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
+      : __val_(std::invoke(std::forward<_Fp>(__f), std::forward<_Args>(__args)...)) {}
+#  endif
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept {
+    if (has_value()) {
+      __val_.~value_type();
+      std::__construct_at(std::addressof(__get_disengaged()), __optional::__disengaged_construct(), __optional::__disengaged_construct());
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept {
+#if __has_builtin(__builtin_is_within_lifetime)
+    if consteval {
+      return __builtin_is_within_lifetime(__val_);
+    }
+#endif
+    return __optional::__cooperate<_Tp>::__is_engaged(*std::launder(std::addressof(__val_)));
+  }
+};
+
+template <class _Tp>
+struct __optional_destruct_base<_Tp, true, true> {
+  using value_type = _Tp;
+  static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
+  union {
+    value_type __disengaged_val_;
+    value_type __val_;
+  };
+
+#if __has_builtin(__builtin_is_within_lifetime)
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get_disengaged() & { return __disengaged_state_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const value_type& __get_disengaged() const& { return __disengaged_state_; }
+#else
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get_disengaged() & { return __val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const value_type& __get_disengaged() const& { return __val_; }
+#endif
+
+#if __has_builtin(__builtin_is_within_lifetime)
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base() noexcept : __disengaged_state_(__optional::__disengaged_construct(), __optional::__disengaged_construct()) {}
+#else
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base() noexcept : __val_(__optional::__disengaged_construct(), __optional::__disengaged_construct()) {}
+#endif
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
+      : __val_(std::forward<_Args>(__args)...) {}
+
+#  if _LIBCPP_STD_VER >= 23
+  template <class _Fp, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base(
+      __optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
+      : __val_(std::invoke(std::forward<_Fp>(__f), std::forward<_Args>(__args)...)) {}
+#  endif
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept {
+    if (has_value()) {
+      __val_.~value_type();
+      std::__construct_at(std::addressof(__get_disengaged()), __optional::__disengaged_construct(), __optional::__disengaged_construct());
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept {
+#if __has_builtin(__builtin_is_within_lifetime)
+    if consteval {
+      return __builtin_is_within_lifetime(__val_);
+    }
+#endif
+    return __optional::__cooperate<_Tp>::__is_engaged(*std::launder(std::addressof(__val_)));
+  }
+};
+#endif
 
 template <class _Tp, bool = is_reference<_Tp>::value>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
@@ -349,7 +477,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   using value_type = _Tp;
   using __base::__base;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__engaged_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __base::has_value(); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() & noexcept { return this->__val_; }
   _LIBCPP_HIDE_FROM_ABI constexpr const value_type& __get() const& noexcept { return this->__val_; }
@@ -359,8 +487,23 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage");
-    std::__construct_at(std::addressof(this->__val_), std::forward<_Args>(__args)...);
-    this->__engaged_ = true;
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+    if constexpr (__optional::__cooperate<_Tp>::__do_cooperate()) {
+#if __has_builtin(__builtin_is_within_lifetime)
+      if consteval {
+        // No operations are ever done on a disengaged value. Ensure it is not destroyed.
+        std::__construct_at(std::addressof(this->__val_), std::forward<_Args>(__args)...);
+        return;
+      }
+#endif
+      __optional::__cooperate<_Tp>::__construct_over(*std::launder(std::addressof(this->__val_)), std::forward<_Args>(__args)...);
+    } else {
+#endif
+      std::__construct_at(std::addressof(this->__val_), std::forward<_Args>(__args)...);
+      this->__engaged_ = true;
+#ifdef _LIBCPP_ABI_COOPERATIVE_OPTIONAL
+    }
+#endif
   }
 
   template <class _That>
@@ -371,11 +514,11 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
 
   template <class _That>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt) {
-    if (this->__engaged_ == __opt.has_value()) {
-      if (this->__engaged_)
+    if (this->has_value() == __opt.has_value()) {
+      if (this->has_value())
         this->__val_ = std::forward<_That>(__opt).__get();
     } else {
-      if (this->__engaged_)
+      if (this->has_value())
         this->reset();
       else
         __construct(std::forward<_That>(__opt).__get());

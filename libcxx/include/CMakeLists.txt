@@ -572,6 +572,7 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __optional/cooperate.h
   __ostream/basic_ostream.h
   __ostream/print.h
   __pstl/backends/libdispatch.h
