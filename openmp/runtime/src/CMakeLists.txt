@@ -252,7 +252,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # Create *.inc before compiling any sources
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
-set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Codegenning")
+set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
 add_dependencies(omp libomp-needed-headers)
 
 # Windows specific build rules
@@ -294,7 +294,7 @@ if(WIN32)
   set(LIBOMP_IMP_LIB_TARGET omp)
   set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
   add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
-  set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Codegenning")
+  set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Sourcegenning")
   add_dependencies(omp libomp-needed-def-file)
 
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
