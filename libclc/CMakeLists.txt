@@ -172,7 +172,7 @@ if( LIBCLC_STANDALONE_BUILD )
 else()
   add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
 endif()
-set_target_properties( prepare_builtins PROPERTIES FOLDER "libclc/Codegenning")
+set_target_properties( prepare_builtins PROPERTIES FOLDER "libclc/Sourcegenning")
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
 target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
@@ -230,14 +230,14 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
-set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Codegenning" )
+set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
   OUTPUT clspv-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
-set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Codegenning" )
+set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 enable_testing()
 
@@ -401,7 +401,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
-      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Codegenning" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Sourcegenning" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
