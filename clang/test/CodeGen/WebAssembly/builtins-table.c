@@ -7,17 +7,17 @@ static __externref_t table[0];
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_get
 // CHECK-SAME: (i32 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(10) @llvm.wasm.table.get.externref(ptr addrspace(1) @table, i32 [[INDEX]])
-// CHECK-NEXT:    ret ptr addrspace(10) [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call target("wasm.externref") @llvm.wasm.table.get.externref(ptr addrspace(1) @table, i32 [[INDEX]])
+// CHECK-NEXT:    ret target("wasm.externref") [[TMP0]]
 //
 __externref_t test_builtin_wasm_table_get(int index) {
   return __builtin_wasm_table_get(table, index);
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_set
-// CHECK-SAME: (i32 noundef [[INDEX:%.*]], ptr addrspace(10) [[REF:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i32 noundef [[INDEX:%.*]], target("wasm.externref") [[REF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @table, i32 [[INDEX]], ptr addrspace(10) [[REF]])
+// CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @table, i32 [[INDEX]], target("wasm.externref") [[REF]])
 // CHECK-NEXT:    ret void
 //
 void test_builtin_wasm_table_set(int index, __externref_t ref) {
@@ -35,9 +35,9 @@ int test_builtin_wasm_table_size() {
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_grow
-// CHECK-SAME: (ptr addrspace(10) [[REF:%.*]], i32 noundef [[NELEM:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (target("wasm.externref") [[REF:%.*]], i32 noundef [[NELEM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.wasm.table.grow.externref(ptr addrspace(1) @table, ptr addrspace(10) [[REF]], i32 [[NELEM]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.wasm.table.grow.externref(ptr addrspace(1) @table, target("wasm.externref") [[REF]], i32 [[NELEM]])
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int test_builtin_wasm_table_grow(__externref_t ref, int nelem) {
@@ -45,9 +45,9 @@ int test_builtin_wasm_table_grow(__externref_t ref, int nelem) {
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_fill
-// CHECK-SAME: (i32 noundef [[INDEX:%.*]], ptr addrspace(10) [[REF:%.*]], i32 noundef [[NELEM:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i32 noundef [[INDEX:%.*]], target("wasm.externref") [[REF:%.*]], i32 noundef [[NELEM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.wasm.table.fill.externref(ptr addrspace(1) @table, i32 [[INDEX]], ptr addrspace(10) [[REF]], i32 [[NELEM]])
+// CHECK-NEXT:    call void @llvm.wasm.table.fill.externref(ptr addrspace(1) @table, i32 [[INDEX]], target("wasm.externref") [[REF]], i32 [[NELEM]])
 // CHECK-NEXT:    ret void
 //
 void test_builtin_wasm_table_fill(int index, __externref_t ref, int nelem) {

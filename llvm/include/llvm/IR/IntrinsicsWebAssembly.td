@@ -44,6 +44,13 @@ def int_wasm_ref_is_null_exn :
                         "llvm.wasm.ref.is_null.exn">;
 
 //===----------------------------------------------------------------------===//
+// funcref target ext type -> pointer intrinsic
+//===----------------------------------------------------------------------===//
+def int_wasm_funcref_to_ptr:
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_funcref_ty],
+                        [IntrNoMem], "llvm.wasm.funcref.to_ptr">;
+
+//===----------------------------------------------------------------------===//
 // Table intrinsics
 //===----------------------------------------------------------------------===//
 def int_wasm_table_set_externref :

@@ -7,12 +7,13 @@ void helper(externref_t);
 
 // CHECK-LABEL: @handle(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OBJ_ADDR:%.*]] = alloca ptr addrspace(10), align 1
-// CHECK-NEXT:    store ptr addrspace(10) [[OBJ:%.*]], ptr [[OBJ_ADDR]], align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(10), ptr [[OBJ_ADDR]], align 1
-// CHECK-NEXT:    call void @helper(ptr addrspace(10) [[TMP0]])
+// CHECK-NEXT:    [[OBJ_ADDR:%.*]] = alloca target("wasm.externref"), align 1
+// CHECK-NEXT:    store target("wasm.externref") [[OBJ:%.*]], ptr [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load target("wasm.externref"), ptr [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    call void @helper(target("wasm.externref") [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void handle(externref_t obj) {
   helper(obj);
 }
+
