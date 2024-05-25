@@ -342,6 +342,10 @@ New Compiler Flags
   ``__attribute__((section(...)))``. This enables linker GC to collect unused
   symbols without having to use a per-symbol section.
 
+- ``-fms-define-stdc`` and its clang-cl counterpart ``/Zc:__STDC__``.
+  Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
+  MSVC compatibility mode is used. It has no effect for C++ code.
+
 Deprecated Compiler Flags
 -------------------------
 
