@@ -12,10 +12,16 @@
 
 namespace LIBC_NAMESPACE {
 TEST(LlvmLibcOSUtilVDSOTest, SymbolsDefined) {
-  // for now, we simply test all symbols are provided.
-  for (size_t i = 0; i < static_cast<size_t>(vdso::VDSOSym::VDSOSymCount); ++i)
+  for (size_t i = 0; i < static_cast<size_t>(vdso::VDSOSym::VDSOSymCount);
+       ++i) {
+    // RiscvHwProbe is provided only on >=6.4 kernels. Skip it for now.
+#ifdef LIBC_VDSO_HAS_RISCV_HWPROBE
+    if (static_cast<vdso::VDSOSym>(i) == vdso::VDSOSym::RiscvHwProbe)
+      continue;
+#endif
     EXPECT_NE(vdso::get_symbol(static_cast<vdso::VDSOSym>(i)),
               static_cast<void *>(nullptr));
+  }
 }
 
 #ifdef LIBC_VDSO_HAS_GETTIMEOFDAY

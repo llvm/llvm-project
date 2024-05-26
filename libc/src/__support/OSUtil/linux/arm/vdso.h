@@ -11,22 +11,34 @@
 namespace LIBC_NAMESPACE {
 namespace vdso {
 // macro definitions
-#define LIBC_VDSO_HAS_GETTIMEOFDAY
+// following the order in arch/arm/vdso/vdso.lds.S
 #define LIBC_VDSO_HAS_CLOCK_GETTIME
+#define LIBC_VDSO_HAS_GETTIMEOFDAY
+#define LIBC_VDSO_HAS_CLOCK_GETRES
+#define LIBC_VDSO_HAS_CLOCK_GETTIME64
 
 // list of VDSO symbols
 enum class VDSOSym {
-  GetTimeOfDay,
   ClockGetTime,
+  GetTimeOfDay,
+  ClockGetRes,
+  ClockGetTime64,
+  VDSOSymCount
 };
 
 // translate VDSOSym to symbol names
 LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
   switch (sym) {
-  case VDSOSym::GetTimeOfDay:
-    return "__vdso_gettimeofday";
   case VDSOSym::ClockGetTime:
     return "__vdso_clock_gettime";
+  case VDSOSym::GetTimeOfDay:
+    return "__vdso_gettimeofday";
+  case VDSOSym::ClockGetRes:
+    return "__vdso_clock_getres";
+  case VDSOSym::ClockGetTime64:
+    return "__vdso_clock_gettime64";
+  default:
+    return "";
   }
 }
 

@@ -17,6 +17,7 @@ namespace vdso {
 #define LIBC_VDSO_HAS_CLOCK_GETRES
 
 // list of VDSO symbols
+// following the order in arch/arm64/kernel/vdso/vdso.lds.S
 enum class VDSOSym {
   RTSigReturn,
   GetTimeOfDay,
