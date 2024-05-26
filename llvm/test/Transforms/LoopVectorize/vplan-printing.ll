@@ -882,6 +882,58 @@ exit:
   ret void
 }
 
+define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
+; CHECK-LABEL: 'print_first_order_recurrence_and_result'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<1000> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE:%.+]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:     WIDEN ir<%add> = add vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR1_SPLICE]]>
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds i16, ptr %ptr, i64 %iv
+  %for.1.next = load i16, ptr %gep.ptr, align 2
+  %add = add i16 %for.1, 1
+  store i16 %add, ptr %gep.ptr
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret i16 %for.1
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
