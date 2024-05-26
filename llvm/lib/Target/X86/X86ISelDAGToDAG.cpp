@@ -1617,7 +1617,7 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
             Ops.push_back(N->getOperand(2));
             Ops.push_back(N->getOperand(3));
           }
-          // Chain
+          // Chain of memory load
           Ops.push_back(And.getOperand(6));
           // Glue
           if (IsCTESTCC)
