@@ -33,6 +33,7 @@ add_object_library(
   DEPENDS
     .${LIBC_TARGET_ARCHITECTURE}.vdso
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.futex_word_type

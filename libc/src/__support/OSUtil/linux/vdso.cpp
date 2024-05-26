@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
@@ -70,7 +71,9 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
     // skip if this is a file-level version
     if (def->vd_flags & VER_FLG_BASE)
       continue;
-    // check if the version identifier matches
+    // check if the version identifier matches. Highest bit is used to determine
+    // whether the symbol is local. Only lower 15 bits are used for version
+    // identifier.
     if ((def->vd_ndx & 0x7FFF) == identifier) {
       Verdaux *aux = def->aux();
       return strtab + aux->vda_name;
@@ -82,61 +85,58 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
 using VDSOArray =
     cpp::array<void *, static_cast<size_t>(VDSOSym::VDSOSymCount)>;
 
-static VDSOArray symbol_table;
-} // namespace
+VDSOArray symbol_table;
 
-void *get_symbol(VDSOSym sym) {
-  // if sym is invalid, return nullptr
-  const auto index = static_cast<size_t>(sym);
-  if (index >= symbol_table.size())
-    return nullptr;
+size_t shdr_get_symbol_count(ElfW(Shdr) * vdso_shdr, size_t e_shnum) {
+  // iterate all sections until we locate the dynamic symbol section
+  for (size_t i = 0; i < e_shnum; ++i) {
+    // dynamic symbol section is a table section
+    // therefore, the number of entries can be computed as the ratio
+    // of the section size to the size of a single entry
+    if (vdso_shdr[i].sh_type == SHT_DYNSYM)
+      return vdso_shdr[i].sh_size / vdso_shdr[i].sh_entsize;
+  }
+  return 0;
+}
 
-  static FutexWordType once_flag = 0;
-  callonce(reinterpret_cast<CallOnceFlag *>(&once_flag), [] {
-    // first clear the symbol table
-    for (auto &i : symbol_table)
-      i = nullptr;
+struct VDSOSymbolTable {
+  const char *strtab;
+  ElfW(Sym) * symtab;
+  ElfW(Half) * versym;
+  Verdef *verdef;
 
-    // get the address of the VDSO, protect errno since getauxval may change it
-    int errno_backup = libc_errno;
-    uintptr_t vdso_ehdr_addr = getauxval(AT_SYSINFO_EHDR);
-    // Get the memory address of the vDSO ELF header.
-    auto vdso_ehdr = reinterpret_cast<ElfW(Ehdr) *>(vdso_ehdr_addr);
-    // leave the table unpopulated if we don't have vDSO
-    if (vdso_ehdr == nullptr) {
-      libc_errno = errno_backup;
-      return;
-    }
+  void populate_symbol_cache(size_t symbol_count, ElfW(Addr) vdso_addr) {
+    for (size_t i = 0; i < symbol_table.size(); ++i) {
+      auto sym = static_cast<VDSOSym>(i);
+      cpp::string_view name = symbol_name(sym);
+      cpp::string_view version = symbol_version(sym);
+      for (size_t j = 0; j < symbol_count; ++j) {
+        if (name == strtab + symtab[j].st_name) {
+          // we find a symbol with desired name
+          // now we need to check if it has the right version
+          if (versym && verdef)
+            if (version != find_version(verdef, versym, strtab, j))
+              continue;
 
-    // count entries
-    size_t symbol_count = 0;
-    // locate the section header inside the elf using the section header offset
-    auto vdso_shdr =
-        reinterpret_cast<ElfW(Shdr) *>(vdso_ehdr_addr + vdso_ehdr->e_shoff);
-    // iterate all sections until we locate the dynamic symbol section
-    for (size_t i = 0; i < vdso_ehdr->e_shnum; ++i) {
-      if (vdso_shdr[i].sh_type == SHT_DYNSYM) {
-        // dynamic symbol section is a table section
-        // therefore, the number of entries can be computed as the ratio
-        // of the section size to the size of a single entry
-        symbol_count = vdso_shdr[i].sh_size / vdso_shdr[i].sh_entsize;
-        break;
+          // put the symbol address into the symbol table
+          symbol_table[i] =
+              reinterpret_cast<void *>(vdso_addr + symtab[j].st_value);
+        }
       }
     }
+  }
+};
 
-    // early return if no symbol is found
-    if (symbol_count == 0)
-      return;
-
-    // We need to find both the loadable segment and the dynamic linking of the
-    // vDSO.
-    auto vdso_addr = static_cast<ElfW(Addr)>(-1);
+struct PhdrInfo {
+  ElfW(Addr) vdso_addr;
+  ElfW(Dyn) * vdso_dyn;
+  static cpp::optional<PhdrInfo> from(ElfW(Phdr) * vdso_phdr, size_t e_phnum,
+                                      uintptr_t vdso_ehdr_addr) {
+    static constexpr ElfW(Addr) INVALID_ADDR = static_cast<ElfW(Addr)>(-1);
+    ElfW(Addr) vdso_addr = INVALID_ADDR;
     ElfW(Dyn) *vdso_dyn = nullptr;
-    // compute vdso_phdr as the program header using the program header offset
-    ElfW(Phdr) *vdso_phdr =
-        reinterpret_cast<ElfW(Phdr) *>(vdso_ehdr_addr + vdso_ehdr->e_phoff);
     // iterate through all the program headers until we get the desired pieces
-    for (size_t i = 0; i < vdso_ehdr->e_phnum; ++i) {
+    for (size_t i = 0; i < e_phnum; ++i) {
       if (vdso_phdr[i].p_type == PT_DYNAMIC)
         vdso_dyn = reinterpret_cast<ElfW(Dyn) *>(vdso_ehdr_addr +
                                                  vdso_phdr[i].p_offset);
@@ -146,14 +146,13 @@ void *get_symbol(VDSOSym sym) {
             vdso_ehdr_addr + vdso_phdr[i].p_offset - vdso_phdr[i].p_vaddr;
 
       if (vdso_addr && vdso_dyn)
-        break;
+        return PhdrInfo{vdso_addr, vdso_dyn};
     }
-    // early return if either the dynamic linking or the loadable segment is not
-    // found
-    if (vdso_dyn == nullptr || vdso_addr == static_cast<ElfW(Addr)>(-1))
-      return;
 
-    // now, locate several more tables inside the dynmaic linking section
+    return cpp::nullopt;
+  }
+
+  cpp::optional<VDSOSymbolTable> populate_symbol_table() {
     const char *strtab = nullptr;
     ElfW(Sym) *symtab = nullptr;
     ElfW(Half) *versym = nullptr;
@@ -178,26 +177,73 @@ void *get_symbol(VDSOSym sym) {
       }
     }
     if (strtab == nullptr || symtab == nullptr)
-      return;
+      return cpp::nullopt;
 
-    for (size_t i = 0; i < symbol_table.size(); ++i) {
-      for (size_t j = 0; j < symbol_count; ++j) {
-        auto sym = static_cast<VDSOSym>(i);
-        if (symbol_name(sym) == strtab + symtab[j].st_name) {
-          // we find a symbol with desired name
-          // now we need to check if it has the right version
-          if (versym && verdef)
-            if (symbol_version(sym) != find_version(verdef, versym, strtab, j))
-              continue;
+    return VDSOSymbolTable{strtab, symtab, versym, verdef};
+  }
+};
 
-          // put the symbol address into the symbol table
-          symbol_table[i] =
-              reinterpret_cast<void *>(vdso_addr + symtab[j].st_value);
-        }
-      }
-    }
-  });
+void initialize_vdso_global_cache() {
+  // first clear the symbol table
+  for (auto &i : symbol_table)
+    i = nullptr;
 
+  // get the address of the VDSO, protect errno since getauxval may change
+  // it
+  int errno_backup = libc_errno;
+  uintptr_t vdso_ehdr_addr = getauxval(AT_SYSINFO_EHDR);
+  // Get the memory address of the vDSO ELF header.
+  auto vdso_ehdr = reinterpret_cast<ElfW(Ehdr) *>(vdso_ehdr_addr);
+  // leave the table unpopulated if we don't have vDSO
+  if (vdso_ehdr == nullptr) {
+    libc_errno = errno_backup;
+    return;
+  }
+
+  // locate the section header inside the elf using the section header
+  // offset
+  auto vdso_shdr =
+      reinterpret_cast<ElfW(Shdr) *>(vdso_ehdr_addr + vdso_ehdr->e_shoff);
+  size_t symbol_count = shdr_get_symbol_count(vdso_shdr, vdso_ehdr->e_shnum);
+
+  // early return if no symbol is found
+  if (symbol_count == 0)
+    return;
+
+  // We need to find both the loadable segment and the dynamic linking of
+  // the vDSO. compute vdso_phdr as the program header using the program
+  // header offset
+  ElfW(Phdr) *vdso_phdr =
+      reinterpret_cast<ElfW(Phdr) *>(vdso_ehdr_addr + vdso_ehdr->e_phoff);
+  cpp::optional<PhdrInfo> phdr_info =
+      PhdrInfo::from(vdso_phdr, vdso_ehdr->e_phnum, vdso_ehdr_addr);
+  // early return if either the dynamic linking or the loadable segment is
+  // not found
+  if (!phdr_info.has_value())
+    return;
+
+  // now, locate several more tables inside the dynmaic linking section
+  cpp::optional<VDSOSymbolTable> vdso_symbol_table =
+      phdr_info->populate_symbol_table();
+
+  // early return if we can't find any required fields of the symbol table
+  if (!vdso_symbol_table.has_value())
+    return;
+
+  // finally, populate the global symbol table cache
+  vdso_symbol_table->populate_symbol_cache(symbol_count, phdr_info->vdso_addr);
+}
+} // namespace
+
+void *get_symbol(VDSOSym sym) {
+  // if sym is invalid, return nullptr
+  const auto index = static_cast<size_t>(sym);
+  if (index >= symbol_table.size())
+    return nullptr;
+
+  static FutexWordType once_flag = 0;
+  callonce(reinterpret_cast<CallOnceFlag *>(&once_flag),
+           initialize_vdso_global_cache);
   return symbol_table[index];
 }
 } // namespace vdso
