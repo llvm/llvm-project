@@ -1553,12 +1553,12 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     switch (Opc) {
     default:
       continue;
-    // TESTrr+ANDrr/rm -> TESTrr/TESTmr
+    // ANDrr/rm + TESTrr+ -> TESTrr/TESTmr
     case X86::TEST8rr:
     case X86::TEST16rr:
     case X86::TEST32rr:
     case X86::TEST64rr:
-    // CTESTrr+ANDrr/rm -> CTESTrr/CTESTmr
+    // ANDrr/rm + CTESTrr -> CTESTrr/CTESTmr
     case X86::CTEST8rr:
     case X86::CTEST16rr:
     case X86::CTEST32rr:
