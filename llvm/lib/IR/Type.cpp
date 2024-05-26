@@ -844,7 +844,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                           TargetExtType::HasZeroInit);
 
   // Opaque types in the WebAssembly name space.
-  if (Name.startswith("wasm."))
+  if (Name.starts_with("wasm."))
     return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit, TargetExtType::CanBeGlobal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
