@@ -17,8 +17,10 @@
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
@@ -39,6 +41,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -1241,6 +1244,18 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
+
+      if (RsrcIntr->IsImage) {
+        auto Idx = CI.arg_size() - 1;
+        unsigned OrderingArg =
+            cast<ConstantInt>(CI.getArgOperand(Idx))->getZExtValue();
+        auto Ordering = (OrderingArg & AMDGPU::CPol::ATOMIC_ORDERING) >> 4;
+        unsigned ClearedCPol = OrderingArg & ~AMDGPU::CPol::ATOMIC_ORDERING;
+        ConstantInt *CPol = ConstantInt::get(
+            IntegerType::getInt32Ty(CI.getContext()), ClearedCPol);
+        const_cast<CallInst &>(CI).setArgOperand(Idx, CPol);
+        Info.ordering = static_cast<AtomicOrdering>(Ordering);
+      }
 
       switch (IntrID) {
       default:

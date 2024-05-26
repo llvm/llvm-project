@@ -56,8 +56,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -8582,14 +8584,15 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
     EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
-    MachineMemOperand::Flags Flags, LocationSize Size,
-    const AAMDNodes &AAInfo) {
+    MachineMemOperand::Flags Flags, LocationSize Size, const AAMDNodes &AAInfo,
+    AtomicOrdering Ordering) {
   if (Size.hasValue() && !Size.getValue())
     Size = LocationSize::precise(MemVT.getStoreSize());
 
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, Flags, Size, Alignment, AAInfo);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, Flags, Size, Alignment, AAInfo, /*Ranges*/ nullptr,
+      /*SSID*/ SyncScope::System, Ordering, Ordering);
 
   return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, MMO);
 }

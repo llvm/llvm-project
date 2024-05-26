@@ -654,6 +654,31 @@ multiclass MIMG_NoSampler <mimgopc op, string asm, bit has_d16, bit mip = 0,
   }
 }
 
+multiclass MIMG_NoSampler_Pseudo <mimgopc op, string asm, bit has_d16, bit mip = 0,
+                           bit isResInfo = 0,
+                           bit msaa = 0> {
+  def "" : MIMGBaseOpcode {
+    let Coordinates = !not(isResInfo);
+    let LodOrClampOrMip = mip;
+    let HasD16 = has_d16;
+    let MSAA = msaa;
+  }
+
+  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
+      mayLoad = !not(isResInfo), isCodeGenOnly = 1 in {
+    let VDataDwords = 1 in
+    defm _V1 : MIMG_NoSampler_Src_Helper <op, asm, VGPR_32, 1, msaa>;
+    let VDataDwords = 2 in
+    defm _V2 : MIMG_NoSampler_Src_Helper <op, asm, VReg_64, 0, msaa>;
+    let VDataDwords = 3 in
+    defm _V3 : MIMG_NoSampler_Src_Helper <op, asm, VReg_96, 0, msaa>;
+    let VDataDwords = 4 in
+    defm _V4 : MIMG_NoSampler_Src_Helper <op, asm, VReg_128, 0, msaa>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_NoSampler_Src_Helper <op, asm, VReg_160, 0, msaa>;
+  }
+}
+
 class MIMG_Store_Helper <mimgopc op, string asm,
                          RegisterClass data_rc,
                          RegisterClass addr_rc,
@@ -1565,6 +1590,9 @@ defm IMAGE_ATOMIC_PK_ADD_BF16   : MIMG_Atomic <mimgopc<0x87, MIMG.NOP, MIMG.NOP,
 defm IMAGE_ATOMIC_ADD_FLT       : MIMG_Atomic <mimgopc<0x83, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_add_flt", 0, 1>;
 defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic <mimgopc<0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", 0, 1, "image_atomic_min_flt">;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", 0, 1, "image_atomic_max_flt">;
+
+
+defm IMAGE_ATOMIC_LOAD          : MIMG_NoSampler_Pseudo <mimgopc<0x00, 0x00, 0x00>, "image_load", 1>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample>;
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {

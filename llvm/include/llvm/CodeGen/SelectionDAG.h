@@ -36,6 +36,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RecyclingAllocator.h"
@@ -1305,7 +1306,8 @@ public:
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes(),
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic);
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1313,11 +1315,12 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes(),
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,
-                               Size, AAInfo);
+                               Size, AAInfo, Ordering);
   }
 
   SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl, SDVTList VTList,
