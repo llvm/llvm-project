@@ -265,15 +265,19 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     }
   }
 
+  // Eliminate freeze if all operands are guaranteed non-poison.
+  if (!MaybePoisonOperand) {
+    // Check again for poison, we ignored flags above.
+    if (isGuaranteedNotToBeUndefOrPoison(OrigOp, MRI)) {
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(DstOp, OrigOp); };
+      return true;
+    }
+    return false;
+  }
+
   Observer.changingInstr(*OrigDef);
   cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
   Observer.changedInstr(*OrigDef);
-
-  // Eliminate freeze if all operands are guaranteed non-poison.
-  if (!MaybePoisonOperand) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(DstOp, OrigOp); };
-    return true;
-  }
 
   Register MaybePoisonOperandReg = MaybePoisonOperand->getReg();
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
