@@ -1633,6 +1633,9 @@ ConversionPatternRewriter::ConversionPatternRewriter(
   setListener(impl.get());
 }
 
+ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
+    : PatternRewriter(ctx), impl(nullptr) {}
+
 ConversionPatternRewriter::~ConversionPatternRewriter() = default;
 
 void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
@@ -1717,19 +1720,17 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
   SmallVector<Value> remappedValues;
-  if (failed(impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, key,
-                               remappedValues)))
+  if (failed(getRemappedValues(key, remappedValues)))
     return nullptr;
   return remappedValues.front();
 }
 
 LogicalResult
 ConversionPatternRewriter::getRemappedValues(ValueRange keys,
-                                             SmallVectorImpl<Value> &results) {
+                                             SmallVector<Value> &results) {
   if (keys.empty())
     return success();
-  return impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, keys,
-                           results);
+  return getAdapterOperands("value", /*inputLoc=*/std::nullopt, keys, results);
 }
 
 void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
@@ -1819,6 +1820,22 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
   return *impl;
 }
 
+void ConversionPatternRewriter::setCurrentTypeConverter(
+    const TypeConverter *converter) {
+  impl->currentTypeConverter = converter;
+}
+
+const TypeConverter *
+ConversionPatternRewriter::getCurrentTypeConverter() const {
+  return impl->currentTypeConverter;
+}
+
+LogicalResult ConversionPatternRewriter::getAdapterOperands(
+    StringRef valueDiagTag, std::optional<Location> inputLoc, ValueRange values,
+    SmallVector<Value> &remapped) {
+  return impl->remapValues(valueDiagTag, inputLoc, *this, values, remapped);
+}
+
 //===----------------------------------------------------------------------===//
 // ConversionPattern
 //===----------------------------------------------------------------------===//
@@ -1827,16 +1844,18 @@ LogicalResult
 ConversionPattern::matchAndRewrite(Operation *op,
                                    PatternRewriter &rewriter) const {
   auto &dialectRewriter = static_cast<ConversionPatternRewriter &>(rewriter);
-  auto &rewriterImpl = dialectRewriter.getImpl();
 
   // Track the current conversion pattern type converter in the rewriter.
-  llvm::SaveAndRestore currentConverterGuard(rewriterImpl.currentTypeConverter,
-                                             getTypeConverter());
+  const TypeConverter *currentTypeConverter =
+      dialectRewriter.getCurrentTypeConverter();
+  auto resetTypeConverter = llvm::make_scope_exit(
+      [&] { dialectRewriter.setCurrentTypeConverter(currentTypeConverter); });
+  dialectRewriter.setCurrentTypeConverter(getTypeConverter());
 
   // Remap the operands of the operation.
-  SmallVector<Value, 4> operands;
-  if (failed(rewriterImpl.remapValues("operand", op->getLoc(), rewriter,
-                                      op->getOperands(), operands))) {
+  SmallVector<Value> operands;
+  if (failed(dialectRewriter.getAdapterOperands("operand", op->getLoc(),
+                                                op->getOperands(), operands))) {
     return failure();
   }
   return matchAndRewrite(op, operands, dialectRewriter);

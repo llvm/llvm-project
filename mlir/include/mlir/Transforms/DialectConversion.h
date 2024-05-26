@@ -247,7 +247,8 @@ public:
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
   /// and a null type on conversion or cast failure.
-  template <typename TargetType> TargetType convertType(Type t) const {
+  template <typename TargetType>
+  TargetType convertType(Type t) const {
     return dyn_cast_or_null<TargetType>(convertType(t));
   }
 
@@ -657,7 +658,7 @@ struct ConversionPatternRewriterImpl;
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
 /// hooks.
-class ConversionPatternRewriter final : public PatternRewriter {
+class ConversionPatternRewriter : public PatternRewriter {
 public:
   ~ConversionPatternRewriter() override;
 
@@ -708,8 +709,18 @@ public:
   /// Return the converted values that replace 'keys' with types defined by the
   /// type converter of the currently executing pattern. Returns failure if the
   /// remap failed, success otherwise.
-  LogicalResult getRemappedValues(ValueRange keys,
-                                  SmallVectorImpl<Value> &results);
+  LogicalResult getRemappedValues(ValueRange keys, SmallVector<Value> &results);
+
+  virtual void setCurrentTypeConverter(const TypeConverter *converter);
+
+  virtual const TypeConverter *getCurrentTypeConverter() const;
+
+  /// Populate the operands that are used for constructing the adapter into
+  /// `remapped`.
+  virtual LogicalResult getAdapterOperands(StringRef valueDiagTag,
+                                           std::optional<Location> inputLoc,
+                                           ValueRange values,
+                                           SmallVector<Value> &remapped);
 
   //===--------------------------------------------------------------------===//
   // PatternRewriter Hooks
@@ -755,6 +766,14 @@ public:
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+protected:
+  /// Protected constructor for `OneShotConversionPatternRewriter`. Does not
+  /// initialize `impl`.
+  explicit ConversionPatternRewriter(MLIRContext *ctx);
+
+  // Hide unsupported pattern rewriter API.
+  using OpBuilder::setListener;
+
 private:
   // Allow OperationConverter to construct new rewriters.
   friend struct OperationConverter;
@@ -764,9 +783,6 @@ private:
   /// bring the IR into an inconsistent state when used standalone.
   explicit ConversionPatternRewriter(MLIRContext *ctx,
                                      const ConversionConfig &config);
-
-  // Hide unsupported pattern rewriter API.
-  using OpBuilder::setListener;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };

@@ -430,7 +430,7 @@ func.func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index
 #map6 = affine_map<(d0,d1,d2) -> (d0 + d1 + d2)>
 
 // CHECK-LABEL: func @affine_applies(
-func.func @affine_applies(%arg0 : index) {
+func.func @affine_applies(%arg0 : index) -> (index, index, index, index, index) {
 // CHECK: %[[c0:.*]] = arith.constant 0 : index
   %zero = affine.apply #map0()
 
@@ -442,9 +442,7 @@ func.func @affine_applies(%arg0 : index) {
   %102 = arith.constant 102 : index
   %copy = affine.apply #map2(%zero)
 
-// CHECK-NEXT: %[[v0:.*]] = arith.addi %[[c0]], %[[c0]] : index
 // CHECK-NEXT: %[[c1:.*]] = arith.constant 1 : index
-// CHECK-NEXT: %[[v1:.*]] = arith.addi %[[v0]], %[[c1]] : index
   %one = affine.apply #map3(%symbZero)[%zero]
 
 // CHECK-NEXT: %[[c2:.*]] = arith.constant 2 : index
@@ -466,7 +464,9 @@ func.func @affine_applies(%arg0 : index) {
 // CHECK-NEXT: %[[v12:.*]] = arith.muli %arg0, %[[c7]] : index
 // CHECK-NEXT: %[[v13:.*]] = arith.addi %[[v11]], %[[v12]] : index
   %four = affine.apply #map4(%arg0, %arg0, %arg0, %arg0)[%arg0, %arg0, %arg0]
-  return
+
+// CHECK: return %[[c0]], %[[c0]], %[[c0]], %[[c1]], %[[v13]]
+  return %zero, %symbZero, %copy, %one, %four : index, index, index, index, index
 }
 
 // CHECK-LABEL: func @args_ret_affine_apply(

@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <memory>
 #include <type_traits>
 
@@ -1346,8 +1347,8 @@ void ConvertComplexToStandardPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect, math::MathDialect>();
   target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+  if (failed(applyPartialOneShotConversion(getOperation(), target,
+                                           std::move(patterns))))
     signalPassFailure();
 }
 } // namespace

@@ -321,9 +321,9 @@ func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
 // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
 // CHECK-NEXT: = llvm.sext %[[ARG0]] : vector<1xi3> to vector<1xi6>
   %0 = arith.extsi %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.zext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+// CHECK: = llvm.zext %[[ARG0]] : vector<1xi3> to vector<1xi6>
   %1 = arith.extui %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.trunc %[[ARG0]] : vector<1xi3> to vector<1xi2>
+// CHECK: = llvm.trunc %[[ARG0]] : vector<1xi3> to vector<1xi2>
   %2 = arith.trunci %arg0 : vector<i3> to vector<i2>
   return
 }
@@ -478,11 +478,12 @@ func.func @mului_extended_vector1d(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -
 // -----
 
 // CHECK-LABEL: func @cmpf_2dvector(
+//  CHECK-SAME:     %[[FARG0:.*]]: vector<4x3xf32>, %[[FARG1:.*]]: vector<4x3xf32>
 func.func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
-  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xf32>>
-  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[FARG0]]
+  // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[FARG1]]
+  // CHECK-DAG: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK-DAG: %[[EXTRACT2:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.array<4 x vector<3xf32>>
   // CHECK: %[[CMP:.*]] = llvm.fcmp "olt" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
   %0 = arith.cmpf olt, %arg0, %arg1 : vector<4x3xf32>
@@ -492,9 +493,10 @@ func.func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
 // -----
 
 // CHECK-LABEL: func @cmpi_0dvector(
+//  CHECK-SAME:     %[[FARG0:.*]]: vector<i32>, %[[FARG1:.*]]: vector<i32>
 func.func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
-  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
+  // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[FARG0]]
+  // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[FARG1]]
   // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : vector<1xi32>
   %0 = arith.cmpi ult, %arg0, %arg1 : vector<i32>
   func.return
@@ -503,11 +505,12 @@ func.func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
 // -----
 
 // CHECK-LABEL: func @cmpi_2dvector(
+//  CHECK-SAME:     %[[FARG0:.*]]: vector<4x3xi32>, %[[FARG1:.*]]: vector<4x3xi32>
 func.func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
-  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xi32>>
-  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[FARG0]]
+  // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[FARG1]]
+  // CHECK-DAG: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK-DAG: %[[EXTRACT2:.*]] = llvm.extractvalue %[[ARG1]][0] : !llvm.array<4 x vector<3xi32>>
   // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xi32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
   %0 = arith.cmpi ult, %arg0, %arg1 : vector<4x3xi32>

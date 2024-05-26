@@ -25,6 +25,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 
@@ -240,8 +241,8 @@ struct ConvertControlFlowToLLVM
     LLVMTypeConverter converter(&getContext(), options);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
 
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(applyPartialOneShotConversion(getOperation(), target,
+                                             std::move(patterns))))
       signalPassFailure();
   }
 };

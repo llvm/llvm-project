@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLLVMPASS
@@ -291,8 +292,8 @@ struct ConvertMathToLLVMPass
     LLVMTypeConverter converter(&getContext());
     populateMathToLLVMConversionPatterns(converter, patterns, approximateLog1p);
     LLVMConversionTarget target(getContext());
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(applyPartialOneShotConversion(getOperation(), target,
+                                             std::move(patterns))))
       signalPassFailure();
   }
 };
