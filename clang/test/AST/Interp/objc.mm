@@ -6,3 +6,7 @@
   static_assert(a, ""); // both-error {{static assertion expression is not an integral constant expression}}
 }
 @end
+
+@interface NSString
+@end
+constexpr NSString *t0 = @"abc";
