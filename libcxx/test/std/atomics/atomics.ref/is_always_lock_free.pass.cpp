@@ -20,22 +20,20 @@
 #include "test_macros.h"
 #include "atomic_helpers.h"
 
-
 template <typename T>
-void check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<T> const a) {
+void check_always_lock_free(std::atomic_ref<T> const& a) {
   if (is_lock_free_status_known<T>()) {
-      constexpr LockFreeStatus known_status = get_known_atomic_lock_free_status<T>();
+    constexpr LockFreeStatus known_status = get_known_atomic_lock_free_status<T>();
 
-      static_assert(std::atomic_ref<T>::is_always_lock_free == (known_status == LockFreeStatus::always),
-              "is_always_lock_free is inconsistent with known lock-free status");
-      if (known_status == LockFreeStatus::always) {
-        assert(a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
-      } else if (known_status == LockFreeStatus::never) {
-        assert(!a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
-      } else {
-        assert(a.is_lock_free() || !a.is_lock_free()); // This is kinda dumb, but we might as well call the function once.
-      }
-
+    static_assert(std::atomic_ref<T>::is_always_lock_free == (known_status == LockFreeStatus::always),
+                  "is_always_lock_free is inconsistent with known lock-free status");
+    if (known_status == LockFreeStatus::always) {
+      assert(a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
+    } else if (known_status == LockFreeStatus::never) {
+      assert(!a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
+    } else {
+      assert(a.is_lock_free() || !a.is_lock_free()); // This is kinda dumb, but we might as well call the function once.
+    }
   }
   std::same_as<const bool> decltype(auto) is_always_lock_free = std::atomic_ref<T>::is_always_lock_free;
   if (is_always_lock_free) {
@@ -49,11 +47,10 @@ void check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<T> const a) {
   do {                                                                                                                 \
     typedef T type;                                                                                                    \
     type obj{};                                                                                                        \
-    check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<type>(obj));                                                                \
+    check_always_lock_free(std::atomic_ref<type>(obj));                                                                \
   } while (0)
 
 void check_always_lock_free_types() {
-
   static_assert(std::atomic_ref<int>::is_always_lock_free);
   static_assert(std::atomic_ref<char>::is_always_lock_free);
 }
@@ -65,13 +62,13 @@ void test() {
   check_always_lock_free_types();
 
   int i = 0;
-  check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<int>(i));
+  check_always_lock_free(std::atomic_ref<int>(i));
 
   float f = 0.f;
-  check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<float>(f));
+  check_always_lock_free(std::atomic_ref<float>(f));
 
   int* p = &i;
-  check_always_lock_free_subsumes_is_lock_free(std::atomic_ref<int*>(p));
+  check_always_lock_free(std::atomic_ref<int*>(p));
 
   CHECK_ALWAYS_LOCK_FREE(struct Empty{});
   CHECK_ALWAYS_LOCK_FREE(struct OneInt { int i; });

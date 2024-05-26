@@ -50,23 +50,22 @@ constexpr bool msvc_is_lock_free_macro_value() {
 #  error "Unknown compiler"
 #endif
 enum class LockFreeStatus { unknown = -1, never = 0, sometimes = 1, always = 2 };
-#define COMPARE_TYPES(T1, T2) \
-  (sizeof(T1) == sizeof(T2) && alignof(T1) >= alignof(T2))
+#define COMPARE_TYPES(T1, T2) (sizeof(T1) == sizeof(T2) && alignof(T1) >= alignof(T2))
 
 template <class T>
 constexpr inline LockFreeStatus get_known_atomic_lock_free_status() {
-  return LockFreeStatus{COMPARE_TYPES(T, char)
-           ? TEST_ATOMIC_CHAR_LOCK_FREE
-           : (COMPARE_TYPES(T, short)
-                  ? TEST_ATOMIC_SHORT_LOCK_FREE
-                  : (COMPARE_TYPES(T, int)
-                         ? TEST_ATOMIC_INT_LOCK_FREE
-                         : (COMPARE_TYPES(T, long)
-                                ? TEST_ATOMIC_LONG_LOCK_FREE
-                                : (COMPARE_TYPES(T, long long)
-                                       ? TEST_ATOMIC_LLONG_LOCK_FREE
-                                       : (COMPARE_TYPES(T, void*) ? TEST_ATOMIC_POINTER_LOCK_FREE
-                                                                                   : -1)))))};
+  return LockFreeStatus{
+      COMPARE_TYPES(T, char)
+          ? TEST_ATOMIC_CHAR_LOCK_FREE
+          : (COMPARE_TYPES(T, short)
+                 ? TEST_ATOMIC_SHORT_LOCK_FREE
+                 : (COMPARE_TYPES(T, int)
+                        ? TEST_ATOMIC_INT_LOCK_FREE
+                        : (COMPARE_TYPES(T, long)
+                               ? TEST_ATOMIC_LONG_LOCK_FREE
+                               : (COMPARE_TYPES(T, long long)
+                                      ? TEST_ATOMIC_LLONG_LOCK_FREE
+                                      : (COMPARE_TYPES(T, void*) ? TEST_ATOMIC_POINTER_LOCK_FREE : -1)))))};
 }
 
 template <class T>
@@ -80,7 +79,6 @@ static_assert(is_lock_free_status_known<int>(), "");
 static_assert(is_lock_free_status_known<long>(), "");
 static_assert(is_lock_free_status_known<long long>(), "");
 static_assert(is_lock_free_status_known<void*>(), "");
-
 
 // These macros are somewhat suprising to use, since they take the values 0, 1, or 2.
 // To make the tests clearer, get rid of them in preference of AtomicInfo.
