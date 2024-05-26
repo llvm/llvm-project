@@ -717,18 +717,71 @@ const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
   return nullptr;
 }
 
+/// Invalidate only the requested elements instead of the whole buffer.
+/// This is basically a refinement of the more generic 'escapeArgs' or
+/// the plain old 'invalidateRegions'.
+/// This only works if the \p StartIndex and \p Count are concrete or
+/// perfectly-constrained.
+static ProgramStateRef
+escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
+                           const CallEvent &Call, const MemRegion *Buffer,
+                           QualType ElemType, SVal StartIndex, SVal Count) {
+  if (!llvm::isa_and_nonnull<SubRegion>(Buffer))
+    return State;
+
+  auto UnboxAsInt = [&C, &State](SVal V) -> std::optional<int64_t> {
+    auto &SVB = C.getSValBuilder();
+    if (const llvm::APSInt *Int = SVB.getKnownValue(State, V))
+      return Int->tryExtValue();
+    return std::nullopt;
+  };
+
+  auto StartIndexVal = UnboxAsInt(StartIndex);
+  auto CountVal = UnboxAsInt(Count);
+
+  // FIXME: Maybe we could make this more generic, and expose this by the
+  // 'invalidateRegions' API. After doing so, it might make sense to make this
+  // limit configurable.
+  constexpr int MaxInvalidatedElementsLimit = 64;
+  if (!StartIndexVal || !CountVal || *CountVal > MaxInvalidatedElementsLimit) {
+    return State->invalidateRegions({loc::MemRegionVal{Buffer}},
+                                    Call.getOriginExpr(), C.blockCount(),
+                                    C.getLocationContext(),
+                                    /*CausesPointerEscape=*/false);
+  }
+
+  constexpr auto DoNotInvalidateSuperRegion =
+      RegionAndSymbolInvalidationTraits::InvalidationKinds::
+          TK_DoNotInvalidateSuperRegion;
+
+  auto &RegionManager = Buffer->getMemRegionManager();
+  SmallVector<SVal> EscapingVals;
+  EscapingVals.reserve(*CountVal);
+
+  RegionAndSymbolInvalidationTraits ITraits;
+  for (auto Idx : llvm::seq(*StartIndexVal, *StartIndexVal + *CountVal)) {
+    NonLoc Index = C.getSValBuilder().makeArrayIndex(Idx);
+    const auto *Element = RegionManager.getElementRegion(
+        ElemType, Index, cast<SubRegion>(Buffer), C.getASTContext());
+    EscapingVals.push_back(loc::MemRegionVal(Element));
+    ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
+  }
+  return State->invalidateRegions(EscapingVals, Call.getOriginExpr(),
+                                  C.blockCount(), C.getLocationContext(),
+                                  /*CausesPointerEscape=*/false,
+                                  /*InvalidatedSymbols=*/nullptr, &Call,
+                                  &ITraits);
+}
+
 static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
                                   const CallEvent &Call,
                                   ArrayRef<unsigned int> EscapingArgs) {
-  const auto *CE = Call.getOriginExpr();
-
-  SmallVector<SVal> EscapingVals;
-  EscapingVals.reserve(EscapingArgs.size());
-  for (auto EscArgIdx : EscapingArgs)
-    EscapingVals.push_back(Call.getArgSVal(EscArgIdx));
-  State = State->invalidateRegions(EscapingVals, CE, C.blockCount(),
-                                   C.getLocationContext(),
-                                   /*CausesPointerEscape=*/false);
+  auto GetArgSVal = [&Call](int Idx) { return Call.getArgSVal(Idx); };
+  auto EscapingVals = to_vector(map_range(EscapingArgs, GetArgSVal));
+  State = State->invalidateRegions(EscapingVals, Call.getOriginExpr(),
+                                   C.blockCount(), C.getLocationContext(),
+                                   /*CausesPointerEscape=*/false,
+                                   /*InvalidatedSymbols=*/nullptr);
   return State;
 }
 
@@ -937,8 +990,21 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
 
   // At read, invalidate the buffer in any case of error or success,
   // except if EOF was already present.
-  if (IsFread && !E.isStreamEof())
-    State = escapeArgs(State, C, Call, {0});
+  if (IsFread && !E.isStreamEof()) {
+    // Try to invalidate the individual elements.
+    if (const auto *BufferFirstElem =
+            dyn_cast_or_null<ElementRegion>(Call.getArgSVal(0).getAsRegion())) {
+      const MemRegion *Buffer = BufferFirstElem->getSuperRegion();
+      QualType ElemTy = BufferFirstElem->getElementType();
+      SVal FirstAccessedItem = BufferFirstElem->getIndex();
+      SVal ItemCount = Call.getArgSVal(2);
+      State = escapeByStartIndexAndCount(State, C, Call, Buffer, ElemTy,
+                                         FirstAccessedItem, ItemCount);
+    } else {
+      // Otherwise just fall back to invalidating the whole buffer.
+      State = escapeArgs(State, C, Call, {0});
+    }
+  }
 
   // Generate a transition for the success state.
   // If we know the state to be FEOF at fread, do not add a success state.
