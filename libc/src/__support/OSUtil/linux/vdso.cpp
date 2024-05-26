@@ -94,9 +94,8 @@ void *get_symbol(VDSOSym sym) {
   static FutexWordType once_flag = 0;
   callonce(reinterpret_cast<CallOnceFlag *>(&once_flag), [] {
     // first clear the symbol table
-    for (auto &i : symbol_table) {
+    for (auto &i : symbol_table)
       i = nullptr;
-    }
 
     // get the address of the VDSO, protect errno since getauxval may change it
     int errno_backup = libc_errno;
