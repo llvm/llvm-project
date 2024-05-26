@@ -1638,6 +1638,12 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCStringLiteral(
+    const ObjCStringLiteral *E) {
+  return this->delegate(E->getString());
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSYCLUniqueStableNameExpr(
     const SYCLUniqueStableNameExpr *E) {
   if (DiscardResult)

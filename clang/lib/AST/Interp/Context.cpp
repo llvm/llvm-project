@@ -164,7 +164,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
       T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
     return PT_FnPtr;
 
-  if (T->isReferenceType() || T->isPointerType())
+  if (T->isReferenceType() || T->isPointerType() ||
+      T->isObjCObjectPointerType())
     return PT_Ptr;
 
   if (const auto *AT = T->getAs<AtomicType>())
