@@ -1463,10 +1463,10 @@ void RewriteInstance::registerFragments() {
     for (StringRef Name : Function.getNames()) {
       StringRef BaseName = NR.restore(Name);
       const bool IsGlobal = BaseName == Name;
-      const size_t ColdSuffixPos = BaseName.find(".cold");
-      if (ColdSuffixPos == StringRef::npos)
+      auto [BaseParentName, Suffix] = BaseName.split(".cold");
+      if (BaseParentName == BaseName)
         continue;
-      StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
+      std::string ParentName = (BaseParentName + Suffix).str();
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
       const uint64_t NumPossibleLocalParents =
           NR.getUniquifiedNameCount(ParentName);
