@@ -794,6 +794,8 @@ Bug Fixes to C++ Support
   Fixes (#GH87210), (GH89541).
 - Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
   Fixes (#GH91308).
+- Fix defaulted ``operator==``/``operator<=>`` not working properly with
+  classes that have anonymous struct members (#GH92497).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
