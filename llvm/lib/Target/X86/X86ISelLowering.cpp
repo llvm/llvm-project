@@ -88,6 +88,12 @@ static cl::opt<int> BrMergingBaseCostThresh(
         "to never merge branches."),
     cl::Hidden);
 
+static cl::opt<int> BrMergingCcmpBias(
+    "x86-br-merging-ccmp-bias", cl::init(6),
+    cl::desc("Increases 'x86-br-merging-base-cost' in cases that the target "
+             "supports conditional compare instructions."),
+    cl::Hidden);
+
 static cl::opt<int> BrMergingLikelyBias(
     "x86-br-merging-likely-bias", cl::init(0),
     cl::desc("Increases 'x86-br-merging-base-cost' in cases that it is likely "
@@ -3403,6 +3409,9 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Rhs) const {
   using namespace llvm::PatternMatch;
   int BaseCost = BrMergingBaseCostThresh.getValue();
+  // With CCMP, branches can be merged in a more efficient way.
+  if (BaseCost >= 0 && Subtarget.hasCCMP())
+    BaseCost += BrMergingCcmpBias;
   // a == b && a == c is a fast pattern on x86.
   ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&
@@ -33937,6 +33946,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TESTUI)
   NODE_NAME_CASE(FP80_ADD)
   NODE_NAME_CASE(STRICT_FP80_ADD)
+  NODE_NAME_CASE(CCMP)
+  NODE_NAME_CASE(CTEST)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -49208,6 +49219,147 @@ static SDValue combineBMILogicOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
+                                        SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &ST) {
+  // cmp(setcc(cc, X), 0)
+  // brcond ne
+  //  ->
+  //    X
+  //    brcond cc
+
+  // sub(setcc(cc, X), 1)
+  // brcond ne
+  //  ->
+  //    X
+  //    brcond ~cc
+  //
+  // if only flag has users
+
+  SDValue SetCC = N->getOperand(0);
+
+  // TODO: Remove the check hasCCMP() and update the non-APX tests.
+  if (!ST.hasCCMP() || SetCC.getOpcode() != X86ISD::SETCC || !Flag.hasOneUse())
+    return SDValue();
+
+  // Check the only user of flag is `brcond ne`.
+  SDNode *BrCond = *Flag->uses().begin();
+  if (BrCond->getOpcode() != X86ISD::BRCOND)
+    return SDValue();
+  unsigned CondNo = 2;
+  if (static_cast<X86::CondCode>(BrCond->getConstantOperandVal(CondNo)) !=
+      X86::COND_NE)
+    return SDValue();
+
+  SDValue X = SetCC.getOperand(1);
+  // Replace API is called manually here b/c the number of results may change.
+  DAG.ReplaceAllUsesOfValueWith(Flag, X);
+
+  SDValue CCN = SetCC.getOperand(0);
+  X86::CondCode CC =
+      static_cast<X86::CondCode>(CCN->getAsAPIntVal().getSExtValue());
+  X86::CondCode OppositeCC = X86::GetOppositeBranchCondition(CC);
+  // Update CC for the consumer of the flag.
+  // The old CC is `ne`. Hence, when comparing the result with 0, we are
+  // checking if the second condition evaluates to true. When comparing the
+  // result with 1, we are checking uf the second condition evaluates to false.
+  SmallVector<SDValue> Ops(BrCond->op_values());
+  if (isNullConstant(N->getOperand(1)))
+    Ops[CondNo] = CCN;
+  else if (isOneConstant(N->getOperand(1)))
+    Ops[CondNo] = DAG.getTargetConstant(OppositeCC, SDLoc(BrCond), MVT::i8);
+  else
+    llvm_unreachable("expect constant 0 or 1");
+
+  SDValue NewBrCond =
+      DAG.getNode(X86ISD::BRCOND, SDLoc(BrCond), BrCond->getValueType(0), Ops);
+  // Avoid self-assign error b/c CC1 can be `e/ne`.
+  if (BrCond != NewBrCond.getNode())
+    DCI.CombineTo(BrCond, NewBrCond);
+  return X;
+}
+
+static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &ST) {
+  // and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y)))
+  //  ->
+  //    setcc(cc1, ccmp(X, Y, ~cflags/cflags, cc0/~cc0, flag0))
+
+  // and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0)))
+  //  ->
+  //    setcc(cc1, ctest(X, X, ~cflags/cflags, cc0/~cc0, flag0))
+  //
+  // where cflags is determined by cc1.
+
+  if (!ST.hasCCMP())
+    return SDValue();
+
+  SDValue SetCC0 = N->getOperand(0);
+  SDValue SetCC1 = N->getOperand(1);
+  if (SetCC0.getOpcode() != X86ISD::SETCC ||
+      SetCC1.getOpcode() != X86ISD::SETCC)
+    return SDValue();
+
+  auto GetCombineToOpc = [&](SDValue V) -> unsigned {
+    SDValue Op = V.getOperand(1);
+    unsigned Opc = Op.getOpcode();
+    if (Opc == X86ISD::SUB)
+      return X86ISD::CCMP;
+    if (Opc == X86ISD::CMP && isNullConstant(Op.getOperand(1)))
+      return X86ISD::CTEST;
+    return 0U;
+  };
+
+  unsigned NewOpc = 0;
+
+  // AND/OR is commutable. Canonicalize the operands to make SETCC with SUB/CMP
+  // appear on the right.
+  if (!(NewOpc = GetCombineToOpc(SetCC1))) {
+    std::swap(SetCC0, SetCC1);
+    if (!(NewOpc = GetCombineToOpc(SetCC1)))
+      return SDValue();
+  }
+
+  X86::CondCode CC0 =
+      static_cast<X86::CondCode>(SetCC0.getConstantOperandVal(0));
+  // CCMP/CTEST is not conditional when the source condition is COND_P/COND_NP.
+  if (CC0 == X86::COND_P || CC0 == X86::COND_NP)
+    return SDValue();
+
+  bool IsOR = N->getOpcode() == ISD::OR;
+
+  // CMP/TEST is executed and updates the EFLAGS normally only when SrcCC
+  // evaluates to true. So we need to inverse CC0 as SrcCC when the logic
+  // operator is OR. Similar for CC1.
+  SDValue SrcCC =
+      IsOR ? DAG.getTargetConstant(X86::GetOppositeBranchCondition(CC0),
+                                   SDLoc(SetCC0.getOperand(0)), MVT::i8)
+           : SetCC0.getOperand(0);
+  SDValue CC1N = SetCC1.getOperand(0);
+  X86::CondCode CC1 =
+      static_cast<X86::CondCode>(CC1N->getAsAPIntVal().getSExtValue());
+  X86::CondCode OppositeCC1 = X86::GetOppositeBranchCondition(CC1);
+  X86::CondCode CFlagsCC = IsOR ? CC1 : OppositeCC1;
+  SDLoc DL(N);
+  SDValue CFlags = DAG.getTargetConstant(
+      X86::getCCMPCondFlagsFromCondCode(CFlagsCC), DL, MVT::i8);
+  SDValue Sub = SetCC1.getOperand(1);
+
+  // Replace any uses of the old flag produced by SUB/CMP with the new one
+  // produced by CCMP/CTEST.
+  SDValue CCMP = (NewOpc == X86ISD::CCMP)
+                     ? DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+                                   {Sub.getOperand(0), Sub.getOperand(1),
+                                    CFlags, SrcCC, SetCC0.getOperand(1)})
+                     : DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                                   {Sub.getOperand(0), Sub.getOperand(0),
+                                    CFlags, SrcCC, SetCC0.getOperand(1)});
+
+  return DAG.getNode(X86ISD::SETCC, DL, MVT::i8, {CC1N, CCMP});
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -49290,6 +49442,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
+    return SetCC;
 
   if (SDValue V = combineScalarAndWithMaskSetcc(N, DAG, Subtarget))
     return V;
@@ -50075,6 +50230,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
+    return SetCC;
 
   if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
     return R;
@@ -54597,6 +54755,7 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
 }
 
 static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   // Only handle test patterns.
   if (!isNullConstant(N->getOperand(1)))
@@ -54610,6 +54769,10 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
   SDValue Op = N->getOperand(0);
   EVT VT = Op.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (SDValue CMP =
+          combineX86SubCmpForFlags(N, SDValue(N, 0), DAG, DCI, Subtarget))
+    return CMP;
 
   // If we have a constant logical shift that's only used in a comparison
   // against zero turn it into an equivalent AND. This allows turning it into
@@ -54739,7 +54902,8 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &ST) {
   assert((X86ISD::ADD == N->getOpcode() || X86ISD::SUB == N->getOpcode()) &&
          "Expected X86ISD::ADD or X86ISD::SUB");
 
@@ -54749,6 +54913,10 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   MVT VT = LHS.getSimpleValueType();
   bool IsSub = X86ISD::SUB == N->getOpcode();
   unsigned GenericOpc = IsSub ? ISD::SUB : ISD::ADD;
+
+  if (IsSub && isOneConstant(N->getOperand(1)) && !N->hasAnyUseOfValue(0))
+    if (SDValue CMP = combineX86SubCmpForFlags(N, SDValue(N, 1), DAG, DCI, ST))
+      return CMP;
 
   // If we don't use the flag result, simplify back to a generic ADD/SUB.
   if (!N->hasAnyUseOfValue(1)) {
@@ -57049,11 +57217,11 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::BLENDV:      return combineSelect(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
-  case X86ISD::CMP:         return combineCMP(N, DAG, Subtarget);
+  case X86ISD::CMP:         return combineCMP(N, DAG, DCI, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, DCI, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
-  case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI);
+  case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI, Subtarget);
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);

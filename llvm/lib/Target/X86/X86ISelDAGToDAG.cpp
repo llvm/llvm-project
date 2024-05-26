@@ -1553,11 +1553,16 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     switch (Opc) {
     default:
       continue;
-    // TESTrr+ANDrr/rm -> TESTrr/TESTmr
+    // ANDrr/rm + TESTrr+ -> TESTrr/TESTmr
     case X86::TEST8rr:
     case X86::TEST16rr:
     case X86::TEST32rr:
-    case X86::TEST64rr: {
+    case X86::TEST64rr:
+    // ANDrr/rm + CTESTrr -> CTESTrr/CTESTmr
+    case X86::CTEST8rr:
+    case X86::CTEST16rr:
+    case X86::CTEST32rr:
+    case X86::CTEST64rr: {
       auto &Op0 = N->getOperand(0);
       if (Op0 != N->getOperand(1) || !Op0->hasNUsesOfValue(2, Op0.getResNo()) ||
           !Op0.isMachineOpcode())
@@ -1575,8 +1580,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         CASE_ND(AND64rr) {
           if (And->hasAnyUseOfValue(1))
             continue;
-          MachineSDNode *Test = CurDAG->getMachineNode(
-              Opc, SDLoc(N), MVT::i32, And.getOperand(0), And.getOperand(1));
+          SmallVector<SDValue> Ops(N->op_values());
+          Ops[0] = And.getOperand(0);
+          Ops[1] = And.getOperand(1);
+          MachineSDNode *Test =
+              CurDAG->getMachineNode(Opc, SDLoc(N), MVT::i32, Ops);
           ReplaceUses(N, Test);
           MadeChange = true;
           continue;
@@ -1588,8 +1596,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
           if (And->hasAnyUseOfValue(1))
             continue;
           unsigned NewOpc;
+          bool IsCTESTCC = X86::isCTESTCC(Opc);
 #define FROM_TO(A, B)                                                          \
-  CASE_ND(A) NewOpc = X86::B;                                                  \
+  CASE_ND(A) NewOpc = IsCTESTCC ? X86::C##B : X86::B;                          \
   break;
           switch (And.getMachineOpcode()) {
             FROM_TO(AND8rm, TEST8mr);
@@ -1600,10 +1609,20 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 #undef FROM_TO
 #undef CASE_ND
           // Need to swap the memory and register operand.
-          SDValue Ops[] = {And.getOperand(1), And.getOperand(2),
-                           And.getOperand(3), And.getOperand(4),
-                           And.getOperand(5), And.getOperand(0),
-                           And.getOperand(6) /* Chain */};
+          SmallVector<SDValue> Ops = {And.getOperand(1), And.getOperand(2),
+                                      And.getOperand(3), And.getOperand(4),
+                                      And.getOperand(5), And.getOperand(0)};
+          // CC, Cflags.
+          if (IsCTESTCC) {
+            Ops.push_back(N->getOperand(2));
+            Ops.push_back(N->getOperand(3));
+          }
+          // Chain of memory load
+          Ops.push_back(And.getOperand(6));
+          // Glue
+          if (IsCTESTCC)
+            Ops.push_back(N->getOperand(4));
+
           MachineSDNode *Test = CurDAG->getMachineNode(
               NewOpc, SDLoc(N), MVT::i32, MVT::Other, Ops);
           CurDAG->setNodeMemRefs(
