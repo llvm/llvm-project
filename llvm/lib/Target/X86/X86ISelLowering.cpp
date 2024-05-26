@@ -49278,6 +49278,8 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     Ops[CondNo] = CCN;
   else if (isOneConstant(N->getOperand(1)))
     Ops[CondNo] = DAG.getTargetConstant(OppositeCC, SDLoc(BrCond), MVT::i8);
+  else
+    llvm_unreachable("expect constant 0 or 1");
 
   SDValue NewBrCond =
       DAG.getNode(X86ISD::BRCOND, SDLoc(BrCond), BrCond->getValueType(0), Ops);
