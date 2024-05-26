@@ -9,4 +9,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.OSUtil.linux.vdso
     libc.hdr.types.struct_timeval
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.clockid_t
+    libc.hdr.time_macros
 )
