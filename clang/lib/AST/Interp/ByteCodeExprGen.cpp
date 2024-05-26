@@ -2649,6 +2649,14 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  if (!E->isExpressibleAsConstantInitializer())
+    return this->emitInvalid(E);
+
+  return this->delegate(E->getSubExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
