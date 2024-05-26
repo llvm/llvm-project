@@ -1596,9 +1596,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
           if (And->hasAnyUseOfValue(1))
             continue;
           unsigned NewOpc;
-          unsigned NumOps = N->getNumOperands();
+          bool IsCTESTCC = X86::isCTESTCC(Opc);
 #define FROM_TO(A, B)                                                          \
-  CASE_ND(A) NewOpc = NumOps > 2 ? X86::C##B : X86::B;                         \
+  CASE_ND(A) NewOpc = IsCTESTCC ? X86::C##B : X86::B;                          \
   break;
           switch (And.getMachineOpcode()) {
             FROM_TO(AND8rm, TEST8mr);
@@ -1612,7 +1612,6 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
           SmallVector<SDValue> Ops = {And.getOperand(1), And.getOperand(2),
                                       And.getOperand(3), And.getOperand(4),
                                       And.getOperand(5), And.getOperand(0)};
-          bool IsCTESTCC = X86::isCTESTCC(Opc);
           // CC, Cflags.
           if (IsCTESTCC) {
             Ops.push_back(N->getOperand(2));
