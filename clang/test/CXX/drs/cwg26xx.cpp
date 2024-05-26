@@ -240,3 +240,29 @@ void test() {
 }
 }
 #endif
+
+
+#if __cplusplus >= 202302L
+namespace cwg2692 { // cwg2692: 19
+
+ struct A {
+    static void f(A); // #cwg2692-1
+    void f(this A); // #cwg2692-2
+
+    void g();
+  };
+
+  void A::g() {
+    (&A::f)(A()); // expected-error {{call to 'f' is ambiguous}}
+                  // expected-note@#cwg2692-1 {{candidate}}
+                  // expected-note@#cwg2692-2 {{candidate}}
+
+
+
+    (&A::f)();    // expected-error {{no matching function for call to 'f'}}
+                  // expected-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+                  // expected-note@#cwg2692-2 {{candidate function not viable: requires at most 1 argument, but 0 were provided}}
+  }
+
+}
+#endif

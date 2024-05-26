@@ -899,6 +899,8 @@ class Sema;
     /// object argument.
     bool IgnoreObjectArgument : 1;
 
+    bool TookAddressOfOverload : 1;
+
     /// True if the candidate was found using ADL.
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
@@ -999,6 +1001,8 @@ class Sema;
       /// Initialization of an object of class type by constructor,
       /// using either a parenthesized or braced list of arguments.
       CSK_InitByConstructor,
+
+      CSK_AddressOfOverloadSet,
     };
 
     /// Information about operator rewrites to consider when adding operator

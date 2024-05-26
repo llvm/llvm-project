@@ -6971,6 +6971,7 @@ void Sema::AddOverloadCandidate(
   Candidate.IsSurrogate = false;
   Candidate.IsADLCandidate = IsADLCandidate;
   Candidate.IgnoreObjectArgument = false;
+  Candidate.TookAddressOfOverload = false;
   Candidate.ExplicitCallArguments = Args.size();
 
   // Explicit functions are not actually candidates at all if we're not
@@ -7545,10 +7546,19 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
       CandidateSet.getRewriteInfo().getRewriteKind(Method, PO);
   Candidate.IsSurrogate = false;
   Candidate.IgnoreObjectArgument = false;
+  Candidate.TookAddressOfOverload =
+      CandidateSet.getKind() == OverloadCandidateSet::CSK_AddressOfOverloadSet;
   Candidate.ExplicitCallArguments = Args.size();
 
-  unsigned NumParams = Method->getNumExplicitParams();
-  unsigned ExplicitOffset = Method->isExplicitObjectMemberFunction() ? 1 : 0;
+  bool IgnoreExplicitObject =
+      (Method->isExplicitObjectMemberFunction() &&
+       CandidateSet.getKind() ==
+           OverloadCandidateSet::CSK_AddressOfOverloadSet);
+  unsigned ExplicitOffset =
+      !IgnoreExplicitObject && Method->isExplicitObjectMemberFunction() ? 1 : 0;
+  unsigned NumParams = Method->getNumParams() - ExplicitOffset;
+  if (CandidateSet.getKind() == OverloadCandidateSet::CSK_AddressOfOverloadSet)
+    NumParams += int(Method->isImplicitObjectMemberFunction());
 
   // (C++ 13.3.2p2): A candidate function having fewer than m
   // parameters is viable only if it has an ellipsis in its parameter
@@ -7566,7 +7576,12 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   // (8.3.6). For the purposes of overload resolution, the
   // parameter list is truncated on the right, so that there are
   // exactly m parameters.
-  unsigned MinRequiredArgs = Method->getMinRequiredExplicitArguments();
+  unsigned MinRequiredArgs = Method->getMinRequiredArguments() - ExplicitOffset;
+  if (CandidateSet.getKind() ==
+          OverloadCandidateSet::CSK_AddressOfOverloadSet &&
+      Method->isImplicitObjectMemberFunction())
+    MinRequiredArgs++;
+
   if (Args.size() < MinRequiredArgs && !PartialOverloading) {
     // Not enough arguments.
     Candidate.Viable = false;
@@ -7636,7 +7651,16 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
       // exist for each argument an implicit conversion sequence
       // (13.3.3.1) that converts that argument to the corresponding
       // parameter of F.
-      QualType ParamType = Proto->getParamType(ArgIdx + ExplicitOffset);
+      QualType ParamType;
+      if (CandidateSet.getKind() ==
+              OverloadCandidateSet::CSK_AddressOfOverloadSet &&
+          Method->isImplicitObjectMemberFunction()) {
+        ParamType = ArgIdx == 0
+                        ? Method->getFunctionObjectParameterReferenceType()
+                        : Proto->getParamType(ArgIdx - 1);
+      } else {
+        ParamType = Proto->getParamType(ArgIdx + ExplicitOffset);
+      }
       Candidate.Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[ArgIdx], ParamType,
                                 SuppressUserConversions,
@@ -7998,6 +8022,7 @@ void Sema::AddConversionCandidate(
   Candidate.Function = Conversion;
   Candidate.IsSurrogate = false;
   Candidate.IgnoreObjectArgument = false;
+  Candidate.TookAddressOfOverload = false;
   Candidate.FinalConversion.setAsIdentityConversion();
   Candidate.FinalConversion.setFromType(ConvType);
   Candidate.FinalConversion.setAllToTypes(ToType);
@@ -8200,6 +8225,7 @@ void Sema::AddTemplateConversionCandidate(
     Candidate.FailureKind = ovl_fail_bad_deduction;
     Candidate.IsSurrogate = false;
     Candidate.IgnoreObjectArgument = false;
+    Candidate.TookAddressOfOverload = false;
     Candidate.ExplicitCallArguments = 1;
     Candidate.DeductionFailure = MakeDeductionFailureInfo(Context, Result,
                                                           Info);
@@ -8240,6 +8266,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
   Candidate.Viable = true;
   Candidate.IsSurrogate = true;
   Candidate.IgnoreObjectArgument = false;
+  Candidate.TookAddressOfOverload = false;
   Candidate.ExplicitCallArguments = Args.size();
 
   // Determine the implicit conversion sequence for the implicit
@@ -8465,6 +8492,7 @@ void Sema::AddBuiltinCandidate(QualType *ParamTys, ArrayRef<Expr *> Args,
   Candidate.Function = nullptr;
   Candidate.IsSurrogate = false;
   Candidate.IgnoreObjectArgument = false;
+  Candidate.TookAddressOfOverload = false;
   std::copy(ParamTys, ParamTys + Args.size(), Candidate.BuiltinParamTypes);
 
   // Determine the implicit conversion sequences for each of the
@@ -10929,6 +10957,12 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   if (Best->Function && Best->Function->isDeleted())
     return OR_Deleted;
 
+  if (auto *M = dyn_cast_or_null<CXXMethodDecl>(Best->Function);
+      Kind == CSK_AddressOfOverloadSet && M &&
+      M->isImplicitObjectMemberFunction()) {
+    return OR_No_Viable_Function;
+  }
+
   if (!EquivalentCands.empty())
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
@@ -11538,7 +11572,8 @@ static bool CheckArityMismatch(Sema &S, OverloadCandidate *Cand,
 
 /// General arity mismatch diagnosis over a candidate in a candidate set.
 static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
-                                  unsigned NumFormalArgs) {
+                                  unsigned NumFormalArgs,
+                                  bool IsAddressOf = false) {
   assert(isa<FunctionDecl>(D) &&
       "The templated declaration should at least be a function"
       " when diagnosing bad template argument deduction due to too many"
@@ -11551,7 +11586,8 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
   unsigned MinParams = Fn->getMinRequiredExplicitArguments();
 
   // at least / at most / exactly
-  bool HasExplicitObjectParam = Fn->hasCXXExplicitFunctionObjectParameter();
+  bool HasExplicitObjectParam =
+      !IsAddressOf && Fn->hasCXXExplicitFunctionObjectParameter();
   unsigned ParamCount = FnTy->getNumParams() - (HasExplicitObjectParam ? 1 : 0);
   unsigned mode, modeCount;
   if (NumFormalArgs < MinParams) {
@@ -11593,7 +11629,8 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
 static void DiagnoseArityMismatch(Sema &S, OverloadCandidate *Cand,
                                   unsigned NumFormalArgs) {
   if (!CheckArityMismatch(S, Cand, NumFormalArgs))
-    DiagnoseArityMismatch(S, Cand->FoundDecl, Cand->Function, NumFormalArgs);
+    DiagnoseArityMismatch(S, Cand->FoundDecl, Cand->Function, NumFormalArgs,
+                          Cand->TookAddressOfOverload);
 }
 
 static TemplateDecl *getDescribedTemplate(Decl *Templated) {
@@ -14076,6 +14113,21 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   }
 
   case OR_No_Viable_Function: {
+    if (*Best != CandidateSet->end() &&
+        CandidateSet->getKind() ==
+            clang::OverloadCandidateSet::CSK_AddressOfOverloadSet) {
+      if (CXXMethodDecl *M =
+              dyn_cast_if_present<CXXMethodDecl>((*Best)->Function);
+          M && M->isImplicitObjectMemberFunction()) {
+        CandidateSet->NoteCandidates(
+            PartialDiagnosticAt(
+                Fn->getBeginLoc(),
+                SemaRef.PDiag(diag::err_member_call_without_object) << 0 << M),
+            SemaRef, OCD_AmbiguousCandidates, Args);
+        return ExprError();
+      }
+    }
+
     // Try to recover by looking for viable functions which the user might
     // have meant to call.
     ExprResult Recovery = BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc,
@@ -14167,8 +14219,10 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                          Expr *ExecConfig,
                                          bool AllowTypoCorrection,
                                          bool CalleesAddressIsTaken) {
-  OverloadCandidateSet CandidateSet(Fn->getExprLoc(),
-                                    OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(
+      Fn->getExprLoc(), CalleesAddressIsTaken
+                            ? OverloadCandidateSet::CSK_AddressOfOverloadSet
+                            : OverloadCandidateSet::CSK_Normal);
   ExprResult result;
 
   if (buildOverloadedCallSet(S, Fn, ULE, Args, LParenLoc, &CandidateSet,
@@ -16333,7 +16387,7 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     assert(UnOp->getOpcode() == UO_AddrOf &&
            "Can only take the address of an overloaded function");
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Fn)) {
-      if (Method->isStatic()) {
+      if (!Method->isImplicitObjectMemberFunction()) {
         // Do nothing: static member functions aren't any different
         // from non-member functions.
       } else {

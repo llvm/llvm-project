@@ -3027,6 +3027,7 @@ public:
   struct FindResult {
     OverloadExpr *Expression;
     bool IsAddressOfOperand;
+    bool IsAddressOfOperandWithParen;
     bool HasFormOfMemberPointer;
   };
 
@@ -3039,6 +3040,7 @@ public:
     assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
 
     FindResult Result;
+    bool HasParen = isa<ParenExpr>(E);
 
     E = E->IgnoreParens();
     if (isa<UnaryOperator>(E)) {
@@ -3048,10 +3050,12 @@ public:
 
       Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
       Result.IsAddressOfOperand = true;
+      Result.IsAddressOfOperandWithParen = HasParen;
       Result.Expression = Ovl;
     } else {
       Result.HasFormOfMemberPointer = false;
       Result.IsAddressOfOperand = false;
+      Result.IsAddressOfOperandWithParen = false;
       Result.Expression = cast<OverloadExpr>(E);
     }
 
