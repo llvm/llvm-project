@@ -11,8 +11,6 @@
 
 #include <array>
 
-#include "test_macros.h"
-
 template <auto>
 struct Test {};
 
