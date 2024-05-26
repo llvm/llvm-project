@@ -10,3 +10,4 @@
 @interface NSString
 @end
 constexpr NSString *t0 = @"abc";
+constexpr NSString *t1 = @("abc");
