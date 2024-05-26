@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_SHARED_CONST_TYPES_H
 #define TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_SHARED_CONST_TYPES_H
 

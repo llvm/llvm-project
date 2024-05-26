@@ -39,12 +39,12 @@ static_assert( std::is_constructible<std::shared_ptr<Base>,  Derived*, test_dele
 static_assert(!std::is_constructible<std::shared_ptr<A>,  int*, test_deleter<A>, test_allocator<A> >::value, "");
 
 #if TEST_STD_VER >= 17
-static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int>, test_allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int*, bad_deleter, test_allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>, test_allocator<int>>::value, "");
-static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int>, test_allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter, test_allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>, test_allocator<int>>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int>, test_allocator<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int*, bad_deleter, test_allocator<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>, test_allocator<int> >::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int>, test_allocator<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter, test_allocator<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>, test_allocator<int> >::value, "");
 #endif
 
 
