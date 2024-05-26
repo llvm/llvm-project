@@ -49353,21 +49353,22 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
       static_cast<X86::CondCode>(CC1N->getAsAPIntVal().getSExtValue());
   X86::CondCode OppositeCC1 = X86::GetOppositeBranchCondition(CC1);
   X86::CondCode CFlagsCC = IsOR ? CC1 : OppositeCC1;
+  SDLoc DL(N);
   SDValue CFlags = DAG.getTargetConstant(
-      X86::getCCMPCondFlagsFromCondCode(CFlagsCC), SDLoc(N), MVT::i8);
+      X86::getCCMPCondFlagsFromCondCode(CFlagsCC), DL, MVT::i8);
   SDValue Sub = SetCC1.getOperand(1);
 
   // Replace any uses of the old flag produced by SUB/CMP with the new one
   // produced by CCMP/CTEST.
   SDValue CCMP = (NewOpc == X86ISD::CCMP)
-                     ? DAG.getNode(X86ISD::CCMP, SDLoc(N), MVT::i32,
+                     ? DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
                                    {Sub.getOperand(0), Sub.getOperand(1),
                                     CFlags, SCC, SetCC0.getOperand(1)})
-                     : DAG.getNode(X86ISD::CTEST, SDLoc(N), MVT::i32,
+                     : DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
                                    {Sub.getOperand(0), Sub.getOperand(0),
                                     CFlags, SCC, SetCC0.getOperand(1)});
 
-  return DAG.getNode(X86ISD::SETCC, SDLoc(N), MVT::i8, {CC1N, CCMP});
+  return DAG.getNode(X86ISD::SETCC, DL, MVT::i8, {CC1N, CCMP});
 }
 
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
