@@ -16,6 +16,8 @@ struct Test {};
 void test() {
   // LWG 3382. NTTP for pair and array
   // https://cplusplus.github.io/LWG/issue3382
+#if !defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
   constexpr std::pair<int, long> a{};
   [[maybe_unused]] Test<a> test1{};
+#endif
 }
