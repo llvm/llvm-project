@@ -55,7 +55,7 @@
 "`P2845R8 <https://wg21.link/P2845R8>`__","LWG","Formatting of ``std::filesystem::path``","Tokyo March 2024","","","|format|"
 "`P0493R5 <https://wg21.link/P0493R5>`__","LWG","Atomic minimum/maximum","Tokyo March 2024","","",""
 "`P2542R8 <https://wg21.link/P2542R8>`__","LWG","``views::concat``","Tokyo March 2024","","","|ranges|"
-"`P2591R5 <https://wg21.link/P2591R5>`__","LWG","Concatenation of strings and string views","Tokyo March 2024","","",""
+"`P2591R5 <https://wg21.link/P2591R5>`__","LWG","Concatenation of strings and string views","Tokyo March 2024","|Complete|","19.0",""
 "`P2248R8 <https://wg21.link/P2248R8>`__","LWG","Enabling list-initialization for algorithms","Tokyo March 2024","","",""
 "`P2810R4 <https://wg21.link/P2810R4>`__","LWG","``is_debugger_present`` ``is_replaceable``","Tokyo March 2024","","",""
 "`P1068R11 <https://wg21.link/P1068R11>`__","LWG","Vector API for random number generation","Tokyo March 2024","","",""
