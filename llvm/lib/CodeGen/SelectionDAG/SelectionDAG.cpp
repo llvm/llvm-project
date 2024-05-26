@@ -11293,10 +11293,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
     return ReplaceAllUsesWith(SDValue(From, 0), To[0]);
 
   for (unsigned i = 0, e = From->getNumValues(); i != e; ++i) {
-    // Preserve Debug Info.
-    transferDbgValues(SDValue(From, i), To[i]);
-    // Preserve extra info.
-    copyExtraInfo(From, To[i].getNode());
+    if (From->hasAnyUseOfValue(i)) {
+      // Preserve Debug Info.
+      transferDbgValues(SDValue(From, i), To[i]);
+      // Preserve extra info.
+      copyExtraInfo(From, To[i].getNode());
+    }
   }
 
   // Iterate over just the existing users of From. See the comments in
