@@ -5507,7 +5507,7 @@ struct EnsureImmediateInvocationInDefaultArgs
   // in the case of nested struct initialization.
   ExprResult TransformCXXThisExpr(CXXThisExpr *E) { return E; }
 
-  // Rewrite to source location to refer to the context in which they are used
+  // Rewrite to source location to refer to the context in which they are used.
   ExprResult TransformSourceLocExpr(SourceLocExpr *E) {
     if (E->getParentContext() == SemaRef.CurContext)
       return E;
