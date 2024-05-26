@@ -186,9 +186,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 9
     ; CHECK-NEXT: %c:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %3:_(s64) = nneg G_ZEXT %c(s32)
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE %3
-    ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT %c(s32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %cst:_(s32) = G_CONSTANT i32 9
@@ -253,9 +252,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s64) = exact G_UDIV %c, %c
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[UDIV]]
-    ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
+    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s64) = G_UDIV %c, %c
+    ; CHECK-NEXT: $x0 = COPY [[UDIV]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %cst:_(s64) = G_CONSTANT i64 9
@@ -298,9 +296,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL %c, %c
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[MUL]]
-    ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL %c, %c
+    ; CHECK-NEXT: $x0 = COPY [[MUL]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %cst:_(s64) = G_CONSTANT i64 9
@@ -343,9 +340,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nuw G_TRUNC %c(s64)
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[TRUNC]]
-    ; CHECK-NEXT: $w0 = COPY [[FREEZE]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %c(s64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $x0
     %cst:_(s64) = G_CONSTANT i64 9
@@ -388,9 +384,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD %c, %c
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[ADD]]
-    ; CHECK-NEXT: $x0 = COPY [[FREEZE]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD %c, %c
+    ; CHECK-NEXT: $x0 = COPY [[ADD]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %cst:_(s64) = G_CONSTANT i64 9
