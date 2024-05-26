@@ -28,16 +28,17 @@ namespace PR12884_original {
       typedef int arg;
     };
     struct C {
-      typedef B::X<typename B::arg> x; // precxx17-warning{{missing 'typename' prior to dependent type name B::X; implicit 'typename' is a C++20 extension}}
+      typedef B::X<typename B::arg> x; // precxx17-warning{{missing 'typename' prior to dependent type name B::X; implicit 'typename' is a C++20 extension}} \
+                                       cxx17-error{{typename specifier refers to non-type member 'arg' in 'PR12884_original::A<int>::B'}}
     };
   };
 
   template <> struct A<int>::B {
     template <int N> struct X {};
-    static const int arg = 0;
+    static const int arg = 0; // cxx17-note{{referenced member 'arg' is declared here}}
   };
 
-  A<int>::C::x a;
+  A<int>::C::x a; // cxx17-note{{in instantiation of member class 'PR12884_original::A<int>::C' requested here}}
 }
 namespace PR12884_half_fixed {
   template <typename T> struct A {
