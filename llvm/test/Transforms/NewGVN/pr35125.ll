@@ -29,7 +29,7 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr @a, align 4
 ; CHECK-NEXT:    br label [[IF_END6]]
 ; CHECK:       if.end6:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[LOR_END]] ], [ [[TMP0]], [[IF_END]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr @.str, i32 [[TMP2]])
 ; CHECK-NEXT:    ret i32 0
 ;
