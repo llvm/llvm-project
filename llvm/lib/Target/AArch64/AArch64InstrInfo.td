@@ -171,8 +171,6 @@ def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
-def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
 def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
@@ -5448,6 +5446,52 @@ defm : SelectSetCCSwapOperands<setlt, "CMGT">;
 defm : SelectSetCCSwapOperands<setle, "CMGE">;
 defm : SelectSetCCSwapOperands<setult, "CMHI">;
 defm : SelectSetCCSwapOperands<setule, "CMHS">;
+
+multiclass SelectSetCCZeroRHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), immAllZerosV)),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), immAllZerosV)),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), immAllZerosV)),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), immAllZerosV)),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), immAllZerosV)),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), immAllZerosV)),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), immAllZerosV)),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroRHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroRHS<setgt, "CMGT">;
+defm : SelectSetCCZeroRHS<setge, "CMGE">;
+defm : SelectSetCCZeroRHS<setlt, "CMLT">;
+defm : SelectSetCCZeroRHS<setle, "CMLE">;
+
+multiclass SelectSetCCZeroLHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag immAllZerosV, (v8i8 V64:$Rn))),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag immAllZerosV, (v16i8 V128:$Rn))),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag immAllZerosV, (v4i16 V64:$Rn))),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag immAllZerosV, (v8i16 V128:$Rn))),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag immAllZerosV, (v2i32 V64:$Rn))),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag immAllZerosV, (v4i32 V128:$Rn))),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag immAllZerosV, (v2i64 V128:$Rn))),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroLHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroLHS<setgt, "CMLT">;
+defm : SelectSetCCZeroLHS<setge, "CMLE">;
+defm : SelectSetCCZeroLHS<setlt, "CMGT">;
+defm : SelectSetCCZeroLHS<setle, "CMGE">;
 
 let Predicates = [HasNEON] in {
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",

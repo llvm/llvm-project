@@ -36,9 +36,6 @@ void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
 LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
 
 #else
-// In overlay mode, we simply use the system errno.
-#include "hdr/errno_macros.h"
-
 void LIBC_NAMESPACE::Errno::operator=(int a) { errno = a; }
 LIBC_NAMESPACE::Errno::operator int() { return errno; }
 

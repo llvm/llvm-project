@@ -565,7 +565,8 @@ private:
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
-  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context, DeclContext *DC);
+  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
+                                        const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
@@ -713,9 +714,6 @@ public:
 
   /// Force a type to be emitted and get its ID.
   serialization::TypeID GetOrCreateTypeID(QualType T);
-
-  /// Determine the type ID of an already-emitted type.
-  serialization::TypeID getTypeID(QualType T) const;
 
   /// Find the first local declaration of a given local redeclarable
   /// decl.

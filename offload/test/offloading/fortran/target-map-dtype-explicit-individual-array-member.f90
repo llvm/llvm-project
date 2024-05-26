@@ -1,5 +1,5 @@
 ! Offloading test checking interaction of an
-! explicit derived type member mapping of 
+! explicit derived type member mapping of
 ! an array when mapped to target
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
@@ -18,9 +18,9 @@ type :: scalar_array
     real(4) :: array_y(10)
     real(4) :: break_3
 end type scalar_array
-  
+
    type(scalar_array) :: scalar_arr
-    
+
   !$omp target map(tofrom:scalar_arr%array_y)
     do i = 1, 10
       scalar_arr%array_y(i) = i

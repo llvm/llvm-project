@@ -7,7 +7,7 @@ function(add_lldb_test_executable test_name)
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   list(APPEND ALL_LLDB_TEST_EXECUTABLES ${test_name})
   set(ALL_LLDB_TEST_EXECUTABLES ${ALL_LLDB_TEST_EXECUTABLES} PARENT_SCOPE)
-  set_target_properties(${test_name} PROPERTIES FOLDER "lldb tests")
+  set_target_properties(${test_name} PROPERTIES FOLDER "LLDB/Tests")
 endfunction()
 
 add_lldb_test_executable(thread_inferior inferior/thread_inferior.cpp)

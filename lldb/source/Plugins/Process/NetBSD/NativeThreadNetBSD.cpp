@@ -180,8 +180,6 @@ void NativeThreadNetBSD::SetStepping() {
 }
 
 std::string NativeThreadNetBSD::GetName() {
-  Log *log = GetLog(POSIXLog::Thread);
-
 #ifdef PT_LWPSTATUS
   struct ptrace_lwpstatus info = {};
   info.pl_lwpid = m_tid;
@@ -193,6 +191,8 @@ std::string NativeThreadNetBSD::GetName() {
   return info.pl_name;
 #else
   std::vector<struct kinfo_lwp> infos;
+  Log *log = GetLog(POSIXLog::Thread);
+
   int mib[5] = {CTL_KERN, KERN_LWP, static_cast<int>(m_process.GetID()),
                 sizeof(struct kinfo_lwp), 0};
   size_t size;
