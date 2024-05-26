@@ -43,6 +43,10 @@ enum NodeType : unsigned {
   ROTL_W,
   ROTR_W,
 
+  // unsigned 32-bit integer division
+  DIV_WU,
+  MOD_WU,
+
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,

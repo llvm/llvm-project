@@ -1188,8 +1188,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::OR: case ISD::VP_OR:
   case ISD::XOR: case ISD::VP_XOR:
   case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_ASHR:
-  case ISD::SRL: case ISD::VP_LSHR:
+  case ISD::SRA: case ISD::VP_SRA:
+  case ISD::SRL: case ISD::VP_SRL:
   case ISD::UREM: case ISD::VP_UREM:
   case ISD::SREM: case ISD::VP_SREM:
   case ISD::FREM: case ISD::VP_FREM:
@@ -2911,18 +2911,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo,
                                                  SDValue &Hi) {
-  EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-
   SDValue Expanded = TLI.expandVectorSplice(N, DAG);
-  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Expanded,
-                   DAG.getVectorIdxConstant(0, DL));
-  Hi =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, Expanded,
-                  DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+  std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
@@ -2967,12 +2959,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
 
-  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
-  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
-                   DAG.getVectorIdxConstant(0, DL));
-  Hi =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, Load,
-                  DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+  std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
@@ -4248,8 +4235,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SUB: case ISD::VP_SUB:
   case ISD::XOR: case ISD::VP_XOR:
   case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_ASHR:
-  case ISD::SRL: case ISD::VP_LSHR:
+  case ISD::SRA: case ISD::VP_SRA:
+  case ISD::SRL: case ISD::VP_SRL:
   case ISD::FMINNUM: case ISD::VP_FMINNUM:
   case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:

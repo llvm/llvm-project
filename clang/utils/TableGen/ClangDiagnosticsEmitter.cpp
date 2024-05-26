@@ -1086,7 +1086,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
       PluralPiece *Plural = New<PluralPiece>();
       do {
         Text = Text.drop_front(); // '{' or '|'
-        size_t End = Text.find_first_of(":");
+        size_t End = Text.find_first_of(':');
         if (End == StringRef::npos)
           Builder.PrintFatalError("expected ':' while parsing %plural");
         ++End;

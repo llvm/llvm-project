@@ -991,6 +991,11 @@ public:
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
+  /// Return the expression required to zero extend the Op
+  /// value assuming it was the smaller SrcTy value.
+  SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
+                               const SDLoc &DL, EVT VT);
+
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
   /// appropriate extension for the pointer's semantics.
