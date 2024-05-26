@@ -2672,6 +2672,9 @@ bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
+  if (E->getType().isNull())
+    return false;
+
   if (E->getType()->isVoidType())
     return this->discard(E);
 
