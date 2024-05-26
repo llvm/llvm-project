@@ -3972,7 +3972,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     // target can override this with custom lowering and calling the
     // implementation functions.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (LI.isLegalOrCustom({G_UMIN, Ty}))
+    if (LI.isLegalOrCustom({G_UMIN, Ty}) && LI.isLegalOrCustom({G_UMAX, Ty}))
       return lowerAddSubSatToMinMax(MI);
     return lowerAddSubSatToAddoSubo(MI);
   }
