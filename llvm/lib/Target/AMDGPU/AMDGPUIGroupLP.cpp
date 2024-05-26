@@ -2348,6 +2348,8 @@ private:
 
   ScheduleDAGMI *DAG;
 
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations;
+
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
   // between then.
@@ -2390,7 +2392,10 @@ public:
   AMDGPU::SchedulingPhase Phase = AMDGPU::SchedulingPhase::Initial;
 
   IGroupLPDAGMutation() = default;
-  IGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) : Phase(Phase) {}
+  IGroupLPDAGMutation(
+      AMDGPU::SchedulingPhase Phase,
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations)
+      : SavedMutations(SavedMutations), Phase(Phase) {}
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -2607,6 +2612,13 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     PS.solve();
     return;
   }
+
+  if (!SavedMutations)
+    return;
+
+  // We did not apply a mutation, fall back to SavedMutations
+  for (auto &m : *SavedMutations)
+    m->apply(DAG);
 }
 
 void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
@@ -2703,9 +2715,10 @@ namespace llvm {
 /// same scheduling region (e.g. pre and post-RA scheduling / multiple
 /// scheduling "phases"), we can reenter this mutation framework more than once
 /// for a given region.
-std::unique_ptr<ScheduleDAGMutation>
-createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
-  return std::make_unique<IGroupLPDAGMutation>(Phase);
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
+    AMDGPU::SchedulingPhase Phase,
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations) {
+  return std::make_unique<IGroupLPDAGMutation>(Phase, SavedMutations);
 }
 
 } // end namespace llvm
