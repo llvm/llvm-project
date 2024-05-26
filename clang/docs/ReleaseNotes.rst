@@ -794,6 +794,8 @@ Bug Fixes to C++ Support
   Fixes (#GH87210), (GH89541).
 - Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
   Fixes (#GH91308).
+- Fix a crash caused by a regression in the handling of ``source_location``
+  in dependent contexts. Fixes (#GH92680).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
