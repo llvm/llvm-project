@@ -27,6 +27,7 @@
 #include "omp-tools.h"
 #endif
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -1607,6 +1608,7 @@ Error GenericPluginTy::init() {
   if (!NumDevicesOrErr)
     return NumDevicesOrErr.takeError();
 
+  Initialized = true;
   NumDevices = *NumDevicesOrErr;
   if (NumDevices == 0)
     return Plugin::success();
@@ -1692,14 +1694,27 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   if (!MachineOrErr)
     return MachineOrErr.takeError();
 
-  if (!*MachineOrErr)
-    return false;
-
-  // Perform plugin-dependent checks for the specific architecture if needed.
-  return isELFCompatible(Image);
+  return MachineOrErr;
 }
 
-int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
+Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
+  if (identify_magic(Image) != file_magic::bitcode)
+    return false;
+
+  LLVMContext Context;
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Image, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
+
+  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+}
+
+int32_t GenericPluginTy::is_initialized() const { return Initialized; }
+
+int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image,
+                                         bool Initialized) {
   auto T = logger::log<int32_t>(__func__, Image);
   int32_t R = [&]() {
     StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
@@ -1719,10 +1734,25 @@ int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
       auto MatchOrErr = checkELFImage(Buffer);
       if (Error Err = MatchOrErr.takeError())
         return HandleError(std::move(Err));
-      return *MatchOrErr;
+      if (!Initialized || !*MatchOrErr)
+        return *MatchOrErr;
+
+      // Perform plugin-dependent checks for the specific architecture if needed.
+      auto CompatibleOrErr = isELFCompatible(Buffer);
+      if (Error Err = CompatibleOrErr.takeError())
+        return HandleError(std::move(Err));
+      return *CompatibleOrErr;
     }
+    case file_magic::offload_binary: {
+      // Perform plugin-dependent checks for the specific architecture if needed.
+      auto CompatibleOrErr = isELFCompatible(Buffer);
+      if (Error Err = CompatibleOrErr.takeError())
+        return HandleError(std::move(Err));
+      return *CompatibleOrErr;
+    }
+
     case file_magic::bitcode: {
-      auto MatchOrErr = getJIT().checkBitcodeImage(Buffer);
+      auto MatchOrErr = checkBitcodeImage(Buffer);
       if (Error Err = MatchOrErr.takeError())
         return HandleError(std::move(Err));
       return *MatchOrErr;
