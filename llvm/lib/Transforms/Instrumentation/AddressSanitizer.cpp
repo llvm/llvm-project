@@ -1139,8 +1139,16 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   /// Collect Alloca instructions we want (and can) handle.
   void visitAllocaInst(AllocaInst &AI) {
     // FIXME: Handle scalable vectors instead of ignoring them.
+    auto IsScalableVecTy = [](const Type *Ty) {
+      if (const auto *STy = dyn_cast<StructType>(Ty))
+        return any_of(STy->elements(), [](const Type *ElemTy) {
+          return isa<ScalableVectorType>(ElemTy);
+        });
+      return isa<ScalableVectorType>(Ty);
+    };
+
     if (!ASan.isInterestingAlloca(AI) ||
-        isa<ScalableVectorType>(AI.getAllocatedType())) {
+        IsScalableVecTy(AI.getAllocatedType())) {
       if (AI.isStaticAlloca()) {
         // Skip over allocas that are present *before* the first instrumented
         // alloca, we don't want to move those around.
