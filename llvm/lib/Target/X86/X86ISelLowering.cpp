@@ -49284,12 +49284,8 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
   SDValue NewBrCond =
       DAG.getNode(X86ISD::BRCOND, SDLoc(BrCond), BrCond->getValueType(0), Ops);
   // Avoid self-assign error b/c CC1 can be `e/ne`.
-  // Replace API is called manually here b/c we're updating the user of the node
-  // being visited instead of the node itself.
-  if (BrCond != NewBrCond.getNode()) {
-    DAG.ReplaceAllUsesWith(BrCond, &NewBrCond);
-    DCI.recursivelyDeleteUnusedNodes(BrCond);
-  }
+  if (BrCond != NewBrCond.getNode())
+    DCI.CombineTo(BrCond, NewBrCond);
   return X;
 }
 
@@ -49343,10 +49339,10 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
 
   bool IsOR = N->getOpcode() == ISD::OR;
 
-  // CMP/TEST is executed and updates the EFLAGS normally only when SCC
-  // evaluates to true. So we need to inverse CC0 as SCC when the logic operator
-  // is OR. Similar for CC1.
-  SDValue SCC =
+  // CMP/TEST is executed and updates the EFLAGS normally only when SrcCC
+  // evaluates to true. So we need to inverse CC0 as SrcCC when the logic
+  // operator is OR. Similar for CC1.
+  SDValue SrcCC =
       IsOR ? DAG.getTargetConstant(X86::GetOppositeBranchCondition(CC0),
                                    SDLoc(SetCC0.getOperand(0)), MVT::i8)
            : SetCC0.getOperand(0);
@@ -49365,10 +49361,10 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
   SDValue CCMP = (NewOpc == X86ISD::CCMP)
                      ? DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
                                    {Sub.getOperand(0), Sub.getOperand(1),
-                                    CFlags, SCC, SetCC0.getOperand(1)})
+                                    CFlags, SrcCC, SetCC0.getOperand(1)})
                      : DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
                                    {Sub.getOperand(0), Sub.getOperand(0),
-                                    CFlags, SCC, SetCC0.getOperand(1)});
+                                    CFlags, SrcCC, SetCC0.getOperand(1)});
 
   return DAG.getNode(X86ISD::SETCC, DL, MVT::i8, {CC1N, CCMP});
 }
