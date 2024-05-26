@@ -1638,6 +1638,12 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCStringLiteral(
+    const ObjCStringLiteral *E) {
+  return this->delegate(E->getString());
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSYCLUniqueStableNameExpr(
     const SYCLUniqueStableNameExpr *E) {
   if (DiscardResult)
@@ -2641,6 +2647,14 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
   }
 
   return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  if (!E->isExpressibleAsConstantInitializer())
+    return this->emitInvalid(E);
+
+  return this->delegate(E->getSubExpr());
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
