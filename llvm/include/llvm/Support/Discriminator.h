@@ -121,12 +121,9 @@ static inline unsigned getBaseFSBitEnd() {
 }
 
 // Set bits in range of [0 .. n] to 1. Used in FS Discriminators.
-static inline unsigned getN1Bits(int N) {
-  // Work around the g++ bug that folding "(1U << (N + 1)) - 1" to 0.
-  if (N == 31)
-    return 0xFFFFFFFF;
+static inline unsigned getN1Bits(unsigned N) {
   assert((N < 32) && "N is invalid");
-  return (1U << (N + 1)) - 1;
+  return 0xFFFFFFFF >> (31 - N);
 }
 
 } // namespace llvm
