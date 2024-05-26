@@ -18,7 +18,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -277,7 +276,8 @@ private:
   std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
-  serialization::IdentifierID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
+  serialization::IdentifierID FirstIdentID =
+      serialization::NUM_PREDEF_IDENT_IDS;
 
   /// The identifier ID that will be assigned to the next new identifier.
   serialization::IdentifierID NextIdentID = FirstIdentID;
@@ -288,7 +288,8 @@ private:
   /// The ID numbers for identifiers are consecutive (in order of
   /// discovery), starting at 1. An ID of zero refers to a NULL
   /// IdentifierInfo.
-  llvm::MapVector<const IdentifierInfo *, serialization::IdentifierID> IdentifierIDs;
+  llvm::MapVector<const IdentifierInfo *, serialization::IdentifierID>
+      IdentifierIDs;
 
   /// The first ID number we can use for our own macros.
   serialization::MacroID FirstMacroID = serialization::NUM_PREDEF_MACRO_IDS;
@@ -351,7 +352,8 @@ private:
   /// Mapping from macro definitions (as they occur in the preprocessing
   /// record) to the macro IDs.
   llvm::DenseMap<const MacroDefinitionRecord *,
-                 serialization::PreprocessedEntityID> MacroDefinitions;
+                 serialization::PreprocessedEntityID>
+      MacroDefinitions;
 
   /// Cache of indices of anonymous declarations within their lexical
   /// contexts.
@@ -387,7 +389,7 @@ private:
     DeclUpdate(unsigned Kind, unsigned Val) : Kind(Kind), Val(Val) {}
     DeclUpdate(unsigned Kind, Module *M) : Kind(Kind), Mod(M) {}
     DeclUpdate(unsigned Kind, const Attr *Attribute)
-          : Kind(Kind), Attribute(Attribute) {}
+        : Kind(Kind), Attribute(Attribute) {}
 
     unsigned getKind() const { return Kind; }
     const Decl *getDecl() const { return Dcl; }
@@ -426,11 +428,10 @@ private:
   /// We keep track of external definitions and other 'interesting' declarations
   /// as we are emitting declarations to the AST file. The AST file contains a
   /// separate record for these declarations, which are provided to the AST
-  /// consumer by the AST reader. This is behavior is required to properly cope with,
-  /// e.g., tentative variable definitions that occur within
-  /// headers. The declarations themselves are stored as declaration
-  /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
-  /// record.
+  /// consumer by the AST reader. This is behavior is required to properly cope
+  /// with, e.g., tentative variable definitions that occur within headers. The
+  /// declarations themselves are stored as declaration IDs, since they will be
+  /// written out to an EAGERLY_DESERIALIZED_DECLS record.
   RecordData EagerlyDeserializedDecls;
   RecordData ModularCodegenDecls;
 
@@ -772,8 +773,8 @@ public:
   void AddVersionTuple(const VersionTuple &Version, RecordDataImpl &Record);
 
   /// Retrieve or create a submodule ID for this module, or return 0 if
-  /// the submodule is neither local (a submodle of the currently-written module)
-  /// nor from an imported module.
+  /// the submodule is neither local (a submodle of the currently-written
+  /// module) nor from an imported module.
   unsigned getLocalOrImportedSubmoduleID(const Module *Mod);
 
   /// Note that the identifier II occurs at the given offset
@@ -792,9 +793,7 @@ public:
 
   void ClearSwitchCaseIDs();
 
-  unsigned getTypeExtQualAbbrev() const {
-    return TypeExtQualAbbrev;
-  }
+  unsigned getTypeExtQualAbbrev() const { return TypeExtQualAbbrev; }
 
   unsigned getDeclParmVarAbbrev() const { return DeclParmVarAbbrev; }
   unsigned getDeclRecordAbbrev() const { return DeclRecordAbbrev; }
@@ -853,7 +852,8 @@ public:
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
-  void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
+  void IdentifierRead(serialization::IdentifierID ID,
+                      IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;

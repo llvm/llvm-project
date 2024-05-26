@@ -17,7 +17,6 @@
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -242,9 +241,7 @@ LLVM_DUMP_METHOD void Decl::dumpColor() const {
   P.Visit(this);
 }
 
-LLVM_DUMP_METHOD void DeclContext::dumpAsDecl() const {
-  dumpAsDecl(nullptr);
-}
+LLVM_DUMP_METHOD void DeclContext::dumpAsDecl() const { dumpAsDecl(nullptr); }
 
 LLVM_DUMP_METHOD void DeclContext::dumpAsDecl(const ASTContext *Ctx) const {
   // By design, DeclContext is required to be a base class of some class that
@@ -271,8 +268,7 @@ LLVM_DUMP_METHOD void DeclContext::dumpLookups() const {
   dumpLookups(llvm::errs());
 }
 
-LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS,
-                                               bool DumpDecls,
+LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS, bool DumpDecls,
                                                bool Deserialize) const {
   const DeclContext *DC = this;
   while (!DC->isTranslationUnit())
@@ -352,9 +348,7 @@ LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
 // ConceptReference method implementations
 //===----------------------------------------------------------------------===//
 
-LLVM_DUMP_METHOD void ConceptReference::dump() const {
-  dump(llvm::errs());
-}
+LLVM_DUMP_METHOD void ConceptReference::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void ConceptReference::dump(raw_ostream &OS) const {
   auto &Ctx = getNamedConcept()->getASTContext();
