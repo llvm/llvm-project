@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -729,9 +730,9 @@ private:
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
     Fortran::lower::StatementContext stmtCtx;
-    fir::CUDADataAttributeAttr cudaAttr =
-        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
-                                                         sym);
+    cuf::DataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                        sym);
     mlir::Value errmsg = errMsgExpr ? errorManager.errMsgAddr : nullptr;
     mlir::Value stream =
         streamExpr
@@ -746,7 +747,7 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
     return builder
-        .create<fir::CUDAAllocateOp>(
+        .create<cuf::AllocateOp>(
             loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
         .getResult();
@@ -804,9 +805,9 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
                                      const fir::MutableBoxValue &box,
                                      ErrorManager &errorManager,
                                      const Fortran::semantics::Symbol &sym) {
-  fir::CUDADataAttributeAttr cudaAttr =
-      Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
-                                                       sym);
+  cuf::DataAttributeAttr cudaAttr =
+      Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                      sym);
   mlir::Value errmsg =
       mlir::isa<fir::AbsentOp>(errorManager.errMsgAddr.getDefiningOp())
           ? nullptr
@@ -815,7 +816,7 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
   // Keep return type the same as a standard AllocatableAllocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
   return builder
-      .create<fir::CUDADeallocateOp>(
+      .create<cuf::DeallocateOp>(
           loc, retTy, box.getAddr(), errmsg, cudaAttr,
           errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
       .getResult();

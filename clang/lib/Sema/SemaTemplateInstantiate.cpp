@@ -275,6 +275,13 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
                                      TemplateArgs->asArray(),
                                      /*Final=*/false);
 
+    if (RelativeToPrimary &&
+        (Function->getTemplateSpecializationKind() ==
+             TSK_ExplicitSpecialization ||
+         (Function->getFriendObjectKind() &&
+          !Function->getPrimaryTemplate()->getFriendObjectKind())))
+      return Response::UseNextDecl(Function);
+
     // If this function was instantiated from a specialized member that is
     // a function template, we're done.
     assert(Function->getPrimaryTemplate() && "No function template?");
@@ -1612,11 +1619,6 @@ namespace {
       case TemplateArgument::Pack:
         // Literally rewrite the template argument pack, instead of unpacking
         // it.
-        assert(
-            SemaRef.CodeSynthesisContexts.back().Kind ==
-                Sema::CodeSynthesisContext::BuildingDeductionGuides &&
-            "Transforming a template argument pack is only allowed in building "
-            "deduction guide");
         for (auto &pack : Arg.getPackAsArray()) {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
@@ -4368,9 +4370,9 @@ Sema::SubstStmt(Stmt *S, const MultiLevelTemplateArgumentList &TemplateArgs) {
 bool Sema::SubstTemplateArgument(
     const TemplateArgumentLoc &Input,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentLoc &Output) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
-                                    DeclarationName());
+    TemplateArgumentLoc &Output, SourceLocation Loc,
+    const DeclarationName &Entity) {
+  TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, Entity);
   return Instantiator.TransformTemplateArgument(Input, Output);
 }
 

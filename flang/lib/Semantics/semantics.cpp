@@ -543,6 +543,14 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
   return **cudaBuiltinsScope_;
 }
 
+const Scope &SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    CHECK(cudaDeviceScope_.value() != nullptr);
+  }
+  return **cudaDeviceScope_;
+}
+
 void SemanticsContext::UsePPCBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
     ppcBuiltinsScope_ = GetBuiltinModule("__ppc_intrinsics");

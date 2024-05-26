@@ -273,7 +273,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
       for (StringRef Value : A->getValues()) {
         if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
-            Value == "ndd" || Value == "ccmp" || Value == "cf") {
+            Value == "ndd" || Value == "ccmp" || Value == "nf" ||
+            Value == "cf") {
           Features.push_back(
               Args.MakeArgString((IsNegative ? "-" : "+") + Value));
           continue;

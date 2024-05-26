@@ -2912,15 +2912,67 @@ static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPl
   }
 }
 
-void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   Action::OffloadKind DeviceOffloadKind) const {
+static inline llvm::VersionTuple
+sizedDeallocMinVersion(llvm::Triple::OSType OS) {
+  switch (OS) {
+  default:
+    break;
+  case llvm::Triple::Darwin:
+  case llvm::Triple::MacOSX: // Earliest supporting version is 10.12.
+    return llvm::VersionTuple(10U, 12U);
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS: // Earliest supporting version is 10.0.0.
+    return llvm::VersionTuple(10U);
+  case llvm::Triple::WatchOS: // Earliest supporting version is 3.0.0.
+    return llvm::VersionTuple(3U);
+  }
+
+  llvm_unreachable("Unexpected OS");
+}
+
+bool Darwin::isSizedDeallocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
+  if (isTargetMacCatalyst())
+    return TargetVersion < sizedDeallocMinVersion(llvm::Triple::MacOSX);
+  switch (TargetPlatform) {
+  case MacOS: // Earlier than 10.12.
+    OS = llvm::Triple::MacOSX;
+    break;
+  case IPhoneOS:
+    OS = llvm::Triple::IOS;
+    break;
+  case TvOS: // Earlier than 10.0.
+    OS = llvm::Triple::TvOS;
+    break;
+  case WatchOS: // Earlier than 3.0.
+    OS = llvm::Triple::WatchOS;
+    break;
+  case DriverKit:
+  case XROS:
+    // Always available.
+    return false;
+  }
+
+  return TargetVersion < sizedDeallocMinVersion(OS);
+}
+
+void Darwin::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation) &&
+      isSizedDeallocationUnavailable())
+    CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
 

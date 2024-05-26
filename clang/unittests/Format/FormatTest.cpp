@@ -3124,6 +3124,7 @@ TEST_F(FormatTest, FormatsLabels) {
                "    g();\n"
                "  }\n"
                "}");
+
   FormatStyle Style = getLLVMStyle();
   Style.IndentGotoLabels = false;
   verifyFormat("void f() {\n"
@@ -3163,6 +3164,13 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
+
+  Style.ColumnLimit = 15;
+  verifyFormat("#define FOO   \\\n"
+               "label:        \\\n"
+               "  break;",
+               Style);
+
   // The opening brace may either be on the same unwrapped line as the colon or
   // on a separate one. The formatter should recognize both.
   Style = getLLVMStyle();
@@ -10539,6 +10547,17 @@ TEST_F(FormatTest, KeepStringLabelValuePairsOnALine) {
       "                  bbbbbbbbbbbbbbbbbbbbbbb);");
 }
 
+TEST_F(FormatTest, WrapBeforeInsertionOperatorbetweenStringLiterals) {
+  verifyFormat("QStringList() << \"foo\" << \"bar\";");
+
+  verifyNoChange("QStringList() << \"foo\"\n"
+                 "              << \"bar\";");
+
+  verifyFormat("log_error(log, \"foo\" << \"bar\");",
+               "log_error(log, \"foo\"\n"
+               "                   << \"bar\");");
+}
+
 TEST_F(FormatTest, UnderstandsEquals) {
   verifyFormat(
       "aaaaaaaaaaaaaaaaa =\n"
@@ -17321,12 +17340,14 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
+  verifyFormat("xor = foo;");
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);
   verifyFormat("a or_eq 8;", Spaces);
+  verifyFormat("xor= foo;", Spaces);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
@@ -27204,8 +27225,14 @@ TEST_F(FormatTest, RemoveParentheses) {
                "if ((({ a; })))\n"
                "  b;",
                Style);
+  verifyFormat("static_assert((std::is_constructible_v<T, Args &&> && ...));",
+               "static_assert(((std::is_constructible_v<T, Args &&> && ...)));",
+               Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
+  verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);
@@ -27213,6 +27240,9 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("return (... && std::is_convertible_v<TArgsLocal, TArgs>);",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
   verifyFormat("inline decltype(auto) f() {\n"
                "  if (a) {\n"
                "    return (a);\n"

@@ -454,6 +454,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   case BuiltinType::BoundMember:
+  case BuiltinType::UnresolvedTemplate:
   case BuiltinType::Dependent:
   case BuiltinType::Overload:
   case BuiltinType::UnknownAny:

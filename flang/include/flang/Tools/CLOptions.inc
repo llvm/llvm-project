@@ -148,9 +148,14 @@ static void addCanonicalizerPassWithoutRegionSimplification(
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
-inline void addCfgConversionPass(mlir::PassManager &pm) {
-  addNestedPassToAllTopLevelOperationsConditionally(
-      pm, disableCfgConversion, fir::createCFGConversion);
+inline void addCfgConversionPass(
+    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &config) {
+  if (config.NSWOnLoopVarInc)
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
+  else
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversion);
 }
 
 inline void addAVC(
@@ -169,9 +174,11 @@ inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-inline void addCodeGenRewritePass(mlir::PassManager &pm) {
-  addPassConditionally(
-      pm, disableCodeGenRewrite, fir::createFirCodeGenRewritePass);
+inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
+  fir::CodeGenRewriteOptions options;
+  options.preserveDeclare = preserveDeclare;
+  addPassConditionally(pm, disableCodeGenRewrite,
+      [&]() { return fir::createFirCodeGenRewritePass(options); });
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
@@ -287,10 +294,10 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(fir::createPolymorphicOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
-    pm.addPass(fir::createAliasTagsPass());
+    pm.addPass(fir::createAddAliasTags());
 
   // convert control flow to CFG form
-  fir::addCfgConversionPass(pm);
+  fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -310,16 +317,18 @@ inline void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    pm.addPass(hlfir::createSimplifyHLFIRIntrinsicsPass());
+    addNestedPassToAllTopLevelOperations(
+        pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
-  pm.addPass(hlfir::createInlineElementalsPass());
+  addNestedPassToAllTopLevelOperations(pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
-    pm.addPass(hlfir::createOptimizedBufferizationPass());
+    addNestedPassToAllTopLevelOperations(
+        pm, hlfir::createOptimizedBufferization);
   }
-  pm.addPass(hlfir::createLowerHLFIROrderedAssignmentsPass());
-  pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());
+  pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
+  pm.addPass(hlfir::createLowerHLFIRIntrinsics());
   pm.addPass(hlfir::createBufferizeHLFIRPass());
   pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
 }
@@ -335,7 +344,7 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
-  pm.addPass(fir::createOMPDescriptorMapInfoGenPass());
+  pm.addPass(fir::createOMPMapInfoFinalizationPass());
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
@@ -353,7 +362,8 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     MLIRToLLVMPassPipelineConfig config, llvm::StringRef inputFilename = {}) {
   fir::addBoxedProcedurePass(pm);
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
-  fir::addCodeGenRewritePass(pm);
+  fir::addCodeGenRewritePass(
+      pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);

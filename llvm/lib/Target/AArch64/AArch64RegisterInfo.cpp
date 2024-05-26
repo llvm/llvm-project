@@ -233,13 +233,9 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
     report_fatal_error(
         "Calling convention SVE_VectorCall is unsupported on Darwin.");
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
-    report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
-        "unsupported on Darwin.");
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
-    report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
-        "unsupported on Darwin.");
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     report_fatal_error(
         "Calling convention CFGuard_Check is unsupported on Darwin.");
@@ -552,7 +548,8 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     if (hasStackRealignment(MF))
       return true;
 
-    if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+    auto &ST = MF.getSubtarget<AArch64Subtarget>();
+    if (ST.hasSVE() || ST.isStreaming()) {
       const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
