@@ -4346,6 +4346,28 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
     return Style.SpacesInParensOptions.InEmptyParentheses;
   }
+  if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
+      Style.SpacesInParensOptions.ExceptDoubleParentheses &&
+      Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
+    auto *InnerLParen = Left.MatchingParen;
+    if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
+      InnerLParen->SpacesRequiredBefore = 0;
+      return false;
+    }
+  }
+  if (Style.SpacesInParensOptions.InConditionalStatements) {
+    const FormatToken *LeftParen = nullptr;
+    if (Left.is(tok::l_paren))
+      LeftParen = &Left;
+    else if (Right.is(tok::r_paren) && Right.MatchingParen)
+      LeftParen = Right.MatchingParen;
+    if (LeftParen) {
+      if (LeftParen->is(TT_ConditionLParen))
+        return true;
+      if (LeftParen->Previous && isKeywordWithCondition(*LeftParen->Previous))
+        return true;
+    }
+  }
 
   // trailing return type 'auto': []() -> auto {}, auto foo() -> auto {}
   if (Left.is(tok::kw_auto) && Right.isOneOf(TT_LambdaLBrace, TT_FunctionLBrace,
@@ -4372,60 +4394,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
 
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren)) {
-    const FormatToken *LeftParen =
-        Left.is(tok::l_paren) ? &Left : Right.MatchingParen;
-    const FormatToken *RightParen =
-        LeftParen ? LeftParen->MatchingParen : nullptr;
-    const auto IsAttributeParen = [](const FormatToken *Paren) {
-      return Paren && Paren->isOneOf(TT_AttributeLParen, TT_AttributeRParen);
-    };
-    auto AddSpaceExceptInDoubleParens = [&]() {
-      const auto *RPrev = RightParen ? RightParen->Previous : nullptr;
-      const auto *LNext = LeftParen->Next;
-      const auto *LPrev = LeftParen->Previous;
-      if (!(RPrev && RPrev->is(tok::r_paren) && LNext &&
-            LNext->is(tok::l_paren))) {
-        return true;
-      }
-      auto HasEqualBeforeNextParen = [&]() {
-        auto *Tok = LNext;
-        if (!Tok || !Tok->is(tok::l_paren))
-          return false;
-        while ((Tok = Tok->Next) && !Tok->isOneOf(tok::l_paren, tok::r_paren))
-          if (Tok->is(tok::equal))
-            return true;
-        return false;
-      };
-      const bool SuppressSpace =
-          IsAttributeParen(LeftParen) ||
-          (LPrev && (LPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
-                     (HasEqualBeforeNextParen() &&
-                      (LPrev->isOneOf(tok::kw_if, tok::kw_while) ||
-                       LPrev->endsSequence(tok::kw_constexpr, tok::kw_if)))));
-      return !SuppressSpace;
-    };
-    const auto AddSpace = [&](bool Option) {
-      if (Style.SpacesInParensOptions.ExceptDoubleParentheses && Option)
-        return AddSpaceExceptInDoubleParens();
-      return Option;
-    };
-
-    if (LeftParen && (LeftParen->is(TT_ConditionLParen) ||
-                      (LeftParen->Previous &&
-                       isKeywordWithCondition(*LeftParen->Previous)))) {
-      return AddSpace(Style.SpacesInParensOptions.InConditionalStatements);
-    }
-    if (RightParen && RightParen->is(TT_CastRParen))
-      return AddSpace(Style.SpacesInParensOptions.InCStyleCasts);
-    if (IsAttributeParen(LeftParen) || IsAttributeParen(RightParen))
-      return AddSpace(Style.SpacesInParensOptions.Other);
-    if ((LeftParen && IsAttributeParen(LeftParen->Previous)) ||
-        (RightParen && IsAttributeParen(RightParen->Next))) {
-      return AddSpace(Style.SpacesInParensOptions.Other);
-    }
-    return AddSpace(Style.SpacesInParensOptions.Other);
+    return (Right.is(TT_CastRParen) ||
+            (Left.MatchingParen && Left.MatchingParen->is(TT_CastRParen)))
+               ? Style.SpacesInParensOptions.InCStyleCasts
+               : Style.SpacesInParensOptions.Other;
   }
-
   if (Right.isOneOf(tok::semi, tok::comma))
     return false;
   if (Right.is(tok::less) && Line.Type == LT_ObjCDecl) {
