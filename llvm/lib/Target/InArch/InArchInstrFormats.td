@@ -39,6 +39,39 @@ class InArchInst<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern
 
 }
 
+class InArchInst6Op<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>: Instruction
+{
+  // Inst and Size: for tablegen(... -gen-emitter) and
+  // tablegen(... -gen-disassembler) in CMakeLists.txt
+  let Namespace = "InArch";
+  let DecoderNamespace = "InArch";
+  let Size = 4;
+
+  field bits<32> Inst;
+
+  bits<8> Opcode = op;
+  bits<4>  r1;
+  bits<4>  r2;
+  bits<4>  r3;
+  bits<4>  r4;
+  bits<4>  r5;
+  bits<4>  r6;
+
+
+  let Inst{31-24} = Opcode;
+  let Inst{23-20} = r1;
+  let Inst{19-16} = r2;
+  let Inst{15-12} = r3;
+  let Inst{11-8}  = r4;
+  let Inst{7-4} = r5;
+  let Inst{3-0}  = r6;
+
+  let OutOperandList = outs;
+  let InOperandList  = ins;
+  let AsmString   = asmstr;
+  let Pattern     = pattern;
+}
+
 // Pseudo instructions format
 class InArchPseudoInst<dag outs, dag ins, string asmstr, list<dag> pattern>
    : InArchInst<0, outs, ins, asmstr, pattern> {

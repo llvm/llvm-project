@@ -51,6 +51,10 @@ InArchTargetLowering::InArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ADD, MVT::i32, Legal);
   setOperationAction(ISD::MUL, MVT::i32, Legal);
+  setOperationAction(ISD::SHL, MVT::i32, Legal);
+  setOperationAction(ISD::SRL, MVT::i32, Legal);
+  setOperationAction(ISD::XOR, MVT::i32, Legal);
+  setOperationAction(ISD::SREM, MVT::i32, Legal);
   // ...
   setOperationAction(ISD::LOAD, MVT::i32, Legal);
   setOperationAction(ISD::STORE, MVT::i32, Legal);
@@ -59,6 +63,8 @@ InArchTargetLowering::InArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UNDEF, MVT::i32, Legal);
 
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 
   setOperationAction(ISD::FRAMEADDR, MVT::i32, Legal);
   // setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
@@ -73,6 +79,8 @@ const char *InArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "InArchISD::CALL";
   case InArchISD::RET:
     return "InArchISD::RET";
+  case InArchISD::SELECT_CC:
+    return "InArchISD::SELECT_CC";
   }
   return nullptr;
 }
@@ -647,11 +655,31 @@ SDValue InArchTargetLowering::lowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
                      LHS, RHS, TargetCC, Block);
 }
 
+SDValue InArchTargetLowering::lowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TVal = Op.getOperand(2);
+  SDValue FVal = Op.getOperand(3);
+  SDLoc DL(Op);
+
+  assert(LHS.getValueType() == MVT::i32);
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  translateSetCCForBranch(DL, LHS, RHS, CC, DAG);
+  SDValue TargetCC = DAG.getCondCode(CC);
+  return DAG.getNode(InArchISD::SELECT_CC, DL,TVal.getValueType(), TVal,
+   FVal, TargetCC, LHS, RHS);
+}
+
 SDValue InArchTargetLowering::LowerOperation(SDValue Op,
                                            SelectionDAG &DAG) const {
   switch (Op->getOpcode()) {
   case ISD::BR_CC:
     return lowerBR_CC(Op, DAG);
+  case ISD::SELECT:
+    llvm_unreachable("1");
+  case ISD::SELECT_CC:
+    return lowerSELECT_CC(Op, DAG);
   default:
     llvm_unreachable("");
   }

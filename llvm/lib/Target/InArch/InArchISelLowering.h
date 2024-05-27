@@ -18,6 +18,7 @@ enum NodeType : unsigned {
   RET,
   CALL,
   BR_CC,
+  SELECT_CC
 };
 
 } // namespace InArchISD
@@ -72,6 +73,7 @@ private:
 
   SDValue lowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 };
 
 } // end namespace llvm

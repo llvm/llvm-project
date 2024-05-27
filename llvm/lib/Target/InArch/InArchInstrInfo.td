@@ -12,6 +12,12 @@ def SDT_InArchBrCC : SDTypeProfile<0, 4, [ SDTCisSameAs<0, 1>,
                                          SDTCisVT<2, OtherVT>,
                                          SDTCisVT<3, OtherVT>]>;
 
+def SDT_InArchSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                    SDTCisSameAs<1, 2>,
+                                    SDTCisVT<3, OtherVT>,
+                                    SDTCisVT<4, i32>,
+                                    SDTCisVT<4, i32> ]>;
+
 // These are target-independent nodes, but have target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_InArchCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
@@ -27,6 +33,9 @@ def inarch_call     : SDNode<"InArchISD::CALL", SDT_InArchCall,
 
 def inarch_brcc     : SDNode<"InArchISD::BR_CC", SDT_InArchBrCC,
                             [SDNPHasChain]>;
+
+def inarch_selectcc : SDNode<"InArchISD::SELECT_CC", SDT_InArchSelectCC,
+                         [SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -226,9 +235,9 @@ def BNE  : BranchCC<0x71, "B.NE">;
 def BLE  : BranchCC<0x72, "B.LE">;
 def BGT  : BranchCC<0x73, "B.GT">;
 def BLEU  : BranchCC<0x74, "B.LEU">;
-def BGEU  : BranchCC<0x74, "B.GEU">;
-def BGTU  : BranchCC<0x75, "B.GTU">;
-def BLTU  : BranchCC<0x76, "B.LTU">;
+def BGEU  : BranchCC<0x75, "B.GEU">;
+def BGTU  : BranchCC<0x76, "B.GTU">;
+def BLTU  : BranchCC<0x77, "B.LTU">;
 
 def : PatBcc<SETEQ, BEQ>;
 def : PatBcc<SETNE, BNE>;
@@ -238,6 +247,22 @@ def : PatBcc<SETULE, BLEU>;
 def : PatBcc<SETUGT, BGTU>;
 def : PatBcc<SETUGE, BGEU>;
 def : PatBcc<SETULT, BLTU>;
+
+let r5=0,r6=0 in
+{
+    class Select<CondCode Cond, bits<8> Op, string name> : InArchInst6Op<Op, (outs GPR:$rd), (ins GPR:$r1, GPR:$r2, GPR:$r3, GPR:$r4),
+                           !strconcat("SELECT",name, " $r1 $r2 $r3 $r4"),
+                            [(set GPR:$rd, (inarch_selectcc GPR: $r1, GPR: $r2, Cond, GPR: $r3,GPR: $r4))]>;
+}
+
+def SELECTEQ : Select<SETEQ,0x80,"SEQ">;
+def SELECTNE : Select<SETNE,0x81,"SNE">;
+def SELECTLE : Select<SETLE,0x82,"SLE">;
+def SELECTGT : Select<SETGT,0x83,"SGT">;
+def SELECTULE : Select<SETULE,0x84,"SULE">;
+def SELECTUGT : Select<SETUGT,0x85,"SUGT">;
+def SELECTUGE : Select<SETUGE,0x86,"SUGE">;
+def SELECTULT : Select<SETULT,0x87,"SULT">;
 
 // movli
 let isAsCheapAsAMove = 1, isCodeGenOnly = 1, isReMaterializable = 1, r2 = 0 in
@@ -274,17 +299,29 @@ def : Pat<(i32 (load (add BaseAddr:$r2, simm16:$r3_imm))),
 def : Pat<(i32 (load (IsOrAdd AddrFI:$r2, simm16:$r3_imm))),
           (LDI AddrFI:$r2, simm16:$r3_imm)>;
 
-def ADD : ArithmRR<0x30, "ADD">;  def : PatGprGpr<add,  ADD>;
 def SUB : ArithmRR<0x31, "SUB">;  def : PatGprGpr<sub,  SUB>;
+def ADD : ArithmRR<0x30, "ADD">;  def : PatGprGpr<add,  ADD>;
 def MUL : ArithmRR<0x32, "MUL">;  def : PatGprGpr<mul,  MUL>;
 def DIV : ArithmRR<0x33, "DIV">;  def : PatGprGpr<sdiv, DIV>;
 def OR  : ArithmRR<0x34, "OR">;   def : PatGprGpr<or,   OR>;
 def AND : ArithmRR<0x35, "AND">;  def : PatGprGpr<and,  AND>;
 def XOR : ArithmRR<0x36, "XOR">;  def : PatGprGpr<xor,  XOR>;
+def SHL : ArithmRR<0x37, "SHL">;  def : PatGprGpr<shl,  SHL>;
+def SRL : ArithmRR<0x38, "SRL">;  def : PatGprGpr<srl,  SRL>;
+def SREM : ArithmRR<0x39, "SREM">;  def : PatGprGpr<srem, SREM>;
 
 def ADDI : ArithmRI<0x40, "ADDi">; def : PatGprImm<add, ADDI, simm16>;
+def SUBI : ArithmRI<0x41, "SUBi">; def : PatGprImm<sub, SUBI, simm16>;
 def MULI : ArithmRI<0x42, "MULi">; def : PatGprImm<mul, MULI, simm16>;
-def ORI  : ArithmRI<0x44, "ORi">;  def : PatGprImm<mul, ORI,  simm16>;
+def ORI  : ArithmRI<0x44, "ORi">;  def : PatGprImm<or, ORI,  simm16>;
+def XORI : ArithmRI<0x45, "XORi">;  def : PatGprImm<xor, XORI,  simm16>;
+def SHLI : ArithmRI<0x46, "SHLI">;  def : PatGprImm<shl, SHLI,  simm16>;
+def SRLI : ArithmRI<0x47, "SRLI">;  def : PatGprImm<srl, SRLI,  simm16>;
+def SREMI : ArithmRI<0x48, "SREMI">;  def : PatGprImm<srem, SREMI,  simm16>;
+
+def ADDRMI : InArchInst<0x50, (outs GPR:$r1), (ins GPR:$r2, simm16:$r3_imm),
+                     "addrmi $r1 $r2 $r3_imm",
+                     [(set GPR:$r1, (srem (add GPR:$r2, simm16:$r3_imm), simm16:$r3_imm))]>;
 
 // i16 imm
 def : Pat<(i32 i32li16u:$r3_imm), (MOVLI imm:$r3_imm)>;

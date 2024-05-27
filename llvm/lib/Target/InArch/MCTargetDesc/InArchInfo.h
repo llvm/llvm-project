@@ -12,7 +12,9 @@ enum CondCode {
   LE,
   GT,
   LEU,
+  GEU,
   GTU,
+  LTU,
   INVALID,
 };
 

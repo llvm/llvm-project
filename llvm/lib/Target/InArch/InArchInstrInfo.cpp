@@ -55,8 +55,12 @@ static InArchCC::CondCode getCondFromBranchOpc(unsigned Opc) {
     return InArchCC::GT;
   case InArch::BLEU:
     return InArchCC::LEU;
+  case InArch::BGEU:
+    return InArchCC::GEU;
   case InArch::BGTU:
     return InArchCC::GTU;
+  case InArch::BLTU:
+    return InArchCC::LTU;
   }
 }
 
@@ -86,8 +90,12 @@ const MCInstrDesc &InArchInstrInfo::getBrCond(InArchCC::CondCode CC) const {
     return get(InArch::BGT);
   case InArchCC::LEU:
     return get(InArch::BLEU);
+  case InArchCC::GEU:
+    return get(InArch::BGEU);
   case InArchCC::GTU:
     return get(InArch::BGTU);
+  case InArchCC::LTU:
+    return get(InArch::BLTU);
   }
 }
 
@@ -105,8 +113,12 @@ InArchCC::CondCode InArchCC::getOppositeBranchCondition(InArchCC::CondCode CC) {
     return InArchCC::LE;
   case InArchCC::LEU:
     return InArchCC::GTU;
+  case InArchCC::GEU:
+    return InArchCC::LTU;
   case InArchCC::GTU:
     return InArchCC::LEU;
+  case InArchCC::LTU:
+    return InArchCC::GEU;
   }
 }
 

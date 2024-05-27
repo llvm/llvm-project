@@ -42,6 +42,8 @@ unsigned InArchELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Targ
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
+  //TODO seem good but maybe its better to think about better
+  return 0;
   llvm_unreachable("Unimplemented fixup -> relocation");
 }
 
