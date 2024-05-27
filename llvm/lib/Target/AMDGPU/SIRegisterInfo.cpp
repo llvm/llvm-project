@@ -1775,8 +1775,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
   if (SpillToVGPR) {
 
-    assert(SB.NumSubRegs == VGPRSpills.size() &&
-           "Num of VGPR lanes should be equal to num of SGPRs spilled");
+    assert(SB.NumSubRegs <= VGPRSpills.size() &&
+           "Num of VGPR lanes should be greater or equal to num of SGPRs "
+           "spilled, as Stack Slot Coloring pass assigns different SGPR spills "
+           "into same stack slots");
 
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =

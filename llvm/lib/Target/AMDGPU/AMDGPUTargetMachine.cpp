@@ -1421,6 +1421,9 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // since FastRegAlloc does the replacements itself.
   addPass(createVirtRegRewriter(false));
 
+  // Optimizes SGPR spills into VGPR lanes for non-interferring spill-ranges.
+  addPass(&StackSlotColoringID);
+
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsID);
   addPass(&SIPreAllocateWWMRegsID);
