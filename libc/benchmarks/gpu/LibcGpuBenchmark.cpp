@@ -36,11 +36,10 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
 
-  uint64_t total_overhead_cycles = 0;
-  uint32_t overhead_iterations = 10;
+  uint64_t overhead = UINT64_MAX;
+  int overhead_iterations = 10;
   for (int i = 0; i < overhead_iterations; i++)
-    total_overhead_cycles += LIBC_NAMESPACE::overhead();
-  uint64_t overhead = total_overhead_cycles / overhead_iterations;
+    overhead = cpp::min(overhead, LIBC_NAMESPACE::overhead());
 
   for (uint64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
