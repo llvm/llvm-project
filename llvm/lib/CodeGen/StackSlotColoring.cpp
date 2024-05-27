@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -64,6 +65,7 @@ namespace {
     MachineFrameInfo *MFI = nullptr;
     const TargetInstrInfo *TII = nullptr;
     const MachineBlockFrequencyInfo *MBFI = nullptr;
+    SlotIndexes *Indexes = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
@@ -152,6 +154,14 @@ namespace {
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
+
+      /// NOTE: As in AMDGPU pass pipeline, reg alloc is spillted into 2 phases
+      /// and StackSlotColoring is invoked after each phase, it becomes
+      /// important to preserve additional analyses result to be used by VGPR
+      /// regAlloc, after being done with SGPR regAlloc and its related passes.
+      AU.addPreserved<LiveIntervals>();
+      AU.addPreserved<LiveDebugVariables>();
+
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -496,8 +506,13 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     ++I;
   }
 
-  for (MachineInstr *MI : toErase)
+  /// FIXED: As this pass preserves SlotIndexesAnalysis result, any
+  /// addition/removal of MI needs corresponding update in SlotIndexAnalysis,
+  /// to avoid corruption of SlotIndexesAnalysis result.
+  for (MachineInstr *MI : toErase) {
     MI->eraseFromParent();
+    Indexes->removeMachineInstrFromMaps(*MI);
+  }
 
   return changed;
 }
@@ -515,6 +530,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  Indexes = &getAnalysis<SlotIndexes>();
 
   bool Changed = false;
 
