@@ -49253,7 +49253,8 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     return SDValue();
 
   SDValue X = SetCC.getOperand(1);
-  // sub has two results while X only have one. DAG combine assumes the value type match.
+  // sub has two results while X only have one. DAG combine assumes the value
+  // type matches.
   if (N->getNumValues() > 1)
     X = DAG.getMergeValues({N->getOperand(0), X}, SDLoc(N));
 
