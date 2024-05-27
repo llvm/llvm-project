@@ -1482,7 +1482,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   }
 
   if (OldMethod && NewMethod && !OldMethod->isStatic() &&
-      !OldMethod->isStatic()) {
+      !NewMethod->isStatic()) {
     bool HaveCorrespondingObjectParameters = [&](const CXXMethodDecl *Old,
                                                  const CXXMethodDecl *New) {
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
@@ -14363,7 +14363,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
