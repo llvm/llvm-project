@@ -585,13 +585,6 @@ struct VectorInterleaveOpConvert final
   LogicalResult
   matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Check the source vector type
-    VectorType sourceType = interleaveOp.getSourceVectorType();
-    if (sourceType.getRank() != 1 || sourceType.isScalable()) {
-      return rewriter.notifyMatchFailure(interleaveOp,
-                                         "unsupported source vector type");
-    }
-
     // Check the result vector type
     VectorType oldResultType = interleaveOp.getResultVectorType();
     Type newResultType = getTypeConverter()->convertType(oldResultType);
@@ -600,10 +593,11 @@ struct VectorInterleaveOpConvert final
                                          "unsupported result vector type");
 
     // Interleave the indices
+    VectorType sourceType = interleaveOp.getSourceVectorType();
     int n = sourceType.getNumElements();
 
-    // Input vectors of size 1 are converted to scalars by the type converter. 
-    // We cannot use spirv::VectorShuffleOp directly in this case, and need to 
+    // Input vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use spirv::VectorShuffleOp directly in this case, and need to
     // use spirv::CompositeConstructOp.
     if (n == 1) {
       SmallVector<Value> newOperands(2);
@@ -622,7 +616,7 @@ struct VectorInterleaveOpConvert final
     rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
         interleaveOp, newResultType, adaptor.getLhs(), adaptor.getRhs(),
         rewriter.getI32ArrayAttr(indices));
-    
+
     return success();
   }
 };
