@@ -2708,7 +2708,7 @@ func.func @_QPsub() {
   return
 }
 // CHECK-LABEL: llvm.func @_QPsub() {
-// CHECK:         %0 = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %1 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+// CHECK:         %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
 // CHECK:         llvm.return
 // CHECK:       }
