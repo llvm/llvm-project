@@ -385,7 +385,7 @@ enum ConstantsCodes {
   CST_CODE_CSTRING = 9,          // CSTRING:       [values]
   CST_CODE_CE_BINOP = 10,        // CE_BINOP:      [opcode, opval, opval]
   CST_CODE_CE_CAST = 11,         // CE_CAST:       [opcode, opty, opval]
-  CST_CODE_CE_GEP = 12,          // CE_GEP:        [n x operands]
+  CST_CODE_CE_GEP_OLD = 12,      // CE_GEP:        [n x operands]
   CST_CODE_CE_SELECT = 13,       // CE_SELECT:     [opval, opval, opval]
   CST_CODE_CE_EXTRACTELT = 14,   // CE_EXTRACTELT: [opty, opval, opval]
   CST_CODE_CE_INSERTELT = 15,    // CE_INSERTELT:  [opval, opval, opval]
@@ -412,6 +412,7 @@ enum ConstantsCodes {
                                       //                 asmdialect|unwind,
                                       //                 asmstr,conststr]
   CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
+  CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -523,6 +524,14 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// GetElementPtrOptionalFlags - Flags for serializing
+/// GEPOperator's SubclassOptionalData contents.
+enum GetElementPtrOptionalFlags {
+  GEP_INBOUNDS = 0,
+  GEP_NUSW = 1,
+  GEP_NUW = 2,
+};
 
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {

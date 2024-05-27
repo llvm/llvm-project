@@ -1721,8 +1721,9 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     if (auto *GV = dyn_cast<GlobalVariable>(C))
       if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
           isInBoundsIndices(Idxs))
-        return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
-                                              /*InBounds=*/true, InRange);
+        // TODO(gep_nowrap): Can also set NUW here.
+        return ConstantExpr::getGetElementPtr(
+            PointeeTy, C, Idxs, GEPNoWrapFlags::inBounds(), InRange);
 
   return nullptr;
 }

@@ -1095,7 +1095,10 @@ public:
       I->setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setIsInBounds(GEPFlags.IsInBounds);
+      // TODO(gep_nowrap): Track the full GEPNoWrapFlags in VPlan.
+      cast<GetElementPtrInst>(I)->setNoWrapFlags(
+          GEPFlags.IsInBounds ? GEPNoWrapFlags::inBounds()
+                              : GEPNoWrapFlags::none());
       break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);
