@@ -688,13 +688,13 @@ static const StringMap<SIAtomicAddrSpace> ASNames = {{
 void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
   const MachineFunction *MF = MI.getMF();
   const Function &Fn = MF->getFunction();
-  std::string Str;
-  raw_string_ostream OS(Str);
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
   OS << "unknown address space '" << AS << "'; expected one of ";
   ListSeparator LS;
   for (const auto &[Name, Val] : ASNames)
     OS << LS << '\'' << Name << '\'';
-  DiagnosticInfoUnsupported BadTag(Fn, Str, MI.getDebugLoc(), DS_Warning);
+  DiagnosticInfoUnsupported BadTag(Fn, Str.str(), MI.getDebugLoc(), DS_Warning);
   Fn.getContext().diagnose(BadTag);
 }
 
