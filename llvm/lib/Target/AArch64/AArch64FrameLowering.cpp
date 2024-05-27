@@ -197,7 +197,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -989,7 +988,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 }
 
-static void getLiveRegsForEntryMBB(LiveRegUnits &LiveRegs,
+static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
                                    const MachineBasicBlock &MBB) {
   const MachineFunction *MF = MBB.getParent();
   LiveRegs.addLiveIns(MBB);
@@ -1019,18 +1018,16 @@ static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
 
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
-  LiveRegUnits LiveRegs(TRI);
+  LivePhysRegs LiveRegs(TRI);
   getLiveRegsForEntryMBB(LiveRegs, *MBB);
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
-  if (LiveRegs.available(AArch64::X9))
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  if (LiveRegs.available(MRI, AArch64::X9))
     return AArch64::X9;
 
-  BitVector Allocatable =
-      TRI.getAllocatableSet(*MF, TRI.getRegClass(AArch64::GPR64RegClassID));
-
-  for (unsigned Reg : Allocatable.set_bits()) {
-    if (LiveRegs.available(Reg))
+  for (unsigned Reg : AArch64::GPR64RegClass) {
+    if (LiveRegs.available(MRI, Reg))
       return Reg;
   }
   return AArch64::NoRegister;
@@ -1046,11 +1043,14 @@ bool AArch64FrameLowering::canUseAsPrologue(
   const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
 
   if (AFI->hasSwiftAsyncContext()) {
-    LiveRegUnits LiveRegs(*RegInfo);
+    const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    LivePhysRegs LiveRegs(TRI);
     getLiveRegsForEntryMBB(LiveRegs, MBB);
     // The StoreSwiftAsyncContext clobbers X16 and X17. Make sure they are
     // available.
-    if (!LiveRegs.available(AArch64::X16) || !LiveRegs.available(AArch64::X17))
+    if (!LiveRegs.available(MRI, AArch64::X16) ||
+        !LiveRegs.available(MRI, AArch64::X17))
       return false;
   }
 
@@ -1606,7 +1606,7 @@ static void emitDefineCFAWithFP(MachineFunction &MF, MachineBasicBlock &MBB,
 /// Collect live registers from the end of \p MI's parent up to (including) \p
 /// MI in \p LiveRegs.
 static void getLivePhysRegsUpTo(MachineInstr &MI, const TargetRegisterInfo &TRI,
-                                LiveRegUnits &LiveRegs) {
+                                LivePhysRegs &LiveRegs) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   LiveRegs.addLiveOuts(MBB);
@@ -1644,7 +1644,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
          NonFrameStart->getFlag(MachineInstr::FrameSetup))
     ++NonFrameStart;
 
-  LiveRegUnits LiveRegs(*TRI);
+  LivePhysRegs LiveRegs(*TRI);
   if (NonFrameStart != MBB.end()) {
     getLivePhysRegsUpTo(*NonFrameStart, *TRI, LiveRegs);
     // Ignore registers used for stack management for now.
@@ -1662,7 +1662,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
          make_range(MBB.instr_begin(), NonFrameStart->getIterator())) {
       for (auto &Op : MI.operands())
         if (Op.isReg() && Op.isDef())
-          assert(LiveRegs.available(Op.getReg()) &&
+          assert(!LiveRegs.contains(Op.getReg()) &&
                  "live register clobbered by inserted prologue instructions");
     }
   });
@@ -4132,7 +4132,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   // FIXME : This approach of bailing out from merge is conservative in
   // some ways like even if stg loops are not present after merge the
   // insert list, this liveness check is done (which is not needed).
-  LiveRegUnits LiveRegs(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
+  LivePhysRegs LiveRegs(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
   LiveRegs.addLiveOuts(*MBB);
   for (auto I = MBB->rbegin();; ++I) {
     MachineInstr &MI = *I;
@@ -4141,7 +4141,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
     LiveRegs.stepBackward(*I);
   }
   InsertI++;
-  if (!LiveRegs.available(AArch64::NZCV))
+  if (LiveRegs.contains(AArch64::NZCV))
     return InsertI;
 
   llvm::stable_sort(Instrs,
