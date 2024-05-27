@@ -586,7 +586,7 @@ struct VectorInterleaveOpConvert final
   matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check the source vector type
-    auto sourceType = interleaveOp.getSourceVectorType();
+    VectorType sourceType = interleaveOp.getSourceVectorType();
     if (sourceType.getRank() != 1 || sourceType.isScalable()) {
       return rewriter.notifyMatchFailure(interleaveOp,
                                          "unsupported source vector type");
