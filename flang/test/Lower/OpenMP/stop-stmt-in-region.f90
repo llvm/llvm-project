@@ -73,12 +73,16 @@ subroutine test_stop_in_region3()
 end
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region4() {
-! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-! CHECK:         %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_stop_in_region4Ei"}
 ! CHECK:         %[[VAL_1_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_stop_in_region4Ex"}
 ! CHECK:         %[[VAL_2_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_stop_in_region4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:         %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 10 : i32
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 1 : i32

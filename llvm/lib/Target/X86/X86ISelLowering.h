@@ -735,6 +735,10 @@ namespace llvm {
     // Perform an FP80 add after changing precision control in FPCW.
     FP80_ADD,
 
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
+
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCMPS,

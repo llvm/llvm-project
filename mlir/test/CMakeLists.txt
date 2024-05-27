@@ -217,12 +217,12 @@ endif()
 add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
   )
-set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
