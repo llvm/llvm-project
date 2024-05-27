@@ -145,7 +145,7 @@ public:
   ///
   /// \returns a vector of FileEntry where APINotes files are.
   llvm::SmallVector<FileEntryRef, 2>
-  getCurrentModuleAPINotes(Module *M, bool LookInModule,
+  getCurrentModuleAPINotes(const Module *M, bool LookInModule,
                            ArrayRef<std::string> SearchPaths);
 
   /// Load Compiled API notes for current module.

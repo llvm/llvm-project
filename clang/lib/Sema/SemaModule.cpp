@@ -22,7 +22,7 @@
 using namespace clang;
 using namespace sema;
 
-static void checkModuleImportContext(Sema &S, Module *M,
+static void checkModuleImportContext(Sema &S, const Module *M,
                                      SourceLocation ImportLoc, DeclContext *DC,
                                      bool FromInclude = false) {
   SourceLocation ExternCLoc;
@@ -81,9 +81,9 @@ static std::string stringFromPath(ModuleIdPath Path) {
 /// primary module interface unit corresponding to the module \param
 /// CurrentModule. Since currently it is expensive to decide whether two module
 /// units come from the same module by comparing the module name.
-static bool
-isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
-                                    Module *&FoundPrimaryModuleInterface) {
+static bool isImportingModuleUnitFromSameModule(
+    const Module *Imported, const Module *CurrentModule,
+    const Module *&FoundPrimaryModuleInterface) {
   if (!Imported->isNamedModule())
     return false;
 
@@ -126,22 +126,22 @@ isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
 ///   translation units imported by non-exported module-import-declarations in
 ///   the module unit purview of U. These rules can in turn lead to the
 ///   importation of yet more translation units.
-static void
-makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
-                             Module *CurrentModule, SourceLocation ImportLoc,
-                             bool IsImportingPrimaryModuleInterface = false) {
+static void makeTransitiveImportsVisible(
+    VisibleModuleSet &VisibleModules, const Module *Imported,
+    const Module *CurrentModule, SourceLocation ImportLoc,
+    bool IsImportingPrimaryModuleInterface = false) {
   assert(Imported->isNamedModule() &&
          "'makeTransitiveImportsVisible()' is intended for standard C++ named "
          "modules only.");
 
-  llvm::SmallVector<Module *, 4> Worklist;
+  llvm::SmallVector<const Module *, 4> Worklist;
   Worklist.push_back(Imported);
 
-  Module *FoundPrimaryModuleInterface =
+  const Module *FoundPrimaryModuleInterface =
       IsImportingPrimaryModuleInterface ? Imported : nullptr;
 
   while (!Worklist.empty()) {
-    Module *Importing = Worklist.pop_back_val();
+    const Module *Importing = Worklist.pop_back_val();
 
     if (VisibleModules.isVisible(Importing))
       continue;
@@ -152,7 +152,7 @@ makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
 
     if (isImportingModuleUnitFromSameModule(Importing, CurrentModule,
                                             FoundPrimaryModuleInterface))
-      for (Module *TransImported : Importing->Imports)
+      for (const Module *TransImported : Importing->Imports)
         if (!VisibleModules.isVisible(TransImported))
           Worklist.push_back(TransImported);
   }
@@ -161,8 +161,7 @@ makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
 Sema::DeclGroupPtrTy
 Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   // We start in the global module;
-  Module *GlobalModule =
-      PushGlobalModuleFragment(ModuleLoc);
+  const Module *GlobalModule = PushGlobalModuleFragment(ModuleLoc);
 
   // All declarations created from now on are owned by the global module.
   auto *TU = Context.getTranslationUnitDecl();
@@ -584,7 +583,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (IsPartition) {
     // We already checked that we are in a module purview in the parser.
     assert(!ModuleScopes.empty() && "in a module purview, but no module?");
-    Module *NamedMod = ModuleScopes.back().Module;
+    const Module *NamedMod = ModuleScopes.back().Module;
     // If we are importing into a partition, find the owning named module,
     // otherwise, the name of the importing named module.
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
@@ -667,13 +666,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // If this was a header import, pad out with dummy locations.
     // FIXME: Pass in and use the location of the header-name token in this
     // case.
-    for (Module *ModCheck = Mod; ModCheck; ModCheck = ModCheck->Parent)
+    for (const Module *ModCheck = Mod; ModCheck; ModCheck = ModCheck->Parent)
       IdentifierLocs.push_back(SourceLocation());
   } else if (getLangOpts().CPlusPlusModules && !Mod->Parent) {
     // A single identifier for the whole name.
     IdentifierLocs.push_back(Path[0].second);
   } else {
-    Module *ModCheck = Mod;
+    const Module *ModCheck = Mod;
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
       // If we've run out of module parents, just drop the remaining
       // identifiers.  We need the length to be consistent.
@@ -749,7 +748,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   VisibleModules.setVisible(Mod, DirectiveLoc);
 
   if (getLangOpts().isCompilingModule()) {
-    Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
+    const Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
     (void)ThisModule;
     assert(ThisModule && "was expecting a module if building one");
@@ -1010,7 +1009,7 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   return D;
 }
 
-Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc) {
+const Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc) {
   // We shouldn't create new global module fragment if there is already
   // one.
   if (!TheGlobalModuleFragment) {
@@ -1036,7 +1035,7 @@ void Sema::PopGlobalModuleFragment() {
   ModuleScopes.pop_back();
 }
 
-Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
+const Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
   if (!TheImplicitGlobalModuleFragment) {
     ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
     TheImplicitGlobalModuleFragment =

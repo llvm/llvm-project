@@ -1621,13 +1621,13 @@ LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
                              : CK);
 }
 
-Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
+const Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
   if (isa<NamespaceDecl>(this))
     // Namespaces never have module linkage.  It is the entities within them
     // that [may] do.
     return nullptr;
 
-  Module *M = getOwningModule();
+  const Module *M = getOwningModule();
   if (!M)
     return nullptr;
 
@@ -5675,7 +5675,7 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
 
 /// Retrieve the number of module identifiers needed to name the given
 /// module.
-static unsigned getNumModuleIdentifiers(Module *Mod) {
+static unsigned getNumModuleIdentifiers(const Module *Mod) {
   unsigned Result = 1;
   while (Mod->Parent) {
     Mod = Mod->Parent;

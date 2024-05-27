@@ -766,14 +766,14 @@ private:
 
   /// If the current lexer is for a submodule that is being built, this
   /// is that submodule.
-  Module *CurLexerSubmodule = nullptr;
+  const Module *CurLexerSubmodule = nullptr;
 
   /// Keeps track of the stack of files currently
   /// \#included, and macros currently being expanded from, not counting
   /// CurLexer/CurTokenLexer.
   struct IncludeStackInfo {
     LexerCallback               CurLexerCallback;
-    Module                     *TheSubmodule;
+    const Module *TheSubmodule;
     std::unique_ptr<Lexer>      TheLexer;
     PreprocessorLexer          *ThePPLexer;
     std::unique_ptr<TokenLexer> TheTokenLexer;
@@ -781,7 +781,7 @@ private:
 
     // The following constructors are completely useless copies of the default
     // versions, only needed to pacify MSVC.
-    IncludeStackInfo(LexerCallback CurLexerCallback, Module *TheSubmodule,
+    IncludeStackInfo(LexerCallback CurLexerCallback, const Module *TheSubmodule,
                      std::unique_ptr<Lexer> &&TheLexer,
                      PreprocessorLexer *ThePPLexer,
                      std::unique_ptr<TokenLexer> &&TheTokenLexer,
@@ -990,7 +990,7 @@ private:
     // FIXME: CounterValue?
     // FIXME: PragmaPushMacroInfo?
   };
-  std::map<Module *, SubmoduleState> Submodules;
+  std::map<const Module *, SubmoduleState> Submodules;
 
   /// The preprocessor state for preprocessing outside of any submodule.
   SubmoduleState NullSubmoduleState;
@@ -1004,7 +1004,7 @@ private:
 
   /// The set of top-level modules that affected preprocessing, but were not
   /// imported.
-  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
+  llvm::SmallSetVector<const Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
@@ -1289,7 +1289,7 @@ public:
 
   /// Return the submodule owning the file being lexed. This may not be
   /// the current module if we have changed modules since entering the file.
-  Module *getCurrentLexerSubmodule() const { return CurLexerSubmodule; }
+  const Module *getCurrentLexerSubmodule() const { return CurLexerSubmodule; }
 
   /// Returns the FileID for the preprocessor predefines.
   FileID getPredefinesFileID() const { return PredefinesFileID; }
@@ -1341,7 +1341,7 @@ public:
   /// Determine whether II is defined as a macro within the module M,
   /// if that is a module that we've already preprocessed. Does not check for
   /// macros imported into M.
-  bool isMacroDefinedInLocalModule(const IdentifierInfo *II, Module *M) {
+  bool isMacroDefinedInLocalModule(const IdentifierInfo *II, const Module *M) {
     if (!II->hasMacroDefinition())
       return false;
     auto I = Submodules.find(M);
@@ -1432,10 +1432,10 @@ public:
                                MacroDirective *MD);
 
   /// Register an exported macro for a module and identifier.
-  ModuleMacro *addModuleMacro(Module *Mod, IdentifierInfo *II,
+  ModuleMacro *addModuleMacro(const Module *Mod, IdentifierInfo *II,
                               MacroInfo *Macro,
                               ArrayRef<ModuleMacro *> Overrides, bool &IsNew);
-  ModuleMacro *getModuleMacro(Module *Mod, const IdentifierInfo *II);
+  ModuleMacro *getModuleMacro(const Module *Mod, const IdentifierInfo *II);
 
   /// Get the list of leaf (non-overridden) module macros for a name.
   ArrayRef<ModuleMacro*> getLeafModuleMacros(const IdentifierInfo *II) const {
@@ -1471,7 +1471,7 @@ public:
   /// \}
 
   /// Mark the given clang module as affecting the current clang module or translation unit.
-  void markClangModuleAsAffecting(Module *M) {
+  void markClangModuleAsAffecting(const Module *M) {
     assert(M->isModuleMapModule());
     if (!BuildingSubmoduleStack.empty()) {
       if (M != BuildingSubmoduleStack.back().M)
@@ -1483,7 +1483,8 @@ public:
 
   /// Get the set of top-level clang modules that affected preprocessing, but were not
   /// imported.
-  const llvm::SmallSetVector<Module *, 2> &getAffectingClangModules() const {
+  const llvm::SmallSetVector<const Module *, 2> &
+  getAffectingClangModules() const {
     return AffectingClangModules;
   }
 
@@ -1739,7 +1740,7 @@ public:
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
 
-  SourceLocation getModuleImportLoc(Module *M) const {
+  SourceLocation getModuleImportLoc(const Module *M) const {
     return CurSubmoduleState->VisibleModules.getImportLoc(M);
   }
 
@@ -2360,7 +2361,7 @@ public:
   Module *getCurrentModule();
 
   /// Retrieves the module whose implementation we're current compiling, if any.
-  Module *getCurrentModuleImplementation();
+  const Module *getCurrentModuleImplementation();
 
   /// If we are preprocessing a named module.
   bool isInNamedModule() const { return ModuleDeclState.isNamedModule(); }

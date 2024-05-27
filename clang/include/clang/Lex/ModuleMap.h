@@ -105,7 +105,7 @@ class ModuleMap {
   llvm::DenseMap<const IdentifierInfo *, Module *> CachedModuleLoads;
 
   /// Shadow modules created while building this module map.
-  llvm::SmallVector<Module*, 2> ShadowModules;
+  llvm::SmallVector<const Module *, 2> ShadowModules;
 
   /// The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
@@ -182,7 +182,7 @@ public:
     }
 
     /// Whether this header is accessible from the specified module.
-    bool isAccessibleFrom(Module *M) const {
+    bool isAccessibleFrom(const Module *M) const {
       return !(getRole() & PrivateHeader) ||
              (M && M->getTopLevelModule() == getModule()->getTopLevelModule());
     }
@@ -227,7 +227,7 @@ private:
   /// Modules from the same scope may not have the same name.
   unsigned CurrentModuleScopeID = 0;
 
-  llvm::DenseMap<Module *, unsigned> ModuleScopeIDs;
+  llvm::DenseMap<const Module *, unsigned> ModuleScopeIDs;
 
   /// The set of attributes that can be attached to a module.
   struct Attributes {
@@ -300,7 +300,8 @@ private:
   /// \returns The resolved export declaration, which will have a NULL pointer
   /// if the export could not be resolved.
   Module::ExportDecl
-  resolveExport(Module *Mod, const Module::UnresolvedExportDecl &Unresolved,
+  resolveExport(const Module *Mod,
+                const Module::UnresolvedExportDecl &Unresolved,
                 bool Complain) const;
 
   /// Resolve the given module id to an actual module.
@@ -314,7 +315,8 @@ private:
   ///
   /// \returns The resolved module, or null if the module-id could not be
   /// resolved.
-  Module *resolveModuleId(const ModuleId &Id, Module *Mod, bool Complain) const;
+  Module *resolveModuleId(const ModuleId &Id, const Module *Mod,
+                          bool Complain) const;
 
   /// Add an unresolved header to a module.
   ///
@@ -337,7 +339,7 @@ private:
   ///        be found in case M was, set it to true. False otherwise.
   /// \return The resolved file, if any.
   OptionalFileEntryRef
-  findHeader(Module *M, const Module::UnresolvedHeaderDirective &Header,
+  findHeader(const Module *M, const Module::UnresolvedHeaderDirective &Header,
              SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework);
 
   /// Resolve the given header directive.
@@ -382,8 +384,8 @@ private:
     return static_cast<bool>(findHeaderInUmbrellaDirs(File, IntermediateDirs));
   }
 
-  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, Attributes Attrs,
-                               Module *Parent);
+  const Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir,
+                                     Attributes Attrs, Module *Parent);
 
 public:
   /// Construct a new module map.
@@ -418,7 +420,7 @@ public:
   bool isBuiltinHeader(FileEntryRef File);
 
   bool shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
-                                               Module *Module) const;
+                                               const Module *Module) const;
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {
@@ -511,7 +513,7 @@ public:
   /// name lookup.
   ///
   /// \returns The named module, if known; otherwise, returns null.
-  Module *lookupModuleUnqualified(StringRef Name, Module *Context) const;
+  Module *lookupModuleUnqualified(StringRef Name, const Module *Context) const;
 
   /// Retrieve a module with the given name within the given context,
   /// using direct (qualified) name lookup.
@@ -522,7 +524,7 @@ public:
   /// null, we will look for a top-level module.
   ///
   /// \returns The named submodule, if known; otherwose, returns null.
-  Module *lookupModuleQualified(StringRef Name, Module *Context) const;
+  Module *lookupModuleQualified(StringRef Name, const Module *Context) const;
 
   /// Find a new module or submodule, or create it if it does not already
   /// exist.
@@ -585,13 +587,13 @@ public:
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
-  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, bool IsSystem,
-                               Module *Parent);
+  const Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir,
+                                     bool IsSystem, Module *Parent);
 
   /// Create a new top-level module that is shadowed by
   /// \p ShadowingModule.
   Module *createShadowedModule(StringRef Name, bool IsFramework,
-                               Module *ShadowingModule);
+                               const Module *ShadowingModule);
 
   /// Creates a new declaration scope for module names, allowing
   /// previously defined modules to shadow definitions from the new scope.
@@ -600,7 +602,7 @@ public:
   /// scope, which is the opposite of how shadowing works for variables.
   void finishModuleDeclarationScope() { CurrentModuleScopeID += 1; }
 
-  bool mayShadowNewModule(Module *ExistingModule) {
+  bool mayShadowNewModule(const Module *ExistingModule) {
     assert(!ExistingModule->Parent && "expected top-level module");
     assert(ModuleScopeIDs.count(ExistingModule) && "unknown module");
     return ModuleScopeIDs[ExistingModule] < CurrentModuleScopeID;
@@ -634,7 +636,7 @@ public:
   FileID getModuleMapFileIDForUniquing(const Module *M) const;
   OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, FileID ModMapFID);
+  void setInferredModuleAllowedBy(const Module *M, FileID ModMapFID);
 
   /// Canonicalize \p Path in a manner suitable for a module map file. In
   /// particular, this canonicalizes the parent directory separately from the

@@ -1232,13 +1232,13 @@ void Sema::ActOnEndOfTranslationUnit() {
   // Now we can decide whether the modules we're building need an initializer.
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
-    auto DoesModNeedInit = [this](Module *M) {
+    auto DoesModNeedInit = [this](const Module *M) {
       if (!getASTContext().getModuleInitializers(M).empty())
         return true;
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
-      for (Module *I : M->Imports)
+      for (const Module *I : M->Imports)
         if (I->isNamedModuleInterfaceHasInit())
           return true;
 

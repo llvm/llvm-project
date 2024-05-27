@@ -714,7 +714,7 @@ private:
 
   /// A set of hidden declarations.
   using HiddenNames = SmallVector<Decl *, 2>;
-  using HiddenNamesMapType = llvm::DenseMap<Module *, HiddenNames>;
+  using HiddenNamesMapType = llvm::DenseMap<const Module *, HiddenNames>;
 
   /// A mapping from each of the hidden submodules to the deserialized
   /// declarations in that submodule that could be made visible.
@@ -1672,7 +1672,7 @@ public:
                          SourceLocation ImportLoc);
 
   /// Make the names within this set of hidden names visible.
-  void makeNamesVisible(const HiddenNames &Names, Module *Owner);
+  void makeNamesVisible(const HiddenNames &Names, const Module *Owner);
 
   /// Note that MergedDef is a redefinition of the canonical definition
   /// Def, so Def should be visible whenever MergedDef is.

@@ -130,7 +130,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
 
 bool Module::isUnimportable(const LangOptions &LangOpts,
                             const TargetInfo &Target, Requirement &Req,
-                            Module *&ShadowingModule) const {
+                            const Module *&ShadowingModule) const {
   if (!IsUnimportable)
     return false;
 
@@ -176,7 +176,7 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
 bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
                          Requirement &Req,
                          UnresolvedHeaderDirective &MissingHeader,
-                         Module *&ShadowingModule) const {
+                         const Module *&ShadowingModule) const {
   if (IsAvailable)
     return true;
 
@@ -329,7 +329,7 @@ void Module::addRequirement(StringRef Feature, bool RequiredState,
 }
 
 void Module::markUnavailable(bool Unimportable) {
-  auto needUpdate = [Unimportable](Module *M) {
+  auto needUpdate = [Unimportable](const Module *M) {
     return M->IsAvailable || (!M->IsUnimportable && Unimportable);
   };
 
@@ -377,7 +377,7 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
   return Result;
 }
 
-Module *Module::getGlobalModuleFragment() const {
+const Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
                                 "fragment from the C++20 Named modules");
 
@@ -388,7 +388,7 @@ Module *Module::getGlobalModuleFragment() const {
   return nullptr;
 }
 
-Module *Module::getPrivateModuleFragment() const {
+const Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
                                 "fragment from the C++20 Named modules");
 
@@ -401,10 +401,7 @@ Module *Module::getPrivateModuleFragment() const {
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
-  for (std::vector<Module *>::const_iterator I = SubModules.begin(),
-                                             E = SubModules.end();
-       I != E; ++I) {
-    Module *Mod = *I;
+  for (Module *Mod : SubModules) {
     if (!Mod->IsExplicit)
       Exported.push_back(Mod);
   }
@@ -412,7 +409,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // Find re-exported modules by filtering the list of imported modules.
   bool AnyWildcard = false;
   bool UnrestrictedWildcard = false;
-  SmallVector<Module *, 4> WildcardRestrictions;
+  SmallVector<const Module *, 4> WildcardRestrictions;
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
     Module *Mod = Exports[I].getPointer();
     if (!Exports[I].getInt()) {
@@ -428,7 +425,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
     if (UnrestrictedWildcard)
       continue;
 
-    if (Module *Restriction = Exports[I].getPointer())
+    if (const Module *Restriction = Exports[I].getPointer())
       WildcardRestrictions.push_back(Restriction);
     else {
       WildcardRestrictions.clear();
@@ -447,7 +444,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
     if (!Acceptable) {
       // Check whether this module meets one of the restrictions.
       for (unsigned R = 0, NR = WildcardRestrictions.size(); R != NR; ++R) {
-        Module *Restriction = WildcardRestrictions[R];
+        const Module *Restriction = WildcardRestrictions[R];
         if (Mod == Restriction || Mod->isSubModuleOf(Restriction)) {
           Acceptable = true;
           break;
@@ -471,7 +468,7 @@ void Module::buildVisibleModulesCache() const {
   // Every imported module is visible.
   SmallVector<Module *, 16> Stack(Imports.begin(), Imports.end());
   while (!Stack.empty()) {
-    Module *CurrModule = Stack.pop_back_val();
+    const Module *CurrModule = Stack.pop_back_val();
 
     // Every module transitively exported by an imported module is visible.
     if (VisibleModulesCache.insert(CurrModule).second)
@@ -589,7 +586,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "export ";
-    if (Module *Restriction = Exports[I].getPointer()) {
+    if (const Module *Restriction = Exports[I].getPointer()) {
       OS << Restriction->getFullModuleName(true);
       if (Exports[I].getInt())
         OS << ".*";
@@ -609,7 +606,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   }
 
   if (Dump) {
-    for (Module *M : Imports) {
+    for (const Module *M : Imports) {
       OS.indent(Indent + 2);
       llvm::errs() << "import " << M->getFullModuleName() << "\n";
     }
@@ -678,7 +675,7 @@ LLVM_DUMP_METHOD void Module::dump() const {
   print(llvm::errs(), 0, true);
 }
 
-void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
+void VisibleModuleSet::setVisible(const Module *M, SourceLocation Loc,
                                   VisibleCallback Vis, ConflictCallback Cb) {
   // We can't import a global module fragment so the location can be invalid.
   assert((M->isGlobalModule() || Loc.isValid()) &&
@@ -689,7 +686,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
   ++Generation;
 
   struct Visiting {
-    Module *M;
+    const Module *M;
     Visiting *ExportedBy;
   };
 
@@ -707,7 +704,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     // Make any exported modules visible.
     SmallVector<Module *, 16> Exports;
     V.M->getExportedModules(Exports);
-    for (Module *E : Exports) {
+    for (const Module *E : Exports) {
       // Don't import non-importable modules.
       if (!E->isUnimportable())
         VisitModule({E, &V});
@@ -715,7 +712,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
 
     for (auto &C : V.M->Conflicts) {
       if (isVisible(C.Other)) {
-        llvm::SmallVector<Module*, 8> Path;
+        llvm::SmallVector<const Module *, 8> Path;
         for (Visiting *I = &V; I; I = I->ExportedBy)
           Path.push_back(I->M);
         Cb(Path, C.Other, C.Message);
@@ -725,7 +722,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
   VisitModule({M, nullptr});
 }
 
-ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
+ASTSourceDescriptor::ASTSourceDescriptor(const Module &M)
     : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();

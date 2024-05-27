@@ -7461,7 +7461,7 @@ public:
   /// Get the set of additional modules that should be checked during
   /// name lookup. A module and its imports become visible when instanting a
   /// template defined within it.
-  llvm::DenseSet<Module *> &getLookupModules();
+  llvm::DenseSet<const Module *> &getLookupModules();
 
   bool hasVisibleMergedDefinition(const NamedDecl *Def);
   bool hasMergedDefinitionInCurrentModule(const NamedDecl *Def);
@@ -7482,41 +7482,47 @@ public:
   /// specialization declaration for a specialization of a template. (For a
   /// member specialization, use hasVisibleMemberSpecialization.)
   bool hasVisibleExplicitSpecialization(
-      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr);
   /// Determine if there is a reachable declaration of \p D that is an explicit
   /// specialization declaration for a specialization of a template. (For a
   /// member specialization, use hasReachableMemberSpecialization.)
   bool hasReachableExplicitSpecialization(
-      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr);
 
   /// Determine if there is a visible declaration of \p D that is a member
   /// specialization declaration (as opposed to an instantiated declaration).
   bool hasVisibleMemberSpecialization(
-      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr);
   /// Determine if there is a reachable declaration of \p D that is a member
   /// specialization declaration (as opposed to an instantiated declaration).
   bool hasReachableMemberSpecialization(
-      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr);
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
   /// Determine whether any declaration of an entity is visible.
-  bool
-  hasVisibleDeclaration(const NamedDecl *D,
-                        llvm::SmallVectorImpl<Module *> *Modules = nullptr) {
+  bool hasVisibleDeclaration(
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr) {
     return isVisible(D) || hasVisibleDeclarationSlow(D, Modules);
   }
 
-  bool hasVisibleDeclarationSlow(const NamedDecl *D,
-                                 llvm::SmallVectorImpl<Module *> *Modules);
-  /// Determine whether any declaration of an entity is reachable.
   bool
-  hasReachableDeclaration(const NamedDecl *D,
-                          llvm::SmallVectorImpl<Module *> *Modules = nullptr) {
+  hasVisibleDeclarationSlow(const NamedDecl *D,
+                            llvm::SmallVectorImpl<const Module *> *Modules);
+  /// Determine whether any declaration of an entity is reachable.
+  bool hasReachableDeclaration(
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr) {
     return isReachable(D) || hasReachableDeclarationSlow(D, Modules);
   }
   bool hasReachableDeclarationSlow(
-      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+      const NamedDecl *D,
+      llvm::SmallVectorImpl<const Module *> *Modules = nullptr);
 
   void diagnoseTypo(const TypoCorrection &Correction,
                     const PartialDiagnostic &TypoDiag,
@@ -7702,7 +7708,7 @@ public:
 
   // When loading a non-modular PCH files, this is used to restore module
   // visibility.
-  void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
+  void makeModuleVisible(const Module *Mod, SourceLocation ImportLoc) {
     VisibleModules.setVisible(Mod, ImportLoc);
   }
 
@@ -7802,7 +7808,7 @@ private:
   llvm::SmallVector<ModuleScope, 16> ModuleScopes;
 
   /// For an interface unit, this is the implicitly imported interface unit.
-  clang::Module *ThePrimaryInterface = nullptr;
+  const clang::Module *ThePrimaryInterface = nullptr;
 
   /// The explicit global module fragment of the current translation unit.
   /// The explicit Global Module Fragment, as specified in C++
@@ -7827,12 +7833,12 @@ private:
   bool isCurrentModulePurview() const;
 
   /// Enter the scope of the explicit global module fragment.
-  Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
+  const Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of the explicit global module fragment.
   void PopGlobalModuleFragment();
 
   /// Enter the scope of an implicit global module fragment.
-  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
+  const Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of an implicit global module fragment.
   void PopImplicitGlobalModuleFragment();
 
@@ -10174,12 +10180,12 @@ public:
 
   /// Extra modules inspected when performing a lookup during a template
   /// instantiation. Computed lazily.
-  SmallVector<Module *, 16> CodeSynthesisContextLookupModules;
+  SmallVector<const Module *, 16> CodeSynthesisContextLookupModules;
 
   /// Cache of additional modules that should be used for name lookup
   /// within the current template instantiation. Computed lazily; use
   /// getLookupModules() to get a complete set.
-  llvm::DenseSet<Module *> LookupModulesCache;
+  llvm::DenseSet<const Module *> LookupModulesCache;
 
   /// Map from the most recent declaration of a namespace to the most
   /// recent visible declaration of that namespace.

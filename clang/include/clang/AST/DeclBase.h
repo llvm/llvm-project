@@ -817,11 +817,11 @@ public:
            "owned local decl but no local module storage");
     return reinterpret_cast<Module *const *>(this)[-1];
   }
-  void setLocalOwningModule(Module *M) {
+  void setLocalOwningModule(const Module *M) {
     assert(!isFromASTFile() && hasOwningModule() &&
            hasLocalOwningModuleStorage() &&
            "should not have a cached owning module");
-    reinterpret_cast<Module **>(this)[-1] = M;
+    reinterpret_cast<const Module **>(this)[-1] = M;
   }
 
   /// Is this declaration owned by some module?
@@ -839,7 +839,7 @@ public:
   ///
   /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
   /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  const Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.

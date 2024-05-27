@@ -838,7 +838,7 @@ static bool isStackProtectorOn(const LangOptions &LangOpts,
 }
 
 void CodeGenModule::Release() {
-  Module *Primary = getContext().getCurrentNamedModule();
+  const Module *Primary = getContext().getCurrentNamedModule();
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
@@ -2977,16 +2977,17 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
 
 /// Add link options implied by the given module, including modules
 /// it depends on, using a postorder walk.
-static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
-                                    SmallVectorImpl<llvm::MDNode *> &Metadata,
-                                    llvm::SmallPtrSet<Module *, 16> &Visited) {
+static void
+addLinkOptionsPostorder(CodeGenModule &CGM, const Module *Mod,
+                        SmallVectorImpl<llvm::MDNode *> &Metadata,
+                        llvm::SmallPtrSet<const Module *, 16> &Visited) {
   // Import this module's parent.
   if (Mod->Parent && Visited.insert(Mod->Parent).second) {
     addLinkOptionsPostorder(CGM, Mod->Parent, Metadata, Visited);
   }
 
   // Import this module's dependencies.
-  for (Module *Import : llvm::reverse(Mod->Imports)) {
+  for (const Module *Import : llvm::reverse(Mod->Imports)) {
     if (Visited.insert(Import).second)
       addLinkOptionsPostorder(CGM, Import, Metadata, Visited);
   }
@@ -3028,7 +3029,7 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
   }
 }
 
-void CodeGenModule::EmitModuleInitializers(clang::Module *Primary) {
+void CodeGenModule::EmitModuleInitializers(const clang::Module *Primary) {
   assert(Primary->isNamedModuleUnit() &&
          "We should only emit module initializers for named modules.");
 
@@ -3065,12 +3066,12 @@ void CodeGenModule::EmitModuleLinkOptions() {
   // Collect the set of all of the modules we want to visit to emit link
   // options, which is essentially the imported modules and all of their
   // non-explicit child modules.
-  llvm::SetVector<clang::Module *> LinkModules;
-  llvm::SmallPtrSet<clang::Module *, 16> Visited;
-  SmallVector<clang::Module *, 16> Stack;
+  llvm::SetVector<const clang::Module *> LinkModules;
+  llvm::SmallPtrSet<const clang::Module *, 16> Visited;
+  SmallVector<const clang::Module *, 16> Stack;
 
   // Seed the stack with imported modules.
-  for (Module *M : ImportedModules) {
+  for (const Module *M : ImportedModules) {
     // Do not add any link flags when an implementation TU of a module imports
     // a header of that same module.
     if (M->getTopLevelModuleName() == getLangOpts().CurrentModule &&
@@ -3083,7 +3084,7 @@ void CodeGenModule::EmitModuleLinkOptions() {
   // Find all of the modules to import, making a little effort to prune
   // non-leaf modules.
   while (!Stack.empty()) {
-    clang::Module *Mod = Stack.pop_back_val();
+    const clang::Module *Mod = Stack.pop_back_val();
 
     bool AnyChildren = false;
 
@@ -3112,7 +3113,7 @@ void CodeGenModule::EmitModuleLinkOptions() {
   // to linker options inserted by things like #pragma comment().
   SmallVector<llvm::MDNode *, 16> MetadataArgs;
   Visited.clear();
-  for (Module *M : LinkModules)
+  for (const Module *M : LinkModules)
     if (Visited.insert(M).second)
       addLinkOptionsPostorder(*this, M, MetadataArgs, Visited);
   std::reverse(MetadataArgs.begin(), MetadataArgs.end());
@@ -7002,13 +7003,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // emitted here.
 
     // Find all of the submodules and emit the module initializers.
-    llvm::SmallPtrSet<clang::Module *, 16> Visited;
-    SmallVector<clang::Module *, 16> Stack;
+    llvm::SmallPtrSet<const clang::Module *, 16> Visited;
+    SmallVector<const clang::Module *, 16> Stack;
     Visited.insert(Import->getImportedModule());
     Stack.push_back(Import->getImportedModule());
 
     while (!Stack.empty()) {
-      clang::Module *Mod = Stack.pop_back_val();
+      const clang::Module *Mod = Stack.pop_back_val();
       if (!EmittedModuleInitializers.insert(Mod).second)
         continue;
 

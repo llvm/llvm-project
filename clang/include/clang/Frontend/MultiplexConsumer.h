@@ -39,7 +39,7 @@ public:
   void SelectorRead(serialization::SelectorID iD, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID,
                            MacroDefinitionRecord *MD) override;
-  void ModuleRead(serialization::SubmoduleID ID, Module *Mod) override;
+  void ModuleRead(serialization::SubmoduleID ID, const Module *Mod) override;
   void ModuleImportRead(serialization::SubmoduleID ID,
                         SourceLocation ImportLoc) override;
 

@@ -256,7 +256,7 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
   Out << "\n";
 }
 
-ModuleMacro *ModuleMacro::create(Preprocessor &PP, Module *OwningModule,
+ModuleMacro *ModuleMacro::create(Preprocessor &PP, const Module *OwningModule,
                                  const IdentifierInfo *II, MacroInfo *Macro,
                                  ArrayRef<ModuleMacro *> Overrides) {
   void *Mem = PP.getPreprocessorAllocator().Allocate(

@@ -1641,8 +1641,8 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
     return false;
   }
 
-  Module *NewM = New->getOwningModule();
-  Module *OldM = Old->getOwningModule();
+  const Module *NewM = New->getOwningModule();
+  const Module *OldM = Old->getOwningModule();
 
   if (NewM && NewM->isPrivateModule())
     NewM = NewM->Parent;
@@ -1763,8 +1763,8 @@ bool Sema::IsRedefinitionInModule(const NamedDecl *New,
          const_cast<Sema *>(this)->isReachable(Old) &&
          "We shouldn't see unreachable definitions here.");
 
-  Module *NewM = New->getOwningModule();
-  Module *OldM = Old->getOwningModule();
+  const Module *NewM = New->getOwningModule();
+  const Module *OldM = Old->getOwningModule();
 
   // We only checks for named modules here. The header like modules is skipped.
   // FIXME: This is not right if we import the header like modules in the module
@@ -4775,7 +4775,7 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
   StringRef HdrFilename =
       SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old->getLocation()));
 
-  auto noteFromModuleOrInclude = [&](Module *Mod,
+  auto noteFromModuleOrInclude = [&](const Module *Mod,
                                      SourceLocation IncLoc) -> bool {
     // Redefinition errors with modules are common with non modular mapped
     // headers, example: a non-modular header H in module A that also gets

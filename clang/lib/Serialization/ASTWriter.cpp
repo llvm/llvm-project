@@ -166,7 +166,7 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 namespace {
 
 std::optional<std::set<const FileEntry *>>
-GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
+GetAffectingModuleMaps(const Preprocessor &PP, const Module *RootModule) {
   if (!PP.getHeaderSearchInfo()
            .getHeaderSearchOpts()
            .ModulesPruneNonAffectingModuleMaps)
@@ -1223,7 +1223,7 @@ ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
   // Probably we can solve this by a new hash mechanism. But the safety and
   // efficiency may a problem too. Here we just combine the hash value of the
   // used modules conservatively.
-  for (Module *M : TouchedTopLevelModules)
+  for (const Module *M : TouchedTopLevelModules)
     Hasher.update(M->Signature);
 
   return ASTFileSignature::create(Hasher.result());
@@ -1967,7 +1967,7 @@ namespace {
     using key_type_ref = const key_type &;
 
     using UnresolvedModule =
-        llvm::PointerIntPair<Module *, 2, ModuleMap::ModuleHeaderRole>;
+        llvm::PointerIntPair<const Module *, 2, ModuleMap::ModuleHeaderRole>;
 
     struct data_type {
       const HeaderFileInfo &HFI;
@@ -2046,7 +2046,7 @@ namespace {
       }
       LE.write<uint32_t>(Offset);
 
-      auto EmitModule = [&](Module *M, ModuleMap::ModuleHeaderRole Role) {
+      auto EmitModule = [&](const Module *M, ModuleMap::ModuleHeaderRole Role) {
         if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M)) {
           uint32_t Value = (ModID << 3) | (unsigned)Role;
           assert((Value >> 3) == ModID && "overflow in header module info");
@@ -2859,7 +2859,7 @@ unsigned ASTWriter::getLocalOrImportedSubmoduleID(const Module *Mod) {
   return SubmoduleIDs[Mod] = NextSubmoduleID++;
 }
 
-unsigned ASTWriter::getSubmoduleID(Module *Mod) {
+unsigned ASTWriter::getSubmoduleID(const Module *Mod) {
   unsigned ID = getLocalOrImportedSubmoduleID(Mod);
   // FIXME: This can easily happen, if we have a reference to a submodule that
   // did not result in us loading a module file for that submodule. For
@@ -2871,7 +2871,7 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
 
 /// Compute the number of modules within the given tree (including the
 /// given module).
-static unsigned getNumberOfModules(Module *Mod) {
+static unsigned getNumberOfModules(const Module *Mod) {
   unsigned ChildModules = 0;
   for (auto *Submodule : Mod->submodules())
     ChildModules += getNumberOfModules(Submodule);
@@ -5458,8 +5458,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     // Write the submodules that were imported, if any.
     struct ModuleInfo {
       uint64_t ID;
-      Module *M;
-      ModuleInfo(uint64_t ID, Module *M) : ID(ID), M(M) {}
+      const Module *M;
+      ModuleInfo(uint64_t ID, const Module *M) : ID(ID), M(M) {}
     };
     llvm::SmallVector<ModuleInfo, 64> Imports;
     for (const auto *I : Context.local_imports()) {
@@ -6661,7 +6661,7 @@ void ASTWriter::MacroDefinitionRead(serialization::PreprocessedEntityID ID,
   MacroDefinitions[MD] = ID;
 }
 
-void ASTWriter::ModuleRead(serialization::SubmoduleID ID, Module *Mod) {
+void ASTWriter::ModuleRead(serialization::SubmoduleID ID, const Module *Mod) {
   assert(!SubmoduleIDs.contains(Mod));
   SubmoduleIDs[Mod] = ID;
 }
@@ -6900,7 +6900,7 @@ void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
       DeclUpdate(UPD_DECL_MARKED_OPENMP_DECLARETARGET, Attr));
 }
 
-void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {
+void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, const Module *M) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
   assert(!D->isUnconditionallyVisible() && "expected a hidden declaration");

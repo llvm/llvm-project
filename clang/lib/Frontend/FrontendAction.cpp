@@ -154,7 +154,7 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
   CurrentASTUnit = std::move(AST);
 }
 
-Module *FrontendAction::getCurrentModule() const {
+const Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
       CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
@@ -663,7 +663,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     // Set up the input file for replay purposes.
     auto Kind = AST->getInputKind();
     if (Kind.getFormat() == InputKind::ModuleMap) {
-      Module *ASTModule =
+      const Module *ASTModule =
           AST->getPreprocessor().getHeaderSearchInfo().lookupModule(
               AST->getLangOpts().CurrentModule, SourceLocation(),
               /*AllowSearch*/ false);

@@ -462,7 +462,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
     void resolve(ASTContext &Ctx);
   };
-  llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
+  llvm::DenseMap<const Module *, PerModuleInitializers *> ModuleInitializers;
 
   /// This is the top-level (C++20) Named module we are building.
   Module *CurrentCXXNamedModule = nullptr;
@@ -1060,12 +1060,12 @@ public:
   /// for a module. This will typically be a global variable (with internal
   /// linkage) that runs module initializers, such as the iostream initializer,
   /// or an ImportDecl nominating another module that has initializers.
-  void addModuleInitializer(Module *M, Decl *Init);
+  void addModuleInitializer(const Module *M, Decl *Init);
 
-  void addLazyModuleInitializers(Module *M, ArrayRef<GlobalDeclID> IDs);
+  void addLazyModuleInitializers(const Module *M, ArrayRef<GlobalDeclID> IDs);
 
   /// Get the initializations to perform when importing a module, if any.
-  ArrayRef<Decl*> getModuleInitializers(Module *M);
+  ArrayRef<Decl *> getModuleInitializers(const Module *M);
 
   /// Set the (C++20) module we are building.
   void setCurrentNamedModule(Module *M);

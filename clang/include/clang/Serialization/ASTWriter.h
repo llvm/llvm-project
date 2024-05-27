@@ -362,7 +362,7 @@ private:
   ///
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
-  llvm::DenseSet<Module *> TouchedTopLevelModules;
+  llvm::DenseSet<const Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -373,7 +373,7 @@ private:
       void *Type;
       SourceLocation::UIntTy Loc;
       unsigned Val;
-      Module *Mod;
+      const Module *Mod;
       const Attr *Attribute;
     };
 
@@ -385,7 +385,7 @@ private:
     DeclUpdate(unsigned Kind, SourceLocation Loc)
         : Kind(Kind), Loc(Loc.getRawEncoding()) {}
     DeclUpdate(unsigned Kind, unsigned Val) : Kind(Kind), Val(Val) {}
-    DeclUpdate(unsigned Kind, Module *M) : Kind(Kind), Mod(M) {}
+    DeclUpdate(unsigned Kind, const Module *M) : Kind(Kind), Mod(M) {}
     DeclUpdate(unsigned Kind, const Attr *Attribute)
           : Kind(Kind), Attribute(Attribute) {}
 
@@ -398,7 +398,7 @@ private:
     }
 
     unsigned getNumber() const { return Val; }
-    Module *getModule() const { return Mod; }
+    const Module *getModule() const { return Mod; }
     const Attr *getAttr() const { return Attribute; }
   };
 
@@ -526,7 +526,7 @@ private:
   SourceLocation::UIntTy getAdjustment(SourceLocation::UIntTy Offset) const;
 
   /// Retrieve or create a submodule ID for this module.
-  unsigned getSubmoduleID(Module *Mod);
+  unsigned getSubmoduleID(const Module *Mod);
 
   /// Write the given subexpression to the bitstream.
   void WriteSubStmt(Stmt *S);
@@ -859,7 +859,7 @@ private:
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID ID,
                            MacroDefinitionRecord *MD) override;
-  void ModuleRead(serialization::SubmoduleID ID, Module *Mod) override;
+  void ModuleRead(serialization::SubmoduleID ID, const Module *Mod) override;
 
   // ASTMutationListener implementation.
   void CompletedTagDefinition(const TagDecl *D) override;
@@ -891,7 +891,7 @@ private:
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
-  void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
+  void RedefinedHiddenDefinition(const NamedDecl *D, const Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
   void EnteringModulePurview() override;

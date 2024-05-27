@@ -63,7 +63,8 @@ public:
   void handleModuleBegin(Token &Tok) {
     assert(Tok.getKind() == tok::annot_module_begin);
     ModuleEntryIncludes.insert(
-        {Tok.getLocation(), (Module *)Tok.getAnnotationValue()});
+        {Tok.getLocation(),
+         static_cast<const Module *>(Tok.getAnnotationValue())});
   }
 private:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,

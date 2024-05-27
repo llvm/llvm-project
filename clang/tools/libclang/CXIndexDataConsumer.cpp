@@ -493,7 +493,7 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
   // indexing, it doesn't correspond to an imported AST file.
   // FIXME: This assumes that AST files and top-level modules directly
   // correspond, which is unlikely to remain true forever.
-  if (Module *SrcMod = ImportD->getImportedOwningModule())
+  if (const Module *SrcMod = ImportD->getImportedOwningModule())
     if (SrcMod->getTopLevelModule() == Mod->getTopLevelModule())
       return;
 

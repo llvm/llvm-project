@@ -10808,12 +10808,12 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
   assert(D && "Unknown declaration");
   Diag(Loc, diag::ext_equivalent_internal_linkage_decl_in_modules) << D;
 
-  Module *M = getOwningModule(D);
+  const Module *M = getOwningModule(D);
   Diag(D->getLocation(), diag::note_equivalent_internal_linkage_decl)
       << !M << (M ? M->getFullModuleName() : "");
 
   for (auto *E : Equiv) {
-    Module *M = getOwningModule(E);
+    const Module *M = getOwningModule(E);
     Diag(E->getLocation(), diag::note_equivalent_internal_linkage_decl)
         << !M << (M ? M->getFullModuleName() : "");
   }

@@ -282,10 +282,10 @@ void TextNodeDumper::Visit(const Decl *D) {
   dumpLocation(D->getLocation());
   if (D->isFromASTFile())
     OS << " imported";
-  if (Module *M = D->getOwningModule())
+  if (const Module *M = D->getOwningModule())
     OS << " in " << M->getFullModuleName();
   if (auto *ND = dyn_cast<NamedDecl>(D))
-    for (Module *M : D->getASTContext().getModulesWithMergedDefinition(
+    for (const Module *M : D->getASTContext().getModulesWithMergedDefinition(
              const_cast<NamedDecl *>(ND)))
       AddChild([=] { OS << "also in " << M->getFullModuleName(); });
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))

@@ -2768,7 +2768,7 @@ void ASTWriter::WriteDeclAbbrevs() {
 /// relatively painless since they would presumably only do it for top-level
 /// decls.
 static bool isRequiredDecl(const Decl *D, ASTContext &Context,
-                           Module *WritingModule) {
+                           const Module *WritingModule) {
   // Named modules have different semantics than header modules. Every named
   // module units owns a translation unit. So the importer of named modules
   // doesn't need to deserilize everything ahead of time.

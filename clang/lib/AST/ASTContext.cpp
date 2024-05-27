@@ -1024,7 +1024,7 @@ void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
     return;
 
   auto &Merged = It->second;
-  llvm::DenseSet<Module*> Found;
+  llvm::DenseSet<const Module *> Found;
   for (Module *&M : Merged)
     if (!Found.insert(M).second)
       M = nullptr;
@@ -1057,7 +1057,7 @@ void ASTContext::PerModuleInitializers::resolve(ASTContext &Ctx) {
          "GetExternalDecl for lazy module initializer added more inits");
 }
 
-void ASTContext::addModuleInitializer(Module *M, Decl *D) {
+void ASTContext::addModuleInitializer(const Module *M, Decl *D) {
   // One special case: if we add a module initializer that imports another
   // module, and that module's only initializer is an ImportDecl, simplify.
   if (const auto *ID = dyn_cast<ImportDecl>(D)) {
@@ -1083,7 +1083,7 @@ void ASTContext::addModuleInitializer(Module *M, Decl *D) {
   Inits->Initializers.push_back(D);
 }
 
-void ASTContext::addLazyModuleInitializers(Module *M,
+void ASTContext::addLazyModuleInitializers(const Module *M,
                                            ArrayRef<GlobalDeclID> IDs) {
   auto *&Inits = ModuleInitializers[M];
   if (!Inits)
@@ -1092,7 +1092,7 @@ void ASTContext::addLazyModuleInitializers(Module *M,
                                  IDs.begin(), IDs.end());
 }
 
-ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
+ArrayRef<Decl *> ASTContext::getModuleInitializers(const Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
     return std::nullopt;

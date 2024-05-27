@@ -12141,7 +12141,7 @@ public:
 static void DiagnoseInvisibleNamespace(const TypoCorrection &Corrected,
                                        Sema &S) {
   auto *ND = cast<NamespaceDecl>(Corrected.getFoundDecl());
-  Module *M = ND->getOwningModule();
+  const Module *M = ND->getOwningModule();
   assert(M && "hidden namespace definition not in a module?");
 
   if (M->isExplicitGlobalModule())
@@ -16866,7 +16866,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   /// If the declaration is already in global module fragment, we don't
   /// need to attach it again.
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
-    Module *GlobalModule = PushImplicitGlobalModuleFragment(ExternLoc);
+    const Module *GlobalModule = PushImplicitGlobalModuleFragment(ExternLoc);
     D->setLocalOwningModule(GlobalModule);
   }
 

@@ -4382,7 +4382,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
   typedef CodeCompletionResult Result;
   if (Path.empty()) {
     // Enumerate all top-level modules.
-    SmallVector<Module *, 8> Modules;
+    SmallVector<const Module *, 8> Modules;
     SemaRef.PP.getHeaderSearchInfo().collectAllModules(Modules);
     for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
       Builder.AddTypedTextChunk(
@@ -4394,7 +4394,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
     }
   } else if (getLangOpts().Modules) {
     // Load the named module.
-    Module *Mod = SemaRef.PP.getModuleLoader().loadModule(
+    const Module *Mod = SemaRef.PP.getModuleLoader().loadModule(
         ImportLoc, Path, Module::AllVisible,
         /*IsInclusionDirective=*/false);
     // Enumerate submodules.

@@ -661,7 +661,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     } else if (Reader.getContext().getLangOpts().ModulesLocalVisibility) {
       // If local visibility is being tracked, this declaration will become
       // hidden and visible as the owning module does.
-    } else if (Module *Owner = Reader.getSubmodule(SubmoduleID)) {
+    } else if (const Module *Owner = Reader.getSubmodule(SubmoduleID)) {
       // Mark the declaration as visible when its owning module becomes visible.
       if (Owner->NameVisibility == Module::AllVisible)
         D->setVisibleDespiteOwningModule();

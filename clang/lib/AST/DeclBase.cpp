@@ -106,7 +106,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     Buffer += ExtraAlign;
     auto *ParentModule =
         Parent ? cast<Decl>(Parent)->getOwningModule() : nullptr;
-    return new (Buffer) Module*(ParentModule) + 1;
+    return new (Buffer) const Module *(ParentModule) + 1;
   }
   return ::operator new(Size + Extra, Ctx);
 }

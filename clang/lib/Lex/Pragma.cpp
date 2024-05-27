@@ -1118,7 +1118,7 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (LexModuleName(PP, Tok, ModuleName))
         return;
       ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
-      Module *M = nullptr;
+      const Module *M = nullptr;
       for (auto IIAndLoc : ModuleName) {
         M = MM.lookupModuleQualified(IIAndLoc.first->getName(), M);
         if (!M) {
@@ -1136,7 +1136,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("modules")) {
       struct ModuleVisitor {
         Preprocessor &PP;
-        void visit(Module *M, bool VisibleOnly) {
+        void visit(const Module *M, bool VisibleOnly) {
           SourceLocation ImportLoc = PP.getModuleImportLoc(M);
           if (!VisibleOnly || ImportLoc.isValid()) {
             llvm::errs() << M->getFullModuleName() << " ";
@@ -1146,7 +1146,7 @@ struct PragmaDebugHandler : public PragmaHandler {
             }
             llvm::errs() << "\n";
           }
-          for (Module *Sub : M->submodules()) {
+          for (const Module *Sub : M->submodules()) {
             if (!VisibleOnly || ImportLoc.isInvalid() || Sub->IsExplicit)
               visit(Sub, VisibleOnly);
           }

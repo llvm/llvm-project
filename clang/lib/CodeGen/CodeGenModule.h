@@ -520,11 +520,11 @@ private:
   SmallVector<StermFinalizerData, 8> PrioritizedCXXStermFinalizers;
 
   /// The complete set of modules that has been imported.
-  llvm::SetVector<clang::Module *> ImportedModules;
+  llvm::SetVector<const clang::Module *> ImportedModules;
 
   /// The set of modules for which the module initializers
   /// have been emitted.
-  llvm::SmallPtrSet<clang::Module *, 16> EmittedModuleInitializers;
+  llvm::SmallPtrSet<const clang::Module *, 16> EmittedModuleInitializers;
 
   /// A vector of metadata strings for linker options.
   SmallVector<llvm::MDNode *, 16> LinkerOptionsMetadata;
@@ -1651,7 +1651,7 @@ private:
   void EmitCXXThreadLocalInitFunc();
 
   /// Emit the function that initializes global variables for a C++ Module.
-  void EmitCXXModuleInitFunc(clang::Module *Primary);
+  void EmitCXXModuleInitFunc(const clang::Module *Primary);
 
   /// Emit the function that initializes C++ globals.
   void EmitCXXGlobalInitFunc();
@@ -1715,7 +1715,7 @@ private:
   void emitLLVMUsed();
 
   /// For C++20 Itanium ABI, emit the initializers for the module.
-  void EmitModuleInitializers(clang::Module *Primary);
+  void EmitModuleInitializers(const clang::Module *Primary);
 
   /// Emit the link options introduced by imported modules.
   void EmitModuleLinkOptions();
