@@ -4976,7 +4976,6 @@ cc_library(
         ":VectorToLLVM",
         ":VectorToSCF",
         ":VectorTransformOpsIncGen",
-        ":VectorTransforms",
         ":X86VectorTransforms",
     ],
 )
