@@ -75,11 +75,11 @@ fillInterchangeVector(ArrayRef<int64_t> interchangeVector,
 static LogicalResult
 verifyTileSizeOptions(RewriterBase &rewriter, Location loc,
                       const scf::SCFTilingOptions &options) {
-  // Specifying number of tile is only supported on `scf.forall` op.
+  // Specifying number of threads is only supported on `scf.forall` op.
   if (options.numThreadsComputationFunction &&
       options.loopType != scf::SCFTilingOptions::LoopType::ForallOp) {
     return rewriter.notifyMatchFailure(
-        loc, "number of tiles/threads can only by specified when loop type is "
+        loc, "number of threads can only by specified when loop type is "
              "set to use `scf.forall`");
   }
 
@@ -111,25 +111,27 @@ getTileSizes(RewriterBase &rewriter, TilingInterface op,
     // If the number of tiles is also specified, use that.
     if (options.tileSizeComputationFunction) {
       tileSizes = options.tileSizeComputationFunction(rewriter, op);
-    } else {
-      // Compute the tile sizes from the iteration domain and number
-      // of tiles as follows
-      // - niters = ceilDiv(ub - lb, step)
-      // - tileSize = ceilDiv(niters, numThreads)
-      AffineExpr s0, s1, s2, s3;
-      bindSymbols(rewriter.getContext(), s0, s1, s2, s3);
-      AffineExpr numItersExpr = (s1 - s0).ceilDiv(s2);
-      AffineExpr tileSizeExpr = numItersExpr.ceilDiv(s3);
       tileSizes.resize(numLoops, zero);
-      for (auto [index, range, nt] :
-           llvm::enumerate(iterationDomain, numThreads)) {
-        if (isConstantIntValue(nt, 0))
-          continue;
+      return {tileSizes, numThreads};
+    }
 
-        tileSizes[index] = affine::makeComposedFoldedAffineApply(
-            rewriter, op.getLoc(), tileSizeExpr,
-            {range.offset, range.size, range.stride, nt});
-      }
+    // Compute the tile sizes from the iteration domain and number
+    // of tiles as follows
+    // - niters = ceilDiv(ub - lb, step)
+    // - tileSize = ceilDiv(niters, numThreads)
+    AffineExpr s0, s1, s2, s3;
+    bindSymbols(rewriter.getContext(), s0, s1, s2, s3);
+    AffineExpr numItersExpr = (s1 - s0).ceilDiv(s2);
+    AffineExpr tileSizeExpr = numItersExpr.ceilDiv(s3);
+    tileSizes.resize(numLoops, zero);
+    for (auto [index, range, nt] :
+         llvm::enumerate(iterationDomain, numThreads)) {
+      if (isConstantIntValue(nt, 0))
+        continue;
+
+      tileSizes[index] = affine::makeComposedFoldedAffineApply(
+          rewriter, op.getLoc(), tileSizeExpr,
+          {range.offset, range.size, range.stride, nt});
     }
     tileSizes.resize(numLoops, zero);
     return {tileSizes, numThreads};
@@ -139,9 +141,9 @@ getTileSizes(RewriterBase &rewriter, TilingInterface op,
   // skips tiling a particular dimension. This convention is significantly
   // simpler to handle instead of adjusting affine maps to account for missing
   // dimensions.
-  if (options.tileSizeComputationFunction) {
-    tileSizes = options.tileSizeComputationFunction(rewriter, op);
-  }
+  assert(options.tileSizeComputationFunction &&
+         "expected tile sizes to be specified");
+  tileSizes = options.tileSizeComputationFunction(rewriter, op);
   tileSizes.resize(numLoops, zero);
 
   return {tileSizes, numThreads};
