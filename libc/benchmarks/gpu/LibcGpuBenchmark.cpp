@@ -35,9 +35,15 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   uint64_t cycles_squared = 0;
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
+
+  uint64_t total_overhead_cycles = 0;
+  uint32_t overhead_iterations = 10;
+  for (int i = 0; i < overhead_iterations; i++)
+    total_overhead_cycles += LIBC_NAMESPACE::overhead();
+  uint64_t overhead = total_overhead_cycles / overhead_iterations;
+
   for (uint64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
-    uint64_t overhead = LIBC_NAMESPACE::overhead();
     const clock_t start = static_cast<double>(clock());
     for (uint32_t i = 0; i < iterations; i++) {
       auto wrapper_intermediate = wrapper_func();
