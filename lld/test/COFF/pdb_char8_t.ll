@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: llc -mtriple x86_64-windows-msvc -filetype obj -o %t.obj %s
 ; RUN: lld-link /nodefaultlib /noentry /dll /debug /out:%t.exe /pdb:%t.pdb %t.obj
-; RUN: llvm-pdbutil dump -type-index=0x7c %t.pdb
+; RUN: llvm-pdbutil dump -type-index=0x7c %t.pdb | FileCheck %s
 
 ; CHECK: 0x007C (char8_t) | char8_t
 

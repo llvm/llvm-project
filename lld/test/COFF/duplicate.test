@@ -6,7 +6,7 @@ RUN: not lld-link /out:beta.dll /dll alpha.obj beta.obj alpha.lib 2>&1 | FileChe
 
 CHECK-ALPHA: error: duplicate symbol: f
 CHECK-ALPHA: defined at {{.*}}alpha.obj
-CHECK-APLHA: defined at alpha.dll
+CHECK-ALPHA: defined at alpha.dll
 
 RUN: llc -mtriple x86_64-windows-msvc -filetype obj -o gamma.obj %S/Inputs/gamma.ll
 RUN: not lld-link /out:gamma.exe /subsystem:console /entry:mainCRTStartup gamma.obj alpha.lib 2>&1 | FileCheck %s -check-prefix CHECK-GAMMA
