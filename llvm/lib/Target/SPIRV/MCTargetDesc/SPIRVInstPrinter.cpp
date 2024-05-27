@@ -346,15 +346,13 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     StrStartIndex += numOpsInString;
 
     // Check for final Op of "OpDecorate %x %stringImm %linkageAttribute".
-    if (MI->getOpcode() == SPIRV::OpDecorate) {
-      int64_t Imm = MI->getOperand(1).getImm();
-      if (Imm ==
-          static_cast<unsigned>(Decoration::LinkageAttributes)) {
-        O << ' ';
-        printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
-            MI, StrStartIndex, O);
-        break;
-      }
+    if (MI->getOpcode() == SPIRV::OpDecorate &&
+        MI->getOperand(1).getImm() ==
+            static_cast<unsigned>(Decoration::LinkageAttributes)) {
+      O << ' ';
+      printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
+          MI, StrStartIndex, O);
+      break;
     }
   }
 }
