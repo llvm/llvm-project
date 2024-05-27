@@ -30,7 +30,7 @@ namespace {
 /// Example:
 ///
 /// ```mlir
-/// vector.interleave %a, %b : vector<1x2x3x4xi64>
+/// vector.interleave %a, %b : vector<1x2x3x4xi64> -> vector<1x2x3x8xi64>
 /// ```
 /// Would be unrolled to:
 /// ```mlir
@@ -39,14 +39,15 @@ namespace {
 ///        : vector<4xi64> from vector<1x2x3x4xi64>  |
 /// %1 = vector.extract %b[0, 0, 0]                  |
 ///        : vector<4xi64> from vector<1x2x3x4xi64>  | - Repeated 6x for
-/// %2 = vector.interleave %0, %1 : vector<4xi64>    |   all leading positions
+/// %2 = vector.interleave %0, %1 :                  |   all leading positions
+///        : vector<4xi64> -> vector<8xi64>          |
 /// %3 = vector.insert %2, %result [0, 0, 0]         |
 ///        : vector<8xi64> into vector<1x2x3x8xi64>  ┘
 /// ```
 ///
 /// Note: If any leading dimension before the `targetRank` is scalable the
 /// unrolling will stop before the scalable dimension.
-class UnrollInterleaveOp : public OpRewritePattern<vector::InterleaveOp> {
+class UnrollInterleaveOp final : public OpRewritePattern<vector::InterleaveOp> {
 public:
   UnrollInterleaveOp(int64_t targetRank, MLIRContext *context,
                      PatternBenefit benefit = 1)
@@ -84,7 +85,7 @@ private:
 /// Example:
 ///
 /// ```mlir
-/// vector.interleave %a, %b : vector<7xi16>
+/// vector.interleave %a, %b : vector<7xi16> -> vector<14xi16>
 /// ```
 ///
 /// Is rewritten into:
@@ -93,10 +94,8 @@ private:
 /// vector.shuffle %arg0, %arg1 [0, 7, 1, 8, 2, 9, 3, 10, 4, 11, 5, 12, 6, 13]
 ///   : vector<7xi16>, vector<7xi16>
 /// ```
-class InterleaveToShuffle : public OpRewritePattern<vector::InterleaveOp> {
-public:
-  InterleaveToShuffle(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit) {};
+struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
