@@ -244,29 +244,28 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a3, a2, a1
-; CHECK-NEXT:    vl8re32.v v8, (a3)
-; CHECK-NEXT:    addi a3, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
 ; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vl8re32.v v0, (a0)
-; CHECK-NEXT:    vl8re32.v v8, (a1)
+; CHECK-NEXT:    vl8re32.v v24, (a0)
+; CHECK-NEXT:    vl8re32.v v0, (a1)
+; CHECK-NEXT:    vl8re32.v v16, (a3)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vl8re32.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vv v0, v24, v0
+; CHECK-NEXT:    vadd.vv v24, v8, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vadd.vv v8, v24, v8
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vadd.vv v0, v8, v0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vadd.vv v8, v8, v24
-; CHECK-NEXT:    vadd.vv v24, v0, v16
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vadd.vv v8, v0, v8
+; CHECK-NEXT:    vadd.vv v24, v24, v16
 ; CHECK-NEXT:    vadd.vx v16, v8, a4
 ; CHECK-NEXT:    vadd.vx v8, v24, a4
 ; CHECK-NEXT:    csrr a0, vlenb

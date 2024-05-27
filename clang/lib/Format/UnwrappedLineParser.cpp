@@ -47,7 +47,8 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "["
+       << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -160,13 +161,16 @@ UnwrappedLineParser::UnwrappedLineParser(
     IdentifierTable &IdentTable)
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
       CurrentLines(&Lines), Style(Style), IsCpp(Style.isCpp()),
-      Keywords(Keywords), CommentPragmasRegex(Style.CommentPragmas),
-      Tokens(nullptr), Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
+      LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
+      CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
+      Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
       IncludeGuard(Style.IndentPPDirectives == FormatStyle::PPDIS_None
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
+  assert(IsCpp == LangOpts.CXXOperatorNames);
+}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -1185,12 +1189,6 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (FormatTok->is(tok::identifier) &&
-      Tokens->peekNextToken()->is(tok::colon)) {
-    nextToken();
-    nextToken();
-  }
-
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
   // would be to use the same approach we use on the file level (no
@@ -1410,6 +1408,13 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
       isJSDeclOrStmt(Keywords, Next)) {
     return addUnwrappedLine();
   }
+}
+
+static bool isAltOperator(const FormatToken &Tok) {
+  return isalpha(Tok.TokenText[0]) &&
+         Tok.isOneOf(tok::ampamp, tok::ampequal, tok::amp, tok::pipe,
+                     tok::tilde, tok::exclaim, tok::exclaimequal, tok::pipepipe,
+                     tok::pipeequal, tok::caret, tok::caretequal);
 }
 
 void UnwrappedLineParser::parseStructuralElement(
@@ -1677,7 +1682,8 @@ void UnwrappedLineParser::parseStructuralElement(
     if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
-      Line->Tokens.begin()->Tok->MustBreakBefore = true;
+      if (!Line->InMacroBody || CurrentLines->size() > 1)
+        Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
       parseLabel(!Style.IndentGotoLabels);
       if (HasLabel)
@@ -1690,9 +1696,15 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
-  const bool InRequiresExpression =
-      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-  do {
+  for (const bool InRequiresExpression =
+           OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+       !eof();) {
+    if (IsCpp && isAltOperator(*FormatTok)) {
+      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
+          Next && Next->isBinaryOperator()) {
+        FormatTok->Tok.setKind(tok::identifier);
+      }
+    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -1870,7 +1882,7 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::caret:
       nextToken();
       // Block return type.
-      if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(IsCpp)) {
+      if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
@@ -2123,7 +2135,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-  } while (!eof());
+  }
 }
 
 bool UnwrappedLineParser::tryToParsePropertyAccessor() {
@@ -2231,7 +2243,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName(IsCpp)) {
+    if (FormatTok->isTypeName(LangOpts)) {
       nextToken();
       continue;
     }
@@ -3385,7 +3397,7 @@ void UnwrappedLineParser::parseAccessSpecifier() {
 /// \brief Parses a requires, decides if it is a clause or an expression.
 /// \pre The current token has to be the requires keyword.
 /// \returns true if it parsed a clause.
-bool clang::format::UnwrappedLineParser::parseRequires() {
+bool UnwrappedLineParser::parseRequires() {
   assert(FormatTok->is(tok::kw_requires) && "'requires' expected");
   auto RequiresToken = FormatTok;
 
@@ -3448,7 +3460,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     break;
   }
   default:
-    if (PreviousNonComment->isTypeOrIdentifier(IsCpp)) {
+    if (PreviousNonComment->isTypeOrIdentifier(LangOpts)) {
       // This is a requires clause.
       parseRequiresClause(RequiresToken);
       return true;
@@ -3511,7 +3523,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       --OpenAngles;
       break;
     default:
-      if (NextToken->isTypeName(IsCpp)) {
+      if (NextToken->isTypeName(LangOpts)) {
         FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
@@ -4004,8 +4016,6 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   };
 
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    if (FormatTok->is(tok::colon))
-      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -4013,9 +4023,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
-          IsNonMacroIdentifier(FormatTok->Previous)) {
-        break;
+      if (AngleNestingLevel == 0) {
+        if (FormatTok->is(tok::colon)) {
+          IsDerived = true;
+        } else if (FormatTok->is(tok::l_paren) &&
+                   IsNonMacroIdentifier(FormatTok->Previous)) {
+          break;
+        }
       }
       if (FormatTok->is(tok::l_brace)) {
         if (AngleNestingLevel == 0 && IsListInitialization())
@@ -4027,7 +4041,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (FormatTok->is(tok::l_square)) {
         FormatToken *Previous = FormatTok->Previous;
         if (!Previous || (Previous->isNot(tok::r_paren) &&
-                          !Previous->isTypeOrIdentifier(IsCpp))) {
+                          !Previous->isTypeOrIdentifier(LangOpts))) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())

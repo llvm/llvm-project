@@ -111,7 +111,9 @@ def riscv_ctlz_vl       : SDNode<"RISCVISD::CTLZ_VL",       SDT_RISCVIntUnOp_VL>
 def riscv_cttz_vl       : SDNode<"RISCVISD::CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
 def riscv_ctpop_vl      : SDNode<"RISCVISD::CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
 
+def riscv_avgfloors_vl  : SDNode<"RISCVISD::AVGFLOORS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_avgflooru_vl  : SDNode<"RISCVISD::AVGFLOORU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_avgceils_vl   : SDNode<"RISCVISD::AVGCEILS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_avgceilu_vl   : SDNode<"RISCVISD::AVGCEILU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_saddsat_vl   : SDNode<"RISCVISD::SADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_uaddsat_vl   : SDNode<"RISCVISD::UADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
@@ -634,18 +636,18 @@ class VPatBinaryVL_V<SDPatternOperator vop,
                    (mask_type V0), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
 class VPatBinaryVL_V_RM<SDPatternOperator vop,
-                     string instruction_name,
-                     string suffix,
-                     ValueType result_type,
-                     ValueType op1_type,
-                     ValueType op2_type,
-                     ValueType mask_type,
-                     int log2sew,
-                     LMULInfo vlmul,
-                     VReg result_reg_class,
-                     VReg op1_reg_class,
-                     VReg op2_reg_class,
-                     bit isSEWAware = 0>
+                        string instruction_name,
+                        string suffix,
+                        ValueType result_type,
+                        ValueType op1_type,
+                        ValueType op2_type,
+                        ValueType mask_type,
+                        int log2sew,
+                        LMULInfo vlmul,
+                        VReg result_reg_class,
+                        VReg op1_reg_class,
+                        VReg op2_reg_class,
+                        bit isSEWAware = 0>
     : Pat<(result_type (vop
                        (op1_type op1_reg_class:$rs1),
                        (op2_type op2_reg_class:$rs2),
@@ -2073,19 +2075,19 @@ multiclass VPatSlide1VL_VF<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm> {
+multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
   foreach vti = AllIntegerVectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                      (vti.Vector vti.RegClass:$rs2),
                      vti.RegClass:$merge, (vti.Mask V0), VLOpFrag),
-                (!cast<Instruction>("PseudoVAADDU_VV_"#vti.LMul.MX#"_MASK")
+                (!cast<Instruction>("PseudoVAADD"#suffix#"_VV_"#vti.LMul.MX#"_MASK")
                   vti.RegClass:$merge, vti.RegClass:$rs1, vti.RegClass:$rs2,
                   (vti.Mask V0), vxrm, GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
       def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                      (vti.Vector (SplatPat (XLenVT GPR:$rs2))),
                      vti.RegClass:$merge, (vti.Mask V0), VLOpFrag),
-                (!cast<Instruction>("PseudoVAADDU_VX_"#vti.LMul.MX#"_MASK")
+                (!cast<Instruction>("PseudoVAADD"#suffix#"_VX_"#vti.LMul.MX#"_MASK")
                   vti.RegClass:$merge, vti.RegClass:$rs1, GPR:$rs2,
                   (vti.Mask V0), vxrm, GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
     }
@@ -2369,8 +2371,10 @@ defm : VPatBinaryVL_VV_VX<riscv_ssubsat_vl, "PseudoVSSUB">;
 defm : VPatBinaryVL_VV_VX<riscv_usubsat_vl, "PseudoVSSUBU">;
 
 // 12.2. Vector Single-Width Averaging Add and Subtract
-defm : VPatAVGADDVL_VV_VX_RM<riscv_avgflooru_vl, 0b10>;
-defm : VPatAVGADDVL_VV_VX_RM<riscv_avgceilu_vl, 0b00>;
+defm : VPatAVGADDVL_VV_VX_RM<riscv_avgfloors_vl, 0b10>;
+defm : VPatAVGADDVL_VV_VX_RM<riscv_avgflooru_vl, 0b10, suffix="U">;
+defm : VPatAVGADDVL_VV_VX_RM<riscv_avgceils_vl, 0b00>;
+defm : VPatAVGADDVL_VV_VX_RM<riscv_avgceilu_vl, 0b00, suffix="U">;
 
 // 12.5. Vector Narrowing Fixed-Point Clip Instructions
 multiclass VPatTruncSatClipVL<VTypeInfo vti, VTypeInfo wti> {

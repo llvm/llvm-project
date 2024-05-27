@@ -1,6 +1,9 @@
 // Testing that adding a new line in a module interface unit won't cause the BMI
 // of consuming module unit changes.
 //
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+//
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 %t/A.v1.cppm -emit-reduced-module-interface -o %t/A.v1.pcm
 //

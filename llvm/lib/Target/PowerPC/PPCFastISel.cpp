@@ -2074,16 +2074,15 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
   if (GV->isThreadLocal())
     return 0;
 
-  // If the global has the toc-data attribute then fallback to DAG-ISEL.
-  if (TM.getTargetTriple().isOSAIX())
-    if (const GlobalVariable *Var = dyn_cast_or_null<GlobalVariable>(GV))
-      if (Var->hasAttribute("toc-data"))
-        return false;
-
   PPCFuncInfo->setUsesTOCBasePtr();
+  bool IsAIXTocData = TM.getTargetTriple().isOSAIX() &&
+                      isa<GlobalVariable>(GV) &&
+                      cast<GlobalVariable>(GV)->hasAttribute("toc-data");
+
   // For small code model, generate a simple TOC load.
   if (CModel == CodeModel::Small)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::LDtoc),
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            IsAIXTocData ? TII.get(PPC::ADDItoc8) : TII.get(PPC::LDtoc),
             DestReg)
         .addGlobalAddress(GV)
         .addReg(PPC::X2);
@@ -2101,6 +2100,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
     if (Subtarget->isGVIndirectSymbol(GV)) {
+      assert(!IsAIXTocData && "TOC data should always be direct.");
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
     } else {

@@ -9,6 +9,12 @@
 
 #include <arm_sve.h>
 
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
+
 // CHECK-LABEL: define dso_local <vscale x 32 x i1> @test_svundef2_b(
 // CPP-CHECK-LABEL: define dso_local <vscale x 32 x i1> @_Z15test_svundef2_bv(
 //
@@ -18,7 +24,7 @@
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i1> undef
 //
-svboolx2_t test_svundef2_b() {
+svboolx2_t test_svundef2_b(void) MODE_ATTR {
     return svundef2_b();
 }
 
@@ -31,6 +37,6 @@ svboolx2_t test_svundef2_b() {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i1> undef
 //
-svboolx4_t test_svundef4_b() {
+svboolx4_t test_svundef4_b(void) MODE_ATTR {
     return svundef4_b();
 }

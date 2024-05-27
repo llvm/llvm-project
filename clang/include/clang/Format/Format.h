@@ -5239,7 +5239,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
 /// Returns the replacements corresponding to applying and formatting
 /// \p Replaces on success; otheriwse, return an llvm::Error carrying
 /// llvm::StringError.
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
                    const FormatStyle &Style);
 
@@ -5256,7 +5256,7 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// The include manipulation is done via ``tooling::HeaderInclude``, see its
 /// documentation for more details on how include insertion points are found and
 /// what edits are produced.
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 
@@ -5381,11 +5381,10 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                                     StringRef FallbackStyle,
-                                     StringRef Code = "",
-                                     llvm::vfs::FileSystem *FS = nullptr,
-                                     bool AllowUnknownOptions = false);
+Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
+                               StringRef FallbackStyle, StringRef Code = "",
+                               llvm::vfs::FileSystem *FS = nullptr,
+                               bool AllowUnknownOptions = false);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.

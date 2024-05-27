@@ -179,6 +179,12 @@ public:
         VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
+  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+                            const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
+  }
+
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
                         DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
