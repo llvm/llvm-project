@@ -48,7 +48,9 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
     IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
     EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
-    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize)
+    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
+    NonBindCInteroperability, CudaManaged, CudaUnified,
+    PolymorphicActualAllocatableOrPointerToMonomorphicDummy)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -80,6 +82,8 @@ public:
     disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
     disable_.set(LanguageFeature::CUDA); // !@cuf
+    disable_.set(LanguageFeature::CudaManaged);
+    disable_.set(LanguageFeature::CudaUnified);
     disable_.set(LanguageFeature::ImplicitNoneTypeNever);
     disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
     disable_.set(LanguageFeature::DefaultSave);

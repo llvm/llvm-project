@@ -16,9 +16,7 @@
 define float @test_atomicrmw_xchg_f32_global_system(ptr addrspace(1) %ptr, float %value) {
 ; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
-; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
-; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4
 ; COMMON-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst
@@ -29,9 +27,7 @@ define float @test_atomicrmw_xchg_f32_global_system(ptr addrspace(1) %ptr, float
 define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, float %value) {
 ; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
-; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
-; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
 ; COMMON-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -42,9 +38,7 @@ define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memo
 define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
 ; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
-; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
-; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
@@ -55,9 +49,7 @@ define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_remote_memory(ptr
 define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
 ; COMMON-LABEL: define float @test_atomicrmw_xchg_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = bitcast float [[VALUE]] to i32
-; COMMON-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i32 [[TMP1]] seq_cst, align 4
-; COMMON-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP2]] to float
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw xchg ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -268,7 +260,7 @@ define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memo
 ;
 ; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_system__amdgpu_no_fine_grained_memory(
@@ -3713,5 +3705,19 @@ attributes #1 = { "denormal-fp-mode-f32"="dynamic,dynamic" }
 
 !0 = !{}
 ;.
+; GFX803: [[META0]] = !{}
+;.
+; GFX906: [[META0]] = !{}
+;.
+; GFX908: [[META0]] = !{}
+;.
+; GFX90A: [[META0]] = !{}
+;.
 ; GFX940: [[META0]] = !{}
+;.
+; GFX10: [[META0]] = !{}
+;.
+; GFX11: [[META0]] = !{}
+;.
+; GFX12: [[META0]] = !{}
 ;.

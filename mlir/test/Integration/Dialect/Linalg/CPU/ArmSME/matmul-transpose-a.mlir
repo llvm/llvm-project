@@ -61,7 +61,7 @@ module attributes {transform.with_named_sequence} {
 
     // Step 1: Tile for size [4] x [4], which corresponds to SVLs x SVLs, where
     //         SVLs is the number of 32-bit elements in a vector of SVL bits.
-    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul_transpose_a[[4], [4], 1]
+    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul_transpose_a tile_sizes [[4], [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize.

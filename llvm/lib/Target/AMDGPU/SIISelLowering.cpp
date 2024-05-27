@@ -225,18 +225,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::bf16, Promote);
     AddPromotedToType(ISD::SELECT, MVT::bf16, MVT::i16);
 
-    // TODO: Could make these legal
-    setOperationAction(ISD::FABS, MVT::bf16, Expand);
-    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+    setOperationAction(ISD::FABS, MVT::bf16, Legal);
+    setOperationAction(ISD::FNEG, MVT::bf16, Legal);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Legal);
 
     // We only need to custom lower because we can't specify an action for bf16
     // sources.
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
-
-    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, MVT::v2bf16, MVT::v2i16);
   }
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
@@ -745,9 +741,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v8i32, Expand);
 
-    if (!Subtarget->hasVOP3PInsts())
-      setOperationAction(ISD::BUILD_VECTOR,
-                         {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
+                       Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
     setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
@@ -854,9 +849,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax())
+  if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
@@ -877,6 +876,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   setOperationAction(ISD::GET_FPENV, MVT::i64, Custom);
   setOperationAction(ISD::SET_FPENV, MVT::i64, Custom);
 
@@ -955,6 +955,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
 const GCNSubtarget *SITargetLowering::getSubtarget() const {
   return Subtarget;
+}
+
+ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
+  return RCRegs;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1233,13 +1238,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
       switch (IntrID) {
       default:
+        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
         // XXX - Should this be volatile without known ordering?
         Info.flags |= MachineMemOperand::MOVolatile;
         break;
@@ -2976,12 +2981,20 @@ SDValue SITargetLowering::LowerFormalArguments(
                                    DL, Elts);
           }
 
-          SDValue CMemVT;
-          if (VT.isScalarInteger() && VT.bitsLT(NewArg.getSimpleValueType()))
-            CMemVT = DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewArg);
-          else
-            CMemVT = DAG.getBitcast(MemVT, NewArg);
-          NewArg = convertArgType(DAG, VT, MemVT, DL, CMemVT,
+          // If the argument was preloaded to multiple consecutive 32-bit
+          // registers because of misalignment between addressable SGPR tuples
+          // and the argument size, we can still assume that because of kernarg
+          // segment alignment restrictions that NewArg's size is the same as
+          // MemVT and just do a bitcast. If MemVT is less than 32-bits we add a
+          // truncate since we cannot preload to less than a single SGPR and the
+          // MemVT may be smaller.
+          EVT MemVTInt =
+              EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+          if (MemVT.bitsLT(NewArg.getSimpleValueType()))
+            NewArg = DAG.getNode(ISD::TRUNCATE, DL, MemVTInt, NewArg);
+
+          NewArg = DAG.getBitcast(MemVT, NewArg);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, NewArg,
                                   Ins[i].Flags.isSExt(), &Ins[i]);
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
@@ -3859,19 +3872,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InGlue.getNode())
-    Ops.push_back(InGlue);
-
-  // NOTE: This potentially results in *two* glue operands, and the wrong one
-  // might possibly show up where the other was intended. In particular,
-  // Emitter::EmitMachineNode() expects only the glued convergence token if it
-  // exists. Similarly, the selection of the call expects to match only the
-  // InGlue operand if it exists.
   if (SDValue Token = CLI.ConvergenceControlToken) {
-    Ops.push_back(SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE,
-                                             DL, MVT::Glue, Token),
-                          0));
+    SmallVector<SDValue, 2> GlueOps;
+    GlueOps.push_back(Token);
+    if (InGlue)
+      GlueOps.push_back(InGlue);
+
+    InGlue = SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE, DL,
+                                        MVT::Glue, GlueOps),
+                     0);
   }
+
+  if (InGlue)
+    Ops.push_back(InGlue);
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
@@ -4057,6 +4070,91 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
                                TableEntry, EnumOffset);
 
   return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
+}
+
+SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+
+  SDValue NewMode = Op.getOperand(1);
+  assert(NewMode.getValueType() == MVT::i32);
+
+  // Index a table of 4-bit entries mapping from the C FLT_ROUNDS values to the
+  // hardware MODE.fp_round values.
+  if (auto *ConstMode = dyn_cast<ConstantSDNode>(NewMode)) {
+    uint32_t ClampedVal = std::min(
+        static_cast<uint32_t>(ConstMode->getZExtValue()),
+        static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
+    NewMode = DAG.getConstant(
+        AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal), SL, MVT::i32);
+  } else {
+    // If we know the input can only be one of the supported standard modes in
+    // the range 0-3, we can use a simplified mapping to hardware values.
+    KnownBits KB = DAG.computeKnownBits(NewMode);
+    const bool UseReducedTable = KB.countMinLeadingZeros() >= 30;
+    // The supported standard values are 0-3. The extended values start at 8. We
+    // need to offset by 4 if the value is in the extended range.
+
+    if (UseReducedTable) {
+      // Truncate to the low 32-bits.
+      SDValue BitTable = DAG.getConstant(
+          AMDGPU::FltRoundToHWConversionTable & 0xffff, SL, MVT::i32);
+
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
+
+      NewMode =
+          DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
+
+      // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
+      // the table extracted bits into inline immediates.
+    } else {
+      // table_index = umin(value, value - 4)
+      // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+      SDValue BitTable =
+          DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
+
+      SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+      SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
+      SDValue IndexVal =
+          DAG.getNode(ISD::UMIN, SL, MVT::i32, NewMode, OffsetEnum);
+
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+
+      SDValue TableValue =
+          DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+      SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+
+      // No need to mask out the high bits since the setreg will ignore them
+      // anyway.
+      NewMode = TruncTable;
+    }
+
+    // Insert a readfirstlane in case the value is a VGPR. We could do this
+    // earlier and keep more operations scalar, but that interferes with
+    // combining the source.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, SL, MVT::i32);
+    NewMode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                          ReadFirstLaneID, NewMode);
+  }
+
+  // N.B. The setreg will be later folded into s_round_mode on supported
+  // targets.
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_setreg, SL, MVT::i32);
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  SDValue RoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
+
+  SDValue SetReg =
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, Op->getVTList(), Op.getOperand(0),
+                  IntrinID, RoundBothImm, NewMode);
+
+  return SetReg;
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
@@ -5735,6 +5833,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -5754,6 +5854,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return lowerSET_ROUNDING(Op, DAG);
   case ISD::PREFETCH:
     return lowerPREFETCH(Op, DAG);
   case ISD::FP_EXTEND:
@@ -5860,16 +5962,10 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
   assert(M->getNumValues() == 2 || M->getNumValues() == 3);
   bool IsTFE = M->getNumValues() == 3;
 
-  unsigned Opc;
-  if (IsFormat) {
-    Opc = IsTFE ? AMDGPUISD::BUFFER_LOAD_FORMAT_TFE
-                : AMDGPUISD::BUFFER_LOAD_FORMAT;
-  } else {
-    // TODO: Support non-format TFE loads.
-    if (IsTFE)
-      return SDValue();
-    Opc = AMDGPUISD::BUFFER_LOAD;
-  }
+  unsigned Opc = IsFormat ? (IsTFE ? AMDGPUISD::BUFFER_LOAD_FORMAT_TFE
+                                   : AMDGPUISD::BUFFER_LOAD_FORMAT)
+                 : IsTFE  ? AMDGPUISD::BUFFER_LOAD_TFE
+                          : AMDGPUISD::BUFFER_LOAD;
 
   if (IsD16) {
     return adjustLoadValueType(AMDGPUISD::BUFFER_LOAD_FORMAT_D16, M, DAG, Ops);
@@ -5877,7 +5973,8 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 
   // Handle BUFFER_LOAD_BYTE/UBYTE/SHORT/USHORT overloaded intrinsics
   if (!IsD16 && !LoadVT.isVector() && EltType.getSizeInBits() < 32)
-    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M->getMemOperand());
+    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M->getMemOperand(),
+                                      IsTFE);
 
   if (isTypeLegal(LoadVT)) {
     return getMemIntrinsicNode(Opc, DL, M->getVTList(), Ops, IntVT,
@@ -6964,7 +7061,7 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
                                DAG.getSplatBuildVector(VecVT, SL, InsVal));
 
-  // 2. Mask off all other indicies except the required index within (1).
+  // 2. Mask off all other indices except the required index within (1).
   SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, BFM, ExtVal);
 
   // 3. Mask off the required index within the target vector.
@@ -7491,8 +7588,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
                           ? (ReqRetNumElts + 1) / 2
                           : ReqRetNumElts;
 
-  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    DMaskPop : (DMaskPop + 1) / 2;
+  int MaskPopDwords = (!IsD16 || Unpacked) ? DMaskPop : (DMaskPop + 1) / 2;
 
   MVT DataDwordVT = NumDataDwords == 1 ?
     MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
@@ -10071,11 +10167,30 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
 }
 
 // Handle 8 bit and 16 bit buffer loads
-SDValue
-SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT,
-                                             SDLoc DL, ArrayRef<SDValue> Ops,
-                                             MachineMemOperand *MMO) const {
+SDValue SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG,
+                                                     EVT LoadVT, SDLoc DL,
+                                                     ArrayRef<SDValue> Ops,
+                                                     MachineMemOperand *MMO,
+                                                     bool IsTFE) const {
   EVT IntVT = LoadVT.changeTypeToInteger();
+
+  if (IsTFE) {
+    unsigned Opc = (LoadVT.getScalarType() == MVT::i8)
+                       ? AMDGPUISD::BUFFER_LOAD_UBYTE_TFE
+                       : AMDGPUISD::BUFFER_LOAD_USHORT_TFE;
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *OpMMO = MF.getMachineMemOperand(MMO, 0, 8);
+    SDVTList VTs = DAG.getVTList(MVT::v2i32, MVT::Other);
+    SDValue Op = getMemIntrinsicNode(Opc, DL, VTs, Ops, MVT::v2i32, OpMMO, DAG);
+    SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                                 DAG.getConstant(1, DL, MVT::i32));
+    SDValue Data = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                               DAG.getConstant(0, DL, MVT::i32));
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Data);
+    SDValue Value = DAG.getNode(ISD::BITCAST, DL, LoadVT, Trunc);
+    return DAG.getMergeValues({Value, Status, SDValue(Op.getNode(), 1)}, DL);
+  }
+
   unsigned Opc = (LoadVT.getScalarType() == MVT::i8) ?
          AMDGPUISD::BUFFER_LOAD_UBYTE : AMDGPUISD::BUFFER_LOAD_USHORT;
 
@@ -11977,11 +12092,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
     auto VecIdx = IdxOp->getZExtValue();
     auto ScalarSize = Op.getScalarValueSizeInBits();
-    if (ScalarSize != 32) {
+    if (ScalarSize < 32)
       Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
-    }
-
-    return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
+    return calculateSrcByte(ScalarSize >= 32 ? Op : Op.getOperand(0),
                             StartingIndex, Index);
   }
 
@@ -13100,6 +13213,33 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   return SDValue();
 }
 
+/// \return true if the subtarget supports minimum3 and maximum3 with the given
+/// base min/max opcode \p Opc for type \p VT.
+static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
+                             EVT VT) {
+  switch (Opc) {
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXNUM_IEEE:
+  case AMDGPUISD::FMIN_LEGACY:
+  case AMDGPUISD::FMAX_LEGACY:
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return (VT == MVT::f32 || VT == MVT::f16) && Subtarget.hasIEEEMinMax3();
+  case ISD::SMAX:
+  case ISD::SMIN:
+  case ISD::UMAX:
+  case ISD::UMIN:
+    return (VT == MVT::i32) || (VT == MVT::i16 && Subtarget.hasMin3Max3_16());
+  default:
+    return false;
+  }
+
+  llvm_unreachable("not a min/max opcode");
+}
+
 SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -13112,10 +13252,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // Only do this if the inner op has one use since this will just increases
   // register pressure for no benefit.
 
-  if (Opc != AMDGPUISD::FMIN_LEGACY && Opc != AMDGPUISD::FMAX_LEGACY &&
-      !VT.isVector() &&
-      (VT == MVT::i32 || VT == MVT::f32 ||
-       ((VT == MVT::f16 || VT == MVT::i16) && Subtarget->hasMin3Max3_16()))) {
+  if (supportsMin3Max3(*Subtarget, Opc, VT)) {
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {

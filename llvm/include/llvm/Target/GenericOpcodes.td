@@ -988,6 +988,13 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point tangent of a value.
+def G_FTAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point square root of a value.
 // This returns NaN for negative nonzero values.
 // NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's

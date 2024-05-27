@@ -359,15 +359,18 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
       PHINode::Create(Int32Ty, 2, PN->getName() + ".int", PN->getIterator());
   NewPHI->addIncoming(ConstantInt::get(Int32Ty, InitValue),
                       PN->getIncomingBlock(IncomingEdge));
+  NewPHI->setDebugLoc(PN->getDebugLoc());
 
-  Value *NewAdd =
+  Instruction *NewAdd =
       BinaryOperator::CreateAdd(NewPHI, ConstantInt::get(Int32Ty, IncValue),
                                 Incr->getName() + ".int", Incr->getIterator());
+  NewAdd->setDebugLoc(Incr->getDebugLoc());
   NewPHI->addIncoming(NewAdd, PN->getIncomingBlock(BackEdge));
 
   ICmpInst *NewCompare =
       new ICmpInst(TheBr->getIterator(), NewPred, NewAdd,
                    ConstantInt::get(Int32Ty, ExitValue), Compare->getName());
+  NewCompare->setDebugLoc(Compare->getDebugLoc());
 
   // In the following deletions, PN may become dead and may be deleted.
   // Use a WeakTrackingVH to observe whether this happens.
@@ -391,8 +394,9 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // We give preference to sitofp over uitofp because it is faster on most
   // platforms.
   if (WeakPH) {
-    Value *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
-                                 PN->getParent()->getFirstInsertionPt());
+    Instruction *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
+                                       PN->getParent()->getFirstInsertionPt());
+    Conv->setDebugLoc(PN->getDebugLoc());
     PN->replaceAllUsesWith(Conv);
     RecursivelyDeleteTriviallyDeadInstructions(PN, TLI, MSSAU.get());
   }

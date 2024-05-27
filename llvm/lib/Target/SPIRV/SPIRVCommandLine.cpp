@@ -47,6 +47,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_bit_instructions},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_INTEL_inline_assembly",
+         SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",
@@ -55,6 +57,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_INTEL_variable_length_array},
         {"SPV_INTEL_function_pointers",
          SPIRV::Extension::Extension::SPV_INTEL_function_pointers},
+        {"SPV_KHR_shader_clock",
+         SPIRV::Extension::Extension::SPV_KHR_shader_clock},
 };
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,

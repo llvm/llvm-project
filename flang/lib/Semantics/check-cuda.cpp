@@ -463,6 +463,46 @@ static int DoConstructTightNesting(
   return 1;
 }
 
+static void CheckReduce(
+    SemanticsContext &context, const parser::CUFReduction &reduce) {
+  auto op{std::get<parser::CUFReduction::Operator>(reduce.t).v};
+  for (const auto &var :
+      std::get<std::list<parser::Scalar<parser::Variable>>>(reduce.t)) {
+    if (const auto &typedExprPtr{var.thing.typedExpr};
+        typedExprPtr && typedExprPtr->v) {
+      const auto &expr{*typedExprPtr->v};
+      if (auto type{expr.GetType()}) {
+        auto cat{type->category()};
+        bool isOk{false};
+        switch (op) {
+        case parser::AccReductionOperator::Operator::Plus:
+        case parser::AccReductionOperator::Operator::Multiply:
+        case parser::AccReductionOperator::Operator::Max:
+        case parser::AccReductionOperator::Operator::Min:
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          break;
+        case parser::AccReductionOperator::Operator::Iand:
+        case parser::AccReductionOperator::Operator::Ior:
+        case parser::AccReductionOperator::Operator::Ieor:
+          isOk = cat == TypeCategory::Integer;
+          break;
+        case parser::AccReductionOperator::Operator::And:
+        case parser::AccReductionOperator::Operator::Or:
+        case parser::AccReductionOperator::Operator::Eqv:
+        case parser::AccReductionOperator::Operator::Neqv:
+          isOk = cat == TypeCategory::Logical;
+          break;
+        }
+        if (!isOk) {
+          context.Say(var.thing.GetSource(),
+              "!$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type %s"_err_en_US,
+              type->AsFortran());
+        }
+      }
+    }
+  }
+}
+
 void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   auto source{std::get<parser::CUFKernelDoConstruct::Directive>(x.t).source};
   const auto &directive{std::get<parser::CUFKernelDoConstruct::Directive>(x.t)};
@@ -488,6 +528,10 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
+  }
+  for (const auto &reduce :
+      std::get<std::list<parser::CUFReduction>>(directive.t)) {
+    CheckReduce(context_, reduce);
   }
 }
 

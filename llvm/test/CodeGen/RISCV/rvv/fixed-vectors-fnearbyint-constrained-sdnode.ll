@@ -19,9 +19,9 @@ define <2 x half> @nearbyint_v2f16(<2 x half> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <2 x half> @llvm.experimental.constrained.nearbyint.v2f16(<2 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x half> %r
@@ -42,9 +42,9 @@ define <4 x half> @nearbyint_v4f16(<4 x half> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <4 x half> @llvm.experimental.constrained.nearbyint.v4f16(<4 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x half> %r
@@ -65,9 +65,9 @@ define <8 x half> @nearbyint_v8f16(<8 x half> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <8 x half> @llvm.experimental.constrained.nearbyint.v8f16(<8 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x half> %r
@@ -88,9 +88,9 @@ define <16 x half> @nearbyint_v16f16(<16 x half> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <16 x half> @llvm.experimental.constrained.nearbyint.v16f16(<16 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <16 x half> %r
@@ -112,9 +112,9 @@ define <32 x half> @nearbyint_v32f16(<32 x half> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <32 x half> @llvm.experimental.constrained.nearbyint.v32f16(<32 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <32 x half> %r
@@ -135,9 +135,9 @@ define <2 x float> @nearbyint_v2f32(<2 x float> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <2 x float> @llvm.experimental.constrained.nearbyint.v2f32(<2 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x float> %r
@@ -158,9 +158,9 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x float> %r
@@ -181,9 +181,9 @@ define <8 x float> @nearbyint_v8f32(<8 x float> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <8 x float> @llvm.experimental.constrained.nearbyint.v8f32(<8 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x float> %r
@@ -204,9 +204,9 @@ define <16 x float> @nearbyint_v16f32(<16 x float> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <16 x float> @llvm.experimental.constrained.nearbyint.v16f32(<16 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <16 x float> %r
@@ -227,9 +227,9 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x double> %r
@@ -250,9 +250,9 @@ define <4 x double> @nearbyint_v4f64(<4 x double> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x double> %r
@@ -273,9 +273,9 @@ define <8 x double> @nearbyint_v8f64(<8 x double> %v) strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
+; CHECK-NEXT:    fsflags a0
 ; CHECK-NEXT:    ret
   %r = call <8 x double> @llvm.experimental.constrained.nearbyint.v8f64(<8 x double> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x double> %r

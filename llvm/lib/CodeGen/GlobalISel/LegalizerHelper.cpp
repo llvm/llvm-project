@@ -69,8 +69,9 @@ getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
     unsigned EltSize = OrigTy.getScalarSizeInBits();
     if (LeftoverSize % EltSize != 0)
       return {-1, -1};
-    LeftoverTy = LLT::scalarOrVector(
-        ElementCount::getFixed(LeftoverSize / EltSize), EltSize);
+    LeftoverTy =
+        LLT::scalarOrVector(ElementCount::getFixed(LeftoverSize / EltSize),
+                            OrigTy.getElementType());
   } else {
     LeftoverTy = LLT::scalar(LeftoverSize);
   }
@@ -212,7 +213,7 @@ void LegalizerHelper::mergeMixedSubvectors(Register DstReg,
     appendVectorElts(AllElts, PartRegs[i]);
 
   Register Leftover = PartRegs[PartRegs.size() - 1];
-  if (MRI.getType(Leftover).isScalar())
+  if (!MRI.getType(Leftover).isVector())
     AllElts.push_back(Leftover);
   else
     appendVectorElts(AllElts, Leftover);
@@ -1295,7 +1296,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
-
+  case TargetOpcode::G_CONSTANT_FOLD_BARRIER:
   case TargetOpcode::G_FREEZE: {
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -1309,7 +1310,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     SmallVector<Register, 8> Parts;
     for (unsigned i = 0; i < Unmerge->getNumDefs(); ++i) {
       Parts.push_back(
-          MIRBuilder.buildFreeze(NarrowTy, Unmerge.getReg(i)).getReg(0));
+          MIRBuilder.buildInstr(MI.getOpcode(), {NarrowTy}, {Unmerge.getReg(i)})
+              .getReg(0));
     }
 
     MIRBuilder.buildMergeLikeInstr(MI.getOperand(0).getReg(), Parts);
@@ -2514,6 +2516,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_FREEZE:
+  case TargetOpcode::G_CONSTANT_FOLD_BARRIER:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
     widenScalarDst(MI, WideTy);
@@ -3969,7 +3972,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     // target can override this with custom lowering and calling the
     // implementation functions.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (LI.isLegalOrCustom({G_UMIN, Ty}))
+    if (LI.isLegalOrCustom({G_UMIN, Ty}) && LI.isLegalOrCustom({G_UMAX, Ty}))
       return lowerAddSubSatToMinMax(MI);
     return lowerAddSubSatToAddoSubo(MI);
   }

@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64GlobalISelUtils.h"
+#include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "GISel/AArch64LegalizerInfo.h"
@@ -77,50 +78,6 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
-/// Check if a vector shuffle corresponds to a REV instruction with the
-/// specified blocksize.
-bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
-               unsigned BlockSize) {
-  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
-         "Only possible block sizes for REV are: 16, 32, 64");
-  assert(EltSize != 64 && "EltSize cannot be 64 for REV mask.");
-
-  unsigned BlockElts = M[0] + 1;
-
-  // If the first shuffle index is UNDEF, be optimistic.
-  if (M[0] < 0)
-    BlockElts = BlockSize / EltSize;
-
-  if (BlockSize <= EltSize || BlockSize != BlockElts * EltSize)
-    return false;
-
-  for (unsigned i = 0; i < NumElts; ++i) {
-    // Ignore undef indices.
-    if (M[i] < 0)
-      continue;
-    if (static_cast<unsigned>(M[i]) !=
-        (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
-      return false;
-  }
-
-  return true;
-}
-
-/// Determines if \p M is a shuffle vector mask for a TRN of \p NumElts.
-/// Whether or not G_TRN1 or G_TRN2 should be used is stored in \p WhichResult.
-bool isTRNMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && static_cast<unsigned>(M[i]) != i + WhichResult) ||
-        (M[i + 1] >= 0 &&
-         static_cast<unsigned>(M[i + 1]) != i + NumElts + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
 std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
@@ -161,38 +118,6 @@ std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
   else
     Imm -= NumElts;
   return std::make_pair(ReverseExt, Imm);
-}
-
-/// Determines if \p M is a shuffle vector mask for a UZP of \p NumElts.
-/// Whether or not G_UZP1 or G_UZP2 should be used is stored in \p WhichResult.
-bool isUZPMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    // Skip undef indices.
-    if (M[i] < 0)
-      continue;
-    if (static_cast<unsigned>(M[i]) != 2 * i + WhichResult)
-      return false;
-  }
-  return true;
-}
-
-/// \return true if \p M is a zip mask for a shuffle vector of \p NumElts.
-/// Whether or not G_ZIP1 or G_ZIP2 should be used is stored in \p WhichResult.
-bool isZipMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  if (NumElts % 2 != 0)
-    return false;
-
-  // 0 means use ZIP1, 1 means use ZIP2.
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && static_cast<unsigned>(M[i]) != Idx) ||
-        (M[i + 1] >= 0 && static_cast<unsigned>(M[i + 1]) != Idx + NumElts))
-      return false;
-    Idx += 1;
-  }
-  return true;
 }
 
 /// Helper function for matchINS.
@@ -308,7 +233,7 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZipMask(ShuffleMask, NumElts, WhichResult))
+  if (!isZIPMask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
   Register V1 = MI.getOperand(1).getReg();

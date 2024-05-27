@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck -check-prefix=CHECK32 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-cpu core2 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu core2 %s -emit-llvm -o - | FileCheck -check-prefix=CHECK32 %s
 
 // CHECK-LABEL: define dso_local x86_fp80 @testinc(
 // CHECK-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0:[0-9]+]] {
