@@ -57,7 +57,9 @@ void mlir::math::populateLegalizeToF32TypeConverter(
   });
   typeConverter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        return b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        extFOp->setAttr("eliminatable", b.getBoolAttr(true));
+        return extFOp;
       });
 }
 
@@ -84,8 +86,11 @@ LogicalResult LegalizeToF32RewritePattern::matchAndRewrite(
   SmallVector<Value> results = (*legalized)->getResults();
   for (auto [result, newType, origType] : llvm::zip_equal(
            results, (*legalized)->getResultTypes(), op->getResultTypes())) {
-    if (newType != origType)
-      result = rewriter.create<arith::TruncFOp>(loc, origType, result);
+    if (newType != origType) {
+      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, origType, result);
+      truncFOp->setAttr("eliminatable", rewriter.getBoolAttr(true));
+      result = truncFOp->getResults().front();
+    }
   }
   rewriter.replaceOp(op, results);
   return success();

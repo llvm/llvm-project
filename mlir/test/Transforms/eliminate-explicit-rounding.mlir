@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file -math-legalize-to-f32 --arith-emulate-unsupported-floats="source-types=bf16 target-type=f32" -math-canonicalize-f32-promotion | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -math-legalize-to-f32 --arith-emulate-unsupported-floats="source-types=bf16 target-type=f32" -eliminate-explicit-rounding | FileCheck %s
 
 // CHECK-LABEL: @sequences
 // CHECK-SAME: ([[ARG0:%.+]]: bf16)
