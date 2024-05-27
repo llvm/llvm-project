@@ -22,8 +22,10 @@
 
 template <typename T>
 void check_always_lock_free(std::atomic_ref<T> const& a) {
-  if (is_lock_free_status_known<T>()) {
-    constexpr LockFreeStatus known_status = get_known_atomic_lock_free_status<T>();
+  using InfoT = LockFreeStatusInfo<T>;
+
+  if (InfoT::status_known) {
+    constexpr LockFreeStatus known_status = InfoT::value;
 
     static_assert(std::atomic_ref<T>::is_always_lock_free == (known_status == LockFreeStatus::always),
                   "is_always_lock_free is inconsistent with known lock-free status");

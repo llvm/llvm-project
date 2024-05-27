@@ -49,12 +49,24 @@ constexpr bool msvc_is_lock_free_macro_value() {
 #else
 #  error "Unknown compiler"
 #endif
-enum class LockFreeStatus { unknown = -1, never = 0, sometimes = 1, always = 2 };
-#define COMPARE_TYPES(T1, T2) (sizeof(T1) == sizeof(T2) && alignof(T1) >= alignof(T2))
+
+// The entire LockFreeStatus/LockFreeStatusEnum/LockFreeStatusType exists entirely to work around the support
+// for C++03, which many of our atomic tests run under. This is a bit of a hack, but it's the best we can do.
+//
+// We could limit the testing involving these things to C++11 or greater? But test coverage in C++03 seems important too.
+#if TEST_STD_VER < 11
+struct LockFreeStatusEnum {
+  enum LockFreeStatus { unknown = -1, never = 0, sometimes = 1, always = 2 };
+};
+typedef LockFreeStatusEnum::LockFreeStatus LockFreeStatus;
+#else
+enum class LockFreeStatus : int { unknown = -1, never = 0, sometimes = 1, always = 2 };
+#endif
+#define COMPARE_TYPES(T1, T2) (sizeof(T1) == sizeof(T2) && TEST_ALIGNOF(T1) >= TEST_ALIGNOF(T2))
 
 template <class T>
-constexpr inline LockFreeStatus get_known_atomic_lock_free_status() {
-  return LockFreeStatus{
+struct LockFreeStatusInfo {
+  static const LockFreeStatus value = LockFreeStatus(
       COMPARE_TYPES(T, char)
           ? TEST_ATOMIC_CHAR_LOCK_FREE
           : (COMPARE_TYPES(T, short)
@@ -65,20 +77,23 @@ constexpr inline LockFreeStatus get_known_atomic_lock_free_status() {
                                ? TEST_ATOMIC_LONG_LOCK_FREE
                                : (COMPARE_TYPES(T, long long)
                                       ? TEST_ATOMIC_LLONG_LOCK_FREE
-                                      : (COMPARE_TYPES(T, void*) ? TEST_ATOMIC_POINTER_LOCK_FREE : -1)))))};
-}
+                                      : (COMPARE_TYPES(T, void*) ? TEST_ATOMIC_POINTER_LOCK_FREE : -1))))));
 
-template <class T>
-constexpr bool is_lock_free_status_known() {
-  return get_known_atomic_lock_free_status<T>() != LockFreeStatus::unknown;
-}
+  static const bool status_known = value != LockFreeStatus::unknown;
+};
 
-static_assert(is_lock_free_status_known<char>(), "");
-static_assert(is_lock_free_status_known<short>(), "");
-static_assert(is_lock_free_status_known<int>(), "");
-static_assert(is_lock_free_status_known<long>(), "");
-static_assert(is_lock_free_status_known<long long>(), "");
-static_assert(is_lock_free_status_known<void*>(), "");
+static_assert(LockFreeStatusInfo<char>::status_known, "");
+static_assert(LockFreeStatusInfo<short>::status_known, "");
+static_assert(LockFreeStatusInfo<int>::status_known, "");
+static_assert(LockFreeStatusInfo<long>::status_known, "");
+static_assert(LockFreeStatusInfo<long long>::status_known, "");
+static_assert(LockFreeStatusInfo<void*>::status_known, "");
+
+// I think these are always supposed to be lock free, and it's worth trying to hardcode expected values.
+static_assert(LockFreeStatusInfo<char>::value == LockFreeStatus::always, "");
+static_assert(LockFreeStatusInfo<short>::value == LockFreeStatus::always, "");
+static_assert(LockFreeStatusInfo<int>::value == LockFreeStatus::always,
+              ""); // This one may not always be lock free, but we'll let the CI decide.
 
 // These macros are somewhat suprising to use, since they take the values 0, 1, or 2.
 // To make the tests clearer, get rid of them in preference of AtomicInfo.
