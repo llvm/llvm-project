@@ -247,13 +247,100 @@ constexpr bool testComplexityParameterizedIterPermutateIn1In2() {
   return true;
 }
 
+constexpr bool testComplexityBasic() {
+  // Complexity: At most 2 * ((last1 - first1) + (last2 - first2)) - 1 comparisons and applications of each projection.
+  std::array<Data, 5> r1{{{1}, {3}, {5}, {7}, {9}}};
+  std::array<Data, 5> r2{{{2}, {4}, {6}, {8}, {10}}};
+  std::array<int, 0> expected{};
+
+  const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
+
+  // std::set_intersection
+  {
+    std::array<Data, 0> out{};
+    std::size_t numberOfComp = 0;
+
+    const auto comp = [&numberOfComp](int x, int y) {
+      ++numberOfComp;
+      return x < y;
+    };
+
+    std::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp);
+
+    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(numberOfComp <= maxOperation);
+  }
+
+  // ranges::set_intersection iterator overload
+  {
+    std::array<Data, 0> out{};
+    std::size_t numberOfComp  = 0;
+    std::size_t numberOfProj1 = 0;
+    std::size_t numberOfProj2 = 0;
+
+    const auto comp = [&numberOfComp](int x, int y) {
+      ++numberOfComp;
+      return x < y;
+    };
+
+    const auto proj1 = [&numberOfProj1](const Data& d) {
+      ++numberOfProj1;
+      return d.data;
+    };
+
+    const auto proj2 = [&numberOfProj2](const Data& d) {
+      ++numberOfProj2;
+      return d.data;
+    };
+
+    std::ranges::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp, proj1, proj2);
+
+    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(numberOfComp <= maxOperation);
+    assert(numberOfProj1 <= maxOperation);
+    assert(numberOfProj2 <= maxOperation);
+  }
+
+  // ranges::set_intersection range overload
+  {
+    std::array<Data, 0> out{};
+    std::size_t numberOfComp  = 0;
+    std::size_t numberOfProj1 = 0;
+    std::size_t numberOfProj2 = 0;
+
+    const auto comp = [&numberOfComp](int x, int y) {
+      ++numberOfComp;
+      return x < y;
+    };
+
+    const auto proj1 = [&numberOfProj1](const Data& d) {
+      ++numberOfProj1;
+      return d.data;
+    };
+
+    const auto proj2 = [&numberOfProj2](const Data& d) {
+      ++numberOfProj2;
+      return d.data;
+    };
+
+    std::ranges::set_intersection(r1, r2, out.data(), comp, proj1, proj2);
+
+    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(numberOfComp < maxOperation);
+    assert(numberOfProj1 < maxOperation);
+    assert(numberOfProj2 < maxOperation);
+  }
+}
+
 } // unnamed namespace
 
 int main(int, char**) {
+  testComplexityBasic();
   testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
   testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
   testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
 
+  static_assert(testComplexityBasic());
   static_assert(testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>());
   static_assert(testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>());
   static_assert(testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>());
