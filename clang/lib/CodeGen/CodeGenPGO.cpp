@@ -1246,6 +1246,11 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
     return;
 
+  // Don't create tvbitmap_update if the record is allocated but excluded.
+  // Or `bitmap |= (1 << 0)` would be wrongly executed to the next bitmap.
+  if (DecisionStateIter->second.Indices.size() == 0)
+    return;
+
   // Extract the offset of the global bitmap associated with this expression.
   unsigned MCDCTestVectorBitmapOffset = DecisionStateIter->second.BitmapIdx;
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
