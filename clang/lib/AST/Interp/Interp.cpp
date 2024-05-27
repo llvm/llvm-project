@@ -457,7 +457,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
 
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -477,7 +477,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -660,7 +660,8 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   return diagnoseUnknownDecl(S, OpPC, D);
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK) {
   if (!Ptr.isDummy())
     return true;
 
@@ -669,7 +670,15 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!D)
     return false;
 
-  return diagnoseUnknownDecl(S, OpPC, D);
+  if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
+    return diagnoseUnknownDecl(S, OpPC, D);
+
+  assert(AK == AK_Assign);
+  if (S.getLangOpts().CPlusPlus11) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_modify_global);
+  }
+  return false;
 }
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
