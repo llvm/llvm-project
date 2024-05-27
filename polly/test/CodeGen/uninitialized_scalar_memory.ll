@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; Verify we initialize the scalar locations reserved for the incoming phi
 ; values.

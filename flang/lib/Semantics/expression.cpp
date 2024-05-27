@@ -1600,16 +1600,23 @@ private:
       parser::CharBlock name, std::int64_t lower, std::int64_t upper,
       std::int64_t stride);
 
-  template <int KIND, typename A>
-  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> GetSpecificIntExpr(
-      const A &x) {
-    if (MaybeExpr y{exprAnalyzer_.Analyze(x)}) {
+  template <int KIND>
+  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> ToSpecificInt(
+      MaybeExpr &&y) {
+    if (y) {
       Expr<SomeInteger> *intExpr{UnwrapExpr<Expr<SomeInteger>>(*y)};
       return Fold(exprAnalyzer_.GetFoldingContext(),
           ConvertToType<Type<TypeCategory::Integer, KIND>>(
               std::move(DEREF(intExpr))));
+    } else {
+      return std::nullopt;
     }
-    return std::nullopt;
+  }
+
+  template <int KIND, typename A>
+  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> GetSpecificIntExpr(
+      const A &x) {
+    return ToSpecificInt<KIND>(exprAnalyzer_.Analyze(x));
   }
 
   // Nested array constructors all reference the same ExpressionAnalyzer,
@@ -1772,26 +1779,45 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
 
 // Transforms l:u(:s) into (_,_=l,u(,s)) with an anonymous index '_'
 void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
-  std::optional<Expr<ImpliedDoIntType>> lower{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<0>(triplet.t))};
-  std::optional<Expr<ImpliedDoIntType>> upper{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<1>(triplet.t))};
-  std::optional<Expr<ImpliedDoIntType>> stride{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<2>(triplet.t))};
-  if (lower && upper) {
-    if (!stride) {
-      stride = Expr<ImpliedDoIntType>{1};
+  MaybeExpr lowerExpr{exprAnalyzer_.Analyze(std::get<0>(triplet.t))};
+  MaybeExpr upperExpr{exprAnalyzer_.Analyze(std::get<1>(triplet.t))};
+  MaybeExpr strideExpr{exprAnalyzer_.Analyze(std::get<2>(triplet.t))};
+  if (lowerExpr && upperExpr) {
+    auto lowerType{lowerExpr->GetType()};
+    auto upperType{upperExpr->GetType()};
+    auto strideType{strideExpr ? strideExpr->GetType() : lowerType};
+    if (lowerType && upperType && strideType) {
+      int kind{lowerType->kind()};
+      if (upperType->kind() > kind) {
+        kind = upperType->kind();
+      }
+      if (strideType->kind() > kind) {
+        kind = strideType->kind();
+      }
+      auto lower{ToSpecificInt<ImpliedDoIntType::kind>(std::move(lowerExpr))};
+      auto upper{ToSpecificInt<ImpliedDoIntType::kind>(std::move(upperExpr))};
+      if (lower && upper) {
+        auto stride{
+            ToSpecificInt<ImpliedDoIntType::kind>(std::move(strideExpr))};
+        if (!stride) {
+          stride = Expr<ImpliedDoIntType>{1};
+        }
+        DynamicType type{TypeCategory::Integer, kind};
+        if (!type_) {
+          type_ = DynamicTypeWithLength{type};
+        }
+        parser::CharBlock anonymous;
+        if (auto converted{ConvertToType(type,
+                AsGenericExpr(
+                    Expr<ImpliedDoIntType>{ImpliedDoIndex{anonymous}}))}) {
+          auto v{std::move(values_)};
+          Push(std::move(converted));
+          std::swap(v, values_);
+          values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
+              std::move(*upper), std::move(*stride), std::move(v)});
+        }
+      }
     }
-    if (!type_) {
-      type_ = DynamicTypeWithLength{ImpliedDoIntType::GetType()};
-    }
-    auto v{std::move(values_)};
-    parser::CharBlock anonymous;
-    Push(Expr<SomeType>{
-        Expr<SomeInteger>{Expr<ImpliedDoIntType>{ImpliedDoIndex{anonymous}}}});
-    std::swap(v, values_);
-    values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
-        std::move(*upper), std::move(*stride), std::move(v)});
   }
 }
 
