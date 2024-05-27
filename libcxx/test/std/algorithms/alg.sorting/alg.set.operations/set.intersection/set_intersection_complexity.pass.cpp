@@ -93,10 +93,9 @@ template <template <class...> class InIterType1,
           class InIterType2,
           class OutIterType,
           std::size_t ResultSize,
-          std::size_t N1,
-          std::size_t N2>
-constexpr counted_set_intersection_result<ResultSize>
-counted_set_intersection(std::array<int, N1> in1, std::array<int, N2> in2) {
+          std::ranges::input_range R1,
+          std::ranges::input_range R2>
+constexpr counted_set_intersection_result<ResultSize> counted_set_intersection(const R1& in1, const R2& in2) {
   counted_set_intersection_result<ResultSize> out;
 
   const auto comp = [&out](int x, int y) {
@@ -120,10 +119,9 @@ template <template <class...> class InIterType1,
           class InIterType2,
           class OutIterType,
           std::size_t ResultSize,
-          std::size_t N1,
-          std::size_t N2>
-constexpr counted_set_intersection_result<ResultSize>
-counted_ranges_set_intersection(std::array<int, N1> in1, std::array<int, N2> in2) {
+          std::ranges::input_range R1,
+          std::ranges::input_range R2>
+constexpr counted_set_intersection_result<ResultSize> counted_ranges_set_intersection(const R1& in1, const R2& in2) {
   counted_set_intersection_result<ResultSize> out;
 
   const auto comp = [&out](int x, int y) {
@@ -240,24 +238,76 @@ constexpr void testComplexityParameterizedIterPermutateIn1() {
 }
 
 template <class Out>
-constexpr bool testComplexityParameterizedIterPermutateIn1In2() {
+constexpr void testComplexityParameterizedIterPermutateIn1In2() {
   testComplexityParameterizedIterPermutateIn1<forward_iterator, Out>();
   testComplexityParameterizedIterPermutateIn1<bidirectional_iterator, Out>();
   testComplexityParameterizedIterPermutateIn1<random_access_iterator, Out>();
+}
+
+constexpr bool testComplexity() {
+  testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
+  testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
+  testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
+  return true;
+}
+
+template <template <typename...> class In1, template <typename...> class In2, class Out>
+constexpr void testComplexityGuaranteesParameterizedIter() {
+  // now a more generic validation of the complexity guarantees when searching for a single value
+  for (unsigned range_size = 1; range_size < 20; ++range_size) {
+    std::ranges::iota_view<int, int> r1(0, range_size);
+    for (int i : r1) {
+      // At most 2 * ((last1 - first1) + (last2 - first2)) - 1 comparisons
+      counted_set_intersection_result<1> expected(std::array{i});
+      expected.opcounts.comparisons              = 2 * (r1.size() + 1) - 1;
+      expected.opcounts.in[0].proj               = expected.opcounts.comparisons;
+      expected.opcounts.in[1].proj               = expected.opcounts.comparisons;
+      expected.opcounts.in[0].iterops.increments = 2 * r1.size();
+      expected.opcounts.in[1].iterops.increments = 2;
+      expected.opcounts.in[0].iterops.decrements = expected.opcounts.in[0].iterops.increments;
+      expected.opcounts.in[1].iterops.decrements = expected.opcounts.in[1].iterops.increments;
+
+      expected.assertNotBetterThan(
+          counted_set_intersection<In1, In2, Out, expected.result.size()>(r1, expected.result));
+      expected.assertNotBetterThan(
+          counted_ranges_set_intersection<In1, In2, Out, expected.result.size()>(r1, expected.result));
+    }
+  }
+}
+
+template <template <typename...> class In2, class Out>
+constexpr void testComplexityGuaranteesParameterizedIterPermutateIn1() {
+  //common_input_iterator
+  testComplexityGuaranteesParameterizedIter<forward_iterator, In2, Out>();
+  testComplexityGuaranteesParameterizedIter<bidirectional_iterator, In2, Out>();
+  testComplexityGuaranteesParameterizedIter<random_access_iterator, In2, Out>();
+}
+
+template <class Out>
+constexpr void testComplexityGuaranteesParameterizedIterPermutateIn1In2() {
+  testComplexityGuaranteesParameterizedIterPermutateIn1<forward_iterator, Out>();
+  testComplexityGuaranteesParameterizedIterPermutateIn1<bidirectional_iterator, Out>();
+  testComplexityGuaranteesParameterizedIterPermutateIn1<random_access_iterator, Out>();
+}
+
+constexpr bool testComplexityGuarantees() {
+  testComplexityGuaranteesParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
+  testComplexityGuaranteesParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
+  testComplexityGuaranteesParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
   return true;
 }
 
 constexpr bool testComplexityBasic() {
   // Complexity: At most 2 * ((last1 - first1) + (last2 - first2)) - 1 comparisons and applications of each projection.
-  std::array<Data, 5> r1{{{1}, {3}, {5}, {7}, {9}}};
-  std::array<Data, 5> r2{{{2}, {4}, {6}, {8}, {10}}};
+  std::array<int, 5> r1{1, 3, 5, 7, 9};
+  std::array<int, 5> r2{2, 4, 6, 8, 10};
   std::array<int, 0> expected{};
 
   const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
 
   // std::set_intersection
   {
-    std::array<Data, 0> out{};
+    std::array<int, 0> out{};
     std::size_t numberOfComp = 0;
 
     const auto comp = [&numberOfComp](int x, int y) {
@@ -267,13 +317,13 @@ constexpr bool testComplexityBasic() {
 
     std::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp);
 
-    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(std::ranges::equal(out, expected));
     assert(numberOfComp <= maxOperation);
   }
 
   // ranges::set_intersection iterator overload
   {
-    std::array<Data, 0> out{};
+    std::array<int, 0> out{};
     std::size_t numberOfComp  = 0;
     std::size_t numberOfProj1 = 0;
     std::size_t numberOfProj2 = 0;
@@ -283,19 +333,19 @@ constexpr bool testComplexityBasic() {
       return x < y;
     };
 
-    const auto proj1 = [&numberOfProj1](const Data& d) {
+    const auto proj1 = [&numberOfProj1](int d) {
       ++numberOfProj1;
-      return d.data;
+      return d;
     };
 
-    const auto proj2 = [&numberOfProj2](const Data& d) {
+    const auto proj2 = [&numberOfProj2](int d) {
       ++numberOfProj2;
-      return d.data;
+      return d;
     };
 
     std::ranges::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp, proj1, proj2);
 
-    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(std::ranges::equal(out, expected));
     assert(numberOfComp <= maxOperation);
     assert(numberOfProj1 <= maxOperation);
     assert(numberOfProj2 <= maxOperation);
@@ -303,7 +353,7 @@ constexpr bool testComplexityBasic() {
 
   // ranges::set_intersection range overload
   {
-    std::array<Data, 0> out{};
+    std::array<int, 0> out{};
     std::size_t numberOfComp  = 0;
     std::size_t numberOfProj1 = 0;
     std::size_t numberOfProj2 = 0;
@@ -313,37 +363,39 @@ constexpr bool testComplexityBasic() {
       return x < y;
     };
 
-    const auto proj1 = [&numberOfProj1](const Data& d) {
+    const auto proj1 = [&numberOfProj1](int d) {
       ++numberOfProj1;
-      return d.data;
+      return d;
     };
 
-    const auto proj2 = [&numberOfProj2](const Data& d) {
+    const auto proj2 = [&numberOfProj2](int d) {
       ++numberOfProj2;
-      return d.data;
+      return d;
     };
 
     std::ranges::set_intersection(r1, r2, out.data(), comp, proj1, proj2);
 
-    assert(std::ranges::equal(out, expected, {}, &Data::data));
+    assert(std::ranges::equal(out, expected));
     assert(numberOfComp < maxOperation);
     assert(numberOfProj1 < maxOperation);
     assert(numberOfProj2 < maxOperation);
   }
+  return true;
 }
 
 } // unnamed namespace
 
 int main(int, char**) {
   testComplexityBasic();
-  testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>();
-  testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>();
-  testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>();
+  testComplexity();
+  testComplexityGuarantees();
 
   static_assert(testComplexityBasic());
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<forward_iterator<int*>>());
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<bidirectional_iterator<int*>>());
-  static_assert(testComplexityParameterizedIterPermutateIn1In2<random_access_iterator<int*>>());
+  static_assert(testComplexity());
+
+  // we hit maximum constexpr evaluation step limit even if we split this into
+  // the 3 types of the first type layer, so let's skip the constexpr validation
+  // static_assert(testComplexityGuarantees());
 
   return 0;
 }
