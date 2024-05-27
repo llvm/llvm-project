@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   BufferViewFlowOpInterfaceImpl.cpp
+  EliminateExplicitRounding.cpp
   EmulateUnsupportedFloats.cpp
   EmulateWideInt.cpp
   EmulateNarrowType.cpp

@@ -117,4 +117,50 @@ def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
   ];
  }
 
+ def EliminateExplicitRounding : Pass<"eliminate-explicit-rounding"> {
+  let summary = "Eliminate the intermidiate truncf/extf pairs";
+  let description = [{
+    `legalize-to-f32` and `arith-emulate-unsupported-floats` pass does f32 promotion
+    for every op belonging to the illegal op list. Once there are some consecutive
+    illegal ops, these passes will insert `arith.truncf` and `arith.extf` pairs
+    between the illegal ops.
+    
+    This pass is to eliminate the intermidiate truncf/extf pairs to improve
+    performance.
+
+    However, this pass may introduce numerical difference as the `f32->bf16` rounding
+    is eliminated.
+
+    Example:
+
+    ```mlir
+    // the initial func
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = math.absf %arg0 : vector<32xbf16>
+        %1 = math.sin %0 : vector<32xbf16>
+        return %1 : vector<32xbf16>
+      }
+    // after legalize-to-f32
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = arith.extf %arg0 : vector<32xbf16> to vector<32xf32>
+        %1 = math.absf %0 : vector<32xf32>
+        %2 = arith.truncf %1 : vector<32xf32> to vector<32xbf16>
+        %3 = arith.extf %2 : vector<32xbf16> to vector<32xf32>
+        %4 = math.sin %3 : vector<32xf32>
+        %5 = arith.truncf %4 : vector<32xf32> to vector<32xbf16>
+        return %5 : vector<32xbf16>
+      }
+    // after eliminate-explicit-rounding
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = arith.extf %arg0 : vector<32xbf16> to vector<32xf32>
+        %1 = math.absf %0 : vector<32xf32>
+        %2 = math.sin %1 : vector<32xf32>
+        %3 = arith.truncf %2 : vector<32xf32> to vector<32xbf16>
+        return %3 : vector<32xbf16>
+      }
+    ```
+
+  }];
+}
+
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES
