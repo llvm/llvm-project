@@ -341,6 +341,9 @@ void SUnit::biasCriticalPath() {
 }
 
 void SUnit::biasLongerPaths() {
+  if (NumPreds < 2)
+    return;
+
   llvm::stable_sort(Preds, [](SDep A, SDep B) {
     // B should only be ordered before A if it is a data dependency and its
     // depth is larger.
