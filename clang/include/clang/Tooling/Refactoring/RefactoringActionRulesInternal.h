@@ -139,6 +139,11 @@ createRefactoringActionRule(const RequirementTypes &... Requirements) {
                                  RequirementTypes...>::value;
     }
 
+    bool hasLocationRequirement() override {
+      return internal::HasBaseOf<SourceLocationRequirement,
+                                 RequirementTypes...>::value;
+    }
+
     void visitRefactoringOptions(RefactoringOptionVisitor &Visitor) override {
       internal::visitRefactoringOptions(
           Visitor, Requirements,
