@@ -68,8 +68,7 @@ bool mlir::emitc::isSupportedEmitCType(Type type) {
     return !llvm::isa<emitc::ArrayType>(elemType) &&
            isSupportedEmitCType(elemType);
   }
-  if (type.isIndex() ||
-      llvm::isa<emitc::SignedSizeTType, emitc::SizeTType>(type))
+  if (type.isIndex() || emitc::isAnySizeTType(type))
     return true;
   if (llvm::isa<IntegerType>(type))
     return isSupportedIntegerType(type);
@@ -110,9 +109,8 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 }
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
-  return llvm::isa<IndexType, emitc::SignedSizeTType, emitc::SizeTType,
-                   emitc::OpaqueType>(type) ||
-         isSupportedIntegerType(type);
+  return llvm::isa<IndexType,emitc::OpaqueType>(type) ||
+         isSupportedIntegerType(type) || isAnySizeTType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -148,8 +146,7 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
   Type resultType = op->getResult(0).getType();
   Type attrType = cast<TypedAttr>(value).getType();
 
-  if (isa<emitc::SignedSizeTType, emitc::SizeTType>(resultType) &&
-      attrType.isIndex())
+  if (isAnySizeTType(resultType) && attrType.isIndex())
     return success();
 
   if (resultType != attrType)

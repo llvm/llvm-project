@@ -41,6 +41,8 @@ func.func @cast(%arg0: i32) {
 
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
+  %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
   return
 }
 
