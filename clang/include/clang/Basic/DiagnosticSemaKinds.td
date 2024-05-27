@@ -855,7 +855,7 @@ def note_strncat_wrong_size : Note<
   "the terminating null byte">;
 
 def warn_assume_side_effects : Warning<
-  "the argument to %0 has side effects that will be discarded">,
+  "assumption is ignored because it contains (potential) side-effects">,
   InGroup<DiagGroup<"assume">>;
 def warn_omp_assume_attribute_string_unknown : Warning<
   "unknown assumption string '%0'; attribute is potentially ignored">,
