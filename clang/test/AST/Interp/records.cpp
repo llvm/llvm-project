@@ -1467,3 +1467,16 @@ namespace IgnoredCtorWithZeroInit {
     return (S(), true);
   }
 }
+
+#if __cplusplus >= 202002L
+namespace VirtOperator {
+  /// This used to crash because it's a virtual CXXOperatorCallExpr.
+  struct B {
+    virtual constexpr bool operator==(const B&) const { return true; }
+  };
+  struct D : B {
+    constexpr bool operator==(const B&) const override{ return false; } // both-note {{operator}}
+  };
+  constexpr bool cmp_base_derived = D() == D(); // both-warning {{ambiguous}}
+}
+#endif
