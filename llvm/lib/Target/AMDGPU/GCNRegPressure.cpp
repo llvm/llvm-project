@@ -464,6 +464,8 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
       continue;
     if (MO.isUse() && !MO.readsReg())
       continue;
+    if (!ShouldTrackIt && MO.isDef())
+      continue;
     if (!SeenRegs.insert(MO.getReg()).second)
       continue;
     const LiveInterval &LI = CurrLIS->getInterval(MO.getReg());
