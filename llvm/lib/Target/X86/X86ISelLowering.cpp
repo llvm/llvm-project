@@ -49253,8 +49253,9 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     return SDValue();
 
   SDValue X = SetCC.getOperand(1);
-  // Replace API is called manually here b/c the number of results may change.
-  DAG.ReplaceAllUsesOfValueWith(Flag, X);
+  // sub has two results while X only have one. DAG combine assumes the value type match.
+  if (N->getNumValues() > 1)
+    X = DAG.getMergeValues({N->getOperand(0), X}, SDLoc(N));
 
   SDValue CCN = SetCC.getOperand(0);
   X86::CondCode CC =
