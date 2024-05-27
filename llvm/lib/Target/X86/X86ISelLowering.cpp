@@ -49239,8 +49239,7 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
 
   SDValue SetCC = N->getOperand(0);
 
-  // TODO: Remove the check hasCCMP() and update the non-APX tests.
-  if (!ST.hasCCMP() || SetCC.getOpcode() != X86ISD::SETCC || !Flag.hasOneUse())
+  if (SetCC.getOpcode() != X86ISD::SETCC || !Flag.hasOneUse())
     return SDValue();
 
   // Check the only user of flag is `brcond ne`.
