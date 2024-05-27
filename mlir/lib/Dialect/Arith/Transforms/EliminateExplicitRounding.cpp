@@ -52,15 +52,14 @@ struct EliminateExplicitRoundingRewritePattern final
     // check whether the rounding pair's input and output data type are the
     // same. Currently only consider to eliminate rounding pairs for (bf16 / f16
     // <-> f32)
-    if (auto input = truncFOp.getOperand()) {
-      auto inTy = input.getType();
-      auto outTy = extFOp.getType();
-      auto shortTy = getElementTypeOrSelf(truncFOp.getType());
-      if (inTy == outTy && getElementTypeOrSelf(inTy).isF32() &&
-          (shortTy.isF16() || shortTy.isBF16())) {
-        rewriter.replaceOp(extFOp, {input});
-        return success();
-      }
+    auto input = truncFOp.getOperand();
+    auto inTy = input.getType();
+    auto outTy = extFOp.getType();
+    auto shortTy = getElementTypeOrSelf(truncFOp.getType());
+    if (inTy == outTy && getElementTypeOrSelf(inTy).isF32() &&
+        (shortTy.isF16() || shortTy.isBF16())) {
+      rewriter.replaceOp(extFOp, {input});
+      return success();
     }
 
     return failure();
