@@ -92,7 +92,7 @@ Expected<ArrayRef<T>> MinidumpFile::getListStream(StreamType Type) const {
 
   return getDataSliceAs<T>(*Stream, ListOffset, ListSize);
 }
-template Expected<ArrayRef<Module>>
+template Expected<ArrayRef<minidump::Module>>
     MinidumpFile::getListStream(StreamType) const;
 template Expected<ArrayRef<Thread>>
     MinidumpFile::getListStream(StreamType) const;

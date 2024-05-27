@@ -16,7 +16,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/xxhash.h"
 #include <atomic>
 #include <cstddef>
