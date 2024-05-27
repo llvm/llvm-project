@@ -42,6 +42,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
+// These types are required to make __atomic_is_always_lock_free work across GCC and Clang.
+// GCC won't allow the reinterpret_cast<_Tp*>(-required_alignment) trick initially used,
+// so we need to actually fake up an instance of a type with the correct alignment.
+template <size_t _Alignment>
+struct __alignment_checker_type {
+  alignas(_Alignment) char __data;
+};
+
+template <size_t _Alignment>
+struct __get_aligner_instance {
+  static constexpr __alignment_checker_type<_Alignment> __instance{};
+};
+
 template <class _Tp>
 struct __atomic_ref_base {
 protected:
@@ -105,7 +118,7 @@ public:
   // that the pointer is going to be aligned properly at runtime because that is a (checked) precondition
   // of atomic_ref's constructor.
   static constexpr bool is_always_lock_free =
-      __atomic_always_lock_free(sizeof(_Tp), reinterpret_cast<_Tp*>(-required_alignment));
+      __atomic_always_lock_free(sizeof(_Tp), &__get_aligner_instance<required_alignment>::__instance);
 
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(_Tp), __ptr_); }
 
@@ -321,6 +334,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
   _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
 };
+
 
 template <class _Tp>
 struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
