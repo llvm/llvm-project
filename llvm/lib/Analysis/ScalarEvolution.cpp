@@ -14746,16 +14746,14 @@ void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
 
 void SCEVUnionPredicate::add(const SCEVPredicate *N) {
   if (const auto *Set = dyn_cast<SCEVUnionPredicate>(N)) {
-    for (const auto *Pred : Set->Preds) {
-      // Skip predicates already implied by this union predicate.
-      if (implies(Pred))
-        continue;
+    for (const auto *Pred : Set->Preds)
       add(Pred);
-    }
     return;
   }
 
-  Preds.push_back(N);
+  // Only add predicate if it is not already implied by this union predicate.
+  if (!implies(N))
+    Preds.push_back(N);
 }
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
