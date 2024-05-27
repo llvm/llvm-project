@@ -59,6 +59,18 @@ C++ Specific Potentially Breaking Changes
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
 
+  This change uncovered a bug in libstdc++ 14.1.0 which may cause compile failures
+  on systems using that version of libstdc++ and Clang 19, with an error that looks
+  something like this:
+
+  .. code-block:: text
+
+    <source>:4:5: error: expression is not assignable
+    4 |     ++this;
+      |     ^ ~~~~
+
+  To fix this, update libstdc++ to version 14.1.1 or greater.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -154,6 +166,11 @@ C++17 Feature Support
   the values produced by GCC, so these macros should not be used from header
   files because they may not be stable across multiple TUs (the values may vary
   based on compiler version as well as CPU tuning). #GH60174
+
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -317,7 +334,8 @@ New Compiler Flags
 
 - ``-fexperimental-late-parse-attributes`` enables an experimental feature to
   allow late parsing certain attributes in specific contexts where they would
-  not normally be late parsed.
+  not normally be late parsed. Currently this allows late parsing the
+  `counted_by` attribute in C. See `Attribute Changes in Clang`_.
 
 - ``-fseparate-named-sections`` uses separate unique sections for global
   symbols in named special sections (i.e. symbols annotated with
@@ -406,6 +424,24 @@ Attribute Changes in Clang
 - The ``clspv_libclc_builtin`` attribute has been added to allow clspv
   (`OpenCL-C to Vulkan SPIR-V compiler <https://github.com/google/clspv>`_) to identify functions coming from libclc
   (`OpenCL-C builtin library <https://libclc.llvm.org>`_).
+- The ``counted_by`` attribute is now allowed on pointers that are members of a
+  struct in C.
+
+- The ``counted_by`` attribute can now be late parsed in C when
+  ``-fexperimental-late-parse-attributes`` is passed but only when attribute is
+  used in the declaration attribute position. This allows using the
+  attribute on existing code where it previously impossible to do so without
+  re-ordering struct field declarations would break ABI as shown below.
+
+  .. code-block:: c
+
+     struct BufferTy {
+       /* Refering to `count` requires late parsing */
+       char* buffer __counted_by(count);
+       /* Swapping `buffer` and `count` to avoid late parsing would break ABI */
+       size_t count;
+     };
+
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -742,6 +778,18 @@ Bug Fixes to C++ Support
 - Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 - Fix a bug where the last argument was not considered when considering the most viable function for
   explicit object argument member functions. Fixes (#GH92188).
+- Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
+  the ``constexpr`` specifier. Fixes (#GH61004).
+- Clang no longer transforms dependent qualified names into implicit class member access expressions
+  until it can be determined whether the name is that of a non-static member.
+- Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
+- Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
+  as implicitly ``const`` in language modes after C++11.
+- Fixed a crash when trying to emit captures in a lambda call operator with an explicit object
+  parameter that is called on a derived type of the lambda.
+  Fixes (#GH87210), (GH89541).
+- Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
+  Fixes (#GH91308).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -754,6 +802,7 @@ Miscellaneous Bug Fixes
 
 - Fixed an infinite recursion in ASTImporter, on return type declared inside
   body of C++11 lambda without trailing return (#GH68775).
+- Fixed declaration name source location of instantiated function definitions (GH71161).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

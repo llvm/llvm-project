@@ -287,6 +287,8 @@ public:
 
   const GCNSubtarget *getSubtarget() const;
 
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
   bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode, EVT DestVT,
                        EVT SrcVT) const override;
 

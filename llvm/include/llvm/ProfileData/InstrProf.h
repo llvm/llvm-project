@@ -385,8 +385,9 @@ struct TemporalProfTraceTy {
   /// Use a set of temporal profile traces to create a list of balanced
   /// partitioning function nodes used by BalancedPartitioning to generate a
   /// function order that reduces page faults during startup
-  static std::vector<BPFunctionNode>
-  createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces);
+  static void createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces,
+                                    std::vector<BPFunctionNode> &Nodes,
+                                    bool RemoveOutlierUNs = true);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -1184,35 +1185,32 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 // data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
 // as appropriate when updating the indexed profile format.
 struct Header {
-  uint64_t Magic;
+  uint64_t Magic = IndexedInstrProf::Magic;
   // The lower 32 bits specify the version of the indexed profile.
   // The most significant 32 bits are reserved to specify the variant types of
   // the profile.
-  uint64_t Version;
-  uint64_t Unused; // Becomes unused since version 4
-  uint64_t HashType;
+  uint64_t Version = 0;
+  uint64_t Unused = 0; // Becomes unused since version 4
+  uint64_t HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
   // This field records the offset of this hash table's metadata (i.e., the
   // number of buckets and entries), which follows right after the payload of
   // the entire hash table.
-  uint64_t HashOffset;
-  uint64_t MemProfOffset;
-  uint64_t BinaryIdOffset;
-  uint64_t TemporalProfTracesOffset;
-  uint64_t VTableNamesOffset;
+  uint64_t HashOffset = 0;
+  uint64_t MemProfOffset = 0;
+  uint64_t BinaryIdOffset = 0;
+  uint64_t TemporalProfTracesOffset = 0;
+  uint64_t VTableNamesOffset = 0;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
 
-  // Reads a header struct from the buffer.
+  // Reads a header struct from the buffer. Header fields are in machine native
+  // endianness.
   static Expected<Header> readFromBuffer(const unsigned char *Buffer);
 
   // Returns the size of the header in bytes for all valid fields based on the
   // version. I.e a older version header will return a smaller size.
   size_t size() const;
-
-  // Returns the format version in little endian. The header retains the version
-  // in native endian of the compiler runtime.
-  uint64_t formatVersion() const;
 };
 
 // Profile summary data recorded in the profile data file in indexed

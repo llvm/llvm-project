@@ -2463,11 +2463,15 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitGlobalIFunc(M, IFunc);
 
   // Finalize debug and EH information.
+  // Defer MCAssembler based constant folding due to a performance issue. The
+  // label differences will be evaluated at write time.
+  OutStreamer->setUseAssemblerInfoForParsing(false);
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endModule();
   }
+  OutStreamer->setUseAssemblerInfoForParsing(true);
 
   // This deletes all the ephemeral handlers that AsmPrinter added, while
   // keeping all the user-added handlers alive until the AsmPrinter is

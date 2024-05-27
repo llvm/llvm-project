@@ -129,6 +129,7 @@ Changes to the RISC-V Backend
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
+* Zaamo and Zalrsc are no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -237,6 +238,11 @@ Changes to the LLVM tools
   `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
   documented in `--help` output and the command guide. (`#90474
   <https://github.com/llvm/llvm-project/pull/90474>`)
+
+* llvm-readobj's LLVM output format for ELF core files has been changed.
+  Similarly, the JSON format has been fixed for this case. The NT_FILE note
+  now has a map for the mapped files. (`#92835
+  <https://github.com/llvm/llvm-project/pull/92835>`).
 
 Changes to LLDB
 ---------------------------------

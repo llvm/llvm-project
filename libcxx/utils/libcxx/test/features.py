@@ -38,6 +38,39 @@ def _getAndroidDeviceApi(cfg):
         )
     )
 
+
+def _mingwSupportsModules(cfg):
+    # Only mingw headers are known to work with libc++ built as a module,
+    # at the moment.
+    if not "__MINGW32__" in compilerMacros(cfg):
+        return False
+    # For mingw headers, check for a version known to support being built
+    # as a module.
+    return sourceBuilds(
+        cfg,
+        """
+        #include <_mingw_mac.h>
+        #if __MINGW64_VERSION_MAJOR < 12
+        #error Headers known to be incompatible
+        #elif __MINGW64_VERSION_MAJOR == 12
+        // The headers were fixed to work with libc++ modules during
+        // __MINGW64_VERSION_MAJOR == 12. The headers became compatible
+        // with libc++ built as a module in
+        // 1652e9241b5d8a5a779c6582b1c3c4f4a7cc66e5 (Apr 2024), but the
+        // following commit 8c13b28ace68f2c0094d45121d59a4b951b533ed
+        // removed the now unused __mingw_static_ovr define. Use this
+        // as indicator for whether we've got new enough headers.
+        #ifdef __mingw_static_ovr
+        #error Headers too old
+        #endif
+        #else
+        // __MINGW64_VERSION_MAJOR > 12 should be ok.
+        #endif
+        int main() { return 0; }
+        """,
+    )
+
+
 # Lit features are evaluated in order. Some checks may require the compiler detection to have
 # run first in order to work properly.
 DEFAULT_FEATURES = [
@@ -281,7 +314,7 @@ DEFAULT_FEATURES = [
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
         or "__FreeBSD__" in compilerMacros(cfg)
-        or "_WIN32" in compilerMacros(cfg)
+        or ("_WIN32" in compilerMacros(cfg) and not _mingwSupportsModules(cfg))
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
         or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
