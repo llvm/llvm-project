@@ -397,11 +397,6 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
 }
 
-static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
-  return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
-}
-
 // TODO: Investigate the cost/benefit of tail call elimination on debugging.
 FunctionPassManager
 PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
@@ -1039,12 +1034,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       Phase != ThinOrFullLTOPhase::ThinLTOPostLink)
     MPM.addPass(SampleProfileProbePass(TM));
 
-  // Instrument function entry and exit before all inlining.
-  if (!isLTOPostLink(Phase)) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        EntryExitInstrumenterPass(/*PostInlining=*/false)));
-  }
-
   bool HasSampleProfile = PGOOpt && (PGOOpt->Action == PGOOptions::SampleUse);
 
   // In ThinLTO mode, when flattened profile is used, all the available
@@ -1081,6 +1070,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(CoroEarlyPass());
 
     FunctionPassManager EarlyFPM;
+    if (Phase != ThinOrFullLTOPhase::FullLTOPostLink) {
+      EarlyFPM.addPass(EntryExitInstrumenterPass(/*PostInlining=*/false));
+    }
     // Lower llvm.expect to metadata before attempting transforms.
     // Compare/branch metadata may alter the behavior of passes like
     // SimplifyCFG.
