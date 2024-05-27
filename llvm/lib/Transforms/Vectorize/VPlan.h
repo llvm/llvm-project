@@ -86,6 +86,14 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
 const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
                                 Loop *CurLoop = nullptr);
 
+/// A helper function that returns the reciprocal of the block probability of
+/// predicated blocks. If we return X, we are assuming the predicated block
+/// will execute once for every X iterations of the loop header.
+///
+/// TODO: We should use actual block probability here, if available. Currently,
+///       we always assume predicated blocks have a 50% chance of executing.
+inline unsigned getReciprocalPredBlockProb() { return 2; }
+
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
@@ -720,7 +728,12 @@ struct VPCostContext {
                 LoopVectorizationCostModel &CM)
       : TTI(TTI), Types(CanIVTy, Ctx), Ctx(Ctx), CM(CM) {}
 
-  InstructionCost getLegacyCost(Instruction *UI, ElementCount VF);
+  /// Return the cost for \p UI with \p VF using the legacy cost model until
+  /// computing the cost for all recipes has been migrated to VPlan.
+  InstructionCost getLegacyCost(Instruction *UI, ElementCount VF) const;
+
+  /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
+  /// already has been pre-computed.
   bool skipCostComputation(Instruction *UI) const;
 };
 
@@ -763,10 +776,10 @@ public:
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
 
-  /// Compute the cost of this recipe. Unless overriden by subclasses, the
-  /// default implementation falls back to the legacy cost model using the
-  /// underlying instructions.
-  virtual InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx);
+  /// Return the cost of this recipe, taking into account if the cost
+  /// computation should be skipped and the ForceTargetInstructionCost flag.
+  /// Also takes care of printing the cost for debugging.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -828,6 +841,11 @@ public:
 
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
+
+protected:
+  /// Compute the cost of this recipe using the legacy cost model and the
+  /// underlying instructions.
+  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.

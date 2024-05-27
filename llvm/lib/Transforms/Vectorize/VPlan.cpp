@@ -53,7 +53,6 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
-extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define DEBUG_TYPE "vplan"
 
@@ -734,30 +733,10 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
-static InstructionCost computeCostForRecipe(VPRecipeBase *R, ElementCount VF,
-                                            VPCostContext &Ctx) {
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(R)) {
-    auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-    if (UI && Ctx.skipCostComputation(UI))
-      return 0;
-  }
-
-  InstructionCost RecipeCost = R->computeCost(VF, Ctx);
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-      RecipeCost.isValid())
-    RecipeCost = InstructionCost(ForceTargetInstructionCost);
-
-  LLVM_DEBUG({
-    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    R->dump();
-  });
-  return RecipeCost;
-}
-
 InstructionCost VPBasicBlock::computeCost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
   for (VPRecipeBase &R : *this)
-    Cost += computeCostForRecipe(&R, VF, Ctx);
+    Cost += R.cost(VF, Ctx);
   return Cost;
 }
 
@@ -767,6 +746,9 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
   if (!isReplicator()) {
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->computeCost(VF, Ctx);
+
+    // Add the cost for the backedge.
+    Cost += 1;
     return Cost;
   }
 
@@ -781,7 +763,7 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
   for (VPRecipeBase &R : *Then)
-    Cost += computeCostForRecipe(&R, VF, Ctx);
+    Cost += R.cost(VF, Ctx);
 
   // Note the cost estimates below closely match the current legacy cost model.
   auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
@@ -801,10 +783,8 @@ InstructionCost VPRegionBlock::computeCost(ElementCount VF,
 
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
-  // blockNeedsPredication from Legal is used so as to not include all blocks in
-  // tail folded loops.
   if (VF.isScalar())
-    return Cost / 2;
+    return Cost / getReciprocalPredBlockProb();
 
   // Add the cost for branches around scalarized and predicated blocks.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -1537,6 +1517,8 @@ bool vputils::isUniformBoolean(VPValue *Cond) {
   auto *R = Cond->getDefiningRecipe();
   if (!R)
     return true;
+  // TODO: match additional patterns preserving uniformity of booleans, e.g.,
+  // AND/OR/etc.
   return match(R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
          all_of(R->operands(), [](VPValue *Op) {
            return vputils::isUniformAfterVectorization(Op);

@@ -412,14 +412,6 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
-/// A helper function that returns the reciprocal of the block probability of
-/// predicated blocks. If we return X, we are assuming the predicated block
-/// will execute once for every X iterations of the loop header.
-///
-/// TODO: We should use actual block probability here, if available. Currently,
-///       we always assume predicated blocks have a 50% chance of executing.
-static unsigned getReciprocalPredBlockProb() { return 2; }
-
 /// Returns "best known" trip count for the specified loop \p L as defined by
 /// the following procedure:
 ///   1) Returns exact trip count if it is known.
@@ -7371,7 +7363,8 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   return VF;
 }
 
-InstructionCost VPCostContext::getLegacyCost(Instruction *UI, ElementCount VF) {
+InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
+                                             ElementCount VF) const {
   return CM.getInstructionCost(UI, VF).first;
 }
 
@@ -7426,6 +7419,8 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
           ReductionOperations.insert(I);
       }
     }
+
+    // Pre-compute the cost for I, if it has a reduction pattern cost.
     for (Instruction *I : ReductionOperations) {
       auto ReductionCost = CM.getReductionPatternCost(
           I, VF, ToVectorTy(I->getType(), VF), TTI::TCK_RecipThroughput);
@@ -7442,8 +7437,6 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
   }
 
   Cost += Plan.computeCost(VF, CostCtx);
-  // Add the cost for the backedge.
-  Cost += 1;
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
   return Cost;
 }
