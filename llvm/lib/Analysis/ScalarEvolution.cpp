@@ -14751,7 +14751,9 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N) {
     return;
   }
 
-  Preds.push_back(N);
+  // Only add predicate if it is not already implied by this union predicate.
+  if (!implies(N))
+    Preds.push_back(N);
 }
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
