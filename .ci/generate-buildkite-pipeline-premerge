@@ -144,6 +144,7 @@ function exclude-windows() {
     cross-project-tests) ;; # tests failing
     compiler-rt)         ;; # tests taking too long
     openmp)              ;; # TODO: having trouble with the Perl installation
+    flang)               ;; # https://discourse.llvm.org/t/flang-tests-are-extremely-slow-on-windows/78591/40
     libc)                ;; # no Windows support
     lldb)                ;; # tests failing
     bolt)                ;; # tests are not supported yet
