@@ -109,7 +109,7 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 }
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
-  return llvm::isa<IndexType,emitc::OpaqueType>(type) ||
+  return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
          isSupportedIntegerType(type) || isAnySizeTType(type);
 }
 
