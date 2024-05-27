@@ -16,12 +16,6 @@
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-// #include "mlir/IR/Types.h"
-// #include "mlir/IR/Builders.h"
-// #include "mlir/IR/BuiltinOps.h"
-// #include "mlir/IR/Region.h"
-// #include "mlir/Pass/Pass.h"
-// #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -48,12 +42,16 @@ struct EliminateExplicitRoundingRewritePattern final
     auto truncfAttr = truncfop->getAttrOfType<BoolAttr>("eliminatable");
     if (!truncfAttr || (truncfAttr && !truncfAttr.getValue())) return failure();
 
-    // check whether the the rounding pair's input and output data type are the same
+    // check whether the the rounding pair's input and output data type are the
+    // same Currently only consider to eliminate rounding pairs for (bf16 / f16
+    // <-> f32)
     if (auto input = truncfop.getOperand()) {
         auto inTy = input.getType();
         auto outTy = extfop.getType();
-        if (inTy == outTy && getElementTypeOrSelf(inTy).isF32()) {
-            rewriter.replaceOp(extfop, {input});
+        auto shortTy = getElementTypeOrSelf(truncfop.getType());
+        if (inTy == outTy && getElementTypeOrSelf(inTy).isF32() &&
+            (shortTy.isF16() || shortTy.isBF16())) {
+          rewriter.replaceOp(extfop, {input});
         }
     }
     return success();
