@@ -1,10 +1,12 @@
-// RUN: %libomptarget-compile-generic -Xclang "-fprofile-instrument=llvm"
+// RUN: %libomptarget-compile-generic -fprofile-generate \
+// RUN:     -Xclang "-fprofile-instrument=llvm"
 // RUN: env LLVM_PROFILE_FILE=llvm.profraw %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
 // RUN:     %target_triple.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-PGO"
 
-// RUN: %libomptarget-compile-generic -Xclang "-fprofile-instrument=clang"
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
+// RUN:     -Xclang "-fprofile-instrument=clang"
 // RUN: env LLVM_PROFILE_FILE=clang.profraw %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
 // RUN:     %target_triple.clang.profraw | %fcheck-generic \
