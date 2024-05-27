@@ -34,9 +34,6 @@ using namespace llvm;
 
 namespace llvm {
 void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
-} // namespace llvm
-
-namespace llvm {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
