@@ -7,7 +7,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; The IR is copied from llvm/test/Analysis/DependenceAnalysis/SimpleSIVNoValidityCheckFixedSize.ll
 
 ; CHECK: Loop 'for.body' has cost = 4186116
-; CHECK-NEXT: Loop 'for.body4' has cost = 128898
+; CHECK-NEXT: Loop 'for.body4' has cost = 130944
 
 ;; #define N 1024
 ;; #define M 2048
@@ -49,7 +49,7 @@ for.end13:                                        ; preds = %for.inc11
 
 
 ; CHECK: Loop 'for.body' has cost = 4186116
-; CHECK-NEXT: Loop 'for.body4' has cost = 128898
+; CHECK-NEXT: Loop 'for.body4' has cost = 130944
 
 define void @t2(ptr %a) {
 entry:
@@ -87,7 +87,7 @@ declare ptr @func_with_returned_arg(ptr returned %arg)
 ; CHECK-NEXT: Loop 'for.body4' has cost = 16762927104000000
 ; CHECK-NEXT: Loop 'for.body8' has cost = 130960368000000
 ; CHECK-NEXT: Loop 'for.body12' has cost = 1047682944000
-; CHECK-NEXT: Loop 'for.body16' has cost = 32260032000
+; CHECK-NEXT: Loop 'for.body16' has cost = 32772096000
 
 ;; #define N 128
 ;; #define M 2048
