@@ -49239,8 +49239,7 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
 
   SDValue SetCC = N->getOperand(0);
 
-  // TODO: Remove the check hasCCMP() and update the non-APX tests.
-  if (!ST.hasCCMP() || SetCC.getOpcode() != X86ISD::SETCC || !Flag.hasOneUse())
+  if (SetCC.getOpcode() != X86ISD::SETCC || !Flag.hasOneUse())
     return SDValue();
 
   // Check the only user of flag is `brcond ne`.
@@ -49253,8 +49252,10 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     return SDValue();
 
   SDValue X = SetCC.getOperand(1);
-  // Replace API is called manually here b/c the number of results may change.
-  DAG.ReplaceAllUsesOfValueWith(Flag, X);
+  // sub has two results while X only have one. DAG combine assumes the value
+  // type matches.
+  if (N->getOpcode() == X86ISD::SUB)
+    X = DAG.getMergeValues({N->getOperand(0), X}, SDLoc(N));
 
   SDValue CCN = SetCC.getOperand(0);
   X86::CondCode CC =
