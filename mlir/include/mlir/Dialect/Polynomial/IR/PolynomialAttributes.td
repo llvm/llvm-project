@@ -18,7 +18,7 @@ class Polynomial_Attr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 def Polynomial_IntPolynomialAttr : Polynomial_Attr<"IntPolynomial", "int_polynomial"> {
-  let summary = "An attribute containing a single-variable polynomial with integer coefficients.";
+  let summary = "an attribute containing a single-variable polynomial with integer coefficients";
   let description = [{
     A polynomial attribute represents a single-variable polynomial with integer
     coefficients, which is used to define the modulus of a `RingAttr`, as well
@@ -41,7 +41,7 @@ def Polynomial_IntPolynomialAttr : Polynomial_Attr<"IntPolynomial", "int_polynom
 }
 
 def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_polynomial"> {
-  let summary = "An attribute containing a single-variable polynomial with double precision floating point coefficients.";
+  let summary = "an attribute containing a single-variable polynomial with double precision floating point coefficients";
   let description = [{
     A polynomial attribute represents a single-variable polynomial with double
     precision floating point coefficients.
@@ -62,8 +62,72 @@ def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_p
   let hasCustomAssemblyFormat = 1;
 }
 
+def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
+    "TypedIntPolynomial", "typed_int_polynomial", [TypedAttrInterface]> {
+  let summary = "a typed int_polynomial";
+  let description = [{
+    Example:
+
+    ```mlir
+    !poly_ty = !polynomial.polynomial<ring=<coefficientType=i32>>
+    #poly = int<1 x**7 + 4> : !poly_ty
+    #poly_verbose = #polynomial.typed_int_polynomial<1 x**7 + 4> : !poly_ty
+    ```
+  }];
+  let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::IntPolynomialAttr":$value);
+  let assemblyFormat = "$value `:` $type";
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const IntPolynomial &":$value), [{
+      return $_get(
+        type.getContext(),
+        type,
+        IntPolynomialAttr::get(type.getContext(), value));
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const Attribute &":$value), [{
+      return $_get(type.getContext(), type, ::llvm::cast<IntPolynomialAttr>(value));
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    using ValueType = ::mlir::Attribute;
+  }];
+}
+
+def Polynomial_TypedFloatPolynomialAttr : Polynomial_Attr<
+    "TypedFloatPolynomial", "typed_float_polynomial", [TypedAttrInterface]> {
+  let summary = "a typed float_polynomial";
+  let description = [{
+    Example:
+
+    ```mlir
+    !poly_ty = !polynomial.polynomial<ring=<coefficientType=f32>>
+    #poly = float<1.4 x**7 + 4.5> : !poly_ty
+    #poly_verbose = #polynomial.typed_float_polynomial<1.4 x**7 + 4.5> : !poly_ty
+    ```
+  }];
+  let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::FloatPolynomialAttr":$value);
+  let assemblyFormat = "$value `:` $type";
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const FloatPolynomial &":$value), [{
+      return $_get(
+        type.getContext(),
+        type,
+        FloatPolynomialAttr::get(type.getContext(), value));
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const Attribute &":$value), [{
+      return $_get(type.getContext(), type, ::llvm::cast<FloatPolynomialAttr>(value));
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    using ValueType = ::mlir::Attribute;
+  }];
+}
+
 def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
-  let summary = "An attribute specifying a polynomial ring.";
+  let summary = "an attribute specifying a polynomial ring";
   let description = [{
     A ring describes the domain in which polynomial arithmetic occurs. The ring
     attribute in `polynomial` represents the more specific case of polynomials

@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %flang_fc1 -fopenmp -fsyntax-only %s
 
 subroutine s

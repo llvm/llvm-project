@@ -776,10 +776,9 @@ bool CursorVisitor::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   // Visit the default argument.
-  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (TypeSourceInfo *DefArg = D->getDefaultArgumentInfo())
-      if (Visit(DefArg->getTypeLoc()))
-        return true;
+  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited() &&
+      VisitTemplateArgumentLoc(D->getDefaultArgument()))
+    return true;
 
   return false;
 }
@@ -946,8 +945,9 @@ bool CursorVisitor::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return true;
 
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (Expr *DefArg = D->getDefaultArgument())
-      return Visit(MakeCXCursor(DefArg, StmtParent, TU, RegionOfInterest));
+    if (D->hasDefaultArgument() &&
+        VisitTemplateArgumentLoc(D->getDefaultArgument()))
+      return true;
 
   return false;
 }
@@ -2855,6 +2855,10 @@ void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
 }
 void OpenACCClauseEnqueue::VisitDeviceTypeClause(
     const OpenACCDeviceTypeClause &C) {}
+void OpenACCClauseEnqueue::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  VisitVarList(C);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

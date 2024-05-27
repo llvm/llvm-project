@@ -6494,7 +6494,8 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
       return false;
 
-    return hasSameType(TTPX->getDefaultArgument(), TTPY->getDefaultArgument());
+    return hasSameType(TTPX->getDefaultArgument().getArgument().getAsType(),
+                       TTPY->getDefaultArgument().getArgument().getAsType());
   }
 
   if (auto *NTTPX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
@@ -6502,8 +6503,10 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!NTTPX->hasDefaultArgument() || !NTTPY->hasDefaultArgument())
       return false;
 
-    Expr *DefaultArgumentX = NTTPX->getDefaultArgument()->IgnoreImpCasts();
-    Expr *DefaultArgumentY = NTTPY->getDefaultArgument()->IgnoreImpCasts();
+    Expr *DefaultArgumentX =
+        NTTPX->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
+    Expr *DefaultArgumentY =
+        NTTPY->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
     llvm::FoldingSetNodeID XID, YID;
     DefaultArgumentX->Profile(XID, *this, /*Canonical=*/true);
     DefaultArgumentY->Profile(YID, *this, /*Canonical=*/true);

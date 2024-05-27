@@ -22,6 +22,30 @@
 namespace Fortran {
 namespace lower {
 namespace omp {
+bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
+    const semantics::Symbol *symbol, lower::pft::Evaluation &eval) const {
+  return eval.visit(
+      common::visitors{[&](const parser::OpenMPConstruct &functionParserNode) {
+                         return symDefMap.count(symbol) &&
+                                symDefMap.at(symbol) == &functionParserNode;
+                       },
+                       [](const auto &functionParserNode) { return false; }});
+}
+
+DataSharingProcessor::DataSharingProcessor(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, lower::pft::Evaluation &eval,
+    bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
+    lower::SymMap *symTable)
+    : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
+      firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
+      shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
+      useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
+      visitor() {
+  eval.visit([&](const auto &functionParserNode) {
+    parser::Walk(functionParserNode, visitor);
+  });
+}
 
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps,
@@ -226,7 +250,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       assert(loopIV && "loopIV was not set");
-      firOpBuilder.create<fir::StoreOp>(loopOp.getLoc(), v, loopIV);
+      firOpBuilder.createStoreWithConvert(loc, v, loopIV);
       lastPrivIP = firOpBuilder.saveInsertionPoint();
     } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
       // Already handled by genOMP()
@@ -285,38 +309,9 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
         // Recursively look for OpenMP constructs within `nestedEval`'s region
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
       else {
-        bool isOrderedConstruct = [&]() {
-          if (auto *ompConstruct =
-                  nestedEval.getIf<parser::OpenMPConstruct>()) {
-            if (auto *ompBlockConstruct =
-                    std::get_if<parser::OpenMPBlockConstruct>(
-                        &ompConstruct->u)) {
-              const auto &beginBlockDirective =
-                  std::get<parser::OmpBeginBlockDirective>(
-                      ompBlockConstruct->t);
-              const auto origDirective =
-                  std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
-
-              return origDirective == llvm::omp::Directive::OMPD_ordered;
-            }
-          }
-
-          return false;
-        }();
-
-        bool isCriticalConstruct = [&]() {
-          if (auto *ompConstruct =
-                  nestedEval.getIf<parser::OpenMPConstruct>()) {
-            return std::get_if<parser::OpenMPCriticalConstruct>(
-                       &ompConstruct->u) != nullptr;
-          }
-          return false;
-        }();
-
-        if (!isOrderedConstruct && !isCriticalConstruct)
-          converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                     /*collectSymbols=*/true,
-                                     /*collectHostAssociatedSymbols=*/false);
+        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/false);
       }
     }
   }
@@ -356,6 +351,11 @@ void DataSharingProcessor::collectSymbols(
 
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
+
+  for (auto *symbol : allSymbols)
+    if (visitor.isSymbolDefineBy(symbol, eval))
+      symbolsInNestedRegions.remove(symbol);
+
   // Filter-out symbols that must not be privatized.
   bool collectImplicit = flag == semantics::Symbol::Flag::OmpImplicit;
   bool collectPreDetermined = flag == semantics::Symbol::Flag::OmpPreDetermined;
