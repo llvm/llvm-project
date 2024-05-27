@@ -4348,11 +4348,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
       Style.SpacesInParensOptions.ExceptDoubleParentheses &&
-      ((Left.is(tok::l_paren) && Right.is(tok::l_paren)) ||
-       (Left.is(tok::r_paren) && Right.is(tok::r_paren)))) {
-    const auto *Tok = Left.MatchingParen;
-    if (Tok && Tok->Previous == Right.MatchingParen)
+      Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
+    auto *InnerLParen = Left.MatchingParen;
+    if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
+      InnerLParen->SpacesRequiredBefore = 0;
       return false;
+    }
   }
   if (Style.SpacesInParensOptions.InConditionalStatements) {
     const FormatToken *LeftParen = nullptr;
