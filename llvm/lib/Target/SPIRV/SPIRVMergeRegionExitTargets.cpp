@@ -255,7 +255,7 @@ public:
       modified = true;
     }
 
-#if !NDEBUG
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
     validateRegionExits(TopLevelRegion);
 #endif
     return modified;
