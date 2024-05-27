@@ -59,7 +59,8 @@ ASM_FUNCTION_ARM64_RE = re.compile(
      flags=(re.M | re.S))
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*;+[ \t]*@"?(?P=func)"?\n[^:]*?'
+    r"\.type\s+_?(?P<func>[^,\n]+),@function\n"
+    r'^_?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"  # (body of the function)
     # This list is incomplete
     r"^\s*(\.Lfunc_end[0-9]+:\n|\.section)",
