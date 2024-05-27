@@ -1102,8 +1102,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   //
   // TODO(jingyue): do some range analysis to keep as many inbounds as
   // possible. GEPs with inbounds are more friendly to alias analysis.
+  // TODO(gep_nowrap): Preserve nuw at least.
   bool GEPWasInBounds = GEP->isInBounds();
-  GEP->setIsInBounds(false);
+  GEP->setNoWrapFlags(GEPNoWrapFlags::none());
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
   if (LowerGEP) {
@@ -1377,8 +1378,9 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   uint64_t ObjectSize;
   if (!getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
      Offset.ugt(ObjectSize)) {
-    First->setIsInBounds(false);
-    Second->setIsInBounds(false);
+    // TODO(gep_nowrap): Make flag preservation more precise.
+    First->setNoWrapFlags(GEPNoWrapFlags::none());
+    Second->setNoWrapFlags(GEPNoWrapFlags::none());
   } else
     First->setIsInBounds(true);
 }
