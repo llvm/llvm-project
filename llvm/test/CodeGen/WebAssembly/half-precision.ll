@@ -27,3 +27,11 @@ define <8 x half> @splat_v8f16(float %x) {
   %v = call <8 x half> @llvm.wasm.splat.f16x8(float %x)
   ret <8 x half> %v
 }
+
+; CHECK-LABEL: extract_lane_v8f16:
+; CHECK:       f16x8.extract_lane $push0=, $0, 1
+; CHECK-NEXT:  return $pop0
+define float @extract_lane_v8f16(<8 x half> %v) {
+  %r = call float @llvm.wasm.extract.lane.f16x8(<8 x half> %v, i32 1)
+  ret float %r
+}

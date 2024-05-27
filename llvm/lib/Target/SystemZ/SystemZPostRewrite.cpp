@@ -17,7 +17,7 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 using namespace llvm;
@@ -161,7 +161,8 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
   assert(DestReg == MI.getOperand(1).getReg() &&
          "Expected destination and first source operand to be the same.");
 
-  LivePhysRegs LiveRegs(TII->getRegisterInfo());
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
+  LiveRegUnits LiveRegs(TRI);
   LiveRegs.addLiveOuts(MBB);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);
@@ -171,15 +172,18 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
   MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
   RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
   RestMBB->transferSuccessors(&MBB);
-  for (MCPhysReg R : LiveRegs)
-    RestMBB->addLiveIn(R);
+  const BitVector &BV = TRI.getAllocatableSet(MF);
+  for (Register Reg : BV.set_bits())
+    if (!LiveRegs.available(Reg))
+      RestMBB->addLiveIn(Reg);
 
   // Create a new block MoveMBB to hold the move instruction.
   MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
   MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
   MoveMBB->addLiveIn(SrcReg);
-  for (MCPhysReg R : LiveRegs)
-    MoveMBB->addLiveIn(R);
+  for (Register Reg : BV.set_bits())
+    if (!LiveRegs.available(Reg))
+      MoveMBB->addLiveIn(Reg);
 
   // At the end of MBB, create a conditional branch to RestMBB if the
   // condition is false, otherwise fall through to MoveMBB.
