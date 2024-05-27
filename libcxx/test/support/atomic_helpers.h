@@ -50,18 +50,16 @@ constexpr bool msvc_is_lock_free_macro_value() {
 #  error "Unknown compiler"
 #endif
 
+#ifdef TEST_COMPILER_CLANG
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wc++11-extensions"
+#endif
 // The entire LockFreeStatus/LockFreeStatusEnum/LockFreeStatusType exists entirely to work around the support
 // for C++03, which many of our atomic tests run under. This is a bit of a hack, but it's the best we can do.
 //
 // We could limit the testing involving these things to C++11 or greater? But test coverage in C++03 seems important too.
-#if TEST_STD_VER < 11
-struct LockFreeStatusEnum {
-  enum LockFreeStatus { unknown = -1, never = 0, sometimes = 1, always = 2 };
-};
-typedef LockFreeStatusEnum::LockFreeStatus LockFreeStatus;
-#else
+
 enum class LockFreeStatus : int { unknown = -1, never = 0, sometimes = 1, always = 2 };
-#endif
 #define COMPARE_TYPES(T1, T2) (sizeof(T1) == sizeof(T2) && TEST_ALIGNOF(T1) >= TEST_ALIGNOF(T2))
 
 template <class T>
@@ -79,9 +77,11 @@ struct LockFreeStatusInfo {
                                       ? TEST_ATOMIC_LLONG_LOCK_FREE
                                       : (COMPARE_TYPES(T, void*) ? TEST_ATOMIC_POINTER_LOCK_FREE : -1))))));
 
-  static const bool status_known = value != LockFreeStatus::unknown;
+  static const bool status_known = LockFreeStatusInfo::value != LockFreeStatus::unknown;
 };
 
+// IDK why this blows up in C++03, but it does. So we'll just disable it.
+#if TEST_STD_VER >= 11
 static_assert(LockFreeStatusInfo<char>::status_known, "");
 static_assert(LockFreeStatusInfo<short>::status_known, "");
 static_assert(LockFreeStatusInfo<int>::status_known, "");
@@ -94,6 +94,7 @@ static_assert(LockFreeStatusInfo<char>::value == LockFreeStatus::always, "");
 static_assert(LockFreeStatusInfo<short>::value == LockFreeStatus::always, "");
 static_assert(LockFreeStatusInfo<int>::value == LockFreeStatus::always,
               ""); // This one may not always be lock free, but we'll let the CI decide.
+#endif
 
 // These macros are somewhat suprising to use, since they take the values 0, 1, or 2.
 // To make the tests clearer, get rid of them in preference of AtomicInfo.
@@ -103,6 +104,10 @@ static_assert(LockFreeStatusInfo<int>::value == LockFreeStatus::always,
 #undef TEST_ATOMIC_LONG_LOCK_FREE
 #undef TEST_ATOMIC_LLONG_LOCK_FREE
 #undef TEST_ATOMIC_POINTER_LOCK_FREE
+
+#ifdef TEST_COMPILER_CLANG
+#  pragma clang diagnostic pop
+#endif
 
 struct UserAtomicType {
   int i;
