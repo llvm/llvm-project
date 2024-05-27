@@ -16,7 +16,7 @@ from UpdateTestChecks import common
 
 # llc is the only llc-like in the LLVM tree but downstream forks can add
 # additional ones here if they have them.
-LLC_LIKE_TOOLS = ("llc",)
+LLC_LIKE_TOOLS = ["llc",]
 
 
 def main():
@@ -60,7 +60,7 @@ def main():
         help="Treat the given tool name as an llc-like tool for which check lines should be generated",
     )
     parser.add_argument(
-        "--march",
+        "--default-march",
         default=None,
         help="Set a default -march for when neither triple nor arch are found in a RUN line",
     )
@@ -99,7 +99,7 @@ def main():
             if m:
                 triple_in_cmd = m.groups()[0]
 
-            march_in_cmd = ti.args.march
+            march_in_cmd = ti.args.default_march
             m = common.MARCH_ARG_RE.search(llc_cmd)
             if m:
                 march_in_cmd = m.groups()[0]
@@ -111,9 +111,11 @@ def main():
                 from UpdateTestChecks import asm as output_type
 
             common.verify_filecheck_prefixes(filecheck_cmd)
-            if llc_tool not in LLC_LIKE_TOOLS and (
-                not ti.args.tool or llc_tool != ti.args.tool
-            ):
+
+            llc_like_tools = LLC_LIKE_TOOLS[:]
+            if ti.args.tool:
+                llc_like_tools.append(ti.args.tool)
+            if llc_tool not in llc_like_tools:
                 common.warn("Skipping non-llc RUN line: " + l)
                 continue
 
