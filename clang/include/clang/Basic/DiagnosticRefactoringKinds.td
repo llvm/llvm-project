@@ -28,6 +28,8 @@ def err_refactor_extract_simple_expression : Error<"the selected expression "
 def err_refactor_extract_prohibited_expression : Error<"the selected "
   "expression cannot be extracted">;
 
+def err_refactor_no_location : Error<"refactoring action can't be initiated "
+  "without a location">;
 }
 
 } // end of Refactoring diagnostics
