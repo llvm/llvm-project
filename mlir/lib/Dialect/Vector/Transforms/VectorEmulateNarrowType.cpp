@@ -1090,7 +1090,7 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %1 = arith.shli %0, 4 : vector<4xi8>
 ///        %2 = arith.shrsi %1, 4 : vector<4xi8>
 ///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
 ///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
 ///
 ///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
@@ -1099,7 +1099,7 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %1 = arith.shli %0, 4 : vector<4xi8>
 ///        %2 = arith.shrsi %1, 4 : vector<4xi8>
 ///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
 ///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
 ///
 /// Example (unsigned):
@@ -1108,7 +1108,7 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
 ///        %1 = arith.andi %0, 15 : vector<4xi8>
 ///        %2 = arith.shrui %0, 4 : vector<4xi8>
-///        %3 = vector.interleave %1, %2 : vector<4xi8>
+///        %3 = vector.interleave %1, %2 : vector<4xi8> -> vector<8xi8>
 ///        %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
 ///
 template <typename ConversionOpType, bool isSigned>
