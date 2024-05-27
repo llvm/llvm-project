@@ -28,6 +28,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/User.h"
@@ -1198,26 +1199,27 @@ public:
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
-                   bool InBounds = false,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     return getGetElementPtr(
-        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()),
-        InBounds, InRange, OnlyIfReducedTy);
+        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
+        InRange, OnlyIfReducedTy);
   }
   static Constant *
-  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx, bool InBounds = false,
+  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRange,
+    return getGetElementPtr(Ty, C, cast<Value>(Idx), NW, InRange,
                             OnlyIfReducedTy);
   }
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
-                   bool InBounds = false,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
@@ -1225,18 +1227,18 @@ public:
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Constant *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             Constant *Idx) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, Idx, true);
+    return getGetElementPtr(Ty, C, Idx, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
 
   static Constant *getExtractElement(Constant *Vec, Constant *Idx,

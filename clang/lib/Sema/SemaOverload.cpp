@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DependenceFlags.h"
@@ -1481,7 +1482,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   }
 
   if (OldMethod && NewMethod && !OldMethod->isStatic() &&
-      !OldMethod->isStatic()) {
+      !NewMethod->isStatic()) {
     bool HaveCorrespondingObjectParameters = [&](const CXXMethodDecl *Old,
                                                  const CXXMethodDecl *New) {
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
@@ -6493,17 +6494,20 @@ ExprResult Sema::InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
       Obj->getExprLoc(), Obj);
 }
 
-static void PrepareExplicitObjectArgument(Sema &S, CXXMethodDecl *Method,
+static bool PrepareExplicitObjectArgument(Sema &S, CXXMethodDecl *Method,
                                           Expr *Object, MultiExprArg &Args,
                                           SmallVectorImpl<Expr *> &NewArgs) {
   assert(Method->isExplicitObjectMemberFunction() &&
          "Method is not an explicit member function");
   assert(NewArgs.empty() && "NewArgs should be empty");
+
   NewArgs.reserve(Args.size() + 1);
   Expr *This = GetExplicitObjectExpr(S, Object, Method);
   NewArgs.push_back(This);
   NewArgs.append(Args.begin(), Args.end());
   Args = NewArgs;
+  return S.DiagnoseInvalidExplicitObjectParameterInLambda(
+      Method, Object->getBeginLoc());
 }
 
 /// Determine whether the provided type is an integral type, or an enumeration
@@ -11319,8 +11323,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   Expr *FromExpr = Conv.Bad.FromExpr;
   QualType FromTy = Conv.Bad.getFromType();
   QualType ToTy = Conv.Bad.getToType();
-  SourceRange ToParamRange =
-      !isObjectArgument ? Fn->getParamDecl(I)->getSourceRange() : SourceRange();
+  SourceRange ToParamRange;
+
+  // FIXME: In presence of parameter packs we can't determine parameter range
+  // reliably, as we don't have access to instantiation.
+  bool HasParamPack =
+      llvm::any_of(Fn->parameters().take_front(I), [](const ParmVarDecl *Parm) {
+        return Parm->isParameterPack();
+      });
+  if (!isObjectArgument && !HasParamPack)
+    ToParamRange = Fn->getParamDecl(I)->getSourceRange();
 
   if (FromTy == S.Context.OverloadTy) {
     assert(FromExpr && "overload set argument came from implicit argument?");
@@ -14372,7 +14384,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -15633,8 +15645,10 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   CallExpr *TheCall = nullptr;
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
-    PrepareExplicitObjectArgument(*this, Method, MemExpr->getBase(), Args,
-                                  NewArgs);
+    if (PrepareExplicitObjectArgument(*this, Method, MemExpr->getBase(), Args,
+                                      NewArgs))
+      return ExprError();
+
     // Build the actual expression node.
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
@@ -15948,9 +15962,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
-    // FIXME: we should do that during the definition of the lambda when we can.
-    DiagnoseInvalidExplicitObjectParameterInLambda(Method);
-    PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
+    IsError |= PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
   } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
         Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);

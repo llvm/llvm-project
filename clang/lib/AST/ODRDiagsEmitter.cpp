@@ -1523,8 +1523,11 @@ bool ODRDiagsEmitter::diagnoseMismatch(
         }
 
         if (HasFirstDefaultArgument && HasSecondDefaultArgument) {
-          Expr *FirstDefaultArgument = FirstNTTPD->getDefaultArgument();
-          Expr *SecondDefaultArgument = SecondNTTPD->getDefaultArgument();
+          TemplateArgument FirstDefaultArgument =
+              FirstNTTPD->getDefaultArgument().getArgument();
+          TemplateArgument SecondDefaultArgument =
+              SecondNTTPD->getDefaultArgument().getArgument();
+
           if (computeODRHash(FirstDefaultArgument) !=
               computeODRHash(SecondDefaultArgument)) {
             DiagTemplateError(FunctionTemplateParameterDifferentDefaultArgument)

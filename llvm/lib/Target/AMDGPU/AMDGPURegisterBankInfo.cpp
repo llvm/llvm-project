@@ -3041,6 +3041,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
@@ -4323,6 +4328,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT_TFE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
@@ -5132,6 +5142,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
+    case Intrinsic::amdgcn_pops_exiting_wave_id:
+      return getDefaultMappingSOP(MI);
     default:
       return getInvalidInstructionMapping();
     }

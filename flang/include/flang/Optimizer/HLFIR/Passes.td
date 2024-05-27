@@ -29,12 +29,10 @@ def OptimizedBufferization : Pass<"opt-bufferization"> {
 
 def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR transformational intrinsic operations";
-  let constructor = "hlfir::createLowerHLFIRIntrinsicsPass()";
 }
 
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
-  let constructor = "hlfir::createLowerHLFIROrderedAssignmentsPass()";
   let options = [
     Option<"tryFusingAssignments", "fuse-assignments",
            "bool", /*default=*/"false",

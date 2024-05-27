@@ -1745,11 +1745,20 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
                                    UndefPoisonKind Kind) {
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
 
+  if (auto *GMI = dyn_cast<GenericMachineInstr>(RegDef)) {
+    if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
+        GMI->hasPoisonGeneratingFlags())
+      return true;
+  } else {
+    // Conservatively return true.
+    return true;
+  }
+
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return false;
   default:
-    return true;
+    return !isa<GCastOp>(RegDef) && !isa<GBinOp>(RegDef);
   }
 }
 
@@ -1767,8 +1776,17 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     return true;
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
-  default:
-    return false;
+  default: {
+    auto MOCheck = [&](const MachineOperand &MO) {
+      if (!MO.isReg())
+        return true;
+      return ::isGuaranteedNotToBeUndefOrPoison(MO.getReg(), MRI, Depth + 1,
+                                                Kind);
+    };
+    return !::canCreateUndefOrPoison(Reg, MRI,
+                                     /*ConsiderFlagsAndMetadata=*/true, Kind) &&
+           all_of(RegDef->uses(), MOCheck);
+  }
   }
 }
 

@@ -1236,10 +1236,10 @@ class StringError : public ErrorInfo<StringError> {
 public:
   static char ID;
 
-  // Prints EC + S and converts to EC
+  StringError(std::string &&S, std::error_code EC, bool PrintMsgOnly);
+  /// Prints EC + S and converts to EC.
   StringError(std::error_code EC, const Twine &S = Twine());
-
-  // Prints S and converts to EC
+  /// Prints S and converts to EC.
   StringError(const Twine &S, std::error_code EC);
 
   void log(raw_ostream &OS) const override;
@@ -1258,15 +1258,23 @@ template <typename... Ts>
 inline Error createStringError(std::error_code EC, char const *Fmt,
                                const Ts &... Vals) {
   std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << format(Fmt, Vals...);
-  return make_error<StringError>(Stream.str(), EC);
+  raw_string_ostream(Buffer) << format(Fmt, Vals...);
+  return make_error<StringError>(Buffer, EC);
 }
 
-Error createStringError(std::error_code EC, char const *Msg);
+Error createStringError(std::string &&Msg, std::error_code EC);
+
+inline Error createStringError(std::error_code EC, const char *S) {
+  return createStringError(std::string(S), EC);
+}
 
 inline Error createStringError(std::error_code EC, const Twine &S) {
-  return createStringError(EC, S.str().c_str());
+  return createStringError(S.str(), EC);
+}
+
+/// Create a StringError with an inconvertible error code.
+inline Error createStringError(const Twine &S) {
+  return createStringError(llvm::inconvertibleErrorCode(), S);
 }
 
 template <typename... Ts>

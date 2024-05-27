@@ -1005,7 +1005,8 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
       return C;
 
     return ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], Ops.slice(1),
-                                          GEP->isInBounds(), GEP->getInRange());
+                                          GEP->getNoWrapFlags(),
+                                          GEP->getInRange());
   }
 
   if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {
@@ -1268,7 +1269,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   if (!Ops1)
     return nullptr;
 
-  return ConstantFoldCompareInstruction(Predicate, Ops0, Ops1);
+  return ConstantExpr::getCompare(Predicate, Ops0, Ops1);
 }
 
 Constant *llvm::ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,

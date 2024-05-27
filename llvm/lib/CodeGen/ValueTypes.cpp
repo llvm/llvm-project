@@ -579,9 +579,11 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   // clang-format on
 }
 
-/// Return the value type corresponding to the specified type.  This returns all
-/// pointers as MVT::iPTR.  If HandleUnknown is true, unknown types are returned
-/// as Other, otherwise they are invalid.
+/// Return the value type corresponding to the specified type.
+/// If HandleUnknown is true, unknown types are returned as Other, otherwise
+/// they are invalid.
+/// NB: This includes pointer types, which require a DataLayout to convert
+/// to a concrete value type.
 MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   assert(Ty != nullptr && "Invalid type");
   switch (Ty->getTypeID()) {
@@ -611,7 +613,6 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
-  case Type::PointerTyID:   return MVT(MVT::iPTR);
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
@@ -622,9 +623,11 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   }
 }
 
-/// getEVT - Return the value type corresponding to the specified type.  This
-/// returns all pointers as MVT::iPTR.  If HandleUnknown is true, unknown types
-/// are returned as Other, otherwise they are invalid.
+/// getEVT - Return the value type corresponding to the specified type.
+/// If HandleUnknown is true, unknown types are returned as Other, otherwise
+/// they are invalid.
+/// NB: This includes pointer types, which require a DataLayout to convert
+/// to a concrete value type.
 EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   switch (Ty->getTypeID()) {
   default:
