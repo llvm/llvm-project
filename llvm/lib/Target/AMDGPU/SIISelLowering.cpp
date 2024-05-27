@@ -6116,15 +6116,16 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   }
 
   if (ValSize < 32) {
-    SDValue InitBitCast = DAG.getBitcast(IntVT, Src0);
-    Src0 = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
+    bool IsFloat = VT.isFloatingPoint();
+    Src0 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src0) : Src0,
+                                SL, MVT::i32);
     if (Src2.getNode()) {
-      SDValue Src2Cast = DAG.getBitcast(IntVT, Src2);
-      Src2 = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
+      Src2 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src2) : Src2,
+                                  SL, MVT::i32);
     }
     SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
     SDValue Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
-    return DAG.getBitcast(VT, Trunc);
+    return IsFloat ? DAG.getBitcast(VT, Trunc) : Trunc;
   }
 
   if ((ValSize % 32) == 0) {

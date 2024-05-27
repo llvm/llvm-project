@@ -5444,32 +5444,32 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   if ((Size % 32) == 0) {
     SmallVector<Register, 2> PartialRes;
     unsigned NumParts = Size / 32;
-    bool IsS16Vec = Ty.isVector() && Ty.getElementType() == S16;
+    LLT PartialResTy =
+        Ty.isVector() && Ty.getElementType() == S16 ? V2S16 : S32;
     MachineInstrBuilder Src0Parts;
 
-    Src0Parts =
-        IsS16Vec ? B.buildUnmerge(V2S16, Src0) : B.buildUnmerge(S32, Src0);
+    Src0Parts = B.buildUnmerge(PartialResTy, Src0);
 
     switch (IID) {
     case Intrinsic::amdgcn_readlane: {
       Register Src1 = MI.getOperand(3).getReg();
       for (unsigned i = 0; i < NumParts; ++i) {
         Src0 = Src0Parts.getReg(i);
-        PartialRes.push_back((B.buildIntrinsic(Intrinsic::amdgcn_readlane,
-                                               {IsS16Vec ? V2S16 : S32})
-                                  .addUse(Src0)
-                                  .addUse(Src1))
-                                 .getReg(0));
+        PartialRes.push_back(
+            (B.buildIntrinsic(Intrinsic::amdgcn_readlane, {PartialResTy})
+                 .addUse(Src0)
+                 .addUse(Src1))
+                .getReg(0));
       }
       break;
     }
     case Intrinsic::amdgcn_readfirstlane: {
       for (unsigned i = 0; i < NumParts; ++i) {
         Src0 = Src0Parts.getReg(i);
-        PartialRes.push_back((B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
-                                               {IsS16Vec ? V2S16 : S32})
-                                  .addUse(Src0)
-                                  .getReg(0)));
+        PartialRes.push_back(
+            (B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {PartialResTy})
+                 .addUse(Src0)
+                 .getReg(0)));
       }
 
       break;
@@ -5479,18 +5479,17 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
       Register Src2 = MI.getOperand(4).getReg();
       MachineInstrBuilder Src2Parts;
 
-      Src2Parts =
-          IsS16Vec ? B.buildUnmerge(V2S16, Src2) : B.buildUnmerge(S32, Src2);
+      Src2Parts = B.buildUnmerge(PartialResTy, Src2);
 
       for (unsigned i = 0; i < NumParts; ++i) {
         Src0 = Src0Parts.getReg(i);
         Src2 = Src2Parts.getReg(i);
-        PartialRes.push_back((B.buildIntrinsic(Intrinsic::amdgcn_writelane,
-                                               {IsS16Vec ? V2S16 : S32})
-                                  .addUse(Src0)
-                                  .addUse(Src1)
-                                  .addUse(Src2))
-                                 .getReg(0));
+        PartialRes.push_back(
+            (B.buildIntrinsic(Intrinsic::amdgcn_writelane, {PartialResTy})
+                 .addUse(Src0)
+                 .addUse(Src1)
+                 .addUse(Src2))
+                .getReg(0));
       }
 
       break;
