@@ -632,6 +632,8 @@ Bug Fixes in This Version
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
