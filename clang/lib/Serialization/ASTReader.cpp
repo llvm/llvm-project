@@ -1264,7 +1264,7 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
                 Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
@@ -3401,7 +3401,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
           static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
