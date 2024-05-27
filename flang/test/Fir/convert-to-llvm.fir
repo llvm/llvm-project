@@ -2698,3 +2698,17 @@ func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:           llvm.return
 // CHECK:         }
+
+// -----
+
+// Test `fir.declare` conversion.
+func.func @_QPsub() {
+  %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsubEx"}
+  %1 = fir.declare %0 {uniq_name = "_QFsubEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  return
+}
+// CHECK-LABEL: llvm.func @_QPsub() {
+// CHECK:         %0 = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %1 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+// CHECK:         llvm.return
+// CHECK:       }
