@@ -28,6 +28,16 @@ MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
   return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0);
 }
 
+// We use this to effectively force an executable stack
+MCSection *MCAsmInfoELF::getExecutableStackSection(MCContext &Ctx) const {
+  // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
+  // don't emit them.
+  if (Ctx.getTargetTriple().isOSSolaris())
+    return nullptr;
+  return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
+                           ELF::SHF_EXECINSTR);
+}
+
 MCAsmInfoELF::MCAsmInfoELF() {
   HasIdentDirective = true;
   WeakRefDirective = "\t.weak\t";

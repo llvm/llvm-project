@@ -14,3 +14,5 @@ declare void @gnat__perfect_hash_generators__select_char_position__build_identic
 
 declare void @llvm.init.trampoline(ptr, ptr, ptr) nounwind 
 declare ptr @llvm.adjust.trampoline(ptr) nounwind 
+
+; CHECK: .section ".note.GNU-stack","x",@progbits
