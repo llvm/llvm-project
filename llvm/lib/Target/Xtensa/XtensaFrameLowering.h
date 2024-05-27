@@ -14,10 +14,16 @@
 namespace llvm {
 class XtensaTargetMachine;
 class XtensaSubtarget;
+class XtensaInstrInfo;
+class XtensaRegisterInfo;
 
 class XtensaFrameLowering : public TargetFrameLowering {
+  const XtensaSubtarget &STI;
+  const XtensaInstrInfo &TII;
+  const XtensaRegisterInfo *TRI;
+
 public:
-  XtensaFrameLowering();
+  XtensaFrameLowering(const XtensaSubtarget &STI);
 
   bool hasFP(const MachineFunction &MF) const override;
 

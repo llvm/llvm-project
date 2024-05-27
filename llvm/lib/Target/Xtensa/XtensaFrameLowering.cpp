@@ -22,9 +22,10 @@
 
 using namespace llvm;
 
-XtensaFrameLowering::XtensaFrameLowering()
+XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0,
-                          Align(4)) {}
+                          Align(4)),
+      STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
 bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -36,14 +37,10 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MBB == &MF.front() && "Shrink-wrapping not yet implemented");
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const XtensaRegisterInfo *RegInfo = static_cast<const XtensaRegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const XtensaInstrInfo &TII =
-      *static_cast<const XtensaInstrInfo *>(MF.getSubtarget().getInstrInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
-  unsigned SP = Xtensa::SP;
-  unsigned FP = RegInfo->getFrameRegister(MF);
+  MCRegister SP = Xtensa::SP;
+  MCRegister FP = TRI->getFrameRegister(MF);
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
 
@@ -121,20 +118,21 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const XtensaRegisterInfo *RegInfo = static_cast<const XtensaRegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const XtensaInstrInfo &TII =
-      *static_cast<const XtensaInstrInfo *>(MF.getSubtarget().getInstrInfo());
   DebugLoc DL = MBBI->getDebugLoc();
-  unsigned SP = Xtensa::SP;
-  unsigned FP = RegInfo->getFrameRegister(MF);
+  MCRegister SP = Xtensa::SP;
+  MCRegister FP = TRI->getFrameRegister(MF);
 
   // if framepointer enabled, restore the stack pointer.
   if (hasFP(MF)) {
-    // Find the first instruction that restores a callee-saved register.
+    // We should place restore stack pointer instruction just before
+    // sequence of instructions which restores callee-saved registers.
+    // This sequence is placed at the end of the basic block,
+    // so we should find first instruction of the sequence.
     MachineBasicBlock::iterator I = MBBI;
 
-    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
+    // Find the first instruction at the end that restores a callee-saved
+    // register.
+    for (auto &Info : MFI.getCalleeSavedInfo())
       --I;
 
     BuildMI(MBB, I, DL, TII.get(Xtensa::OR), SP).addReg(FP).addReg(FP);
@@ -154,9 +152,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
-
   MachineBasicBlock &EntryBlock = *(MF->begin());
-  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
@@ -199,8 +195,7 @@ MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
     if (I->getOpcode() == Xtensa::ADJCALLSTACKDOWN)
       Amount = -Amount;
 
-    unsigned SP = Xtensa::SP;
-    TII.adjustStackPtr(SP, Amount, MBB, I);
+    TII.adjustStackPtr(Xtensa::SP, Amount, MBB, I);
   }
 
   return MBB.erase(I);
@@ -210,9 +205,7 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const XtensaRegisterInfo *RegInfo = static_cast<const XtensaRegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  unsigned FP = RegInfo->getFrameRegister(MF);
+  unsigned FP = TRI->getFrameRegister(MF);
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
@@ -227,9 +220,9 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
     return;
 
   const TargetRegisterClass &RC = Xtensa::ARRegClass;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
   int FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false);
+
   RS->addScavengingFrameIndex(FI);
 }

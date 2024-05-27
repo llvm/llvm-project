@@ -542,14 +542,14 @@ SDValue XtensaTargetLowering::LowerConstantPool(ConstantPoolSDNode *CP,
 
 SDValue XtensaTargetLowering::LowerSTACKSAVE(SDValue Op,
                                              SelectionDAG &DAG) const {
-  unsigned SP = Xtensa::SP;
-  return DAG.getCopyFromReg(Op.getOperand(0), SDLoc(Op), SP, Op.getValueType());
+  return DAG.getCopyFromReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
+                            Op.getValueType());
 }
 
 SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  unsigned SP = Xtensa::SP;
-  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), SP, Op.getOperand(1));
+  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
+                          Op.getOperand(1));
 }
 
 SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
