@@ -513,11 +513,11 @@ public:
 
   /// List of modules which this modules dependent on. Different
   /// from `Imports`, this includes indirectly imported modules too.
-  /// The order of DependentModules is significant. It should keep
+  /// The order of TransitiveImports is significant. It should keep
   /// the same order with that module file manager when we write
   /// the current module file. The value of the member will be initialized
   /// in `ASTReader::ReadModuleOffsetMap`.
-  llvm::SmallVector<ModuleFile *, 16> DependentModules;
+  llvm::SmallVector<ModuleFile *, 16> TransitiveImports;
 
   /// Determine whether this module was directly imported at
   /// any point during translation.

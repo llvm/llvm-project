@@ -4059,7 +4059,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder DeclRemap(F.DeclRemap);
   RemapBuilder TypeRemap(F.TypeRemap);
 
-  auto &ImportedModuleVector = F.DependentModules;
+  auto &ImportedModuleVector = F.TransitiveImports;
   assert(ImportedModuleVector.empty());
 
   while (Data < DataEnd) {
