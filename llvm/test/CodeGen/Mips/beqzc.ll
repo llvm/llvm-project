@@ -10,7 +10,7 @@ entry:
   %cmp = icmp eq i32 %0, 0
   %. = select i1 %cmp, i32 10, i32 55
   store i32 %., ptr @j, align 4
-; cond-b-short: 	beqz	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}  # 16 bit inst
+; cond-b-short: 	beqz	$[[#]], $BB[[#]]_[[#]]
   ret i32 0
 }
 

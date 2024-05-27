@@ -611,9 +611,10 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       continue;
 
     // Delay slot filling is disabled at -O0, or in microMIPS32R6.
+    // FIXME: Add support for MIPS16. All delay slots in MIPS16 are 16-bit.
     if (!DisableDelaySlotFiller &&
         (TM->getOptLevel() != CodeGenOptLevel::None) &&
-        !(InMicroMipsMode && STI.hasMips32r6())) {
+        !(InMicroMipsMode && STI.hasMips32r6()) && !STI.inMips16Mode()) {
 
       bool Filled = false;
 

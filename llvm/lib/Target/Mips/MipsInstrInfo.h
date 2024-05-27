@@ -114,7 +114,6 @@ public:
                   MachineBasicBlock::iterator MI) const override;
 
   /// Insert an ISA appropriate `nop`.
-  // FIXME: Add support for MIPS16e.
   MachineInstrBuilder insertNop(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 DebugLoc DL) const;

@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=16
+; RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=static < %s \
+; RUN:     | llvm-mc -arch=mipsel -mattr=+mips16 -show-inst \
+; RUN:     | FileCheck %s -check-prefix=16
 
 @i = global i32 25, align 4
 @.str = private unnamed_addr constant [5 x i8] c"%i \0A\00", align 1
@@ -25,7 +27,7 @@ entry:
   call void @p(ptr %arrayidx1)
   ret void
 }
-; 16:	save	$ra, 2040
-; 16:	addiu	$sp, -40 # 16 bit inst
-; 16:	addiu	$sp, 40 # 16 bit inst
-; 16:	restore	$ra, 2040
+; 16:	save	$ra, 2040       # <MCInst #[[#]] SaveX16
+; 16:	addiu	$sp, -40        # <MCInst #[[#]] AddiuSpImm16
+; 16:	addiu	$sp, 40         # <MCInst #[[#]] AddiuSpImm16
+; 16:	restore	$ra, 2040     # <MCInst #[[#]] RestoreX16

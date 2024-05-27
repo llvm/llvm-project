@@ -94,14 +94,14 @@ declare i32 @printf(ptr, ...) "target-cpu"="mips16" "target-features"="+mips16,+
 attributes #0 = { nounwind "target-cpu"="mips16" "target-features"="+mips16,+o32" }
 attributes #1 = { "target-cpu"="mips16" "target-features"="+mips16,+o32" }
 
-; 16:	cmpi	${{[0-9]+}}, 1 	# 16 bit inst
-; 16:	bteqz	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	cmpi	$[[#]], 1 	
+; 16:	bteqz	$BB[[#]]_[[#]]
 
-; 16:	cmpi	${{[0-9]+}}, 1000
-; 16:	bteqz	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	cmpi	$[[#]], 1000
+; 16:	bteqz	$BB[[#]]_[[#]]
 
-; 16:	cmpi	${{[0-9]+}}, 3 	# 16 bit inst
-; 16:	bteqz	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	cmpi	$[[#]], 3 	
+; 16:	bteqz	$BB[[#]]_[[#]]
 
-; 16:	cmpi	${{[0-9]+}}, 1000
-; 16:	bteqz	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	cmpi	$[[#]], 1000
+; 16:	bteqz	$BB[[#]]_[[#]]

@@ -20,11 +20,6 @@ def simm9_addiusp : Operand<i32> {
   let DecoderMethod = "DecodeSimm9SP";
 }
 
-def uimm3_shift : Operand<i32> {
-  let EncoderMethod = "getUImm3Mod8Encoding";
-  let DecoderMethod = "DecodePOOL16BEncodedField";
-}
-
 def simm3_lsa2 : Operand<i32> {
   let EncoderMethod = "getSImm3Lsa2Value";
   let DecoderMethod = "DecodeAddiur2Simm7";

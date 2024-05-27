@@ -107,16 +107,15 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ;
 ; MIPS16-LABEL: f123:
 ; MIPS16:       # %bb.0: # %entry
-; MIPS16-NEXT:    save 16 # 16 bit inst
-; MIPS16-EMPTY:
+; MIPS16-NEXT:    save 16
 ; MIPS16-NEXT:    .cfi_def_cfa_offset 16
 ; MIPS16-NEXT:    lw $2, 8($sp)
 ; MIPS16-NEXT:    lw $2, 12($sp)
 ; MIPS16-NEXT:    li $3, 3
 ; MIPS16-NEXT:    sw $3, 8($sp)
-; MIPS16-NEXT:    lw $3, $CPI0_0 # 16 bit inst
+; MIPS16-NEXT:    lw $3, $CPI0_0
 ; MIPS16-NEXT:    and $3, $2
-; MIPS16-NEXT:    lw $2, $CPI0_1 # 16 bit inst
+; MIPS16-NEXT:    lw $2, $CPI0_1
 ; MIPS16-NEXT:    or $2, $3
 ; MIPS16-NEXT:    sw $2, 12($sp)
 ; MIPS16-NEXT:    move $2, $zero
@@ -125,17 +124,17 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS16-NEXT:    and $3, $2
 ; MIPS16-NEXT:    lw $2, 4($sp)
 ; MIPS16-NEXT:    sw $3, 0($sp)
-; MIPS16-NEXT:    lw $3, $CPI0_2 # 16 bit inst
+; MIPS16-NEXT:    lw $3, $CPI0_2
 ; MIPS16-NEXT:    and $3, $2
-; MIPS16-NEXT:    lw $2, $CPI0_3 # 16 bit inst
+; MIPS16-NEXT:    lw $2, $CPI0_3
 ; MIPS16-NEXT:    or $2, $3
 ; MIPS16-NEXT:    sw $2, 4($sp)
 ; MIPS16-NEXT:    lw $2, 0($sp)
 ; MIPS16-NEXT:    lw $3, 4($sp)
 ; MIPS16-NEXT:    sw $3, 4($sp)
-; MIPS16-NEXT:    lw $3, $CPI0_4 # 16 bit inst
+; MIPS16-NEXT:    lw $3, $CPI0_4
 ; MIPS16-NEXT:    and $3, $2
-; MIPS16-NEXT:    lw $2, $CPI0_5 # 16 bit inst
+; MIPS16-NEXT:    lw $2, $CPI0_5
 ; MIPS16-NEXT:    or $2, $3
 ; MIPS16-NEXT:    sw $2, 0($sp)
 ; MIPS16-NEXT:    lw $2, 4($sp)
@@ -146,7 +145,7 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS16-NEXT:    srl $2, $2, 16
 ; MIPS16-NEXT:    li $4, 65532
 ; MIPS16-NEXT:    and $4, $2
-; MIPS16-NEXT:    lw $2, $CPI0_6 # 16 bit inst
+; MIPS16-NEXT:    lw $2, $CPI0_6
 ; MIPS16-NEXT:    and $2, $3
 ; MIPS16-NEXT:    or $2, $4
 ; MIPS16-NEXT:    sw $2, 0($sp)
@@ -156,8 +155,7 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS16-NEXT:    sll $3, $4, 5
 ; MIPS16-NEXT:    or $3, $2
 ; MIPS16-NEXT:    srl $2, $4, 27
-; MIPS16-NEXT:    restore 16 # 16 bit inst
-; MIPS16-EMPTY:
+; MIPS16-NEXT:    restore 16
 ; MIPS16-NEXT:    jrc $ra
 ; MIPS16-NEXT:    .p2align 2
 ; MIPS16-NEXT:  # %bb.1:
@@ -268,8 +266,7 @@ define i32 @foo(i32 signext %x) {
 ;
 ; MIPS16-LABEL: foo:
 ; MIPS16:       # %bb.0: # %entry
-; MIPS16-NEXT:    save 8 # 16 bit inst
-; MIPS16-EMPTY:
+; MIPS16-NEXT:    save 8 
 ; MIPS16-NEXT:    .cfi_def_cfa_offset 8
 ; MIPS16-NEXT:    sw $4, 4($sp)
 ; MIPS16-NEXT:    move $3, $zero
@@ -279,8 +276,7 @@ define i32 @foo(i32 signext %x) {
 ; MIPS16-NEXT:    li $3, 8
 ; MIPS16-NEXT:    or $3, $2
 ; MIPS16-NEXT:    sw $3, 4($sp)
-; MIPS16-NEXT:    restore 8 # 16 bit inst
-; MIPS16-EMPTY:
+; MIPS16-NEXT:    restore 8 
 ; MIPS16-NEXT:    jrc $ra
 ;
 ; MIPS64R2N32-LABEL: foo:

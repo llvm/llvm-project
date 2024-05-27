@@ -63,21 +63,24 @@ def : InstRW<[GenericWriteALU], (instrs ADDIUPC, ALIGN, ALUIPC, AUI,
 // MIPS16e
 // =======
 
-def : InstRW<[GenericWriteALU], (instrs AddiuRxImmX16, AddiuRxRxImm16,
-                                 AddiuRxRxImmX16, AddiuRxRyOffMemX16,
-                                 AddiuRxPcImmX16, AddiuSpImm16, AddiuSpImmX16,
-                                 AdduRxRyRz16, AndRxRxRy16, CmpRxRy16,
+def : InstRW<[GenericWriteALU], (instrs AddiuRxImm16, AddiuRxImmX16, 
+                                 AddiuRxRxImm16, AddiuRxRxImmX16,
+                                 AddiuRxRyOffMemX16, AddiuRxPcImm16,
+                                 AddiuRxPcImmX16, AddiuRxSpImm16,
+                                 AddiuRxSpImmX16, AddiuSpImm16, AddiuSpImmX16,
+                                 AddiuRyRxImm16, AddiuRyRxImmX16, AdduRxRyRz16,
+                                 AndRxRxRy16, Asmacro16, CmpRxRy16,
                                  CmpiRxImm16, CmpiRxImmX16, LiRxImm16,
                                  LiRxImmX16, LiRxImmAlignX16, Move32R16,
                                  MoveR3216, Mfhi16, Mflo16, NegRxRy16,
-                                 NotRxRy16, OrRxRxRy16, SebRx16, SehRx16,
-                                 SllX16, SllvRxRy16, SltiRxImm16,
-                                 SltiRxImmX16, SltiCCRxImmX16,
-                                 SltiuRxImm16, SltiuRxImmX16, SltiuCCRxImmX16,
-                                 SltRxRy16, SltCCRxRy16, SltuRxRy16,
-                                 SltuRxRyRz16, SltuCCRxRy16, SravRxRy16,
-                                 SraX16, SrlvRxRy16, SrlX16, SubuRxRyRz16,
-                                 XorRxRxRy16)>;
+                                 NotRxRy16, OrRxRxRy16, SebRx16, SehRx16, 
+                                 Sll16, SllX16, SllvRxRy16, SltiRxImm16,
+                                 SltiRxImmX16, SltiCCRxImmX16, SltiuRxImm16,
+                                 SltiuRxImmX16, SltiuCCRxImmX16, SltRxRy16,
+                                 SltCCRxRy16, SltuRxRy16, SltuRxRyRz16,
+                                 SltuCCRxRy16, SravRxRy16, Sra16, SraX16, 
+                                 SrlvRxRy16, Srl16, SrlX16, SubuRxRyRz16, 
+                                 XorRxRxRy16, ZebRx16, ZehRx16)>;
 
 def : InstRW<[GenericWriteALU], (instrs Constant32, LwConstant32,
                                  GotPrologue16, CONSTPOOL_ENTRY)>;
@@ -337,11 +340,12 @@ def : InstRW<[GenericWriteJump], (instrs Bimm16, BimmX16, BeqzRxImm16,
                                   BtnezT8CmpX16, BtnezT8CmpiX16,
                                   BtnezT8SltX16, BtnezT8SltuX16,
                                   BtnezT8SltiX16, BtnezT8SltiuX16, JrRa16,
-                                  JrcRa16, JrcRx16, RetRA16)>;
+                                  JrcRa16, JrRx16, JrcRx16, RetRA16)>;
 
-def : InstRW<[GenericWriteJumpAndLink], (instrs Jal16, JalB16, JumpLinkReg16)>;
+def : InstRW<[GenericWriteJumpAndLink], (instrs Jal16, JalB16, JumpLinkReg16,
+                                         JalrRaRx16, JalrcRaRx16, Jalx16)>;
 
-def : InstRW<[GenericWriteTrap], (instrs Break16)>;
+def : InstRW<[GenericWriteTrap], (instrs Break16, Sdbbp16)>;
 
 def : InstRW<[GenericWriteALULong], (instrs SelBeqZ, SelTBteqZCmp,
                                      SelTBteqZCmpi, SelTBteqZSlt,
@@ -633,14 +637,21 @@ def : InstRW<[GenericWriteCache], (instrs CACHEE_MM)>;
 // =======
 
 def : InstRW<[GenericWriteLoad], (instrs Restore16, RestoreX16,
-                                  LbRxRyOffMemX16,
-                                  LbuRxRyOffMemX16, LhRxRyOffMemX16,
-                                  LhuRxRyOffMemX16, LwRxRyOffMemX16,
-                                  LwRxSpImmX16, LwRxPcTcp16, LwRxPcTcpX16)>;
+                                  LbRxRyOffMem16, LbRxRyOffMemX16,
+                                  LbuRxRyOffMem16, LbuRxRyOffMemX16,
+                                  LhRxRyOffMem16, LhRxRyOffMemX16,
+                                  LhuRxRyOffMem16, LhuRxRyOffMemX16,
+                                  LwRxRyOffMem16, LwRxRyOffMemX16,
+                                  LwRxSpImm16, LwRxSpImmX16, 
+                                  LwRxPcImm16, LwRxPcImmX16,
+                                  LwRxPcTcp16, LwRxPcTcpX16)>;
 
-def : InstRW<[GenericWriteStore], (instrs Save16, SaveX16, SbRxRyOffMemX16,
-                                   ShRxRyOffMemX16, SwRxRyOffMemX16,
-                                   SwRxSpImmX16)>;
+def : InstRW<[GenericWriteStore], (instrs Save16, SaveX16, 
+                                   SbRxRyOffMem16, SbRxRyOffMemX16,
+                                   ShRxRyOffMem16, ShRxRyOffMemX16,
+                                   SwRxRyOffMem16, SwRxRyOffMemX16,
+                                   SwRxSpImm16, SwRxSpImmX16,
+                                   SwRaSpImm16, SwRaSpImmX16)>;
 
 // microMIPS
 // =========

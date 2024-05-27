@@ -58,6 +58,8 @@ MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
     return ABI.ArePtrs64bit() ? &Mips::SP64RegClass : &Mips::SP32RegClass;
   case MipsPtrClass::GlobalPointer:
     return ABI.ArePtrs64bit() ? &Mips::GP64RegClass : &Mips::GP32RegClass;
+  case MipsPtrClass::CPU16Regs:
+    return &Mips::CPU16RegsRegClass;
   }
 
   llvm_unreachable("Unknown pointer kind");

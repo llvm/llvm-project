@@ -16,15 +16,15 @@ target triple = "mips--linux-gnu"
 define void @t() #0 {
 entry:
   store i32 -559023410, ptr @i, align 4
-; load-relax: 	lw	${{[0-9]+}}, $CPI0_0
+; load-relax: 	lw	$[[#]], $CPI0_0
 ; load-relax:	jrc	 $ra
 ; load-relax:	.p2align	2
 ; load-relax: $CPI0_0:
 ; load-relax:	.4byte	3735943886
 ; load-relax:	.end	t
 
-; no-load-relax: lw	${{[0-9]+}}, $CPI0_1	# 16 bit inst
-; no-load-relax:	jalrc 	${{[0-9]+}}
+; no-load-relax: lw	$[[#]], $CPI0_1
+; no-load-relax:	jalrc $ra, $[[#]]
 ; no-load-relax:	b	$BB0_2
 ; no-load-relax:	.p2align	2
 ; no-load-relax: $CPI0_1:
