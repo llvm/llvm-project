@@ -4346,6 +4346,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
     return Style.SpacesInParensOptions.InEmptyParentheses;
   }
+  if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
+      Style.SpacesInParensOptions.ExceptDoubleParentheses &&
+      ((Left.is(tok::l_paren) && Right.is(tok::l_paren)) ||
+       (Left.is(tok::r_paren) && Right.is(tok::r_paren)))) {
+    const auto *Tok = Left.MatchingParen;
+    if (Tok && Tok->Previous == Right.MatchingParen)
+      return false;
+  }
   if (Style.SpacesInParensOptions.InConditionalStatements) {
     const FormatToken *LeftParen = nullptr;
     if (Left.is(tok::l_paren))
