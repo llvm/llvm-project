@@ -56,6 +56,10 @@ public:
   /// to be fulfilled before refactoring can be performed.
   virtual bool hasSelectionRequirement() = 0;
 
+  /// Returns true when the rule has a source location requirement that has
+  /// to be fulfilled before refactoring can be performed.
+  virtual bool hasLocationRequirement() = 0;
+
   /// Traverses each refactoring option used by the rule and invokes the
   /// \c visit callback in the consumer for each option.
   ///
