@@ -601,6 +601,19 @@ struct VectorInterleaveOpConvert final
 
     // Interleave the indices
     int n = sourceType.getNumElements();
+
+    // Input vectors of size 1 are converted to scalars by the type converter. 
+    // We cannot use spirv::VectorShuffleOp directly in this case, and need to 
+    // use spirv::CompositeConstructOp.
+    if (n == 1) {
+      SmallVector<Value> newOperands(2);
+      newOperands[0] = adaptor.getLhs();
+      newOperands[1] = adaptor.getRhs();
+      rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+          interleaveOp, newResultType, newOperands);
+      return success();
+    }
+
     auto seq = llvm::seq<int64_t>(2 * n);
     auto indices = llvm::to_vector(
         llvm::map_range(seq, [n](int i) { return (i % 2 ? n : 0) + i / 2; }));
@@ -609,7 +622,7 @@ struct VectorInterleaveOpConvert final
     rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
         interleaveOp, newResultType, adaptor.getLhs(), adaptor.getRhs(),
         rewriter.getI32ArrayAttr(indices));
-
+    
     return success();
   }
 };
