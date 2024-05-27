@@ -117,6 +117,9 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
     /// Original IR callsite corresponding to this call, if available.
     const CallBase *CB = nullptr;
 
@@ -584,6 +587,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with

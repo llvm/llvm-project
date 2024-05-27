@@ -11,6 +11,7 @@
 #include "SystemZ.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZMachineScheduler.h"
+#include "SystemZTargetObjectFile.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,6 +29,11 @@
 #include <string>
 
 using namespace llvm;
+
+static cl::opt<bool> EnableMachineCombinerPass(
+    "systemz-machine-combiner",
+    cl::desc("Enable the machine combiner pass"),
+    cl::init(true), cl::Hidden);
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
@@ -83,7 +89,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   // Note: Some times run with -triple s390x-unknown.
   // In this case, default to ELF unless z/OS specifically provided.
-  return std::make_unique<TargetLoweringObjectFileELF>();
+  return std::make_unique<SystemZELFTargetObjectFile>();
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -228,7 +234,7 @@ void SystemZPassConfig::addIRPasses() {
     addPass(createLoopDataPrefetchPass());
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -244,6 +250,10 @@ bool SystemZPassConfig::addInstSelector() {
 
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
+
+  if (EnableMachineCombinerPass)
+    addPass(&MachineCombinerID);
+
   return true;
 }
 

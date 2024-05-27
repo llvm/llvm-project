@@ -316,6 +316,58 @@ func.func @all_gather_invalid_negative_gather_axis(
 
 // -----
 
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_duplicate_mesh_axis(
+    %arg0 : tensor<?xf32>) -> tensor<?xf32> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0, 0]
+    slice_axis = 0
+    : tensor<?xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_dynamic_dimension(
+    %arg0 : tensor<?xf32>) -> tensor<2xf32> {
+  // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected dynamic, but got 2.}}
+  %0 = mesh.all_slice %arg0 on @mesh0
+    slice_axis = 0
+    : tensor<?xf32> -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_static_dimension_size(
+    %arg0 : tensor<3xf32>) -> tensor<2xf32> {
+  // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected 1, but got 2.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0]
+    slice_axis = 0
+    : tensor<3xf32> -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_operand_static_dimension_size(
+    %arg0 : tensor<4xf32>) -> tensor<?xf32> {
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0]
+    slice_axis = 0
+    : tensor<4xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
 func.func @all_to_all_invalid_mesh_symbol(
     %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
   // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
@@ -660,7 +712,7 @@ mesh.mesh @mesh0(shape = 3)
 
 func.func @reduce_scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf64> {
-  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for scatter axis 0.}}
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
   %0 = mesh.reduce_scatter %arg0 on @mesh0 mesh_axes = [0] scatter_axis = 0
     : tensor<4xf32> -> tensor<?xf64>
   return %0 : tensor<?xf64>
@@ -711,7 +763,7 @@ mesh.mesh @mesh0(shape = 3)
 
 func.func @scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf32> {
-  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for scatter axis 0.}}
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
   %0 = mesh.scatter %arg0 on @mesh0 mesh_axes = [0]
     scatter_axis = 0 root = [1]
     : (tensor<4xf32>) -> tensor<?xf32>

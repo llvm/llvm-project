@@ -57,18 +57,31 @@ module;
             else:
                 module_cpp_in.write(f"#include <{header}>\n")
 
-        module_cpp_in.write("\n// *** Headers not yet available ***\n")
+        module_cpp_in.write(
+            """
+// *** Headers not yet available ***
+//
+// This validation is mainly to catch when a new header is added but adding the
+// corresponding .inc file is forgotten. However, the check based on __has_include
+// alone doesn't work on Windows because the Windows SDK is on the include path,
+// and that means the MSVC STL headers can be found as well, tricking __has_include
+// into thinking that libc++ provides the header.
+//
+#ifndef _WIN32
+"""
+        )
         for header in sorted(headers_not_available):
             module_cpp_in.write(
                 f"""\
-#if __has_include(<{header}>)
-#  error "please update the header information for <{header}> in headers_not_available in utils/libcxx/header_information.py"
-#endif // __has_include(<{header}>)
+#  if __has_include(<{header}>)
+#    error "please update the header information for <{header}> in headers_not_available in utils/libcxx/header_information.py"
+#  endif // __has_include(<{header}>)
 """
             )
 
         module_cpp_in.write(
-            f"""
+            f"""#endif // _WIN32
+
 export module {module};
 {'export import std;' if module == 'std.compat' else ''}
 

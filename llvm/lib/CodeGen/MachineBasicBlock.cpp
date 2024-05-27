@@ -1137,7 +1137,6 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 
   MachineFunction *MF = getParent();
   MachineBasicBlock *PrevFallthrough = getNextNode();
-  DebugLoc DL;  // FIXME: this is nowhere
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
   NMBB->setCallFrameSize(Succ->getCallFrameSize());
@@ -1218,6 +1217,15 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
+    // In original 'this' BB, there must be a branch instruction targeting at
+    // Succ. We can not find it out since currently getBranchDestBlock was not
+    // implemented for all targets. However, if the merged DL has column or line
+    // number, the scope and non-zero column and line number is same with that
+    // branch instruction so we can safely use it.
+    DebugLoc DL, MergedDL = findBranchDebugLoc();
+    if (MergedDL && (MergedDL.getLine() || MergedDL.getCol()))
+      DL = MergedDL;
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
@@ -1718,6 +1726,12 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
 
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
+}
+
+void MachineBasicBlock::clearLiveIns(
+    std::vector<RegisterMaskPair> &OldLiveIns) {
+  assert(OldLiveIns.empty() && "Vector must be empty");
+  std::swap(LiveIns, OldLiveIns);
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {

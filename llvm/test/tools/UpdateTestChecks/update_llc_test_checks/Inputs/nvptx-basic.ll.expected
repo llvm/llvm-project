@@ -30,7 +30,6 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
 ; CHECK-NEXT:    ld.u64 %rd7, [%SP+24];
 ; CHECK-NEXT:    ld.u64 %rd8, [%SP+16];
 ; CHECK-NEXT:    { // callseq 0, 0
-; CHECK-NEXT:    .reg .b32 temp_param_reg;
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
 ; CHECK-NEXT:    st.param.v2.b64 [param0+0], {%rd6, %rd5};
 ; CHECK-NEXT:    st.param.v2.b64 [param0+16], {%rd8, %rd7};

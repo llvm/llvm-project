@@ -105,7 +105,7 @@ private:
   }
 
   mlir::Type gen(const Fortran::evaluate::Component &component) {
-    auto recTy = gen(component.base()).cast<fir::RecordType>();
+    auto recTy = mlir::cast<fir::RecordType>(gen(component.base()));
     const Fortran::semantics::Symbol &componentSymbol =
         component.GetLastSymbol();
     // Parent components will not be found here, they are not part

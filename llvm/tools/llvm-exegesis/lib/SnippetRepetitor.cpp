@@ -48,10 +48,8 @@ public:
 
 class LoopSnippetRepetitor : public SnippetRepetitor {
 public:
-  explicit LoopSnippetRepetitor(const LLVMState &State)
-      : SnippetRepetitor(State),
-        LoopCounter(State.getExegesisTarget().getLoopCounterRegister(
-            State.getTargetMachine().getTargetTriple())) {}
+  explicit LoopSnippetRepetitor(const LLVMState &State, unsigned LoopRegister)
+      : SnippetRepetitor(State), LoopCounter(LoopRegister) {}
 
   // Loop over the snippet ceil(MinInstructions / Instructions.Size()) times.
   FillFunction Repeat(ArrayRef<MCInst> Instructions, unsigned MinInstructions,
@@ -113,8 +111,8 @@ public:
         (void)_;
         Loop.addInstructions(Instructions);
       }
-      ET.decrementLoopCounterAndJump(*Loop.MBB, *Loop.MBB,
-                                     State.getInstrInfo());
+      ET.decrementLoopCounterAndJump(*Loop.MBB, *Loop.MBB, State.getInstrInfo(),
+                                     LoopCounter);
 
       // Set up the exit basic block.
       Loop.MBB->addSuccessor(Exit.MBB, BranchProbability::getZero());
@@ -138,14 +136,14 @@ SnippetRepetitor::~SnippetRepetitor() {}
 
 std::unique_ptr<const SnippetRepetitor>
 SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
-                         const LLVMState &State) {
+                         const LLVMState &State, unsigned LoopRegister) {
   switch (Mode) {
   case Benchmark::Duplicate:
   case Benchmark::MiddleHalfDuplicate:
     return std::make_unique<DuplicateSnippetRepetitor>(State);
   case Benchmark::Loop:
   case Benchmark::MiddleHalfLoop:
-    return std::make_unique<LoopSnippetRepetitor>(State);
+    return std::make_unique<LoopSnippetRepetitor>(State, LoopRegister);
   case Benchmark::AggregateMin:
     break;
   }

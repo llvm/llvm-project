@@ -264,12 +264,40 @@ class ConcurrentEventsBase(TestBase):
                 "Expected main thread (finish) breakpoint to be hit once",
             )
 
-            num_threads = self.inferior_process.GetNumThreads()
+            # There should be a single active thread (the main one) which hit
+            # the breakpoint after joining.  Depending on the pthread
+            # implementation we may have a worker thread finishing the pthread_join()
+            # after it has returned.  Filter the threads to only count those
+            # with user functions on them from our test case file,
+            # lldb/test/API/functionalities/thread/concurrent_events/main.cpp
+            user_code_funcnames = [
+                "breakpoint_func",
+                "crash_func",
+                "do_action_args",
+                "dotest",
+                "main",
+                "register_signal_handler",
+                "signal_func",
+                "sigusr1_handler",
+                "start_threads",
+                "watchpoint_func",
+            ]
+            num_threads_with_usercode = 0
+            for t in self.inferior_process.threads:
+                thread_has_user_code = False
+                for f in t.frames:
+                    for funcname in user_code_funcnames:
+                        if funcname in f.GetDisplayFunctionName():
+                            thread_has_user_code = True
+                            break
+                if thread_has_user_code:
+                    num_threads_with_usercode += 1
+
             self.assertEqual(
                 1,
-                num_threads,
+                num_threads_with_usercode,
                 "Expecting 1 thread but seeing %d. Details:%s"
-                % (num_threads, "\n\t".join(self.describe_threads())),
+                % (num_threads_with_usercode, "\n\t".join(self.describe_threads())),
             )
             self.runCmd("continue")
 

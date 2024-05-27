@@ -539,17 +539,8 @@ static void resolvePrevailingInIndex(
 // Initialize the TargetMachine builder for a given Triple
 static void initTMBuilder(TargetMachineBuilder &TMBuilder,
                           const Triple &TheTriple) {
-  // Set a default CPU for Darwin triples (copied from LTOCodeGenerator).
-  // FIXME this looks pretty terrible...
-  if (TMBuilder.MCpu.empty() && TheTriple.isOSDarwin()) {
-    if (TheTriple.getArch() == llvm::Triple::x86_64)
-      TMBuilder.MCpu = "core2";
-    else if (TheTriple.getArch() == llvm::Triple::x86)
-      TMBuilder.MCpu = "yonah";
-    else if (TheTriple.getArch() == llvm::Triple::aarch64 ||
-             TheTriple.getArch() == llvm::Triple::aarch64_32)
-      TMBuilder.MCpu = "cyclone";
-  }
+  if (TMBuilder.MCpu.empty())
+    TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
 }
 
@@ -775,7 +766,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    const lto::InputFile &File) {
+    GVSummaryPtrSet &DecSummaries, const lto::InputFile &File) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -805,7 +796,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
 
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 }
 
 /**
@@ -841,10 +832,14 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
+  // 'EmitImportsFiles' emits the list of modules from which to import from, and
+  // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
+  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
+  GVSummaryPtrSet DecSummaries;
   std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 
   std::error_code EC;
   if ((EC = EmitImportsFiles(ModuleIdentifier, OutputName,
@@ -989,7 +984,7 @@ void ThinLTOCodeGenerator::run() {
 
   if (CodeGenOnly) {
     // Perform only parallel codegen and return.
-    ThreadPool Pool;
+    DefaultThreadPool Pool;
     int count = 0;
     for (auto &Mod : Modules) {
       Pool.async([&](int count) {
@@ -1135,7 +1130,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Parallel optimizer + codegen
   {
-    ThreadPool Pool(heavyweight_hardware_concurrency(ThreadCount));
+    DefaultThreadPool Pool(heavyweight_hardware_concurrency(ThreadCount));
     for (auto IndexCount : ModulesOrdering) {
       auto &Mod = Modules[IndexCount];
       Pool.async([&](int count) {

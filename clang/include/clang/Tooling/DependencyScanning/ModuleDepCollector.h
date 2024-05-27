@@ -149,6 +149,8 @@ private:
       BuildInfo;
 };
 
+using PrebuiltModuleVFSMapT = llvm::StringMap<llvm::StringSet<>>;
+
 class ModuleDepCollector;
 
 /// Callback that records textual includes and direct modular includes/imports
@@ -214,6 +216,7 @@ public:
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
+                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
                      ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
                      bool IsStdModuleP1689Format);
 
@@ -233,6 +236,8 @@ private:
   DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
+  /// Mapping from prebuilt AST files to their sorted list of VFS overlay files.
+  PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -302,6 +307,11 @@ private:
   void associateWithContextHash(const CowCompilerInvocation &CI,
                                 ModuleDeps &Deps);
 };
+
+/// Resets codegen options that don't affect modules/PCH.
+void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                               const LangOptions &LangOpts,
+                               CodeGenOptions &CGOpts);
 
 } // end namespace dependencies
 } // end namespace tooling

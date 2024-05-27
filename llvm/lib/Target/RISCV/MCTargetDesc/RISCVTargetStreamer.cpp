@@ -16,7 +16,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 
@@ -46,6 +46,12 @@ void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
 void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
   TargetABI = ABI;
+}
+
+void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
+  HasRVC = STI.hasFeature(RISCV::FeatureStdExtC) ||
+           STI.hasFeature(RISCV::FeatureStdExtZca);
+  HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
 }
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,

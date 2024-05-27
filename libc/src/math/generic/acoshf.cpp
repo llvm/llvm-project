@@ -33,12 +33,8 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   }
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
-    // Check for exceptional values.
-    uint32_t x_abs = xbits.abs().uintval();
-    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
-      // x is +inf or NaN.
+    if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
       return x;
-    }
 
     // Helper functions to set results for exceptional cases.
     auto round_result_slightly_down = [](float r) -> float {

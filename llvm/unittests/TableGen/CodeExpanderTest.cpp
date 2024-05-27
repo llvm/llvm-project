@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "GlobalISel/CodeExpander.h"
-#include "GlobalISel/CodeExpansions.h"
+#include "Common/GlobalISel/CodeExpander.h"
+#include "Common/GlobalISel/CodeExpansions.h"
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"

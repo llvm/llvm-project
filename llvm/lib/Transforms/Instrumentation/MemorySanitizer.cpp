@@ -152,6 +152,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -211,6 +212,9 @@ using namespace llvm;
 
 DEBUG_COUNTER(DebugInsertCheck, "msan-insert-check",
               "Controls which checks to insert");
+
+DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
+              "Controls which instruction to instrument");
 
 static const unsigned kOriginSize = 4;
 static const Align kMinOriginAlignment = Align(4);
@@ -1040,8 +1044,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
@@ -1131,6 +1135,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
+  SmallVector<Instruction *, 16> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1232,9 +1237,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Note: The loop based formation works for fixed length vectors too,
     // however we prefer to unroll and specialize alignment below.
     if (TS.isScalable()) {
-      Value *Size = IRB.CreateTypeSize(IRB.getInt32Ty(), TS);
-      Value *RoundUp = IRB.CreateAdd(Size, IRB.getInt32(kOriginSize - 1));
-      Value *End = IRB.CreateUDiv(RoundUp, IRB.getInt32(kOriginSize));
+      Value *Size = IRB.CreateTypeSize(MS.IntptrTy, TS);
+      Value *RoundUp =
+          IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
+      Value *End =
+          IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
         SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
@@ -1336,7 +1343,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Returns true if Debug Location curresponds to multiple warnings.
+  // Returns true if Debug Location corresponds to multiple warnings.
   bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
     if (MS.TrackOrigins < 2)
       return false;
@@ -1461,19 +1468,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeChecks() {
-    llvm::stable_sort(InstrumentationList,
-                      [](const ShadowOriginAndInsertPoint &L,
-                         const ShadowOriginAndInsertPoint &R) {
-                        return L.OrigIns < R.OrigIns;
-                      });
+#ifndef NDEBUG
+    // For assert below.
+    SmallPtrSet<Instruction *, 16> Done;
+#endif
 
     for (auto I = InstrumentationList.begin();
          I != InstrumentationList.end();) {
-      auto J =
-          std::find_if(I + 1, InstrumentationList.end(),
-                       [L = I->OrigIns](const ShadowOriginAndInsertPoint &R) {
-                         return L != R.OrigIns;
-                       });
+      auto OrigIns = I->OrigIns;
+      // Checks are grouped by the original instruction. We call all
+      // `insertShadowCheck` for an instruction at once.
+      assert(Done.insert(OrigIns).second);
+      auto J = std::find_if(I + 1, InstrumentationList.end(),
+                            [OrigIns](const ShadowOriginAndInsertPoint &R) {
+                              return OrigIns != R.OrigIns;
+                            });
       // Process all checks of instruction at once.
       materializeInstructionChecks(ArrayRef<ShadowOriginAndInsertPoint>(I, J));
       I = J;
@@ -1513,6 +1522,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
+
+    // `visit` above only collects instructions. Process them after iterating
+    // CFG to avoid requirement on CFG transformations.
+    for (Instruction *I : Instructions)
+      InstVisitor<MemorySanitizerVisitor>::visit(*I);
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -1949,8 +1963,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned ArgOffset = 0;
       const DataLayout &DL = F->getParent()->getDataLayout();
       for (auto &FArg : F->args()) {
-        if (!FArg.getType()->isSized()) {
-          LLVM_DEBUG(dbgs() << "Arg is not sized\n");
+        if (!FArg.getType()->isSized() || FArg.getType()->isScalableTy()) {
+          LLVM_DEBUG(dbgs() << (FArg.getType()->isScalableTy()
+                                    ? "vscale not fully supported\n"
+                                    : "Arg is not sized\n"));
+          if (A == &FArg) {
+            ShadowPtr = getCleanShadow(V);
+            setOrigin(A, getCleanOrigin());
+            break;
+          }
           continue;
         }
 
@@ -2131,8 +2152,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
@@ -2166,8 +2186,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   // ------------------- Visitors.
@@ -2178,7 +2197,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't want to visit if we're in the prologue
     if (isInPrologue(I))
       return;
-    InstVisitor<MemorySanitizerVisitor>::visit(I);
+    if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
+      LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
+      // We still need to set the shadow and origin to clean values.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    Instructions.push_back(&I);
   }
 
   /// Instrument LoadInst
@@ -2495,6 +2522,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
     Type *srcTy = V->getType();
+    if (srcTy == dstTy)
+      return V;
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
     size_t dstSizeInBits = VectorOrPrimitiveTypeSizeInBits(dstTy);
     if (srcSizeInBits > 1 && dstSizeInBits == 1)
@@ -3715,8 +3744,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void handleArithmeticWithOverflow(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = getShadow(&I, 1);
+    Value *ShadowElt0 = IRB.CreateOr(Shadow0, Shadow1);
+    Value *ShadowElt1 =
+        IRB.CreateICmpNE(ShadowElt0, getCleanShadow(ShadowElt0));
+
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt0, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt1, 1);
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      handleArithmeticWithOverflow(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
@@ -4161,6 +4214,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         LLVM_DEBUG(dbgs() << "Arg " << i << " is not sized: " << CB << "\n");
         continue;
       }
+
+      if (A->getType()->isScalableTy()) {
+        LLVM_DEBUG(dbgs() << "Arg  " << i << " is vscale: " << CB << "\n");
+        // Handle as noundef, but don't reserve tls slots.
+        insertShadowCheck(A, &CB);
+        continue;
+      }
+
       unsigned Size = 0;
       const DataLayout &DL = F.getParent()->getDataLayout();
 
@@ -4399,8 +4460,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
     const DataLayout &DL = F.getParent()->getDataLayout();
-    uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);
+    TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
+    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
     if (I.isArrayAllocation())
       Len = IRB.CreateMul(Len,
                           IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));

@@ -26,16 +26,35 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           output tensors.
 
           Example 1: A gemm op has 3 loops, M, N and K. Their loop iterator
-          types are parallel, parallel, reduction-sum. This indicates that M and
+          types are parallel, parallel, reduction. This indicates that M and
           N are traversed in parallel, while the K dimension is used for
           reduction.
-
-          Example 2: A softmax op's loop iterator types are parallel and
-          invalid. The second dimension is considered as invalid because it is
-          neither parallel nor any kind of reduction. 
         }],
-        /*retType=*/"SmallVector<::mlir::mesh::IteratorType>",
+        /*retType=*/"SmallVector<mlir::utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the kind of all reduction loop iterators.
+          The order is the same as the same as the result from
+          `getLoopIteratorTypes`.
+
+          Example 1:
+          iterator types =  (parallel, reduction, parallel, reduction)
+                                             ||                   ||
+          reduction kinds = (                sum,                 max)
+
+          Example 2:
+          A softmax op's loop iterator types are parallel and
+          reduction.
+          The reduction iterator will be of kind `generic`, since it is non of
+          the available presets.
+        }],
+        /*retType=*/"SmallVector<ReductionKind>",
+        /*methodName=*/"getReductionLoopIteratorKinds",
         /*args=*/(ins),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return {};"
@@ -56,8 +75,11 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Given that certain operands or results of the operation may have
-          sharding annotations, this method leverages this information to deduce
-          how the operation should be sharded.
+          sharding annotations, this method leverages this information to
+          deduce how the operation should be sharded.
+          The passed sharding may be incomplete, this gives freedom for the
+          op to select the most appropriate shardings for all the operands
+          and results and the op itself.
         }],
         /*retTy=*/"FailureOr<ShardingOption>",
         /*methodName=*/"getShardingOption",
@@ -69,6 +91,24 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         /*defaultImplementation=*/[{
           return detail::defaultGetShardingOption(
             $_op.getOperation(), operandShardings, resultShardings);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Based on a given ShardingOption, get the operand and result
+          operations for the operands and results sharding annotations.
+          This is what shardings the operands and results need to have in order
+          to shard the op according to shardingOption.
+        }],
+        /*retTy=*/"FailureOr<SmallVector<MeshShardingAttr>>",
+        /*methodName=*/"getShardingAnnotations",
+        /*args=*/(ins
+          "const ShardingOption &":$shardingOption
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return detail::defaultGetShardingAnnotations(
+            $_op.getOperation(), shardingOption);
         }]
       >,
       InterfaceMethod<

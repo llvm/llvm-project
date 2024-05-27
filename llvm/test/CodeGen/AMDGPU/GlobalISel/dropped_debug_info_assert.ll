@@ -89,4 +89,4 @@ attributes #0 = { nofree nosync nounwind readnone willreturn }
 !7 = distinct !DISubprogram(name: "call_debug_loc", scope: !1, file: !1, line: 8, type: !8, scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !9)
 !8 = !DISubroutineType(types: !9)
 !9 = !{}
-!10 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!10 = !{i32 1, !"amdhsa_code_object_version", i32 500}

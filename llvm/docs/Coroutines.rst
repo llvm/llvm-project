@@ -1744,6 +1744,267 @@ a call to ``llvm.coro.suspend.retcon`` after resuming abnormally.
 In a yield-once coroutine, it is undefined behavior if the coroutine
 executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 
+.. _coro.await.suspend.void:
+
+'llvm.coro.await.suspend.void' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.await.suspend.void(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.void``' intrinsic encapsulates C++ 
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``void awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare void @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    call void @llvm.coro.await.suspend.void(
+                ptr %awaiter,
+                ptr %hdl,
+                ptr @await_suspend_function)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can be inlined
+    call void @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)   
+    ...
+
+  ; wrapper function example
+  define void @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      call void @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      ret void
+
+.. _coro.await.suspend.bool:
+
+'llvm.coro.await.suspend.bool' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.await.suspend.bool(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.bool``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``bool awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+If `await_suspend_function` call returns `true`, the current coroutine is
+immediately resumed.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    %resume = call i1 @llvm.coro.await.suspend.bool(
+                ptr %awaiter,
+                ptr %hdl,
+                ptr @await_suspend_function)
+    br i1 %resume, %await.suspend.bool, %await.ready
+  await.suspend.bool:
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+  await.ready:
+    call void @"Awaiter::await_resume"(ptr %awaiter)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can inlined
+    %resume = call i1 @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    br i1 %resume, %await.suspend.bool, %await.ready
+    ...
+
+  ; wrapper function example
+  define i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      %resume = call i1 @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      ret i1 %resume
+
+.. _coro.await.suspend.handle:
+
+'llvm.coro.await.suspend.handle' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.await.suspend.handle(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.handle``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``std::corouine_handle<> awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+`await_suspend_function` must return a pointer to a valid
+coroutine frame. The intrinsic will be lowered to a tail call resuming the
+returned coroutine frame. It will be marked `musttail` on targets that support
+that. Instructions following the intrinsic will become unreachable.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    call void @llvm.coro.await.suspend.handle(
+        ptr %awaiter,
+        ptr %hdl,
+        ptr @await_suspend_function)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can be inlined
+    %next = call ptr @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    musttail call void @llvm.coro.resume(%next)
+    ret void
+    ...
+
+  ; wrapper function example
+  define ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      %hdl.raw = call ptr @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      %hdl.result = ... ; get address of returned coroutine handle
+      ret ptr %hdl.result
+
 Coroutine Transformation Passes
 ===============================
 CoroEarly
@@ -1758,7 +2019,9 @@ and `coro.promise`_ intrinsics.
 CoroSplit
 ---------
 The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
-into separate functions.
+into separate functions. This pass also lowers `coro.await.suspend.void`_,
+`coro.await.suspend.bool`_ and `coro.await.suspend.handle`_ intrinsics.
+
 
 CoroElide
 ---------

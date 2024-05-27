@@ -377,13 +377,13 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDRBBui renamable $x0, 4095, pcsections !0 :: (load monotonic (s8) from %ir.ptr_unsigned)
-  ; CHECK-NEXT:   renamable $w9 = LDRBBroW renamable $x0, killed renamable $w1, 1, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_regoff)
-  ; CHECK-NEXT:   renamable $w10 = LDURBBi renamable $x0, -256, pcsections !0 :: (load monotonic (s8) from %ir.ptr_unscaled)
-  ; CHECK-NEXT:   renamable $x11 = ADDXri killed renamable $x0, 291, 12
-  ; CHECK-NEXT:   $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = LDRBBui killed renamable $x11, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_random)
-  ; CHECK-NEXT:   $w8 = ADDWrs killed renamable $w8, killed renamable $w10, 0, pcsections !0
-  ; CHECK-NEXT:   $w0 = ADDWrs killed renamable $w8, killed renamable $w9, 0, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = LDRBBroW renamable $x0, killed renamable $w1, 1, 0 :: (load unordered (s8) from %ir.ptr_regoff)
+  ; CHECK-NEXT:   renamable $w10 = LDURBBi renamable $x0, -256 :: (load monotonic (s8) from %ir.ptr_unscaled)
+  ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w9, killed renamable $w8, 0, pcsections !0
+  ; CHECK-NEXT:   renamable $x9 = ADDXri killed renamable $x0, 291, 12
+  ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w8, killed renamable $w10, 0, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = LDRBBui killed renamable $x9, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_random)
+  ; CHECK-NEXT:   renamable $w0 = ADDWrx killed renamable $w8, killed renamable $w9, 0, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %ptr_unsigned = getelementptr i8, ptr %p, i32 4095
   %val_unsigned = load atomic i8, ptr %ptr_unsigned monotonic, align 1, !pcsections !0
@@ -409,13 +409,13 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDRHHui renamable $x0, 4095, pcsections !0 :: (load monotonic (s16) from %ir.ptr_unsigned)
-  ; CHECK-NEXT:   renamable $w9 = LDRHHroW renamable $x0, killed renamable $w1, 1, 1, pcsections !0 :: (load unordered (s16) from %ir.ptr_regoff)
-  ; CHECK-NEXT:   renamable $w10 = LDURHHi renamable $x0, -256, pcsections !0 :: (load monotonic (s16) from %ir.ptr_unscaled)
-  ; CHECK-NEXT:   renamable $x11 = ADDXri killed renamable $x0, 291, 12
-  ; CHECK-NEXT:   $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = LDRHHui killed renamable $x11, 0, pcsections !0 :: (load unordered (s16) from %ir.ptr_random)
-  ; CHECK-NEXT:   $w8 = ADDWrs killed renamable $w8, killed renamable $w10, 0, pcsections !0
-  ; CHECK-NEXT:   $w0 = ADDWrs killed renamable $w8, killed renamable $w9, 0, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = LDRHHroW renamable $x0, killed renamable $w1, 1, 1 :: (load unordered (s16) from %ir.ptr_regoff)
+  ; CHECK-NEXT:   renamable $w10 = LDURHHi renamable $x0, -256 :: (load monotonic (s16) from %ir.ptr_unscaled)
+  ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w9, killed renamable $w8, 8, pcsections !0
+  ; CHECK-NEXT:   renamable $x9 = ADDXri killed renamable $x0, 291, 12
+  ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w8, killed renamable $w10, 8, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = LDRHHui killed renamable $x9, 0, pcsections !0 :: (load unordered (s16) from %ir.ptr_random)
+  ; CHECK-NEXT:   renamable $w0 = ADDWrx killed renamable $w8, killed renamable $w9, 8, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %ptr_unsigned = getelementptr i16, ptr %p, i32 4095
   %val_unsigned = load atomic i16, ptr %ptr_unsigned monotonic, align 2, !pcsections !0

@@ -114,6 +114,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::csky:
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
+  case llvm::Triple::m68k:
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   default:
     break;
@@ -345,7 +346,7 @@ void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
     return; // Nothing to do.
 
   StringRef Name(ArgName);
-  if (Name.equals("-I") || Name.equals("-L") || Name.empty())
+  if (Name == "-I" || Name == "-L" || Name.empty())
     CombinedArg = true;
 
   StringRef Dirs(DirList);
@@ -736,11 +737,12 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   StringRef V = A->getValue();
   bool SupportedArgument = false, EnableTLSDESC = false;
   bool Unsupported = !Triple.isOSBinFormatELF();
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
-    SupportedArgument = V == "gnu";
+    SupportedArgument = V == "gnu" || V == "gnu2";
+    EnableTLSDESC = V == "gnu2";
   } else {
     Unsupported = true;
   }
@@ -757,15 +759,15 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
-  const bool IsOSAIX = ToolChain.getTriple().isOSAIX();
-  const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
+  const llvm::Triple &Triple = ToolChain.getTriple();
+  const bool IsOSAIX = Triple.isOSAIX();
+  const bool IsAMDGCN = Triple.isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" &&
-      !ToolChain.getTriple().isOSOpenBSD()) {
+      llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -834,7 +836,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, Triple);
   if (!CPU.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
@@ -965,10 +967,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
                                  options::OPT_mno_xcoff_roptr, false);
     StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
-
     if (!IsOSAIX)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << OptStr << ToolChain.getTriple().str();
+          << OptStr << Triple.str();
 
     if (HasRoptr) {
       // The data sections option is on by default on AIX. We only need to error
@@ -1031,7 +1032,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
-                   ToolChain.getTriple().hasDefaultEmulatedTLS())) {
+                   Triple.hasDefaultEmulatedTLS())) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
@@ -1075,21 +1076,37 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
 /// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
 /// LLVM C library for GPUs.
-static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
+static void addOpenMPDeviceLibC(const Compilation &C, const ArgList &Args,
                                 ArgStringList &CmdArgs) {
   if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
     return;
 
   // Check the resource directory for the LLVM libc GPU declarations. If it's
   // found we can assume that LLVM was built with support for the GPU libc.
-  SmallString<256> LibCDecls(TC.getDriver().ResourceDir);
+  SmallString<256> LibCDecls(C.getDriver().ResourceDir);
   llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
                           "llvm-libc-decls");
   bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
                  llvm::sys::fs::is_directory(LibCDecls);
-  if (Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC)) {
-    CmdArgs.push_back("-lcgpu");
-    CmdArgs.push_back("-lmgpu");
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
+    return;
+
+  SmallVector<const ToolChain *> ToolChains;
+  auto TCRange = C.getOffloadToolChains(Action::OFK_OpenMP);
+  for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
+    ToolChains.push_back(TI->second);
+
+  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
+        return TC->getTriple().isAMDGPU();
+      })) {
+    CmdArgs.push_back("-lcgpu-amdgpu");
+    CmdArgs.push_back("-lmgpu-amdgpu");
+  }
+  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
+        return TC->getTriple().isNVPTX();
+      })) {
+    CmdArgs.push_back("-lcgpu-nvptx");
+    CmdArgs.push_back("-lmgpu-nvptx");
   }
 }
 
@@ -1110,7 +1127,11 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, false))
     return;
 
-  for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
+  SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
+  if (const auto CandidateRPath = TC.getStdlibPath())
+    CandidateRPaths.emplace_back(*CandidateRPath);
+
+  for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
@@ -1118,9 +1139,10 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
-bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
-                             const ArgList &Args, bool ForceStaticHostRuntime,
-                             bool IsOffloadingHost, bool GompNeedsRT) {
+bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
+                             const ToolChain &TC, const ArgList &Args,
+                             bool ForceStaticHostRuntime, bool IsOffloadingHost,
+                             bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false))
     return false;
@@ -1161,7 +1183,7 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
     CmdArgs.push_back("-lomptarget.devicertl");
 
   if (IsOffloadingHost)
-    addOpenMPDeviceLibC(TC, Args, CmdArgs);
+    addOpenMPDeviceLibC(C, Args, CmdArgs);
 
   addArchSpecificRPath(TC, Args, CmdArgs);
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
@@ -1169,122 +1191,25 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-/// Determines if --whole-archive is active in the list of arguments.
-static bool isWholeArchivePresent(const ArgList &Args) {
-  bool WholeArchiveActive = false;
-  for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
-    if (Arg) {
-      for (StringRef ArgValue : Arg->getValues()) {
-        if (ArgValue == "--whole-archive")
-          WholeArchiveActive = true;
-        if (ArgValue == "--no-whole-archive")
-          WholeArchiveActive = false;
-      }
-    }
-  }
-
-  return WholeArchiveActive;
-}
-
-/// Determine if driver is invoked to create a shared object library (-static)
-static bool isSharedLinkage(const ArgList &Args) {
-  return Args.hasArg(options::OPT_shared);
-}
-
-/// Determine if driver is invoked to create a static object library (-shared)
-static bool isStaticLinkage(const ArgList &Args) {
-  return Args.hasArg(options::OPT_static);
-}
-
-/// Add Fortran runtime libs for MSVC
-static void addFortranRuntimeLibsMSVC(const ArgList &Args,
-                                      llvm::opt::ArgStringList &CmdArgs) {
-  unsigned RTOptionID = options::OPT__SLASH_MT;
-  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
-                     .Case("static", options::OPT__SLASH_MT)
-                     .Case("static_dbg", options::OPT__SLASH_MTd)
-                     .Case("dll", options::OPT__SLASH_MD)
-                     .Case("dll_dbg", options::OPT__SLASH_MDd)
-                     .Default(options::OPT__SLASH_MT);
-  }
-  switch (RTOptionID) {
-  case options::OPT__SLASH_MT:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
-    break;
-  case options::OPT__SLASH_MTd:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
-    break;
-  case options::OPT__SLASH_MD:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
-    break;
-  case options::OPT__SLASH_MDd:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
-    break;
-  }
-}
-
-// Add FortranMain runtime lib
-static void addFortranMain(const ToolChain &TC, const ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs) {
-  // 0. Shared-library linkage
-  // If we are attempting to link a library, we should not add
-  // -lFortran_main.a to the link line, as the `main` symbol is not
-  // required for a library and should also be provided by one of
-  // the translation units of the code that this shared library
-  // will be linked against eventually.
-  if (isSharedLinkage(Args) || isStaticLinkage(Args)) {
-    return;
-  }
-
-  // 1. MSVC
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    addFortranRuntimeLibsMSVC(Args, CmdArgs);
-    return;
-  }
-
-  // 2. GNU and similar
-  const Driver &D = TC.getDriver();
-  const char *FortranMainLinkFlag = "-lFortran_main";
-
-  // Warn if the user added `-lFortran_main` - this library is an implementation
-  // detail of Flang and should be handled automaticaly by the driver.
-  for (const char *arg : CmdArgs) {
-    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
-      D.Diag(diag::warn_drv_deprecated_custom)
-          << FortranMainLinkFlag
-          << "see the Flang driver documentation for correct usage";
-  }
-
-  // The --whole-archive option needs to be part of the link line to make
-  // sure that the main() function from Fortran_main.a is pulled in by the
-  // linker. However, it shouldn't be used if it's already active.
-  // TODO: Find an equivalent of `--whole-archive` for Darwin and AIX.
-  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
-      !TC.getTriple().isOSAIX()) {
-    CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back(FortranMainLinkFlag);
-    CmdArgs.push_back("--no-whole-archive");
-    return;
-  }
-
-  CmdArgs.push_back(FortranMainLinkFlag);
-}
-
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // 1. Link FortranMain
-  // FortranMain depends on FortranRuntime, so needs to be listed first. If
-  // -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (!Args.hasArg(options::OPT_no_fortran_main))
-    addFortranMain(TC, Args, CmdArgs);
-
-  // 2. Link FortranRuntime and FortranDecimal
+  // Link FortranRuntime and FortranDecimal
   // These are handled earlier on Windows by telling the frontend driver to
   // add the correct libraries to link against as dependents in the object
   // file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    StringRef F128LibName = TC.getDriver().getFlangF128MathLibrary();
+    F128LibName.consume_front_insensitive("lib");
+    if (!F128LibName.empty()) {
+      bool AsNeeded = !TC.getTriple().isOSAIX();
+      CmdArgs.push_back("-lFortranFloat128Math");
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
+      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
+    }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
   }
@@ -2083,8 +2008,12 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args) {
   unsigned DwarfVersion = ParseDebugDefaultVersion(TC, Args);
   if (const Arg *GDwarfN = getDwarfNArg(Args))
-    if (int N = DwarfVersionNum(GDwarfN->getSpelling()))
+    if (int N = DwarfVersionNum(GDwarfN->getSpelling())) {
       DwarfVersion = N;
+      if (DwarfVersion == 5 && TC.getTriple().isOSAIX())
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << GDwarfN->getSpelling() << TC.getTriple().str();
+    }
   if (DwarfVersion == 0) {
     DwarfVersion = TC.GetDefaultDwarfVersion();
     assert(DwarfVersion && "toolchain default DWARF version must be nonzero");
@@ -2721,13 +2650,9 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args,
                                StringRef BitcodeSuffix,
-                               const llvm::Triple &Triple) {
+                               const llvm::Triple &Triple,
+                               const ToolChain &HostTC) {
   SmallVector<StringRef, 8> LibraryPaths;
-
-  // Add path to clang lib / lib64 folder.
-  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
-  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-  LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
   // Add user defined library paths from LIBRARY_PATH.
   std::optional<std::string> LibPath =
@@ -2739,6 +2664,10 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     for (StringRef Path : Frags)
       LibraryPaths.emplace_back(Path.trim());
   }
+
+  // Check all of the standard library search paths used by the compiler.
+  for (const auto &LibPath : HostTC.getFilePaths())
+    LibraryPaths.emplace_back(LibPath);
 
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
@@ -2787,7 +2716,7 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
       !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_no_hip_rt)) {
+      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
     // Claim "no HIP libraries" arguments if any
@@ -2820,4 +2749,16 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
+}
+
+void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
+                                   llvm::opt::ArgStringList &CmdArgs) {
+  if (TCArgs.hasFlag(options::OPT_offload_compress,
+                     options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("-compress");
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("-verbose");
+  if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
+    CmdArgs.push_back(
+        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 }

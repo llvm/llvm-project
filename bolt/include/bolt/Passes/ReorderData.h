@@ -35,7 +35,8 @@ private:
   sortedByFunc(BinaryContext &BC, const BinarySection &Section,
                std::map<uint64_t, BinaryFunction> &BFs) const;
 
-  void printOrder(const BinarySection &Section, DataOrder::const_iterator Begin,
+  void printOrder(BinaryContext &BC, const BinarySection &Section,
+                  DataOrder::const_iterator Begin,
                   DataOrder::const_iterator End) const;
 
   /// Set the ordering of the section with \p SectionName.  \p NewOrder is a
@@ -51,7 +52,7 @@ public:
 
   const char *getName() const override { return "reorder-data"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

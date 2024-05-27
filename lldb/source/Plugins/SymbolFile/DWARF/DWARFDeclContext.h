@@ -47,6 +47,10 @@ public:
 
   DWARFDeclContext() : m_entries() {}
 
+  DWARFDeclContext(llvm::ArrayRef<Entry> entries) {
+    llvm::append_range(m_entries, entries);
+  }
+
   void AppendDeclContext(dw_tag_t tag, const char *name) {
     m_entries.push_back(Entry(tag, name));
   }

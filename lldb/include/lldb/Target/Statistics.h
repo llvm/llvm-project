@@ -132,6 +132,7 @@ struct ConstStringStats {
 
 struct StatisticsOptions {
   bool summary_only = false;
+  bool load_all_debug_info = false;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.

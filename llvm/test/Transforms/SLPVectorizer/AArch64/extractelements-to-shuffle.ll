@@ -76,13 +76,14 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[PB_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PB]], [[ENTRY]] ], [ [[SCEVGEP311]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[PA_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PA]], [[ENTRY]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i64> [[TMP12]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i64> [[TMP16]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i64> [[TMP12]] to <4 x i32>
+; CHECK-NEXT:    [[TMP57:%.*]] = trunc <4 x i64> [[TMP15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = add <4 x i32> [[TMP16]], [[TMP57]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NUMBEROFBOOLS]], 127
 ; CHECK-NEXT:    [[CMP86284:%.*]] = icmp ugt i32 [[AND]], 31
 ; CHECK-NEXT:    br i1 [[CMP86284]], label [[WHILE_BODY88:%.*]], label [[WHILE_END122:%.*]]
@@ -103,16 +104,16 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[AND95:%.*]] = and i32 [[B_0278]], 1
 ; CHECK-NEXT:    [[SHR96]] = lshr i32 [[A_0279]], 1
 ; CHECK-NEXT:    [[SHR97]] = lshr i32 [[B_0278]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> poison, i32 [[AND94]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i32> [[TMP22]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq <2 x i32> [[TMP23]], zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x i32> [[TMP23]], zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i1> [[TMP24]], <2 x i1> [[TMP25]], <4 x i32> <i32 0, i32 3, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x i32> poison, i32 [[AND95]], i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x i32> [[TMP27]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP29:%.*]] = icmp ne <2 x i32> [[TMP28]], zeroinitializer
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq <2 x i32> [[TMP28]], zeroinitializer
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x i1> [[TMP29]], <2 x i1> [[TMP30]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND94]], 0
+; CHECK-NEXT:    [[TOBOOL98:%.*]] = icmp ne i32 [[AND95]], 0
+; CHECK-NEXT:    [[TOBOOL100:%.*]] = icmp eq i32 [[AND94]], 0
+; CHECK-NEXT:    [[TOBOOL103:%.*]] = icmp eq i32 [[AND95]], 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL100]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i1> [[TMP22]], i1 [[TOBOOL]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i1> [[TMP23]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL98]], i32 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i1> [[TMP25]], i1 [[TOBOOL103]], i32 1
+; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i1> [[TMP27]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP32:%.*]] = select <4 x i1> [[TMP26]], <4 x i1> [[TMP31]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP33:%.*]] = zext <4 x i1> [[TMP32]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP34]] = add <4 x i32> [[TMP21]], [[TMP33]]
@@ -148,16 +149,16 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[AND134:%.*]] = and i32 [[B_1300]], 1
 ; CHECK-NEXT:    [[SHR135]] = lshr i32 [[A_1301]], 1
 ; CHECK-NEXT:    [[SHR136]] = lshr i32 [[B_1300]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x i32> poison, i32 [[AND133]], i32 0
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <2 x i32> [[TMP39]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq <2 x i32> [[TMP40]], zeroinitializer
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp ne <2 x i32> [[TMP40]], zeroinitializer
-; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <2 x i1> [[TMP41]], <2 x i1> [[TMP42]], <4 x i32> <i32 0, i32 3, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x i32> poison, i32 [[AND134]], i32 0
-; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <2 x i32> [[TMP44]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP46:%.*]] = icmp ne <2 x i32> [[TMP45]], zeroinitializer
-; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq <2 x i32> [[TMP45]], zeroinitializer
-; CHECK-NEXT:    [[TMP48:%.*]] = shufflevector <2 x i1> [[TMP46]], <2 x i1> [[TMP47]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; CHECK-NEXT:    [[TOBOOL137:%.*]] = icmp ne i32 [[AND133]], 0
+; CHECK-NEXT:    [[TOBOOL139:%.*]] = icmp ne i32 [[AND134]], 0
+; CHECK-NEXT:    [[TOBOOL144:%.*]] = icmp eq i32 [[AND133]], 0
+; CHECK-NEXT:    [[TOBOOL147:%.*]] = icmp eq i32 [[AND134]], 0
+; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL144]], i32 0
+; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <4 x i1> [[TMP40]], i1 [[TOBOOL137]], i32 1
+; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <4 x i1> [[TMP41]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL139]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i1> [[TMP42]], i1 [[TOBOOL147]], i32 1
+; CHECK-NEXT:    [[TMP48:%.*]] = shufflevector <4 x i1> [[TMP39]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP49:%.*]] = select <4 x i1> [[TMP43]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP50:%.*]] = zext <4 x i1> [[TMP49]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP51]] = add <4 x i32> [[TMP38]], [[TMP50]]
@@ -166,9 +167,9 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    br i1 [[CMP130_NOT]], label [[WHILE_END166]], label [[WHILE_BODY132]]
 ; CHECK:       while.end166:
 ; CHECK-NEXT:    [[TMP52:%.*]] = phi <4 x i32> [ [[TMP35]], [[WHILE_END122]] ], [ [[TMP51]], [[WHILE_BODY132]] ]
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP52]], i32 2
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP52]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[CTT:%.*]], align 4
-; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP52]], i32 3
+; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP52]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP54]], ptr [[CFF:%.*]], align 4
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x i32> [[TMP52]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP55]], ptr [[CTF:%.*]], align 4

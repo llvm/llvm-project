@@ -19,6 +19,6 @@ class FormatAPITestCase(TestBase):
         self.assertTrue(error.Fail())
 
         format = lldb.SBFormat("${frame.index}", error)
-        self.assertIs(error.GetCString(), None)
+        self.assertIsNone(error.GetCString())
         self.assertTrue(format)
         self.assertTrue(error.Success())

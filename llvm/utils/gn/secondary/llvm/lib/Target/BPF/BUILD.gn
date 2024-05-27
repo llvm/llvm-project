@@ -60,6 +60,7 @@ static_library("LLVMBPFCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "BPFASpaceCastSimplifyPass.cpp",
     "BPFAbstractMemberAccess.cpp",
     "BPFAdjustOpt.cpp",
     "BPFAsmPrinter.cpp",

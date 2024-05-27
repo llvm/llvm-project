@@ -99,7 +99,7 @@ public:
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
-  bool isVoid() const { return Void & !Pointer; }
+  bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
@@ -1385,17 +1385,14 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         SVEType ToV(To.BaseType, N);
         for (const ReinterpretTypeInfo &From : Reinterprets) {
           SVEType FromV(From.BaseType, N);
-          if (ShortForm) {
-            OS << "__aio __attribute__((target(\"sve\"))) " << ToV.str()
-               << " svreinterpret_" << To.Suffix;
-            OS << "(" << FromV.str() << " op) __arm_streaming_compatible {\n";
-            OS << "  return __builtin_sve_reinterpret_" << To.Suffix << "_"
-               << From.Suffix << Suffix << "(op);\n";
-            OS << "}\n\n";
-          } else
-            OS << "#define svreinterpret_" << To.Suffix << "_" << From.Suffix
-               << Suffix << "(...) __builtin_sve_reinterpret_" << To.Suffix
-               << "_" << From.Suffix << Suffix << "(__VA_ARGS__)\n";
+          OS << "__aio "
+                "__attribute__((__clang_arm_builtin_alias(__builtin_sve_"
+                "reinterpret_"
+             << To.Suffix << "_" << From.Suffix << Suffix << ")))\n"
+             << ToV.str() << " svreinterpret_" << To.Suffix;
+          if (!ShortForm)
+            OS << "_" << From.Suffix << Suffix;
+          OS << "(" << FromV.str() << " op);\n";
         }
       }
   }
@@ -1453,7 +1450,7 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
         SVEType FromV(From.BaseType, N);
         OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
            << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sve\")\n";
+           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
       }
     }
   }
@@ -1579,6 +1576,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
+  OS << "#include <stddef.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1604,6 +1602,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & 1;\n";
   OS << "}\n\n";
+
+  OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible;\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
         "__arm_streaming_compatible __arm_out(\"za\") "

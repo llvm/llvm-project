@@ -119,3 +119,15 @@ define float @f7(ptr %ptr0) {
 
   ret float %mul10
 }
+
+; Check that reassociation flags do not get in the way of MEEB.
+define float @f8(ptr %x) {
+; CHECK-LABEL: f8:
+; CHECK: meeb %f0
+entry:
+  %0 = load float, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds float, ptr %x, i64 1
+  %1 = load float, ptr %arrayidx1, align 8
+  %add = fmul reassoc nsz arcp contract afn float %1, %0
+  ret float %add
+}

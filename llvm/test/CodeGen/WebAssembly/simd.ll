@@ -38,44 +38,22 @@ define <16 x i8> @splat_v16i8(i8 %x) {
 ; NO-SIMD128-LABEL: splat_v16i8:
 ; NO-SIMD128:         .functype splat_v16i8 (i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $1
+; NO-SIMD128-NEXT:    i32.store8 14($0), $1
+; NO-SIMD128-NEXT:    i32.store8 13($0), $1
+; NO-SIMD128-NEXT:    i32.store8 12($0), $1
+; NO-SIMD128-NEXT:    i32.store8 11($0), $1
+; NO-SIMD128-NEXT:    i32.store8 10($0), $1
+; NO-SIMD128-NEXT:    i32.store8 9($0), $1
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $1
+; NO-SIMD128-NEXT:    i32.store8 7($0), $1
+; NO-SIMD128-NEXT:    i32.store8 6($0), $1
+; NO-SIMD128-NEXT:    i32.store8 5($0), $1
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $1
+; NO-SIMD128-NEXT:    i32.store8 3($0), $1
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $1
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $1
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $1
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $1
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $1
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $1
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $1
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $1
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $1
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $1
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $1
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $1
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $1
 ; NO-SIMD128-NEXT:    return
   %v = insertelement <16 x i8> undef, i8 %x, i32 0
   %res = shufflevector <16 x i8> %v, <16 x i8> undef,
@@ -356,44 +334,22 @@ define <16 x i8> @replace_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-LABEL: replace_v16i8:
 ; NO-SIMD128:         .functype replace_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $16
+; NO-SIMD128-NEXT:    i32.store8 14($0), $15
+; NO-SIMD128-NEXT:    i32.store8 13($0), $14
+; NO-SIMD128-NEXT:    i32.store8 12($0), $13
+; NO-SIMD128-NEXT:    i32.store8 11($0), $17
+; NO-SIMD128-NEXT:    i32.store8 10($0), $11
+; NO-SIMD128-NEXT:    i32.store8 9($0), $10
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $9
+; NO-SIMD128-NEXT:    i32.store8 7($0), $8
+; NO-SIMD128-NEXT:    i32.store8 6($0), $7
+; NO-SIMD128-NEXT:    i32.store8 5($0), $6
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $5
+; NO-SIMD128-NEXT:    i32.store8 3($0), $4
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $3
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $16
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $15
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $14
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $13
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $17
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $11
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $10
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $8
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $7
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $6
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <16 x i8> %v, i8 %x, i32 11
   ret <16 x i8> %res
@@ -461,44 +417,22 @@ define <16 x i8> @replace_zero_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-LABEL: replace_zero_v16i8:
 ; NO-SIMD128:         .functype replace_zero_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $16
+; NO-SIMD128-NEXT:    i32.store8 14($0), $15
+; NO-SIMD128-NEXT:    i32.store8 13($0), $14
+; NO-SIMD128-NEXT:    i32.store8 12($0), $13
+; NO-SIMD128-NEXT:    i32.store8 11($0), $12
+; NO-SIMD128-NEXT:    i32.store8 10($0), $11
+; NO-SIMD128-NEXT:    i32.store8 9($0), $10
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $9
+; NO-SIMD128-NEXT:    i32.store8 7($0), $8
+; NO-SIMD128-NEXT:    i32.store8 6($0), $7
+; NO-SIMD128-NEXT:    i32.store8 5($0), $6
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $5
+; NO-SIMD128-NEXT:    i32.store8 3($0), $4
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $3
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $17
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $16
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $15
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $14
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $13
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $12
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $11
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $10
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $8
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $7
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $6
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <16 x i8> %v, i8 %x, i32 0
   ret <16 x i8> %res
@@ -514,44 +448,22 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; NO-SIMD128-LABEL: shuffle_v16i8:
 ; NO-SIMD128:         .functype shuffle_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $32
+; NO-SIMD128-NEXT:    i32.store8 14($0), $15
+; NO-SIMD128-NEXT:    i32.store8 13($0), $30
+; NO-SIMD128-NEXT:    i32.store8 12($0), $13
+; NO-SIMD128-NEXT:    i32.store8 11($0), $28
+; NO-SIMD128-NEXT:    i32.store8 10($0), $11
+; NO-SIMD128-NEXT:    i32.store8 9($0), $26
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $9
+; NO-SIMD128-NEXT:    i32.store8 7($0), $24
+; NO-SIMD128-NEXT:    i32.store8 6($0), $7
+; NO-SIMD128-NEXT:    i32.store8 5($0), $22
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $5
+; NO-SIMD128-NEXT:    i32.store8 3($0), $20
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $3
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $18
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $32
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $15
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $30
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $13
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $28
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $11
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $26
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $24
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $7
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $22
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $20
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <16 x i8> %x, <16 x i8> %y,
     <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23,
@@ -569,44 +481,22 @@ define <16 x i8> @shuffle_undef_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v16i8:
 ; NO-SIMD128:         .functype shuffle_undef_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $2
+; NO-SIMD128-NEXT:    i32.store8 14($0), $2
+; NO-SIMD128-NEXT:    i32.store8 13($0), $2
+; NO-SIMD128-NEXT:    i32.store8 12($0), $2
+; NO-SIMD128-NEXT:    i32.store8 11($0), $2
+; NO-SIMD128-NEXT:    i32.store8 10($0), $2
+; NO-SIMD128-NEXT:    i32.store8 9($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $2
+; NO-SIMD128-NEXT:    i32.store8 7($0), $2
+; NO-SIMD128-NEXT:    i32.store8 6($0), $2
+; NO-SIMD128-NEXT:    i32.store8 5($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $2
+; NO-SIMD128-NEXT:    i32.store8 3($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $2
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $2
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $2
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $2
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $2
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $2
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $2
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $2
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $2
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $2
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $2
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <16 x i8> %x, <16 x i8> %y,
     <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef,
@@ -641,44 +531,22 @@ define <16 x i8> @build_v16i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3,
 ; NO-SIMD128-LABEL: build_v16i8:
 ; NO-SIMD128:         .functype build_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store8 15($0), $16
+; NO-SIMD128-NEXT:    i32.store8 14($0), $15
+; NO-SIMD128-NEXT:    i32.store8 13($0), $14
+; NO-SIMD128-NEXT:    i32.store8 12($0), $13
+; NO-SIMD128-NEXT:    i32.store8 11($0), $12
+; NO-SIMD128-NEXT:    i32.store8 10($0), $11
+; NO-SIMD128-NEXT:    i32.store8 9($0), $10
 ; NO-SIMD128-NEXT:    i32.store8 8($0), $9
+; NO-SIMD128-NEXT:    i32.store8 7($0), $8
+; NO-SIMD128-NEXT:    i32.store8 6($0), $7
+; NO-SIMD128-NEXT:    i32.store8 5($0), $6
 ; NO-SIMD128-NEXT:    i32.store8 4($0), $5
+; NO-SIMD128-NEXT:    i32.store8 3($0), $4
 ; NO-SIMD128-NEXT:    i32.store8 2($0), $3
 ; NO-SIMD128-NEXT:    i32.store8 1($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 15
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store8 0($pop1), $16
-; NO-SIMD128-NEXT:    i32.const $push2=, 14
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store8 0($pop3), $15
-; NO-SIMD128-NEXT:    i32.const $push4=, 13
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store8 0($pop5), $14
-; NO-SIMD128-NEXT:    i32.const $push6=, 12
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store8 0($pop7), $13
-; NO-SIMD128-NEXT:    i32.const $push8=, 11
-; NO-SIMD128-NEXT:    i32.add $push9=, $0, $pop8
-; NO-SIMD128-NEXT:    i32.store8 0($pop9), $12
-; NO-SIMD128-NEXT:    i32.const $push10=, 10
-; NO-SIMD128-NEXT:    i32.add $push11=, $0, $pop10
-; NO-SIMD128-NEXT:    i32.store8 0($pop11), $11
-; NO-SIMD128-NEXT:    i32.const $push12=, 9
-; NO-SIMD128-NEXT:    i32.add $push13=, $0, $pop12
-; NO-SIMD128-NEXT:    i32.store8 0($pop13), $10
-; NO-SIMD128-NEXT:    i32.const $push14=, 7
-; NO-SIMD128-NEXT:    i32.add $push15=, $0, $pop14
-; NO-SIMD128-NEXT:    i32.store8 0($pop15), $8
-; NO-SIMD128-NEXT:    i32.const $push16=, 6
-; NO-SIMD128-NEXT:    i32.add $push17=, $0, $pop16
-; NO-SIMD128-NEXT:    i32.store8 0($pop17), $7
-; NO-SIMD128-NEXT:    i32.const $push18=, 5
-; NO-SIMD128-NEXT:    i32.add $push19=, $0, $pop18
-; NO-SIMD128-NEXT:    i32.store8 0($pop19), $6
-; NO-SIMD128-NEXT:    i32.const $push20=, 3
-; NO-SIMD128-NEXT:    i32.add $push21=, $0, $pop20
-; NO-SIMD128-NEXT:    i32.store8 0($pop21), $4
 ; NO-SIMD128-NEXT:    return
                               i8 %x4, i8 %x5, i8 %x6, i8 %x7,
                               i8 %x8, i8 %x9, i8 %x10, i8 %x11,
@@ -734,22 +602,14 @@ define <8 x i16> @splat_v8i16(i16 %x) {
 ; NO-SIMD128-LABEL: splat_v8i16:
 ; NO-SIMD128:         .functype splat_v8i16 (i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $1
+; NO-SIMD128-NEXT:    i32.store16 12($0), $1
+; NO-SIMD128-NEXT:    i32.store16 10($0), $1
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $1
+; NO-SIMD128-NEXT:    i32.store16 6($0), $1
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $1
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $1
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $1
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $1
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $1
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $1
 ; NO-SIMD128-NEXT:    return
   %v = insertelement <8 x i16> undef, i16 %x, i32 0
   %res = shufflevector <8 x i16> %v, <8 x i16> undef,
@@ -1016,22 +876,14 @@ define <8 x i16> @replace_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-LABEL: replace_v8i16:
 ; NO-SIMD128:         .functype replace_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $9
+; NO-SIMD128-NEXT:    i32.store16 12($0), $7
+; NO-SIMD128-NEXT:    i32.store16 10($0), $6
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $5
+; NO-SIMD128-NEXT:    i32.store16 6($0), $4
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $3
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $9
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $7
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $6
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <8 x i16> %v, i16 %x, i32 7
   ret <8 x i16> %res
@@ -1095,22 +947,14 @@ define <8 x i16> @replace_zero_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-LABEL: replace_zero_v8i16:
 ; NO-SIMD128:         .functype replace_zero_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $8
+; NO-SIMD128-NEXT:    i32.store16 12($0), $7
+; NO-SIMD128-NEXT:    i32.store16 10($0), $6
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $5
+; NO-SIMD128-NEXT:    i32.store16 6($0), $4
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $3
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $9
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $8
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $7
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $6
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <8 x i16> %v, i16 %x, i32 0
   ret <8 x i16> %res
@@ -1126,22 +970,14 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; NO-SIMD128-LABEL: shuffle_v8i16:
 ; NO-SIMD128:         .functype shuffle_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $16
+; NO-SIMD128-NEXT:    i32.store16 12($0), $7
+; NO-SIMD128-NEXT:    i32.store16 10($0), $14
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $5
+; NO-SIMD128-NEXT:    i32.store16 6($0), $12
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $3
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $10
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $16
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $7
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $14
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $12
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <8 x i16> %x, <8 x i16> %y,
     <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -1158,22 +994,14 @@ define <8 x i16> @shuffle_undef_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v8i16:
 ; NO-SIMD128:         .functype shuffle_undef_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $2
+; NO-SIMD128-NEXT:    i32.store16 12($0), $2
+; NO-SIMD128-NEXT:    i32.store16 10($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $2
+; NO-SIMD128-NEXT:    i32.store16 6($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $2
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $2
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $2
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $2
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <8 x i16> %x, <8 x i16> %y,
     <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef,
@@ -1198,22 +1026,14 @@ define <8 x i16> @build_v8i16(i16 %x0, i16 %x1, i16 %x2, i16 %x3,
 ; NO-SIMD128-LABEL: build_v8i16:
 ; NO-SIMD128:         .functype build_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store16 14($0), $8
+; NO-SIMD128-NEXT:    i32.store16 12($0), $7
+; NO-SIMD128-NEXT:    i32.store16 10($0), $6
 ; NO-SIMD128-NEXT:    i32.store16 8($0), $5
+; NO-SIMD128-NEXT:    i32.store16 6($0), $4
 ; NO-SIMD128-NEXT:    i32.store16 4($0), $3
 ; NO-SIMD128-NEXT:    i32.store16 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 14
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store16 0($pop1), $8
-; NO-SIMD128-NEXT:    i32.const $push2=, 12
-; NO-SIMD128-NEXT:    i32.add $push3=, $0, $pop2
-; NO-SIMD128-NEXT:    i32.store16 0($pop3), $7
-; NO-SIMD128-NEXT:    i32.const $push4=, 10
-; NO-SIMD128-NEXT:    i32.add $push5=, $0, $pop4
-; NO-SIMD128-NEXT:    i32.store16 0($pop5), $6
-; NO-SIMD128-NEXT:    i32.const $push6=, 6
-; NO-SIMD128-NEXT:    i32.add $push7=, $0, $pop6
-; NO-SIMD128-NEXT:    i32.store16 0($pop7), $4
 ; NO-SIMD128-NEXT:    return
                               i16 %x4, i16 %x5, i16 %x6, i16 %x7) {
   %t0 = insertelement <8 x i16> undef, i16 %x0, i32 0
@@ -1258,12 +1078,10 @@ define <4 x i32> @splat_v4i32(i32 %x) {
 ; NO-SIMD128-LABEL: splat_v4i32:
 ; NO-SIMD128:         .functype splat_v4i32 (i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $1
 ; NO-SIMD128-NEXT:    i32.store 8($0), $1
 ; NO-SIMD128-NEXT:    i32.store 4($0), $1
 ; NO-SIMD128-NEXT:    i32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $1
 ; NO-SIMD128-NEXT:    return
   %v = insertelement <4 x i32> undef, i32 %x, i32 0
   %res = shufflevector <4 x i32> %v, <4 x i32> undef,
@@ -1368,12 +1186,10 @@ define <4 x i32> @replace_v4i32(<4 x i32> %v, i32 %x) {
 ; NO-SIMD128-LABEL: replace_v4i32:
 ; NO-SIMD128:         .functype replace_v4i32 (i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $4
 ; NO-SIMD128-NEXT:    i32.store 8($0), $5
 ; NO-SIMD128-NEXT:    i32.store 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <4 x i32> %v, i32 %x, i32 2
   ret <4 x i32> %res
@@ -1433,12 +1249,10 @@ define <4 x i32> @replace_zero_v4i32(<4 x i32> %v, i32 %x) {
 ; NO-SIMD128-LABEL: replace_zero_v4i32:
 ; NO-SIMD128:         .functype replace_zero_v4i32 (i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $4
 ; NO-SIMD128-NEXT:    i32.store 8($0), $3
 ; NO-SIMD128-NEXT:    i32.store 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store 0($0), $5
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <4 x i32> %v, i32 %x, i32 0
   ret <4 x i32> %res
@@ -1454,12 +1268,10 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; NO-SIMD128-LABEL: shuffle_v4i32:
 ; NO-SIMD128:         .functype shuffle_v4i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $8
 ; NO-SIMD128-NEXT:    i32.store 8($0), $3
 ; NO-SIMD128-NEXT:    i32.store 4($0), $6
 ; NO-SIMD128-NEXT:    i32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $8
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x i32> %x, <4 x i32> %y,
     <4 x i32> <i32 0, i32 5, i32 2, i32 7>
@@ -1476,12 +1288,10 @@ define <4 x i32> @shuffle_undef_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v4i32:
 ; NO-SIMD128:         .functype shuffle_undef_v4i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $2
 ; NO-SIMD128-NEXT:    i32.store 8($0), $2
 ; NO-SIMD128-NEXT:    i32.store 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store 0($0), $2
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x i32> %x, <4 x i32> %y,
     <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -1501,12 +1311,10 @@ define <4 x i32> @build_v4i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; NO-SIMD128-LABEL: build_v4i32:
 ; NO-SIMD128:         .functype build_v4i32 (i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    i32.store 12($0), $4
 ; NO-SIMD128-NEXT:    i32.store 8($0), $3
 ; NO-SIMD128-NEXT:    i32.store 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    i32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %t0 = insertelement <4 x i32> undef, i32 %x0, i32 0
   %t1 = insertelement <4 x i32> %t0, i32 %x1, i32 1
@@ -1801,12 +1609,10 @@ define <4 x float> @splat_v4f32(float %x) {
 ; NO-SIMD128-LABEL: splat_v4f32:
 ; NO-SIMD128:         .functype splat_v4f32 (i32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $1
 ; NO-SIMD128-NEXT:    f32.store 8($0), $1
 ; NO-SIMD128-NEXT:    f32.store 4($0), $1
 ; NO-SIMD128-NEXT:    f32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $1
 ; NO-SIMD128-NEXT:    return
   %v = insertelement <4 x float> undef, float %x, i32 0
   %res = shufflevector <4 x float> %v, <4 x float> undef,
@@ -1911,12 +1717,10 @@ define <4 x float> @replace_v4f32(<4 x float> %v, float %x) {
 ; NO-SIMD128-LABEL: replace_v4f32:
 ; NO-SIMD128:         .functype replace_v4f32 (i32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $4
 ; NO-SIMD128-NEXT:    f32.store 8($0), $5
 ; NO-SIMD128-NEXT:    f32.store 4($0), $2
 ; NO-SIMD128-NEXT:    f32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <4 x float> %v, float %x, i32 2
   ret <4 x float> %res
@@ -1976,12 +1780,10 @@ define <4 x float> @replace_zero_v4f32(<4 x float> %v, float %x) {
 ; NO-SIMD128-LABEL: replace_zero_v4f32:
 ; NO-SIMD128:         .functype replace_zero_v4f32 (i32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $4
 ; NO-SIMD128-NEXT:    f32.store 8($0), $3
 ; NO-SIMD128-NEXT:    f32.store 4($0), $2
 ; NO-SIMD128-NEXT:    f32.store 0($0), $5
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %res = insertelement <4 x float> %v, float %x, i32 0
   ret <4 x float> %res
@@ -1997,12 +1799,10 @@ define <4 x float> @shuffle_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: shuffle_v4f32:
 ; NO-SIMD128:         .functype shuffle_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $8
 ; NO-SIMD128-NEXT:    f32.store 8($0), $3
 ; NO-SIMD128-NEXT:    f32.store 4($0), $6
 ; NO-SIMD128-NEXT:    f32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $8
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x float> %x, <4 x float> %y,
     <4 x i32> <i32 0, i32 5, i32 2, i32 7>
@@ -2019,12 +1819,10 @@ define <4 x float> @shuffle_undef_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v4f32:
 ; NO-SIMD128:         .functype shuffle_undef_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $2
 ; NO-SIMD128-NEXT:    f32.store 8($0), $2
 ; NO-SIMD128-NEXT:    f32.store 4($0), $2
 ; NO-SIMD128-NEXT:    f32.store 0($0), $2
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x float> %x, <4 x float> %y,
     <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -2044,12 +1842,10 @@ define <4 x float> @build_v4f32(float %x0, float %x1, float %x2, float %x3) {
 ; NO-SIMD128-LABEL: build_v4f32:
 ; NO-SIMD128:         .functype build_v4f32 (i32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.store 12($0), $4
 ; NO-SIMD128-NEXT:    f32.store 8($0), $3
 ; NO-SIMD128-NEXT:    f32.store 4($0), $2
 ; NO-SIMD128-NEXT:    f32.store 0($0), $1
-; NO-SIMD128-NEXT:    i32.const $push0=, 12
-; NO-SIMD128-NEXT:    i32.add $push1=, $0, $pop0
-; NO-SIMD128-NEXT:    f32.store 0($pop1), $4
 ; NO-SIMD128-NEXT:    return
   %t0 = insertelement <4 x float> undef, float %x0, i32 0
   %t1 = insertelement <4 x float> %t0, float %x1, i32 1

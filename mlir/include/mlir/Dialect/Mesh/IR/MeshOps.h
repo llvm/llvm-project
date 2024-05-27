@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_MESH_IR_MESHOPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -38,9 +39,9 @@ using MeshAxesAttr = DenseI16ArrayAttr;
 namespace mlir {
 namespace mesh {
 
-bool isReductionLoop(IteratorType iType);
-
-bool areReductionAndPartialMatch(IteratorType iType, Partial partial);
+inline bool isReductionLoop(utils::IteratorType iType) {
+  return iType == utils::IteratorType::reduction;
+}
 
 template <typename T>
 void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
@@ -48,17 +49,26 @@ void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
     array.pop_back();
 }
 
-Partial getPartialTypeFromReduction(IteratorType iType);
-
 // Is the same tensor replicated on all processes.
 inline bool isFullReplication(MeshShardingAttr attr) {
-  return attr.getPartialAxes().empty() && attr.getSplitAxes().empty();
+  return attr.getPartialAxes().empty() &&
+         llvm::all_of(attr.getSplitAxes(), [](MeshAxesAttr axes) {
+           return axes.asArrayRef().empty();
+         });
+}
+
+inline mesh::MeshOp
+getMeshOrNull(Operation *op, FlatSymbolRefAttr meshSymbol,
+              SymbolTableCollection &symbolTableCollection) {
+  return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
+      op, meshSymbol);
 }
 
 inline mesh::MeshOp getMesh(Operation *op, FlatSymbolRefAttr meshSymbol,
                             SymbolTableCollection &symbolTableCollection) {
-  return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
-      op, meshSymbol);
+  mesh::MeshOp meshOp = getMeshOrNull(op, meshSymbol, symbolTableCollection);
+  assert(meshOp);
+  return meshOp;
 }
 
 // Get the corresponding mesh op using the standard attribute nomenclature.
@@ -92,6 +102,12 @@ int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes,
   return res;
 }
 
+template <typename MeshAxesRange>
+int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes, MeshOp mesh) {
+  return collectiveProcessGroupSize(std::forward<MeshAxesRange>(meshAxes),
+                                    mesh.getShape());
+}
+
 // Get the size of a sharded dimension.
 inline int64_t shardDimension(int64_t dimSize, int64_t shardCount) {
   if (ShapedType::isDynamic(dimSize) || ShapedType::isDynamic(shardCount))
@@ -122,6 +138,17 @@ ShapedType shardShapedType(ShapedType shape, MeshOp mesh,
 // If not ranked tensor type return `type`.
 // `sharding` in that case must be null.
 Type shardType(Type type, MeshOp mesh, MeshShardingAttr sharding);
+
+// Insert shard op if there is not one that already has the same sharding.
+// May insert resharding if required.
+void maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                         OpOperand &operand,
+                                         OpBuilder &builder);
+void maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                         OpResult result, OpBuilder &builder);
+void maybeInsertSourceShardingAnnotation(MeshShardingAttr sharding,
+                                         OpOperand &operand,
+                                         OpBuilder &builder);
 
 } // namespace mesh
 } // namespace mlir

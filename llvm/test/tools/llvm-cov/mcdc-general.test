@@ -119,7 +119,7 @@
 // RUN: rm -rf %t.html.dir
 // RUN: llvm-cov show --show-mcdc-summary --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs -format html -o %t.html.dir
 // RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/mcdc-general.cpp.html %s
-// HTML-COUNT-4: MC/DC Decision Region (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>
+// HTML-COUNT-4: MC/DC Decision Region (<span class='line-number'><a href='#L{{[0-9]+}}'><span>
 
 // RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.html.dir/index.html %s
 // HTML-INDEX-LABEL: <table>

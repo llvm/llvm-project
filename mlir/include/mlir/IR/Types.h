@@ -97,14 +97,19 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename... Tys>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const;
   template <typename... Tys>
+  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
   bool isa_and_nonnull() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
   U dyn_cast_or_null() const;
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const;
 
   /// Return a unique identifier for the concrete type. This is used to support
@@ -133,7 +138,8 @@ public:
   bool isF80() const;
   bool isF128() const;
 
-  /// Return true if this is an integer type with the specified width.
+  /// Return true if this is an integer type (with the specified width).
+  bool isInteger() const;
   bool isInteger(unsigned width) const;
   /// Return true if this is a signless integer type (with the specified width).
   bool isSignlessInteger() const;

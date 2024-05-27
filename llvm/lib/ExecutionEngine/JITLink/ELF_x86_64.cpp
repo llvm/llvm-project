@@ -343,24 +343,6 @@ createLinkGraphFromELFObject_x86_64(MemoryBufferRef ObjectBuffer) {
       .buildGraph();
 }
 
-static SectionRangeSymbolDesc
-identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
-  constexpr StringRef StartSymbolPrefix = "__start";
-  constexpr StringRef EndSymbolPrefix = "__end";
-
-  auto SymName = Sym.getName();
-  if (SymName.starts_with(StartSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
-      return {*Sec, true};
-  } else if (SymName.starts_with(EndSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
-      return {*Sec, false};
-  }
-  return {};
-}
-
 void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
                      std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;

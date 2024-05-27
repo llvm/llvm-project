@@ -108,9 +108,7 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    .pad #12
 ; CHECK-NEXT:    sub sp, #12
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    strd r0, r1, [sp] @ 8-byte Folded Spill
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    stm.w sp, {r0, r1, r3} @ 12-byte Folded Spill
 ; CHECK-NEXT:    blt .LBB4_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r1, [sp, #48]

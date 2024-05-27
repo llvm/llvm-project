@@ -85,7 +85,6 @@ CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
 CGOPT(bool, DisableIntegratedAS)
-CGOPT(bool, RelaxELFRelocations)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
@@ -97,6 +96,7 @@ CGOPT_EXP(bool, EmulatedTLS)
 CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
+CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
@@ -362,13 +362,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                                 cl::init(false));
   CGBINDOPT(UseCtors);
 
-  static cl::opt<bool> RelaxELFRelocations(
-      "relax-elf-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
-      cl::init(true));
-  CGBINDOPT(RelaxELFRelocations);
-
   static cl::opt<bool> DataSections(
       "data-sections", cl::desc("Emit data into separate sections"),
       cl::init(false));
@@ -426,6 +419,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Give unique names to every basic block section"),
       cl::init(false));
   CGBINDOPT(UniqueBasicBlockSectionNames);
+
+  static cl::opt<bool> SeparateNamedSections(
+      "separate-named-sections",
+      cl::desc("Use separate unique sections for named sections"),
+      cl::init(false));
+  CGBINDOPT(SeparateNamedSections);
 
   static cl::opt<EABI> EABIVersion(
       "meabi", cl::desc("Set EABI type (default depends on triple):"),
@@ -568,7 +567,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
   Options.DisableIntegratedAS = getDisableIntegratedAS();
-  Options.RelaxELFRelocations = getRelaxELFRelocations();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
@@ -578,6 +576,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
+  Options.SeparateNamedSections = getSeparateNamedSections();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS =
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());

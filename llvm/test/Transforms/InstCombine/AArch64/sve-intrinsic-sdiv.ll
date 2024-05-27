@@ -8,7 +8,7 @@ define <vscale x 4 x i32> @sdiv_i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.asrd.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], i32 23)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388608, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 8388608))
   ret <vscale x 4 x i32> %out
 }
 
@@ -18,7 +18,7 @@ define <vscale x 4 x i32> @sdiv_i32_neg(<vscale x 4 x i32> %a, <vscale x 4 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.neg.nxv4i32(<vscale x 4 x i32> [[TMP1]], <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 ;
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -8388608, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 -8388608))
   ret <vscale x 4 x i32> %out
 }
 
@@ -27,7 +27,7 @@ define <vscale x 2 x i64> @sdiv_i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.asrd.nxv2i64(<vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[A:%.*]], i32 23)
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 8388608, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 8388608))
   ret <vscale x 2 x i64> %out
 }
 
@@ -37,25 +37,25 @@ define <vscale x 2 x i64> @sdiv_i64_neg(<vscale x 2 x i64> %a, <vscale x 2 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.neg.nxv2i64(<vscale x 2 x i64> [[TMP1]], <vscale x 2 x i1> [[PG]], <vscale x 2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 ;
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -8388608, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 -8388608))
   ret <vscale x 2 x i64> %out
 }
 
 define <vscale x 4 x i32> @sdiv_i32_not_base2(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: @sdiv_i32_not_base2(
-; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388607, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388607, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUT]]
 ;
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388607, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 8388607))
   ret <vscale x 4 x i32> %out
 }
 
 define <vscale x 4 x i32> @sdiv_i32_not_base2_neg(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: @sdiv_i32_not_base2_neg(
-; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -8388607, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -8388607, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUT]]
 ;
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -8388607, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 -8388607))
   ret <vscale x 4 x i32> %out
 }
 
@@ -64,7 +64,7 @@ define <vscale x 4 x i32> @sdiv_i32_not_zero(<vscale x 4 x i32> %a, <vscale x 4 
 ; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUT]]
 ;
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 0))
   ret <vscale x 4 x i32> %out
 }
 

@@ -47,6 +47,7 @@ on how to get in touch with us and to learn more about the current status.
    Character
    ComplexOperations
    ControlFlowGraph
+   DebugGeneration
    Directives
    DoConcurrent
    Extensions
@@ -68,6 +69,8 @@ on how to get in touch with us and to learn more about the current status.
    OpenACC
    OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
+   OpenMP-declare-target
+   OpenMP-descriptor-management
    OpenMP-semantics
    OptionComparison
    Overview
@@ -78,10 +81,12 @@ on how to get in touch with us and to learn more about the current status.
    Preprocessing
    ProcedurePointer
    RuntimeDescriptor
+   RuntimeEnvironment
    RuntimeTypeInfo
    Semantics
    f2018-grammar.md
    fstack-arrays
+   Real16MathSupport
 ```
 
 # Indices and tables

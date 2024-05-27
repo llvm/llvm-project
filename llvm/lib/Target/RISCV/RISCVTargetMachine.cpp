@@ -84,22 +84,22 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
 static cl::opt<bool>
     EnableSinkFold("riscv-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
-                   cl::init(false), cl::Hidden);
+                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableLoopDataPrefetch("riscv-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool>
-    EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
-                        cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(true));
-
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
     cl::desc("Enable load clustering in the machine scheduler"),
     cl::init(false));
+
+static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
+    "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
+    cl::desc("Insert vsetvls after vector register allocation"),
+    cl::init(true));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -121,10 +121,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVCoalesceVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
-  initializeRISCVInitUndefPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
 }
@@ -279,21 +279,7 @@ public:
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
                                const TargetRegisterClass &RC) {
-  return RISCV::VRRegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM8RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN5M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN6M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN7M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN8M1RegClass.hasSubClassEq(&RC);
+  return RISCVRegisterInfo::isRVVRegClass(&RC);
 }
 
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
@@ -366,6 +352,7 @@ public:
 
   void addIRPasses() override;
   bool addPreISel() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -382,7 +369,6 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
-  void addOptimizedRegAlloc() override;
   void addFastRegAlloc() override;
 };
 } // namespace
@@ -407,21 +393,30 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
-  if (EnableSplitRegAlloc)
-    addPass(createRVVRegAllocPass(false));
+  addPass(createRVVRegAllocPass(false));
+  if (EnableVSETVLIAfterRVVRegAlloc)
+    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVCoalesceVSETVLIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableRISCVDeadRegisterElimination)
+    addPass(createRISCVDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
-  if (EnableSplitRegAlloc) {
-    addPass(createRVVRegAllocPass(true));
-    addPass(createVirtRegRewriter(false));
-  }
+  addPass(createRVVRegAllocPass(true));
+  addPass(createVirtRegRewriter(false));
+  if (EnableVSETVLIAfterRVVRegAlloc)
+    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVCoalesceVSETVLIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableRISCVDeadRegisterElimination)
+    addPass(createRISCVDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 void RISCVPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoopDataPrefetch)
@@ -450,6 +445,12 @@ bool RISCVPassConfig::addPreISel() {
   }
 
   return false;
+}
+
+void RISCVPassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool RISCVPassConfig::addInstSelector() {
@@ -549,22 +550,22 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
-  addPass(createRISCVInsertVSETVLIPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      EnableRISCVDeadRegisterElimination)
-    addPass(createRISCVDeadRegisterDefinitionsPass());
+
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
-}
 
-void RISCVPassConfig::addOptimizedRegAlloc() {
-  insertPass(&DetectDeadLanesID, &RISCVInitUndefID);
-
-  TargetPassConfig::addOptimizedRegAlloc();
+  // Run RISCVInsertVSETVLI after PHI elimination. On O1 and above do it after
+  // register coalescing so needVSETVLIPHI doesn't need to look through COPYs.
+  if (!EnableVSETVLIAfterRVVRegAlloc) {
+    if (TM->getOptLevel() == CodeGenOptLevel::None)
+      insertPass(&PHIEliminationID, &RISCVInsertVSETVLIID);
+    else
+      insertPass(&RegisterCoalescerID, &RISCVInsertVSETVLIID);
+  }
 }
 
 void RISCVPassConfig::addFastRegAlloc() {
-  addPass(createRISCVInitUndefPass());
+  addPass(&InitUndefID);
   TargetPassConfig::addFastRegAlloc();
 }
 

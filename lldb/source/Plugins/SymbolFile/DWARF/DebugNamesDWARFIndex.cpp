@@ -9,10 +9,11 @@
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 using namespace lldb_private;
@@ -47,26 +48,30 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   return result;
 }
 
-std::optional<DIERef>
-DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) const {
+DWARFUnit *
+DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
   // Look for a DWARF unit offset (CU offset or local TU offset) as they are
   // both offsets into the .debug_info section.
   std::optional<uint64_t> unit_offset = entry.getCUOffset();
   if (!unit_offset) {
     unit_offset = entry.getLocalTUOffset();
     if (!unit_offset)
-      return std::nullopt;
+      return nullptr;
   }
 
   DWARFUnit *cu =
       m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
-  if (!cu)
-    return std::nullopt;
+  return cu ? &cu->GetNonSkeletonUnit() : nullptr;
+}
 
-  cu = &cu->GetNonSkeletonUnit();
+std::optional<DIERef>
+DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) const {
+  DWARFUnit *unit = GetNonSkeletonUnit(entry);
+  if (!unit)
+    return std::nullopt;
   if (std::optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(cu->GetSymbolFileDWARF().GetFileIndex(),
-                  DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
+    return DIERef(unit->GetSymbolFileDWARF().GetFileIndex(),
+                  DIERef::Section::DebugInfo, unit->GetOffset() + *die_offset);
 
   return std::nullopt;
 }
@@ -216,6 +221,108 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
       return;
 
   m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
+}
+
+namespace {
+using Entry = llvm::DWARFDebugNames::Entry;
+
+/// If `entry` and all of its parents have an `IDX_parent`, use that information
+/// to build and return a list of at most `max_parents` parent Entries.
+/// `entry` itself is not included in the list.
+/// If any parent does not have an `IDX_parent`, or the Entry data is corrupted,
+/// nullopt is returned.
+std::optional<llvm::SmallVector<Entry, 4>>
+getParentChain(Entry entry, uint32_t max_parents) {
+  llvm::SmallVector<Entry, 4> parent_entries;
+
+  do {
+    if (!entry.hasParentInformation())
+      return std::nullopt;
+
+    llvm::Expected<std::optional<Entry>> parent = entry.getParentDIEEntry();
+    if (!parent) {
+      // Bad data.
+      LLDB_LOG_ERROR(
+          GetLog(DWARFLog::Lookups), parent.takeError(),
+          "Failed to extract parent entry from a non-empty IDX_parent");
+      return std::nullopt;
+    }
+
+    // Last parent in the chain.
+    if (!parent->has_value())
+      break;
+
+    parent_entries.push_back(**parent);
+    entry = **parent;
+  } while (parent_entries.size() < max_parents);
+
+  return parent_entries;
+}
+} // namespace
+
+void DebugNamesDWARFIndex::GetFullyQualifiedType(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (context.GetSize() == 0)
+    return;
+
+  llvm::StringRef leaf_name = context[0].name;
+  llvm::SmallVector<llvm::StringRef> parent_names;
+  for (auto idx : llvm::seq<int>(1, context.GetSize()))
+    parent_names.emplace_back(context[idx].name);
+
+  // For each entry, grab its parent chain and check if we have a match.
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(leaf_name)) {
+    if (!isType(entry.tag()))
+      continue;
+
+    // Grab at most one extra parent, subsequent parents are not necessary to
+    // test equality.
+    std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
+        getParentChain(entry, parent_names.size() + 1);
+
+    if (!parent_chain) {
+      // Fallback: use the base class implementation.
+      if (!ProcessEntry(entry, [&](DWARFDIE die) {
+            return GetFullyQualifiedTypeImpl(context, die, callback);
+          }))
+        return;
+      continue;
+    }
+
+    if (SameParentChain(parent_names, *parent_chain) &&
+        !ProcessEntry(entry, callback))
+      return;
+  }
+}
+
+bool DebugNamesDWARFIndex::SameParentChain(
+    llvm::ArrayRef<llvm::StringRef> parent_names,
+    llvm::ArrayRef<DebugNames::Entry> parent_entries) const {
+
+  if (parent_entries.size() != parent_names.size())
+    return false;
+
+  auto SameAsEntryATName = [this](llvm::StringRef name,
+                                  const DebugNames::Entry &entry) {
+    // Peek at the AT_name of `entry` and test equality to `name`.
+    auto maybe_dieoffset = entry.getDIEUnitOffset();
+    if (!maybe_dieoffset)
+      return false;
+    DWARFUnit *unit = GetNonSkeletonUnit(entry);
+    if (!unit)
+      return false;
+    return name == unit->PeekDIEName(unit->GetOffset() + *maybe_dieoffset);
+  };
+
+  // If the AT_name of any parent fails to match the expected name, we don't
+  // have a match.
+  for (auto [parent_name, parent_entry] :
+       llvm::zip_equal(parent_names, parent_entries))
+    if (!SameAsEntryATName(parent_name, parent_entry))
+      return false;
+  return true;
 }
 
 void DebugNamesDWARFIndex::GetTypes(

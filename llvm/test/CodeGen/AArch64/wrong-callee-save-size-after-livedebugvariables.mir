@@ -64,6 +64,7 @@
 name:            foo
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 fixedStack:      []
 stack:

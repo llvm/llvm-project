@@ -30,17 +30,4 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
                         "Chipset that these operations will run on">];
 }
 
-def OptimizeSharedMemory : Pass<"amdgpu-optimize-shared-memory"> {
-  let summary = "Optimizes accesses to shared memory memrefs in order to reduce bank conflicts.";
-  let description = [{
-    This pass adds a transformation and pass to the AMDGPU dialect that
-    attempts to optimize reads/writes from a memref representing GPU shared
-    memory in order to avoid bank conflicts.
-  }];
-
-  let dependentDialects = [
-    "memref::MemRefDialect", "vector::VectorDialect"
-  ];
-}
-
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

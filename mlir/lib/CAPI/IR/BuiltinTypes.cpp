@@ -78,6 +78,14 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
+bool mlirTypeIsAFloat(MlirType type) {
+  return llvm::isa<FloatType>(unwrap(type));
+}
+
+unsigned mlirFloatTypeGetWidth(MlirType type) {
+  return llvm::cast<FloatType>(unwrap(type)).getWidth();
+}
+
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
 }
@@ -303,11 +311,11 @@ MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
 }
 
 bool mlirVectorTypeIsScalable(MlirType type) {
-  return unwrap(type).cast<VectorType>().isScalable();
+  return cast<VectorType>(unwrap(type)).isScalable();
 }
 
 bool mlirVectorTypeIsDimScalable(MlirType type, intptr_t dim) {
-  return unwrap(type).cast<VectorType>().getScalableDims()[dim];
+  return cast<VectorType>(unwrap(type)).getScalableDims()[dim];
 }
 
 //===----------------------------------------------------------------------===//

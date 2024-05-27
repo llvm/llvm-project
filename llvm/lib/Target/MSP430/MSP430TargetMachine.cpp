@@ -83,7 +83,7 @@ MachineFunctionInfo *MSP430TargetMachine::createMachineFunctionInfo(
 }
 
 void MSP430PassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

@@ -1442,7 +1442,17 @@ class DictAttr(Attribute):
     @property
     def typeid(self) -> TypeID: ...
 
-class F16Type(Type):
+class FloatType(Type):
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def width(self) -> int:
+        """
+        Returns the width of the floating-point type.
+        """
+
+class F16Type(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> F16Type:
@@ -1455,7 +1465,7 @@ class F16Type(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class F32Type(Type):
+class F32Type(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> F32Type:
@@ -1468,7 +1478,7 @@ class F32Type(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class F64Type(Type):
+class F64Type(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> F64Type:
@@ -1502,7 +1512,7 @@ class FlatSymbolRefAttr(Attribute):
         Returns the value of the FlatSymbolRef attribute as a string
         """
 
-class Float8E4M3B11FNUZType(Type):
+class Float8E4M3B11FNUZType(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> Float8E4M3B11FNUZType:
@@ -1515,7 +1525,7 @@ class Float8E4M3B11FNUZType(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class Float8E4M3FNType(Type):
+class Float8E4M3FNType(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> Float8E4M3FNType:
@@ -1528,7 +1538,7 @@ class Float8E4M3FNType(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class Float8E4M3FNUZType(Type):
+class Float8E4M3FNUZType(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> Float8E4M3FNUZType:
@@ -1541,7 +1551,7 @@ class Float8E4M3FNUZType(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class Float8E5M2FNUZType(Type):
+class Float8E5M2FNUZType(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> Float8E5M2FNUZType:
@@ -1554,7 +1564,7 @@ class Float8E5M2FNUZType(Type):
     @property
     def typeid(self) -> TypeID: ...
 
-class Float8E5M2Type(Type):
+class Float8E5M2Type(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> Float8E5M2Type:
@@ -1601,7 +1611,7 @@ class FloatAttr(Attribute):
         Returns the value of the float attribute
         """
 
-class FloatTF32Type(Type):
+class FloatTF32Type(FloatType):
     static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
     @staticmethod
     def get(context: Optional[Context] = None) -> FloatTF32Type:

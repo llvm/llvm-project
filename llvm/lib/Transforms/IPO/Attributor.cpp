@@ -275,7 +275,7 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty, DL);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -3123,12 +3123,12 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       // Create a new call or invoke instruction to replace the old one.
       CallBase *NewCB;
       if (InvokeInst *II = dyn_cast<InvokeInst>(OldCB)) {
-        NewCB =
-            InvokeInst::Create(NewFn, II->getNormalDest(), II->getUnwindDest(),
-                               NewArgOperands, OperandBundleDefs, "", OldCB);
+        NewCB = InvokeInst::Create(NewFn, II->getNormalDest(),
+                                   II->getUnwindDest(), NewArgOperands,
+                                   OperandBundleDefs, "", OldCB->getIterator());
       } else {
         auto *NewCI = CallInst::Create(NewFn, NewArgOperands, OperandBundleDefs,
-                                       "", OldCB);
+                                       "", OldCB->getIterator());
         NewCI->setTailCallKind(cast<CallInst>(OldCB)->getTailCallKind());
         NewCB = NewCI;
       }
@@ -3954,7 +3954,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
     // to do it eagerly.
-    if (F->hasLocalLinkage()) {
+    if (AC.UseLiveness && F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&

@@ -147,6 +147,7 @@ void MCContext::reset() {
   XCOFFAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
   SPIRVAllocator.DestroyAll();
+  WasmSignatureAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
@@ -373,6 +374,10 @@ void MCContext::setSymbolValue(MCStreamer &Streamer, const Twine &Sym,
 
 void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {
   InlineAsmUsedLabelNames[Sym->getName()] = Sym;
+}
+
+wasm::WasmSignature *MCContext::createWasmSignature() {
+  return new (WasmSignatureAllocator.Allocate()) wasm::WasmSignature;
 }
 
 MCSymbolXCOFF *
@@ -615,15 +620,20 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID)
+  if (UniqueID == GenericSectionID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
+    // Minor performance optimization: avoid hash map lookup in
+    // isELFGenericMergeableSection, which will return true for SectionName.
+    IsMergeable = true;
+  }
 
   // For mergeable sections or non-mergeable sections with a generic mergeable
   // section name we enter their Unique ID into the ELFEntrySizeMap so that
   // compatible globals can be assigned to the same section.
+
   if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
     ELFEntrySizeMap.insert(std::make_pair(
-        ELFEntrySizeKey{SectionName, Flags, EntrySize}, UniqueID));
+        std::make_tuple(SectionName, Flags, EntrySize), UniqueID));
   }
 }
 
@@ -640,8 +650,7 @@ bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
 std::optional<unsigned>
 MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                     unsigned EntrySize) {
-  auto I = ELFEntrySizeMap.find(
-      MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
+  auto I = ELFEntrySizeMap.find(std::make_tuple(SectionName, Flags, EntrySize));
   return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }

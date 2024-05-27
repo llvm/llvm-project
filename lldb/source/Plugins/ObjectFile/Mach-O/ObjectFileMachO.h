@@ -271,6 +271,7 @@ protected:
   static lldb_private::ConstString GetSegmentNameOBJC();
   static lldb_private::ConstString GetSegmentNameLINKEDIT();
   static lldb_private::ConstString GetSegmentNameDWARF();
+  static lldb_private::ConstString GetSegmentNameLLVM_COV();
   static lldb_private::ConstString GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;

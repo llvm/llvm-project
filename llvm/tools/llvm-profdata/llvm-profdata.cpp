@@ -19,8 +19,8 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/BalancedPartitioning.h"
@@ -75,7 +75,6 @@ cl::SubCommand MergeSubcommand(
 namespace {
 enum ProfileKinds { instr, sample, memory };
 enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
-} // namespace
 
 enum ProfileFormat {
   PF_None = 0,
@@ -87,6 +86,7 @@ enum ProfileFormat {
 };
 
 enum class ShowFormat { Text, Json, Yaml };
+} // namespace
 
 // Common options.
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
@@ -291,6 +291,27 @@ cl::opt<bool> DropProfileSymbolList(
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
 
+// Temporary support for writing the previous version of the format, to enable
+// some forward compatibility.
+// TODO: Consider enabling this with future version changes as well, to ease
+// deployment of newer versions of llvm-profdata.
+cl::opt<bool> DoWritePrevVersion(
+    "write-prev-version", cl::init(false), cl::Hidden,
+    cl::desc("Write the previous version of indexed format, to enable "
+             "some forward compatibility."));
+
+cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
+    "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Specify the version of the memprof format to use"),
+    cl::init(memprof::Version0),
+    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
+
+cl::opt<bool> MemProfFullSchema(
+    "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Use the full schema for serialization"), cl::init(false));
+
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                   cl::desc("<base profile file>"),
@@ -319,7 +340,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
         "profile with max count value greater then the parameter value"),
     cl::sub(OverlapSubcommand));
 
-// Options unique to show subcommand.
+// Options specific to show subcommand.
 cl::opt<bool> ShowCounts("counts", cl::init(false),
                          cl::desc("Show counter values for shown functions"),
                          cl::sub(ShowSubcommand));
@@ -345,6 +366,9 @@ cl::opt<bool> ShowIndirectCallTargets(
     "ic-targets", cl::init(false),
     cl::desc("Show indirect call site target values for shown functions"),
     cl::sub(ShowSubcommand));
+cl::opt<bool> ShowVTables("show-vtables", cl::init(false),
+                          cl::desc("Show vtable names for shown functions"),
+                          cl::sub(ShowSubcommand));
 cl::opt<bool> ShowMemOPSizes(
     "memop-sizes", cl::init(false),
     cl::desc("Show the profiled sizes of the memory intrinsic calls "
@@ -415,12 +439,19 @@ cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
                                  cl::desc("Show profile version. "),
                                  cl::sub(ShowSubcommand));
 
+// Options specific to order subcommand.
+cl::opt<unsigned>
+    NumTestTraces("num-test-traces", cl::init(0),
+                  cl::desc("Keep aside the last <num-test-traces> traces in "
+                           "the profile when computing the function order and "
+                           "instead use them to evaluate that order"),
+                  cl::sub(OrderSubcommand));
+
 // We use this string to indicate that there are
 // multiple static functions map to the same name.
 const std::string DuplicateNameStr = "----";
 
-static void warn(Twine Message, std::string Whence = "",
-                 std::string Hint = "") {
+static void warn(Twine Message, StringRef Whence = "", StringRef Hint = "") {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -432,13 +463,13 @@ static void warn(Twine Message, std::string Whence = "",
 static void warn(Error E, StringRef Whence = "") {
   if (E.isA<InstrProfError>()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      warn(IPE.message(), std::string(Whence), std::string(""));
+      warn(IPE.message(), Whence);
     });
   }
 }
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -457,16 +488,16 @@ static void exitWithError(Error E, StringRef Whence = "") {
         // Hint in case user missed specifying the profile type.
         Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
-      exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
+      exitWithError(IPE.message(), Whence, Hint);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -474,7 +505,7 @@ static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
   if (FailMode == failIfAnyAreInvalid)
     exitWithErrorCode(EC, Whence);
   else
-    warn(EC.message(), std::string(Whence));
+    warn(EC.message(), Whence);
 }
 
 static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
@@ -579,8 +610,9 @@ struct WriterContext {
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
-      : Writer(IsSparse, ReservoirSize, MaxTraceLength), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+      : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
+               MemProfVersionRequested, MemProfFullSchema),
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -657,10 +689,22 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       if (!Succeeded)
         return;
     }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
-    for (const auto &I : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
     }
     return;
   }
@@ -720,6 +764,13 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
                              Input.Filename, FuncName, firstTime);
     });
+  }
+
+  const InstrProfSymtab &symtab = Reader->getSymtab();
+  const auto &VTableNames = symtab.getVTableNames();
+
+  for (const auto &kv : VTableNames) {
+    WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -898,7 +949,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
@@ -1541,7 +1592,7 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
   // If OutputSizeLimit is 0 (default), it is the same as write().
   if (std::error_code EC =
           Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
-    exitWithErrorCode(std::move(EC));
+    exitWithErrorCode(EC);
 }
 
 static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
@@ -1610,7 +1661,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   }
 }
 
-static int merge_main(int argc, const char *argv[]) {
+static int merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
@@ -1623,8 +1674,7 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " +
-                  sys::path::filename(argv[0]) + " " + argv[1] + " -help");
+    exitWithError("no input files specified. See " + ProgName + " merge -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -2610,7 +2660,7 @@ void overlapSampleProfile(const std::string &BaseFilename,
   OverlapAggr.dumpFuncSimilarity(OS);
 }
 
-static int overlap_main(int argc, const char *argv[]) {
+static int overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -2817,6 +2867,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
+      if (ShowVTables)
+        OS << "    Number of instrumented vtables: "
+           << Func.getNumValueSites(IPVK_VTableTarget) << "\n";
+
       uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
       if (ShowMemOPSizes && NumMemOPCalls > 0)
         OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
@@ -2835,6 +2889,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Target Results:\n";
         traverseAllValueSites(Func, IPVK_IndirectCallTarget,
                               VPStats[IPVK_IndirectCallTarget], OS,
+                              &(Reader->getSymtab()));
+      }
+
+      if (ShowVTables) {
+        OS << "    VTable Results:\n";
+        traverseAllValueSites(Func, IPVK_VTableTarget,
+                              VPStats[IPVK_VTableTarget], OS,
                               &(Reader->getSymtab()));
       }
 
@@ -2884,6 +2945,11 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     OS << "Statistics for indirect call sites profile:\n";
     showValueSitesStats(OS, IPVK_IndirectCallTarget,
                         VPStats[IPVK_IndirectCallTarget]);
+  }
+
+  if (ShownFunctions && ShowVTables) {
+    OS << "Statistics for vtable profile:\n";
+    showValueSitesStats(OS, IPVK_VTableTarget, VPStats[IPVK_VTableTarget]);
   }
 
   if (ShownFunctions && ShowMemOPSizes) {
@@ -3171,15 +3237,16 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   return 0;
 }
 
-static int show_main(int argc, const char *argv[]) {
+static int show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
+    errs() << ProgName
+           << " show: Input file name cannot be the same as the output file "
+              "name!\n";
     return 1;
   }
   if (JsonFormat)
@@ -3203,7 +3270,7 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main(int argc, const char *argv[]) {
+static int order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3218,13 +3285,42 @@ static int order_main(int argc, const char *argv[]) {
     // Read all entries
     (void)I;
   }
-  auto &Traces = Reader->getTemporalProfTraces();
-  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes(Traces);
+  ArrayRef Traces = Reader->getTemporalProfTraces();
+  if (NumTestTraces && NumTestTraces >= Traces.size())
+    exitWithError(
+        "--" + NumTestTraces.ArgStr +
+        " must be smaller than the total number of traces: expected: < " +
+        Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
+  ArrayRef TestTraces = Traces.take_back(NumTestTraces);
+  Traces = Traces.drop_back(NumTestTraces);
+
+  std::vector<BPFunctionNode> Nodes;
+  TemporalProfTraceTy::createBPFunctionNodes(Traces, Nodes);
   BalancedPartitioningConfig Config;
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
   OS << "# Ordered " << Nodes.size() << " functions\n";
+  if (!TestTraces.empty()) {
+    // Since we don't know the symbol sizes, we assume 32 functions per page.
+    DenseMap<BPFunctionNode::IDT, unsigned> IdToPageNumber;
+    for (auto &Node : Nodes)
+      IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
+
+    SmallSet<unsigned, 0> TouchedPages;
+    unsigned Area = 0;
+    for (auto &Trace : TestTraces) {
+      for (auto Id : Trace.FunctionNameRefs) {
+        auto It = IdToPageNumber.find(Id);
+        if (It == IdToPageNumber.end())
+          continue;
+        TouchedPages.insert(It->getSecond());
+        Area += TouchedPages.size();
+      }
+      TouchedPages.clear();
+    }
+    OS << "# Total area under the page fault curve: " << (float)Area << "\n";
+  }
   OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
         "linkage and this output does not take that into account. Some "
         "post-processing may be required before passing to the linker via "
@@ -3254,16 +3350,16 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(argc, argv);
+    return show_main(ProgName);
 
   if (OrderSubcommand)
-    return order_main(argc, argv);
+    return order_main();
 
   if (OverlapSubcommand)
-    return overlap_main(argc, argv);
+    return overlap_main();
 
   if (MergeSubcommand)
-    return merge_main(argc, argv);
+    return merge_main(ProgName);
 
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";

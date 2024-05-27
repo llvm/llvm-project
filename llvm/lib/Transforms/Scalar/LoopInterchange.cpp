@@ -976,7 +976,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
       }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
-    LLVM_DEBUG(dbgs() << "Cound not find inner loop induction variables.\n");
+    LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
     return false;
   }
 

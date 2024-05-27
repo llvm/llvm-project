@@ -127,7 +127,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::IOS:
       case llvm::Triple::WatchOS:
       case llvm::Triple::TvOS:
-      // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+      case llvm::Triple::BridgeOS:
         break;
       // Only accept "vendor" for vendor if the host is Apple and it "unknown"
       // wasn't specified (it was just returned because it was NOT specified)

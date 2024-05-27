@@ -13,7 +13,7 @@
 // CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx803"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908:sramecc+:xnack- \
@@ -43,7 +43,7 @@
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 --offload-arch=skylake \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-FAILED
 
-// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
+// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 -fno-openmp \

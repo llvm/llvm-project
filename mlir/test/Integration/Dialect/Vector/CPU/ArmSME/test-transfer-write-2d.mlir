@@ -1,10 +1,5 @@
 // DEFINE: %{entry_point} = entry
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// DEFINE:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
@@ -56,7 +51,7 @@ func.func @transfer_write_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index
 func.func @load_and_print(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %0 = vector.load %A[%base1, %base2] : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return

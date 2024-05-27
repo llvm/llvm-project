@@ -1,7 +1,7 @@
 ; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-gnueabi"
+target triple = "aarch64"
 
 ; 3 reads and 3 writes should need 12 memchecks
 ; CHECK: function 'testf':

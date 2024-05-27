@@ -142,7 +142,7 @@ define double @ret_fpext_f32_to_f64_nosub(float nofpclass(sub) %arg0) {
 }
 
 define double @ret_fpext_f32_to_f64_nonorm(float nofpclass(norm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub norm) double @ret_fpext_f32_to_f64_nonorm
+; CHECK-LABEL: define nofpclass(sub) double @ret_fpext_f32_to_f64_nonorm
 ; CHECK-SAME: (float nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
 ; CHECK-NEXT:    ret double [[EXT]]
@@ -482,7 +482,37 @@ define double @ret_fpext_bf16_f64_nosub(bfloat nofpclass(sub) %arg0) {
 }
 
 define double @ret_fpext_bf16_f64_nonorm(bfloat nofpclass(norm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub norm) double @ret_fpext_bf16_f64_nonorm
+; CHECK-LABEL: define nofpclass(sub) double @ret_fpext_bf16_f64_nonorm
+; CHECK-SAME: (bfloat nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_bf16_f64_nonorm_psub(bfloat nofpclass(norm psub) %arg0) {
+; CHECK-LABEL: define nofpclass(sub pnorm) double @ret_fpext_bf16_f64_nonorm_psub
+; CHECK-SAME: (bfloat nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_bf16_f64_nonorm_nsub(bfloat nofpclass(norm nsub) %arg0) {
+; CHECK-LABEL: define nofpclass(sub nnorm) double @ret_fpext_bf16_f64_nonorm_nsub
+; CHECK-SAME: (bfloat nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_bf16_f64_nonorm_sub(bfloat nofpclass(norm sub) %arg0) {
+; CHECK-LABEL: define nofpclass(sub norm) double @ret_fpext_bf16_f64_nonorm_sub
 ; CHECK-SAME: (bfloat nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to double
 ; CHECK-NEXT:    ret double [[EXT]]

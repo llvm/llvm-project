@@ -110,9 +110,9 @@ private:
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeXor(Instruction *I,
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
-  bool CombineXorOpnd(Instruction *I, reassociate::XorOpnd *Opnd1,
+  bool CombineXorOpnd(BasicBlock::iterator It, reassociate::XorOpnd *Opnd1,
                       APInt &ConstOpnd, Value *&Res);
-  bool CombineXorOpnd(Instruction *I, reassociate::XorOpnd *Opnd1,
+  bool CombineXorOpnd(BasicBlock::iterator It, reassociate::XorOpnd *Opnd1,
                       reassociate::XorOpnd *Opnd2, APInt &ConstOpnd,
                       Value *&Res);
   Value *buildMinimalMultiplyDAG(IRBuilderBase &Builder,

@@ -1171,6 +1171,25 @@ define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2)
   ret <4 x i32> %4
 }
 
+; PR84660 - check for illegal types
+define <2 x i128> @neg_scalar_broadcast_illegaltype(i128 %arg) {
+; CHECK-LABEL: neg_scalar_broadcast_illegaltype:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    movq %rsi, 16(%rdi)
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movq $0, 24(%rdi)
+; CHECK-NEXT:    movq $0, 8(%rdi)
+; CHECK-NEXT:    retq
+  %i = xor i128 %arg, 1
+  %i1 = insertelement <2 x i128> zeroinitializer, i128 %i, i64 0
+  %i2 = shufflevector <2 x i128> %i1, <2 x i128> zeroinitializer, <2 x i32> zeroinitializer
+  %i3 = and <2 x i128> <i128 1, i128 1>, %i2
+  ret <2 x i128> %i3
+}
+
 define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {
 ; SSE-LABEL: andnp_xx:
 ; SSE:       # %bb.0:

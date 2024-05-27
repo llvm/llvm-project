@@ -66,6 +66,14 @@ public:
   static bool isRequired() { return true; }
 };
 
+class BPFASpaceCastSimplifyPass
+    : public PassInfoMixin<BPFASpaceCastSimplifyPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
 class BPFAdjustOptPass : public PassInfoMixin<BPFAdjustOptPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

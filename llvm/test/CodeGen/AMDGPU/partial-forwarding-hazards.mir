@@ -13,6 +13,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX12-LABEL: name: partial_forwarding_1_hazard
     ; GFX12: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX12-NEXT: $exec = S_MOV_B64 -1
@@ -48,6 +49,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX12-LABEL: name: partial_forwarding_2_hazard
     ; GFX12: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX12-NEXT: $sgpr0 = S_MOV_B32 0
@@ -100,6 +102,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX12-LABEL: name: partial_forwarding_3_hazard
     ; GFX12: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX12-NEXT: $vgpr10 = V_MOV_B32_e32 0, implicit $exec
@@ -235,6 +238,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX12-LABEL: name: partial_forwarding_4_hazard
     ; GFX12: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX12-NEXT: $exec = S_MOV_B64 -1
@@ -308,6 +312,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX12-LABEL: name: partial_forwarding_5_hazard
     ; GFX12: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX12-NEXT: $vgpr10 = V_MOV_B32_e32 0, implicit $exec
@@ -394,6 +399,7 @@ body:            |
   ; GFX11-NEXT:   S_WAITCNT_DEPCTR 4095
   ; GFX11-NEXT:   $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
+  ;
   ; GFX12-LABEL: name: partial_forwarding_branching_1a
   ; GFX12: bb.0:
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)
@@ -471,6 +477,7 @@ body:            |
   ; GFX11-NEXT:   S_WAITCNT_DEPCTR 4095
   ; GFX11-NEXT:   $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
+  ;
   ; GFX12-LABEL: name: partial_forwarding_branching_1b
   ; GFX12: bb.0:
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)

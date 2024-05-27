@@ -420,7 +420,7 @@ def Vector_ShuffleOp :
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
-     Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
+     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -443,6 +443,8 @@ def Vector_ShuffleOp :
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
+
+    Note, scalable vectors are not supported.
 
     Example:
 
@@ -477,6 +479,150 @@ def Vector_ShuffleOp :
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
+
+def ResultIsDoubleSourceVectorType : TypesMatchWith<
+    "type of 'result' is double the width of the inputs",
+    "lhs", "result",
+    [{
+      [&]() -> ::mlir::VectorType {
+        auto vectorType = ::llvm::cast<::mlir::VectorType>($_self);
+        ::mlir::VectorType::Builder builder(vectorType);
+        if (vectorType.getRank() == 0) {
+          static constexpr int64_t v2xTyShape[] = {2};
+          return builder.setShape(v2xTyShape);
+        }
+        auto lastDim = vectorType.getRank() - 1;
+        return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
+      }()
+    }]>;
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
+    ResultIsDoubleSourceVectorType]> {
+  let summary = "constructs a vector by interleaving two input vectors";
+  let description = [{
+    The interleave operation constructs a new vector by interleaving the
+    elements from the trailing (or final) dimension of two input vectors,
+    returning a new vector where the trailing dimension is twice the size.
+
+    Note that for the n-D case this differs from the interleaving possible with
+    `vector.shuffle`, which would only operate on the leading dimension.
+
+    Another key difference is this operation supports scalable vectors, though
+    currently a general LLVM lowering is limited to the case where only the
+    trailing dimension is scalable.
+
+    Example:
+    ```mlir
+    %a = arith.constant dense<[0, 1]> : vector<2xi32>
+    %b = arith.constant dense<[2, 3]> : vector<2xi32>
+    // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
+
+    // Examples showing allowed input and result types.
+    %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
+    %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
+    %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
+    %4 = vector.interleave %i, %j : vector<2x4x[2]xf64> -> vector<2x4x[4]xf64>
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$lhs, AnyVectorOfAnyRank:$rhs);
+  let results = (outs AnyVector:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return ::llvm::cast<VectorType>(getLhs().getType());
+    }
+    VectorType getResultVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+}
+
+class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
+  "the trailing dimension of the results is half the width of source trailing dimension",
+  "source", result,
+  [{
+    [&]() -> ::mlir::VectorType {
+      auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+      ::mlir::VectorType::Builder builder(vectorType);
+      auto lastDim = vectorType.getRank() - 1;
+      auto newDimSize = vectorType.getDimSize(lastDim) / 2;;
+      if (newDimSize <= 0)
+         return vectorType; // (invalid input type)
+      return builder.setDim(lastDim, newDimSize);
+    }()
+  }]
+>;
+
+def SourceVectorEvenElementCount : PredOpTrait<
+  "the trailing dimension of the source vector has an even number of elements",
+  CPred<[{
+    [&](){
+      auto srcVec = getSourceVectorType();
+      return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
+    }()
+  }]>
+>;
+
+def Vector_DeinterleaveOp :
+  Vector_Op<"deinterleave", [Pure,
+    SourceVectorEvenElementCount,
+    ResultIsHalfSourceVectorType<"res1">,
+    AllTypesMatch<["res1", "res2"]>
+    ]> {
+      let summary = "constructs two vectors by deinterleaving an input vector";
+      let description = [{
+        The deinterleave operation constructs two vectors from a single input
+        vector. The first result vector contains the elements from even indexes
+        of the input, and the second contains elements from odd indexes. This is
+        the inverse of a `vector.interleave` operation.
+
+        Each output's trailing dimension is half of the size of the input
+        vector's trailing dimension. This operation requires the input vector
+        to have a rank > 0 and an even number of elements in its trailing
+        dimension.
+
+        The operation supports scalable vectors.
+
+        Example:
+        ```mlir
+        %0, %1 = vector.deinterleave %a
+                   : vector<8xi8> -> vector<4xi8>
+        %2, %3 = vector.deinterleave %b
+                   : vector<2x8xi8> -> vector<2x4xi8>
+        %4, %5 = vector.deinterleave %c
+                   : vector<2x8x4xi8> -> vector<2x8x2xi8>
+        %6, %7 = vector.deinterleave %d
+                   : vector<[8]xf32> -> vector<[4]xf32>
+        %8, %9 = vector.deinterleave %e
+                   : vector<2x[6]xf64> -> vector<2x[3]xf64>
+        %10, %11 = vector.deinterleave %f
+                   : vector<2x4x[6]xf64> -> vector<2x4x[3]xf64>
+        ```
+      }];
+
+      let arguments = (ins AnyVector:$source);
+      let results = (outs AnyVector:$res1, AnyVector:$res2);
+
+      let assemblyFormat = [{
+        $source attr-dict `:` type($source) `->` type($res1)
+      }];
+
+      let extraClassDeclaration = [{
+        VectorType getSourceVectorType() {
+          return ::llvm::cast<VectorType>(getSource().getType());
+        }
+        VectorType getResultVectorType() {
+          return ::llvm::cast<VectorType>(getRes1().getType());
+        }
+      }];
+    }
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
@@ -1262,7 +1408,7 @@ def Vector_TransferReadOp :
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
           %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
-          memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+          memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1285,7 +1431,7 @@ def Vector_TransferReadOp :
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
         %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
-        memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+        memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -2746,7 +2892,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [Pure]> {
+  [Pure, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2762,6 +2909,13 @@ def VectorScaleOp : Vector_Op<"vscale",
   }];
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
+
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        ::llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      setNameFn(getResult(), "vscale");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

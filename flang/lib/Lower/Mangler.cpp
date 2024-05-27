@@ -182,7 +182,8 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                    bool underscoring) {
   assert((symbol.owner().kind() !=
               Fortran::semantics::Scope::Kind::BlockConstruct ||
-          symbol.has<Fortran::semantics::SubprogramDetails>()) &&
+          symbol.has<Fortran::semantics::SubprogramDetails>() ||
+          Fortran::semantics::IsBindCProcedure(symbol)) &&
          "block object mangling must specify a scopeBlockIdMap");
   ScopeBlockIdMap scopeBlockIdMap;
   return mangleName(symbol, scopeBlockIdMap, keepExternalInScope, underscoring);

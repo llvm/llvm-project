@@ -1,4 +1,5 @@
 add_subdirectory(Support)
+add_subdirectory(CUF)
 
 add_flang_library(FIRDialect
   FIRAttr.cpp
@@ -13,10 +14,11 @@ add_flang_library(FIRDialect
   CanonicalizationPatternsIncGen
   MLIRIR
   FIROpsIncGen
-  HLFIROpsIncGen
+  CUFAttrsIncGen
   intrinsics_gen
 
   LINK_LIBS
+  CUFAttrs
   FIRDialectSupport
   MLIRArithDialect
   MLIRBuiltinToLLVMIRTranslation

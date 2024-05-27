@@ -1,5 +1,5 @@
 if(NOT (TARGET libc.src.__support.threads.mutex)
-   OR LIBC_TARGET_ARCHITECTURE_IS_GPU)
+   OR LIBC_TARGET_OS_IS_GPU)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
   # we just skip everything about files.
   return()
@@ -25,6 +25,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
+    libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex

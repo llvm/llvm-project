@@ -1171,23 +1171,21 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ; SSE2-NEXT:    pand %xmm8, %xmm5
 ; SSE2-NEXT:    pand %xmm8, %xmm4
 ; SSE2-NEXT:    packuswb %xmm5, %xmm4
+; SSE2-NEXT:    paddb %xmm0, %xmm4
 ; SSE2-NEXT:    pand %xmm8, %xmm3
 ; SSE2-NEXT:    pand %xmm8, %xmm2
 ; SSE2-NEXT:    packuswb %xmm3, %xmm2
 ; SSE2-NEXT:    pand %xmm8, %xmm7
 ; SSE2-NEXT:    pand %xmm8, %xmm6
 ; SSE2-NEXT:    packuswb %xmm7, %xmm6
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psadbw %xmm1, %xmm6
-; SSE2-NEXT:    psadbw %xmm1, %xmm2
-; SSE2-NEXT:    paddq %xmm6, %xmm2
-; SSE2-NEXT:    psadbw %xmm1, %xmm4
-; SSE2-NEXT:    psadbw %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm2, %xmm6
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    psadbw %xmm0, %xmm6
+; SSE2-NEXT:    psadbw %xmm0, %xmm4
+; SSE2-NEXT:    paddq %xmm6, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,2,3]
 ; SSE2-NEXT:    paddq %xmm4, %xmm0
-; SSE2-NEXT:    paddq %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    paddq %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1200,23 +1198,21 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ; SSE41-NEXT:    pand %xmm8, %xmm5
 ; SSE41-NEXT:    pand %xmm8, %xmm4
 ; SSE41-NEXT:    packuswb %xmm5, %xmm4
+; SSE41-NEXT:    paddb %xmm0, %xmm4
 ; SSE41-NEXT:    pand %xmm8, %xmm3
 ; SSE41-NEXT:    pand %xmm8, %xmm2
 ; SSE41-NEXT:    packuswb %xmm3, %xmm2
 ; SSE41-NEXT:    pand %xmm8, %xmm7
 ; SSE41-NEXT:    pand %xmm8, %xmm6
 ; SSE41-NEXT:    packuswb %xmm7, %xmm6
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    psadbw %xmm1, %xmm6
-; SSE41-NEXT:    psadbw %xmm1, %xmm2
-; SSE41-NEXT:    paddq %xmm6, %xmm2
-; SSE41-NEXT:    psadbw %xmm1, %xmm4
-; SSE41-NEXT:    psadbw %xmm1, %xmm0
+; SSE41-NEXT:    paddb %xmm2, %xmm6
+; SSE41-NEXT:    pxor %xmm0, %xmm0
+; SSE41-NEXT:    psadbw %xmm0, %xmm6
+; SSE41-NEXT:    psadbw %xmm0, %xmm4
+; SSE41-NEXT:    paddq %xmm6, %xmm4
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,2,3]
 ; SSE41-NEXT:    paddq %xmm4, %xmm0
-; SSE41-NEXT:    paddq %xmm2, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE41-NEXT:    paddq %xmm0, %xmm1
-; SSE41-NEXT:    movd %xmm1, %eax
+; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE41-NEXT:    retq
 ;
@@ -1229,19 +1225,17 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ; AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpsadbw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vpackuswb %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpsadbw %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsadbw %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpsadbw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpackuswb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpsadbw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vpackuswb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsadbw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
@@ -1259,12 +1253,10 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm1
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpackuswb %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpsadbw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-NEXT:    vpsadbw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

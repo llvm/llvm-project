@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
-#define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
+#ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
+#define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -87,7 +87,7 @@ public:
 
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
-      llvm::CodeObjectVersionKind::COV_4;
+      llvm::CodeObjectVersionKind::COV_5;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
@@ -141,4 +141,4 @@ public:
 
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_CODEGENOPTIONS_H

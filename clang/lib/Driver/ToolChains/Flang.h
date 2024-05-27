@@ -77,6 +77,13 @@ private:
   void AddRISCVTargetArgs(const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Add specific options for X86_64 target.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddX86_64TargetArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Extract offload options from the driver arguments and add them to
   /// the command arguments.
   /// \param [in] C The current compilation for the driver invocation

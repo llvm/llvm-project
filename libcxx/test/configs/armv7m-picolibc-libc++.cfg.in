@@ -5,7 +5,7 @@ libc_linker_script = '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'
 config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
 
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
+    '-nostdinc++ -I %{include-dir} -I %{target-include-dir} -I %{libcxx-dir}/test/support'
 
     # Disable warnings in cxx_atomic_impl.h:
     # "large atomic operation may incur significant performance penalty; the
@@ -17,7 +17,7 @@ config.substitutions.append(('%{compile_flags}',
     ' -include picolibc.h'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi'
     ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
     ' -T {}'.format(libc_linker_script) +
     ' -Wl,--defsym=__flash=0x0'

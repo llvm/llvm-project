@@ -170,6 +170,10 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_label_attr - substituted by a call to a label attribute matcher;
+  //   - $_roundingMode_attr - substituted by a call to a rounding mode
+  //     attribute matcher;
+  //   - $_fpExceptionBehavior_attr - substituted by a call to a FP exception
+  //     behavior attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;

@@ -191,6 +191,17 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
   return *this;
 }
 
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
+  return *this;
+}
+
 namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
@@ -522,10 +533,10 @@ static T extractMaskValue(T KeyPath) {
 
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS,     \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE,         \
-    ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE,         \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
-  if ((VISIBILITY)&options::CC1Option) {                                       \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+  if ((VISIBILITY) & options::CC1Option) {                                     \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
       KEYPATH = MERGER(KEYPATH, IMPLIED_VALUE);                                \
@@ -539,10 +550,10 @@ static T extractMaskValue(T KeyPath) {
 // with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, \
-    VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT,   \
-    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
-    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
-  if ((VISIBILITY)&options::CC1Option) {                                       \
+    VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,        \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+  if ((VISIBILITY) & options::CC1Option) {                                     \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
           (Extracted !=                                                        \
@@ -1545,6 +1556,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
                llvm::DICompileUnit::DebugNameTableKind::Default))
     GenerateArg(Consumer, OPT_gpubnames);
 
+  if (Opts.DebugTemplateAlias)
+    GenerateArg(Consumer, OPT_gtemplate_alias);
+
   auto TNK = Opts.getDebugSimpleTemplateNames();
   if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
     if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
@@ -1816,6 +1830,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
+  Opts.DebugTemplateAlias = Args.hasArg(OPT_gtemplate_alias);
+
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
           ? llvm::DICompileUnit::DebugNameTableKind::GNU
@@ -1953,7 +1969,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
     else if (Val == llvm::FunctionReturnThunksKind::Extern &&
-             Args.getLastArgValue(OPT_mcmodel_EQ).equals("large"))
+             Args.getLastArgValue(OPT_mcmodel_EQ) == "large")
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getAsString(Args)
           << Args.getLastArg(OPT_mcmodel_EQ)->getAsString(Args);
@@ -1973,14 +1989,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       F.Internalize = true;
     }
     Opts.LinkBitcodeFiles.push_back(F);
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
-    if (T.isOSAIX()) {
-      StringRef Name = A->getValue();
-      if (Name == "local-dynamic")
-        Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
-    }
   }
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
@@ -2541,6 +2549,7 @@ static const auto &getFrontendActionTable() {
       {frontend::DumpTokens, OPT_dump_tokens},
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
+      {frontend::EmitCIR, OPT_emit_cir},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
@@ -2553,6 +2562,8 @@ static const auto &getFrontendActionTable() {
 
       {frontend::GenerateModule, OPT_emit_module},
       {frontend::GenerateModuleInterface, OPT_emit_module_interface},
+      {frontend::GenerateReducedModuleInterface,
+       OPT_emit_reduced_module_interface},
       {frontend::GenerateHeaderUnit, OPT_emit_header_unit},
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
@@ -2752,6 +2763,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
     case Language::HLSL:
       Lang = "hlsl";
       break;
+    case Language::CIR:
+      Lang = "cir";
+      break;
     }
 
     GenerateArg(Consumer, OPT_x,
@@ -2827,6 +2841,30 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     }
 
     Opts.ProgramAction = *ProgramAction;
+
+    // Catch common mistakes when multiple actions are specified for cc1 (e.g.
+    // -S -emit-llvm means -emit-llvm while -emit-llvm -S means -S). However, to
+    // support driver `-c -Xclang ACTION` (-cc1 -emit-llvm file -main-file-name
+    // X ACTION), we suppress the error when the two actions are separated by
+    // -main-file-name.
+    //
+    // As an exception, accept composable -ast-dump*.
+    if (!A->getSpelling().starts_with("-ast-dump")) {
+      const Arg *SavedAction = nullptr;
+      for (const Arg *AA :
+           Args.filtered(OPT_Action_Group, OPT_main_file_name)) {
+        if (AA->getOption().matches(OPT_main_file_name)) {
+          SavedAction = nullptr;
+        } else if (!SavedAction) {
+          SavedAction = AA;
+        } else {
+          if (!A->getOption().matches(OPT_ast_dump_EQ))
+            Diags.Report(diag::err_fe_invalid_multiple_actions)
+                << SavedAction->getSpelling() << A->getSpelling();
+          break;
+        }
+      }
+    }
   }
 
   if (const Arg* A = Args.getLastArg(OPT_plugin)) {
@@ -2878,6 +2916,8 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
+  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+    Opts.UseClangIRPipeline = true;
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
@@ -2953,6 +2993,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                   .Cases("ast", "pcm", "precompiled-header",
                          InputKind(Language::Unknown, InputKind::Precompiled))
                   .Case("ir", Language::LLVM_IR)
+                  .Case("cir", Language::CIR)
                   .Default(Language::Unknown);
 
     if (DashX.isUnknown())
@@ -3186,6 +3227,22 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   bool IsIndexHeaderMap = false;
   bool IsSysrootSpecified =
       Args.hasArg(OPT__sysroot_EQ) || Args.hasArg(OPT_isysroot);
+
+  // Expand a leading `=` to the sysroot if one was passed (and it's not a
+  // framework flag).
+  auto PrefixHeaderPath = [IsSysrootSpecified,
+                           &Opts](const llvm::opt::Arg *A,
+                                  bool IsFramework = false) -> std::string {
+    assert(A->getNumValues() && "Unexpected empty search path flag!");
+    if (IsSysrootSpecified && !IsFramework && A->getValue()[0] == '=') {
+      SmallString<32> Buffer;
+      llvm::sys::path::append(Buffer, Opts.Sysroot,
+                              llvm::StringRef(A->getValue()).substr(1));
+      return std::string(Buffer);
+    }
+    return A->getValue();
+  };
+
   for (const auto *A : Args.filtered(OPT_I, OPT_F, OPT_index_header_map)) {
     if (A->getOption().matches(OPT_index_header_map)) {
       // -index-header-map applies to the next -I or -F.
@@ -3197,16 +3254,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
         IsIndexHeaderMap ? frontend::IndexHeaderMap : frontend::Angled;
 
     bool IsFramework = A->getOption().matches(OPT_F);
-    std::string Path = A->getValue();
-
-    if (IsSysrootSpecified && !IsFramework && A->getValue()[0] == '=') {
-      SmallString<32> Buffer;
-      llvm::sys::path::append(Buffer, Opts.Sysroot,
-                              llvm::StringRef(A->getValue()).substr(1));
-      Path = std::string(Buffer);
-    }
-
-    Opts.AddPath(Path, Group, IsFramework,
+    Opts.AddPath(PrefixHeaderPath(A, IsFramework), Group, IsFramework,
                  /*IgnoreSysroot*/ true);
     IsIndexHeaderMap = false;
   }
@@ -3224,12 +3272,18 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   }
 
   for (const auto *A : Args.filtered(OPT_idirafter))
-    Opts.AddPath(A->getValue(), frontend::After, false, true);
+    Opts.AddPath(PrefixHeaderPath(A), frontend::After, false, true);
   for (const auto *A : Args.filtered(OPT_iquote))
-    Opts.AddPath(A->getValue(), frontend::Quoted, false, true);
-  for (const auto *A : Args.filtered(OPT_isystem, OPT_iwithsysroot))
-    Opts.AddPath(A->getValue(), frontend::System, false,
-                 !A->getOption().matches(OPT_iwithsysroot));
+    Opts.AddPath(PrefixHeaderPath(A), frontend::Quoted, false, true);
+
+  for (const auto *A : Args.filtered(OPT_isystem, OPT_iwithsysroot)) {
+    if (A->getOption().matches(OPT_iwithsysroot)) {
+      Opts.AddPath(A->getValue(), frontend::System, false,
+                   /*IgnoreSysRoot=*/false);
+      continue;
+    }
+    Opts.AddPath(PrefixHeaderPath(A), frontend::System, false, true);
+  }
   for (const auto *A : Args.filtered(OPT_iframework))
     Opts.AddPath(A->getValue(), frontend::System, true, true);
   for (const auto *A : Args.filtered(OPT_iframeworkwithsysroot))
@@ -3288,12 +3342,44 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
     Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
+static void GeneratePointerAuthArgs(const LangOptions &Opts,
+                                    ArgumentConsumer Consumer) {
+  if (Opts.PointerAuthIntrinsics)
+    GenerateArg(Consumer, OPT_fptrauth_intrinsics);
+  if (Opts.PointerAuthCalls)
+    GenerateArg(Consumer, OPT_fptrauth_calls);
+  if (Opts.PointerAuthReturns)
+    GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthAuthTraps)
+    GenerateArg(Consumer, OPT_fptrauth_auth_traps);
+  if (Opts.PointerAuthVTPtrAddressDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
+  if (Opts.PointerAuthVTPtrTypeDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthInitFini)
+    GenerateArg(Consumer, OPT_fptrauth_init_fini);
+}
+
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
+                                 DiagnosticsEngine &Diags) {
+  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.PointerAuthVTPtrAddressDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
+  Opts.PointerAuthVTPtrTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
+}
+
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
   switch (IK.getLanguage()) {
   case Language::Unknown:
   case Language::LLVM_IR:
+  case Language::CIR:
     llvm_unreachable("should not parse language flags for this input");
 
   case Language::C:
@@ -3359,6 +3445,8 @@ static StringRef GetInputKindName(InputKind IK) {
     return "Asm";
   case Language::LLVM_IR:
     return "LLVM IR";
+  case Language::CIR:
+    return "Clang IR";
 
   case Language::HLSL:
     return "HLSL";
@@ -3374,7 +3462,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                                               const llvm::Triple &T,
                                               InputKind IK) {
   if (IK.getFormat() == InputKind::Precompiled ||
-      IK.getLanguage() == Language::LLVM_IR) {
+      IK.getLanguage() == Language::LLVM_IR ||
+      IK.getLanguage() == Language::CIR) {
     if (Opts.ObjCAutoRefCount)
       GenerateArg(Consumer, OPT_fobjc_arc);
     if (Opts.PICLevel != 0)
@@ -3479,7 +3568,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fblocks);
 
   if (Opts.ConvergentFunctions &&
-      !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice))
+      !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice ||
+        Opts.HLSL))
     GenerateArg(Consumer, OPT_fconvergent_functions);
 
   if (Opts.NoBuiltin && !Opts.Freestanding)
@@ -3617,6 +3707,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   case LangOptions::ClangABI::Ver17:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
     break;
+  case LangOptions::ClangABI::Ver18:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "18.0");
+    break;
   case LangOptions::ClangABI::Latest:
     break;
   }
@@ -3660,7 +3753,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   if (IK.getFormat() == InputKind::Precompiled ||
-      IK.getLanguage() == Language::LLVM_IR) {
+      IK.getLanguage() == Language::LLVM_IR ||
+      IK.getLanguage() == Language::CIR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
     // PassManager in BackendUtil.cpp. They need to be initialized no matter
     // what the input type is.
@@ -3876,7 +3970,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   Opts.ConvergentFunctions = Args.hasArg(OPT_fconvergent_functions) ||
                              Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-                             Opts.SYCLIsDevice;
+                             Opts.SYCLIsDevice || Opts.HLSL;
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
@@ -4009,6 +4103,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
       if (TT.getArch() == llvm::Triple::UnknownArch ||
           !(TT.getArch() == llvm::Triple::aarch64 || TT.isPPC() ||
+            TT.getArch() == llvm::Triple::systemz ||
             TT.getArch() == llvm::Triple::nvptx ||
             TT.getArch() == llvm::Triple::nvptx64 ||
             TT.getArch() == llvm::Triple::amdgcn ||
@@ -4122,6 +4217,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
       else if (Major <= 17)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
+      else if (Major <= 18)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4245,10 +4342,29 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << ShaderModel << T.getOSName() << T.str();
         }
+        // Validate that if fnative-half-type is given, that
+        // the language standard is at least hlsl2018, and that
+        // the target shader model is at least 6.2.
+        if (Args.getLastArg(OPT_fnative_half_type)) {
+          const LangStandard &Std =
+              LangStandard::getLangStandardForKind(Opts.LangStd);
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
+                T.getOSVersion() >= VersionTuple(6, 2)))
+            Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
+                << "-enable-16bit-types" << true << Std.getName()
+                << T.getOSVersion().getAsString();
+        }
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
+        }
+        if (Args.getLastArg(OPT_fnative_half_type)) {
+          const LangStandard &Std =
+              LangStandard::getLangStandardForKind(Opts.LangStd);
+          if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
+            Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
+                << "-fnative-half-type" << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
@@ -4268,6 +4384,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::ASTView:
   case frontend::EmitAssembly:
   case frontend::EmitBC:
+  case frontend::EmitCIR:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:
@@ -4277,6 +4394,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::FixIt:
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:
+  case frontend::GenerateReducedModuleInterface:
   case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
@@ -4606,6 +4724,8 @@ bool CompilerInvocation::CreateFromArgsImpl(
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
+  ParsePointerAuthArgs(LangOpts, Args, Diags);
+
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
   if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
@@ -4836,6 +4956,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateTargetArgs(getTargetOpts(), Consumer);
   GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
   GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
+  GeneratePointerAuthArgs(getLangOpts(), Consumer);
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
                       getFrontendOpts().OutputFile, &getLangOpts());

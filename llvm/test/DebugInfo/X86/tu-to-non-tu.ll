@@ -156,14 +156,14 @@
 %struct.templ_non_tu.1 = type { ptr }
 
 @_ZTV6non_tu = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI6non_tu, ptr @_ZN6non_tu2f1Ev] }, align 8
-@v1 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV6non_tu, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !0
+@v1 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV6non_tu, i32 0, i32 0, i32 2) } }, align 8, !dbg !0
 @v5 = dso_local global %struct.ref_internal zeroinitializer, align 1, !dbg !5
 @_ZTV12templ_non_tuIiE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIiE, ptr @_ZN12templ_non_tuIiE2f1Ev] }, align 8
-@v2 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIiE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !13
+@v2 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIiE, i32 0, i32 0, i32 2) } }, align 8, !dbg !13
 @_ZTV12templ_non_tuIlE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIlE, ptr @_ZN12templ_non_tuIlE2f1Ev] }, align 8
-@v3 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIlE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !32
+@v3 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIlE, i32 0, i32 0, i32 2) } }, align 8, !dbg !32
 @_ZTV12templ_non_tuIbE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIbE, ptr @_ZN12templ_non_tuIbE2f1Ev] }, align 8
-@v4 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIbE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !46
+@v4 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIbE, i32 0, i32 0, i32 2) } }, align 8, !dbg !46
 @v6 = dso_local global %class.ref_internal_template zeroinitializer, align 1, !dbg !60
 @v7 = dso_local global %class.ref_from_ref_internal_template zeroinitializer, align 1, !dbg !69
 @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global ptr

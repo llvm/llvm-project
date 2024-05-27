@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___STOP_TOKEN_STOP_STATE_H
 #define _LIBCPP___STOP_TOKEN_STOP_STATE_H
 
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__stop_token/atomic_unique_lock.h>

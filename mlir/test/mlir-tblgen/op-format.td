@@ -93,14 +93,14 @@ def OptionalGroupC : TestFormat_Op<[{
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
 
 // CHECK-LABEL: OptionalGroupD::parse
-// CHECK: if (auto result = [&]() -> ::mlir::OptionalParseResult {
+// CHECK: if (auto optResult = [&]() -> ::mlir::OptionalParseResult {
 // CHECK:   auto odsResult = parseCustom(parser, aOperand, bOperand);
-// CHECK:   if (!odsResult) return {};
+// CHECK:   if (!odsResult.has_value()) return {};
 // CHECK:   if (::mlir::failed(*odsResult)) return ::mlir::failure();
 // CHECK:   return ::mlir::success();
-// CHECK: }(); result.has_value() && ::mlir::failed(*result)) {
+// CHECK: }(); optResult.has_value() && ::mlir::failed(*optResult)) {
 // CHECK:   return ::mlir::failure();
-// CHECK: } else if (result.has_value()) {
+// CHECK: } else if (optResult.has_value()) {
 
 // CHECK-LABEL: OptionalGroupD::print
 // CHECK-NEXT: if (((getA()) || (getB()))) {

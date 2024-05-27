@@ -8,7 +8,7 @@
 ; the fallback path.
 
 ; Check that we fallback on invoke translation failures.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %1:_(s80) = G_FCONSTANT x86_fp80 0xK4002A000000000000000
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: G_STORE %1:psr(s80), %0:gpr(p0) :: (store (s80) into %ir.ptr, align 16) (in function: test_x86_fp80_dump)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_x86_fp80_dump
 ; FALLBACK-WITH-REPORT-OUT-LABEL: test_x86_fp80_dump:
 define void @test_x86_fp80_dump(ptr %ptr){

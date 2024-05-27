@@ -126,23 +126,34 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    if (!Desc) {
-      LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function "
-                        << F.getName() << "\n");
-      return false;
-    }
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-    return true;
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
   }
 };
 
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
 
 template <typename FT> class SampleProfileLoaderBaseImpl {
 public:

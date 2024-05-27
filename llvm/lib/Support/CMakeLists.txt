@@ -56,9 +56,6 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if( LLVM_ENABLE_TERMINFO )
-    set(imported_libs ${imported_libs} Terminfo::terminfo)
-  endif()
   set(system_libs ${system_libs} ${LLVM_ATOMIC_LIB})
   set(system_libs ${system_libs} ${LLVM_PTHREAD_LIB})
   if( UNIX AND NOT (BEOS OR HAIKU) )
@@ -176,6 +173,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp
@@ -187,6 +185,8 @@ add_llvm_component_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
+  HexagonAttributeParser.cpp
+  HexagonAttributes.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
@@ -216,7 +216,7 @@ add_llvm_component_library(LLVMSupport
   Regex.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
-  RISCVISAInfo.cpp
+  RISCVISAUtils.cpp
   ScaledNumber.cpp
   ScopedPrinter.cpp
   SHA1.cpp
@@ -320,14 +320,6 @@ if(LLVM_ENABLE_ZSTD)
   endif()
   get_library_name(${zstd_library} zstd_library)
   set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
-endif()
-
-if(LLVM_ENABLE_TERMINFO)
-  if(NOT terminfo_library)
-    get_property(terminfo_library TARGET Terminfo::terminfo PROPERTY LOCATION)
-  endif()
-  get_library_name(${terminfo_library} terminfo_library)
-  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

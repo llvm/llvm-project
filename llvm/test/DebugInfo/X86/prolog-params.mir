@@ -98,6 +98,8 @@ fixedStack:
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
   - { id: 2, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: arr, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true }

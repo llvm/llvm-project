@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
-#define __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
+#ifndef LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
+#define LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
 
 // Use definitions from <linux/mman.h> to dispatch arch-specific flag values.
 // For example, MCL_CURRENT/MCL_FUTURE/MCL_ONFAULT are different on different
@@ -45,4 +45,4 @@
 #define POSIX_MADV_DONTNEED MADV_DONTNEED
 #endif
 
-#endif // __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
+#endif // LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H

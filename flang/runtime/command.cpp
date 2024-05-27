@@ -16,9 +16,7 @@
 #include <limits>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
+#include "flang/Common/windows-include.h"
 
 // On Windows GetCurrentProcessId returns a DWORD aka uint32_t
 #include <processthreadsapi.h>
@@ -196,11 +194,11 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
 }
 
 static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
-  std::size_t s{d.ElementBytes() - 1};
-  while (*d.OffsetElement(s) == ' ') {
+  std::size_t s{d.ElementBytes()}; // This can be 0.
+  while (s != 0 && *d.OffsetElement(s - 1) == ' ') {
     --s;
   }
-  return s + 1;
+  return s;
 }
 
 std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,

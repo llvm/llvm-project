@@ -213,9 +213,8 @@ Check for undefined results of binary operators.
 
 core.VLASize (C)
 """"""""""""""""
-Check for declarations of Variable Length Arrays of undefined or zero size.
-
- Check for declarations of VLA of undefined or zero size.
+Check for declarations of Variable Length Arrays (VLA) of undefined, zero or negative
+size.
 
 .. code-block:: c
 
@@ -228,6 +227,28 @@ Check for declarations of Variable Length Arrays of undefined or zero size.
    int x = 0;
    int vla2[x]; // warn: zero size
  }
+
+
+The checker also gives warning if the `TaintPropagation` checker is switched on
+and an unbound, attacker controlled (tainted) value is used to define
+the size of the VLA.
+
+.. code-block:: c
+
+ void taintedVLA(void) {
+   int x;
+   scanf("%d", &x);
+   int vla[x]; // Declared variable-length array (VLA) has tainted (attacker controlled) size, that can be 0 or negative
+ }
+
+ void taintedVerfieidVLA(void) {
+   int x;
+   scanf("%d", &x);
+   if (x<1)
+     return;
+   int vla[x]; // no-warning. The analyzer can prove that x must be positive.
+ }
+
 
 .. _core-uninitialized-ArraySubscript:
 
@@ -318,6 +339,51 @@ cplusplus
 ^^^^^^^^^
 
 C++ Checkers.
+
+.. _cplusplus-ArrayDelete:
+
+cplusplus.ArrayDelete (C++)
+"""""""""""""""""""""""""""
+
+Reports destructions of arrays of polymorphic objects that are destructed as
+their base class. If the dynamic type of the array is different from its static
+type, calling `delete[]` is undefined.
+
+This checker corresponds to the SEI CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+
+.. code-block:: cpp
+
+ class Base {
+ public:
+   virtual ~Base() {}
+ };
+ class Derived : public Base {};
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
+**Limitations**
+
+The checker does not emit note tags when casting to and from reference types,
+even though the pointer values are tracked across references.
+
+.. code-block:: cpp
+
+ void foo() {
+   Derived *d = new Derived[10];
+   Derived &dref = *d;
+
+   Base &bref = static_cast<Base&>(dref); // no note
+   Base *b = &bref;
+   delete[] b; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
 
 .. _cplusplus-InnerPointer:
 
@@ -783,9 +849,88 @@ Check for performance anti-patterns when using Grand Central Dispatch.
 
 .. _optin-performance-Padding:
 
-optin.performance.Padding
-"""""""""""""""""""""""""
+optin.performance.Padding (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
+
+This checker detects structs with excessive padding, which can lead to wasted
+memory thus decreased performance by reducing the effectiveness of the
+processor cache. Padding bytes are added by compilers to align data accesses
+as some processors require data to be aligned to certain boundaries. On others,
+unaligned data access are possible, but impose significantly larger latencies.
+
+To avoid padding bytes, the fields of a struct should be ordered by decreasing
+by alignment. Usually, its easier to think of the ``sizeof`` of the fields, and
+ordering the fields by ``sizeof`` would usually also lead to the same optimal
+layout.
+
+In rare cases, one can use the ``#pragma pack(1)`` directive to enforce a packed
+layout too, but it can significantly increase the access times, so reordering the
+fields is usually a better solution.
+
+
+.. code-block:: cpp
+
+ // warn: Excessive padding in 'struct NonOptimal' (35 padding bytes, where 3 is optimal)
+ struct NonOptimal {
+   char c1;
+   // 7 bytes of padding
+   std::int64_t big1; // 8 bytes
+   char c2;
+   // 7 bytes of padding
+   std::int64_t big2; // 8 bytes
+   char c3;
+   // 7 bytes of padding
+   std::int64_t big3; // 8 bytes
+   char c4;
+   // 7 bytes of padding
+   std::int64_t big4; // 8 bytes
+   char c5;
+   // 7 bytes of padding
+ };
+ static_assert(sizeof(NonOptimal) == 4*8+5+5*7);
+
+ // no-warning: The fields are nicely aligned to have the minimal amount of padding bytes.
+ struct Optimal {
+   std::int64_t big1; // 8 bytes
+   std::int64_t big2; // 8 bytes
+   std::int64_t big3; // 8 bytes
+   std::int64_t big4; // 8 bytes
+   char c1;
+   char c2;
+   char c3;
+   char c4;
+   char c5;
+   // 3 bytes of padding
+ };
+ static_assert(sizeof(Optimal) == 4*8+5+3);
+
+ // no-warning: Bit packing representation is also accepted by this checker, but
+ // it can significantly increase access times, so prefer reordering the fields.
+ #pragma pack(1)
+ struct BitPacked {
+   char c1;
+   std::int64_t big1; // 8 bytes
+   char c2;
+   std::int64_t big2; // 8 bytes
+   char c3;
+   std::int64_t big3; // 8 bytes
+   char c4;
+   std::int64_t big4; // 8 bytes
+   char c5;
+ };
+ static_assert(sizeof(BitPacked) == 4*8+5);
+
+The ``AllowedPad`` option can be used to specify a threshold for the number
+padding bytes raising the warning. If the number of padding bytes of the struct
+and the optimal number of padding bytes differ by more than the threshold value,
+a warning will be raised.
+
+By default, the ``AllowedPad`` threshold is 24 bytes.
+
+To override this threshold to e.g. 4 bytes, use the
+``-analyzer-config optin.performance.Padding:AllowedPad=4`` option.
+
 
 .. _optin-portability-UnixAPI:
 
@@ -1033,6 +1178,47 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    char buf [5];
    strncpy(buf, "a", 1); // warn
  }
+
+security.SetgidSetuidOrder (C)
+""""""""""""""""""""""""""""""
+When dropping user-level and group-level privileges in a program by using
+``setuid`` and ``setgid`` calls, it is important to reset the group-level
+privileges (with ``setgid``) first. Function ``setgid`` will likely fail if
+the superuser privileges are already dropped.
+
+The checker checks for sequences of ``setuid(getuid())`` and
+``setgid(getgid())`` calls (in this order). If such a sequence is found and
+there is no other privilege-changing function call (``seteuid``, ``setreuid``,
+``setresuid`` and the GID versions of these) in between, a warning is
+generated. The checker finds only exactly ``setuid(getuid())`` calls (and the
+GID versions), not for example if the result of ``getuid()`` is stored in a
+variable.
+
+.. code-block:: c
+
+ void test1() {
+   // ...
+   // end of section with elevated privileges
+   // reset privileges (user and group) to normal user
+   if (setuid(getuid()) != 0) {
+     handle_error();
+     return;
+   }
+   if (setgid(getgid()) != 0) { // warning: A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail
+     handle_error();
+     return;
+   }
+   // user-ID and group-ID are reset to normal user now
+   // ...
+ }
+
+In the code above the problem is that ``setuid(getuid())`` removes superuser
+privileges before ``setgid(getgid())`` is called. To fix the problem the
+``setgid(getgid())`` should be called first. Further attention is needed to
+avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
+this) and always check the return value of these calls.
+
+This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
 .. _unix-checkers:
 
@@ -1299,10 +1485,116 @@ range of the argument.
 
 **Parameters**
 
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+The ``ModelPOSIX`` option controls if functions from the POSIX standard are
+recognized by the checker.
+
+With ``ModelPOSIX=true``, many POSIX functions are modeled according to the
+`POSIX standard`_. This includes ranges of parameters and possible return
+values. Furthermore the behavior related to ``errno`` in the POSIX case is
+often that ``errno`` is set only if a function call fails, and it becomes
+undefined after a successful function call.
+
+With ``ModelPOSIX=false``, this checker follows the C99 language standard and
+only models the functions that are described there. It is possible that the
+same functions are modeled differently in the two cases because differences in
+the standards. The C standard specifies less aspects of the functions, for
+example exact ``errno`` behavior is often unspecified (and not modeled by the
+checker).
+
+Default value of the option is ``true``.
+
+.. _unix-Stream:
+
+unix.Stream (C)
+"""""""""""""""
+Check C stream handling functions:
+``fopen, fdopen, freopen, tmpfile, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, fprintf, fscanf, ungetc, getdelim, getline, fseek, fseeko, ftell, ftello, fflush, rewind, fgetpos, fsetpos, clearerr, feof, ferror, fileno``.
+
+The checker maintains information about the C stream objects (``FILE *``) and
+can detect error conditions related to use of streams. The following conditions
+are detected:
+
+* The ``FILE *`` pointer passed to the function is NULL (the single exception is
+  ``fflush`` where NULL is allowed).
+* Use of stream after close.
+* Opened stream is not closed.
+* Read from a stream after end-of-file. (This is not a fatal error but reported
+  by the checker. Stream remains in EOF state and the read operation fails.)
+* Use of stream when the file position is indeterminate after a previous failed
+  operation. Some functions (like ``ferror``, ``clearerr``, ``fseek``) are
+  allowed in this state.
+* Invalid 3rd ("``whence``") argument to ``fseek``.
+
+The stream operations are by this checker usually split into two cases, a success
+and a failure case. However, in the case of write operations (like ``fwrite``,
+``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
+unwanted reports on projects that don't have error checks around the write
+operations, so by default the checker assumes that write operations always succeed.
+This behavior can be controlled by the ``Pedantic`` flag: With
+``-analyzer-config unix.Stream:Pedantic=true`` the checker will model the
+cases where a write operation fails and report situations where this leads to
+erroneous behavior. (The default is ``Pedantic=false``, where write operations
+are assumed to succeed.)
+
+.. code-block:: c
+
+ void test1() {
+   FILE *p = fopen("foo", "r");
+ } // warn: opened file is never closed
+
+ void test2() {
+   FILE *p = fopen("foo", "r");
+   fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
+   fclose(p);
+ }
+
+ void test3() {
+   FILE *p = fopen("foo", "r");
+   if (p) {
+     fseek(p, 1, 3); // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
+     fclose(p);
+   }
+ }
+
+ void test4() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fclose(p);
+   fclose(p); // warn: stream already closed
+ }
+
+ void test5() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!ferror(p))
+     fgetc(p); // warn: possible read after end-of-file
+
+   fclose(p);
+ }
+
+ void test6() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!feof(p))
+     fgetc(p); // warn: file position may be indeterminate after I/O error
+
+   fclose(p);
+ }
+
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
 
 .. _osx-checkers:
 
@@ -1890,28 +2182,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
- }
-
 .. _alpha-core-CastSize:
 
 alpha.core.CastSize (C)
@@ -2126,30 +2396,6 @@ Either the comparison is useless or there is division by zero.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
-
-.. _alpha-cplusplus-ArrayDelete:
-
-alpha.cplusplus.ArrayDelete (C++)
-"""""""""""""""""""""""""""""""""
-Reports destructions of arrays of polymorphic objects that are destructed as their base class.
-This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
-
-.. code-block:: cpp
-
- class Base {
-   virtual ~Base() {}
- };
- class Derived : public Base {}
-
- Base *create() {
-   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-   return x;
- }
-
- void foo() {
-   Base *x = create();
-   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
- }
 
 .. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
@@ -2587,6 +2833,41 @@ Warn on mmap() calls that are both writable and executable.
    //       code
  }
 
+.. _alpha-security-putenv-stack-array:
+
+alpha.security.PutenvStackArray (C)
+"""""""""""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
+(automatic) array as the argument. Function ``putenv`` does not copy the passed
+string, only a pointer to the data is stored and this data can be read even by
+other threads. Content of a stack-allocated array is likely to be overwritten
+after returning from the parent function.
+
+The problem can be solved by using a static array variable or dynamically
+allocated memory. Even better is to avoid using ``putenv`` (it has other
+problems related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char env[] = "NAME=value";
+    return putenv(env); // putenv function should not be called with stack-allocated string
+  }
+
+There is one case where the checker can report a false positive. This is when
+the stack-allocated array is used at `putenv` in a function or code branch that
+does not return (calls `fork` or `exec` like function).
+
+Another special case is if the `putenv` is called from function `main`. Here
+the stack is deallocated at the end of the program and it should be no problem
+to use the stack-allocated string (a multi-threaded program may require more
+attention). The checker does not warn for cases when stack space of `main` is
+used at the `putenv` call.
+
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -2612,55 +2893,6 @@ alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
 SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-.. _alpha-security-cert-pos-checkers:
-
-alpha.security.cert.pos
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
-
-.. _alpha-security-cert-pos-34c:
-
-alpha.security.cert.pos.34c
-"""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-
-.. code-block:: c
-
-  int func(const char *var) {
-    char env[1024];
-    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
-    if (retval < 0 || (size_t)retval >= sizeof(env)) {
-        /* Handle error */
-    }
-
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-
-Limitations:
-
-   - Technically, one can pass automatic variables to ``putenv``,
-     but one needs to ensure that the given environment key stays
-     alive until it's removed or overwritten.
-     Since the analyzer cannot keep track of which envvars get overwritten
-     and when, it needs to be slightly more aggressive and warn for such
-     cases too, leading in some cases to false-positive reports like this:
-
-     .. code-block:: c
-
-        void baz() {
-          char env[] = "NAME=value";
-          putenv(env); // false-positive warning: putenv function should not be called...
-          // More code...
-          putenv((char *)"NAME=anothervalue");
-          // This putenv call overwrites the previous entry, thus that can no longer dangle.
-        } // 'env' array becomes dead only here.
-
-alpha.security.cert.env
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
 
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^
@@ -2828,13 +3060,6 @@ Further examples of injection vulnerabilities this checker can find.
     sprintf(buf, s); // warn: untrusted data used as a format string
   }
 
-  void test() {
-    size_t ts;
-    scanf("%zd", &ts); // 'ts' marked as tainted
-    int *p = (int *)malloc(ts * sizeof(int));
-      // warn: untrusted data used as buffer size
-  }
-
 There are built-in sources, propagations and sinks even if no external taint
 configuration is provided.
 
@@ -2862,9 +3087,7 @@ Default propagations rules:
 
 Default sinks:
  ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
- ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``,
- ``memcpy``, ``memmove``, ``strncpy``, ``strndup``, ``malloc``, ``calloc``,
- ``alloca``, ``memccpy``, ``realloc``, ``bcopy``
+ ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
 
 Please note that there are no built-in filter functions.
 
@@ -3003,48 +3226,6 @@ Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fcl
 
    fclose(F); // warn: closing a previously closed file stream
  }
-
-.. _alpha-unix-Stream:
-
-alpha.unix.Stream (C)
-"""""""""""""""""""""
-Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek, ftell, rewind, fgetpos,``
-``fsetpos, clearerr, feof, ferror, fileno``.
-
-.. code-block:: c
-
- void test() {
-   FILE *p = fopen("foo", "r");
- } // warn: opened file is never closed
-
- void test() {
-   FILE *p = fopen("foo", "r");
-   fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-   fclose(p);
- }
-
- void test() {
-   FILE *p = fopen("foo", "r");
-
-   if (p)
-     fseek(p, 1, 3);
-      // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-
-   fclose(p);
- }
-
- void test() {
-   FILE *p = fopen("foo", "r");
-   fclose(p);
-   fclose(p); // warn: already closed
- }
-
- void test() {
-   FILE *p = tmpfile();
-   ftell(p); // warn: stream pointer might be NULL
-   fclose(p);
- }
-
 
 .. _alpha-unix-cstring-BufferOverlap:
 

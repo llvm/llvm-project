@@ -214,6 +214,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (CI->isMustTailCall() && Fn->isVarArg())
             MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
         }
+
+        // Determine if there is a call to setjmp in the machine function.
+        if (Call->hasFnAttr(Attribute::ReturnsTwice))
+          MF->setExposesReturnsTwice(true);
       }
 
       // Mark values used outside their block as exported, by allocating
@@ -222,8 +226,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         if (!isa<AllocaInst>(I) || !StaticAllocaMap.count(cast<AllocaInst>(&I)))
           InitializeRegForValue(&I);
 
-      // Decide the preferred extend type for a value.
-      PreferredExtendType[&I] = getPreferredExtendForValue(&I);
+      // Decide the preferred extend type for a value. This iterates over all
+      // users and therefore isn't cheap, so don't do this at O0.
+      if (DAG->getOptLevel() != CodeGenOptLevel::None)
+        PreferredExtendType[&I] = getPreferredExtendForValue(&I);
     }
   }
 
@@ -249,7 +255,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(PadInst))
+      if (isa<FuncletPadInst>(PadInst) &&
+          Personality != EHPersonality::Wasm_CXX)
         assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
@@ -357,7 +364,7 @@ void FunctionLoweringInfo::clear() {
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
   PreprocessedDbgDeclares.clear();
-  PreprocessedDPVDeclares.clear();
+  PreprocessedDVRDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
@@ -392,6 +399,16 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
   return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
                                       !TLI->requiresUniformRegister(*MF, V));
+}
+
+Register FunctionLoweringInfo::InitializeRegForValue(const Value *V) {
+  // Tokens live in vregs only when used for convergence control.
+  if (V->getType()->isTokenTy() && !isa<ConvergenceControlInst>(V))
+    return 0;
+  Register &R = ValueMap[V];
+  assert(R == Register() && "Already initialized this value register!");
+  assert(VirtReg2Value.empty());
+  return R = CreateRegs(V);
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the

@@ -8,12 +8,13 @@ from typing import Optional
 from ._memref_ops_gen import *
 from ._ods_common import _dispatch_mixed_values, MixedValues
 from .arith import ConstantOp, _is_integer_like_type
-from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType
+from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType, Operation
 
 
 def _is_constant_int_like(i):
     return (
         isinstance(i, Value)
+        and isinstance(i.owner, Operation)
         and isinstance(i.owner.opview, ConstantOp)
         and _is_integer_like_type(i.type)
     )

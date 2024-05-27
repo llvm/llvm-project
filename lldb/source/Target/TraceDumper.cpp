@@ -57,7 +57,7 @@ static bool FileLineAndColumnMatches(const LineEntry &a, const LineEntry &b) {
     return false;
   if (a.column != b.column)
     return false;
-  return a.file == b.file;
+  return a.GetFile() == b.GetFile();
 }
 
 /// Compare the symbol contexts of the provided \a SymbolInfo
@@ -396,7 +396,7 @@ public:
         m_j.attribute(
             "source",
             ToOptionalString(
-                item.symbol_info->sc.line_entry.file.GetPath().c_str()));
+                item.symbol_info->sc.line_entry.GetFile().GetPath().c_str()));
         m_j.attribute("line", item.symbol_info->sc.line_entry.line);
         m_j.attribute("column", item.symbol_info->sc.line_entry.column);
       }

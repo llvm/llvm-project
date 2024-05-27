@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FLOAT128_H__
-#define __LLVM_LIBC_TYPES_FLOAT128_H__
+#ifndef LLVM_LIBC_TYPES_FLOAT128_H
+#define LLVM_LIBC_TYPES_FLOAT128_H
 
-#include <include/llvm-libc-macros/float-macros.h> // LDBL_MANT_DIG
+#include "../llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
 
 // Currently, C23 `_Float128` type is only defined as a built-in type in GCC 7
 // or later, and only for C.  For C++, or for clang, `__float128` is defined
@@ -19,19 +19,18 @@
 //   https://github.com/llvm/llvm-project/issues/80195
 #if defined(__STDC_IEC_60559_BFP__) && !defined(__clang__) &&                  \
     !defined(__cplusplus)
-// Use _Float128 C23 type.
-#define LIBC_COMPILER_HAS_C23_FLOAT128
+#define LIBC_TYPES_HAS_FLOAT128
 typedef _Float128 float128;
 #elif defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
 // Use __float128 type.  gcc and clang sometime use __SIZEOF_FLOAT128__ to
 // notify the availability of __float128.
 // clang also uses __FLOAT128__ macro to notify the availability of __float128
 // type: https://reviews.llvm.org/D15120
-#define LIBC_COMPILER_HAS_FLOAT128_EXTENSION
+#define LIBC_TYPES_HAS_FLOAT128
 typedef __float128 float128;
 #elif (LDBL_MANT_DIG == 113)
-// Use long double.
+#define LIBC_TYPES_HAS_FLOAT128
 typedef long double float128;
 #endif
 
-#endif // __LLVM_LIBC_TYPES_FLOAT128_H__
+#endif // LLVM_LIBC_TYPES_FLOAT128_H

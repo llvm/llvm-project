@@ -1411,7 +1411,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // expected-error @below {{could not find a nested named sequence with name: __transform_main}}
-// expected-error @below {{could not find transform entry point: __transform_main in either payload or transform module}}
 module {
 }
 

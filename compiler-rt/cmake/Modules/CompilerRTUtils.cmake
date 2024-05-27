@@ -368,6 +368,16 @@ macro(construct_compiler_rt_default_triple)
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 
+  if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+    set(option_prefix "")
+    if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+      set(option_prefix "/clang:")
+    endif()
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
+                    OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
+
   string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
   list(GET LLVM_TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
 
@@ -583,7 +593,8 @@ function(add_security_warnings out_flags macosx_sdk_version)
   append_list_if(COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG -Werror=return-stack-address flags)
   append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG -Werror=sizeof-array-decay flags)
   append_list_if(COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG -Werror=format-insufficient-args flags)
-  append_list_if(COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG -Werror=format-security flags)
+  # GCC complains if we pass -Werror=format-security without -Wformat
+  append_list_if(COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG -Wformat -Werror=format-security flags)
   append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG -Werror=sizeof-array-div)
   append_list_if(COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG -Werror=sizeof-pointer-div)
 

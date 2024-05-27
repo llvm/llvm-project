@@ -266,7 +266,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires (__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
     noexcept(noexcept(views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
     -> decltype(      views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
     { return          views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
@@ -277,7 +277,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires (__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
   constexpr auto operator()(_Range&& __range, _Np&&) const
     noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))))
     -> decltype(      _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)))

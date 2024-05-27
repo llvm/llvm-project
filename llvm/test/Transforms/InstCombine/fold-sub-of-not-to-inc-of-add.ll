@@ -50,13 +50,13 @@ define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %t1
 }
 
-define <4 x i32> @p2_vector_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @p2_vector_undef(
+define <4 x i32> @p2_vector_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @p2_vector_poison(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T1]]
 ;
-  %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 undef, i32 -1>
+  %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 poison, i32 -1>
   %t1 = sub <4 x i32> %y, %t0
   ret <4 x i32> %t1
 }

@@ -1503,6 +1503,8 @@ non-v9 SPARC implementations.
   if (TM.getSubtarget<SparcSubtarget>().isV9())
     setOperationAction(ISD::CTPOP, MVT::i32, Legal);
 
+.. _backend-calling-convs:
+
 Calling Conventions
 -------------------
 

@@ -383,7 +383,7 @@ RVV_VECTOR_TYPE_INT("__rvv_uint64m2x4_t", RvvUint64m2x4, RvvUint64m2x4Ty, 2, 64,
 
 RVV_VECTOR_TYPE_INT("__rvv_uint64m4x2_t", RvvUint64m4x2, RvvUint64m4x2Ty, 4, 64, 2, false)
 
-//===- Float16 tuple types --------------------------------------------------===//
+//===- Float16 tuple types ------------------------------------------------===//
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16mf4x2_t", RvvFloat16mf4x2, RvvFloat16mf4x2Ty, 1, 16, 2)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16mf4x3_t", RvvFloat16mf4x3, RvvFloat16mf4x3Ty, 1, 16, 3)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16mf4x4_t", RvvFloat16mf4x4, RvvFloat16mf4x4Ty, 1, 16, 4)
@@ -414,7 +414,7 @@ RVV_VECTOR_TYPE_FLOAT("__rvv_float16m2x4_t", RvvFloat16m2x4, RvvFloat16m2x4Ty, 8
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16m4x2_t", RvvFloat16m4x2, RvvFloat16m4x2Ty, 16, 16, 2)
 
-//===- Float32 tuple types --------------------------------------------------===//
+//===- Float32 tuple types ------------------------------------------------===//
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32mf2x2_t", RvvFloat32mf2x2, RvvFloat32mf2x2Ty, 1, 32, 2)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32mf2x3_t", RvvFloat32mf2x3, RvvFloat32mf2x3Ty, 1, 32, 3)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32mf2x4_t", RvvFloat32mf2x4, RvvFloat32mf2x4Ty, 1, 32, 4)
@@ -437,7 +437,7 @@ RVV_VECTOR_TYPE_FLOAT("__rvv_float32m2x4_t", RvvFloat32m2x4, RvvFloat32m2x4Ty, 4
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float32m4x2_t", RvvFloat32m4x2, RvvFloat32m4x2Ty, 8, 32, 2)
 
-//===- Float64 tuple types -------------------------------------------------===//
+//===- Float64 tuple types ------------------------------------------------===//
 RVV_VECTOR_TYPE_FLOAT("__rvv_float64m1x2_t", RvvFloat64m1x2, RvvFloat64m1x2Ty, 1, 64, 2)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float64m1x3_t", RvvFloat64m1x3, RvvFloat64m1x3Ty, 1, 64, 3)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float64m1x4_t", RvvFloat64m1x4, RvvFloat64m1x4Ty, 1, 64, 4)
@@ -452,7 +452,7 @@ RVV_VECTOR_TYPE_FLOAT("__rvv_float64m2x4_t", RvvFloat64m2x4, RvvFloat64m2x4Ty, 2
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float64m4x2_t", RvvFloat64m4x2, RvvFloat64m4x2Ty, 4, 64, 2)
 
-//===- BFloat16 tuple types -------------------------------------------------===//
+//===- BFloat16 tuple types -----------------------------------------------===//
 RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x2_t", RvvBFloat16mf4x2, RvvBFloat16mf4x2Ty,
                        1, 16, 2)
 RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16mf4x3_t", RvvBFloat16mf4x3, RvvBFloat16mf4x3Ty,

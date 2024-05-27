@@ -885,10 +885,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // Update Live In information
-  bool anyChange = false;
-  do {
-    anyChange = recomputeLiveIns(*tailMBB) || recomputeLiveIns(*testMBB);
-  } while (anyChange);
+  fullyRecomputeLiveIns({tailMBB, testMBB});
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
@@ -1380,11 +1377,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
         footMBB->addSuccessor(&MBB);
       }
 
-      bool anyChange = false;
-      do {
-        anyChange = recomputeLiveIns(*footMBB) || recomputeLiveIns(*bodyMBB) ||
-                    recomputeLiveIns(*headMBB) || recomputeLiveIns(MBB);
-      } while (anyChange);
+      fullyRecomputeLiveIns({footMBB, bodyMBB, headMBB, &MBB});
     }
   } else {
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AndOp), Reg)
@@ -1416,6 +1409,34 @@ bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
   return !isWin64Prologue(MF) && MF.needsFrameMoves();
+}
+
+/// Return true if an opcode is part of the REP group of instructions
+static bool isOpcodeRep(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::REPNE_PREFIX:
+  case X86::REP_MOVSB_32:
+  case X86::REP_MOVSB_64:
+  case X86::REP_MOVSD_32:
+  case X86::REP_MOVSD_64:
+  case X86::REP_MOVSQ_32:
+  case X86::REP_MOVSQ_64:
+  case X86::REP_MOVSW_32:
+  case X86::REP_MOVSW_64:
+  case X86::REP_PREFIX:
+  case X86::REP_STOSB_32:
+  case X86::REP_STOSB_64:
+  case X86::REP_STOSD_32:
+  case X86::REP_STOSD_64:
+  case X86::REP_STOSQ_32:
+  case X86::REP_STOSQ_64:
+  case X86::REP_STOSW_32:
+  case X86::REP_STOSW_64:
+    return true;
+  default:
+    break;
+  }
+  return false;
 }
 
 /// emitPrologue - Push callee-saved registers onto the stack, which
@@ -2194,13 +2215,44 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // flag (DF in EFLAGS register). Clear this flag by creating "cld" instruction
   // in each prologue of interrupt handler function.
   //
-  // FIXME: Create "cld" instruction only in these cases:
+  // Create "cld" instruction only in these cases:
   // 1. The interrupt handling function uses any of the "rep" instructions.
   // 2. Interrupt handling function calls another function.
+  // 3. If there are any inline asm blocks, as we do not know what they do
   //
-  if (Fn.getCallingConv() == CallingConv::X86_INTR)
-    BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
-        .setMIFlag(MachineInstr::FrameSetup);
+  // TODO: We should also emit cld if we detect the use of std, but as of now,
+  // the compiler does not even emit that instruction or even define it, so in
+  // practice, this would only happen with inline asm, which we cover anyway.
+  if (Fn.getCallingConv() == CallingConv::X86_INTR) {
+    bool NeedsCLD = false;
+
+    for (const MachineBasicBlock &B : MF) {
+      for (const MachineInstr &MI : B) {
+        if (MI.isCall()) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (isOpcodeRep(MI.getOpcode())) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (MI.isInlineAsm()) {
+          // TODO: Parse asm for rep instructions or call sites?
+          // For now, let's play it safe and emit a cld instruction
+          // just in case.
+          NeedsCLD = true;
+          break;
+        }
+      }
+    }
+
+    if (NeedsCLD) {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
 
   // At this point we know if the function has WinCFI or not.
   MF.setHasWinCFI(HasWinCFI);

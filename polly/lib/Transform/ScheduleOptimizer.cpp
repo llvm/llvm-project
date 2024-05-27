@@ -69,6 +69,7 @@ class Loop;
 class Module;
 } // namespace llvm
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-opt-isl"
 
 static cl::opt<std::string>
@@ -730,14 +731,14 @@ static void runIslScheduleOptimizer(
   // Schedule without optimizations.
   isl::schedule Schedule = S.getScheduleTree();
   walkScheduleTreeForStatistics(S.getScheduleTree(), 0);
-  LLVM_DEBUG(printSchedule(dbgs(), Schedule, "Original schedule tree"));
+  POLLY_DEBUG(printSchedule(dbgs(), Schedule, "Original schedule tree"));
 
   bool HasUserTransformation = false;
   if (PragmaBasedOpts) {
     isl::schedule ManuallyTransformed = applyManualTransformations(
         &S, Schedule, GetDeps(Dependences::AL_Statement), ORE);
     if (ManuallyTransformed.is_null()) {
-      LLVM_DEBUG(dbgs() << "Error during manual optimization\n");
+      POLLY_DEBUG(dbgs() << "Error during manual optimization\n");
       return;
     }
 
@@ -745,7 +746,7 @@ static void runIslScheduleOptimizer(
       // User transformations have precedence over other transformations.
       HasUserTransformation = true;
       Schedule = std::move(ManuallyTransformed);
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           printSchedule(dbgs(), Schedule, "After manual transformations"));
     }
   }
@@ -755,18 +756,18 @@ static void runIslScheduleOptimizer(
   // TODO: Detect disabled heuristics and no user-directed transformation
   // metadata earlier in ScopDetection.
   if (!HasUserTransformation && S.hasDisableHeuristicsHint()) {
-    LLVM_DEBUG(dbgs() << "Heuristic optimizations disabled by metadata\n");
+    POLLY_DEBUG(dbgs() << "Heuristic optimizations disabled by metadata\n");
     return;
   }
 
   // Get dependency analysis.
   const Dependences &D = GetDeps(Dependences::AL_Statement);
   if (D.getSharedIslCtx() != S.getSharedIslCtx()) {
-    LLVM_DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
+    POLLY_DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
     return;
   }
   if (!D.hasValidDependences()) {
-    LLVM_DEBUG(dbgs() << "Dependency information not available\n");
+    POLLY_DEBUG(dbgs() << "Dependency information not available\n");
     return;
   }
 
@@ -776,9 +777,9 @@ static void runIslScheduleOptimizer(
   // are added by the rescheduling analyzer. Therefore, disabling the
   // rescheduler implicitly also disables these optimizations.
   if (!EnableReschedule) {
-    LLVM_DEBUG(dbgs() << "Skipping rescheduling due to command line option\n");
+    POLLY_DEBUG(dbgs() << "Skipping rescheduling due to command line option\n");
   } else if (HasUserTransformation) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "Skipping rescheduling due to manual transformation\n");
   } else {
     // Build input data.
@@ -824,10 +825,10 @@ static void runIslScheduleOptimizer(
              "or 'no'. Falling back to default: 'yes'\n";
     }
 
-    LLVM_DEBUG(dbgs() << "\n\nCompute schedule from: ");
-    LLVM_DEBUG(dbgs() << "Domain := " << Domain << ";\n");
-    LLVM_DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
-    LLVM_DEBUG(dbgs() << "Validity := " << Validity << ";\n");
+    POLLY_DEBUG(dbgs() << "\n\nCompute schedule from: ");
+    POLLY_DEBUG(dbgs() << "Domain := " << Domain << ";\n");
+    POLLY_DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
+    POLLY_DEBUG(dbgs() << "Validity := " << Validity << ";\n");
 
     int IslMaximizeBands;
     if (MaximizeBandDepth == "yes") {
@@ -868,28 +869,19 @@ static void runIslScheduleOptimizer(
     SC = SC.set_validity(Validity);
     SC = SC.set_coincidence(Validity);
 
-    // Save error handling behavior
-    long MaxOperations = isl_ctx_get_max_operations(Ctx);
-    isl_ctx_set_max_operations(Ctx, ScheduleComputeOut);
-    Schedule = SC.compute_schedule();
-    bool ScheduleQuota = false;
-    if (isl_ctx_last_error(Ctx) == isl_error_quota) {
-      isl_ctx_reset_error(Ctx);
-      LLVM_DEBUG(
-          dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
-      ScheduleQuota = true;
-    }
-    isl_options_set_on_error(Ctx, ISL_ON_ERROR_ABORT);
-    isl_ctx_reset_operations(Ctx);
-    isl_ctx_set_max_operations(Ctx, MaxOperations);
+    {
+      IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut);
+      Schedule = SC.compute_schedule();
 
-    if (ScheduleQuota)
-      return;
+      if (MaxOpGuard.hasQuotaExceeded())
+        POLLY_DEBUG(
+            dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    }
 
     isl_options_set_on_error(Ctx, OnErrorStatus);
 
     ScopsRescheduled++;
-    LLVM_DEBUG(printSchedule(dbgs(), Schedule, "After rescheduling"));
+    POLLY_DEBUG(printSchedule(dbgs(), Schedule, "After rescheduling"));
   }
 
   walkScheduleTreeForStatistics(Schedule, 1);
@@ -917,7 +909,7 @@ static void runIslScheduleOptimizer(
   if (OAI.PatternOpts || OAI.Postopts || OAI.Prevect) {
     Schedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
     Schedule = hoistExtensionNodes(Schedule);
-    LLVM_DEBUG(printSchedule(dbgs(), Schedule, "After post-optimizations"));
+    POLLY_DEBUG(printSchedule(dbgs(), Schedule, "After post-optimizations"));
     walkScheduleTreeForStatistics(Schedule, 2);
   }
 

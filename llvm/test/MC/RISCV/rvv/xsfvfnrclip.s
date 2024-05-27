@@ -12,22 +12,22 @@ sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-INST: sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8a]
 # CHECK-ERROR: instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
-# CHECK-UNKNOWN: 5b 52 86 8a <unknown>
+# CHECK-UNKNOWN: 8a86525b <unknown>
 
 sf.vfnrclip.xu.f.qf v4, v8, fa2, v0.t
 # CHECK-INST: sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x88]
 # CHECK-ERROR: instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
-# CHECK-UNKNOWN: 5b 52 86 88 <unknown>
+# CHECK-UNKNOWN: 8886525b <unknown>
 
 sf.vfnrclip.x.f.qf v4, v8, fa2
 # CHECK-INST: sf.vfnrclip.x.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8e]
 # CHECK-ERROR: instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
-# CHECK-UNKNOWN: 5b 52 86 8e <unknown>
+# CHECK-UNKNOWN: 8e86525b <unknown>
 
 sf.vfnrclip.x.f.qf v4, v8, fa2, v0.t
 # CHECK-INST: sf.vfnrclip.x.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8c]
 # CHECK-ERROR: instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
-# CHECK-UNKNOWN: 5b 52 86 8c <unknown>
+# CHECK-UNKNOWN: 8c86525b <unknown>

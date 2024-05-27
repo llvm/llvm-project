@@ -114,19 +114,22 @@ void llvm::computeLTOCacheKey(
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
     support::endian::write32le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 4});
+    Hasher.update(Data);
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
     support::endian::write64le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 8});
+    Hasher.update(Data);
+  };
+  auto AddUint8 = [&](const uint8_t I) {
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // RelaxELFRelocations. The clang driver can also pass FunctionSections,
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
   // DataSections and DebuggerTuning via command line flags.
-  AddUnsigned(Conf.Options.RelaxELFRelocations);
+  AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
   AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
@@ -156,18 +159,18 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-  std::vector<uint64_t> ExportsGUID;
+  std::vector<std::pair<uint64_t, uint8_t>> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
-    ExportsGUID.push_back(GUID);
-  }
+  for (const auto &[VI, ExportType] : ExportList)
+    ExportsGUID.push_back(
+        std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (uint64_t GUID : ExportsGUID) {
+  for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
+    AddUint8(ExportType);
   }
 
   // Include the hash for every module we import functions from. The set of
@@ -199,13 +202,21 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
+  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn);
+
+    ImportedGUIDs.clear();
+    for (auto &[Fn, ImportType] : Entry.getFunctions())
+      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
+    llvm::sort(ImportedGUIDs);
+    for (auto &[GUID, Type] : ImportedGUIDs) {
+      AddUint64(GUID);
+      AddUint8(Type);
+    }
   }
 
   // Include the hash for the resolved ODR.
@@ -275,9 +286,9 @@ void llvm::computeLTOCacheKey(
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
   for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &ImpF : ImpM.getFunctions()) {
+    for (auto &[GUID, UnusedImportType] : ImpM.getFunctions()) {
       GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
+          Index.findSummaryInModule(GUID, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.
@@ -579,7 +590,9 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(std::make_unique<IRMover>(*CombinedModule)) {}
+      Mover(std::make_unique<IRMover>(*CombinedModule)) {
+  CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
+}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
     : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
@@ -1387,15 +1400,20 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    GVSummaryPtrSet DeclarationSummaries;
+
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex,
+                                     DeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
@@ -1409,7 +1427,7 @@ public:
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
-  ThreadPool BackendThreadPool;
+  DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
@@ -1537,7 +1555,7 @@ public:
   }
 
   unsigned getThreadCount() override {
-    return BackendThreadPool.getThreadCount();
+    return BackendThreadPool.getMaxConcurrency();
   }
 };
 } // end anonymous namespace
@@ -1555,6 +1573,21 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
             ShouldEmitImportsFiles);
       };
+}
+
+StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
+  if (!TheTriple.isOSDarwin())
+    return "";
+  if (TheTriple.getArch() == Triple::x86_64)
+    return "core2";
+  if (TheTriple.getArch() == Triple::x86)
+    return "yonah";
+  if (TheTriple.isArm64e())
+    return "apple-a12";
+  if (TheTriple.getArch() == Triple::aarch64 ||
+      TheTriple.getArch() == Triple::aarch64_32)
+    return "cyclone";
+  return "";
 }
 
 // Given the original \p Path to an output file, replace any path

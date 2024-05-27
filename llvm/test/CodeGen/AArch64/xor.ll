@@ -51,7 +51,7 @@ define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not_decrement:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
   %r = sub <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>
@@ -61,9 +61,8 @@ define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @vec_add_of_not_with_undef(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not_with_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
   %r = add <4 x i32> %t0, <i32 -1, i32 undef, i32 -1, i32 -1>
@@ -73,11 +72,10 @@ define <4 x i32> @vec_add_of_not_with_undef(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @vec_add_of_not_with_undef_decrement(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not_with_undef_decrement:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.4s, #1
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
-  %r = add <4 x i32> %t0, <i32 1, i32 undef, i32 1, i32 1>
+  %r = sub <4 x i32> %t0, <i32 1, i32 undef, i32 1, i32 1>
   ret <4 x i32> %r
 }

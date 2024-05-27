@@ -1066,11 +1066,21 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   command << lookup_arg;
 
   // Log and report progress.
-  Log *log = GetLog(LLDBLog::Host);
-  LLDB_LOG(log, "Calling {0} with {1} to find dSYM: {2}", dsymForUUID_exe_path,
-           lookup_arg, command.GetString());
+  std::string lookup_desc;
+  if (uuid_ptr && file_spec_ptr)
+    lookup_desc =
+        llvm::formatv("{0} ({1})", file_spec_ptr->GetFilename().GetString(),
+                      uuid_ptr->GetAsString());
+  else if (uuid_ptr)
+    lookup_desc = uuid_ptr->GetAsString();
+  else if (file_spec_ptr)
+    lookup_desc = file_spec_ptr->GetFilename().GetString();
 
-  Progress progress("Downloading symbol file", lookup_arg);
+  Log *log = GetLog(LLDBLog::Host);
+  LLDB_LOG(log, "Calling {0} for {1} to find dSYM: {2}", dsymForUUID_exe_path,
+           lookup_desc, command.GetString());
+
+  Progress progress("Downloading symbol file for", lookup_desc);
 
   // Invoke dsymForUUID.
   int exit_status = -1;

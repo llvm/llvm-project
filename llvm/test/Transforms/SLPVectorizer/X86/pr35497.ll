@@ -68,10 +68,10 @@ define void @pr35497() local_unnamed_addr #0 {
 ; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; SSE-NEXT:    [[TMP5:%.*]] = add nuw nsw <2 x i64> [[TMP4]], zeroinitializer
 ; SSE-NEXT:    store <2 x i64> [[TMP5]], ptr undef, align 1
-; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[ADD]], i32 0
-; SSE-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], <i64 2, i64 2>
-; SSE-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], <i64 20, i64 20>
-; SSE-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; SSE-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[ADD]], i32 1
+; SSE-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
+; SSE-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
 ; SSE-NEXT:    [[TMP10:%.*]] = lshr <2 x i64> [[TMP5]], <i64 6, i64 6>
 ; SSE-NEXT:    [[TMP11:%.*]] = add nuw nsw <2 x i64> [[TMP9]], [[TMP10]]
 ; SSE-NEXT:    store <2 x i64> [[TMP11]], ptr [[ARRAYIDX2_2]], align 1
@@ -88,10 +88,10 @@ define void @pr35497() local_unnamed_addr #0 {
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
 ; AVX-NEXT:    store <2 x i64> [[TMP4]], ptr undef, align 1
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[ADD]], i32 0
-; AVX-NEXT:    [[TMP6:%.*]] = shl <2 x i64> [[TMP5]], <i64 2, i64 2>
-; AVX-NEXT:    [[TMP7:%.*]] = and <2 x i64> [[TMP6]], <i64 20, i64 20>
-; AVX-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[ADD]], i32 1
+; AVX-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], <i64 2, i64 2>
+; AVX-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], <i64 20, i64 20>
 ; AVX-NEXT:    [[TMP9:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
 ; AVX-NEXT:    [[TMP10:%.*]] = add nuw nsw <2 x i64> [[TMP8]], [[TMP9]]
 ; AVX-NEXT:    store <2 x i64> [[TMP10]], ptr [[ARRAYIDX2_2]], align 1

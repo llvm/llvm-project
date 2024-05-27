@@ -47,16 +47,28 @@ module iso_c_binding
     c_long_long = c_int64_t, &
     c_signed_char = c_int8_t, &
     c_size_t = kind(c_sizeof(1)), &
+#if __powerpc__
+    c_intmax_t = c_int64_t, &
+#else
     c_intmax_t = c_int128_t, &
+#endif
     c_intptr_t = c_size_t, &
     c_ptrdiff_t = c_size_t
   integer, parameter, public :: &
     c_int_least8_t = c_int8_t, &
     c_int_fast8_t = c_int8_t, &
     c_int_least16_t = c_int16_t, &
+#if defined(__linux__) && defined(__powerpc__)
+    c_int_fast16_t = c_long, &
+#else
     c_int_fast16_t = c_int16_t, &
+#endif
     c_int_least32_t = c_int32_t, &
+#if defined(__linux__) && defined(__powerpc__)
+    c_int_fast32_t = c_long, &
+#else
     c_int_fast32_t = c_int32_t, &
+#endif
     c_int_least64_t = c_int64_t, &
     c_int_fast64_t = c_int64_t, &
     c_int_least128_t = c_int128_t, &

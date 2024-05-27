@@ -951,3 +951,52 @@ define i1 @icmp_or_xor_with_sub_3_6(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
   %cmp = icmp eq i64 %or1, 0
   ret i1 %cmp
 }
+
+
+define i1 @or_disjoint_with_constants(i8 %x) {
+; CHECK-LABEL: @or_disjoint_with_constants(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1:%.*]], 18
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 1
+  %cmp = icmp eq i8 %or, 19
+  ret i1 %cmp
+}
+
+
+define i1 @or_disjoint_with_constants2(i8 %x) {
+; CHECK-LABEL: @or_disjoint_with_constants2(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[TMP1:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 66
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 5
+  %cmp = icmp ne i8 %or, 71
+  call void @use(i8 %or)
+  ret i1 %cmp
+}
+
+
+define i1 @or_disjoint_with_constants_fail_missing_const1(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_disjoint_with_constants_fail_missing_const1(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 19
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, %y
+  %cmp = icmp eq i8 %or, 19
+  ret i1 %cmp
+}
+
+define i1 @or_disjoint_with_constants_fail_missing_const2(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_disjoint_with_constants_fail_missing_const2(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 19
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 19
+  %cmp = icmp eq i8 %or, %y
+  ret i1 %cmp
+}
+

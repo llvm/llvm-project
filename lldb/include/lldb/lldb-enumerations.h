@@ -651,6 +651,9 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1307,7 +1310,7 @@ enum CompletionType {
 
 /// Specifies if children need to be re-computed
 /// after a call to \ref SyntheticChildrenFrontEnd::Update.
-enum class ChildCacheState {
+enum ChildCacheState {
   eRefetch = 0, ///< Children need to be recomputed dynamically.
 
   eReuse = 1, ///< Children did not change and don't need to be recomputed;
@@ -1318,6 +1321,38 @@ enum SymbolDownload {
   eSymbolDownloadOff = 0,
   eSymbolDownloadBackground = 1,
   eSymbolDownloadForeground = 2,
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
+};
+
+/// Used by the debugger to indicate which events are being broadcasted.
+enum DebuggerBroadcastBit {
+  eBroadcastBitProgress = (1 << 0),
+  eBroadcastBitWarning = (1 << 1),
+  eBroadcastBitError = (1 << 2),
+  eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitProgressCategory = (1 << 4),
+};
+
+/// Used for expressing severity in logs and diagnostics.
+enum Severity {
+  eSeverityError,
+  eSeverityWarning,
+  eSeverityInfo, // Equivalent to Remark used in clang.
 };
 
 } // namespace lldb

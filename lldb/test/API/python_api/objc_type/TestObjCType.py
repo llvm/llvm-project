@@ -52,9 +52,9 @@ class ObjCSBTypeTestCase(TestBase):
         aFooType = aBarType.GetDirectBaseClassAtIndex(0)
 
         self.assertTrue(aFooType.IsValid(), "Foo should be a valid data type")
-        self.assertEquals(aFooType.GetName(), "Foo", "Foo has the right name")
+        self.assertEqual(aFooType.GetName(), "Foo", "Foo has the right name")
 
-        self.assertEquals(aBarType.GetNumberOfFields(), 1, "Bar has a field")
+        self.assertEqual(aBarType.GetNumberOfFields(), 1, "Bar has a field")
         aBarField = aBarType.GetFieldAtIndex(0)
 
         self.assertEqual(aBarField.GetName(), "_iVar", "The field has the right name")

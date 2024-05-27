@@ -40,38 +40,38 @@ define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
   ret <2 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef0(
+define <3 x i1> @p2_vec_poison0(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison0(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
-  %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
+  %t0 = shl <3 x i8> <i8 -1, i8 poison, i8 -1>, %bits
   %t1 = xor <3 x i8> %t0, <i8 -1, i8 -1, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef1(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef1(
+define <3 x i1> @p2_vec_poison1(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison1(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, %bits
-  %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
+  %t1 = xor <3 x i8> %t0, <i8 -1, i8 poison, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef2(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef2(
+define <3 x i1> @p2_vec_poison2(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison2(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
-  %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
-  %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
+  %t0 = shl <3 x i8> <i8 -1, i8 poison, i8 -1>, %bits
+  %t1 = xor <3 x i8> %t0, <i8 -1, i8 poison, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }

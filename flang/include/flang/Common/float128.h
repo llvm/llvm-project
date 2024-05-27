@@ -20,6 +20,8 @@
 #ifndef FORTRAN_COMMON_FLOAT128_H_
 #define FORTRAN_COMMON_FLOAT128_H_
 
+#include <float.h>
+
 #ifdef __cplusplus
 /*
  * libc++ does not fully support __float128 right now, e.g.
@@ -49,4 +51,25 @@
 #endif /* (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)) && \
           !defined(_LIBCPP_VERSION)  && !defined(__CUDA_ARCH__) */
 
+/* Define pure C CFloat128Type and CFloat128ComplexType. */
+#if LDBL_MANT_DIG == 113
+typedef long double CFloat128Type;
+#ifndef __cplusplus
+typedef long double _Complex CFloat128ComplexType;
+#endif
+#elif HAS_FLOAT128
+typedef __float128 CFloat128Type;
+
+#ifndef __cplusplus
+/*
+ * Use mode() attribute supported by GCC and Clang.
+ * Adjust it for other compilers as needed.
+ */
+#if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
+typedef _Complex float __attribute__((mode(TC))) CFloat128ComplexType;
+#else
+typedef _Complex float __attribute__((mode(KC))) CFloat128ComplexType;
+#endif
+#endif // __cplusplus
+#endif
 #endif /* FORTRAN_COMMON_FLOAT128_H_ */

@@ -4,7 +4,6 @@ add_header_library(
     sqrt.h
     sqrt_80_bit_long_double.h
   DEPENDS
-    libc.include.fenv
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -41,5 +40,4 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
-    libc.src.math.generic.math_utils
 )

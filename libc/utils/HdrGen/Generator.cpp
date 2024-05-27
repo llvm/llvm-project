@@ -84,11 +84,19 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
       Line = Line.drop_front(CommandPrefixSize);
 
       P = Line.split("(");
+      // It's possible that we have windows line endings, so strip off the extra
+      // CR.
+      P.second = P.second.trim();
       if (P.second.empty() || P.second[P.second.size() - 1] != ')') {
         SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
                             llvm::SourceMgr::DK_Error,
                             "Command argument list should begin with '(' "
                             "and end with ')'.");
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error, P.second.data());
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error,
+                            std::to_string(P.second.size()));
         std::exit(1);
       }
       llvm::StringRef CommandName = P.first;

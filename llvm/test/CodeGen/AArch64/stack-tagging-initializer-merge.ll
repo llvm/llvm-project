@@ -20,10 +20,10 @@ entry:
 ; CHECK-LABEL: define void @OneVarNoInit(
 ; CHECK-DAG:  [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-DAG:  [[TX:%.*]] = call ptr @llvm.aarch64.tagp.{{.*}}(ptr [[X]], {{.*}}, i64 0)
-; CHECK-DAG:  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TX]])
+; CHECK-DAG:  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
 ; CHECK-DAG:  call void @llvm.aarch64.settag(ptr [[TX]], i64 16)
 ; CHECK-DAG:  call void @use(ptr nonnull [[TX]])
-; CHECK-DAG:  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TX]])
+; CHECK-DAG:  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
 
 define void @OneVarInitConst() sanitize_memtag {
 entry:

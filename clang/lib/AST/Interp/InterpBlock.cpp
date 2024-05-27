@@ -73,7 +73,7 @@ void Block::replacePointer(Pointer *Old, Pointer *New) {
   removePointer(Old);
   addPointer(New);
 
-  Old->Pointee = nullptr;
+  Old->PointeeStorage.BS.Pointee = nullptr;
 
 #ifndef NDEBUG
   assert(!hasPointer(Old));
@@ -104,7 +104,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   // Transfer pointers.
   B.Pointers = Blk->Pointers;
   for (Pointer *P = Blk->Pointers; P; P = P->Next)
-    P->Pointee = &B;
+    P->PointeeStorage.BS.Pointee = &B;
 }
 
 void DeadBlock::free() {

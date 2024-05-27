@@ -18,10 +18,10 @@ namespace clang {
 namespace format {
 namespace {
 
-class DefinitionBlockSeparatorTest : public ::testing::Test {
+class DefinitionBlockSeparatorTest : public testing::Test {
 protected:
   static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
+  separateDefinitionBlocks(StringRef Code,
                            const std::vector<tooling::Range> &Ranges,
                            const FormatStyle &Style = getLLVMStyle()) {
     LLVM_DEBUG(llvm::errs() << "---\n");
@@ -34,18 +34,17 @@ protected:
   }
 
   static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
+  separateDefinitionBlocks(StringRef Code,
                            const FormatStyle &Style = getLLVMStyle()) {
     return separateDefinitionBlocks(
         Code,
         /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
   }
 
-  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+  static void _verifyFormat(const char *File, int Line, StringRef Code,
                             const FormatStyle &Style = getLLVMStyle(),
-                            llvm::StringRef ExpectedCode = "",
-                            bool Inverse = true) {
-    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
+                            StringRef ExpectedCode = "", bool Inverse = true) {
+    testing::ScopedTrace t(File, Line, testing::Message() << Code.str());
     bool HasOriginalCode = true;
     if (ExpectedCode == "") {
       ExpectedCode = Code;
@@ -70,7 +69,7 @@ protected:
     EXPECT_EQ(ExpectedCode, Result) << "Test failed. Formatted:\n" << Result;
   }
 
-  static std::string removeEmptyLines(llvm::StringRef Code) {
+  static std::string removeEmptyLines(StringRef Code) {
     std::string Result = "";
     for (auto Char : Code.str()) {
       if (Result.size()) {
@@ -144,7 +143,7 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                Style);
 
   FormatStyle BreakAfterReturnTypeStyle = Style;
-  BreakAfterReturnTypeStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename
   verifyFormat("class Foo {\n"
                "  void\n"
@@ -165,13 +164,13 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
 TEST_F(DefinitionBlockSeparatorTest, FormatConflict) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  llvm::StringRef Code = "class Test {\n"
-                         "public:\n"
-                         "  static void foo() {\n"
-                         "    int t;\n"
-                         "    return 1;\n"
-                         "  }\n"
-                         "};";
+  StringRef Code = "class Test {\n"
+                   "public:\n"
+                   "  static void foo() {\n"
+                   "    int t;\n"
+                   "    return 1;\n"
+                   "  }\n"
+                   "};";
   std::vector<tooling::Range> Ranges = {1, tooling::Range(0, Code.size())};
   EXPECT_EQ(reformat(Style, Code, Ranges, "<stdin>").size(), 0u);
 }

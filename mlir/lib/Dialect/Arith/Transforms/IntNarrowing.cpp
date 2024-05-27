@@ -449,7 +449,7 @@ struct IndexCastPattern final : NarrowingPattern<CastOp> {
       return failure();
 
     FailureOr<int64_t> ub = ValueBoundsConstraintSet::computeConstantBound(
-        presburger::BoundType::UB, in, /*dim=*/std::nullopt,
+        presburger::BoundType::UB, in,
         /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(ub))
       return failure();

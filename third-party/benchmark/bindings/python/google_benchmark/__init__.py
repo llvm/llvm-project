@@ -26,47 +26,29 @@ Example usage:
   if __name__ == '__main__':
     benchmark.main()
 """
+import atexit
 
 from absl import app
+
 from google_benchmark import _benchmark
 from google_benchmark._benchmark import (
-    Counter,
-    kNanosecond,
-    kMicrosecond,
-    kMillisecond,
-    kSecond,
-    oNone,
-    o1,
-    oN,
-    oNSquared,
-    oNCubed,
-    oLogN,
-    oNLogN,
-    oAuto,
-    oLambda,
+    Counter as Counter,
+    State as State,
+    kMicrosecond as kMicrosecond,
+    kMillisecond as kMillisecond,
+    kNanosecond as kNanosecond,
+    kSecond as kSecond,
+    o1 as o1,
+    oAuto as oAuto,
+    oLambda as oLambda,
+    oLogN as oLogN,
+    oN as oN,
+    oNCubed as oNCubed,
+    oNLogN as oNLogN,
+    oNone as oNone,
+    oNSquared as oNSquared,
 )
-
-
-__all__ = [
-    "register",
-    "main",
-    "Counter",
-    "kNanosecond",
-    "kMicrosecond",
-    "kMillisecond",
-    "kSecond",
-    "oNone",
-    "o1",
-    "oN",
-    "oNSquared",
-    "oNCubed",
-    "oLogN",
-    "oNLogN",
-    "oAuto",
-    "oLambda",
-]
-
-__version__ = "0.2.0"
+from google_benchmark.version import __version__ as __version__
 
 
 class __OptionMaker:
@@ -94,14 +76,13 @@ class __OptionMaker:
 
         # The function that get returned on @option.range(start=0, limit=1<<5).
         def __builder_method(*args, **kwargs):
-
             # The decorator that get called, either with the benchmared function
             # or the previous Options
             def __decorator(func_or_options):
                 options = self.make(func_or_options)
                 options.builder_calls.append((builder_name, args, kwargs))
                 # The decorator returns Options so it is not technically a decorator
-                # and needs a final call to @regiser
+                # and needs a final call to @register
                 return options
 
             return __decorator
@@ -156,3 +137,4 @@ def main(argv=None):
 # Methods for use with custom main function.
 initialize = _benchmark.Initialize
 run_benchmarks = _benchmark.RunSpecifiedBenchmarks
+atexit.register(_benchmark.ClearRegisteredBenchmarks)

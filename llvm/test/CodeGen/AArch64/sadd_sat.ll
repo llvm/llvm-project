@@ -2,8 +2,6 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for vec
-
 declare i4 @llvm.sadd.sat.i4(i4, i4)
 declare i8 @llvm.sadd.sat.i8(i8, i8)
 declare i16 @llvm.sadd.sat.i16(i16, i16)

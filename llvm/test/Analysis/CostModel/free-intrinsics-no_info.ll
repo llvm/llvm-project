@@ -24,6 +24,8 @@ define i32 @trivially_free() {
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 true, i1 true, i1 true)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a6 = call ptr @llvm.ptr.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.var.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a7 = call i1 @llvm.allow.ubsan.check(i8 123)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a8 = call i1 @llvm.allow.runtime.check(metadata !"test_check")
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-THROUGHPUT-LABEL: 'trivially_free'
@@ -44,6 +46,8 @@ define i32 @trivially_free() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 true, i1 true, i1 true)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a6 = call ptr @llvm.ptr.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.var.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a7 = call i1 @llvm.allow.ubsan.check(i8 123)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a8 = call i1 @llvm.allow.runtime.check(metadata !"test_check")
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %a0 = call i32 @llvm.annotation.i32(i32 undef, ptr undef, ptr undef, i32 undef)
@@ -64,6 +68,8 @@ define i32 @trivially_free() {
   %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 1, i1 1, i1 1)
   %a6 = call ptr @llvm.ptr.annotation.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
   call void @llvm.var.annotation(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
+  %a7 = call i1 @llvm.allow.ubsan.check(i8 123)
+  %a8 = call i1 @llvm.allow.runtime.check(metadata !"test_check")
   ret i32 undef
 }
 

@@ -29,9 +29,10 @@ declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
   return Decl;
 }
 
-int llvm_test_dibuilder(void) {
+int llvm_test_dibuilder(bool NewDebugInfoFormat) {
   const char *Filename = "debuginfo.c";
   LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
+  LLVMSetIsNewDbgInfoFormat(M, NewDebugInfoFormat);
   LLVMDIBuilderRef DIB = LLVMCreateDIBuilder(M);
 
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
@@ -135,21 +136,39 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooParamVar1 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
                                          42, Int64Ty, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar1, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
+
+  if (LLVMIsNewDbgInfoFormat(M))
+    LLVMDIBuilderInsertDeclareAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
+  else
+    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
   LLVMMetadataRef FooParamVar2 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
                                          42, Int64Ty, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar2, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
+
+  if (LLVMIsNewDbgInfoFormat(M))
+    LLVMDIBuilderInsertDeclareAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
+  else
+    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
+
   LLVMMetadataRef FooParamVar3 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "c", 1, 3, File,
                                          42, VectorTy, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar3, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
+  if (LLVMIsNewDbgInfoFormat(M))
+    LLVMDIBuilderInsertDeclareAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
+  else
+    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+        DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
+        FooParamExpression, FooParamLocation, FooEntryBlock);
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
@@ -166,9 +185,12 @@ int llvm_test_dibuilder(void) {
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
   LLVMMetadataRef FooVarValueExpr =
     LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-
-  LLVMDIBuilderInsertDbgValueAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
-                                   FooVarsLocation, FooVarBlock);
+  if (LLVMIsNewDbgInfoFormat(M))
+    LLVMDIBuilderInsertDbgValueRecordAtEnd(
+        DIB, FooVal1, FooVar1, FooVarValueExpr, FooVarsLocation, FooVarBlock);
+  else
+    LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
+        DIB, FooVal1, FooVar1, FooVarValueExpr, FooVarsLocation, FooVarBlock);
 
   LLVMMetadataRef MacroFile =
       LLVMDIBuilderCreateTempMacroFile(DIB, NULL, 0, File);
@@ -193,10 +215,26 @@ int llvm_test_dibuilder(void) {
 
   LLVMDIBuilderFinalize(DIB);
 
+  // Using the new debug format, debug records get attached to instructions.
+  // Insert a `br` and `ret` now to absorb the debug records which are
+  // currently "trailing", meaning that they're associated with a block
+  // but no particular instruction, which is only valid as a transient state.
+  LLVMContextRef Ctx = LLVMGetModuleContext(M);
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+  LLVMPositionBuilderAtEnd(Builder, FooEntryBlock);
+  // Build `br label %vars` in entry.
+  LLVMBuildBr(Builder, FooVarBlock);
+  // Build `ret i64 0` in vars.
+  LLVMPositionBuilderAtEnd(Builder, FooVarBlock);
+  LLVMTypeRef I64 = LLVMInt64TypeInContext(Ctx);
+  LLVMValueRef Zero = LLVMConstInt(I64, 0, false);
+  LLVMBuildRet(Builder, Zero);
+
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);
 
+  LLVMDisposeBuilder(Builder);
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
 

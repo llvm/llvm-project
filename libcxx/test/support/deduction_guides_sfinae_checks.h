@@ -16,6 +16,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "test_macros.h"
 #if TEST_STD_VER >= 23

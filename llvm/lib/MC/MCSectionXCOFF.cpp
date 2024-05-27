@@ -87,8 +87,7 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     if (getKind().isCommon() && !getKind().isBSSLocal())
       return;
 
-    assert((getKind().isBSSExtern() || getKind().isBSSLocal()) &&
-           "Unexepected section kind for toc-data");
+    assert(getKind().isBSS() && "Unexpected section kind for toc-data");
     printCsectDirective(OS);
     return;
   }

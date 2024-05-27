@@ -4,6 +4,8 @@
 --- |
   define amdgpu_kernel void @single-wave-phase-2b(ptr addrspace(3) noalias %in0, ptr addrspace(3) noalias %in1, ptr addrspace(3) noalias %in2, ptr addrspace(3) noalias %in3, ptr addrspace(3) noalias %in4, ptr addrspace(3) noalias %in5, ptr addrspace(3) noalias %in6, ptr addrspace(3) noalias %in7, ptr addrspace(3) noalias %in8, ptr addrspace(3) noalias %in9, ptr addrspace(3) noalias %in10, ptr addrspace(3) noalias %in11, ptr addrspace(7) noalias %in12, ptr addrspace(7) noalias %in13, ptr addrspace(7) noalias %in14, ptr addrspace(7) noalias %in15, ptr addrspace(7) noalias %in16, ptr addrspace(7) noalias %in17, ptr addrspace(7) noalias %in18, ptr addrspace(7) noalias %in19, ptr addrspace(7) noalias %in20, ptr addrspace(7) noalias %in21, ptr addrspace(7) noalias %in22, ptr addrspace(7) noalias %in23, ptr addrspace(7) noalias %in24, ptr addrspace(7) noalias %in25, ptr addrspace(7) noalias %in26, ptr addrspace(7) noalias %in27, ptr addrspace(7) noalias %in28, ptr addrspace(7) noalias %in29) #0 { ret void }
 
+  attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
+
   !0 = distinct !{!0}
   !1 = !{!1, !0}
 ...

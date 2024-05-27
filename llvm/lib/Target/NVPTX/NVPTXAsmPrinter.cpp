@@ -72,6 +72,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
@@ -370,11 +371,10 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
         << " func_retval0";
     } else if (ShouldPassAsArray(Ty)) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
-      unsigned retAlignment = 0;
-      if (!getAlign(*F, 0, retAlignment))
-        retAlignment = TLI->getFunctionParamOptimizedAlign(F, Ty, DL).value();
-      O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
-        << "]";
+      Align RetAlignment = TLI->getFunctionArgumentAlignment(
+          F, Ty, AttributeList::ReturnIndex, DL);
+      O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
+        << totalsz << "]";
     } else
       llvm_unreachable("Unknown return type");
   } else {
@@ -489,8 +489,11 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (MMI && MMI->hasDebugInfo())
-    emitInitialRawDwarfLocDirective(*MF);
+  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
+    assert(SP->getUnit());
+    if (!SP->getUnit()->isDebugDirectivesOnly() && MMI && MMI->hasDebugInfo())
+      emitInitialRawDwarfLocDirective(*MF);
+  }
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -1019,7 +1022,6 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   const DataLayout &DL = getDataLayout();
 
   // GlobalVariables are always constant pointers themselves.
-  PointerType *PTy = GVar->getType();
   Type *ETy = GVar->getValueType();
 
   if (GVar->hasExternalLinkage()) {
@@ -1027,6 +1029,9 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       O << ".visible ";
     else
       O << ".extern ";
+  } else if (STI.getPTXVersion() >= 50 && GVar->hasCommonLinkage() &&
+             GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) {
+    O << ".common ";
   } else if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
              GVar->hasAvailableExternallyLinkage() ||
              GVar->hasCommonLinkage()) {
@@ -1138,7 +1143,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   }
 
   O << ".";
-  emitPTXAddressSpace(PTy->getAddressSpace(), O);
+  emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
     if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30) {
@@ -1167,8 +1172,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // Ptx allows variable initilization only for constant and global state
     // spaces.
     if (GVar->hasInitializer()) {
-      if ((PTy->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
-          (PTy->getAddressSpace() == ADDRESS_SPACE_CONST)) {
+      if ((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
+          (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) {
         const Constant *Initializer = GVar->getInitializer();
         // 'undef' is treated as there is no value specified.
         if (!Initializer->isNullValue() && !isa<UndefValue>(Initializer)) {
@@ -1183,7 +1188,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
             !isa<UndefValue>(GVar->getInitializer())) {
           report_fatal_error("initial value of '" + GVar->getName() +
                              "' is not allowed in addrspace(" +
-                             Twine(PTy->getAddressSpace()) + ")");
+                             Twine(GVar->getAddressSpace()) + ")");
         }
       }
     }
@@ -1202,8 +1207,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       ElementSize = DL.getTypeStoreSize(ETy);
       // Ptx allows variable initilization only for constant and
       // global state spaces.
-      if (((PTy->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
-           (PTy->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
+      if (((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
+           (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
           GVar->hasInitializer()) {
         const Constant *Initializer = GVar->getInitializer();
         if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
@@ -1553,6 +1558,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     auto getOptimalAlignForParam = [TLI, &DL, &PAL, F,
                                     paramIndex](Type *Ty) -> Align {
+      if (MaybeAlign StackAlign =
+              getAlign(*F, paramIndex + AttributeList::FirstArgIndex))
+        return StackAlign.value();
+
       Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign = PAL.getParamAlignment(paramIndex);
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1716,7 +1725,7 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  int NumBytes = (int) MFI.getStackSize();
+  int64_t NumBytes = MFI.getStackSize();
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
@@ -1842,9 +1851,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   auto AddIntToBuffer = [AggBuffer, Bytes](const APInt &Val) {
     size_t NumBytes = (Val.getBitWidth() + 7) / 8;
     SmallVector<unsigned char, 16> Buf(NumBytes);
-    for (unsigned I = 0; I < NumBytes; ++I) {
+    for (unsigned I = 0; I < NumBytes - 1; ++I) {
       Buf[I] = Val.extractBitsAsZExtValue(8, I * 8);
     }
+    size_t LastBytePosition = (NumBytes - 1) * 8;
+    size_t LastByteBits = Val.getBitWidth() - LastBytePosition;
+    Buf[NumBytes - 1] =
+        Val.extractBitsAsZExtValue(LastByteBits, LastBytePosition);
     AggBuffer->addBytes(Buf.data(), NumBytes, Bytes);
   };
 

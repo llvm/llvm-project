@@ -606,7 +606,7 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_ult_two(<vscale x 16 x i32> %va) {
 ; CHECK-ZVBB-NEXT:    vmsleu.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
-  %cmp = icmp ult <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 2, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  %cmp = icmp ult <vscale x 16 x i32> %a, splat (i32 2)
   ret <vscale x 16 x i1> %cmp
 }
 
@@ -626,7 +626,7 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_ugt_one(<vscale x 16 x i32> %va) {
 ; CHECK-ZVBB-NEXT:    vmsgtu.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
-  %cmp = icmp ugt <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  %cmp = icmp ugt <vscale x 16 x i32> %a, splat (i32 1)
   ret <vscale x 16 x i1> %cmp
 }
 
@@ -646,7 +646,7 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_eq_one(<vscale x 16 x i32> %va) {
 ; CHECK-ZVBB-NEXT:    vmseq.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
-  %cmp = icmp eq <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  %cmp = icmp eq <vscale x 16 x i32> %a, splat (i32 1)
   ret <vscale x 16 x i1> %cmp
 }
 
@@ -666,7 +666,7 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_ne_one(<vscale x 16 x i32> %va) {
 ; CHECK-ZVBB-NEXT:    vmsne.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
-  %cmp = icmp ne <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  %cmp = icmp ne <vscale x 16 x i32> %a, splat (i32 1)
   ret <vscale x 16 x i1> %cmp
 }
 
@@ -1020,7 +1020,7 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_ult_two(<vscale x 8 x i64> %va) {
 ; CHECK-ZVBB-NEXT:    vmsleu.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
-  %cmp = icmp ult <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 2, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %cmp = icmp ult <vscale x 8 x i64> %a, splat (i64 2)
   ret <vscale x 8 x i1> %cmp
 }
 
@@ -1040,7 +1040,7 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_ugt_one(<vscale x 8 x i64> %va) {
 ; CHECK-ZVBB-NEXT:    vmsgtu.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
-  %cmp = icmp ugt <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %cmp = icmp ugt <vscale x 8 x i64> %a, splat (i64 1)
   ret <vscale x 8 x i1> %cmp
 }
 
@@ -1060,7 +1060,7 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_eq_one(<vscale x 8 x i64> %va) {
 ; CHECK-ZVBB-NEXT:    vmseq.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
-  %cmp = icmp eq <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %cmp = icmp eq <vscale x 8 x i64> %a, splat (i64 1)
   ret <vscale x 8 x i1> %cmp
 }
 
@@ -1080,7 +1080,7 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_ne_one(<vscale x 8 x i64> %va) {
 ; CHECK-ZVBB-NEXT:    vmsne.vi v0, v8, 1
 ; CHECK-ZVBB-NEXT:    ret
   %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
-  %cmp = icmp ne <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %cmp = icmp ne <vscale x 8 x i64> %a, splat (i64 1)
   ret <vscale x 8 x i1> %cmp
 }
 

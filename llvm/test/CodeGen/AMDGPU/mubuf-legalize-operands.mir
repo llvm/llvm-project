@@ -70,6 +70,7 @@ body:             |
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W32-LABEL: name: idxen
     ; W32: successors: %bb.1(0x80000000)
     ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
@@ -184,6 +185,7 @@ body:             |
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W32-LABEL: name: offen
     ; W32: successors: %bb.1(0x80000000)
     ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
@@ -298,6 +300,7 @@ body:             |
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W32-LABEL: name: bothen
     ; W32: successors: %bb.1(0x80000000)
     ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
@@ -394,6 +397,7 @@ body:             |
     ; ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
     ; ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W32-LABEL: name: addr64
     ; W32: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
     ; W32-NEXT: {{  $}}
@@ -471,6 +475,7 @@ body:             |
     ; ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
     ; ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W64-NO-ADDR64-LABEL: name: offset
     ; W64-NO-ADDR64: successors: %bb.1(0x80000000)
     ; W64-NO-ADDR64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
@@ -515,6 +520,7 @@ body:             |
     ; W64-NO-ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NO-ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
     ; W64-NO-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ;
     ; W32-LABEL: name: offset
     ; W32: successors: %bb.1(0x80000000)
     ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31

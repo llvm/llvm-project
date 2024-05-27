@@ -1,3 +1,12 @@
+BOLT:
+  - bolt/**/*
+
+ClangIR:
+  - clang/include/clang/CIR/**/*
+  - clang/lib/CIR/**/*
+  - clang/tools/cir-*/**/*
+  - clang/test/CIR/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -230,7 +239,7 @@ mlir:dlti:
   - mlir/**/DLTI/**
 
 mlir:emitc:
-  - mlir/**/EmitC/**
+  - mlir/**/*EmitC*/**
   - mlir/lib/Target/Cpp/**
 
 mlir:func:
@@ -297,7 +306,7 @@ mlir:tensor:
   - mlir/**/Tensor/**
 
 mlir:tosa:
-  - mlir/**/Tosa/**
+  - mlir/**/*Tosa*/**
 
 mlir:ub:
   - mlir/**/UB/**
@@ -461,6 +470,7 @@ backend:m68k:
 
 libc++:
   - libcxx/**
+  - .github/workflows/libcxx-*
 
 libc++abi:
   - libcxxabi/**
@@ -629,6 +639,8 @@ backend:DirectX:
   - '**/*DirectX*/**'
   - '**/*DXIL*/**'
   - '**/*dxil*/**'
+  - '**/*DXContainer*'
+  - '**/*DXContainer*/**'
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
@@ -822,8 +834,55 @@ backend:X86:
   - llvm/lib/TargetParser/X86*
   - llvm/utils/TableGen/X86*
 
+backend:PowerPC:
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/PowerPC*
+  - llvm/include/llvm/BinaryFormat/XCOFF.h
+  - llvm/include/llvm/IR/IntrinsicsPowerPC.td
+  - llvm/lib/CodeGen/AsmPrinter/AIXException.cpp
+  - llvm/lib/Target/PowerPC/**
+  - llvm/test/Analysis/**/PowerPC/**
+  - llvm/test/CodeGen/PowerPC/**
+  - llvm/test/CodeGen/MIR/PowerPC/**
+  - llvm/test/DebugInfo/XCOFF/**
+  - llvm/test/DebugInfo/PowerPC/**
+  - llvm/test/LTO/PowerPC/**
+  - llvm/test/MC/Disassembler/PowerPC/**
+  - llvm/test/MC/PowerPC/**
+  - llvm/test/MC/XCOFF/**
+  - llvm/test/Transforms/**/PowerPC/**
+  - clang/include/clang/Basic/BuiltinsPPC.*
+  - clang/lib/Basic/Targets/PPC.*
+  - clang/lib/CodeGen/Targets/PPC.cpp
+  - clang/lib/Driver/ToolChains/PPC*
+  - clang/lib/Driver/ToolChains/AIX*
+  - clang/lib/Driver/ToolChains/Arch/PPC.*
+  - clang/test/CodeGen/PowerPC/**
+
+backend:SystemZ:
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/SystemZ*
+  - llvm/include/llvm/BinaryFormat/GOFF.h
+  - llvm/include/llvm/IR/IntrinsicsSystemZ.td
+  - llvm/lib/Target/SystemZ/**
+  - llvm/test/Analysis/**/SystemZ/**
+  - llvm/test/CodeGen/SystemZ/**
+  - llvm/test/DebugInfo/SystemZ/**
+  - llvm/test/ExecutionEngine/**/SystemZ/**
+  - llvm/test/MC/Disassembler/SystemZ/**
+  - llvm/test/MC/GOFF/**
+  - llvm/test/MC/SystemZ/**
+  - llvm/test/Transforms/**/SystemZ/**
+  - clang/include/clang/Basic/BuiltinsSystemZ.*
+  - clang/lib/Basic/Targets/SystemZ.*
+  - clang/lib/CodeGen/Targets/SystemZ.cpp
+  - clang/lib/Driver/ToolChains/ZOS*
+  - clang/lib/Driver/ToolChains/Arch/SystemZ.*
+  - clang/test/CodeGen/SystemZ/**
+
 third-party:unittests:
   - third-party/unittests/**
+
+third-party:benchmark:
+  - third-party/benchmark/**
 
 llvm:binary-utilities:
   - llvm/docs/CommandGuide/llvm-*
@@ -886,3 +945,9 @@ openmp:libomp:
 
 openmp:libomptarget:
   - any: ['openmp/**', '!openmp/runtime/**']
+
+bazel:
+  - utils/bazel/**
+
+offload:
+  - offload/**

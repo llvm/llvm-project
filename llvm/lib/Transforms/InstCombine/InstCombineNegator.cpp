@@ -140,7 +140,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
   // Integral constants can be freely negated.
   if (match(V, m_AnyIntegralConstant()))
-    return ConstantExpr::getNeg(cast<Constant>(V), /*HasNUW=*/false,
+    return ConstantExpr::getNeg(cast<Constant>(V),
                                 /*HasNSW=*/false);
 
   // If we have a non-instruction, then give up.
@@ -249,7 +249,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
     const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
     if (IsTrulyNegation &&
-        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowPoison(FullShift)))) {
       Value *Ashr = Builder.CreateAShr(X, FullShift);
       return Builder.CreateSExt(Ashr, I->getType());
     }
@@ -258,9 +258,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::And: {
     Constant *ShAmt;
     // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
-    if (match(I, m_c_And(m_OneUse(m_TruncOrSelf(
-                             m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
-                         m_One()))) {
+    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
+                           m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                       m_One()))) {
       unsigned BW = X->getType()->getScalarSizeInBits();
       Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
       Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));
@@ -320,7 +320,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     return NegatedPHI;
   }
   case Instruction::Select: {
-    if (isKnownNegation(I->getOperand(1), I->getOperand(2))) {
+    if (isKnownNegation(I->getOperand(1), I->getOperand(2), /*NeedNSW=*/false,
+                        /*AllowPoison=*/false)) {
       // Of one hand of select is known to be negation of another hand,
       // just swap the hands around.
       auto *NewSelect = cast<SelectInst>(I->clone());

@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks=-*,modernize-use-nullptr -- | count 0
+// RUN: clang-tidy %s -checks=-*,modernize-use-nullptr -- -std=c17 | count 0
 
 // Note: this test expects no diagnostics, but FileCheck cannot handle that,
 // hence the use of | count 0.

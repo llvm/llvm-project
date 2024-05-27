@@ -3,6 +3,27 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
+  epoll_create
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.epoll_create
+)
+
+add_entrypoint_object(
+  epoll_create1
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.epoll_create1
+)
+
+add_entrypoint_object(
+  epoll_ctl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.epoll_ctl
+)
+
+add_entrypoint_object(
   epoll_wait
   ALIAS
   DEPENDS

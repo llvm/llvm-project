@@ -13,9 +13,10 @@
 
 namespace clang::tidy::modernize {
 
-/// Checks whether a ``find`` or ``rfind`` result is compared with 0 and
-/// suggests replacing with ``starts_with`` when the method exists in the class.
-/// Notably, this will work with ``std::string`` and ``std::string_view``.
+/// Checks for common roundabout ways to express ``starts_with`` and
+/// ``ends_with`` and suggests replacing with ``starts_with`` when the method is
+/// available. Notably, this will work with ``std::string`` and
+/// ``std::string_view``.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-starts-ends-with.html

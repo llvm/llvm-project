@@ -30,13 +30,12 @@ _start:
 // CHECK-NEXT:     Type: SHT_REL
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
-// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x100F4
 // CHECK-NEXT:     Offset: 0xF4
 // CHECK-NEXT:     Size: 16
 // CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info: 4
+// CHECK-NEXT:     Info: 0
 // CHECK:          Name: .iplt
 // CHECK-NEXT:     Type: SHT_PROGBITS
 // CHECK-NEXT:     Flags [

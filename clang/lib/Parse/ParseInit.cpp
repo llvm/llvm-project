@@ -18,6 +18,8 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 using namespace clang;
@@ -35,7 +37,7 @@ bool Parser::MayBeDesignationStart() {
     return true;
 
   case tok::l_square: {  // designator: array-designator
-    if (!PP.getLangOpts().CPlusPlus11)
+    if (!PP.getLangOpts().CPlusPlus)
       return true;
 
     // C++11 lambda expressions and C99 designators can be ambiguous all the
@@ -203,8 +205,9 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
-                                       DesignatorCompletion.InitExprs, Desig);
+        Actions.CodeCompletion().CodeCompleteDesignator(
+            DesignatorCompletion.PreferredBaseType,
+            DesignatorCompletion.InitExprs, Desig);
         return ExprError();
       }
       if (Tok.isNot(tok::identifier)) {
@@ -290,15 +293,15 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
       // Three cases. This is a message send to a type: [type foo]
       // This is a message send to super:  [super foo]
       // This is a message sent to an expr:  [super.bar foo]
-      switch (Actions.getObjCMessageKind(
+      switch (Actions.ObjC().getObjCMessageKind(
           getCurScope(), II, IILoc, II == Ident_super,
           NextToken().is(tok::period), ReceiverType)) {
-      case Sema::ObjCSuperMessage:
+      case SemaObjC::ObjCSuperMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
         return ParseAssignmentExprWithObjCMessageExprStart(
             StartLoc, ConsumeToken(), nullptr, nullptr);
 
-      case Sema::ObjCClassMessage:
+      case SemaObjC::ObjCClassMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
         ConsumeToken(); // the identifier
         if (!ReceiverType) {
@@ -326,7 +329,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
                                                            ReceiverType,
                                                            nullptr);
 
-      case Sema::ObjCInstanceMessage:
+      case SemaObjC::ObjCInstanceMessage:
         // Fall through; we'll just parse the expression and
         // (possibly) treat this like an Objective-C message send
         // later.
@@ -470,7 +473,7 @@ ExprResult Parser::ParseBraceInitializer() {
   auto RunSignatureHelp = [&] {
     QualType PreferredType;
     if (!LikelyType.isNull())
-      PreferredType = Actions.ProduceConstructorSignatureHelp(
+      PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
           LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
           InitExprs, T.getOpenLocation(), /*Braced=*/true);
     CalledSignatureHelp = true;

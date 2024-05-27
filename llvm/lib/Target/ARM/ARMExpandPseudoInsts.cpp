@@ -1470,13 +1470,19 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
 
   // Lazy store all fp registers to the stack.
   // This executes as NOP in the absence of floating-point support.
-  MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
-                                  .addReg(ARM::SP)
-                                  .add(predOps(ARMCC::AL));
-  for (auto R : {ARM::VPR, ARM::FPSCR, ARM::FPSCR_NZCV, ARM::Q0, ARM::Q1,
-                 ARM::Q2, ARM::Q3, ARM::Q4, ARM::Q5, ARM::Q6, ARM::Q7})
-    VLSTM.addReg(R, RegState::Implicit |
-                        (LiveRegs.contains(R) ? 0 : RegState::Undef));
+  MachineInstrBuilder VLSTM =
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
+          .addReg(ARM::SP)
+          .add(predOps(ARMCC::AL))
+          .addImm(0); // Represents a pseoudo register list, has no effect on
+                      // the encoding.
+  // Mark non-live registers as undef
+  for (MachineOperand &MO : VLSTM->implicit_operands()) {
+    if (MO.isReg() && !MO.isDef()) {
+      Register Reg = MO.getReg();
+      MO.setIsUndef(!LiveRegs.contains(Reg));
+    }
+  }
 
   // Restore all arguments
   for (const auto &Regs : ClearedFPRegs) {
@@ -1564,13 +1570,19 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         .add(predOps(ARMCC::AL));
 
     // Lazy store all FP registers to the stack
-    MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
-                                    .addReg(ARM::SP)
-                                    .add(predOps(ARMCC::AL));
-    for (auto R : {ARM::VPR, ARM::FPSCR, ARM::FPSCR_NZCV, ARM::Q0, ARM::Q1,
-                   ARM::Q2, ARM::Q3, ARM::Q4, ARM::Q5, ARM::Q6, ARM::Q7})
-      VLSTM.addReg(R, RegState::Implicit |
-                          (LiveRegs.contains(R) ? 0 : RegState::Undef));
+    MachineInstrBuilder VLSTM =
+        BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
+            .addReg(ARM::SP)
+            .add(predOps(ARMCC::AL))
+            .addImm(0); // Represents a pseoudo register list, has no effect on
+                        // the encoding.
+    // Mark non-live registers as undef
+    for (MachineOperand &MO : VLSTM->implicit_operands()) {
+      if (MO.isReg() && MO.isImplicit() && !MO.isDef()) {
+        Register Reg = MO.getReg();
+        MO.setIsUndef(!LiveRegs.contains(Reg));
+      }
+    }
   } else {
     // Push all the callee-saved registers (s16-s31).
     MachineInstrBuilder VPUSH =
@@ -1673,9 +1685,12 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
 
   // Lazy load fp regs from stack.
   // This executes as NOP in the absence of floating-point support.
-  MachineInstrBuilder VLLDM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
-                                  .addReg(ARM::SP)
-                                  .add(predOps(ARMCC::AL));
+  MachineInstrBuilder VLLDM =
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
+          .addReg(ARM::SP)
+          .add(predOps(ARMCC::AL))
+          .addImm(0); // Represents a pseoudo register list, has no effect on
+                      // the encoding.
 
   if (STI->fixCMSE_CVE_2021_35465()) {
     auto Bundler = MIBundleBuilder(MBB, VLLDM);
@@ -1757,7 +1772,9 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
     // Load FP registers from stack.
     BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
         .addReg(ARM::SP)
-        .add(predOps(ARMCC::AL));
+        .add(predOps(ARMCC::AL))
+        .addImm(0); // Represents a pseoudo register list, has no effect on the
+                    // encoding.
 
     // Pop the stack space
     BuildMI(MBB, MBBI, DL, TII->get(ARM::tADDspi), ARM::SP)
@@ -2180,7 +2197,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
 
     case ARM::TCRETURNdi:
-    case ARM::TCRETURNri: {
+    case ARM::TCRETURNri:
+    case ARM::TCRETURNrinotr12: {
       MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
       if (MBBI->getOpcode() == ARM::SEH_EpilogEnd)
         MBBI--;
@@ -2224,7 +2242,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         // Add the default predicate in Thumb mode.
         if (STI->isThumb())
           MIB.add(predOps(ARMCC::AL));
-      } else if (RetOpcode == ARM::TCRETURNri) {
+      } else if (RetOpcode == ARM::TCRETURNri ||
+                 RetOpcode == ARM::TCRETURNrinotr12) {
         unsigned Opcode =
           STI->isThumb() ? ARM::tTAILJMPr
                          : (STI->hasV4TOps() ? ARM::TAILJMPr : ARM::TAILJMPr4);

@@ -50,6 +50,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   case MVT::v8i16:
   case MVT::v4i32:
   case MVT::v2i64:
+  case MVT::v8f16:
   case MVT::v4f32:
   case MVT::v2f64:
     return wasm::ValType::V128;
@@ -63,7 +64,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    const ArrayRef<MVT> &VTs) {
+                                    ArrayRef<MVT> VTs) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore

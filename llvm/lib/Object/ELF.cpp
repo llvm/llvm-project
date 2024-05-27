@@ -251,7 +251,10 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     }
     break;
   case ELF::EM_HEXAGON:
-    switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_HEX_ORDERED); }
+    switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_HEX_ORDERED);
+      STRINGIFY_ENUM_CASE(ELF, SHT_HEXAGON_ATTRIBUTES);
+    }
     break;
   case ELF::EM_X86_64:
     switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_X86_64_UNWIND); }
@@ -557,7 +560,11 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
 
   for (const Elf_Phdr &Phdr : *ProgramHeadersOrError) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
-      Dyn = ArrayRef(reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
+      const uint8_t *DynOffset = base() + Phdr.p_offset;
+      if (DynOffset > end())
+        return createError(
+            "dynamic section offset past file size: corrupted ELF");
+      Dyn = ArrayRef(reinterpret_cast<const Elf_Dyn *>(DynOffset),
                      Phdr.p_filesz / sizeof(Elf_Dyn));
       break;
     }

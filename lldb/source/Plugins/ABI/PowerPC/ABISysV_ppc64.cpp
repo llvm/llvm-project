@@ -501,14 +501,12 @@ public:
                                                      CompilerType &type) {
     RegisterContext *reg_ctx = thread.GetRegisterContext().get();
     if (!reg_ctx)
-      return llvm::make_error<llvm::StringError>(
-          LOG_PREFIX "Failed to get RegisterContext",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(LOG_PREFIX
+                                     "Failed to get RegisterContext");
 
     ProcessSP process_sp = thread.GetProcess();
     if (!process_sp)
-      return llvm::make_error<llvm::StringError>(
-          LOG_PREFIX "GetProcess() failed", llvm::inconvertibleErrorCode());
+      return llvm::createStringError(LOG_PREFIX "GetProcess() failed");
 
     return ReturnValueExtractor(thread, type, reg_ctx, process_sp);
   }
@@ -768,7 +766,12 @@ private:
 
     // get number of children
     const bool omit_empty_base_classes = true;
-    uint32_t n = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    auto n_or_err = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    if (!n_or_err) {
+      LLDB_LOG_ERROR(m_log, n_or_err.takeError(), LOG_PREFIX "{0}");
+      return {};
+    }
+    uint32_t n = *n_or_err;
     if (!n) {
       LLDB_LOG(m_log, LOG_PREFIX "No children found in struct");
       return {};
@@ -831,7 +834,7 @@ private:
     for (uint32_t i = 0; i < n; i++) {
       std::string name;
       uint32_t size;
-      GetChildType(i, name, size);
+      (void)GetChildType(i, name, size);
       // NOTE: the offset returned by GetChildCompilerTypeAtIndex()
       //       can't be used because it never considers alignment bytes
       //       between struct fields.
@@ -898,7 +901,8 @@ private:
   }
 
   // get child
-  CompilerType GetChildType(uint32_t i, std::string &name, uint32_t &size) {
+  llvm::Expected<CompilerType> GetChildType(uint32_t i, std::string &name,
+                                            uint32_t &size) {
     // GetChild constant inputs
     const bool transparent_pointers = false;
     const bool omit_empty_base_classes = true;

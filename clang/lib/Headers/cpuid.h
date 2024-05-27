@@ -10,7 +10,7 @@
 #ifndef __CPUID_H
 #define __CPUID_H
 
-#if !(__x86_64__ || __i386__)
+#if !defined(__x86_64__) && !defined(__i386__)
 #error this header is for x86 only
 #endif
 
@@ -219,6 +219,7 @@
 #define bit_PREFETCHI     0x00004000
 #define bit_USERMSR       0x00008000
 #define bit_AVX10         0x00080000
+#define bit_APXF          0x00200000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
@@ -255,7 +256,7 @@
 #define bit_AVX10_256   0x00020000
 #define bit_AVX10_512   0x00040000
 
-#if __i386__
+#ifdef __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
     __asm("cpuid" : "=a"(__eax), "=b" (__ebx), "=c"(__ecx), "=d"(__edx) \
                   : "0"(__leaf))
@@ -284,7 +285,7 @@ static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
                                               unsigned int *__sig)
 {
     unsigned int __eax, __ebx, __ecx, __edx;
-#if __i386__
+#ifdef __i386__
     int __cpuid_supported;
 
     __asm("  pushfl\n"

@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-hlfir %s -o - | FileCheck %s
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-hlfir %s -o - | tco | FileCheck %s --check-prefix=LLVM
+! RUN: bbc --use-desc-for-alloc=false -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-hlfir %s -o - | tco | FileCheck %s --check-prefix=LLVM
 
 module poly
   type p1
@@ -520,8 +520,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_from_up_mold(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "b"}) {
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEa"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
-! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEb"} : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEa"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_allocatable_up_from_up_moldEb"} : (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<none>>>, !fir.ref<!fir.class<!fir.ptr<none>>>)
 ! CHECK: %[[LOAD_B:.*]] = fir.load %[[B_DECL]]#1 : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A_DECL]]#1 : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
@@ -539,7 +539,7 @@ contains
 ! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_from_mold_rank(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[VALUE_10:.*]] = fir.alloca i32
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_mold_rankEa"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolyFtest_allocatable_up_from_mold_rankEa"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
 ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK: fir.store %[[C10]] to %[[VALUE_10]] : !fir.ref<i32>
 ! CHECK: %[[EMBOX_10:.*]] = fir.embox %[[VALUE_10]] : (!fir.ref<i32>) -> !fir.box<i32>
@@ -649,7 +649,8 @@ end
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
 ! LLVM: %[[BOX4:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX3]], i8 0, 5
 ! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 1, 6
-! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C3]], 7
+! LLVM: %[[BOX6A:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C3]], 7
+! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6A]], i64 0, 8, 0
 ! LLVM: %[[BOX7:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6]], ptr %{{.*}}, 0
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX7]], ptr %{{.*}}
 ! LLVM: call void %{{.*}}(ptr %{{.*}})
@@ -669,7 +670,8 @@ end
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
 ! LLVM: %[[BOX4:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX3]], i8 0, 5
 ! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 1, 6
-! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C4]], 7
+! LLVM: %[[BOX6A:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C4]], 7
+! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6A]], i64 0, 8, 0
 ! LLVM: %[[BOX7:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6]], ptr %{{.*}}, 0
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX7]], ptr %{{.*}}
 ! LLVM: call void %{{.*}}(ptr %{{.*}})
@@ -679,7 +681,7 @@ end
 ! allocatable.
 
 ! LLVM-LABEL: define void @_QMpolyPtest_deallocate()
-! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] undef }, ptr %[[ALLOCA1:[0-9]*]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] zeroinitializer }, ptr %[[ALLOCA1:[0-9]*]]
 ! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA1]]
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA2:[0-9]*]]
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %[[ALLOCA2]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)

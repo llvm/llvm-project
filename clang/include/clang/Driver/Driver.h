@@ -28,8 +28,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
-#include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -160,9 +160,6 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
-  std::string InstalledDir;
-
   /// The path to the compiler resource directory.
   std::string ResourceDir;
 
@@ -232,10 +229,12 @@ public:
   bool IsDXCMode() const { return Mode == DXCMode; }
 
   /// Only print tool bindings, don't build any jobs.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCCPrintBindings : 1;
 
   /// Set CC_PRINT_OPTIONS mode, which is like -v but logs the commands to
   /// CCPrintOptionsFilename or to stderr.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCPrintOptions : 1;
 
   /// The format of the header information that is emitted. If CC_PRINT_HEADERS
@@ -249,20 +248,29 @@ public:
   /// from non-system headers are emitted.
   HeaderIncludeFilteringKind CCPrintHeadersFiltering = HIFIL_None;
 
+  /// Name of the library that provides implementations of
+  /// IEEE-754 128-bit float math functions used by Fortran F128
+  /// runtime library. It should be linked as needed by the linker job.
+  std::string FlangF128MathLibrary;
+
   /// Set CC_LOG_DIAGNOSTICS mode, which causes the frontend to log diagnostics
   /// to CCLogDiagnosticsFilename or to stderr, in a stable machine readable
   /// format.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCLogDiagnostics : 1;
 
   /// Whether the driver is generating diagnostics for debugging purposes.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCGenDiagnostics : 1;
 
   /// Set CC_PRINT_PROC_STAT mode, which causes the driver to dump
   /// performance report to CC_PRINT_PROC_STAT_FILE or to stdout.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCPrintProcessStats : 1;
 
   /// Set CC_PRINT_INTERNAL_STAT mode, which causes the driver to dump internal
   /// performance report to CC_PRINT_INTERNAL_STAT_FILE or to stdout.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCPrintInternalStats : 1;
 
   /// Pointer to the ExecuteCC1Tool function, if available.
@@ -303,9 +311,11 @@ private:
 
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CheckInputsExist : 1;
   /// Whether to probe for PCH files on disk, in order to upgrade
   /// -include foo.h to -include-pch foo.h.pch.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ProbePrecompiled : 1;
 
 public:
@@ -319,6 +329,7 @@ public:
 
 private:
   /// Certain options suppress the 'no input files' warning.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressMissingInputWarning : 1;
 
   /// Cache of all the ToolChains in use by the driver.
@@ -413,14 +424,6 @@ public:
     return ClangExecutable.c_str();
   }
 
-  /// Get the path to where the clang executable was installed.
-  const char *getInstalledDir() const {
-    if (!InstalledDir.empty())
-      return InstalledDir.c_str();
-    return Dir.c_str();
-  }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
-
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
 
@@ -430,6 +433,11 @@ public:
 
   bool offloadHostOnly() const { return Offload == OffloadHost; }
   bool offloadDeviceOnly() const { return Offload == OffloadDevice; }
+
+  void setFlangF128MathLibrary(std::string name) {
+    FlangF128MathLibrary = std::move(name);
+  }
+  StringRef getFlangF128MathLibrary() const { return FlangF128MathLibrary; }
 
   /// Compute the desired OpenMP runtime from the flags provided.
   OpenMPRuntimeKind getOpenMPRuntime(const llvm::opt::ArgList &Args) const;
@@ -602,6 +610,16 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
+  /// Lookup the path to the Standard library module manifest.
+  ///
+  /// \param C - The compilation.
+  /// \param TC - The tool chain for additional information on
+  /// directories to search.
+  //
+  // FIXME: This should be in CompilationInfo.
+  std::string GetStdModuleManifestPath(const Compilation &C,
+                                       const ToolChain &TC) const;
+
   /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.
   void HandleAutocompletions(StringRef PassedFlags) const;
@@ -729,6 +747,9 @@ private:
   /// option.
   void setDriverMode(StringRef DriverModeValue);
 
+  /// Set the resource directory, depending on which driver is being used.
+  void setResourceDirectory();
+
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
@@ -825,6 +846,13 @@ bool IsClangCL(StringRef DriverMode);
 llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
+
+/// Apply a space separated list of edits to the input argument lists.
+/// See applyOneOverrideOption.
+void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                          const char *OverrideOpts,
+                          llvm::StringSet<> &SavedStrings,
+                          raw_ostream *OS = nullptr);
 
 } // end namespace driver
 } // end namespace clang

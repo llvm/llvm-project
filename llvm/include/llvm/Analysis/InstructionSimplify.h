@@ -32,6 +32,7 @@
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 
@@ -44,6 +45,7 @@ class DataLayout;
 class DominatorTree;
 class Function;
 class Instruction;
+class LoadInst;
 struct LoopStandardAnalysisResults;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
@@ -185,6 +187,11 @@ Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
 /// Given operands for a CastInst, fold the result or return null.
 Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                         const SimplifyQuery &Q);
+
+/// Given operands for a BinaryIntrinsic, fold the result or return null.
+Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType, Value *Op0,
+                               Value *Op1, const SimplifyQuery &Q,
+                               const CallBase *Call);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.

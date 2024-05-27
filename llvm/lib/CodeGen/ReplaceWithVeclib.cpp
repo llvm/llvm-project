@@ -175,7 +175,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // make sure that the operands of the vector function obtained via VFABI match
   // the operands of the original vector instruction.
   if (CI) {
-    for (auto VFParam : OptInfo->Shape.Parameters) {
+    for (auto &VFParam : OptInfo->Shape.Parameters) {
       if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
         continue;
 

@@ -28,6 +28,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -119,8 +120,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
                                    RegionBuilderFn regionBuilder) {
-  assert(llvm::all_of(outputTypes,
-                      [](Type t) { return llvm::isa<ShapedType>(t); }));
+  assert(llvm::all_of(outputTypes, llvm::IsaPred<ShapedType>));
 
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
@@ -162,7 +162,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
       resultTensorTypes.value_or(TypeRange());
   if (!resultTensorTypes)
     copy_if(outputs.getTypes(), std::back_inserter(derivedResultTypes),
-            [](Type type) { return llvm::isa<RankedTensorType>(type); });
+            llvm::IsaPred<RankedTensorType>);
 
   state.addOperands(inputs);
   state.addOperands(outputs);
@@ -373,14 +373,15 @@ namespace {
 
 class RegionBuilderHelper {
 public:
-  RegionBuilderHelper(MLIRContext *context, Block &block)
-      : context(context), block(block) {}
+  RegionBuilderHelper(OpBuilder &builder, Block &block)
+      : builder(builder), block(block) {}
 
   // Build the unary functions defined by OpDSL.
   Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
     if (!isFloatingPoint(arg))
       llvm_unreachable("unsupported non numeric type");
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     switch (unaryFn) {
     case UnaryFn::exp:
       return builder.create<math::ExpOp>(arg.getLoc(), arg);
@@ -394,6 +395,24 @@ public:
       return builder.create<math::FloorOp>(arg.getLoc(), arg);
     case UnaryFn::negf:
       return builder.create<arith::NegFOp>(arg.getLoc(), arg);
+    case UnaryFn::reciprocal: {
+      Attribute oneAttr = builder.getOneAttr(arg.getType());
+      auto one = builder.create<arith::ConstantOp>(arg.getLoc(),
+                                                   ::cast<TypedAttr>(oneAttr));
+      return builder.create<arith::DivFOp>(arg.getLoc(), one, arg);
+    }
+    case UnaryFn::round:
+      return builder.create<math::RoundOp>(arg.getLoc(), arg);
+    case UnaryFn::sqrt:
+      return builder.create<math::SqrtOp>(arg.getLoc(), arg);
+    case UnaryFn::rsqrt:
+      return builder.create<math::RsqrtOp>(arg.getLoc(), arg);
+    case UnaryFn::square:
+      return builder.create<arith::MulFOp>(arg.getLoc(), arg, arg);
+    case UnaryFn::tanh:
+      return builder.create<math::TanhOp>(arg.getLoc(), arg);
+    case UnaryFn::erf:
+      return builder.create<math::ErfOp>(arg.getLoc(), arg);
     }
     llvm_unreachable("unsupported unary function");
   }
@@ -407,7 +426,8 @@ public:
                    arg1.getType().getIntOrFloatBitWidth() == 1;
     if (!allComplex && !allFloatingPoint && !allInteger)
       llvm_unreachable("unsupported non numeric type");
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     switch (binaryFn) {
     case BinaryFn::add:
       if (allComplex)
@@ -465,8 +485,30 @@ public:
       if (allFloatingPoint)
         return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::powf:
+      assert(allFloatingPoint);
+      return builder.create<math::PowFOp>(arg0.getLoc(), arg0, arg1);
     }
     llvm_unreachable("unsupported binary function");
+  }
+
+  // Build the ternary functions defined by OpDSL.
+  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1,
+                       Value arg2) {
+    bool headBool =
+        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
+    bool tailFloatingPoint =
+        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
+    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
+    switch (ternaryFn) {
+    case TernaryFn::select:
+      if (!headBool && !(tailFloatingPoint || tailInteger))
+        llvm_unreachable("unsupported non numeric type");
+      return builder.create<arith::SelectOp>(arg0.getLoc(), arg0, arg1, arg2);
+    }
+    llvm_unreachable("unsupported ternary function");
   }
 
   // Build the type functions defined by OpDSL.
@@ -481,29 +523,32 @@ public:
   }
 
   void yieldOutputs(ValueRange values) {
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     Location loc = builder.getUnknownLoc();
     builder.create<YieldOp>(loc, values);
   }
 
   Value constant(const std::string &value) {
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     Location loc = builder.getUnknownLoc();
     Attribute valueAttr = parseAttribute(value, builder.getContext());
     return builder.create<arith::ConstantOp>(loc, ::cast<TypedAttr>(valueAttr));
   }
 
   Value index(int64_t dim) {
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
   }
 
   Type getIntegerType(unsigned width) {
-    return IntegerType::get(context, width);
+    return IntegerType::get(builder.getContext(), width);
   }
 
-  Type getFloat32Type() { return Float32Type::get(context); }
-  Type getFloat64Type() { return Float64Type::get(context); }
+  Type getFloat32Type() { return Float32Type::get(builder.getContext()); }
+  Type getFloat64Type() { return Float64Type::get(builder.getContext()); }
 
 private:
   // Generates operations to cast the given operand to a specified type.
@@ -511,7 +556,8 @@ private:
   // operand returned as-is (which will presumably yield a verification
   // issue downstream).
   Value cast(Type toType, Value operand, bool isUnsignedCast) {
-    OpBuilder builder = getBuilder();
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
     auto loc = operand.getLoc();
     return convertScalarToDtype(builder, loc, operand, toType, isUnsignedCast);
   }
@@ -526,13 +572,7 @@ private:
     return llvm::isa<IntegerType>(value.getType());
   }
 
-  OpBuilder getBuilder() {
-    OpBuilder builder(context);
-    builder.setInsertionPointToEnd(&block);
-    return builder;
-  }
-
-  MLIRContext *context;
+  OpBuilder &builder;
   Block &block;
 };
 
@@ -586,12 +626,20 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
       return failure();
 
     Location loc = oldFill.getLoc();
-    auto newInit = rewriter.create<TensorReshapeOp>(
-        loc, reshapeOp.getResultType(), oldFill.output(),
-        reshapeOp.getReassociation());
+    TensorReshapeOp newInit;
+    if constexpr (std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value) {
+
+      newInit = rewriter.create<TensorReshapeOp>(
+          loc, reshapeOp.getResultType(), oldFill.output(),
+          reshapeOp.getReassociation(), reshapeOp.getOutputShape(),
+          reshapeOp.getStaticOutputShape());
+    } else {
+      newInit = rewriter.create<TensorReshapeOp>(loc, reshapeOp.getResultType(),
+                                                 oldFill.output(),
+                                                 reshapeOp.getReassociation());
+    }
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, ValueRange{oldFill.value()},
                                         ValueRange{newInit});
-
     return success();
   }
 };
@@ -815,6 +863,22 @@ struct FoldFillWithCopy : OpRewritePattern<linalg::CopyOp> {
   }
 };
 
+/// Fold fill with transpose.
+struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = transposeOp.getInput().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(
+          transposeOp, transposeOp.getResultTypes(), fillOp.getInputs(),
+          transposeOp.getDpsInitOperand(0)->get());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -823,7 +887,7 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
            FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill>(context);
+           FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1087,24 +1151,25 @@ LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
 
-/// Remove generic operations (on tensors) that are just copying
+/// Remove any linalg operation (on tensors) that are just copying
 /// the values from inputs to the results. Requirements are
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
 ///    the arguments corresponding to the operands.
-struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+template <typename OpTy>
+struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(GenericOp genericOp,
+  LogicalResult matchAndRewrite(OpTy linalgOp,
                                 PatternRewriter &rewriter) const override {
     // Check all indexing maps are identity.
-    if (llvm::any_of(genericOp.getIndexingMapsArray(),
+    if (llvm::any_of(linalgOp.getIndexingMapsArray(),
                      [](AffineMap map) { return !map.isIdentity(); }))
       return failure();
 
     // Check that the body of the linalg operation is just a linalg.yield
     // operation.
-    Block &body = genericOp.getRegion().front();
+    Block &body = linalgOp->getRegion(0).front();
     if (!llvm::hasSingleElement(body))
       return failure();
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
@@ -1112,18 +1177,18 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
 
     // In the buffer case, we need to check exact buffer equality.
-    if (genericOp.hasPureBufferSemantics()) {
-      if (genericOp.getNumDpsInputs() == 1 && genericOp.getNumDpsInits() == 1 &&
-          genericOp.getDpsInputOperand(0)->get() ==
-              genericOp.getDpsInitOperand(0)->get()) {
-        rewriter.eraseOp(genericOp);
+    if (linalgOp.hasPureBufferSemantics()) {
+      if (linalgOp.getNumDpsInputs() == 1 && linalgOp.getNumDpsInits() == 1 &&
+          linalgOp.getDpsInputOperand(0)->get() ==
+              linalgOp.getDpsInitOperand(0)->get()) {
+        rewriter.eraseOp(linalgOp);
         return success();
       }
       return failure();
     }
 
     // Mixed semantics is not supported yet.
-    if (!genericOp.hasPureTensorSemantics())
+    if (!linalgOp.hasPureTensorSemantics())
       return failure();
 
     // Get the argument number of the returned values. That is the operand
@@ -1134,8 +1199,8 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
-      Value returnedArg = genericOp->getOperand(argumentNumber);
-      Type resultType = genericOp->getResult(yieldVal.index()).getType();
+      Value returnedArg = linalgOp->getOperand(argumentNumber);
+      Type resultType = linalgOp->getResult(yieldVal.index()).getType();
       // The input can have a different type than the result, e.g. a dynamic
       // input dimension can be turned into a static output dimension.
       Type returnType = returnedArg.getType();
@@ -1145,21 +1210,21 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
         if (sparse_tensor::getSparseTensorEncoding(returnType) ||
             sparse_tensor::getSparseTensorEncoding(resultType))
           returnedArg = rewriter.create<sparse_tensor::ConvertOp>(
-              genericOp.getLoc(), resultType, returnedArg);
+              linalgOp.getLoc(), resultType, returnedArg);
         else {
           if (!tensor::CastOp::areCastCompatible(returnedArg.getType(),
                                                  resultType))
             return failure();
           returnedArg = rewriter.create<tensor::CastOp>(
-              genericOp.getLoc(), resultType, returnedArg);
+              linalgOp.getLoc(), resultType, returnedArg);
         }
       }
       returnedArgs.push_back(returnedArg);
     }
 
-    if (returnedArgs.size() != genericOp->getNumResults())
+    if (returnedArgs.size() != linalgOp->getNumResults())
       return failure();
-    rewriter.replaceOp(genericOp, returnedArgs);
+    rewriter.replaceOp(linalgOp, returnedArgs);
     return success();
   }
 };
@@ -1168,7 +1233,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
 void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<EraseIdentityGenericOp>(context);
+  results.add<EraseIdentityLinalgOp<GenericOp>>(context);
 }
 
 LogicalResult GenericOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
@@ -1785,6 +1850,22 @@ void TransposeOp::getEffects(
                         getDpsInits());
 }
 
+LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
+                                SmallVectorImpl<OpFoldResult> &result) {
+  // Single dimension transpose.
+  if (getPermutation().size() == 0) {
+    result.push_back(getInput());
+    return success();
+  }
+  // Identity permutation.
+  if (isIdentityPermutation(getPermutation())) {
+    result.push_back(getInput());
+    return success();
+  }
+
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
@@ -1905,6 +1986,11 @@ void BroadcastOp::getEffects(
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
+}
+
+void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<EraseIdentityLinalgOp<BroadcastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

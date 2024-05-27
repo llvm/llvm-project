@@ -14,6 +14,7 @@
 
 #include "DAP.h"
 #include "LLDBUtils.h"
+#include "lldb/API/SBCommandInterpreter.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -39,8 +40,7 @@ DAP::DAP()
            {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
-      focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
@@ -406,9 +406,10 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
     std::pair<llvm::StringRef, llvm::StringRef> token =
         llvm::getToken(expression);
     std::string term = token.first.str();
-    lldb::SBCommandReturnObject result;
-    debugger.GetCommandInterpreter().ResolveCommand(term.c_str(), result);
-    bool term_is_command = result.Succeeded();
+    lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+    bool term_is_command = interpreter.CommandExists(term.c_str()) ||
+                           interpreter.UserCommandExists(term.c_str()) ||
+                           interpreter.AliasExists(term.c_str());
     bool term_is_variable = frame.FindVariable(term.c_str()).IsValid();
 
     // If we have both a variable and command, warn the user about the conflict.
@@ -623,7 +624,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
 }
 
 llvm::Error DAP::Loop() {
-  while (!sent_terminated_event) {
+  while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
 
