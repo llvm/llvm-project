@@ -798,7 +798,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when diagnosing failed conversions involving template parameter
   packs. (#GH93076)
 - Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
-  with the same parameters not to be diagnosed. (Fixes #93456).
+  with the same parameters not to be diagnosed. (Fixes #GH93456).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
