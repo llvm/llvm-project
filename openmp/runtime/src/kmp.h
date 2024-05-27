@@ -2675,11 +2675,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
-  unsigned reserved31 : 6;
+  unsigned reserved31 : 5;
   unsigned onced : 1;
 #else
-  unsigned reserved31 : 7;
+  unsigned reserved31 : 6;
 #endif
+  unsigned target : 1;
   unsigned native : 1;
   unsigned freed : 1;
   unsigned complete : 1;
@@ -2728,11 +2729,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
+  unsigned target : 1;
 #if OMPX_TASKGRAPH
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
-  unsigned reserved31 : 6; /* reserved for library use */
+  unsigned reserved31 : 5; /* reserved for library use */
 #else
-  unsigned reserved31 : 7; /* reserved for library use */
+  unsigned reserved31 : 6; /* reserved for library use */
 #endif
 #endif
 } kmp_tasking_flags_t;
