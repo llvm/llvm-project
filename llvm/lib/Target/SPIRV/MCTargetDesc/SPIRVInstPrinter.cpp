@@ -272,6 +272,11 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
     case Decoration::UserSemantic:
       printStringImm(MI, NumFixedOps, O);
       break;
+    case Decoration::HostAccessINTEL:
+      printOperand(MI, NumFixedOps, O);
+      O << ' ';
+      printStringImm(MI, NumFixedOps + 1, O);
+      break;
     default:
       printRemainingVariableOps(MI, NumFixedOps, O, true);
       break;
@@ -341,13 +346,15 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     StrStartIndex += numOpsInString;
 
     // Check for final Op of "OpDecorate %x %stringImm %linkageAttribute".
-    if (MI->getOpcode() == SPIRV::OpDecorate &&
-        MI->getOperand(1).getImm() ==
-            static_cast<unsigned>(Decoration::LinkageAttributes)) {
-      O << ' ';
-      printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
-          MI, StrStartIndex, O);
-      break;
+    if (MI->getOpcode() == SPIRV::OpDecorate) {
+      int64_t Imm = MI->getOperand(1).getImm();
+      if (Imm ==
+          static_cast<unsigned>(Decoration::LinkageAttributes)) {
+        O << ' ';
+        printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
+            MI, StrStartIndex, O);
+        break;
+      }
     }
   }
 }
