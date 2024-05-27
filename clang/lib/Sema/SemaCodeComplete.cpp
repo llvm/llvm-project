@@ -5683,12 +5683,11 @@ QualType getApproximateType(const Expr *E) {
     if (UO->getOpcode() == UnaryOperatorKind::UO_Deref) {
       // We recurse into the subexpression because it could be of dependent
       // type.
-      QualType SubType = getApproximateType(UO->getSubExpr());
-      if (auto Pointee = SubType->getPointeeType(); !Pointee.isNull())
+      if (auto Pointee = getApproximateType(UO->getSubExpr())->getPointeeType();
+          !Pointee.isNull())
         return Pointee;
       // Our caller expects a non-null result, even though the SubType is
-      // supposed to have a pointee.
-      return SubType;
+      // supposed to have a pointee. Fall through to Unresolved anyway.
     }
   }
   return Unresolved;
