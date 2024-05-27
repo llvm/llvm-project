@@ -516,9 +516,10 @@ def Vector_InterleaveOp :
     ```mlir
     %a = arith.constant dense<[0, 1]> : vector<2xi32>
     %b = arith.constant dense<[2, 3]> : vector<2xi32>
-    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
     // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
 
+    // Examples showing allowed input and result types.
     %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
     %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
     %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
