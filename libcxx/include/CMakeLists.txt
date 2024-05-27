@@ -72,23 +72,8 @@ set(files
   __algorithm/partition_point.h
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
-  __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_copy.h
-  __algorithm/pstl_count.h
-  __algorithm/pstl_equal.h
-  __algorithm/pstl_fill.h
-  __algorithm/pstl_find.h
-  __algorithm/pstl_for_each.h
+  __algorithm/pstl.h
   __algorithm/pstl_frontend_dispatch.h
-  __algorithm/pstl_generate.h
-  __algorithm/pstl_is_partitioned.h
-  __algorithm/pstl_merge.h
-  __algorithm/pstl_move.h
-  __algorithm/pstl_replace.h
-  __algorithm/pstl_rotate_copy.h
-  __algorithm/pstl_sort.h
-  __algorithm/pstl_stable_sort.h
-  __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -577,8 +562,7 @@ set(files
   __numeric/iota.h
   __numeric/midpoint.h
   __numeric/partial_sum.h
-  __numeric/pstl_reduce.h
-  __numeric/pstl_transform_reduce.h
+  __numeric/pstl.h
   __numeric/reduce.h
   __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
