@@ -38,28 +38,32 @@ struct EliminateExplicitRoundingRewritePattern final
                                           FilterFunction filterFunc = nullptr)
       : OpRewritePattern(context), filterFunc(filterFunc) {}
 
-  LogicalResult matchAndRewrite(arith::ExtFOp extfop,
+  LogicalResult matchAndRewrite(arith::ExtFOp extFOp,
                                 PatternRewriter &rewriter) const final {
-    if (filterFunc && filterFunc(extfop))
-      return failure();
-    // check whether match `truncf->extf` pair
-    auto truncfop = extfop.getOperand().getDefiningOp<arith::TruncFOp>();
-    if (!truncfop)
+    // check whether match `truncF->extF` pair
+    auto truncFOp = extFOp.getOperand().getDefiningOp<arith::TruncFOp>();
+    if (!truncFOp)
       return failure();
 
-    // check whether the the rounding pair's input and output data type are the
+    // check whether need to filter out
+    if (filterFunc && filterFunc(extFOp))
+      return failure();
+
+    // check whether the rounding pair's input and output data type are the
     // same. Currently only consider to eliminate rounding pairs for (bf16 / f16
     // <-> f32)
-    if (auto input = truncfop.getOperand()) {
+    if (auto input = truncFOp.getOperand()) {
       auto inTy = input.getType();
-      auto outTy = extfop.getType();
-      auto shortTy = getElementTypeOrSelf(truncfop.getType());
+      auto outTy = extFOp.getType();
+      auto shortTy = getElementTypeOrSelf(truncFOp.getType());
       if (inTy == outTy && getElementTypeOrSelf(inTy).isF32() &&
           (shortTy.isF16() || shortTy.isBF16())) {
-        rewriter.replaceOp(extfop, {input});
+        rewriter.replaceOp(extFOp, {input});
+        return success();
       }
     }
-    return success();
+
+    return failure();
   }
 
 private:
