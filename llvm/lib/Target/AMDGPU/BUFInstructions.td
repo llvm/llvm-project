@@ -1434,6 +1434,15 @@ defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short, i32, "BUFFER_LOAD_SSHORT">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte, i32, "BUFFER_LOAD_UBYTE">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort,  i32, "BUFFER_LOAD_USHORT">;
 
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v2i32, "BUFFER_LOAD_DWORD_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v3i32, "BUFFER_LOAD_DWORDX2_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v4i32, "BUFFER_LOAD_DWORDX3_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v5i32, "BUFFER_LOAD_DWORDX4_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_byte_tfe, v2i32, "BUFFER_LOAD_SBYTE_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short_tfe, v2i32, "BUFFER_LOAD_SSHORT_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte_tfe, v2i32, "BUFFER_LOAD_UBYTE_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort_tfe, v2i32, "BUFFER_LOAD_USHORT_TFE">;
+
 multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
                                    string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mubuf_intrinsic_store<name, memoryVt>);
