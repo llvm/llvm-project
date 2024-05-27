@@ -608,7 +608,7 @@ struct VectorInterleaveOpConvert final
 
     auto seq = llvm::seq<int64_t>(2 * n);
     auto indices = llvm::map_to_vector(
-      seq, [n](int i) { return (i % 2 ? n : 0) + i / 2; });
+        seq, [n](int i) { return (i % 2 ? n : 0) + i / 2; });
 
     // Emit a SPIR-V shuffle.
     rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
