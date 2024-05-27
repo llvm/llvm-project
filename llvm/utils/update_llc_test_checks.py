@@ -16,7 +16,9 @@ from UpdateTestChecks import common
 
 # llc is the only llc-like in the LLVM tree but downstream forks can add
 # additional ones here if they have them.
-LLC_LIKE_TOOLS = ["llc",]
+LLC_LIKE_TOOLS = [
+    "llc",
+]
 
 
 def main():
