@@ -11305,9 +11305,15 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (!isObjectArgument) {
     if (I < Fn->getNumParams())
       ToParamRange = Fn->getParamDecl(I)->getSourceRange();
-    else
-      // parameter pack case.
-      ToParamRange = Fn->parameters().back()->getSourceRange();
+    else {
+      // For the parameter pack case, diagnose on the first pack.
+      for (const auto* ParamDecl : Fn->parameters()) {
+        if (ParamDecl->isParameterPack()) {
+          ToParamRange = ParamDecl->getSourceRange();
+          break;
+        }
+      }
+    }
   }
 
   if (FromTy == S.Context.OverloadTy) {

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-print-source-range-info %s 2>&1 | FileCheck %s --strict-whitespace
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-print-source-range-info -std=c++20 %s 2>&1 | FileCheck %s --strict-whitespace
 // CHECK:      error: no matching function
 template <typename T> struct mcdata {
   typedef int result_type;
@@ -74,7 +74,11 @@ void Function() { Function1(33, Type1<-42>(), 66); }
 // CHECK:      error: no matching function for call to 'b'
 // CHECK:      :{[[@LINE+1]]:41-[[@LINE+1]]:45}: note: {{.*}} no known conversion from 'int' to 'ForwardClass' for 3rd argument
 template <class T, class...U> void b(T, U...);
+// CHECK:      error: no matching function for call to 'abbreviated_func'
+// CHECK:      :{[[@LINE+1]]:23-[[@LINE+1]]:30}: note: {{.*}} no known conversion from 'int' to 'ForwardClass' for 3rd argument
+void abbreviated_func(auto..., auto...); // diagnose on the first parameter
 class ForwardClass;
 void NoCrash() {
   b<int, int, ForwardClass>(1, 1, 0);
+  abbreviated_func<int, int, ForwardClass>(1, 1, 0);
 }
