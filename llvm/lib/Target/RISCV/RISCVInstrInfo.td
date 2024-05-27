@@ -1560,8 +1560,8 @@ def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [],
 // -riscv-use-rematerializable-movimm in RISCVISelDAGToDAG.cpp
 // It will be expanded after register allocation.
 // FIXME: The scheduling information does not reflect the multiple instructions.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 1,
-    isPseudo = 1, isReMaterializable = 1, IsSignExtendingOpW = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isReMaterializable = 1 in
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 

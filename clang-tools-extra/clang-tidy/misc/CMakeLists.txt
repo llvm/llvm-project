@@ -15,6 +15,7 @@ add_custom_command(
     DEPENDS ${clang_tidy_confusable_chars_gen_target} ConfusableTable/confusables.txt)
 
 add_custom_target(genconfusable DEPENDS Confusables.inc)
+set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourcegenning")
 
 add_clang_library(clangTidyMiscModule
   ConstCorrectnessCheck.cpp
@@ -51,6 +52,7 @@ add_clang_library(clangTidyMiscModule
   genconfusable
   ClangDriverOptions
   )
+set_target_properties(clangTidyMiscModule PROPERTIES FOLDER "Clang Tools Extra/Libraries")
 
 clang_target_link_libraries(clangTidyMiscModule
   PRIVATE
