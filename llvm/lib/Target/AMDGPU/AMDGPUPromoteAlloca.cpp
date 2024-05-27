@@ -347,7 +347,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
         continue;
       }
     } else {
-      LLVM_DEBUG(dbgs() << "Alloca too big for vectorization (size:" << AllocaCost << ", budget:" << VectorizationBudget << "): " << *AI << "\n");
+      LLVM_DEBUG(dbgs() << "Alloca too big for vectorization (size:"
+                        << AllocaCost << ", budget:" << VectorizationBudget
+                        << "): " << *AI << "\n");
     }
 
     if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
