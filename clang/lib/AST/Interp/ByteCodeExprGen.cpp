@@ -3341,7 +3341,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // write the result into.
     if (IsVirtual && !HasQualifier) {
       uint32_t VarArgSize = 0;
-      unsigned NumParams = Func->getNumWrittenParams();
+      unsigned NumParams =
+          Func->getNumWrittenParams() + isa<CXXOperatorCallExpr>(E);
       for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
         VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
 
