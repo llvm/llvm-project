@@ -33,8 +33,8 @@ constexpr void check_assignable(int* first, int* last, int* expected) {
   // Count operations
   if constexpr (Count) {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(first), &ops);
-    auto sent = assignable_sentinel(stride_counting_iterator(It(last), &ops));
+    auto it   = operation_counting_iterator(It(first), &ops);
+    auto sent = assignable_sentinel(operation_counting_iterator(It(last), &ops));
     std::ranges::advance(it, sent);
     assert(base(base(it)) == expected);
     assert(ops.increments + ops.decrements == 0); // because we got here by assigning from last, not by incrementing
@@ -56,7 +56,7 @@ constexpr void check_sized_sentinel(int* first, int* last, int* expected) {
   // Count operations
   if constexpr (Count) {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(first), &ops);
+    auto it   = operation_counting_iterator(It(first), &ops);
     auto sent = distance_apriori_sentinel(size);
     std::ranges::advance(it, sent);
     if constexpr (std::random_access_iterator<It>) {
@@ -85,8 +85,8 @@ constexpr void check_sentinel(int* first, int* last, int* expected) {
   // Count operations
   if constexpr (Count) {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(first), &ops);
-    auto sent = sentinel_wrapper(stride_counting_iterator(It(last), &ops));
+    auto it   = operation_counting_iterator(It(first), &ops);
+    auto sent = sentinel_wrapper(operation_counting_iterator(It(last), &ops));
     std::ranges::advance(it, sent);
     const auto big   = std::max(ops.increments, ops.decrements);
     const auto small = std::min(ops.increments, ops.decrements);

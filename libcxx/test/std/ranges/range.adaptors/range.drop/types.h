@@ -120,7 +120,7 @@ struct Range {
   int *end() const;
 };
 
-using CountedIter = stride_counting_iterator<forward_iterator<int*>>;
+using CountedIter = operation_counting_iterator<forward_iterator<int*>>;
 struct CountedView : std::ranges::view_base {
   explicit constexpr CountedView(IteratorOpCounts* opcounts) noexcept : opcounts_(opcounts) {}
   constexpr CountedIter begin() const { return CountedIter(ForwardIter(globalBuff), opcounts_); }

@@ -39,8 +39,8 @@ check_forward(int* first, int* last, std::iter_difference_t<It> n, int* expected
   // Count operations
   if constexpr (Count) {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(first), &ops);
-    auto sent = sentinel_wrapper(stride_counting_iterator(It(last), &ops));
+    auto it   = operation_counting_iterator(It(first), &ops);
+    auto sent = sentinel_wrapper(operation_counting_iterator(It(last), &ops));
     (void)std::ranges::advance(it, n, sent);
     // We don't have a sized sentinel, so we have to increment one-by-one
     // regardless of the iterator category.
@@ -68,7 +68,7 @@ constexpr void check_forward_sized_sentinel(int* first, int* last, std::iter_dif
   // Count operations
   {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(first), &ops);
+    auto it   = operation_counting_iterator(It(first), &ops);
     auto sent = distance_apriori_sentinel(size);
     (void)std::ranges::advance(it, n, sent);
     if constexpr (std::random_access_iterator<It>) {
@@ -104,9 +104,9 @@ check_backward(int* first, int* last, std::iter_difference_t<It> n, int* expecte
   // Count operations
   {
     IteratorOpCounts ops;
-    auto it   = stride_counting_iterator(It(last), &ops);
-    auto sent = stride_counting_iterator(It(first), &ops);
-    static_assert(std::bidirectional_iterator<stride_counting_iterator<It>>);
+    auto it   = operation_counting_iterator(It(last), &ops);
+    auto sent = operation_counting_iterator(It(first), &ops);
+    static_assert(std::bidirectional_iterator<operation_counting_iterator<It>>);
     static_assert(Count == !std::sized_sentinel_for<It, It>);
 
     (void)std::ranges::advance(it, n, sent);

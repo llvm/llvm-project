@@ -34,7 +34,7 @@ constexpr void check(int* first, std::iter_difference_t<It> n, int* expected) {
   // Count operations
   if constexpr (Count) {
     IteratorOpCounts ops;
-    auto it = stride_counting_iterator(It(first), &ops);
+    auto it = operation_counting_iterator(It(first), &ops);
     std::ranges::advance(it, n);
     if constexpr (std::random_access_iterator<It>) {
       assert(ops.increments + ops.decrements <= 1);

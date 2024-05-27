@@ -735,7 +735,7 @@ struct IteratorOpCounts {
 
 // Iterator adaptor that records its operation counts in a IteratorOpCounts
 template <class It>
-class stride_counting_iterator {
+class operation_counting_iterator {
 public:
     using value_type = typename iter_value_or_void<It>::type;
     using difference_type = std::iter_difference_t<It>;
@@ -749,99 +749,100 @@ public:
     >>>>>;
     using iterator_category = iterator_concept;
 
-    stride_counting_iterator()
+    operation_counting_iterator()
       requires std::default_initializable<It>
     = default;
 
-    constexpr explicit stride_counting_iterator(It const& it, IteratorOpCounts* counts = nullptr)
+    constexpr explicit operation_counting_iterator(It const& it, IteratorOpCounts* counts = nullptr)
         : base_(base(it)), counts_(counts) {}
 
-    constexpr stride_counting_iterator(const stride_counting_iterator& o) { *this = o; }
-    constexpr stride_counting_iterator(stride_counting_iterator&& o) { *this = o; }
+    constexpr operation_counting_iterator(const operation_counting_iterator& o) { *this = o; }
+    constexpr operation_counting_iterator(operation_counting_iterator&& o) { *this = o; }
 
-    constexpr stride_counting_iterator& operator=(const stride_counting_iterator& o) = default;
-    constexpr stride_counting_iterator& operator=(stride_counting_iterator&& o) { return *this = o; }
+    constexpr operation_counting_iterator& operator=(const operation_counting_iterator& o) = default;
+    constexpr operation_counting_iterator& operator=(operation_counting_iterator&& o) { return *this = o; }
 
-    friend constexpr It base(stride_counting_iterator const& it) { return It(it.base_); }
+    friend constexpr It base(operation_counting_iterator const& it) { return It(it.base_); }
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
     constexpr decltype(auto) operator[](difference_type n) const { return It(base_)[n]; }
 
-    constexpr stride_counting_iterator& operator++() {
-        It tmp(base_);
-        base_ = base(++tmp);
-        moved_by(1);
-        return *this;
+    constexpr operation_counting_iterator& operator++() {
+      It tmp(base_);
+      base_ = base(++tmp);
+      moved_by(1);
+      return *this;
     }
 
     constexpr void operator++(int) { ++*this; }
 
-    constexpr stride_counting_iterator operator++(int)
-        requires std::forward_iterator<It>
+    constexpr operation_counting_iterator operator++(int)
+      requires std::forward_iterator<It>
     {
-        auto temp = *this;
-        ++*this;
-        return temp;
+      auto temp = *this;
+      ++*this;
+      return temp;
     }
 
-    constexpr stride_counting_iterator& operator--()
-        requires std::bidirectional_iterator<It>
+    constexpr operation_counting_iterator& operator--()
+      requires std::bidirectional_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(--tmp);
-        moved_by(-1);
-        return *this;
+      It tmp(base_);
+      base_ = base(--tmp);
+      moved_by(-1);
+      return *this;
     }
 
-    constexpr stride_counting_iterator operator--(int)
-        requires std::bidirectional_iterator<It>
+    constexpr operation_counting_iterator operator--(int)
+      requires std::bidirectional_iterator<It>
     {
-        auto temp = *this;
-        --*this;
-        return temp;
+      auto temp = *this;
+      --*this;
+      return temp;
     }
 
-    constexpr stride_counting_iterator& operator+=(difference_type const n)
-        requires std::random_access_iterator<It>
+    constexpr operation_counting_iterator& operator+=(difference_type const n)
+      requires std::random_access_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(tmp += n);
-        moved_by(n);
-        return *this;
+      It tmp(base_);
+      base_ = base(tmp += n);
+      moved_by(n);
+      return *this;
     }
 
-    constexpr stride_counting_iterator& operator-=(difference_type const n)
-        requires std::random_access_iterator<It>
+    constexpr operation_counting_iterator& operator-=(difference_type const n)
+      requires std::random_access_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(tmp -= n);
-        moved_by(-n);
-        return *this;
+      It tmp(base_);
+      base_ = base(tmp -= n);
+      moved_by(-n);
+      return *this;
     }
 
-    friend constexpr stride_counting_iterator operator+(stride_counting_iterator it, difference_type n)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator+(operation_counting_iterator it, difference_type n)
+      requires std::random_access_iterator<It>
     {
-        return it += n;
+      return it += n;
     }
 
-    friend constexpr stride_counting_iterator operator+(difference_type n, stride_counting_iterator it)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator+(difference_type n, operation_counting_iterator it)
+      requires std::random_access_iterator<It>
     {
-        return it += n;
+      return it += n;
     }
 
-    friend constexpr stride_counting_iterator operator-(stride_counting_iterator it, difference_type n)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator-(operation_counting_iterator it, difference_type n)
+      requires std::random_access_iterator<It>
     {
-        return it -= n;
+      return it -= n;
     }
 
-    friend constexpr difference_type operator-(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::sized_sentinel_for<It, It>
+    friend constexpr difference_type
+    operator-(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::sized_sentinel_for<It, It>
     {
-        return base(x) - base(y);
+      return base(x) - base(y);
     }
 
     constexpr void record_equality_comparison() const {
@@ -849,35 +850,35 @@ public:
         ++counts_->equal_cmps;
     }
 
-    constexpr bool operator==(stride_counting_iterator const& other) const
-        requires std::sentinel_for<It, It>
+    constexpr bool operator==(operation_counting_iterator const& other) const
+      requires std::sentinel_for<It, It>
     {
       record_equality_comparison();
       return It(base_) == It(other.base_);
     }
 
-    friend constexpr bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator<(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) < It(y.base_);
+      return It(x.base_) < It(y.base_);
     }
 
-    friend constexpr bool operator>(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator>(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) > It(y.base_);
+      return It(x.base_) > It(y.base_);
     }
 
-    friend constexpr bool operator<=(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator<=(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) <= It(y.base_);
+      return It(x.base_) <= It(y.base_);
     }
 
-    friend constexpr bool operator>=(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator>=(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) >= It(y.base_);
+      return It(x.base_) >= It(y.base_);
     }
 
     template <class T>
@@ -899,7 +900,7 @@ private:
     IteratorOpCounts* counts_ = nullptr;
 };
 template <class It>
-stride_counting_iterator(It) -> stride_counting_iterator<It>;
+operation_counting_iterator(It) -> operation_counting_iterator<It>;
 
 #endif // TEST_STD_VER > 17
 
