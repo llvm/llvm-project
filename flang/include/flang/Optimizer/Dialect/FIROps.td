@@ -859,7 +859,7 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
 def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
   [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "create an assumed-rank box given another assumed rank-box";
+  let summary = "create an assumed-rank box given another assumed-rank box";
 
   let description = [{
     Limited version of fir.rebox for assumed-rank. Only the lower bounds,
