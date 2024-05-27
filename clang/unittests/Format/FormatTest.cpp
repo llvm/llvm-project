@@ -6636,6 +6636,26 @@ TEST_F(FormatTest, EscapedNewlines) {
                "  int x(int a);",
                AlignLeft);
 
+  constexpr StringRef Code{"#define A   \\\n"
+                           "  int a123; \\\n"
+                           "  int a;    \\\n"
+                           "  int a1234;"};
+  verifyFormat(Code, AlignLeft);
+
+  constexpr StringRef Code2{"#define A    \\\n"
+                            "  int a123;  \\\n"
+                            "  int a;     \\\n"
+                            "  int a1234;"};
+  auto LastLine = getLLVMStyle();
+  LastLine.AlignEscapedNewlines = FormatStyle::ENAS_LeftWithLastLine;
+  verifyFormat(Code2, LastLine);
+
+  LastLine.ColumnLimit = 13;
+  verifyFormat(Code, LastLine);
+
+  LastLine.ColumnLimit = 0;
+  verifyFormat(Code2, LastLine);
+
   FormatStyle DontAlign = getLLVMStyle();
   DontAlign.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   DontAlign.MaxEmptyLinesToKeep = 3;
