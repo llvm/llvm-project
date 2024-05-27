@@ -810,6 +810,7 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
     const Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
+  SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
 
   // By doing RPO we make sure that all predecessors already have weights
   // calculated before visiting theirs successors.
@@ -832,9 +833,10 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
       if (EstimatedLoopWeight.count(LD))
         continue;
 
-      if (!LoopExitBlocks.count(LD))
-        getLoopExitBlocks(LoopBB, LoopExitBlocks[LD]);
-      const SmallVectorImpl<BasicBlock *> &Exits = LoopExitBlocks[LD];
+      auto Res = LoopExitBlocks.try_emplace(LD);
+      SmallVectorImpl<BasicBlock *> &Exits = Res.first->second;
+      if (Res.second)
+        getLoopExitBlocks(LoopBB, Exits);
       auto LoopWeight = getMaxEstimatedEdgeWeight(
           LoopBB, make_range(Exits.begin(), Exits.end()));
 

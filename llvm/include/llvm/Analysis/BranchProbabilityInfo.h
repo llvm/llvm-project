@@ -343,9 +343,6 @@ private:
   /// Keeps mapping of a loop to estimated weight to enter the loop.
   SmallDenseMap<LoopData, uint32_t> EstimatedLoopWeight;
 
-  /// Keeps mapping of a Loop to its "exit" blocks.
-  SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
-
   /// Helper to construct LoopBlock for \p BB.
   LoopBlock getLoopBlock(const BasicBlock *BB) const {
     return LoopBlock(BB, *LI, *SccI.get());
