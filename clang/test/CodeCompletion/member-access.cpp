@@ -384,3 +384,20 @@ void Foo() {
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:382:5 %s -o - | FileCheck -check-prefix=CHECK-DEREF-DEPENDENT %s
 // CHECK-DEREF-DEPENDENT: [#void#]Add()
 }
+
+namespace explicit_object {
+struct A {
+  void foo1(this const A& self, int);
+  template <class Self>
+  void foo2(this Self&& self, long);
+  void foo3(this auto&& self, float);
+};
+
+void test(A& a) {
+  a.foo
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -code-completion-at=%s:397:7 %s -o - | FileCheck -check-prefix=CHECK-EXPLICIT-OBJECT %s
+// CHECK-EXPLICIT-OBJECT: [#void#]foo1(<#int#>)
+// CHECK-EXPLICIT-OBJECT: [#void#]foo2(<#long#>)
+// CHECK-EXPLICIT-OBJECT: [#void#]foo3(<#float#>)
+}
+}

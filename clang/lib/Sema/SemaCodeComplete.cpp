@@ -3119,6 +3119,9 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
     const ParmVarDecl *Param = Function->getParamDecl(P);
 
+    if (Param->isExplicitObjectParameter())
+      continue;
+
     if (Param->hasDefaultArg() && !InOptional) {
       // When we see an optional default argument, put that argument and
       // the remaining default arguments into a new, optional string.
