@@ -638,7 +638,7 @@ gpu.module @test_module_30 {
   }
   // CHECK-LABEL: @subgroup_reduce_xor
   gpu.func @subgroup_reduce_xor(%arg0 : i32) {
-    // CHECK nvvm.redux.sync xor {{.*}}
+    // CHECK: nvvm.redux.sync xor {{.*}}
     %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }

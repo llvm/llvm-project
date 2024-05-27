@@ -11,7 +11,7 @@ func.func @m16n8k16_fp16(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %arg2: 
   // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xf16>>
-  // CHECK-NOT llvm.extractvalue
+  // CHECK-NOT: llvm.extractvalue
   // CHECK: [[d:%.+]] = nvvm.mma.sync
   // CHECK-SAME: shape = #nvvm.shape<m = 16, n = 8, k = 16>
   %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
@@ -56,7 +56,7 @@ func.func @m16n8k8_fp16(%arg0: vector<2x2xf16>, %arg1: vector<1x2xf16>, %arg2: v
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<1 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xf16>>
-  // CHECK-NOT llvm.extractvalue
+  // CHECK-NOT: llvm.extractvalue
   // CHECK: [[d:%.+]] = nvvm.mma.sync
   // CHECK-SAME: shape = #nvvm.shape<m = 16, n = 8, k = 8>
   %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 8]} : (vector<2x2xf16>, vector<1x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
@@ -360,7 +360,7 @@ func.func @mma_sp_sync_f16_16832(%arg0: vector<4x2xf16>,
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xf16>>
 
-  // CHECK-NOT llvm.extractvalue
+  // CHECK-NOT: llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
 
@@ -396,7 +396,7 @@ func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>
   // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xf16>>
 
-  // CHECK-NOT llvm.extractvalue
+  // CHECK-NOT: llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
 
@@ -455,7 +455,7 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
   // CHECK: llvm.extractvalue %{{.*}}[{{.*}}] : !llvm.array<2 x vector<2xi32>>
   // CHECK: llvm.extractvalue %{{.*}}[{{.*}}] : !llvm.array<2 x vector<2xi32>>
 
-  // CHECK-NOT llvm.extractvalue
+  // CHECK-NOT: llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
 
