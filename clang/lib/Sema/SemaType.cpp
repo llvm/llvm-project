@@ -7525,16 +7525,16 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
 
 std::optional<FunctionEffectMode>
 Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName) {
-  if (DiagnoseUnexpandedParameterPack(CondExpr))
-    return std::nullopt;
   if (CondExpr->isTypeDependent() || CondExpr->isValueDependent())
     return FunctionEffectMode::Dependent;
 
   std::optional<llvm::APSInt> ConditionValue =
       CondExpr->getIntegerConstantExpr(Context);
   if (!ConditionValue) {
+    // FIXME: err_attribute_argument_type doesn't quote the attribute
+    // name but needs to; users are inconsistent.
     Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
-        << ("'" + AttributeName.str() + "'") << AANT_ArgumentIntegerConstant
+        << AttributeName << AANT_ArgumentIntegerConstant
         << CondExpr->getSourceRange();
     return std::nullopt;
   }

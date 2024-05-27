@@ -130,7 +130,7 @@ struct S {
 #endif // __cplusplus
 
 // --- COMPUTED NONBLOCKING ---
-void f4() [[clang::nonblocking(__builtin_memset)]] {} // expected-error {{'nonblocking' attribute requires an integer constant}}
+void f4() [[clang::nonblocking(__builtin_memset)]] {} // expected-error {{nonblocking attribute requires an integer constant}}
 
 #ifdef __cplusplus
 // Unexpanded parameter pack
