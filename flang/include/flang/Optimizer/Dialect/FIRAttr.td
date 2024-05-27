@@ -70,4 +70,15 @@ def fir_BoxFieldAttr : I32EnumAttr<
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 
+def fir_LowerBoundModifierAttribute : I32EnumAttr<
+    "LowerBoundModifierAttribute",
+    "Describes how to modify lower bounds",
+    [
+      I32EnumAttrCase<"Preserve", 0, "preserve">,
+      I32EnumAttrCase<"SetToOnes", 1, "ones">,
+      I32EnumAttrCase<"SetToZeroes", 2, "zeroes">,
+    ]> {
+  let cppNamespace = "::fir";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS
