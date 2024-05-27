@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -694,6 +696,105 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   return success();
 }
 
+/// Project dimsPos to their collapsed positions in the reassocIndices.
+///
+/// For example, given dimsPos [0, 1, 2, 4], and matching reassocIndices
+/// [[0], [1, 2], [3], [4]], it returns [0, 1, 1, 3]. Because for pos 0,
+/// the reassoc dim [0] is 0. For pos 1 and 2, the reassoc dim in pos
+/// [1, 2] is 1. And for pos 4, the reassoc dim [4] is 3.
+static SmallVector<int64_t>
+projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
+                             ArrayRef<ReassociationIndices> reassocIndices) {
+  SmallVector<int64_t> projectedPos;
+
+  // Map each dimension to the position of corresponding reassociation index.
+  for (auto pos : dimsPos) {
+    for (auto [idx, indices] : llvm::enumerate(reassocIndices)) {
+      // If the dimension is present in the current indices group, the group
+      // position within the reassociation map is the desired projected
+      // dimension position.
+      if (llvm::any_of(indices,
+                       [&](int64_t expandDim) { return expandDim == pos; })) {
+        projectedPos.push_back(idx);
+        break;
+      }
+    }
+  }
+  assert(projectedPos.size() == dimsPos.size() && "Invalid dim pos projection");
+
+  return projectedPos;
+}
+
+/// Bubble up pack op through expand shape op.
+static LogicalResult
+bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
+                                 tensor::PackOp packOp,
+                                 PatternRewriter &rewriter) {
+  // Cannot propagate shape expansion if there is outer dimensions permutation.
+  ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+  if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
+    return rewriter.notifyMatchFailure(
+        packOp, "expects outer_dims_perm is empty or an identity permutation");
+  }
+
+  // Validate dimensions' relations between shape expansion and packing.
+  SmallVector<ReassociationIndices, 4> reassoc =
+      expandOp.getReassociationIndices();
+  ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
+  llvm::SetVector<int64_t> packDimsPos(packInnerDims.begin(),
+                                       packInnerDims.end());
+
+  for (auto [idx, indices] : llvm::enumerate(reassoc)) {
+    llvm::SetVector<int64_t> expandDimPos(indices.begin(), indices.end());
+    llvm::SetVector<int64_t> packedDims =
+        llvm::set_intersection(packDimsPos, expandDimPos);
+
+    // The expanded dimension is not packed - simply continue.
+    if (packedDims.empty())
+      continue;
+    // Shape expansion cannot be propagated when multiple expanded dimension are
+    // packed.
+    if (packedDims.size() > 1)
+      return rewriter.notifyMatchFailure(
+          packOp, "only one of the expanded dimensions can be packed");
+    // Only the inner-most dim should be packed. Otherwise, elements order will
+    // be affected after operation reordering.
+    if (packedDims[0] != indices.back())
+      return rewriter.notifyMatchFailure(
+          packOp, "can only pack the inner-most expanded dimension");
+  }
+
+  // Project pack.inner_dims_pos to positions before shape expansion.
+  SmallVector<int64_t> projectedInnerDimsPos =
+      projectDimsPosIntoReassocPos(packInnerDims, reassoc);
+
+  // Project the shape expansion to new packed shape.
+  // The pack.outer_dims_perm is restricted to identity so, the permutation can
+  // be omitted for simplicity.
+  RankedTensorType newPackType = tensor::PackOp::inferPackedType(
+      expandOp.getSrcType(), packOp.getStaticInnerTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  auto reassocExpand =
+      getReassociationIndicesForReshape(newPackType, packOp.getDestType());
+  if (!reassocExpand)
+    return rewriter.notifyMatchFailure(
+        packOp, "could not reassociate dims after bubbling up");
+
+  Value destTensor = tensor::PackOp::createDestinationTensor(
+      rewriter, packOp.getLoc(), expandOp.getSrc(), packOp.getMixedTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  Value packedVal = rewriter.create<tensor::PackOp>(
+      packOp.getLoc(), expandOp.getSrc(), destTensor, projectedInnerDimsPos,
+      packOp.getMixedTiles(), packOp.getPaddingValue(),
+      /*outerDimsPerm=*/SmallVector<int64_t>{});
+
+  Value newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
+      packOp.getLoc(), packOp.getDestType(), packedVal, *reassocExpand);
+  rewriter.replaceOp(packOp, newExpandOp);
+
+  return success();
+}
+
 class BubbleUpPackOpThroughReshapeOp final
     : public OpRewritePattern<tensor::PackOp> {
 public:
@@ -722,6 +823,9 @@ public:
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
         .Case([&](tensor::CollapseShapeOp op) {
           return bubbleUpPackOpThroughCollapseShape(op, packOp, rewriter);
+        })
+        .Case([&](tensor::ExpandShapeOp op) {
+          return bubbleUpPackOpThroughExpandShape(op, packOp, rewriter);
         })
         .Default([](Operation *) { return failure(); });
   }
