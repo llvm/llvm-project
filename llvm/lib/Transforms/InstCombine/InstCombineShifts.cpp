@@ -1174,7 +1174,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // X & (CC << C)
         Value *M = Builder.CreateAnd(X, ConstantInt::get(Ty, CC->shl(*C)),
                                      X->getName() + ".mask");
-        return BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        auto *NewOp = BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(Op0BO);
+            Disjoint && Disjoint->isDisjoint())
+          cast<PossiblyDisjointInst>(NewOp)->setIsDisjoint(true);
+        return NewOp;
       }
     }
 
@@ -1266,6 +1270,17 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
                                    m_Value(Y))))) {
     Value *NewLshr = Builder.CreateLShr(Y, Op1, "", /*isExact=*/true);
     auto *NewSub = BinaryOperator::CreateNUWSub(X, NewLshr);
+    NewSub->setHasNoSignedWrap(
+        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
+    return NewSub;
+  }
+
+  // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
+  if (I.isExact() &&
+      match(Op0, m_OneUse(m_NUWSub(m_Value(X),
+                                   m_NUWShl(m_Value(Y), m_Specific(Op1)))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1, "", /*isExact=*/true);
+    auto *NewSub = BinaryOperator::CreateNUWSub(NewLshr, Y);
     NewSub->setHasNoSignedWrap(
         cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
     return NewSub;
