@@ -34,7 +34,7 @@
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)
 # POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
-# POSTCHECK-EMPTY
+# POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK: DW_AT_location [DW_FORM_loclistx]
 # POSTCHECK-SAME: indexed (0x0)
