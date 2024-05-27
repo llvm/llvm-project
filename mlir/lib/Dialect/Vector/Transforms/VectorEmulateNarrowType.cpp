@@ -1119,8 +1119,9 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
                                 PatternRewriter &rewriter) const override {
     // Verify the preconditions.
     Value srcValue = conversionOp.getIn();
-    auto srcVecType = cast<VectorType>(srcValue.getType());
-    auto dstVecType = cast<VectorType>(conversionOp.getType());
+    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
+    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
+
     if (failed(
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
       return failure();

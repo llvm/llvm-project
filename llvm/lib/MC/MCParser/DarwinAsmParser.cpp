@@ -705,7 +705,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
                                    .Case("__datacoal_nt", "__data")
                                    .Default(Section);
 
-    if (!Section.equals(NonCoalSection)) {
+    if (Section != NonCoalSection) {
       StringRef SectionVal(Loc.getPointer());
       size_t B = SectionVal.find(',') + 1, E = SectionVal.find(',', B);
       SMLoc BLoc = SMLoc::getFromPointer(SectionVal.data() + B);

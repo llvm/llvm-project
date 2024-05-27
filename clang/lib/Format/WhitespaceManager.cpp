@@ -107,7 +107,8 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/true);
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/false);
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
@@ -878,22 +879,27 @@ void WhitespaceManager::alignConsecutiveColons(
       Changes, /*StartAt=*/0, AlignStyle);
 }
 
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
+void WhitespaceManager::alignConsecutiveShortCaseStatements(bool IsExpr) {
   if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
+      !(IsExpr ? Style.AllowShortCaseExpressionOnASingleLine
+               : Style.AllowShortCaseLabelsOnASingleLine)) {
     return;
   }
 
+  const auto Type = IsExpr ? TT_CaseLabelArrow : TT_CaseLabelColon;
+  const auto &Option = Style.AlignConsecutiveShortCaseStatements;
+  const bool AlignArrowOrColon =
+      IsExpr ? Option.AlignCaseArrows : Option.AlignCaseColons;
+
   auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
+    if (AlignArrowOrColon)
+      return C.Tok->is(Type);
 
     // Ignore 'IsInsideToken' to allow matching trailing comments which
     // need to be reflowed as that causes the token to appear in two
     // different changes, which will cause incorrect alignment as we'll
     // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
+    return !C.IsInsideToken && C.Tok->Previous && C.Tok->Previous->is(Type);
   };
 
   unsigned MinColumn = 0;
@@ -944,7 +950,7 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
     if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
+    if (Changes[I].Tok->is(Type)) {
       LineIsEmptyCase =
           !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
 

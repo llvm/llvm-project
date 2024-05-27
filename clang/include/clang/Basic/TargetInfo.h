@@ -97,6 +97,10 @@ struct TransferrableTargetInfo {
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
 
+  // This is an optional parameter for targets that
+  // don't use 'LongLongAlign' for '_BitInt' max alignment
+  std::optional<unsigned> BitIntMaxAlign;
+
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
   unsigned char AccumWidth, AccumAlign;
@@ -517,6 +521,22 @@ public:
 
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
+
+  /// getBitIntMaxAlign() - Returns the maximum possible alignment of
+  /// '_BitInt' and 'unsigned _BitInt'.
+  unsigned getBitIntMaxAlign() const {
+    return BitIntMaxAlign.value_or(LongLongAlign);
+  }
+
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
+  /// 'unsigned _BitInt' for this target, in bits.
+  unsigned getBitIntWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
+  unsigned getBitIntAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getBitIntMaxAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.

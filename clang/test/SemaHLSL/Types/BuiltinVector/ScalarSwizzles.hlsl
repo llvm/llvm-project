@@ -54,7 +54,7 @@ vector<uint64_t,4> FillOneUnsignedLong(){
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 2.500000e+00
 
 double2 FillTwoPointFive(){
-  return 2.5.rr;
+  return 2.5l.rr;
 }
 
 // CHECK-LABEL: FillOneHalf
@@ -63,7 +63,7 @@ double2 FillTwoPointFive(){
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 5.000000e-01
 
 double3 FillOneHalf(){
-  return .5.rrr;
+  return .5l.rrr;
 }
 
 // CHECK-LABEL: FillTwoPointFiveFloat
@@ -119,5 +119,14 @@ int64_t4 HooBoy() {
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
 
 float3 AllRighty() {
+  return 1.l.rrr;
+}
+
+// CHECK-LABEL: AllRighty2
+// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+
+float3 AllRighty2() {
   return 1..rrr;
 }

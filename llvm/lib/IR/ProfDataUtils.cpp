@@ -46,6 +46,9 @@ constexpr unsigned WeightsIdx = 1;
 // the minimum number of operands for MD_prof nodes with branch weights
 constexpr unsigned MinBWOps = 3;
 
+// the minimum number of operands for MD_prof nodes with value profiles
+constexpr unsigned MinVPOps = 5;
+
 // We may want to add support for other MD_prof types, so provide an abstraction
 // for checking the metadata type.
 bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
@@ -97,9 +100,23 @@ bool isBranchWeightMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, "branch_weights", MinBWOps);
 }
 
+bool isValueProfileMD(const MDNode *ProfileData) {
+  return isTargetMD(ProfileData, "VP", MinVPOps);
+}
+
 bool hasBranchWeightMD(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
   return isBranchWeightMD(ProfileData);
+}
+
+bool hasCountTypeMD(const Instruction &I) {
+  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
+  // Value profiles record count-type information.
+  if (isValueProfileMD(ProfileData))
+    return true;
+  // Conservatively assume non CallBase instruction only get taken/not-taken
+  // branch probability, so not interpret them as count.
+  return isa<CallBase>(I) && !isBranchWeightMD(ProfileData);
 }
 
 bool hasValidBranchWeightMD(const Instruction &I) {
@@ -210,6 +227,9 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
   if (!ProfDataName || (ProfDataName->getString() != "branch_weights" &&
                         ProfDataName->getString() != "VP"))
+    return;
+
+  if (!hasCountTypeMD(I))
     return;
 
   LLVMContext &C = I.getContext();

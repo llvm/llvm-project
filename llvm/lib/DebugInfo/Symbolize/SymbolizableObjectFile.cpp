@@ -355,7 +355,7 @@ std::vector<object::SectionedAddress>
 SymbolizableObjectFile::findSymbol(StringRef Symbol, uint64_t Offset) const {
   std::vector<object::SectionedAddress> Result;
   for (const SymbolDesc &Sym : Symbols) {
-    if (Sym.Name.equals(Symbol)) {
+    if (Sym.Name == Symbol) {
       uint64_t Addr = Sym.Addr;
       if (Offset < Sym.Size)
         Addr += Offset;

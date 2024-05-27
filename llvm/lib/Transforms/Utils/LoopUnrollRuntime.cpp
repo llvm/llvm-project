@@ -917,9 +917,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     for (Instruction &I : *BB) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      RemapDbgVariableRecordRange(M, I.getDbgRecordRange(), VMap,
-                                  RF_NoModuleLevelChanges |
-                                      RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(M, I.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 

@@ -627,9 +627,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
     func.getOperation()->setAttr(
-        fir::getCUDAAttrName(),
-        fir::getCUDAProcAttribute(func.getContext(),
-                                  *characteristic->cudaSubprogramAttrs));
+        cuf::getProcAttrName(),
+        cuf::getProcAttribute(func.getContext(),
+                              *characteristic->cudaSubprogramAttrs));
   }
 
   if (sym) {
@@ -649,9 +649,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
           ubAttr =
               mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDALaunchBoundsAttrName(),
-            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
-                                           minBPMAttr, ubAttr));
+            cuf::getLaunchBoundsAttrName(),
+            cuf::LaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                       minBPMAttr, ubAttr));
       }
 
       if (!details->cudaClusterDims().empty()) {
@@ -663,9 +663,8 @@ setCUDAAttributes(mlir::func::FuncOp func,
         auto zAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDAClusterDimsAttrName(),
-            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
-                                          zAttr));
+            cuf::getClusterDimsAttrName(),
+            cuf::ClusterDimsAttr::get(func.getContext(), xAttr, yAttr, zAttr));
       }
     }
   }
@@ -1116,8 +1115,8 @@ private:
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
       attrs.emplace_back(
-          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
+          mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
+          cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 

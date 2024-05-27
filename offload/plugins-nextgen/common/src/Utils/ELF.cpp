@@ -36,6 +36,21 @@ bool utils::elf::isELF(StringRef Buffer) {
   }
 }
 
+uint16_t utils::elf::getTargetMachine() {
+#if defined(__x86_64__)
+  return EM_X86_64;
+#elif defined(__s390x__)
+  return EM_S390;
+#elif defined(__aarch64__)
+  return EM_AARCH64;
+#elif defined(__powerpc64__)
+  return EM_PPC64;
+#else
+#warning "Unknown ELF compilation target architecture"
+  return EM_NONE;
+#endif
+}
+
 template <class ELFT>
 static Expected<bool>
 checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {

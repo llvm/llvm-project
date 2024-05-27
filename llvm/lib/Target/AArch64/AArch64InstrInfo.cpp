@@ -5717,7 +5717,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
     Offset = Remainder;
   else {
     NewOffset = NewOffset < 0 ? MinOff : MaxOff;
-    Offset = Offset - NewOffset * Scale;
+    Offset = Offset - (NewOffset * Scale);
   }
 
   if (EmittableOffset)

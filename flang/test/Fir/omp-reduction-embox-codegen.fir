@@ -25,7 +25,7 @@ omp.declare_reduction @test_reduction : !fir.ref<!fir.box<i32>> init {
 
 func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
   %4 = fir.alloca !fir.box<i32>
-  omp.parallel byref reduction(@test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
+  omp.parallel reduction(byref @test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
     omp.terminator
   }
   return
