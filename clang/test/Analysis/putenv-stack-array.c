@@ -45,6 +45,15 @@ int test_auto_var_subarray() {
   return putenv(env + 100); // expected-warning{{The 'putenv' function should not be called with}}
 }
 
+int f_test_auto_var_call(char *env) {
+  return putenv(env); // expected-warning{{The 'putenv' function should not be called with}}
+}
+
+int test_auto_var_call() {
+  char env[1024];
+  return f_test_auto_var_call(env);
+}
+
 int test_constant() {
   char *env = "TEST";
   return putenv(env); // no-warning: data is not on the stack
@@ -67,4 +76,15 @@ void test_auto_var_reset() {
   // at this point and does not copy the returned string, the data may
   // become invalid.
   putenv((char *)"NAME=anothervalue");
+}
+
+void f_main(char *env) {
+  putenv(env); // no warning: string allocated in stack of 'main'
+}
+
+int main(int argc, char **argv) {
+  char env[] = "NAME=value";
+  putenv(env); // no warning: string allocated in stack of 'main'
+  f_main(env);
+  return 0;
 }
