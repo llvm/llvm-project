@@ -570,14 +570,14 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
 }
 
 def EliminateExplicitRounding : Pass<"eliminate-explicit-rounding"> {
-  let summary = "Eliminate redundant truncf/extf pairs";
+  let summary = "Eliminate the intermidiate truncf/extf pairs";
   let description = [{
-    `legalize-to-f32` and `arith-emulate-unsupported-floats` pass does f32 promotion for every op belonging to the
-    illegal op list. Once there are some consecutive illegal ops, these passes
-    will insert redundant `arith.truncf` and `arith.extf` pairs between the illegal
-    ops.
+    `legalize-to-f32` and `arith-emulate-unsupported-floats` pass does f32 promotion
+    for every op belonging to the illegal op list. Once there are some consecutive
+    illegal ops, these passes will insert `arith.truncf` and `arith.extf` pairs
+    between the illegal ops.
     
-    This pass is to eliminate the redundant truncf/extf pairs to improve
+    This pass is to eliminate the intermidiate truncf/extf pairs to improve
     performance.
 
     However, this pass may introduce numerical difference as the `f32->bf16` rounding
@@ -602,7 +602,7 @@ def EliminateExplicitRounding : Pass<"eliminate-explicit-rounding"> {
         %5 = arith.truncf %4 : vector<32xf32> to vector<32xbf16>
         return %5 : vector<32xbf16>
       }
-    // after canonicalize-f32-promotion
+    // after eliminate-explicit-rounding
     func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
         %0 = arith.extf %arg0 : vector<32xbf16> to vector<32xf32>
         %1 = math.absf %0 : vector<32xf32>
