@@ -901,7 +901,8 @@ void VPlan::execute(VPTransformState *State) {
 
   State->CFG.DTU.flush();
   assert(State->CFG.DTU.getDomTree().verify(
-      DominatorTree::VerificationLevel::Fast));
+             DominatorTree::VerificationLevel::Fast) &&
+         "DT not preserved correctly");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
