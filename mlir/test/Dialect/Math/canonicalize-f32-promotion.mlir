@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file -math-legalize-to-f32 -math-canonicalize-f32-promotion | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -math-legalize-to-f32 --arith-emulate-unsupported-floats="source-types=bf16 target-type=f32" -math-canonicalize-f32-promotion | FileCheck %s
 
 // CHECK-LABEL: @sequences
 // CHECK-SAME: ([[ARG0:%.+]]: bf16)
@@ -59,12 +59,11 @@ func.func @f16_sin_vector(%arg0: vector<32x32x32xf16>) -> vector<32x32x32xf16> {
 // CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xbf16>)
 // CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
 // CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
-// CHECK: [[SIN:%.+]] = math.sin [[ABSF]]
-// CHECK: [[TRUNCF0:%.+]] = arith.truncf [[SIN]]
-// CHECK: [[COS:%.+]] = math.cos [[ABSF]]
-// CHECK: [[TRUNCF1:%.+]] = arith.truncf [[COS]]
-// CHECK: [[ADDF:%.+]] = arith.addf
-// CHECK: return [[ADDF]] : vector<32x32x32xbf16>
+// CHECK-DAG: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK-DAG: [[COS:%.+]] = math.cos [[ABSF]]
+// CHECK: [[ADDF:%.+]] = arith.addf [[SIN]], [[COS]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[ADDF]]
+// CHECK: return [[TRUNCF]] : vector<32x32x32xbf16>
 func.func @bf16_branch_vector(%arg0: vector<32x32x32xbf16>) -> vector<32x32x32xbf16> {
   %0 = math.absf %arg0 : vector<32x32x32xbf16>
 	%1 = math.sin %0 : vector<32x32x32xbf16>
