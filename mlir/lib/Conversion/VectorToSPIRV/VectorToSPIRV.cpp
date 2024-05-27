@@ -593,7 +593,7 @@ struct VectorInterleaveOpConvert final
     }
 
     // Check the result vector type
-    auto oldResultType = interleaveOp.getResultVectorType();
+    VectorType oldResultType = interleaveOp.getResultVectorType();
     Type newResultType = getTypeConverter()->convertType(oldResultType);
     if (!newResultType)
       return rewriter.notifyMatchFailure(interleaveOp,
