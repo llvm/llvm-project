@@ -2246,7 +2246,7 @@ public:
 
     auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
     ModuleFile *OwningModuleFile =
-        ModuleFileIndex == 0 ? &MF : MF.DependentModules[ModuleFileIndex - 1];
+        ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
     assert(!SourceMgr.isLoadedSourceLocation(Loc) &&
            "Run out source location space");
