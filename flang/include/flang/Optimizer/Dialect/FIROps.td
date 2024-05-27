@@ -857,6 +857,43 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
+def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "create an assumed-rank box given another assumed-rank box";
+
+  let description = [{
+    Limited version of fir.rebox for assumed-rank. Only the lower bounds,
+    attribute, and element type may change.
+
+    The input may be a box or a reference to a box, in which case the operation
+    reads the incoming reference.
+    Since a fir.shift cannot be built without knowing the rank statically,
+    lower bound changes are encoded via a LowerBoundModifierAttribute.
+    Attribute and element type change are encoded in the result type.
+    Changing the element type is only allowed if the input type is a derived
+    type that extends the output element type.
+
+    Example:
+    ```
+      fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+    ```    
+  }];
+
+  let arguments = (ins
+    AnyRefOrBoxType:$box,
+    fir_LowerBoundModifierAttribute:$lbs_modifier
+  );
+
+  let results = (outs BoxOrClassType);
+
+  let assemblyFormat = [{
+    $box `lbs` $lbs_modifier
+        attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def fir_EmboxCharOp : fir_Op<"emboxchar", [NoMemoryEffect]> {
   let summary = "boxes a given CHARACTER reference and its LEN parameter";
 

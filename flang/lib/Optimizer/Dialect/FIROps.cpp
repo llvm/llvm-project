@@ -2413,6 +2413,52 @@ mlir::LogicalResult fir::ReboxOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReboxAssumedRankOp
+//===----------------------------------------------------------------------===//
+
+static bool areCompatibleAssumedRankElementType(mlir::Type inputEleTy,
+                                                mlir::Type outEleTy) {
+  if (inputEleTy == outEleTy)
+    return true;
+  // Output is unlimited polymorphic -> output dynamic type is the same as input
+  // type.
+  if (mlir::isa<mlir::NoneType>(outEleTy))
+    return true;
+  // Output/Input are derived types. Assuming input extends output type, output
+  // dynamic type is the output static type, unless output is polymorphic.
+  if (mlir::isa<fir::RecordType>(inputEleTy) &&
+      mlir::isa<fir::RecordType>(outEleTy))
+    return true;
+  if (areCompatibleCharacterTypes(inputEleTy, outEleTy))
+    return true;
+  return false;
+}
+
+mlir::LogicalResult fir::ReboxAssumedRankOp::verify() {
+  mlir::Type inputType = getBox().getType();
+  if (!mlir::isa<fir::BaseBoxType>(inputType) && !fir::isBoxAddress(inputType))
+    return emitOpError("input must be a box or box address");
+  mlir::Type inputEleTy =
+      mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(inputType))
+          .unwrapInnerType();
+  mlir::Type outEleTy =
+      mlir::cast<fir::BaseBoxType>(getType()).unwrapInnerType();
+  if (!areCompatibleAssumedRankElementType(inputEleTy, outEleTy))
+    return emitOpError("input and output element types are incompatible");
+  return mlir::success();
+}
+
+void fir::ReboxAssumedRankOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::Value inputBox = getBox();
+  if (fir::isBoxAddress(inputBox.getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // ResultOp
 //===----------------------------------------------------------------------===//
 
