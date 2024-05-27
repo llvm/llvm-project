@@ -10183,9 +10183,9 @@ SDValue SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG,
     SDVTList VTs = DAG.getVTList(MVT::v2i32, MVT::Other);
     SDValue Op = getMemIntrinsicNode(Opc, DL, VTs, Ops, MVT::v2i32, OpMMO, DAG);
     SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
-                                 DAG.getVectorIdxConstant(1, DL));
+                                 DAG.getConstant(1, DL, MVT::i32));
     SDValue Data = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
-                               DAG.getVectorIdxConstant(0, DL));
+                               DAG.getConstant(0, DL, MVT::i32));
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Data);
     SDValue Value = DAG.getNode(ISD::BITCAST, DL, LoadVT, Trunc);
     return DAG.getMergeValues({Value, Status, SDValue(Op.getNode(), 1)}, DL);
