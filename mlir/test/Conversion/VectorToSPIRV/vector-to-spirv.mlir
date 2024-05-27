@@ -501,7 +501,7 @@ func.func @interleave(%a: vector<2xf32>, %b: vector<2xf32>) -> vector<4xf32> {
 //       CHECK: %[[RES:.*]] = spirv.CompositeConstruct %[[V0]], %[[V1]] : (f32, f32) -> vector<2xf32>
 //       CHECK: return %[[RES]]
 func.func @interleave_size1(%a: vector<1xf32>, %b: vector<1xf32>) -> vector<2xf32> {
-  %0 = vector.interleave %a, %b : vector<1xf32>
+  %0 = vector.interleave %a, %b : vector<1xf32> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
