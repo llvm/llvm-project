@@ -8860,8 +8860,10 @@ def err_builtin_fn_use : Error<"builtin functions must be directly called">;
 
 def warn_call_wrong_number_of_arguments : Warning<
   "too %select{few|many}0 arguments in call to %1">;
+
 def err_atomic_builtin_must_be_pointer : Error<
-  "address argument to atomic builtin must be a pointer (%0 invalid)">;
+  "address argument to atomic builtin must be a pointer %select{|to a non-zero-sized object }1(%0 invalid)">;
+
 def err_atomic_builtin_must_be_pointer_intptr : Error<
   "address argument to atomic builtin must be a pointer to integer or pointer"
   " (%0 invalid)">;
