@@ -18481,17 +18481,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16: {
-    Intrinsic::ID IID;
-    IID = BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
-              ? Intrinsic::amdgcn_permlane16
-              : Intrinsic::amdgcn_permlanex16;
-
     llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
     llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
     llvm::Value *Src3 = EmitScalarExpr(E->getArg(3));
     llvm::Value *Src4 = EmitScalarExpr(E->getArg(4));
     llvm::Value *Src5 = EmitScalarExpr(E->getArg(5));
+
+    Intrinsic::ID IID = BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
+                            ? Intrinsic::amdgcn_permlane16
+                            : Intrinsic::amdgcn_permlanex16;
 
     llvm::Function *F = CGM.getIntrinsic(IID, Src0->getType());
     return Builder.CreateCall(F, {Src0, Src1, Src2, Src3, Src4, Src5});
