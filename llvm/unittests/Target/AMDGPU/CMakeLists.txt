@@ -22,5 +22,3 @@ add_llvm_target_unittest(AMDGPUTests
   ExecMayBeModifiedBeforeAnyUse.cpp
   LiveRegUnits.cpp
   )
-
-set_property(TARGET AMDGPUTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

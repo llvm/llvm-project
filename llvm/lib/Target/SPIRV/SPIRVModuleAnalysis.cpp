@@ -1151,6 +1151,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
     }
     break;
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
+  case SPIRV::OpAsmCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_inline_assembly);
+      Reqs.addCapability(SPIRV::Capability::AsmINTEL);
+    }
+    break;
   default:
     break;
   }
