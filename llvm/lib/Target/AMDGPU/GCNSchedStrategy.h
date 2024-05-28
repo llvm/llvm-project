@@ -163,6 +163,35 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
   return OS;
 }
 
+class GCNScheduleDAGMILive;
+class RegionPressureMap {
+  GCNScheduleDAGMILive *DAG;
+  // The live in/out pressure as indexed by the first or last MI in the region
+  // before scheduling.
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveRegMap;
+  // The mapping of RegionIDx to key instruction
+  DenseMap<unsigned, MachineInstr *> IdxToInstruction;
+  // Whether we are calculating LiveOuts or LiveIns
+  bool IsLiveOut;
+  // Whether or not the maps have been generated
+  bool IsMapGenerated = false;
+
+public:
+  RegionPressureMap() {}
+  RegionPressureMap(GCNScheduleDAGMILive *GCNDAG, bool LiveOut)
+      : DAG(GCNDAG), IsLiveOut(LiveOut) {}
+  // Build the Instr->LiveReg and RegionIdx->Instr maps
+  void buildLiveRegMap();
+
+  // Retrieve the LiveReg for a given RegionIdx
+  GCNRPTracker::LiveRegSet &getLiveRegsForRegionIdx(unsigned RegionIdx) {
+    assert(IsMapGenerated);
+    assert(IdxToInstruction.find(RegionIdx) != IdxToInstruction.end());
+    MachineInstr *Key = IdxToInstruction[RegionIdx];
+    return BBLiveRegMap[Key];
+  }
+};
+
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
@@ -170,6 +199,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
   friend class ILPInitialScheduleStage;
+  friend class RegionPressureMap;
 
   const GCNSubtarget &ST;
 
@@ -205,9 +235,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
 
-  // Region live-out cache.
-  SmallVector<GCNRPTracker::LiveRegSet, 32> LiveOuts;
-
   // Region pressure cache.
   SmallVector<GCNRegPressure, 32> Pressure;
 
@@ -218,9 +245,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
 
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveOutMap;
-
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveOutMap() const;
+
+  RegionPressureMap RegionLiveOuts;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;

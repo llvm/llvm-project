@@ -489,7 +489,8 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
     MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S)
     : ScheduleDAGMILive(C, std::move(S)), ST(MF.getSubtarget<GCNSubtarget>()),
       MFI(*MF.getInfo<SIMachineFunctionInfo>()),
-      StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy) {
+      StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy),
+      RegionLiveOuts(this, /*IsLiveOut=*/true) {
 
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
   if (RelaxedOcc) {
@@ -610,16 +611,6 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
     RPTracker.advanceBeforeNext();
     MBBLiveIns[OnlySucc] = RPTracker.moveLiveRegs();
   }
-
-  if (GCNTrackers) {
-    assert(LiveOuts.size() == Regions.size());
-    for (unsigned RegionIdx = 0; RegionIdx < Regions.size(); RegionIdx++) {
-      auto RegionBegin = Regions[RegionIdx].first;
-      auto RegionEnd = Regions[RegionIdx].second;
-      MachineInstr *LastMI = getLastMIForRegion(RegionBegin, RegionEnd);
-      LiveOuts[RegionIdx] = BBLiveOutMap.lookup(LastMI);
-    }
-  }
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
@@ -651,12 +642,29 @@ GCNScheduleDAGMILive::getBBLiveOutMap() const {
   return getLiveRegMap(BBEnders, /*After= */ true, *LIS);
 }
 
+void RegionPressureMap::buildLiveRegMap() {
+  if (IsMapGenerated) {
+    IdxToInstruction.clear();
+    BBLiveRegMap.clear();
+    IsMapGenerated = false;
+  }
+
+  BBLiveRegMap = IsLiveOut ? DAG->getBBLiveOutMap() : DAG->getBBLiveInMap();
+  for (unsigned I = 0; I < DAG->Regions.size(); I++) {
+    MachineInstr *RegionKey;
+    RegionKey = IsLiveOut ? getLastMIForRegion(DAG->Regions[I].first,
+                                               DAG->Regions[I].second)
+                          : &*DAG->Regions[I].first;
+    IdxToInstruction[I] = RegionKey;
+  }
+  IsMapGenerated = true;
+}
+
 void GCNScheduleDAGMILive::finalizeSchedule() {
   // Start actual scheduling here. This function is called by the base
   // MachineScheduler after all regions have been recorded by
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
-  LiveOuts.resize(Regions.size());
   Pressure.resize(Regions.size());
   RescheduleRegions.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
@@ -677,9 +685,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
   if (!Regions.empty()) {
     BBLiveInMap = getBBLiveInMap();
-    if (GCNTrackers) {
-      BBLiveOutMap = getBBLiveOutMap();
-    }
+    if (GCNTrackers)
+      RegionLiveOuts.buildLiveRegMap();
   }
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
@@ -1538,15 +1545,6 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   }
   DAG.Regions = NewRegions;
   DAG.RescheduleRegions = NewRescheduleRegions;
-
-  if (GCNTrackers) {
-    DAG.BBLiveOutMap = DAG.getBBLiveOutMap();
-    auto I = DAG.Regions.begin(), E = DAG.Regions.end();
-    for (; I != E; I++) {
-      MachineInstr *LastMI = getLastMIForRegion(I->first, I->second);
-      DAG.LiveOuts.push_back(DAG.BBLiveOutMap.lookup(LastMI));
-    }
-  }
 
   SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
