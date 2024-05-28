@@ -937,6 +937,7 @@ def conv_2d_ngchw_gfchw(
         U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
     ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.c, D.kh, D.kw])
 
+
 @linalg_structured_op
 def conv_2d_ngchw_gfchw_q(
     I=TensorDef(
