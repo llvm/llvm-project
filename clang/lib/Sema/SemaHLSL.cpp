@@ -347,6 +347,8 @@ class DiagnoseHLSLAvailability
 
   // Helper methods for dealing with current stage context / environment
   void SetShaderStageContext(HLSLShaderAttr::ShaderType ShaderType) {
+    static_assert(HLSLShaderAttr::ShaderTypeMaxValue < 31,
+                  "ShaderType is too big for this bitmap");
     assert((((unsigned)1) << (unsigned)ShaderType) != 0 &&
            (((unsigned)1) << (unsigned)ShaderType) != 31 &&
            "ShaderType is too big for this bitmap");

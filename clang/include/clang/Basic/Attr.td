@@ -4490,7 +4490,10 @@ def HLSLShader : InheritableAttr {
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
   let AdditionalMembers =
-[{static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
+[{
+  static const unsigned ShaderTypeMaxValue = (unsigned)HLSLShaderAttr::Amplification;
+
+  static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
     switch (ShaderType) {
       case HLSLShaderAttr::Pixel:         return llvm::Triple::Pixel;
       case HLSLShaderAttr::Vertex:        return llvm::Triple::Vertex;
