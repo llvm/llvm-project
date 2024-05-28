@@ -344,5 +344,5 @@ bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
       PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
   if (languages.Empty())
     return false;
-  return plugins[language];
+  return languages[language];
 }
