@@ -29,7 +29,7 @@
     __cpp_lib_string_udls                                   201304L [C++14]
     __cpp_lib_string_view                                   201606L [C++17]
                                                             201803L [C++20]
-    __cpp_lib_to_string                                     202306L [C++23]
+    __cpp_lib_to_string                                     202306L [C++26]
 */
 
 #include <string>
@@ -86,7 +86,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -143,7 +143,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -209,7 +209,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -293,7 +293,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -385,17 +385,8 @@
 #   error "__cpp_lib_string_view should have the value 201803L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should be defined in c++23"
-#   endif
-#   if __cpp_lib_to_string != 202306L
-#     error "__cpp_lib_to_string should have the value 202306L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_to_string
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23
