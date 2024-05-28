@@ -15840,11 +15840,8 @@ static bool createTblShuffleMask(unsigned SrcWidth, unsigned DstWidth,
   Mask.resize(MaskLen, NumElts);
 
   unsigned SrcIndex = 0;
-  for (unsigned I = 0; I < MaskLen; I += Factor)
+  for (unsigned I = IsLittleEndian ? 0 : Factor - 1; I < MaskLen; I += Factor)
     Mask[I] = SrcIndex++;
-
-  if (!IsLittleEndian)
-    std::rotate(Mask.rbegin(), Mask.rbegin() + Factor - 1, Mask.rend());
 
   return true;
 }
