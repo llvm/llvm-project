@@ -160,7 +160,6 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
     auto BranchInfo = BB->branch_info_begin();
     for (const BinaryBasicBlock *Successor : BB->successors()) {
       yaml::bolt::SuccessorInfo YamlSI;
-
       YamlSI.Index = Successor->getLayoutIndex();
       YamlSI.Count = BranchInfo->Count;
       YamlSI.Mispreds = BranchInfo->MispredictedCount;
