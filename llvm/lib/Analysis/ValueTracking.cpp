@@ -3140,6 +3140,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
       return true;
     }
 
+    // Constant ptrauth can be null, iff the base pointer can be.
+    if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
+      return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
+
     // A global variable in address space 0 is non null unless extern weak
     // or an absolute symbol reference. Other address spaces may have null as a
     // valid address for a global, so we can't assume anything.

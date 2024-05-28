@@ -150,6 +150,7 @@ syn keyword llvmKeyword
       \ preallocated
       \ private
       \ protected
+      \ ptrauth
       \ ptx_device
       \ ptx_kernel
       \ readnone

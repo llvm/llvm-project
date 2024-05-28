@@ -4754,6 +4754,40 @@ reference to the CFI jump table in the ``LowerTypeTests`` pass. These constants
 may be useful in low-level programs, such as operating system kernels, which
 need to refer to the actual function body.
 
+.. _ptrauth_constant:
+
+Pointer Authentication Constants
+--------------------------------
+
+``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)``
+
+A '``ptrauth``' constant represents a pointer with a cryptographic
+authentication signature embedded into some bits, as described in the
+`Pointer Authentication <PointerAuth.html>`__ document.
+
+A '``ptrauth``' constant is simply a constant equivalent to the
+``llvm.ptrauth.sign`` intrinsic, potentially fed by a discriminator
+``llvm.ptrauth.blend`` if needed.
+
+Its type is the same as the first argument.  An integer constant discriminator
+and an address discriminator may be optionally specified.  Otherwise, they have
+values ``i64 0`` and ``ptr null``.
+
+If the address discriminator is ``null`` then the expression is equivalent to
+
+.. code-block:: llvm
+
+    %tmp = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 DISC)
+    %val = inttoptr i64 %tmp to ptr
+
+Otherwise, the expression is equivalent to:
+
+.. code-block:: llvm
+
+    %tmp1 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr ADDRDISC to i64), i64 DISC)
+    %tmp2 = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 %tmp1)
+    %val = inttoptr i64 %tmp2 to ptr
+
 .. _constantexprs:
 
 Constant Expressions
