@@ -148,7 +148,7 @@ DEFAULT_PARAMETERS = [
         type=str,
         help="The path of the compiler to use for testing.",
         actions=lambda cxx: [
-            AddSubstitution("%{cxx}", cxx),
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
         ],
     ),
     Parameter(
