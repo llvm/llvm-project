@@ -106,11 +106,11 @@ define <16 x i8> @v16i8(<16 x i8> %a) {
 define <32 x i8> @v16i8_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: v16i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI7_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI7_0)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    lui a1, %hi(.LCPI7_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI7_0)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vle8.v v12, (a1)
 ; CHECK-NEXT:    vmv1r.v v14, v9
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vid.v v8
@@ -230,11 +230,11 @@ define <16 x i16> @v16i16(<16 x i16> %a) {
 define <32 x i16> @v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: v16i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI15_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI15_0)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI15_0)
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vmv2r.v v20, v10
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vrgather.vv v8, v12, v16
@@ -363,11 +363,11 @@ define <16 x i32> @v16i32(<16 x i32> %a) {
 define <32 x i32> @v16i32_2(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: v16i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI23_0)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vle16.v v20, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    lui a1, %hi(.LCPI23_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI23_0)
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vle16.v v20, (a1)
 ; CHECK-NEXT:    vmv4r.v v24, v12
 ; CHECK-NEXT:    vmv4r.v v16, v8
 ; CHECK-NEXT:    vrgatherei16.vv v8, v16, v20
@@ -548,11 +548,11 @@ define <16 x half> @v16f16(<16 x half> %a) {
 define <32 x half> @v16f16_2(<16 x half> %a) {
 ; CHECK-LABEL: v16f16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI35_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI35_0)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    lui a1, %hi(.LCPI35_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI35_0)
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -719,11 +719,11 @@ define <8 x double> @v4f64_2(<4 x double> %a, <4 x double> %b) {
 define <32 x i8> @v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI46_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    lui a1, %hi(.LCPI46_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI46_0)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vle8.v v12, (a1)
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
