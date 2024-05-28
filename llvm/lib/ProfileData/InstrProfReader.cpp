@@ -1325,17 +1325,17 @@ Error IndexedInstrProfReader::readHeader() {
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
       Start + Header->HashOffset, Cur, Start, HashType, Header->Version);
 
-  const uint64_t ProfileVersion = GET_VERSION(Header->Version);
   // The MemProfOffset field in the header is only valid when the format
   // version is higher than 8 (when it was introduced).
-  if (ProfileVersion >= 8 && Header->Version & VARIANT_MASK_MEMPROF) {
+  if (GET_VERSION(Header->Version) >= 8 &&
+      Header->Version & VARIANT_MASK_MEMPROF) {
     if (Error E = MemProfReader.deserialize(Start, Header->MemProfOffset))
       return E;
   }
 
   // BinaryIdOffset field in the header is only valid when the format version
   // is higher than 9 (when it was introduced).
-  if (ProfileVersion >= 9) {
+  if (GET_VERSION(Header->Version) >= 9) {
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
     BinaryIdsSize =
@@ -1349,7 +1349,7 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
-  if (ProfileVersion >= 12) {
+  if (GET_VERSION(Header->Version) >= 12) {
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
     CompressedVTableNamesLen =
@@ -1362,7 +1362,8 @@ Error IndexedInstrProfReader::readHeader() {
       return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
-  if (ProfileVersion >= 10 && Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
+  if (GET_VERSION(Header->Version) >= 10 &&
+      Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
     const unsigned char *Ptr = Start + Header->TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
     // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
