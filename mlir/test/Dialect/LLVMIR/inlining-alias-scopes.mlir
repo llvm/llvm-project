@@ -20,14 +20,15 @@
 // CHECK: llvm.store
 // CHECK-SAME: alias_scopes = [#[[$FOO_STORE]]]
 // CHECK-SAME: noalias_scopes = [#[[$FOO_LOAD]]]
-llvm.func @foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %c: i1) {
+llvm.func @foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
   llvm.intr.experimental.noalias.scope.decl #alias_scope
   %2 = llvm.load %arg1 {alias_scopes = [#alias_scope], alignment = 4 : i64, noalias_scopes = [#alias_scope1]} : !llvm.ptr -> f32
-  scf.if %c {
+  "test.one_region_op"() ({
     %3 = llvm.getelementptr inbounds %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %2, %3 {alias_scopes = [#alias_scope1], alignment = 4 : i64, noalias_scopes = [#alias_scope]} : f32, !llvm.ptr
-  }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
   llvm.return
 }
 
@@ -39,8 +40,8 @@ llvm.func @foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %c: i1) {
 // CHECK: llvm.store
 // CHECK-SAME: alias_scopes = [#[[$BAR_STORE]]]
 // CHECK-SAME: noalias_scopes = [#[[$BAR_LOAD]]]
-llvm.func @clone_alias_scopes(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i1) {
-  llvm.call @foo(%arg0, %arg1, %arg2) : (!llvm.ptr, !llvm.ptr, i1) -> ()
+llvm.func @clone_alias_scopes(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  llvm.call @foo(%arg0, %arg1) : (!llvm.ptr, !llvm.ptr) -> ()
   llvm.return
 }
 
@@ -80,7 +81,7 @@ llvm.func @clone_alias_scopes(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i1) {
 // CHECK-NOT: {{(no)?}}alias_scopes =
 // CHECK: llvm.store
 // CHECK-NOT: {{(no)?}}alias_scopes =
-llvm.func @callee_with_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %c: i1) {
+llvm.func @callee_with_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
   %1 = llvm.mlir.constant(8 : i64) : i64
   %2 = llvm.mlir.constant(7 : i64) : i64
@@ -89,18 +90,19 @@ llvm.func @callee_with_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm
   llvm.store %3, %4 {alias_scopes = [#alias_scope], alignment = 4 : i64, noalias_scopes = [#alias_scope1]} : f32, !llvm.ptr
   %5 = llvm.getelementptr inbounds %arg1[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %3, %5 {alias_scopes = [#alias_scope1], alignment = 4 : i64, noalias_scopes = [#alias_scope]} : f32, !llvm.ptr
-  scf.if %c {
+  "test.one_region_op"() ({
     %6 = llvm.load %arg2 {alignment = 4 : i64} : !llvm.ptr -> f32
     %7 = llvm.getelementptr inbounds %arg0[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %6, %7 {alignment = 4 : i64} : f32, !llvm.ptr
-  }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
   llvm.return
 }
 
 // CHECK-LABEL: llvm.func @callee_without_metadata(
 // CHECK-NOT: {{(no)?}}alias_scopes =
 
-llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %c: i1) {
+llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
   %1 = llvm.mlir.constant(8 : i64) : i64
   %2 = llvm.mlir.constant(7 : i64) : i64
@@ -109,11 +111,13 @@ llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !l
   llvm.store %3, %4 {alignment = 4 : i64} : f32, !llvm.ptr
   %5 = llvm.getelementptr inbounds %arg1[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %3, %5 {alignment = 4 : i64} : f32, !llvm.ptr
-  scf.if %c {
+  "test.one_region_op"() ({
     %6 = llvm.load %arg2 {alignment = 4 : i64} : !llvm.ptr -> f32
     %7 = llvm.getelementptr inbounds %arg0[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %6, %7 {alignment = 4 : i64} : f32, !llvm.ptr
-  }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+
   llvm.return
 }
 
@@ -195,10 +199,10 @@ llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !l
 
 llvm.func @caller(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: i1) {
   %0 = llvm.load %arg2 {alias_scopes = [#alias_scope2], alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
-  llvm.call @callee_with_metadata(%arg0, %arg1, %0, %arg3) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i1) -> ()
-  llvm.call @callee_with_metadata(%arg1, %arg1, %arg0, %arg3) {alias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i1) -> ()
-  llvm.call @callee_without_metadata(%arg0, %arg1, %0, %arg3) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i1) -> ()
-  llvm.call @callee_without_metadata(%arg1, %arg1, %arg0, %arg3) {alias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i1) -> ()
+  llvm.call @callee_with_metadata(%arg0, %arg1, %0) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  llvm.call @callee_with_metadata(%arg1, %arg1, %arg0) {alias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  llvm.call @callee_without_metadata(%arg0, %arg1, %0) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  llvm.call @callee_without_metadata(%arg1, %arg1, %arg0) {alias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
   llvm.return
 }
 
@@ -408,12 +412,12 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 
 llvm.func @foo(%arg: i32)
 
-llvm.func @region(%arg0: !llvm.ptr {llvm.noalias}, %c: i1) {
-  scf.if %c {
+llvm.func @region(%arg0: !llvm.ptr {llvm.noalias}) {
+  "test.one_region_op"() ({
     %1 = llvm.load %arg0 : !llvm.ptr -> i32
     llvm.call @foo(%1) : (i32) -> ()
-    scf.yield
-  }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
   llvm.return
 }
 
@@ -423,7 +427,7 @@ llvm.func @region(%arg0: !llvm.ptr {llvm.noalias}, %c: i1) {
 // CHECK: llvm.call
 // CHECK-NOT: alias_scopes
 // CHECK-SAME: noalias_scopes = [#[[$ARG_SCOPE]]]
-llvm.func @noalias_with_region(%arg0: !llvm.ptr, %arg1: i1) {
-  llvm.call @region(%arg0, %arg1) : (!llvm.ptr, i1) -> ()
+llvm.func @noalias_with_region(%arg0: !llvm.ptr) {
+  llvm.call @region(%arg0) : (!llvm.ptr) -> ()
   llvm.return
 }
