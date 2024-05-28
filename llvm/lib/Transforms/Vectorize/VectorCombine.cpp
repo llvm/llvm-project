@@ -1742,9 +1742,9 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
   if (auto *BI = dyn_cast<BinaryOperator>(I))
     return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(), Ops[0],
                                Ops[1]);
-  if (auto CI = dyn_cast<CmpInst>(I))
+  if (auto *CI = dyn_cast<CmpInst>(I))
     return Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
-  if (auto SI = dyn_cast<SelectInst>(I))
+  if (auto *SI = dyn_cast<SelectInst>(I))
     return Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
   if (II)
     return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
