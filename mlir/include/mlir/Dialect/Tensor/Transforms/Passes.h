@@ -21,6 +21,9 @@ namespace tensor {
 /// Creates an instance of the `tensor` subset folding pass.
 std::unique_ptr<Pass> createFoldTensorSubsetOpsPass();
 
+/// Creates an instance of the `tensor` dialect bufferization pass.
+std::unique_ptr<Pass> createTensorBufferizePass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

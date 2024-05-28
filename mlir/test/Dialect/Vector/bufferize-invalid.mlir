@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=vector,bufferization copy-before-write unknown-type-conversion=identity-layout-map allow-unknown-ops" -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -vector-bufferize -split-input-file -verify-diagnostics
+// | FileCheck %s
 
 // CHECK-LABEL: func @mask(
 func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
