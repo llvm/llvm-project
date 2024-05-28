@@ -851,4 +851,28 @@ main:
     # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
     f16x8.extract_lane 1
 
+    # CHECK: f16x8.add # encoding: [0xfd,0xb4,0x02]
+    f16x8.add
+
+    # CHECK: f16x8.sub # encoding: [0xfd,0xb5,0x02]
+    f16x8.sub
+
+    # CHECK: f16x8.mul # encoding: [0xfd,0xb6,0x02]
+    f16x8.mul
+
+    # CHECK: f16x8.div # encoding: [0xfd,0xb7,0x02]
+    f16x8.div
+
+    # CHECK: f16x8.min # encoding: [0xfd,0xb8,0x02]
+    f16x8.min
+
+    # CHECK: f16x8.max # encoding: [0xfd,0xb9,0x02]
+    f16x8.max
+
+    # CHECK: f16x8.pmin # encoding: [0xfd,0xba,0x02]
+    f16x8.pmin
+
+    # CHECK: f16x8.pmax # encoding: [0xfd,0xbb,0x02]
+    f16x8.pmax
+
     end_function
