@@ -171,8 +171,6 @@ def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
-def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
 def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,

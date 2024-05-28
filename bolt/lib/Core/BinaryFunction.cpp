@@ -851,15 +851,19 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     return IndirectBranchType::UNKNOWN;
   }
 
+  auto getExprValue = [&](const MCExpr *Expr) {
+    const MCSymbol *TargetSym;
+    uint64_t TargetOffset;
+    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(Expr);
+    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
+    assert(SymValueOrError && "Global symbol needs a value");
+    return *SymValueOrError + TargetOffset;
+  };
+
   // RIP-relative addressing should be converted to symbol form by now
   // in processed instructions (but not in jump).
   if (DispExpr) {
-    const MCSymbol *TargetSym;
-    uint64_t TargetOffset;
-    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(DispExpr);
-    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
-    assert(SymValueOrError && "global symbol needs a value");
-    ArrayStart = *SymValueOrError + TargetOffset;
+    ArrayStart = getExprValue(DispExpr);
     BaseRegNum = BC.MIB->getNoRegister();
     if (BC.isAArch64()) {
       ArrayStart &= ~0xFFFULL;
@@ -1284,7 +1288,7 @@ Error BinaryFunction::disassemble() {
         const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
         MCSymbol *TargetSymbol = nullptr;
 
-        if (BC.MIB->isUnsupportedBranch(Instruction)) {
+        if (!BC.MIB->isReversibleBranch(Instruction)) {
           setIgnored();
           if (BinaryFunction *TargetFunc =
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
@@ -1666,7 +1670,8 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    if (!BC.HasRelocations)
+    // In BAT mode, register any known entry points for CFG construction.
+    if (!BC.HasRelocations && !BC.HasBATSection)
       setSimple(false);
 
     const uint32_t Offset = KV.first;
@@ -3381,7 +3386,7 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (MIB->isUnsupportedBranch(*CondBranch)) {
+        if (!MIB->isReversibleBranch(*CondBranch)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3697,6 +3702,13 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
 
 size_t BinaryFunction::computeHash(bool UseDFS, HashFunction HashFunction,
                                    OperandHashFuncTy OperandHashFunc) const {
+  LLVM_DEBUG({
+    dbgs() << "BOLT-DEBUG: computeHash " << getPrintName() << ' '
+           << (UseDFS ? "dfs" : "bin") << " order "
+           << (HashFunction == HashFunction::StdHash ? "std::hash" : "xxh3")
+           << '\n';
+  });
+
   if (size() == 0)
     return 0;
 

@@ -59,28 +59,37 @@ namespace templ {
   template struct C<B<int>>;
 } // namespace templ
 
+namespace class_template {
+  template <class T1, class T2 = float> struct A;
+
+  template <class T3> struct B;
+
+  template <template <class T4> class TT1, class T5> struct B<TT1<T5>>;
+  // new-note@-1 {{partial specialization matches}}
+
+  template <class T6, class T7> struct B<A<T6, T7>> {};
+  // new-note@-1 {{partial specialization matches}}
+
+  template struct B<A<int>>;
+  // new-error@-1 {{ambiguous partial specialization}}
+} // namespace class_template
+
 namespace type_pack1 {
   template<class T2> struct A;
   template<template<class ...T3s> class TT1, class T4> struct A<TT1<T4>>   ;
-  // new-note@-1 {{partial specialization matches}}
   template<template<class    T5 > class TT2, class T6> struct A<TT2<T6>> {};
-  // new-note@-1 {{partial specialization matches}}
 
   template<class T1> struct B;
   template struct A<B<char>>;
-  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace type_pack1
 
 namespace type_pack2 {
   template<class T2> struct A;
   template<template<class ...T3s> class TT1, class ...T4> struct A<TT1<T4...>>   ;
-  // new-note@-1 {{partial specialization matches}}
   template<template<class    T5 > class TT2, class ...T6> struct A<TT2<T6...>> {};
-  // new-note@-1 {{partial specialization matches}}
 
   template<class T1> struct B;
   template struct A<B<char>>;
-  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace type_pack2
 
 namespace type_pack3 {
@@ -140,13 +149,10 @@ namespace ttp_defaults {
 
 namespace ttp_only {
   template <template <class...    > class TT1> struct A      { static constexpr int V = 0; };
-  // new-note@-1 2{{template is declared here}}
   template <template <class       > class TT2> struct A<TT2> { static constexpr int V = 1; };
-  // new-error@-1 {{not more specialized than the primary template}}
-  // new-note@-2 {{partial specialization matches}}
+  // new-note@-1 {{partial specialization matches}}
   template <template <class, class> class TT3> struct A<TT3> { static constexpr int V = 2; };
-  // new-error@-1 {{not more specialized than the primary template}}
-  // new-note@-2 {{partial specialization matches}}
+  // new-note@-1 {{partial specialization matches}}
 
   template <class ...          > struct B;
   template <class              > struct C;
@@ -193,5 +199,5 @@ namespace consistency {
 
     template struct A<B<int>, B<int>, B<int>>;
     // new-error@-1 {{ambiguous partial specializations}}
-  } // namespace t1
+  } // namespace t2
 } // namespace consistency

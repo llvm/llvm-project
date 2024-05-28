@@ -223,6 +223,70 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
+bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
+    MachineInstr &MI, BuildFnTy &MatchInfo) {
+  // Ported from InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating.
+  Register DstOp = MI.getOperand(0).getReg();
+  Register OrigOp = MI.getOperand(1).getReg();
+
+  if (!MRI.hasOneNonDBGUse(OrigOp))
+    return false;
+
+  MachineInstr *OrigDef = MRI.getUniqueVRegDef(OrigOp);
+  // Even if only a single operand of the PHI is not guaranteed non-poison,
+  // moving freeze() backwards across a PHI can cause optimization issues for
+  // other users of that operand.
+  //
+  // Moving freeze() from one of the output registers of a G_UNMERGE_VALUES to
+  // the source register is unprofitable because it makes the freeze() more
+  // strict than is necessary (it would affect the whole register instead of
+  // just the subreg being frozen).
+  if (OrigDef->isPHI() || isa<GUnmerge>(OrigDef))
+    return false;
+
+  if (canCreateUndefOrPoison(OrigOp, MRI,
+                             /*ConsiderFlagsAndMetadata=*/false))
+    return false;
+
+  std::optional<MachineOperand> MaybePoisonOperand;
+  for (MachineOperand &Operand : OrigDef->uses()) {
+    if (!Operand.isReg())
+      return false;
+
+    if (isGuaranteedNotToBeUndefOrPoison(Operand.getReg(), MRI))
+      continue;
+
+    if (!MaybePoisonOperand)
+      MaybePoisonOperand = Operand;
+    else {
+      // We have more than one maybe-poison operand. Moving the freeze is
+      // unsafe.
+      return false;
+    }
+  }
+
+  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+
+  // Eliminate freeze if all operands are guaranteed non-poison.
+  if (!MaybePoisonOperand) {
+    MatchInfo = [=](MachineIRBuilder &B) { MRI.replaceRegWith(DstOp, OrigOp); };
+    return true;
+  }
+
+  Register MaybePoisonOperandReg = MaybePoisonOperand->getReg();
+  LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
+
+  MatchInfo = [=](MachineIRBuilder &B) mutable {
+    B.setInsertPt(*OrigDef->getParent(), OrigDef->getIterator());
+    auto Freeze = B.buildFreeze(MaybePoisonOperandRegTy, MaybePoisonOperandReg);
+    replaceRegOpWith(
+        MRI, *OrigDef->findRegisterUseOperand(MaybePoisonOperandReg, TRI),
+        Freeze.getReg(0));
+    replaceRegWith(MRI, DstOp, OrigOp);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
                                                SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
@@ -6749,20 +6813,17 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   return false;
 }
 
-bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
-                                              BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
+                                        BuildFnTy &MatchInfo) {
+  GSelect *Select = cast<GSelect>(MRI.getVRegDef(MO.getReg()));
+  GICmp *Cmp = cast<GICmp>(MRI.getVRegDef(Select->getCondReg()));
+
   Register DstReg = Select->getReg(0);
-  Register Cond = Select->getCondReg();
   Register True = Select->getTrueReg();
   Register False = Select->getFalseReg();
   LLT DstTy = MRI.getType(DstReg);
 
   if (DstTy.isPointer())
-    return false;
-
-  // We need an G_ICMP on the condition register.
-  GICmp *Cmp = getOpcodeDef<GICmp>(Cond, MRI);
-  if (!Cmp)
     return false;
 
   // We want to fold the icmp and replace the select.
@@ -6787,50 +6848,41 @@ bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
   // (icmp X, Y) ? X : Y -> integer minmax.
   // see matchSelectPattern in ValueTracking.
   // Legality between G_SELECT and integer minmax can differ.
-  if (True == CmpLHS && False == CmpRHS) {
-    switch (Pred) {
-    case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: {
-      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
-        return false;
-      MatchInfo = [=](MachineIRBuilder &B) {
-        B.buildUMax(DstReg, True, False);
-      };
-      return true;
-    }
-    case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: {
-      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
-        return false;
-      MatchInfo = [=](MachineIRBuilder &B) {
-        B.buildSMax(DstReg, True, False);
-      };
-      return true;
-    }
-    case ICmpInst::ICMP_ULT:
-    case ICmpInst::ICMP_ULE: {
-      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
-        return false;
-      MatchInfo = [=](MachineIRBuilder &B) {
-        B.buildUMin(DstReg, True, False);
-      };
-      return true;
-    }
-    case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_SLE: {
-      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
-        return false;
-      MatchInfo = [=](MachineIRBuilder &B) {
-        B.buildSMin(DstReg, True, False);
-      };
-      return true;
-    }
-    default:
-      return false;
-    }
-  }
+  if (True != CmpLHS || False != CmpRHS)
+    return false;
 
-  return false;
+  switch (Pred) {
+  case ICmpInst::ICMP_UGT:
+  case ICmpInst::ICMP_UGE: {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
+      return false;
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUMax(DstReg, True, False); };
+    return true;
+  }
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_SGE: {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
+      return false;
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSMax(DstReg, True, False); };
+    return true;
+  }
+  case ICmpInst::ICMP_ULT:
+  case ICmpInst::ICMP_ULE: {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
+      return false;
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUMin(DstReg, True, False); };
+    return true;
+  }
+  case ICmpInst::ICMP_SLT:
+  case ICmpInst::ICMP_SLE: {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
+      return false;
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSMin(DstReg, True, False); };
+    return true;
+  }
+  default:
+    return false;
+  }
 }
 
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
@@ -6840,9 +6892,6 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
 
   if (tryFoldBoolSelectToLogic(Select, MatchInfo))
-    return true;
-
-  if (tryFoldSelectToIntMinMax(Select, MatchInfo))
     return true;
 
   return false;

@@ -94,6 +94,8 @@ Improvements to clang-query
   from an external file, allowing the cost of reading the compilation database
   and building the AST to be imposed just once for faster prototyping.
 
+- Removed support for ``enable output srcloc``. Fixes #GH82591
+
 Improvements to clang-rename
 ----------------------------
 
@@ -373,12 +375,15 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers. Added support for renaming macro arguments.
+  initializers. Added support for renaming macro arguments. Fixed renaming
+  conflicts arising from out-of-line member function template definitions.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts.
+  fixed problem with duplicate parentheses in double implicit casts. Corrected
+  the fix suggestions for C23 and later by using C-style casts instead of
+  ``static_cast``.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly

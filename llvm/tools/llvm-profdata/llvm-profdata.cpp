@@ -75,7 +75,6 @@ cl::SubCommand MergeSubcommand(
 namespace {
 enum ProfileKinds { instr, sample, memory };
 enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
-} // namespace
 
 enum ProfileFormat {
   PF_None = 0,
@@ -87,6 +86,7 @@ enum ProfileFormat {
 };
 
 enum class ShowFormat { Text, Json, Yaml };
+} // namespace
 
 // Common options.
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
@@ -340,7 +340,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
         "profile with max count value greater then the parameter value"),
     cl::sub(OverlapSubcommand));
 
-// Options unique to show subcommand.
+// Options specific to show subcommand.
 cl::opt<bool> ShowCounts("counts", cl::init(false),
                          cl::desc("Show counter values for shown functions"),
                          cl::sub(ShowSubcommand));
@@ -439,12 +439,19 @@ cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
                                  cl::desc("Show profile version. "),
                                  cl::sub(ShowSubcommand));
 
+// Options specific to order subcommand.
+cl::opt<unsigned>
+    NumTestTraces("num-test-traces", cl::init(0),
+                  cl::desc("Keep aside the last <num-test-traces> traces in "
+                           "the profile when computing the function order and "
+                           "instead use them to evaluate that order"),
+                  cl::sub(OrderSubcommand));
+
 // We use this string to indicate that there are
 // multiple static functions map to the same name.
 const std::string DuplicateNameStr = "----";
 
-static void warn(Twine Message, std::string Whence = "",
-                 std::string Hint = "") {
+static void warn(Twine Message, StringRef Whence = "", StringRef Hint = "") {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -456,13 +463,13 @@ static void warn(Twine Message, std::string Whence = "",
 static void warn(Error E, StringRef Whence = "") {
   if (E.isA<InstrProfError>()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      warn(IPE.message(), std::string(Whence), std::string(""));
+      warn(IPE.message(), Whence);
     });
   }
 }
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -481,16 +488,16 @@ static void exitWithError(Error E, StringRef Whence = "") {
         // Hint in case user missed specifying the profile type.
         Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
-      exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
+      exitWithError(IPE.message(), Whence, Hint);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -498,7 +505,7 @@ static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
   if (FailMode == failIfAnyAreInvalid)
     exitWithErrorCode(EC, Whence);
   else
-    warn(EC.message(), std::string(Whence));
+    warn(EC.message(), Whence);
 }
 
 static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
@@ -1585,7 +1592,7 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
   // If OutputSizeLimit is 0 (default), it is the same as write().
   if (std::error_code EC =
           Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
-    exitWithErrorCode(std::move(EC));
+    exitWithErrorCode(EC);
 }
 
 static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
@@ -1654,7 +1661,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   }
 }
 
-static int merge_main(int argc, const char *argv[]) {
+static int merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
@@ -1667,8 +1674,7 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " +
-                  sys::path::filename(argv[0]) + " " + argv[1] + " -help");
+    exitWithError("no input files specified. See " + ProgName + " merge -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -2654,7 +2660,7 @@ void overlapSampleProfile(const std::string &BaseFilename,
   OverlapAggr.dumpFuncSimilarity(OS);
 }
 
-static int overlap_main(int argc, const char *argv[]) {
+static int overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3231,15 +3237,16 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   return 0;
 }
 
-static int show_main(int argc, const char *argv[]) {
+static int show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
+    errs() << ProgName
+           << " show: Input file name cannot be the same as the output file "
+              "name!\n";
     return 1;
   }
   if (JsonFormat)
@@ -3263,7 +3270,7 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main(int argc, const char *argv[]) {
+static int order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3278,13 +3285,42 @@ static int order_main(int argc, const char *argv[]) {
     // Read all entries
     (void)I;
   }
-  auto &Traces = Reader->getTemporalProfTraces();
-  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes(Traces);
+  ArrayRef Traces = Reader->getTemporalProfTraces();
+  if (NumTestTraces && NumTestTraces >= Traces.size())
+    exitWithError(
+        "--" + NumTestTraces.ArgStr +
+        " must be smaller than the total number of traces: expected: < " +
+        Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
+  ArrayRef TestTraces = Traces.take_back(NumTestTraces);
+  Traces = Traces.drop_back(NumTestTraces);
+
+  std::vector<BPFunctionNode> Nodes;
+  TemporalProfTraceTy::createBPFunctionNodes(Traces, Nodes);
   BalancedPartitioningConfig Config;
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
   OS << "# Ordered " << Nodes.size() << " functions\n";
+  if (!TestTraces.empty()) {
+    // Since we don't know the symbol sizes, we assume 32 functions per page.
+    DenseMap<BPFunctionNode::IDT, unsigned> IdToPageNumber;
+    for (auto &Node : Nodes)
+      IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
+
+    SmallSet<unsigned, 0> TouchedPages;
+    unsigned Area = 0;
+    for (auto &Trace : TestTraces) {
+      for (auto Id : Trace.FunctionNameRefs) {
+        auto It = IdToPageNumber.find(Id);
+        if (It == IdToPageNumber.end())
+          continue;
+        TouchedPages.insert(It->getSecond());
+        Area += TouchedPages.size();
+      }
+      TouchedPages.clear();
+    }
+    OS << "# Total area under the page fault curve: " << (float)Area << "\n";
+  }
   OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
         "linkage and this output does not take that into account. Some "
         "post-processing may be required before passing to the linker via "
@@ -3314,16 +3350,16 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(argc, argv);
+    return show_main(ProgName);
 
   if (OrderSubcommand)
-    return order_main(argc, argv);
+    return order_main();
 
   if (OverlapSubcommand)
-    return overlap_main(argc, argv);
+    return overlap_main();
 
   if (MergeSubcommand)
-    return merge_main(argc, argv);
+    return merge_main(ProgName);
 
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";

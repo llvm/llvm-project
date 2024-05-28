@@ -3384,18 +3384,6 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
                                    TargetTransformInfo::TCK_RecipThroughput);
 }
 
-static Type *smallestIntegerVectorType(Type *T1, Type *T2) {
-  auto *I1 = cast<IntegerType>(cast<VectorType>(T1)->getElementType());
-  auto *I2 = cast<IntegerType>(cast<VectorType>(T2)->getElementType());
-  return I1->getBitWidth() < I2->getBitWidth() ? T1 : T2;
-}
-
-static Type *largestIntegerVectorType(Type *T1, Type *T2) {
-  auto *I1 = cast<IntegerType>(cast<VectorType>(T1)->getElementType());
-  auto *I2 = cast<IntegerType>(cast<VectorType>(T2)->getElementType());
-  return I1->getBitWidth() > I2->getBitWidth() ? T1 : T2;
-}
-
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                                             VPlan &Plan) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
@@ -5824,6 +5812,10 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
         PredicatedBBsAfterVectorization[VF].insert(BB);
+        for (auto *Pred : predecessors(BB)) {
+          if (Pred->getSingleSuccessor() == BB)
+            PredicatedBBsAfterVectorization[VF].insert(Pred);
+        }
       }
   }
 }
@@ -7116,26 +7108,12 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       return *RedCost;
 
     Type *SrcScalarTy = I->getOperand(0)->getType();
+    Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
+    if (canTruncateToMinimalBitwidth(Op0AsInstruction, VF))
+      SrcScalarTy =
+          IntegerType::get(SrcScalarTy->getContext(), MinBWs[Op0AsInstruction]);
     Type *SrcVecTy =
         VectorTy->isVectorTy() ? ToVectorTy(SrcScalarTy, VF) : SrcScalarTy;
-    if (canTruncateToMinimalBitwidth(I, VF)) {
-      // This cast is going to be shrunk. This may remove the cast or it might
-      // turn it into slightly different cast. For example, if MinBW == 16,
-      // "zext i8 %1 to i32" becomes "zext i8 %1 to i16".
-      //
-      // Calculate the modified src and dest types.
-      Type *MinVecTy = VectorTy;
-      if (Opcode == Instruction::Trunc) {
-        SrcVecTy = smallestIntegerVectorType(SrcVecTy, MinVecTy);
-        VectorTy =
-            largestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
-      } else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt) {
-        // Leave SrcVecTy unchanged - we only shrink the destination element
-        // type.
-        VectorTy =
-            smallestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
-      }
-    }
 
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
@@ -8153,8 +8131,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
 static VPWidenIntOrFpInductionRecipe *
 createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
                             VPValue *Start, const InductionDescriptor &IndDesc,
-                            VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
-                            VFRange &Range) {
+                            VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop) {
   assert(IndDesc.getStartValue() ==
          Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()));
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
@@ -8176,7 +8153,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
   // produces its scalar and vector values.
   if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi))
     return createWidenInductionRecipes(Phi, Phi, Operands[0], *II, Plan,
-                                       *PSE.getSE(), *OrigLoop, Range);
+                                       *PSE.getSE(), *OrigLoop);
 
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
@@ -8216,7 +8193,7 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
     const InductionDescriptor &II = *Legal->getIntOrFpInductionDescriptor(Phi);
     VPValue *Start = Plan.getOrAddLiveIn(II.getStartValue());
     return createWidenInductionRecipes(Phi, I, Start, II, Plan, *PSE.getSE(),
-                                       *OrigLoop, Range);
+                                       *OrigLoop);
   }
   return nullptr;
 }
@@ -8557,8 +8534,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
       // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL())
-        VPlanTransforms::addExplicitVectorLength(*Plan);
+      // Discard the plan if it is not EVL-compatible
+      if (CM.foldTailWithEVL() &&
+          !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
+        break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -10390,15 +10369,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
         RemoveRedundantDbgInstrs(&BB);
     }
 
-    // We currently do not preserve loopinfo/dominator analyses with outer loop
-    // vectorization. Until this is addressed, mark these analyses as preserved
-    // only for non-VPlan-native path.
-    // TODO: Preserve Loop and Dominator analyses for VPlan-native path.
-    if (!EnableVPlanNativePath) {
-      PA.preserve<LoopAnalysis>();
-      PA.preserve<DominatorTreeAnalysis>();
-      PA.preserve<ScalarEvolutionAnalysis>();
-    }
+    PA.preserve<LoopAnalysis>();
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<ScalarEvolutionAnalysis>();
 
     if (Result.MadeCFGChange) {
       // Making CFG changes likely means a loop got vectorized. Indicate that

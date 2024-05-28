@@ -5601,10 +5601,13 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && AfterRight && Left.is(tok::string_literal) &&
+
+  if (BeforeLeft && BeforeLeft->is(tok::lessless) &&
+      Left.is(tok::string_literal) && Right.is(tok::lessless) && AfterRight &&
       AfterRight->is(tok::string_literal)) {
-    return true;
+    return Right.NewlinesBefore > 0;
   }
+
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

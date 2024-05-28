@@ -214,6 +214,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     // Find out if the comparison would be true or false for the i'th element.
     Constant *C = ConstantFoldCompareInstOperands(ICI.getPredicate(), Elt,
                                                   CompareRHS, DL, &TLI);
+    if (!C)
+      return nullptr;
+
     // If the result is undef for this element, ignore it.
     if (isa<UndefValue>(C)) {
       // Extend range state machines to cover this element in case there is an
@@ -1409,6 +1412,19 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                                                      const APInt &C) {
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Value *X = Trunc->getOperand(0);
+  Type *SrcTy = X->getType();
+  unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
+           SrcBits = SrcTy->getScalarSizeInBits();
+
+  // Match (icmp pred (trunc nuw/nsw X), C)
+  // Which we can convert to (icmp pred X, (sext/zext C))
+  if (shouldChangeType(Trunc->getType(), SrcTy)) {
+    if (Trunc->hasNoSignedWrap())
+      return new ICmpInst(Pred, X, ConstantInt::get(SrcTy, C.sext(SrcBits)));
+    if (!Cmp.isSigned() && Trunc->hasNoUnsignedWrap())
+      return new ICmpInst(Pred, X, ConstantInt::get(SrcTy, C.zext(SrcBits)));
+  }
+
   if (C.isOne() && C.getBitWidth() > 1) {
     // icmp slt trunc(signum(V)) 1 --> icmp slt V, 1
     Value *V = nullptr;
@@ -1416,10 +1432,6 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
       return new ICmpInst(ICmpInst::ICMP_SLT, V,
                           ConstantInt::get(V->getType(), 1));
   }
-
-  Type *SrcTy = X->getType();
-  unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
-           SrcBits = SrcTy->getScalarSizeInBits();
 
   // TODO: Handle any shifted constant by subtracting trailing zeros.
   // TODO: Handle non-equality predicates.
@@ -2405,14 +2417,34 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant that may be more target-friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
-  if (Shl->hasOneUse() && Amt != 0 && C.countr_zero() >= Amt &&
-      DL.isLegalInteger(TypeBits - Amt)) {
-    Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
-    if (auto *ShVTy = dyn_cast<VectorType>(ShType))
-      TruncTy = VectorType::get(TruncTy, ShVTy->getElementCount());
-    Constant *NewC =
-        ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-    return new ICmpInst(Pred, Builder.CreateTrunc(X, TruncTy), NewC);
+  if (Shl->hasOneUse() && Amt != 0 &&
+      shouldChangeType(ShType->getScalarSizeInBits(), TypeBits - Amt)) {
+    ICmpInst::Predicate CmpPred = Pred;
+    APInt RHSC = C;
+
+    if (RHSC.countr_zero() < Amt && ICmpInst::isStrictPredicate(CmpPred)) {
+      // Try the flipped strictness predicate.
+      // e.g.:
+      // icmp ult i64 (shl X, 32), 8589934593 ->
+      // icmp ule i64 (shl X, 32), 8589934592 ->
+      // icmp ule i32 (trunc X, i32), 2 ->
+      // icmp ult i32 (trunc X, i32), 3
+      if (auto FlippedStrictness =
+              InstCombiner::getFlippedStrictnessPredicateAndConstant(
+                  Pred, ConstantInt::get(ShType->getContext(), C))) {
+        CmpPred = FlippedStrictness->first;
+        RHSC = cast<ConstantInt>(FlippedStrictness->second)->getValue();
+      }
+    }
+
+    if (RHSC.countr_zero() >= Amt) {
+      Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
+      Constant *NewC =
+          ConstantInt::get(TruncTy, RHSC.ashr(*ShiftAmt).trunc(TypeBits - Amt));
+      return new ICmpInst(
+          CmpPred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
+          NewC);
+    }
   }
 
   return nullptr;

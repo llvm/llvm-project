@@ -278,7 +278,6 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     aren't races adding new tags to the mlir context.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createAliasTagsPass()";
 }
 
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
@@ -401,6 +400,18 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
            "Set the unsafe-fp-math attribute on functions in the module.">,
   ];
   let constructor = "::fir::createFunctionAttrPass()";
+}
+
+def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
+  let summary =
+    "Simplify operations on assumed-rank types";
+  let description = [{
+    This pass breaks up the lowering of operations on assumed-rank types by 
+    introducing an intermediate FIR level that simplifies code generation. 
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

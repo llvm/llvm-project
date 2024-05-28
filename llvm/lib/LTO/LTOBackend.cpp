@@ -452,9 +452,8 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
         CodegenThreadPool.async(
             [&](const SmallString<0> &BC, unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
-              Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
-                  MemoryBufferRef(StringRef(BC.data(), BC.size()), "ld-temp.o"),
-                  Ctx);
+              Expected<std::unique_ptr<Module>> MOrErr =
+                  parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
               if (!MOrErr)
                 report_fatal_error("Failed to read bitcode");
               std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
@@ -721,7 +720,14 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      ImportList[Summary->modulePath()].insert(GUID);
+      // Try emplace the entry first. If an entry with the same key already
+      // exists, set the value to 'std::min(existing-value, new-value)' to make
+      // sure a definition takes precedence over a declaration.
+      auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
+          GUID, Summary->importType());
+
+      if (!Inserted)
+        Iter->second = std::min(Iter->second, Summary->importType());
     }
   }
   return true;

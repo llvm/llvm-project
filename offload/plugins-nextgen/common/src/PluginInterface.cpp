@@ -24,6 +24,7 @@
 #include "omp-tools.h"
 #endif
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -39,6 +40,7 @@ using namespace target;
 using namespace plugin;
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
+namespace llvm::omp::target::plugin {
 struct RecordReplayTy {
 
   // Describes the state of the record replay mechanism.
@@ -358,8 +360,7 @@ public:
     }
   }
 };
-
-static RecordReplayTy RecordReplay;
+} // namespace llvm::omp::target::plugin
 
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
@@ -470,7 +471,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
-  if (RecordReplay.isReplaying() ||
+  if (GenericDevice.Plugin.getRecordReplay().isReplaying() ||
       Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
@@ -559,6 +560,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
+  RecordReplayTy &RecordReplay = GenericDevice.Plugin.getRecordReplay();
   if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
@@ -833,6 +835,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete MemoryManager;
   MemoryManager = nullptr;
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
@@ -886,7 +889,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
   // Setup the global device memory pool if needed.
-  if (!RecordReplay.isReplaying() && shouldSetupDeviceMemoryPool()) {
+  if (!Plugin.getRecordReplay().isReplaying() &&
+      shouldSetupDeviceMemoryPool()) {
     uint64_t HeapSize;
     auto SizeOrErr = getDeviceHeapSize(HeapSize);
     if (SizeOrErr) {
@@ -1301,8 +1305,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
 
-  if (RecordReplay.isRecordingOrReplaying())
-    return RecordReplay.alloc(Size);
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
+    return Plugin.getRecordReplay().alloc(Size);
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
@@ -1338,7 +1342,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
-  if (RecordReplay.isRecordingOrReplaying())
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
 
   int Res;
@@ -1405,7 +1409,8 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(
-      *this, RecordReplay.isRecordingOrReplaying() ? nullptr : AsyncInfo);
+      *this,
+      Plugin.getRecordReplay().isRecordingOrReplaying() ? nullptr : AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1416,6 +1421,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying() &&
       RecordReplay.isSaveOutputEnabled())
     RecordReplay.saveKernelOutputInfo(GenericKernel.getName());
@@ -1490,6 +1496,7 @@ Error GenericPluginTy::init() {
   if (!NumDevicesOrErr)
     return NumDevicesOrErr.takeError();
 
+  Initialized = true;
   NumDevices = *NumDevicesOrErr;
   if (NumDevices == 0)
     return Plugin::success();
@@ -1502,6 +1509,9 @@ Error GenericPluginTy::init() {
 
   RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
+
+  RecordReplay = new RecordReplayTy();
+  assert(RecordReplay && "Invalid RR interface");
 
   return Plugin::success();
 }
@@ -1522,6 +1532,9 @@ Error GenericPluginTy::deinit() {
 
   if (RPCServer)
     delete RPCServer;
+
+  if (RecordReplay)
+    delete RecordReplay;
 
   // Perform last deinitializations on the plugin.
   return deinitImpl();
@@ -1567,14 +1580,27 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   if (!MachineOrErr)
     return MachineOrErr.takeError();
 
-  if (!*MachineOrErr)
-    return false;
-
-  // Perform plugin-dependent checks for the specific architecture if needed.
-  return isELFCompatible(Image);
+  return MachineOrErr;
 }
 
-int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
+Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
+  if (identify_magic(Image) != file_magic::bitcode)
+    return false;
+
+  LLVMContext Context;
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Image, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
+
+  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+}
+
+int32_t GenericPluginTy::is_initialized() const { return Initialized; }
+
+int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image,
+                                         bool Initialized) {
   StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
                    target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
@@ -1592,10 +1618,17 @@ int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
     auto MatchOrErr = checkELFImage(Buffer);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
-    return *MatchOrErr;
+    if (!Initialized || !*MatchOrErr)
+      return *MatchOrErr;
+
+    // Perform plugin-dependent checks for the specific architecture if needed.
+    auto CompatibleOrErr = isELFCompatible(Buffer);
+    if (Error Err = CompatibleOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *CompatibleOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = getJIT().checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Buffer);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1633,12 +1666,12 @@ int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
       isRecord ? RecordReplayTy::RRStatusTy::RRRecording
                : RecordReplayTy::RRStatusTy::RRReplaying;
 
-  if (auto Err = RecordReplay.init(&Device, MemorySize, VAddr, Status,
-                                   SaveOutput, ReqPtrArgOffset)) {
+  if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
+                                    SaveOutput, ReqPtrArgOffset)) {
     REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
            "(Error: %s)\n",
            MemorySize, toString(std::move(Err)).data());
-    RecordReplay.setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
+    RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
 
     if (!isRecord) {
       return OFFLOAD_FAIL;
@@ -1982,6 +2015,7 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
   assert(DevicePtr && "Invalid device global's address");
 
   // Save the loaded globals if we are recording.
+  RecordReplayTy &RecordReplay = Device.Plugin.getRecordReplay();
   if (RecordReplay.isRecording())
     RecordReplay.addEntry(Name, Size, *DevicePtr);
 

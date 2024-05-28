@@ -48,3 +48,23 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |       |-TemplateArgument type 'double'
 // CHECK-NEXT: |       | `-BuiltinType {{.*}} 'double'
 // CHECK-NEXT: |       `-ParmVarDecl {{.*}} 'double'
+
+template <typename... T1>
+struct Foo {
+  Foo(T1...);
+};
+
+template <typename...T2>
+using AFoo = Foo<T2...>;
+AFoo a(1, 2);
+// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (type-parameter-0-0...) -> Foo<type-parameter-0-0...>'
+// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0...' pack
+// CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (int, int) -> Foo<int, int>' implicit_instantiation
+
+template <typename T>
+using BFoo = Foo<T, T>;
+BFoo b2(1.0, 2.0);
+// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for BFoo> 'auto (type-parameter-0-0, type-parameter-0-0) -> Foo<type-parameter-0-0, type-parameter-0-0>'
+// CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'type-parameter-0-0'
+// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0'
+// CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation

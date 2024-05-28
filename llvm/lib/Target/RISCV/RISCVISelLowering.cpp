@@ -688,7 +688,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_ADD,         ISD::VP_SUB,         ISD::VP_MUL,
         ISD::VP_SDIV,        ISD::VP_UDIV,        ISD::VP_SREM,
         ISD::VP_UREM,        ISD::VP_AND,         ISD::VP_OR,
-        ISD::VP_XOR,         ISD::VP_ASHR,        ISD::VP_LSHR,
+        ISD::VP_XOR,         ISD::VP_SRA,         ISD::VP_SRL,
         ISD::VP_SHL,         ISD::VP_REDUCE_ADD,  ISD::VP_REDUCE_AND,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
@@ -844,8 +844,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
-      setOperationAction({ISD::AVGFLOORU, ISD::AVGCEILU, ISD::SADDSAT,
-                          ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT},
+      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
+                          ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
+                          ISD::SSUBSAT, ISD::USUBSAT},
                          VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
@@ -1237,8 +1238,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
-        setOperationAction({ISD::AVGFLOORU, ISD::AVGCEILU, ISD::SADDSAT,
-                            ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT},
+        setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
+                            ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
+                            ISD::SSUBSAT, ISD::USUBSAT},
                            VT, Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
@@ -1917,7 +1919,7 @@ bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
-         !isa<ConstantSDNode>(Y);
+         (!isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque());
 }
 
 bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
@@ -5339,7 +5341,7 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   SDValue Exp;
   // Restore back to original type. Truncation after SRL is to generate vnsrl.
   if (Op->isVPOpcode()) {
-    Exp = DAG.getNode(ISD::VP_LSHR, DL, IntVT, Bitcast,
+    Exp = DAG.getNode(ISD::VP_SRL, DL, IntVT, Bitcast,
                       DAG.getConstant(ShiftAmt, DL, IntVT), Mask, VL);
     Exp = DAG.getVPZExtOrTrunc(DL, VT, Exp, Mask, VL);
   } else {
@@ -5841,7 +5843,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
   OP_CASE(USUBSAT)
+  OP_CASE(AVGFLOORS)
   OP_CASE(AVGFLOORU)
+  OP_CASE(AVGCEILS)
   OP_CASE(AVGCEILU)
   OP_CASE(FADD)
   OP_CASE(FSUB)
@@ -5919,9 +5923,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_SELECT:
   case ISD::VP_MERGE:
     return RISCVISD::VMERGE_VL;
-  case ISD::VP_ASHR:
+  case ISD::VP_SRA:
     return RISCVISD::SRA_VL;
-  case ISD::VP_LSHR:
+  case ISD::VP_SRL:
     return RISCVISD::SRL_VL;
   case ISD::VP_SQRT:
     return RISCVISD::FSQRT_VL;
@@ -5956,7 +5960,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    126 &&
+                    128 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5982,7 +5986,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    126 &&
+                    128 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -6882,7 +6886,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
+  case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
   case ISD::AVGCEILU:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -7004,8 +7010,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVPOp(Op, DAG);
     [[fallthrough]];
-  case ISD::VP_ASHR:
-  case ISD::VP_LSHR:
+  case ISD::VP_SRA:
+  case ISD::VP_SRL:
   case ISD::VP_SHL:
     return lowerVPOp(Op, DAG);
   case ISD::VP_IS_FPCLASS:
@@ -19958,7 +19964,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UDIV_VL)
   NODE_NAME_CASE(UREM_VL)
   NODE_NAME_CASE(XOR_VL)
+  NODE_NAME_CASE(AVGFLOORS_VL)
   NODE_NAME_CASE(AVGFLOORU_VL)
+  NODE_NAME_CASE(AVGCEILS_VL)
   NODE_NAME_CASE(AVGCEILU_VL)
   NODE_NAME_CASE(SADDSAT_VL)
   NODE_NAME_CASE(UADDSAT_VL)
@@ -21435,7 +21443,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (Op == Instruction::Add || Op == Instruction::Sub ||
       Op == Instruction::And || Op == Instruction::Or ||
       Op == Instruction::Xor || Op == Instruction::InsertElement ||
-      Op == Instruction::ShuffleVector || Op == Instruction::Load)
+      Op == Instruction::ShuffleVector || Op == Instruction::Load ||
+      Op == Instruction::Freeze)
     return false;
 
   if (Inst.getType()->isScalableTy())

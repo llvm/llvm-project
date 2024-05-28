@@ -68,7 +68,7 @@ function compute-projects-to-test() {
       done
     ;;
     clang)
-      for p in clang-tools-extra compiler-rt flang lldb cross-project-tests; do
+      for p in clang-tools-extra compiler-rt lldb cross-project-tests; do
         echo $p
       done
     ;;
@@ -77,6 +77,22 @@ function compute-projects-to-test() {
     ;;
     mlir)
       echo flang
+    ;;
+    *)
+      # Nothing to do
+    ;;
+    esac
+  done
+}
+
+function compute-runtimes-to-test() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    clang)
+      for p in libcxx libcxxabi libunwind; do
+        echo $p
+      done
     ;;
     *)
       # Nothing to do
@@ -178,6 +194,15 @@ function check-targets() {
     cross-project-tests)
       echo "check-cross-project"
     ;;
+    libcxx)
+      echo "check-cxx"
+    ;;
+    libcxxabi)
+      echo "check-cxxabi"
+    ;;
+    libunwind)
+      echo "check-unwind"
+    ;;
     lldb)
       echo "check-all" # TODO: check-lldb may not include all the LLDB tests?
     ;;
@@ -207,17 +232,6 @@ if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cma
 EOF
 fi
 
-# If clang changed.
-if echo "$modified_dirs" | grep -q -E "^(clang)$"; then
-  cat <<EOF
-- trigger: "clang-ci"
-  build:
-    message: "${buildMessage}"
-    commit: "${BUILDKITE_COMMIT}"
-    branch: "${BUILDKITE_BRANCH}"
-EOF
-fi
-
 # Generic pipeline for projects that have not defined custom steps.
 #
 # Individual projects should instead define the pre-commit CI tests that suits their
@@ -230,6 +244,10 @@ modified_projects="$(keep-modified-projects ${all_projects})"
 linux_projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))
 linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
 linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
+
+linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
+linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
+linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
 windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
 windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
@@ -255,7 +273,7 @@ if [[ "${linux_projects}" != "" ]]; then
     CC: 'clang'
     CXX: 'clang++'
   commands:
-  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})"'
+  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
 EOF
 fi
 

@@ -833,6 +833,20 @@ template <typename MapTy> struct CallStackIdConverter {
   }
 };
 
+struct IndexedMemProfData {
+  // A map to hold memprof data per function. The lower 64 bits obtained from
+  // the md5 hash of the function name is used to index into the map.
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> RecordData;
+
+  // A map to hold frame id to frame mappings. The mappings are used to
+  // convert IndexedMemProfRecord to MemProfRecords with frame information
+  // inline.
+  llvm::MapVector<FrameId, Frame> FrameData;
+
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
+};
+
 // Verify that each CallStackId is computed with hashCallStack.  This function
 // is intended to help transition from CallStack to CSId in
 // IndexedAllocationInfo.

@@ -2920,6 +2920,10 @@ void AsmParser::handleMacroExit() {
   // Jump to the EndOfStatement we should return to, and consume it.
   jumpToLoc(ActiveMacros.back()->ExitLoc, ActiveMacros.back()->ExitBuffer);
   Lex();
+  // If .endm/.endr is followed by \n instead of a comment, consume it so that
+  // we don't print an excess \n.
+  if (getTok().is(AsmToken::EndOfStatement))
+    Lex();
 
   // Pop the instantiation entry.
   delete ActiveMacros.back();
@@ -5633,8 +5637,10 @@ MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
         if (NestLevel == 0) {
           EndToken = getTok();
           Lex();
-          if (!parseEOL())
+          if (Lexer.is(AsmToken::EndOfStatement))
             break;
+          printError(getTok().getLoc(), "expected newline");
+          return nullptr;
         }
         --NestLevel;
       }

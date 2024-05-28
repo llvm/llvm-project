@@ -1871,9 +1871,11 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   if (!Subtarget->hasSVEorSME())
     return true;
 
-  // We can only use the BRKB + CNTP sequence with legal predicate types.
+  // We can only use the BRKB + CNTP sequence with legal predicate types. We can
+  // also support fixed-width predicates.
   return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
-         VT != MVT::nxv2i1;
+         VT != MVT::nxv2i1 && VT != MVT::v16i1 && VT != MVT::v8i1 &&
+         VT != MVT::v4i1 && VT != MVT::v2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -5838,9 +5840,20 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue();
   }
   case Intrinsic::experimental_cttz_elts: {
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, Op.getOperand(1));
+    SDValue CttzOp = Op.getOperand(1);
+    EVT VT = CttzOp.getValueType();
+    assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
+    if (VT.isFixedLengthVector()) {
+      // We can use SVE instructions to lower this intrinsic by first creating
+      // an SVE predicate register mask from the fixed-width vector.
+      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, NewVT, CttzOp);
+      CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
+    }
+
+    SDValue NewCttzElts =
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, dl, Op.getValueType());
   }
   }
@@ -7235,7 +7248,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       uint64_t PartSize = VA.getValVT().getStoreSize().getKnownMinValue();
       unsigned NumParts = 1;
       if (Ins[i].Flags.isInConsecutiveRegs()) {
-        assert(!Ins[i].Flags.isInConsecutiveRegsLast());
         while (!Ins[i + NumParts - 1].Flags.isInConsecutiveRegsLast())
           ++NumParts;
       }
@@ -8232,7 +8244,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       uint64_t PartSize = StoreSize;
       unsigned NumParts = 1;
       if (Outs[i].Flags.isInConsecutiveRegs()) {
-        assert(!Outs[i].Flags.isInConsecutiveRegsLast());
         while (!Outs[i + NumParts - 1].Flags.isInConsecutiveRegsLast())
           ++NumParts;
         StoreSize *= NumParts;
@@ -13530,11 +13541,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                       DAG.getConstant(NumElts, dl, MVT::i64));
 
       if (Even && !Odd)
-        return DAG.getNode(AArch64ISD::UZP1, dl, DAG.getVTList(VT, VT), LHS,
-                           RHS);
+        return DAG.getNode(AArch64ISD::UZP1, dl, VT, LHS, RHS);
       if (Odd && !Even)
-        return DAG.getNode(AArch64ISD::UZP2, dl, DAG.getVTList(VT, VT), LHS,
-                           RHS);
+        return DAG.getNode(AArch64ISD::UZP2, dl, VT, LHS, RHS);
     }
   }
 
@@ -19501,7 +19510,8 @@ static SDValue performBuildVectorCombine(SDNode *N,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      (VT == MVT::v4f16 || VT == MVT::v4bf16)) {
     SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
             Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
     if (Elt0->getOpcode() == ISD::FP_ROUND &&
