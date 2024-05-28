@@ -16128,6 +16128,12 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
   return true;
 }
 
+// trunc (sra sext (X), zext (Y)) -> sra (X, smin (Y, scalarsize(Y) - 1))
+// This would be benefit for the cases where X and Y are both the same value
+// type of low precision vectors. Since the truncate would be lowered into
+// n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
+// restriction, such pattern would be expanded into a series of "vsetvli"
+// and "vnsrl" instructions later to reach this point.
 static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
   SDValue Mask = N->getOperand(1);
   SDValue VL = N->getOperand(2);
@@ -16139,12 +16145,6 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
       Mask.getOperand(0) != VL)
     return SDValue();
 
-  // trunc (sra sext (X), zext (Y)) -> sra (X, smin (Y, scalarsize(Y) - 1))
-  // This would be benefit for the cases where X and Y are both the same value
-  // type of low precision vectors. Since the truncate would be lowered into
-  // n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
-  // restriction, such pattern would be expanded into a series of "vsetvli"
-  // and "vnsrl" instructions later to reach this point.
   auto IsTruncNode = [&](SDValue V) {
     return V.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
            V.getOperand(1) == Mask && V.getOperand(2) == VL;
