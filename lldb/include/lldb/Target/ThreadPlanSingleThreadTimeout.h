@@ -46,10 +46,16 @@ public:
 
   ~ThreadPlanSingleThreadTimeout() override;
 
-  // Create a new instance from fresh new state.
-  static void CreateNew(Thread &thread, TimeoutInfo &info);
-  // Reset and create a new instance from the previous state.
-  static void ResetFromPrevState(Thread &thread, TimeoutInfo &info);
+  // If input \param thread is running in single thread mode, push a
+  // new ThreadPlanSingleThreadTimeout based on timeout setting from fresh new
+  // state. The reference of \param info is passed in so that when
+  // ThreadPlanSingleThreadTimeout got popped out its last state can be stored
+  // in it for future resume.
+  static void PushNewWithTimeout(Thread &thread, TimeoutInfo &info);
+
+  // Push a new ThreadPlanSingleThreadTimeout by restoring state from
+  // input \param info and resume execution.
+  static void ResumeFromPrevState(Thread &thread, TimeoutInfo &info);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ValidatePlan(Stream *error) override { return true; }

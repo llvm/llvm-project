@@ -1324,11 +1324,11 @@ public:
 
   /// Send an async interrupt request.
   ///
-  /// If \a thread is specified the async interrupt stop will be attributed the
-  /// specified thread.
+  /// If \a thread is specified the async interrupt stop will be attributed to
+  /// the specified thread.
   ///
   /// \param[in] thread
-  ///     The thread from which to attribute the async interrupt stop to.
+  ///     The thread the async interrupt will be attributed to.
   void SendAsyncInterrupt(Thread *thread = nullptr);
 
   // Notify this process class that modules got loaded.
@@ -2877,6 +2877,14 @@ protected:
   ///     before the instruction executes.
   virtual std::optional<bool> DoGetWatchpointReportedAfter() {
     return std::nullopt;
+  }
+
+  /// Handle thread specific async interrupt and return the original thread
+  /// that requested the async interrupt. It can be null if original thread
+  /// has exited.
+  virtual lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo, const std::string &description) {
+    return lldb::ThreadSP();
   }
 
   lldb::StateType GetPrivateState();

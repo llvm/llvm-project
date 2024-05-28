@@ -12,13 +12,14 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Target/TimeoutResumeAll.h"
 
 namespace lldb_private {
 
 class ThreadPlanStepOverRange : public ThreadPlanStepRange,
-                                ThreadPlanShouldStopHere {
+                                ThreadPlanShouldStopHere,
+                                TimeoutResumeAll {
 public:
   ThreadPlanStepOverRange(Thread &thread, const AddressRange &range,
                           const SymbolContext &addr_context,
@@ -45,13 +46,9 @@ private:
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
   bool IsEquivalentContext(const SymbolContext &context);
-  // Clear and create a new ThreadPlanSingleThreadTimeout to detect if program
-  // is moving forward.
-  void ResetSingleThreadTimeout();
 
   bool m_first_resume;
   lldb::RunMode m_run_mode;
-  ThreadPlanSingleThreadTimeout::TimeoutInfo m_timeout_info;
 
   ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
   const ThreadPlanStepOverRange &

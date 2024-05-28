@@ -37,8 +37,8 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     : ThreadPlanStepRange(ThreadPlan::eKindStepOverRange,
                           "Step range stepping over", thread, range,
                           addr_context, stop_others),
-      ThreadPlanShouldStopHere(this), m_first_resume(true),
-      m_run_mode(stop_others) {
+      ThreadPlanShouldStopHere(this), TimeoutResumeAll(thread),
+      m_first_resume(true), m_run_mode(stop_others) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 }
@@ -349,7 +349,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
 
 void ThreadPlanStepOverRange::DidPush() {
   if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
-    ThreadPlanSingleThreadTimeout::CreateNew(GetThread(), m_timeout_info);
+    PushNewTimeout();
 }
 
 bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
@@ -430,7 +430,6 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
     }
   }
   if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
-    ThreadPlanSingleThreadTimeout::ResetFromPrevState(GetThread(),
-                                                      m_timeout_info);
+    ResumeWithTimeout();
   return true;
 }

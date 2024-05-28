@@ -1140,15 +1140,6 @@ public:
     return lldb::eStopReasonInterrupt;
   }
 
-  bool ShouldStopSynchronous(Event *event_ptr) override { return true; }
-
-  bool ShouldStop(Event *event_ptr) override {
-    ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp)
-      return thread_sp->GetProcess()->GetUnixSignals()->GetShouldStop(m_value);
-    return false;
-  }
-
   const char *GetDescription() override {
     if (m_description.empty()) {
       m_description = "async interrupt";

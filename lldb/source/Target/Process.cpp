@@ -4105,7 +4105,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
 
       if (interrupt_requested) {
         if (StateIsStoppedState(internal_state, true)) {
-          // Oly mark interrupt event if it is not thread specific async
+          // Only mark interrupt event if it is not thread specific async
           // interrupt.
           if (m_interrupt_tid == LLDB_INVALID_THREAD_ID) {
             // We requested the interrupt, so mark this as such in the stop

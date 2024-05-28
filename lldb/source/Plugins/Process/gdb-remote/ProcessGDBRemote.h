@@ -440,11 +440,9 @@ private:
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
 
-  // Handle thread specific async interrupt and return the original thread
-  // that requested the async interrupt. It can be null if original thread
-  // has exited.
-  lldb::ThreadSP HandleThreadAsyncInterrupt(uint8_t signo,
-                                            const std::string &description);
+  lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo,
+                             const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
   using ModuleCacheKey = std::pair<std::string, std::string>;

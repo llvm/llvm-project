@@ -56,13 +56,10 @@ std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
   }
 }
 
-void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread,
-                                              TimeoutInfo &info) {
+void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,
+                                                       TimeoutInfo &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
-    return;
-
-  if (info.m_instance != nullptr)
     return;
 
   // Do not create timeout if we are not stopping other threads.
@@ -77,8 +74,8 @@ void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread,
   LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout pushing a brand new one");
 }
 
-void ThreadPlanSingleThreadTimeout::ResetFromPrevState(Thread &thread,
-                                                       TimeoutInfo &info) {
+void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
+                                                        TimeoutInfo &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
     return;
