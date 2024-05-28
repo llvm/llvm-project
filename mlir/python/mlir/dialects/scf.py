@@ -134,6 +134,6 @@ def for_(
         if len(iter_args) > 1:
             yield iv, iter_args, for_op.results
         elif len(iter_args) == 1:
-            yield iv, iter_args[0], for_op.results
+            yield iv, iter_args[0], for_op.results[0]
         else:
             yield iv
