@@ -248,7 +248,7 @@ add_entrypoint_object(
   HDRS
     ../fabsf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.include.llvm-libc-types.float16
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
