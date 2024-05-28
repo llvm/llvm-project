@@ -62,6 +62,10 @@ Improvements and New Features
 - The ``std::ranges::minmax`` algorithm has been optimized for integral types, resulting in a performance increase of
   up to 100x.
 
+- The ``std::set_intersection`` and ``std::ranges::set_intersection`` algorithms have been optimized to fast-forward over
+  contiguous ranges of non-matching values, reducing the number of comparisons from linear to 
+  logarithmic growth with the number of elements in best-case scenarios.
+
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
