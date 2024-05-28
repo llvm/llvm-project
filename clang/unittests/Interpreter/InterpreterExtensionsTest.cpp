@@ -103,7 +103,14 @@ public:
   NoopRuntimeInterfaceBuilder *RuntimeIBPtr = nullptr;
 };
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(InterpreterExtensionsTest, DISABLED_FindRuntimeInterface) {
+#else
 TEST(InterpreterExtensionsTest, FindRuntimeInterface) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   clang::IncrementalCompilerBuilder CB;
   llvm::Error ErrOut = llvm::Error::success();
   RecordRuntimeIBMetrics Interp(cantFail(CB.CreateCpp()), ErrOut);
