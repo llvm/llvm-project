@@ -3,13 +3,13 @@
 // The .debug-loclists section of the binary contains a base type reference as an argument
 // to DW_OP_regval_type that cannot be resolved when only dumping the .debug-loclists
 // section. prettyPrintBaseTypeRef must handle this case without crashing by printing reduced information.
-// 
+//
 // The binary was compiled using following command:
 //    gcc-13 dwarfdump-loclist-basetyperef.c -c -g -Og -o dwarfdump-loclist-basetyperef.elf-x86-64
 //
 // Contents of dwarfdump-loclist-basetyperef.c:
 //    extern double foo();
-//      
+//
 //    void bar(double arg1, double *arg2) {
 //        *arg2 = foo(arg1);
 //    }
