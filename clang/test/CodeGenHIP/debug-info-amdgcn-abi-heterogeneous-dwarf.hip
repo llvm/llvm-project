@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -O0 -debug-info-kind=limited -gheterogeneous-dwarf -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O0 -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
 // XFAIL:*
 

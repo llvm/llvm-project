@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gheterogeneous-dwarf -emit-llvm -disable-llvm-verifier -o - %s | FileCheck %s
-// RUN: %clang_cc1 -DDEAD_CODE -fblocks -debug-info-kind=limited -gheterogeneous-dwarf -emit-llvm -disable-llvm-verifier -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -emit-llvm -disable-llvm-verifier -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DDEAD_CODE -fblocks -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -emit-llvm -disable-llvm-verifier -o - %s | FileCheck %s
 
 typedef void (^BlockTy)();
 void escapeFunc(BlockTy);

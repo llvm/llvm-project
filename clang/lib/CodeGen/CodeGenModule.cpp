@@ -1052,7 +1052,7 @@ void CodeGenModule::Release() {
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).
-    if (CodeGenOpts.HeterogeneousDwarf) {
+    if (CodeGenOpts.isHeterogeneousDwarfDIExpr()) {
       getModule().addModuleFlag(llvm::Module::Override, "Debug Info Version",
                                 llvm::DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF);
     } else {

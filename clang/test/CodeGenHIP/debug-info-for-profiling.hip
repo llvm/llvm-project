@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=constructor -fdebug-info-for-profiling -gheterogeneous-dwarf -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=constructor -fdebug-info-for-profiling -gheterogeneous-dwarf=diexpression -o - %s 2>&1 | FileCheck %s
 
 // Regression test for workaround in SWDEV-469667
 

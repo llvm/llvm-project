@@ -4882,9 +4882,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   bool EmitDwarfForAMDGCN = EmitDwarf && T.isAMDGCN();
   if (EmitDwarfForAMDGCN)
     CmdArgs.append({"-mllvm", "-amdgpu-spill-cfi-saved-regs"});
-  if (Args.hasFlag(options::OPT_gheterogeneous_dwarf,
-                   options::OPT_gno_heterogeneous_dwarf, EmitDwarfForAMDGCN))
-    CmdArgs.push_back("-gheterogeneous-dwarf");
+  if (Arg *A = Args.getLastArg(options::OPT_gheterogeneous_dwarf_EQ)) {
+    A->render(Args, CmdArgs);
+  } else if (EmitDwarfForAMDGCN) {
+    CmdArgs.push_back("-gheterogeneous-dwarf=diexpr");
+  }
 
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {

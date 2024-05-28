@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x c++ -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x c++ -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -o - %s | FileCheck %s
 
 struct S0 {
   unsigned int x : 16;
