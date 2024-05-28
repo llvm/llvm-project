@@ -4976,6 +4976,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorToSCF",
         ":VectorTransformOpsIncGen",
+        ":VectorTransforms",
         ":X86VectorTransforms",
     ],
 )
@@ -5893,7 +5894,6 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
-        ":VectorTransforms",
         "//llvm:Support",
     ],
 )

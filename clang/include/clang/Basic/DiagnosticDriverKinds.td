@@ -193,10 +193,10 @@ def err_drv_invalid_diagnotics_misexpect_tolerance : Error<
 def err_drv_missing_argument : Error<
   "argument to '%0' is missing (expected %1 value%s1)">;
 def err_drv_missing_Xopenmptarget_or_march: Error<
-  "The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march= .">,
+  "option -fopenmp-targets= requires additional options -Xopenmp-target= and -march=">,
   DefaultFatal;
 def warn_drv_missing_flang_exec : Warning<
-  "%0 not found, 'openmp-extras' package from ROCm may be missing.">,
+  "%0 not found, 'openmp-extras' package from ROCm may be missing">,
   InGroup<InvalidCommandLineArgument>;
 def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
@@ -662,7 +662,7 @@ def warn_drv_global_isel_incomplete_opt : Warning<
   InGroup<GlobalISel>;
 
 def warn_drv_amd_opt_not_found : Warning<
-  "The [AMD] proprietary optimization compiler installation was not found">,
+  "[AMD] proprietary optimization compiler installation was not found">,
   InGroup<UnusedCommandLineArgument>;
 
 def warn_drv_moutline_unsupported_opt : Warning<

@@ -57,3 +57,10 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
 contact: Selehov
 
 ---
+Revert: breaks ipBlender*
+0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
+
+contact: Pierre
+
+---
+

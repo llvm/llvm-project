@@ -21,6 +21,6 @@
 // CHECK-OMP-OPEN-NOT: "{{.*}}../alt/bin/ld.lld"
 
 // RUN: %clang -famd-opt -O3 -### %s  2>&1 | FileCheck --check-prefix=CHECK-ALT-MISS  %s
-// CHECK-ALT-MISS: warning: The [AMD] proprietary optimization compiler installation was not found
+// CHECK-ALT-MISS: warning: [AMD] proprietary optimization compiler installation was not found
 // RUN: %clang -fveclib=AMDLIBM -O3 -### %s  2>&1 | FileCheck --check-prefix=CHECK-VECLIB  %s
-// CHECK-VECLIB: warning: The [AMD] proprietary optimization compiler installation was not found
+// CHECK-VECLIB: warning: [AMD] proprietary optimization compiler installation was not found

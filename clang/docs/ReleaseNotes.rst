@@ -546,6 +546,9 @@ Improvements to Clang's diagnostics
 - Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
   Fixes #GH20456.
 
+- Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
+  Fixes #GH93369.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -807,6 +810,8 @@ Bug Fixes to C++ Support
 - Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
   with the same parameters not to be diagnosed. (Fixes #GH93456).
 - Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
