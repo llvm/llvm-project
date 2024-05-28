@@ -721,6 +721,7 @@ cc_binary(
         ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
+        ":vt_gen",
     ],
 )
 
@@ -1881,6 +1882,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":ObjCARC",
         ":Object",
         ":ProfileData",
         ":Remarks",

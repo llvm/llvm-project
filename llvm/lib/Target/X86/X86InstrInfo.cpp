@@ -3164,6 +3164,63 @@ X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
              : X86::COND_INVALID;
 }
 
+int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
+  // CCMP/CTEST has two conditional operands:
+  // - SCC: source conditonal code (same as CMOV)
+  // - DCF: destination conditional flags, which has 4 valid bits
+  //
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  //
+  // If SCC(source conditional code) evaluates to false, CCMP/CTEST will updates
+  // the conditional flags by as follows:
+  //
+  // OF = DCF.OF
+  // SF = DCF.SF
+  // ZF = DCF.ZF
+  // CF = DCF.CF
+  // PF = DCF.CF
+  // AF = 0 (Auxiliary Carry Flag)
+  //
+  // Otherwise, the CMP or TEST is executed and it updates the
+  // CSPAZO flags normally.
+  //
+  // NOTE:
+  // If SCC = P, then SCC evaluates to true regardless of the CSPAZO value.
+  // If SCC = NP, then SCC evaluates to false regardless of the CSPAZO value.
+
+  enum { CF = 1, ZF = 2, SF = 4, OF = 8, PF = CF };
+
+  switch (CC) {
+  default:
+    llvm_unreachable("Illegal condition code!");
+  case X86::COND_NO:
+  case X86::COND_NE:
+  case X86::COND_GE:
+  case X86::COND_G:
+  case X86::COND_AE:
+  case X86::COND_A:
+  case X86::COND_NS:
+  case X86::COND_NP:
+    return 0;
+  case X86::COND_O:
+    return OF;
+  case X86::COND_B:
+  case X86::COND_BE:
+    return CF;
+    break;
+  case X86::COND_E:
+  case X86::COND_LE:
+    return ZF;
+  case X86::COND_S:
+  case X86::COND_L:
+    return SF;
+  case X86::COND_P:
+    return PF;
+  }
+}
+
 /// Return the inverse of the specified condition,
 /// e.g. turning COND_E to COND_NE.
 X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
