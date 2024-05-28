@@ -12,6 +12,9 @@ define void @test1(i64 %x, ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ;
 entry:
   br label %header
@@ -52,6 +55,9 @@ define void @test2(i64 %x, ptr %a) {
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ;
 entry:
   br label %header
