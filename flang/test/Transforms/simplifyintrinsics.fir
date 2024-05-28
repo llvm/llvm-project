@@ -1260,9 +1260,9 @@ func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i
 
 // CHECK-LABEL:   func.func @_QMtestPcount_generate_mask(
 // CHECK-SAME:                                           %[[A:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
 // CHECK:           fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
 
 // -----
 // Ensure count isn't simplified for unknown dimension arrays
@@ -1285,9 +1285,9 @@ func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
 
 // CHECK-LABEL:   func.func @_QPmc(
 // CHECK-SAME:                     %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 // CHECK:           %[[RES:.*]] = fir.call @_FortranACount({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 
 // -----
 // Ensure Any is simplified in correct usage
@@ -1443,9 +1443,9 @@ func.func private @_FortranAAnyDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32
 
 // CHECK-LABEL:   func.func @_QPtestAny_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAnyDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
 
 // -----
 // Ensure Any is not simplified for unknown dimension arrays
@@ -1468,9 +1468,9 @@ func.func private @_FortranAAny(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1 at
 
 // CHECK-LABEL:   func.func @_QPtestAny_UnknownDim(
 // CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAny({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 
 // -----
 // Check that multi-rank Any cases are properly simplified
@@ -1682,9 +1682,9 @@ func.func private @_FortranAAllDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32
 
 // CHECK-LABEL:   func.func @_QPtestAll_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAllDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
 
 // -----
 // Check Minloc simplifies correctly for 1D case with 1D mask, I32 input
