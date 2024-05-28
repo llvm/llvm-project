@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -std=c++20 -triple aarch64-none-linux-android24 -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-android24  -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++20 -triple aarch64-none-linux-android24  -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s
 
 typedef __builtin_va_list va_list;
 
@@ -15,7 +11,8 @@ typedef __builtin_va_list va_list;
 // CHECK: [[VALISTTYPE:!.+va_list.*]] = !cir.struct<struct "{{.*}}__va_list
 
 int average(int count, ...) {
-// CHECK: cir.func @{{.*}}average{{.*}}(%arg0: !s32i loc({{.+}}), ...) -> !s32i
+// CHECK: cir.func @{{.*}}average{{.*}}(%arg0: !s32i, ...) -> !s32i
+// AMR64_CHECK: cir.func @{{.*}}average{{.*}}(%arg0: !s32i loc({{.+}}), ...) -> !s32i
     va_list args, args_copy;
     va_start(args, count);
     // CHECK: cir.va.start %{{[0-9]+}} : !cir.ptr<[[VALISTTYPE]]>

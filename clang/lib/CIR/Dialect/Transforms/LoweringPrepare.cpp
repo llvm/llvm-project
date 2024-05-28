@@ -15,7 +15,9 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
@@ -70,6 +72,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   void runOnOp(Operation *op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
+  void lowerVAArgOp(VAArgOp op);
   void lowerGlobalOp(GlobalOp op);
   void lowerDynamicCastOp(DynamicCastOp op);
   void lowerStdFindOp(StdFindOp op);
@@ -108,15 +111,24 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
+    auto abiStr = c->getTargetInfo().getABI();
     switch (c->getCXXABIKind()) {
     case clang::TargetCXXABI::GenericItanium:
-    case clang::TargetCXXABI::GenericAArch64:
-    case clang::TargetCXXABI::AppleARM64:
-      // TODO: this isn't quite right, clang uses AppleARM64CXXABI which
-      // inherits from ARMCXXABI. We'll have to follow suit.
       cxxABI.reset(::cir::LoweringPrepareCXXABI::createItaniumABI());
       break;
-
+    case clang::TargetCXXABI::GenericAArch64:
+    case clang::TargetCXXABI::AppleARM64:
+      // TODO: This is temporary solution. ABIKind info should be
+      // propagated from the targetInfo managed by ABI lowering
+      // query system.
+      assert(abiStr == "aapcs" || abiStr == "darwinpcs" ||
+             abiStr == "aapcs-soft");
+      cxxABI.reset(::cir::LoweringPrepareCXXABI::createAArch64ABI(
+          abiStr == "aapcs"
+              ? ::cir::AArch64ABIKind::AAPCS
+              : (abiStr == "darwinpccs" ? ::cir::AArch64ABIKind::DarwinPCS
+                                        : ::cir::AArch64ABIKind::AAPCSSoft)));
+      break;
     default:
       llvm_unreachable("NYI");
     }
@@ -318,6 +330,19 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
 
   op.replaceAllUsesWith(result);
   op.erase();
+}
+
+void LoweringPreparePass::lowerVAArgOp(VAArgOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPoint(op);
+  ::cir::CIRDataLayout datalayout(theModule);
+
+  auto res = cxxABI->lowerVAArg(builder, op, datalayout);
+  if (res) {
+    op.replaceAllUsesWith(res);
+    op.erase();
+  }
+  return;
 }
 
 void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
@@ -603,6 +628,8 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
 void LoweringPreparePass::runOnOp(Operation *op) {
   if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
+  } else if (auto vaArgOp = dyn_cast<VAArgOp>(op)) {
+    lowerVAArgOp(vaArgOp);
   } else if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
   } else if (auto dynamicCast = dyn_cast<DynamicCastOp>(op)) {
@@ -635,8 +662,9 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<CmpThreeWayOp, GlobalOp, DynamicCastOp, StdFindOp, IterEndOp,
-            IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(op))
+    if (isa<CmpThreeWayOp, VAArgOp, GlobalOp, DynamicCastOp, StdFindOp,
+            IterEndOp, IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(
+            op))
       opsToTransform.push_back(op);
   });
 
