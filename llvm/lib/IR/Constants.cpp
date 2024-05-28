@@ -315,8 +315,8 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   Type *IntTy = VectorType::getInteger(VTy);
   Constant *C0 = ConstantExpr::getBitCast(const_cast<Constant *>(this), IntTy);
   Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
-  Constant *CmpEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, C0, C1);
-  return isa<PoisonValue>(CmpEq) || match(CmpEq, m_One());
+  Constant *CmpEq = ConstantFoldCompareInstruction(ICmpInst::ICMP_EQ, C0, C1);
+  return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
 static bool
@@ -1568,7 +1568,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRange(), OnlyIfReducedTy);
+        GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -2348,13 +2348,15 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
 }
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
-                                         ArrayRef<Value *> Idxs, bool InBounds,
+                                         ArrayRef<Value *> Idxs,
+                                         GEPNoWrapFlags NW,
                                          std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InBounds, InRange, Idxs))
+  if (Constant *FC =
+          ConstantFoldGetElementPtr(Ty, C, NW.isInBounds(), InRange, Idxs))
     return FC; // Fold a few common cases.
 
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
@@ -2390,10 +2392,8 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
     ArgVec.push_back(Idx);
   }
 
-  unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, std::nullopt, Ty,
-                                InRange);
+                                NW.getRaw(), std::nullopt, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);

@@ -927,6 +927,18 @@ LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
 }
 
+void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
+  if (T == 0) {
+    LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
+                         "div by 0. Ignoring. Likely the function "
+                      << getParent()->getParent()->getName()
+                      << " has 0 entry count, and contains call instructions "
+                         "with non-zero prof info.");
+    return;
+  }
+  scaleProfData(*this, S, T);
+}
+
 //===----------------------------------------------------------------------===//
 //                        CallBrInst Implementation
 //===----------------------------------------------------------------------===//
@@ -2031,12 +2043,33 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
   return true;
 }
 
+void GetElementPtrInst::setNoWrapFlags(GEPNoWrapFlags NW) {
+  SubclassOptionalData = NW.getRaw();
+}
+
 void GetElementPtrInst::setIsInBounds(bool B) {
-  cast<GEPOperator>(this)->setIsInBounds(B);
+  GEPNoWrapFlags NW = cast<GEPOperator>(this)->getNoWrapFlags();
+  if (B)
+    NW |= GEPNoWrapFlags::inBounds();
+  else
+    NW = NW.withoutInBounds();
+  setNoWrapFlags(NW);
+}
+
+GEPNoWrapFlags GetElementPtrInst::getNoWrapFlags() const {
+  return cast<GEPOperator>(this)->getNoWrapFlags();
 }
 
 bool GetElementPtrInst::isInBounds() const {
   return cast<GEPOperator>(this)->isInBounds();
+}
+
+bool GetElementPtrInst::hasNoUnsignedSignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedSignedWrap();
+}
+
+bool GetElementPtrInst::hasNoUnsignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedWrap();
 }
 
 bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,

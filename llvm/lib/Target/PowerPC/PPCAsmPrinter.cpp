@@ -878,6 +878,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      // On AIX, TLS model opt may have turned local-dynamic accesses into
+      // initial-exec accesses.
+      PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+      if (Model == TLSModel::LocalDynamic &&
+          FuncInfo->isAIXFuncUseTLSIEForLD()) {
+        LLVM_DEBUG(
+            dbgs() << "Current function uses IE access for default LD vars.\n");
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
@@ -1148,12 +1157,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // If the symbol isn't toc-data then use the TOC on AIX.
     // Map the global address operand to be a reference to the TOC entry we
     // will synthesize later. 'TOCEntry' is a label used to reference the
     // storage allocated in the TOC which contains the address of 'MOSymbol'.
-    // If the toc-data attribute is used, the TOC entry contains the data
-    // rather than the address of the MOSymbol.
+    // If the symbol does not have the toc-data attribute, then we create the
+    // TOC entry on AIX. If the toc-data attribute is used, the TOC entry
+    // contains the data rather than the address of the MOSymbol.
     if (![](const MachineOperand &MO) {
           if (!MO.isGlobal())
             return false;
@@ -1161,7 +1170,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
           const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
           if (!GV)
             return false;
-
           return GV->hasAttribute("toc-data");
         }(MO)) {
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
@@ -1292,8 +1300,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     unsigned Op = MI->getOpcode();
 
-    // Change the opcode to load address for tocdata
-    TmpInst.setOpcode(Op == PPC::ADDItocL8 ? PPC::ADDI8 : PPC::LA);
+    // Change the opcode to load address for toc-data.
+    // ADDItocL is only used for 32-bit toc-data on AIX and will always use LA.
+    TmpInst.setOpcode(Op == PPC::ADDItocL8 ? (IsAIX ? PPC::LA8 : PPC::ADDI8)
+                                           : PPC::LA);
 
     const MachineOperand &MO = MI->getOperand(2);
     assert((Op == PPC::ADDItocL8)
@@ -1307,8 +1317,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     const MCExpr *Exp = MCSymbolRefExpr::create(
         MOSymbol,
-        Op == PPC::ADDItocL8 ? MCSymbolRefExpr::VK_PPC_TOC_LO
-                             : MCSymbolRefExpr::VK_PPC_L,
+        IsAIX ? MCSymbolRefExpr::VK_PPC_L : MCSymbolRefExpr::VK_PPC_TOC_LO,
         OutContext);
 
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
@@ -2822,8 +2831,10 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
 
   // When -fdata-sections is enabled, every GlobalVariable will
   // be put into its own csect; therefore, label is not necessary here.
-  if (!TM.getDataSections() || GV->hasSection())
-    OutStreamer->emitLabel(EmittedInitSym);
+  if (!TM.getDataSections() || GV->hasSection()) {
+    if (Csect->getMappingClass() != XCOFF::XMC_TD)
+      OutStreamer->emitLabel(EmittedInitSym);
+  }
 
   // No alias to emit.
   if (!GOAliasMap[GV].size()) {
@@ -2950,7 +2961,11 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry. If the variant kind is
     // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
     // new symbol to prefix the name with a dot.
-    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM) {
+    // If TLS model opt is turned on, create a new symbol to prefix the name
+    // with a dot.
+    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
+        (Subtarget->hasAIXShLibTLSModelOpt() &&
+         I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;

@@ -14,7 +14,7 @@ struct A { int a; A(int a) : a(a) {} virtual ~A(); };
 // PartialTranslationUnit.
 inline A::~A() { printf("~A(%d)\n", a); }
 
-// Create one instance with new and delete it.
+// Create one instance with new and delete it. We crash here now:
 A *a1 = new A(1);
 delete a1;
 // CHECK: ~A(1)

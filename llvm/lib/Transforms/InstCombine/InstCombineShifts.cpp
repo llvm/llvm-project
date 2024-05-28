@@ -1174,7 +1174,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // X & (CC << C)
         Value *M = Builder.CreateAnd(X, ConstantInt::get(Ty, CC->shl(*C)),
                                      X->getName() + ".mask");
-        return BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        auto *NewOp = BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(Op0BO);
+            Disjoint && Disjoint->isDisjoint())
+          cast<PossiblyDisjointInst>(NewOp)->setIsDisjoint(true);
+        return NewOp;
       }
     }
 
@@ -1259,7 +1263,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
-  // ((X << nuw Z) sub nuw Y) >>u exact Z --> X sub nuw (Y >>u exact Z),
+  // ((X << nuw Z) sub nuw Y) >>u exact Z --> X sub nuw (Y >>u exact Z)
   Value *Y;
   if (I.isExact() &&
       match(Op0, m_OneUse(m_NUWSub(m_NUWShl(m_Value(X), m_Specific(Op1)),
@@ -1279,7 +1283,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor:
-      // And does not work here, and sub is handled separately.
+      // Sub is handled separately.
       return true;
     }
   };

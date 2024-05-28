@@ -515,7 +515,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_format_path",
-            "values": {"c++23": 202403}, # P2845R8: Formatting of std::filesystem::path
+            "values": {"c++26": 202403},  # P2845R8: Formatting of std::filesystem::path
             "headers": ["filesystem"],
             "unimplemented": True,
         },
@@ -766,6 +766,16 @@ feature_test_macros = [
             "name": "__cpp_lib_is_swappable",
             "values": {"c++17": 201603},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_is_within_lifetime",
+            # Note this name was changed from "__cpp_lib_within_lifetime" when the paper was adopted
+            # https://github.com/cplusplus/draft/commit/0facada4cadd97e1ba15bfaea76a804f1dc5c309
+            "values": {
+                "c++26": 202306  # P2641R4 Checking if a union alternative is active
+            },
+            "headers": ["type_traits"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_jthread",
@@ -1044,7 +1054,6 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_wrapper",
             "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",
@@ -1261,7 +1270,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_to_string",
-            "values": {"c++23": 202306},  # P2587R3 to_string or not to_string
+            "values": {"c++26": 202306},  # P2587R3 to_string or not to_string
             "headers": ["string"],
             "unimplemented": True,
         },
@@ -1342,14 +1351,6 @@ feature_test_macros = [
             "name": "__cpp_lib_void_t",
             "values": {"c++17": 201411},
             "headers": ["type_traits"],
-        },
-        {
-            "name": "__cpp_lib_within_lifetime",
-            "values": {
-                "c++26": 202306  # P2641R4 Checking if a union alternative is active
-            },
-            "headers": ["type_traits"],
-            "unimplemented": True,
         },
     ]
 ]

@@ -2,7 +2,6 @@
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
-// DEFINE:  --force-streaming-compatible-sve \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
 // DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 

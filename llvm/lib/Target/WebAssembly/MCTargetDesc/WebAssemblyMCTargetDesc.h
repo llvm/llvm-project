@@ -207,6 +207,7 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(LOAD_LANE_I16x8)
   WASM_LOAD_STORE(STORE_LANE_I16x8)
   WASM_LOAD_STORE(LOAD_F16_F32)
+  WASM_LOAD_STORE(STORE_F16_F32)
   return 1;
   WASM_LOAD_STORE(LOAD_I32)
   WASM_LOAD_STORE(LOAD_F32)
@@ -344,6 +345,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_v4i32_S:
   case WebAssembly::ARGUMENT_v2i64:
   case WebAssembly::ARGUMENT_v2i64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
   case WebAssembly::ARGUMENT_v4f32:
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:

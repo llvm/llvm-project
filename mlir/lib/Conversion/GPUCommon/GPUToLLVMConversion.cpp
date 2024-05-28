@@ -926,7 +926,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
 static bool isDefinedByCallTo(Value value, StringRef functionName) {
   assert(isa<LLVM::LLVMPointerType>(value.getType()));
   if (auto defOp = value.getDefiningOp<LLVM::CallOp>())
-    return defOp.getCallee()->equals(functionName);
+    return *defOp.getCallee() == functionName;
   return false;
 }
 

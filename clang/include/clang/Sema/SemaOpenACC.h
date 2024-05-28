@@ -26,6 +26,9 @@ class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 public:
+  // Redeclaration of the version in OpenACCClause.h.
+  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
   /// discriminated union on the 'Clause Kind', with all of the individual
@@ -54,8 +57,23 @@ public:
       bool IsZero;
     };
 
+    struct WaitDetails {
+      Expr *DevNumExpr;
+      SourceLocation QueuesLoc;
+      SmallVector<Expr *> QueueIdExprs;
+    };
+
+    struct DeviceTypeDetails {
+      SmallVector<DeviceTypeArgument> Archs;
+    };
+    struct ReductionDetails {
+      OpenACCReductionOperator Op;
+      SmallVector<Expr *> VarList;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails>
+                 IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
+                 ReductionDetails>
         Details = std::monostate{};
 
   public:
@@ -104,12 +122,43 @@ public:
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
-      //
-      // 'async' has an optional IntExpr, so be tolerant of that.
-      if (ClauseKind == OpenACCClauseKind::Async &&
+
+      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Wait) &&
           std::holds_alternative<std::monostate>(Details))
         return 0;
       return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    SourceLocation getQueuesLoc() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queues location");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return SourceLocation{};
+
+      return std::get<WaitDetails>(Details).QueuesLoc;
+    }
+
+    Expr *getDevNumExpr() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a device number expr");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
+      return std::get<WaitDetails>(Details).DevNumExpr;
+    }
+
+    ArrayRef<Expr *> getQueueIdExprs() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queue id expr list");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return ArrayRef<Expr *>{std::nullopt};
+
+      return std::get<WaitDetails>(Details).QueueIdExprs;
     }
 
     ArrayRef<Expr *> getIntExprs() {
@@ -124,6 +173,10 @@ public:
 
     ArrayRef<Expr *> getIntExprs() const {
       return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
+    }
+
+    OpenACCReductionOperator getReductionOp() const {
+      return std::get<ReductionDetails>(Details).Op;
     }
 
     ArrayRef<Expr *> getVarList() {
@@ -144,8 +197,13 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
+
+      if (ClauseKind == OpenACCClauseKind::Reduction)
+        return std::get<ReductionDetails>(Details).VarList;
+
       return std::get<VarListDetails>(Details).VarList;
     }
 
@@ -170,6 +228,13 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
              "Only copyout/create accepts 'zero' tag");
       return std::get<VarListDetails>(Details).IsZero;
+    }
+
+    ArrayRef<DeviceTypeArgument> getDeviceTypeArchitectures() const {
+      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
+              ClauseKind == OpenACCClauseKind::DType) &&
+             "Only 'device_type'/'dtype' has a device-type-arg list");
+      return std::get<DeviceTypeDetails>(Details).Archs;
     }
 
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
@@ -282,6 +347,27 @@ public:
              "zero: tag only valid on copyout/create");
       Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
     }
+
+    void setReductionDetails(OpenACCReductionOperator Op,
+                             llvm::SmallVector<Expr *> &&VarList) {
+      assert(ClauseKind == OpenACCClauseKind::Reduction &&
+             "reduction details only valid on reduction");
+      Details = ReductionDetails{Op, std::move(VarList)};
+    }
+
+    void setWaitDetails(Expr *DevNum, SourceLocation QueuesLoc,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a wait-details");
+      Details = WaitDetails{DevNum, QueuesLoc, std::move(IntExprs)};
+    }
+
+    void setDeviceTypeDetails(llvm::SmallVector<DeviceTypeArgument> &&Archs) {
+      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
+              ClauseKind == OpenACCClauseKind::DType) &&
+             "Only 'device_type'/'dtype' has a device-type-arg list");
+      Details = DeviceTypeDetails{std::move(Archs)};
+    }
   };
 
   SemaOpenACC(Sema &S);
@@ -329,7 +415,11 @@ public:
 
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
-  ExprResult ActOnVar(Expr *VarExpr);
+  ExprResult ActOnVar(OpenACCClauseKind CK, Expr *VarExpr);
+
+  /// Called while semantically analyzing the reduction clause, ensuring the var
+  /// is the correct kind of reference.
+  ExprResult CheckReductionVar(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.

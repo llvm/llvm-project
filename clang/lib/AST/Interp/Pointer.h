@@ -226,8 +226,7 @@ public:
       return *this;
 
     // If at base, point to an array of base types.
-    if (asBlockPointer().Base == 0 ||
-        asBlockPointer().Base == sizeof(InlineDescriptor))
+    if (isRoot())
       return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
@@ -306,10 +305,8 @@ public:
   const Descriptor *getFieldDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
-    if (isBlockPointer() &&
-        (asBlockPointer().Base == 0 ||
-         asBlockPointer().Base == sizeof(InlineDescriptor) ||
-         asBlockPointer().Base == RootPtrMark))
+
+    if (isRoot())
       return getDeclDesc();
     return getInlineDesc()->Desc;
   }
@@ -317,11 +314,13 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const {
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
-      // Unfortunately, complex types are not array types in clang, but they are
-      // for us.
+      // Unfortunately, complex and vector types are not array types in clang,
+      // but they are for us.
       if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
         return AT->getElementType();
       if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
+        return CT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
     return getFieldDesc()->getType();
@@ -387,12 +386,6 @@ public:
   bool isUnknownSizeArray() const {
     if (!isBlockPointer())
       return false;
-    // If this points inside a dummy block, return true.
-    // FIXME: This might change in the future. If it does, we need
-    // to set the proper Ctor/Dtor functions for dummy Descriptors.
-    if (asBlockPointer().Base != 0 &&
-        asBlockPointer().Base != sizeof(InlineDescriptor) && isDummy())
-      return true;
     return getFieldDesc()->isUnknownSizeArray();
   }
   /// Checks if the pointer points to an array.
@@ -403,9 +396,11 @@ public:
   }
   /// Pointer points directly to a block.
   bool isRoot() const {
-    return (asBlockPointer().Base == 0 ||
-            asBlockPointer().Base == RootPtrMark) &&
-           Offset == 0;
+    if (isZero() || isIntegralPointer())
+      return true;
+    return (asBlockPointer().Base ==
+                asBlockPointer().Pointee->getDescriptor()->getMetadataSize() ||
+            asBlockPointer().Base == 0);
   }
   /// If this pointer has an InlineDescriptor we can use to initialize.
   bool canBeInitialized() const {
@@ -487,9 +482,7 @@ public:
   bool isActive() const {
     if (!isBlockPointer())
       return true;
-    return asBlockPointer().Base == 0 ||
-           asBlockPointer().Base == sizeof(InlineDescriptor) ||
-           getInlineDesc()->IsActive;
+    return isRoot() || getInlineDesc()->IsActive;
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
@@ -508,10 +501,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return (asBlockPointer().Base == 0 ||
-            asBlockPointer().Base == sizeof(InlineDescriptor))
-               ? getDeclDesc()->IsConst
-               : getInlineDesc()->IsConst;
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   /// Returns the declaration ID.
@@ -547,9 +537,6 @@ public:
     if (isZero())
       return 0;
 
-    if (isElementPastEnd())
-      return 1;
-
     // narrow()ed element in a composite array.
     if (asBlockPointer().Base > sizeof(InlineDescriptor) &&
         asBlockPointer().Base == Offset)
@@ -567,11 +554,16 @@ public:
 
     if (!asBlockPointer().Pointee)
       return false;
-    return isElementPastEnd() || getSize() == getOffset();
+
+    return isElementPastEnd() ||
+           (getSize() == getOffset() && !isZeroSizeArray());
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
   bool isElementPastEnd() const { return Offset == PastEndMark; }
+
+  /// Checks if the pointer is pointing to a zero-size array.
+  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {

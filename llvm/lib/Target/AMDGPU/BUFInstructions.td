@@ -1434,6 +1434,15 @@ defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short, i32, "BUFFER_LOAD_SSHORT">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte, i32, "BUFFER_LOAD_UBYTE">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort,  i32, "BUFFER_LOAD_USHORT">;
 
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v2i32, "BUFFER_LOAD_DWORD_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v3i32, "BUFFER_LOAD_DWORDX2_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v4i32, "BUFFER_LOAD_DWORDX3_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_tfe, v5i32, "BUFFER_LOAD_DWORDX4_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_byte_tfe, v2i32, "BUFFER_LOAD_SBYTE_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short_tfe, v2i32, "BUFFER_LOAD_SSHORT_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte_tfe, v2i32, "BUFFER_LOAD_UBYTE_TFE">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort_tfe, v2i32, "BUFFER_LOAD_USHORT_TFE">;
+
 multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
                                    string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mubuf_intrinsic_store<name, memoryVt>);
@@ -2456,13 +2465,19 @@ class get_BUF_ps<string name> {
 
 // gfx11 instruction that accept both old and new assembler name.
 class Mnem_gfx11_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Plus;
+}
 
 class Mnem_gfx11 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Only]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Only;
+}
 
 class Mnem_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX12Plus;
+}
 
 multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;
