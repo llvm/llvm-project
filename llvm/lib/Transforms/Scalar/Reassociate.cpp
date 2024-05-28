@@ -652,9 +652,8 @@ static bool LinearizeExprTree(Instruction *I,
     It->second = 0;
     Ops.push_back(std::make_pair(V, Weight));
     if (Opcode == Instruction::Add && Flags.AllKnownNonNegative &&
-        Flags.HasNSW) {
+        Flags.HasNSW)
       Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
-    }
   }
 
   // For nilpotent operations or addition there may be no operands, for example
