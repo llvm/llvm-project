@@ -1697,6 +1697,12 @@ def : Pat<
                     ConstantStrAttr<StrAttr, "MatchVariadic">)>;
 
 def : Pat<
+  (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchInverseVariadic">),
+  (MixedVOperandOp3 $input2, (variadic $input1b), (variadic $input1a),
+                    ConstantAttr<I32Attr, "1">:$attr1)>;
+
+def : Pat<
   (MixedVOperandOp4 (variadic (MixedVOperandInOutI32Op $input1a),
                               (MixedVOperandInOutI32Op $input1b)),
                     $input2, ConstantAttr<I32Attr, "1">:$attr1),
@@ -3105,6 +3111,11 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
+}
+
+def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
 }
 
 //===----------------------------------------------------------------------===//
