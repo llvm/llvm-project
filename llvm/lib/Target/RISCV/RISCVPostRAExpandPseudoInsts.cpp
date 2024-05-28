@@ -105,7 +105,7 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
 }
 
 bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI) {
+                                            MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
   Register DstReg = MBBI->getOperand(0).getReg();
