@@ -285,7 +285,7 @@ private:
     unsigned BitsDiff = VT.getScalarSizeInBits() - OldVT.getScalarSizeInBits();
     SDValue ShiftCst = DAG.getShiftAmountConstant(BitsDiff, VT, dl);
     SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShiftCst, Mask, EVL);
-    return DAG.getNode(ISD::VP_ASHR, dl, VT, Shl, ShiftCst, Mask, EVL);
+    return DAG.getNode(ISD::VP_SRA, dl, VT, Shl, ShiftCst, Mask, EVL);
   }
 
   /// Get a promoted operand and zero extend it to the final size.

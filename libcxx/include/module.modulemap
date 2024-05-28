@@ -583,6 +583,9 @@ module std_private_fwd_bit_reference [system] {
 }
 module std_private_config            [system] {
   textual header "__config"
+  textual header "__configuration/abi.h"
+  textual header "__configuration/compiler.h"
+  textual header "__configuration/platform.h"
   export *
 }
 module std_private_hash_table        [system] {
@@ -714,35 +717,14 @@ module std_private_algorithm_partition_copy                              [system
 module std_private_algorithm_partition_point                             [system] { header "__algorithm/partition_point.h" }
 module std_private_algorithm_pop_heap                                    [system] { header "__algorithm/pop_heap.h" }
 module std_private_algorithm_prev_permutation                            [system] { header "__algorithm/prev_permutation.h" }
-module std_private_algorithm_pstl_any_all_none_of                        [system] { header "__algorithm/pstl_any_all_none_of.h" }
-module std_private_algorithm_pstl_copy                                   [system] { header "__algorithm/pstl_copy.h" }
-module std_private_algorithm_pstl_count                                  [system] { header "__algorithm/pstl_count.h" }
-module std_private_algorithm_pstl_equal                                  [system] { header "__algorithm/pstl_equal.h" }
-module std_private_algorithm_pstl_fill                                   [system] { header "__algorithm/pstl_fill.h" }
-module std_private_algorithm_pstl_find                                   [system] {
-  header "__algorithm/pstl_find.h"
-  export *
-}
-module std_private_algorithm_pstl_for_each                               [system] {
-  header "__algorithm/pstl_for_each.h"
+module std_private_algorithm_pstl                                        [system] {
+  header "__algorithm/pstl.h"
   export *
 }
 module std_private_algorithm_pstl_frontend_dispatch                      [system] {
   header "__algorithm/pstl_frontend_dispatch.h"
   export std_private_utility_forward
 }
-module std_private_algorithm_pstl_generate                               [system] { header "__algorithm/pstl_generate.h" }
-module std_private_algorithm_pstl_is_partitioned                         [system] { header "__algorithm/pstl_is_partitioned.h" }
-module std_private_algorithm_pstl_merge                                  [system] { header "__algorithm/pstl_merge.h" }
-module std_private_algorithm_pstl_move                                   [system] { header "__algorithm/pstl_move.h" }
-module std_private_algorithm_pstl_replace                                [system] { header "__algorithm/pstl_replace.h" }
-module std_private_algorithm_pstl_rotate_copy                            [system] { header "__algorithm/pstl_rotate_copy.h" }
-module std_private_algorithm_pstl_sort                                   [system] { header "__algorithm/pstl_sort.h" }
-module std_private_algorithm_pstl_stable_sort                            [system] {
-  header "__algorithm/pstl_stable_sort.h"
-  export std_private_functional_operations
-}
-module std_private_algorithm_pstl_transform                              [system] { header "__algorithm/pstl_transform.h" }
 module std_private_algorithm_push_heap                                   [system] { header "__algorithm/push_heap.h" }
 module std_private_algorithm_ranges_adjacent_find                        [system] { header "__algorithm/ranges_adjacent_find.h" }
 module std_private_algorithm_ranges_all_of                               [system] { header "__algorithm/ranges_all_of.h" }
@@ -1066,7 +1048,11 @@ module std_private_atomic_atomic_flag         [system] {
 }
 module std_private_atomic_atomic_init         [system] { header "__atomic/atomic_init.h" }
 module std_private_atomic_atomic_lock_free    [system] { header "__atomic/atomic_lock_free.h" }
-module std_private_atomic_atomic_sync         [system] { header "__atomic/atomic_sync.h" }
+module std_private_atomic_atomic_ref          [system] { header "__atomic/atomic_ref.h" }
+module std_private_atomic_atomic_sync         [system] {
+  header "__atomic/atomic_sync.h"
+  export std_private_atomic_to_gcc_order
+}
 module std_private_atomic_check_memory_order  [system] { header "__atomic/check_memory_order.h" }
 module std_private_atomic_contention_t        [system] { header "__atomic/contention_t.h" }
 module std_private_atomic_cxx_atomic_impl     [system] { header "__atomic/cxx_atomic_impl.h" }
@@ -1074,6 +1060,10 @@ module std_private_atomic_fence               [system] { header "__atomic/fence.
 module std_private_atomic_is_always_lock_free [system] { header "__atomic/is_always_lock_free.h" }
 module std_private_atomic_kill_dependency     [system] { header "__atomic/kill_dependency.h" }
 module std_private_atomic_memory_order        [system] { header "__atomic/memory_order.h" }
+module std_private_atomic_to_gcc_order        [system] {
+  header "__atomic/to_gcc_order.h"
+  export std_private_atomic_memory_order
+}
 
 module std_private_bit_bit_cast       [system] { header "__bit/bit_cast.h" }
 module std_private_bit_bit_ceil       [system] { header "__bit/bit_ceil.h" }
@@ -1582,9 +1572,8 @@ module std_private_numeric_inner_product            [system] { header "__numeric
 module std_private_numeric_iota                     [system] { header "__numeric/iota.h" }
 module std_private_numeric_midpoint                 [system] { header "__numeric/midpoint.h" }
 module std_private_numeric_partial_sum              [system] { header "__numeric/partial_sum.h" }
-module std_private_numeric_pstl_reduce              [system] { header "__numeric/pstl_reduce.h" }
-module std_private_numeric_pstl_transform_reduce    [system] {
-  header "__numeric/pstl_transform_reduce.h"
+module std_private_numeric_pstl                     [system] {
+  header "__numeric/pstl.h"
   export *
 }
 module std_private_numeric_reduce                   [system] { header "__numeric/reduce.h" }

@@ -475,8 +475,7 @@ entry:
 declare float @_Z5rootnfi(float, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_2
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 2)
-; GCN-PRELINK: %__rootn2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
+; GCN: call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_rootn_2(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -507,8 +506,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_m2
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 -2)
-; GCN-PRELINK: %__rootn2rsqrt = tail call fast float @_Z5rsqrtf(float %tmp)
+; GCN: [[SQRT:%.+]] = tail call fast float @llvm.sqrt.f32(float %tmp)
+; GCN-NEXT: fdiv fast float 1.000000e+00, [[SQRT]]
 define amdgpu_kernel void @test_rootn_m2(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4

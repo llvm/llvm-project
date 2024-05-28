@@ -28,8 +28,7 @@ namespace charinfo {
     CHAR_LOWER    = 0x0040,  // a-z
     CHAR_UNDER    = 0x0080,  // _
     CHAR_PERIOD   = 0x0100,  // .
-    CHAR_RAWDEL   = 0x0200,  // {}[]#<>%:;?*+-/^&|~!=,"'
-    CHAR_PUNCT    = 0x0400   // `$@()
+    CHAR_PUNCT    = 0x0200,  // {}[]#<>%:;?*+-/^&|~!=,"'`$@()
   };
 
   enum {
@@ -152,7 +151,8 @@ LLVM_READONLY inline bool isHexDigit(unsigned char c) {
 /// Note that '_' is both a punctuation character and an identifier character!
 LLVM_READONLY inline bool isPunctuation(unsigned char c) {
   using namespace charinfo;
-  return (InfoTable[c] & (CHAR_UNDER|CHAR_PERIOD|CHAR_RAWDEL|CHAR_PUNCT)) != 0;
+  return (InfoTable[c] &
+          (CHAR_UNDER | CHAR_PERIOD | CHAR_PUNCT | CHAR_PUNCT)) != 0;
 }
 
 /// Return true if this character is an ASCII printable character; that is, a
@@ -160,8 +160,8 @@ LLVM_READONLY inline bool isPunctuation(unsigned char c) {
 /// terminal.
 LLVM_READONLY inline bool isPrintable(unsigned char c) {
   using namespace charinfo;
-  return (InfoTable[c] & (CHAR_UPPER|CHAR_LOWER|CHAR_PERIOD|CHAR_PUNCT|
-                          CHAR_DIGIT|CHAR_UNDER|CHAR_RAWDEL|CHAR_SPACE)) != 0;
+  return (InfoTable[c] & (CHAR_UPPER | CHAR_LOWER | CHAR_PERIOD | CHAR_PUNCT |
+                          CHAR_DIGIT | CHAR_UNDER | CHAR_SPACE)) != 0;
 }
 
 /// Return true if this is the body character of a C preprocessing number,
@@ -175,8 +175,9 @@ LLVM_READONLY inline bool isPreprocessingNumberBody(unsigned char c) {
 /// Return true if this is the body character of a C++ raw string delimiter.
 LLVM_READONLY inline bool isRawStringDelimBody(unsigned char c) {
   using namespace charinfo;
-  return (InfoTable[c] & (CHAR_UPPER|CHAR_LOWER|CHAR_PERIOD|
-                          CHAR_DIGIT|CHAR_UNDER|CHAR_RAWDEL)) != 0;
+  return (InfoTable[c] & (CHAR_UPPER | CHAR_LOWER | CHAR_PERIOD | CHAR_DIGIT |
+                          CHAR_UNDER | CHAR_PUNCT)) != 0 &&
+         c != '(' && c != ')';
 }
 
 enum class EscapeChar {

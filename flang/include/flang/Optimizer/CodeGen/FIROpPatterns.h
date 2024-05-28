@@ -101,6 +101,10 @@ protected:
                         mlir::Value box,
                         mlir::ConversionPatternRewriter &rewriter) const;
 
+  mlir::Value getRankFromBox(mlir::Location loc, TypePair boxTy,
+                             mlir::Value box,
+                             mlir::ConversionPatternRewriter &rewriter) const;
+
   // Get the element type given an LLVM type that is of the form
   // (array|struct|vector)+ and the provided indexes.
   mlir::Type getBoxEleTy(mlir::Type type,

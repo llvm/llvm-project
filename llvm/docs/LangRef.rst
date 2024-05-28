@@ -290,13 +290,17 @@ linkage:
     symbol is weak until linked, if not linked, the symbol becomes null
     instead of being an undefined reference.
 ``linkonce_odr``, ``weak_odr``
-    Some languages allow differing globals to be merged, such as two
-    functions with different semantics. Other languages, such as
-    ``C++``, ensure that only equivalent globals are ever merged (the
-    "one definition rule" --- "ODR"). Such languages can use the
-    ``linkonce_odr`` and ``weak_odr`` linkage types to indicate that the
-    global will only be merged with equivalent globals. These linkage
-    types are otherwise the same as their non-``odr`` versions.
+    The ``odr`` suffix indicates that all globals defined with the given name
+    are equivalent, along the lines of the C++ "one definition rule" ("ODR").
+    Informally, this means we can inline functions and fold loads of constants.
+
+    Formally, use the following definition: when an ``odr`` function is
+    called, one of the definitions is non-deterministically chosen to run. For
+    ``odr`` variables, if any byte in the value is not equal in all
+    initializers, that byte is a :ref:`poison value <poisonvalues>`. For
+    aliases and ifuncs, apply the rule for the underlying function or variable.
+
+    These linkage types are otherwise the same as their non-``odr`` versions.
 ``external``
     If none of the above identifiers are used, the global is externally
     visible, meaning that it participates in linkage and can be used to
@@ -11180,6 +11184,8 @@ Syntax:
 
       <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
       <result> = getelementptr inbounds <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr nusw <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr nuw <ty>, ptr <ptrval>{, <ty> <idx>}*
       <result> = getelementptr inrange(S,E) <ty>, ptr <ptrval>{, <ty> <idx>}*
       <result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
 
@@ -11295,27 +11301,47 @@ memory though, even if it happens to point into allocated storage. See the
 :ref:`Pointer Aliasing Rules <pointeraliasing>` section for more
 information.
 
-If the ``inbounds`` keyword is present, the result value of a
-``getelementptr`` with any non-zero indices is a
-:ref:`poison value <poisonvalues>` if one of the following rules is violated:
+The ``getelementptr`` instruction may have a number of attributes that impose
+additional rules. If any of the rules are violated, the result value is a
+:ref:`poison value <poisonvalues>`. In cases where the base is a vector of
+pointers, the attributes apply to each computation element-wise.
 
-*  The base pointer has an *in bounds* address of an allocated object, which
+For ``nusw`` (no unsigned signed wrap):
+
+ * If the type of an index is larger than the pointer index type, the
+   truncation to the pointer index type preserves the signed value
+   (``trunc nsw``).
+ * The multiplication of an index by the type size does not wrap the pointer
+   index type in a signed sense (``mul nsw``).
+ * The successive addition of each offset (without adding the base address)
+   does not wrap the pointer index type in a signed sense (``add nsw``).
+ * The successive addition of the current address, truncated to the pointer
+   index type and interpreted as an unsigned number, and each offset,
+   interpreted as a signed number, does not wrap the pointer index type.
+
+For ``nuw`` (no unsigned wrap):
+
+ * If the type of an index is larger than the pointer index type, the
+   truncation to the pointer index type preserves the unsigned value
+   (``trunc nuw``).
+ * The multiplication of an index by the type size does not wrap the pointer
+   index type in an unsigned sense (``mul nuw``).
+ * The successive addition of each offset (without adding the base address)
+   does not wrap the pointer index type in an unsigned sense (``add nuw``).
+ * The successive addition of the current address, truncated to the pointer
+   index type and interpreted as an unsigned number, and each offset, also
+   interpreted as an unsigned number, does not wrap the pointer index type
+   (``add nuw``).
+
+For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
+if the ``getelementptr`` has any non-zero indices, the following rules apply:
+
+ * The base pointer has an *in bounds* address of an allocated object, which
    means that it points into an allocated object, or to its end. Note that the
    object does not have to be live anymore; being in-bounds of a deallocated
    object is sufficient.
-*  If the type of an index is larger than the pointer index type, the
-   truncation to the pointer index type preserves the signed value.
-*  The multiplication of an index by the type size does not wrap the pointer
-   index type in a signed sense (``nsw``).
-*  The successive addition of each offset (without adding the base address) does
-   not wrap the pointer index type in a signed sense (``nsw``).
-*  The successive addition of the current address, interpreted as an unsigned
-   number, and each offset, interpreted as a signed number, does not wrap the
-   unsigned address space and remains *in bounds* of the allocated object.
-   As a corollary, if the added offset is non-negative, the addition does not
-   wrap in an unsigned sense (``nuw``).
-*  In cases where the base is a vector of pointers, the ``inbounds`` keyword
-   applies to each of the computations element-wise.
+ * During the successive addition of offsets to the address, the resulting
+   pointer must remain *in bounds* of the allocated object at each step.
 
 Note that ``getelementptr`` with all-zero indices is always considered to be
 ``inbounds``, even if the base pointer does not point to an allocated object.
@@ -11325,6 +11351,10 @@ address space is the null pointer itself.
 These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
+
+If ``inbounds`` is present on a ``getelementptr`` instruction, the ``nusw``
+attribute will be automatically set as well. For this reason, the ``nusw``
+will also not be printed in textual IR if ``inbounds`` is already present.
 
 If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
@@ -15757,8 +15787,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Return the same value as a corresponding libm '``fma``' function but without
-trapping or setting ``errno``.
+Return the same value as the IEEE-754 fusedMultiplyAdd operation. This
+is assumed to not trap or set ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
