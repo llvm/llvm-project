@@ -103,6 +103,10 @@ private:
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
 
+  /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
+  /// nullptr if `DIExpressionAttr` is null.
+  llvm::DIExpression *getExpressionAttrOrNull(DIExpressionAttr attr);
+
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
   DenseMap<std::tuple<Location, llvm::DILocalScope *, const llvm::DILocation *>,
