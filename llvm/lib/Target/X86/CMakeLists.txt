@@ -8,7 +8,7 @@ tablegen(LLVM X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1 ${AMDGPU_TABL
 tablegen(LLVM X86GenCallingConv.inc -gen-callingconv ${AMDGPU_TABLEGEN_FLAGS})
 tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel ${AMDGPU_TABLEGEN_FLAGS})
 tablegen(LLVM X86GenDisassemblerTables.inc -gen-disassembler ${AMDGPU_TABLEGEN_FLAGS})
-tablegen(LLVM X86GenCompressEVEXTables.inc -gen-x86-compress-evex-tables ${AMDGPU_TABLEGEN_FLAGS})
+tablegen(LLVM X86GenInstrMapping.inc -gen-x86-instr-mapping ${AMDGPU_TABLEGEN_FLAGS})
 tablegen(LLVM X86GenExegesis.inc -gen-exegesis ${AMDGPU_TABLEGEN_FLAGS})
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel ${AMDGPU_TABLEGEN_FLAGS})
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel ${AMDGPU_TABLEGEN_FLAGS})
