@@ -35,12 +35,13 @@ define <4 x float> @f_v4_s24_inexact(<4 x i32> %u) {
   ret <4 x float> %v
 }
 
-define <4 x float> @f_v4_s32(<4 x i32> %u) {
-; CHECK-LABEL: f_v4_s32:
+define <4 x float> @f_v4_s31(<4 x i32> %u) {
+; CHECK-LABEL: f_v4_s31:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ret
-  %s = ashr <4 x i32> %u, <i32 32, i32 32, i32 32, i32 32>
+  %s = ashr <4 x i32> %u, <i32 31, i32 31, i32 31, i32 31>
   %v = sitofp <4 x i32> %s to <4 x float>
   ret <4 x float> %v
 }
