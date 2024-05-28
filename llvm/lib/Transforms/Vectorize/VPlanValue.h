@@ -74,7 +74,6 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that

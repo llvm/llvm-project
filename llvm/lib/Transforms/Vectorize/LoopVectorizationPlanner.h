@@ -350,7 +350,7 @@ class LoopVectorizationPlanner {
   /// LoopVectorizationLegality to handle inductions and reductions, which is
   /// why it is kept separate from the VPlan-only cost infrastructure.
   ///
-  /// TODO: Move to VPlan::computeCost once the use of the legacy cost model
+  /// TODO: Move to VPlan::computeCost once the use of LoopVectorizationLegality
   /// has been retired.
   InstructionCost computeCost(VPlan &Plan, ElementCount VF) const;
 

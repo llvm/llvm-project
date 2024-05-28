@@ -733,19 +733,18 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
-InstructionCost VPBasicBlock::computeCost(ElementCount VF, VPCostContext &Ctx) {
+InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
   for (VPRecipeBase &R : *this)
     Cost += R.cost(VF, Ctx);
   return Cost;
 }
 
-InstructionCost VPRegionBlock::computeCost(ElementCount VF,
-                                           VPCostContext &Ctx) {
+InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
   if (!isReplicator()) {
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
-      Cost += Block->computeCost(VF, Ctx);
+      Cost += Block->cost(VF, Ctx);
 
     // Add the cost for the backedge.
     Cost += 1;
@@ -969,10 +968,10 @@ void VPlan::execute(VPTransformState *State) {
                                       DominatorTree::VerificationLevel::Fast));
 }
 
-InstructionCost VPlan::computeCost(ElementCount VF, VPCostContext &Ctx) {
+InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
   for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
-    Cost += Block->computeCost(VF, Ctx);
+    Cost += Block->cost(VF, Ctx);
   return Cost;
 }
 

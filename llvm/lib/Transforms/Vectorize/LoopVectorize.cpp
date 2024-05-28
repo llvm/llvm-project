@@ -7436,7 +7436,7 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
     }
   }
 
-  Cost += Plan.computeCost(VF, CostCtx);
+  Cost += Plan.cost(VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
   return Cost;
 }
@@ -7452,8 +7452,7 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
   assert(hasPlanWithVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
-  InstructionCost ScalarCost =
-      computeCost(getBestPlanFor(ElementCount::getFixed(1)), ScalarVF);
+  InstructionCost ScalarCost = computeCost(getBestPlanFor(ScalarVF), ScalarVF);
   VectorizationFactor BestFactor(ScalarVF, ScalarCost, ScalarCost);
 
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
