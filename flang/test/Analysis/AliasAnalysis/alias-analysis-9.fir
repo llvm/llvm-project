@@ -17,13 +17,13 @@
 // end module
 
 // CHECK-LABEL: Testing : "_QMmPfoo"
-// TODO: x and y are non pointer, non target argument and therefore do not alias.
-// CHECK-DAG: x#0 <-> y#0: MayAlias
+// x and y are non pointer, non target argument and therefore do not alias.
+// CHECK-DAG: x#0 <-> y#0: NoAlias
 
-// TODO: y is not a pointer object and therefore does not alias with the x%next component. 
-//       Also assigning x to y would not modify x.next
-// CHECK-DAG: y#0 <-> xnext1#0: MayAlias
-// CHECK-DAG: y#0 <-> xnext2#0: MayAlias
+// y is not a pointer object and therefore does not alias with the x%next
+// component.  Also assigning x to y would not modify x.next
+// CHECK-DAG: y#0 <-> xnext1#0: NoAlias
+// CHECK-DAG: y#0 <-> xnext2#0: NoAlias
 
 // We need to catch the fact that assigning y to x will modify xnext. 
 // The only side-effect between the 2 loads of x.next is the assignment to x, 

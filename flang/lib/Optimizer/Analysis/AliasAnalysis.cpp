@@ -122,12 +122,31 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   if (lhsSrc.kind == rhsSrc.kind) {
+    // If the kinds and origins are the same, then lhs and rhs must alias unless
+    // either source is approximate.  Approximate sources are for parts of the
+    // origin, but we don't have info here on which parts and whether they
+    // overlap, so we normally return MayAlias in that case.
+    //
+    // There is an exceptional case: The origins might compare unequal because
+    // only one has !isData().  If that source is approximate and the other is
+    // not, then the former is the source for the address *of* a pointer
+    // component in a composite, and the latter is for the address of that
+    // composite.  As for the address of any composite vs. the address of one of
+    // its components, a store to one can affect a load from the other, so the
+    // result is MayAlias.
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
       if (approximateSource)
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
+    }
+    if (lhsSrc.origin.u == rhsSrc.origin.u &&
+        ((lhsSrc.approximateSource && !lhsSrc.isData() && !rhsSrc.approximateSource) ||
+         (rhsSrc.approximateSource && !rhsSrc.isData() && !lhsSrc.approximateSource))) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing between composite and pointer component\n");
+      return AliasResult::MayAlias;
     }
 
     // Two host associated accesses may overlap due to an equivalence.
@@ -170,17 +189,6 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
       src1->isData() == src2->isData()) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
-    return AliasResult::MayAlias;
-  }
-
-  // Box for POINTER component inside an object of a derived type
-  // may alias box of a POINTER object, as well as boxes for POINTER
-  // components inside two objects of derived types may alias.
-  if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
-      (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
-      (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent())) {
-    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
     return AliasResult::MayAlias;
   }
 
