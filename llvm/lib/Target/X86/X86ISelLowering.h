@@ -1798,6 +1798,9 @@ namespace llvm {
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
 
+    MachineBasicBlock *emitPatchableEventCall(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const;
+
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.
     SDValue emitFlagsForSetcc(SDValue Op0, SDValue Op1, ISD::CondCode CC,

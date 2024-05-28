@@ -36378,6 +36378,31 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
 }
 
 MachineBasicBlock *
+X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const {
+  // Wrap patchable event calls in CALLSEQ_START/CALLSEQ_END, as tracing
+  // calls may require proper stack alignment.
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  const MIMetadata MIMD(MI);
+  MachineFunction &MF = *BB->getParent();
+
+  // Emit CALLSEQ_START right before the instruction.
+  MF.getFrameInfo().setAdjustsStack(true);
+  unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
+  MachineInstrBuilder CallseqStart =
+      BuildMI(MF, MIMD, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
+  BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
+
+  // Emit CALLSEQ_END right after the instruction.
+  unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
+  MachineInstrBuilder CallseqEnd =
+      BuildMI(MF, MIMD, TII.get(AdjStackUp)).addImm(0).addImm(0);
+  BB->insertAfter(MachineBasicBlock::iterator(MI), CallseqEnd);
+
+  return BB;
+}
+
+MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -36607,7 +36632,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   case TargetOpcode::PATCHABLE_EVENT_CALL:
   case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
-    return BB;
+    return emitPatchableEventCall(MI, BB);
 
   case X86::LCMPXCHG8B: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
