@@ -29,7 +29,7 @@ std::optional<Value> materializeAsUnrealizedCast(OpBuilder &builder,
 
 } // namespace
 
-void mlir::populateEmitCSizeTypeConversions(TypeConverter &converter) {
+void mlir::populateEmitCSizeTTypeConversions(TypeConverter &converter) {
   converter.addConversion(
       [](IndexType type) { return emitc::SizeTType::get(type.getContext()); });
 

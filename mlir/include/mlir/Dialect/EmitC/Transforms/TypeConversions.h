@@ -11,7 +11,7 @@
 
 namespace mlir {
 class TypeConverter;
-void populateEmitCSizeTypeConversions(TypeConverter &converter);
+void populateEmitCSizeTTypeConversions(TypeConverter &converter);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_TYPECONVERSIONS_H
