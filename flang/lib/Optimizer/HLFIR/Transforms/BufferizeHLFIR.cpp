@@ -944,7 +944,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createBufferizeHLFIRPass() {
-  return std::make_unique<BufferizeHLFIR>();
-}
