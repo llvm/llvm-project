@@ -179,27 +179,11 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   }
 
   const BinaryContext &BC = A.getBinaryContext();
-
-  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesA;
-  for (unsigned I = 0; I < OrderA.size(); I++)
-    LayoutIndiciesA[OrderA[I]] = I;
-
-  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesB;
-  for (unsigned I = 0; I < OrderB.size(); I++)
-    LayoutIndiciesB[OrderB[I]] = I;
-
   auto BBI = OrderB.begin();
   for (const BinaryBasicBlock *BB : OrderA) {
     const BinaryBasicBlock *OtherBB = *BBI;
 
-    auto LayoutIndiciesAIt = LayoutIndiciesA.find(BB);
-    assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
-    unsigned BBLayoutIndex = LayoutIndiciesAIt->second;
-
-    auto LayoutIndiciesBIt = LayoutIndiciesB.find(OtherBB);
-    assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
-    unsigned OtherBBLayoutIndex = LayoutIndiciesBIt->second;
-    if (BBLayoutIndex != OtherBBLayoutIndex)
+    if (BB->getLayoutIndex() != OtherBB->getLayoutIndex())
       return false;
 
     // Compare successor basic blocks.
@@ -211,15 +195,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     for (const BinaryBasicBlock *SuccBB : BB->successors()) {
       const BinaryBasicBlock *SuccOtherBB = *SuccBBI;
 
-      LayoutIndiciesAIt = LayoutIndiciesA.find(SuccBB);
-      assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
-      unsigned SuccBBLayoutIndex = LayoutIndiciesAIt->second;
-
-      LayoutIndiciesBIt = LayoutIndiciesB.find(SuccOtherBB);
-      assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
-      unsigned SuccOtherBBLayoutIndex = LayoutIndiciesBIt->second;
-
-      if (SuccBBLayoutIndex != SuccOtherBBLayoutIndex)
+      if (SuccBB->getLayoutIndex() != SuccOtherBB->getLayoutIndex())
         return false;
       ++SuccBBI;
     }
@@ -408,6 +384,8 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       BinaryFunction &BF = BFI.second;
       if (!this->shouldOptimize(BF))
         continue;
+      if (opts::ICFUseDFS)
+        BF.getLayout().update(BF.dfs());
       CongruentBuckets[&BF].emplace(&BF);
     }
   };
@@ -433,6 +411,8 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       // Identical functions go into the same bucket.
       IdenticalBucketsMap IdenticalBuckets;
       for (BinaryFunction *BF : Candidates) {
+        if (opts::ICFUseDFS)
+          BF->getLayout().update(BF->dfs());
         IdenticalBuckets[BF].emplace_back(BF);
       }
 
