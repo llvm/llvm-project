@@ -1653,8 +1653,8 @@ void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
                                  ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
     Actions.OpenMP().StartOpenMPClause(CKind);
-    OMPClause *Clause = ParseOpenMPClause(
-        DKind, CKind, !SeenClauses[unsigned(CKind)]);
+    OMPClause *Clause =
+        ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
     SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
               StopBeforeMatch);
     SeenClauses[unsigned(CKind)] = true;
@@ -2119,8 +2119,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
               Tok.isAnnotation() ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
           Actions.OpenMP().StartOpenMPClause(CKind);
-          OMPClause *Clause = ParseOpenMPClause(
-              OMPD_allocate, CKind, !SeenClauses[unsigned(CKind)]);
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !SeenClauses[unsigned(CKind)]);
           SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
           SeenClauses[unsigned(CKind)] = true;
@@ -2158,8 +2158,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
       Actions.OpenMP().StartOpenMPClause(CKind);
-      OMPClause *Clause = ParseOpenMPClause(
-          OMPD_requires, CKind, !SeenClauses[unsigned(CKind)]);
+      OMPClause *Clause = ParseOpenMPClause(OMPD_requires, CKind,
+                                            !SeenClauses[unsigned(CKind)]);
       SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
       SeenClauses[unsigned(CKind)] = true;
@@ -2716,8 +2716,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
               Tok.isAnnotation() ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
           Actions.OpenMP().StartOpenMPClause(CKind);
-          OMPClause *Clause = ParseOpenMPClause(
-              OMPD_allocate, CKind, !SeenClauses[unsigned(CKind)]);
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !SeenClauses[unsigned(CKind)]);
           SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
           SeenClauses[unsigned(CKind)] = true;
@@ -2917,8 +2917,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       ImplicitClauseAllowed = false;
       Actions.OpenMP().StartOpenMPClause(CKind);
       HasImplicitClause = false;
-      OMPClause *Clause = ParseOpenMPClause(
-          DKind, CKind, !SeenClauses[unsigned(CKind)]);
+      OMPClause *Clause =
+          ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
       SeenClauses[unsigned(CKind)] = true;
       if (Clause)
         Clauses.push_back(Clause);
