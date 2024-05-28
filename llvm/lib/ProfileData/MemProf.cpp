@@ -245,8 +245,8 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
 }
 
 MemProfRecord IndexedMemProfRecord::toMemProfRecord(
-    llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
-        Callback) const {
+    llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
+    const {
   MemProfRecord Record;
 
   Record.AllocSites.reserve(AllocSites.size());
