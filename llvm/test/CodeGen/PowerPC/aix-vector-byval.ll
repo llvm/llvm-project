@@ -42,8 +42,8 @@ define i32 @caller() {
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
   entry:
   %vs = alloca %struct.B, align 16
-  %call = tail call i32 @vec_struct_test(i32 0, %struct.B* nonnull byval(%struct.B) align 16 %vs)
+  %call = tail call i32 @vec_struct_test(i32 0, ptr nonnull byval(%struct.B) align 16 %vs)
   ret i32 %call
 }
 
-declare i32 @vec_struct_test(i32, %struct.B* byval(%struct.B) align 16)
+declare i32 @vec_struct_test(i32, ptr byval(%struct.B) align 16)

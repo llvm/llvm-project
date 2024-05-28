@@ -10,7 +10,7 @@
 %struct.vec_struct = type { <4 x i32> }
 
 ; Function Attrs: norecurse nounwind readonly
-define i32 @vec_struct_test(i32 %i, %struct.vec_struct* nocapture readonly byval(%struct.vec_struct) align 16 %vs) {
+define i32 @vec_struct_test(i32 %i, ptr nocapture readonly byval(%struct.vec_struct) align 16 %vs) {
   ; 32BIT-LABEL: name: vec_struct_test
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   liveins: $r3, $r5, $r6, $r7, $r8
@@ -32,8 +32,8 @@ define i32 @vec_struct_test(i32 %i, %struct.vec_struct* nocapture readonly byval
   ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 renamable $r4, renamable $r3, implicit killed $x3, implicit killed $x4, implicit-def $x3
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %vsi = getelementptr inbounds %struct.vec_struct, %struct.vec_struct* %vs, i32 0, i32 0
-  %0 = load <4 x i32>, <4 x i32>* %vsi, align 16
+  %vsi = getelementptr inbounds i8, ptr %vs, i32 0
+  %0 = load <4 x i32>, ptr %vsi, align 16
   %vecext = extractelement <4 x i32> %0, i32 0
   %add = add nsw i32 %vecext, %i
   ret i32 %add
