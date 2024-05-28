@@ -316,15 +316,6 @@ void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns,
                                   ArrayRef<DbgVariableRecord *> DPInsns);
 
-void tryToSinkInstructionDbgValues(
-    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
-
-void tryToSinkInstructionDPValues(
-    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-    BasicBlock *DestBlock,
-    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
-
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
 /// \p Ops, or return \p nullptr if it cannot be salvaged.

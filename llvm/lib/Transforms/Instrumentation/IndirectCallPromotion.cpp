@@ -233,7 +233,6 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     return false;
 
   assert(DestBlock->getUniquePredecessor() == I->getParent());
-  BasicBlock *SrcBlock = I->getParent();
 
   // Do not move control-flow-involving, volatile loads, vaarg, etc.
   // Do not sink static or dynamic alloca instructions. Static allocas must
@@ -267,18 +266,10 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(*DestBlock, InsertPos);
 
-  // Also sink all related debug uses from the source basic block. Otherwise we
-  // get debug use before the def. Attempt to salvage debug uses first, to
-  // maximise the range variables have location for. If we cannot salvage, then
-  // mark the location undef: we know it was supposed to receive a new location
-  // here, but that computation has been sunk.
-  SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  SmallVector<DbgVariableRecord *> DPValues;
-  findDbgUsers(DbgUsers, I, &DPValues);
-  if (!DbgUsers.empty())
-    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
-  if (!DPValues.empty())
-    tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
+  // TODO: Sink debug intrinsic users of I to 'DestBlock'.
+  // 'InstCombinerImpl::tryToSinkInstructionDbgValues' and
+  // 'InstCombinerImpl::tryToSinkInstructionDbgVariableRecords' already have
+  // the core logic to do this.
   return true;
 }
 

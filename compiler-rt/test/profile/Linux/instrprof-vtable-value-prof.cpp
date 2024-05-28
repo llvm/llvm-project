@@ -110,13 +110,43 @@
 // ICTEXT: _ZTV8Derived1:250
 
 // Test indirect call promotion transformation using vtable profiles.
-// RUN: %clangxx -fprofile-use=test.profdata -fuse-ld=lld -flto=thin -fwhole-program-vtables -O2 -mllvm -enable-vtable-value-profiling -mllvm -icp-enable-vtable-cmp -Rpass=pgo-icall-prom %s 2>&1 | FileCheck %s --check-prefix=REMARK --implicit-check-not="!VP"
+// Build with `-g` to enable debug information.
+// RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -g -flto=thin -fwhole-program-vtables -O2 -mllvm -enable-vtable-value-profiling -mllvm -icp-enable-vtable-cmp -Rpass=pgo-icall-prom -mllvm -print-after=pgo-icall-prom -mllvm -filter-print-funcs=main %s 2>&1 | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
 // REMARK: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
 // REMARK: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
 // REMARK: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
 // REMARK: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
 
+// IR-LABEL: @main
+// IR:   [[OBJ:%.*]] = call {{.*}} @_Z10createTypei
+// IR:   [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
+// IR:   [[CMP1:%.*]] = icmp eq ptr [[VTABLE]], getelementptr inbounds (i8, ptr @_ZTVN12_GLOBAL__N_18Derived2E, i32 16)
+// IR:   br i1 [[CMP1]], label %[[BB1:.*]], label %[[BB2:[a-zA-Z0-9_.]+]],
+//
+// IR: [[BB1]]:
+// IR:   [[RESBB1:%.*]] = call {{.*}} @_ZN12_GLOBAL__N_18Derived24funcEii
+// IR:   br label %[[MERGE0:[a-zA-Z0-9_.]+]]
+//
+// IR: [[BB2]]:
+// IR:   [[CMP2:%.*]] = icmp eq ptr [[VTABLE]], getelementptr inbounds (i8, ptr @_ZTV8Derived1, i32 16)
+// IR:   br i1 [[CMP2]], label %[[BB3:.*]], label %[[BB4:[a-zA-Z0-9_.]+]],
+//
+// IR: [[BB3]]:
+// IR:   [[RESBB3:%.*]] = call {{.*}} @_ZN8Derived14funcEii
+// IR:   br label %[[MERGE1:[a-zA-Z0-9_.]+]],
+//
+// IR: [[BB4]]:
+// IR:   [[FUNCPTR:%.*]] = load ptr, ptr [[VTABLE]]
+// IR:   [[RESBB4:%.*]] = call {{.*}} [[FUNCPTR]]
+// IR:   br label %[[MERGE1]]
+//
+// IR: [[MERGE1]]:
+// IR:    [[RES1:%.*]] = phi i32 [ [[RESBB4]], %[[BB4]] ], [ [[RESBB3]], %[[BB3]] ]
+// IR:    br label %[[MERGE0]]
+//
+// IR: [[MERGE0]]:
+// IR:    [[RES2:%.*]] = phi i32 [ [[RES1]], %[[MERGE1]] ], [ [[RESBB1]], %[[BB1]] ]
 #include <cstdio>
 #include <cstdlib>
 class Base {

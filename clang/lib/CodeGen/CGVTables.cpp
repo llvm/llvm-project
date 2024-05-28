@@ -1344,7 +1344,9 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
   ArrayRef<VTableComponent> Comps = VTLayout.vtable_components();
   for (auto AP : AddressPoints) {
-    // Create type metadata for the address point.
+    // llvm::errs() << VTable->getName() << "\n";
+    // llvm::errs() << AP.Offset << "\t" << AP.TypeName << "\n";
+    //  Create type metadata for the address point.
     AddVTableTypeMetadata(VTable, ComponentWidth * AP.Offset, AP.Base);
 
     // The class associated with each address point could also potentially be
