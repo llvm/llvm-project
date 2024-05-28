@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -ast-print -x hip -verify=NS %s
-// RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device -ast-print -x hip -verify=NS %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1210 -fcuda-is-device -ast-print -x hip -verify=amd,common %s | FileCheck -check-prefixes=CHECK %s
-// RUN: %clang_cc1 -triple nvptx-nvidia-cuda -target-cpu sm_90 -fcuda-is-device -ast-print -x hip -verify=cuda,common %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -ast-print -x hip -verify=NS,all %s
+// RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device -ast-print -x hip -verify=NS,all %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1210 -fcuda-is-device -ast-print -x hip -verify=amd,common,all %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple nvptx-nvidia-cuda -target-cpu sm_90 -fcuda-is-device -ast-print -x hip -verify=cuda,common,all %s | FileCheck -check-prefixes=CHECK %s
 
 #include "Inputs/cuda.h"
 
@@ -43,10 +43,8 @@ __global__ void __cluster_dims__(8, none_const_int / 2, 4) test_non_constant_1()
 //NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
 __global__ void __cluster_dims__(8, 2, none_const_int / 4) test_non_constant_2() {} // common-error {{'cluster_dims' attribute requires parameter 2 to be an integer constant}}
 
-//NS-error@+2 {{__cluster_dims__ is not supported for this GPU architecture}}
 template <int... args>
-__cluster_dims__(args) void test_template_variadic_args(void) {} // common-error {{expression contains unexpanded parameter pack 'args'}}
+__cluster_dims__(args) void test_template_variadic_args(void) {} // all-error {{expression contains unexpanded parameter pack 'args'}}
 
-//NS-error@+2 {{__cluster_dims__ is not supported for this GPU architecture}}
 template <int... args>
-__cluster_dims__(1, args) void test_template_variadic_args_2(void) {} // common-error {{expression contains unexpanded parameter pack 'args'}}
+__cluster_dims__(1, args) void test_template_variadic_args_2(void) {} // all-error {{expression contains unexpanded parameter pack 'args'}}

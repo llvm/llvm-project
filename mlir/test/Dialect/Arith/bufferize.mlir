@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -arith-bufferize -split-input-file -verify-diagnostics | FileCheck %s
-// RUN: mlir-opt %s -arith-bufferize=alignment=64 -split-input-file -verify-diagnostics | FileCheck --check-prefix=ALIGNED %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=arith,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @index_cast(
 // CHECK-SAME:  %[[TENSOR:.*]]: tensor<i32>, %[[SCALAR:.*]]: i32
@@ -22,10 +21,7 @@ func.func @index_cast(%tensor: tensor<i32>, %scalar: i32) -> (tensor<index>, ind
 // The name isn't load-bearing though.
 
 // CHECK: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
-// CHECK-NOT: alignment
-
-// ALIGNED: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
-// ALIGNED-SAME: {alignment = 64 : i64}
+// CHECK-SAME: {alignment = 64 : i64}
 
 // CHECK: @basic
 func.func @basic() -> tensor<3x4xf32> {
