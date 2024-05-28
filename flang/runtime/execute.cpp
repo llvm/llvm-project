@@ -64,15 +64,6 @@ void CheckAndStoreIntToDescriptor(
 // the CMDSTAT variable is not present, error termination is initiated.
 int TerminationCheck(int status, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, Terminator &terminator) {
-  if (status == -1) {
-    if (!cmdstat) {
-      terminator.Crash("Execution error with system status code: %d", status);
-    } else {
-      StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
-    }
-  }
-
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
   int exitStatusVal{status};
@@ -86,6 +77,14 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     } else {
       StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
       CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
+    }
+  }
+  if (status == -1) {
+    if (!cmdstat) {
+      terminator.Crash("Execution error with system status code: %d", status);
+    } else {
+      StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
     }
   }
 
