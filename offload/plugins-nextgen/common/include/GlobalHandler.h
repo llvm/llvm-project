@@ -64,12 +64,10 @@ struct __llvm_profile_data {
 };
 
 extern "C" {
-extern int __attribute__((weak))
-__llvm_write_custom_profile(const char *Target,
-                            const __llvm_profile_data *DataBegin,
-                            const __llvm_profile_data *DataEnd,
-                            const char *CountersBegin, const char *CountersEnd,
-                            const char *NamesBegin, const char *NamesEnd);
+extern int __attribute__((weak)) __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
 }
 
 /// PGO profiling data extracted from a GPU device
