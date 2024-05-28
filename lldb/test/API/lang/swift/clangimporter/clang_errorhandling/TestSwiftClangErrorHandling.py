@@ -26,5 +26,10 @@ class TestSwiftExtraClangFlags(TestBase):
                     '"-DBREAK_STUFF"')
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
+
         self.expect("expr 0", error=True,
                     substrs=['failed to import bridging header'])
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+        # CHECK: Clang error: {{.*}}bridging-header.h

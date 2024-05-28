@@ -14,7 +14,7 @@
 #define liblldb_StoringDiagnosticConsumer_h_
 
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
-
+#include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -216,8 +216,15 @@ public:
       if (m_raw_clang_diagnostics.empty() ||
           m_raw_clang_diagnostics.back() != diagnostic) {
         m_raw_clang_diagnostics.push_back(std::move(diagnostic));
-        if (info.Kind == swift::DiagnosticKind::Error)
+        if (info.Kind == swift::DiagnosticKind::Error) {
           m_num_clang_errors++;
+          // Any errors from clang could be related module import
+          // issues which shoud be surfaced in the health log channel.
+          LLDB_LOG(GetLog(LLDBLog::Types), "{0} Clang error: {1}",
+                   m_ast_context.GetDescription(), formatted_text);
+          LLDB_LOG(lldb_private::GetSwiftHealthLog(), "{0} Clang error: {1}",
+                   m_ast_context.GetDescription(), formatted_text);
+        }
       }
     } else {
       m_raw_swift_diagnostics.push_back(std::move(diagnostic));
