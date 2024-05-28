@@ -53,6 +53,7 @@ echo "Directories modified:" >&2
 echo "$modified_dirs" >&2
 
 function compute-projects-to-test() {
+  echo "flang clang"
   projects=${@}
   for project in ${projects}; do
     echo "${project}"
