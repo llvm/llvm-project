@@ -323,7 +323,7 @@ public:
     CK_NewDeleteLeaksChecker,
     CK_MismatchedDeallocatorChecker,
     CK_InnerPointerChecker,
-    CK_TaintMallocChecker,
+    CK_TaintAllocChecker,
     CK_NumCheckKinds
   };
 
@@ -467,7 +467,7 @@ private:
   bool isMemCall(const CallEvent &Call) const;
   void reportTaintBug(StringRef Msg, ProgramStateRef State, CheckerContext &C,
                       llvm::ArrayRef<SymbolRef> TaintedSyms,
-                      AllocationFamily Family, const Expr *SizeEx) const;
+                      AllocationFamily Family) const;
 
   void CheckTaintedness(CheckerContext &C, const CallEvent &Call,
                         const SVal SizeSVal, ProgramStateRef State,
@@ -1707,6 +1707,12 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
   // MallocUpdateRefState() instead of MallocMemAux() which breaks the
   // existing binding.
   SVal Target = Call.getObjectUnderConstruction();
+  if (Call.getOriginExpr()->isArray()) {
+    std::optional<const Expr *> SizeEx = NE->getArraySize();
+    if (SizeEx)
+      CheckTaintedness(C, Call, C.getSVal(*SizeEx), State, AF_CXXNewArray);
+  }
+
   State = MallocUpdateRefState(C, NE, State, Family, Target);
   State = ProcessZeroAllocCheck(Call, 0, State, Target);
   return State;
@@ -1802,21 +1808,17 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
 void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
                                    CheckerContext &C,
                                    llvm::ArrayRef<SymbolRef> TaintedSyms,
-                                   AllocationFamily Family,
-                                   const Expr *SizeEx) const {
+                                   AllocationFamily Family) const {
 
-  if (!ChecksEnabled[CK_TaintMallocChecker])
+  if (!ChecksEnabled[CK_TaintAllocChecker])
     return;
 
-  if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(State, this)) {
     if (!BT_TaintedAlloc)
-      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintMallocChecker],
+      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintAllocChecker],
                                         "Tainted Memory Allocation",
                                         categories::TaintedData));
     auto R = std::make_unique<PathSensitiveBugReport>(*BT_TaintedAlloc, Msg, N);
-
-    R->addRange(SizeEx->getSourceRange());
-    bugreporter::trackExpressionValue(N, SizeEx, *R);
     for (auto TaintedSym : TaintedSyms) {
       R->markInteresting(TaintedSym);
     }
@@ -1858,7 +1860,7 @@ void MallocChecker::CheckTaintedness(CheckerContext &C, const CallEvent &Call,
   reportTaintBug(
       Callee + " is called with a tainted (potentially attacker controlled) "
                "value. Make sure the value is bound checked.",
-      State, C, TaintedSyms, Family, Call.getArgExpr(0));
+      State, C, TaintedSyms, Family);
 }
 
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
@@ -3806,4 +3808,4 @@ REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
-REGISTER_CHECKER(TaintMallocChecker)
+REGISTER_CHECKER(TaintAllocChecker)

@@ -5,7 +5,7 @@
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
-// RUN:   -analyzer-checker=optin.taint.TaintMalloc
+// RUN:   -analyzer-checker=optin.taint.TaintAlloc
 
 #include "Inputs/system-header-simulator.h"
 

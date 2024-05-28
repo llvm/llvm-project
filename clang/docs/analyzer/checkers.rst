@@ -938,13 +938,14 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
-.. _optin-taint-TaintMalloc:
+.. _optin-taint-TaintAlloc:
 
-optin.taint.TaintMalloc
-"""""""""""""""""""""""
+optin.taint.TaintAlloc (C, C++)
+"""""""""""""""""""""""""""""""
 
 This checker warns for cases when the ``size`` parameter of the ``malloc`` ,
-``calloc``, ``realloc``, ``alloca`` is tainted (potentially attacker controlled).
+``calloc``, ``realloc``, ``alloca`` or the size parameter of the
+array new C++ operator is tainted (potentially attacker controlled).
 If an attacker can inject a large value as the size parameter, memory exhaustion
 denial of service attack can be carried out.
 
@@ -976,6 +977,13 @@ by explicitly marking the ``size`` parameter as sanitized. See the
       return;
     int *p = malloc(size); // No warning expected as the the user input is bound
     free(p);
+  }
+
+  void tcpp(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *ptr = new int[size];// warn: Memory allocation function is called with a tainted (potentially attacker controlled) value
+    delete[] ptr;
   }
 
 .. _security-checkers:
