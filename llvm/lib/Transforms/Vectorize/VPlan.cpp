@@ -442,11 +442,11 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   return NewBB;
 }
 
-void VPIRWrapperBlock::execute(VPTransformState *State) {
+void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalPredecessors().empty() &&
-         "VPIRWrapperBlock cannot have predecessors at the moment");
+         "VPIRBasicBlock cannot have predecessors at the moment");
   assert(getHierarchicalSuccessors().empty() &&
-         "VPIRWrapperBlock cannot have successors");
+         "VPIRBasicBlock cannot have successors");
 
   State->Builder.SetInsertPoint(getWrappedBlock()->getTerminator());
   executeRecipes(State, getWrappedBlock());
@@ -785,7 +785,7 @@ VPlan::~VPlan() {
 
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    BasicBlock *PH) {
-  VPIRWrapperBlock *Preheader = new VPIRWrapperBlock(PH);
+  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =

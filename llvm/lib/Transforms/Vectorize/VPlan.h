@@ -476,7 +476,7 @@ public:
   using VPBlockTy = enum {
     VPBasicBlockSC,
     VPRegionBlockSC,
-    VPIRWrapperBlockSC
+    VPIRBasicBlockSC
   };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
@@ -2894,7 +2894,7 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC ||
-           V->getVPBlockID() == VPBlockBase::VPIRWrapperBlockSC;
+           V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
   void insert(VPRecipeBase *Recipe, iterator InsertPt) {
@@ -2969,28 +2969,28 @@ private:
 /// A special type of VPBasicBlock that wraps an existing IR basic block.
 /// Recipes of the block get added before the first non-phi instruction in the
 /// wrapped block.
-class VPIRWrapperBlock : public VPBasicBlock {
+class VPIRBasicBlock : public VPBasicBlock {
   BasicBlock *WrappedBlock;
 
 public:
-  VPIRWrapperBlock(BasicBlock *WrappedBlock)
+  VPIRBasicBlock(BasicBlock *WrappedBlock)
       : VPBasicBlock(
-            VPIRWrapperBlockSC,
+            VPIRBasicBlockSC,
             (Twine("ir-bb<") + WrappedBlock->getName() + Twine(">")).str()),
         WrappedBlock(WrappedBlock) {}
 
-  ~VPIRWrapperBlock() override {}
+  ~VPIRBasicBlock() override {}
 
   static inline bool classof(const VPBlockBase *V) {
-    return V->getVPBlockID() == VPBlockBase::VPIRWrapperBlockSC;
+    return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
-  VPIRWrapperBlock *clone() override {
-    auto *NewBlock = new VPIRWrapperBlock(WrappedBlock);
+  VPIRBasicBlock *clone() override {
+    auto *NewBlock = new VPIRBasicBlock(WrappedBlock);
     for (VPRecipeBase &R : *this)
       NewBlock->appendRecipe(R.clone());
     return NewBlock;
