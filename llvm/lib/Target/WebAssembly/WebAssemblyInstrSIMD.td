@@ -165,6 +165,7 @@ def F16x8 : Vec {
  let prefix = "f16x8";
 }
 
+// TODO: Include F16x8 here when half precision is better supported.
 defvar AllVecs = [I8x16, I16x8, I32x4, I64x2, F32x4, F64x2];
 defvar IntVecs = [I8x16, I16x8, I32x4, I64x2];
 
@@ -804,6 +805,11 @@ multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name,
                       vec.prefix#"."#name, simdop, reqs>;
 }
 
+multiclass HalfPrecisionBinary<Vec vec, SDPatternOperator node, string name,
+                               bits<32> simdop> {
+  defm "" : SIMDBinary<vec, node, name, simdop, [HasHalfPrecision]>;
+}
+
 multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
                        bit commutable = false> {
   let isCommutable = commutable in
@@ -1213,7 +1219,7 @@ def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
 multiclass SIMDBinaryFP<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<F32x4, node, name, baseInst>;
   defm "" : SIMDBinary<F64x2, node, name, !add(baseInst, 12)>;
-  defm "" : SIMDBinary<F16x8, node, name, !add(baseInst, 80), [HasHalfPrecision]>;
+  defm "" : HalfPrecisionBinary<F16x8, node, name, !add(baseInst, 80)>;
 }
 
 // Addition: add
