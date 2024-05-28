@@ -33,6 +33,70 @@ bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
          MFI.hasVarSizedObjects();
 }
 
+#ifndef NDEBUG
+/* Check whether instruction I stores some callee-saved register from CSI
+ */
+static bool checkStoreInstruction(MachineBasicBlock::iterator I,
+                                  const std::vector<CalleeSavedInfo> &CSI) {
+  bool IsStoreInstruction = false;
+
+  if (I->getOpcode() == TargetOpcode::COPY) {
+    Register DstReg = I->getOperand(0).getReg();
+    Register Reg = I->getOperand(1).getReg();
+    for (const auto &Info : CSI) {
+      if (Info.isSpilledToReg()) {
+        IsStoreInstruction =
+            (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+      }
+      if (IsStoreInstruction)
+        break;
+    }
+  } else if (I->getOpcode() == Xtensa::S32I) {
+    Register Reg = I->getOperand(0).getReg();
+    for (const auto &Info : CSI) {
+      if (!Info.isSpilledToReg()) {
+        IsStoreInstruction = (Info.getReg() == Reg);
+      }
+      if (IsStoreInstruction)
+        break;
+    }
+  }
+
+  return IsStoreInstruction;
+}
+
+/* Check whether instruction I restores some callee-saved register from CSI
+ */
+static bool checkRestoreInstruction(MachineBasicBlock::iterator I,
+                                    const std::vector<CalleeSavedInfo> &CSI) {
+  bool IsRestoreInstruction = false;
+
+  if (I->getOpcode() == TargetOpcode::COPY) {
+    Register Reg = I->getOperand(0).getReg();
+    Register DstReg = I->getOperand(1).getReg();
+    for (const auto &Info : CSI) {
+      if (Info.isSpilledToReg()) {
+        IsRestoreInstruction =
+            (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+      }
+      if (IsRestoreInstruction)
+        break;
+    }
+  } else if (I->getOpcode() == Xtensa::L32I) {
+    Register Reg = I->getOperand(0).getReg();
+    for (const auto &Info : CSI) {
+      if (!Info.isSpilledToReg()) {
+        IsRestoreInstruction = (Info.getReg() == Reg);
+      }
+      if (IsRestoreInstruction)
+        break;
+    }
+  }
+
+  return IsRestoreInstruction;
+}
+#endif
+
 void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MBB == &MF.front() && "Shrink-wrapping not yet implemented");
@@ -66,11 +130,17 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (CSI.size()) {
+  if (!CSI.empty()) {
     // Find the instruction past the last instruction that saves a
-    // callee-saved register to the stack.
-    for (unsigned i = 0; i < CSI.size(); ++i)
+    // callee-saved register to the stack. The callee-saved store
+    // instructions are placed at the begin of basic block, so
+    //  iterate over instruction sequence and check that
+    // save instructions are placed correctly.
+    for (unsigned i = 0; i < CSI.size(); ++i) {
+      assert(checkStoreInstruction(MBBI, CSI) &&
+             "Unexpected callee-saved register store instruction");
       ++MBBI;
+    }
 
     // Iterate over list of callee-saved registers and emit .cfi_offset
     // directives.
@@ -130,10 +200,15 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
     // so we should find first instruction of the sequence.
     MachineBasicBlock::iterator I = MBBI;
 
+    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
     // Find the first instruction at the end that restores a callee-saved
     // register.
-    for (auto &Info : MFI.getCalleeSavedInfo())
+    for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
       --I;
+      assert(checkRestoreInstruction(I, CSI) &&
+             "Unexpected callee-saved register restore instruction");
+    }
 
     BuildMI(MBB, I, DL, TII.get(Xtensa::OR), SP).addReg(FP).addReg(FP);
   }
@@ -204,7 +279,6 @@ MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
 void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
-  MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned FP = TRI->getFrameRegister(MF);
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
@@ -212,8 +286,12 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark $fp as used if function has dedicated frame pointer.
   if (hasFP(MF))
     SavedRegs.set(FP);
+}
 
+void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
   // Set scavenging frame index if necessary.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t MaxSPOffset = MFI.estimateStackSize(MF);
 
   if (isInt<12>(MaxSPOffset))
