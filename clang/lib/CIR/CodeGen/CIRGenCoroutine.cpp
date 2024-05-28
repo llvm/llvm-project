@@ -203,7 +203,7 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
   return builder.create<mlir::cir::CallOp>(
-      loc, fnOp, mlir::ValueRange{CurCoro.Data->CoroId.getResult(0)});
+      loc, fnOp, mlir::ValueRange{CurCoro.Data->CoroId.getResult()});
 }
 
 mlir::cir::CallOp
@@ -225,7 +225,7 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
 
   return builder.create<mlir::cir::CallOp>(
       loc, fnOp,
-      mlir::ValueRange{CurCoro.Data->CoroId.getResult(0), coroframeAddr});
+      mlir::ValueRange{CurCoro.Data->CoroId.getResult(), coroframeAddr});
 }
 
 mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
@@ -273,7 +273,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
 
   auto storeAddr = coroFrame.getPointer();
   builder.CIRBaseBuilderTy::createStore(openCurlyLoc, nullPtrCst, storeAddr);
-  builder.create<mlir::cir::IfOp>(openCurlyLoc, coroAlloc.getResult(0),
+  builder.create<mlir::cir::IfOp>(openCurlyLoc, coroAlloc.getResult(),
                                   /*withElseRegion=*/false,
                                   /*thenBuilder=*/
                                   [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -287,7 +287,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
       buildCoroBeginBuiltinCall(
           openCurlyLoc,
           builder.create<mlir::cir::LoadOp>(openCurlyLoc, allocaTy, storeAddr))
-          .getResult(0);
+          .getResult();
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
   if (auto *RetOnAllocFailure = S.getReturnStmtOnAllocFailure())
