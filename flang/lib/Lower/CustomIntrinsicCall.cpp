@@ -291,7 +291,10 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
           .genIfOp(loc, {boxType}, isPresent,
                    /*withElseRegion=*/true)
           .genThen([&]() {
-            mlir::Value box = builder.createBox(loc, targetExv);
+            mlir::Value box =
+                fir::isBoxAddress(targetBase.getType())
+                    ? builder.create<fir::LoadOp>(loc, fir::getBase(targetExv))
+                    : builder.createBox(loc, targetExv);
             mlir::Value cast = builder.createConvert(loc, boxType, box);
             builder.create<fir::ResultOp>(loc, cast);
           })

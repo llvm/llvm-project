@@ -2436,8 +2436,9 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                                          getActualFortranElementType());
       break;
     case fir::LowerIntrinsicArgAs::Inquired:
-      TODO(loc, "Inquired non-optional arg to intrinsic with custom handling");
-      return;
+      exv = Fortran::lower::convertToBox(loc, converter, actual, stmtCtx,
+                                         getActualFortranElementType());
+      break;
     }
     if (!exv)
       llvm_unreachable("bad switch");
