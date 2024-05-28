@@ -27,6 +27,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "evl-iv-simplify"
 
@@ -103,28 +104,6 @@ static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
     }
 
   return 0U;
-}
-
-// Remove the original induction variable if it's not used anywhere.
-static void tryCleanupOriginalIndVar(PHINode *OrigIndVar,
-                                     const InductionDescriptor &IVD) {
-  if (OrigIndVar->getNumIncomingValues() != 2)
-    return;
-  Value *InitValue = OrigIndVar->getIncomingValue(0);
-  Value *RecValue = OrigIndVar->getIncomingValue(1);
-  if (InitValue != IVD.getStartValue())
-    std::swap(InitValue, RecValue);
-
-  // If the only user of OrigIndVar is the one that produces RecValue, then we
-  // can safely remove it.
-  if (!OrigIndVar->hasOneUse() || OrigIndVar->user_back() != RecValue)
-    return;
-
-  LLVM_DEBUG(dbgs() << "Removed the original IndVar " << *OrigIndVar << "\n");
-  // Turn OrigIndVar into dead code by replacing all its uses by the initial
-  // value of this loop.
-  OrigIndVar->replaceAllUsesWith(InitValue);
-  OrigIndVar->eraseFromParent();
 }
 
 bool EVLIndVarSimplifyImpl::run(Loop &L) {
@@ -262,7 +241,14 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   auto *NewPred = Builder.CreateICmp(Pred, EVLIndVar, TC);
   OrigLatchCmp->replaceAllUsesWith(NewPred);
 
-  tryCleanupOriginalIndVar(IndVar, IVD);
+  // llvm::RecursivelyDeleteDeadPHINode only deletes cycles whose values are
+  // not used outside the cycles. However, in this case the now-RAUW-ed
+  // OrigLatchCmp will be consied a use outside the cycle while in reality it's
+  // practically dead. Thus we need to remove it before calling
+  // RecursivelyDeleteDeadPHINode.
+  (void)RecursivelyDeleteTriviallyDeadInstructions(OrigLatchCmp);
+  if (llvm::RecursivelyDeleteDeadPHINode(IndVar))
+    LLVM_DEBUG(dbgs() << "Removed original IndVar\n");
 
   ++NumEliminatedCanonicalIV;
 

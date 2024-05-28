@@ -20,8 +20,6 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP8]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -37,9 +35,7 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP18]], ptr align 4 [[TMP20]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 0, [[TMP10]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -166,8 +162,6 @@ define void @fixed_iv_step(ptr %arg0, ptr %arg1, i64 %N) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nsw i64 [[N]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -179,9 +173,7 @@ define void @fixed_iv_step(ptr %arg0, ptr %arg1, i64 %N) #0 {
 ; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; CHECK-NEXT:    [[LSR_IV_NEXT33:%.*]] = add i64 [[N_VEC]], -16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[LSR_IV_NEXT33]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; CHECK:       for.end.loopexit5:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
@@ -244,8 +236,6 @@ define void @fixed_iv_step_tc(ptr %arg0, ptr %arg1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nsw i64 87, 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -257,9 +247,7 @@ define void @fixed_iv_step_tc(ptr %arg0, ptr %arg1) #0 {
 ; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; CHECK-NEXT:    [[LSR_IV_NEXT33:%.*]] = add i64 [[N_VEC]], -16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 87
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[LSR_IV_NEXT33]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; CHECK:       for.end.loopexit5:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
