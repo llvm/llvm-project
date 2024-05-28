@@ -5235,12 +5235,12 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 // (e.g. AND) to avoid excessive cost.
 const unsigned MAX_BINOP_DEPTH = 1;
 
-// The function will promote the instruction which defines the register `Reg`
+// This function will promote the instruction which defines the register `Reg`
 // in the parameter from a 32-bit to a 64-bit instruction if needed. The logic
 // used to check whether an instruction needs to be promoted or not is similar
-// to the logic used to check a defined register whether is isSignOrZeroExtended
-// or not in the function PPCInstrInfo::isSignOrZeroExtended. The
-// `PromoteInstr32To64ForEmliEXTSW` function is recursive. The parameter
+// to the logic used to check whether or not a defined register is sign or zero extended
+// within the function PPCInstrInfo::isSignOrZeroExtended. Additionally, the
+// `PromoteInstr32To64ForElimEXTSW` function is recursive. 
 // BinOpDepth does not count all of the recursions. The parameter BinOpDepth is
 // incremented  only when `PromoteInstr32To64ForEmliEXTSW` calls itself more
 // than once. This is done to prevent exponential recursion.
