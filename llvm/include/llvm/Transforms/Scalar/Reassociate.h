@@ -67,11 +67,10 @@ struct OverflowTracking {
   bool HasNUW;
   bool HasNSW;
   bool AllKnownNonNegative;
-  // Note: AllKnownNegative can be true in a case where one of the operands
-  // is negative, but one the operators is not NSW. AllKnownNegative should
+  // Note: AllKnownNonNegative can be true in a case where one of the operands
+  // is negative, but one the operators is not NSW. AllKnownNonNegative should
   // not be used independently of HasNSW
-  OverflowTracking()
-      : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
+  OverflowTracking() : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
 };
 
 class XorOpnd;

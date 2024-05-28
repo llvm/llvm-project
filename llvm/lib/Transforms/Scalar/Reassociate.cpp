@@ -651,8 +651,7 @@ static bool LinearizeExprTree(Instruction *I,
     // Ensure the leaf is only output once.
     It->second = 0;
     Ops.push_back(std::make_pair(V, Weight));
-    if (Opcode == Instruction::Add && Flags.AllKnownNonNegative &&
-        Flags.HasNSW)
+    if (Opcode == Instruction::Add && Flags.AllKnownNonNegative && Flags.HasNSW)
       Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
   }
 
