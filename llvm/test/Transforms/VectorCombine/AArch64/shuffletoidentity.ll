@@ -281,11 +281,7 @@ define <8 x i8> @undeflane(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i8> @constantsplat(<8 x i8> %a) {
 ; CHECK-LABEL: @constantsplat(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i8> [[AT]], <i8 10, i8 10, i8 10, i8 10>
-; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i8> [[AB]], <i8 10, i8 10, i8 10, i8 10>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -332,11 +328,7 @@ define <8 x i8> @constantdiff2(<8 x i8> %a) {
 
 define <8 x half> @constantsplatf(<8 x half> %a) {
 ; CHECK-LABEL: @constantsplatf(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[ABT:%.*]] = fadd <4 x half> [[AT]], <half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900>
-; CHECK-NEXT:    [[ABB:%.*]] = fadd <4 x half> [[AB]], <half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[ABT]], <4 x half> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], <half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900>
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
