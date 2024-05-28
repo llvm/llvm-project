@@ -4867,7 +4867,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                 ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
                 : nullptr;
 
-        auto IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
         if (First && First->isExplicitObjectParameter() &&
             C != DeclaratorContext::LambdaExpr &&
 
