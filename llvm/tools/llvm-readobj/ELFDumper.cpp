@@ -3910,7 +3910,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
           this->Obj.getSectionContents(Sec);
       if (!ContentsOrErr)
         return ContentsOrErr.takeError();
-      return this->Obj.crelHeader(*ContentsOrErr) / 8;
+      auto NumOrErr = this->Obj.getCrelHeader(*ContentsOrErr);
+      if (!NumOrErr)
+        return NumOrErr.takeError();
+      return *NumOrErr / 8;
     }
 
     if (PrintAsRelr(Sec)) {
@@ -3930,7 +3933,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     HasRelocSections = true;
 
     std::string EntriesNum = "<?>";
-    if (Expected<size_t> NumOrErr = GetEntriesNum(Sec))
+    Expected<size_t> NumOrErr = GetEntriesNum(Sec);
+    if (NumOrErr)
       EntriesNum = std::to_string(*NumOrErr);
     else
       this->reportUniqueWarning("unable to get the number of relocations in " +
@@ -3947,10 +3951,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       printRelr(Sec);
     } else {
       uint64_t CrelHdr = 0;
-      if (auto ContentsOrErr = this->Obj.getSectionContents(Sec))
-        CrelHdr = this->Obj.crelHeader(*ContentsOrErr);
-      else
-        consumeError(ContentsOrErr.takeError());
+      if (Sec.sh_type == ELF::SHT_CREL && NumOrErr) {
+        CrelHdr = cantFail(this->Obj.getCrelHeader(
+            cantFail(this->Obj.getSectionContents(Sec))));
+      }
       printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader(),
                                    CrelHdr);
       this->printRelocationsHelper(Sec);
@@ -7909,8 +7913,9 @@ static bool printLLVMOMPOFFLOADNoteLLVMStyle(uint32_t NoteType,
 
 static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
   W.printNumber("Page Size", Note.PageSize);
+  ListScope D(W, "Mappings");
   for (const CoreFileMapping &Mapping : Note.Mappings) {
-    ListScope D(W, "Mapping");
+    DictScope D(W);
     W.printHex("Start", Mapping.Start);
     W.printHex("End", Mapping.End);
     W.printHex("Offset", Mapping.Offset);

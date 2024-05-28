@@ -140,6 +140,7 @@ public:
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
+  Instruction *visitCallInst(CallInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -489,10 +490,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     Type *Ty = GR->findDeducedElementType(Op);
     if (Ty == KnownElemTy)
       continue;
-    if (Instruction *User = dyn_cast<Instruction>(Op->use_begin()->get()))
-      setInsertPointSkippingPhis(B, User->getNextNode());
-    else
-      setInsertPointSkippingPhis(B, I);
     Value *OpTyVal = Constant::getNullValue(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty) {
@@ -500,6 +497,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
       // check if there is existing Intrinsic::spv_assign_ptr_type instruction
       auto It = AssignPtrTypeInstr.find(Op);
       if (It == AssignPtrTypeInstr.end()) {
+        Instruction *User = dyn_cast<Instruction>(Op->use_begin()->get());
+        setInsertPointSkippingPhis(B, User ? User->getNextNode() : I);
         CallInst *CI =
             buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy}, OpTyVal, Op,
                             {B.getInt32(getPointerAddressSpace(OpTy))}, B);
@@ -511,6 +510,17 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
                 Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal))));
       }
     } else {
+      if (auto *OpI = dyn_cast<Instruction>(Op)) {
+        // spv_ptrcast's argument Op denotes an instruction that generates
+        // a value, and we may use getInsertionPointAfterDef()
+        B.SetInsertPoint(*OpI->getInsertionPointAfterDef());
+        B.SetCurrentDebugLocation(OpI->getDebugLoc());
+      } else if (auto *OpA = dyn_cast<Argument>(Op)) {
+        B.SetInsertPointPastAllocas(OpA->getParent());
+        B.SetCurrentDebugLocation(DebugLoc());
+      } else {
+        B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+      }
       SmallVector<Type *, 2> Types = {OpTy, OpTy};
       MetadataAsValue *VMD = MetadataAsValue::get(
           Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal)));
@@ -618,6 +628,28 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
     if (!KeepInst)
       Worklist.pop();
   }
+}
+
+Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
+  if (!Call.isInlineAsm())
+    return &Call;
+
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
+  LLVMContext &Ctx = F->getContext();
+
+  Constant *TyC = UndefValue::get(IA->getFunctionType());
+  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  SmallVector<Value *> Args = {
+      MetadataAsValue::get(Ctx,
+                           MDNode::get(Ctx, ValueAsMetadata::getConstant(TyC))),
+      MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
+  for (unsigned OpIdx = 0; OpIdx < Call.arg_size(); OpIdx++)
+    Args.push_back(Call.getArgOperand(OpIdx));
+
+  IRBuilder<> B(Call.getParent());
+  B.SetInsertPoint(&Call);
+  B.CreateIntrinsic(Intrinsic::spv_inline_asm, {}, {Args});
+  return &Call;
 }
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {

@@ -1459,6 +1459,17 @@ unsigned BitcodeReader::getVirtualTypeID(Type *Ty,
   return TypeID;
 }
 
+static GEPNoWrapFlags toGEPNoWrapFlags(uint64_t Flags) {
+  GEPNoWrapFlags NW;
+  if (Flags & (1 << bitc::GEP_INBOUNDS))
+    NW |= GEPNoWrapFlags::inBounds();
+  if (Flags & (1 << bitc::GEP_NUSW))
+    NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if (Flags & (1 << bitc::GEP_NUW))
+    NW |= GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 static bool isConstExprSupported(const BitcodeConstant *BC) {
   uint8_t Opcode = BC->Opcode;
 
@@ -1614,9 +1625,9 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           C = ConstantExpr::getCompare(BC->Flags, ConstOps[0], ConstOps[1]);
           break;
         case Instruction::GetElementPtr:
-          C = ConstantExpr::getGetElementPtr(BC->SrcElemTy, ConstOps[0],
-                                             ArrayRef(ConstOps).drop_front(),
-                                             BC->Flags, BC->getInRange());
+          C = ConstantExpr::getGetElementPtr(
+              BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
+              toGEPNoWrapFlags(BC->Flags), BC->getInRange());
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
@@ -1700,8 +1711,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I = GetElementPtrInst::Create(BC->SrcElemTy, Ops[0],
                                       ArrayRef(Ops).drop_front(), "constexpr",
                                       InsertBB);
-        if (BC->Flags)
-          cast<GetElementPtrInst>(I)->setIsInBounds();
+        cast<GetElementPtrInst>(I)->setNoWrapFlags(toGEPNoWrapFlags(BC->Flags));
         break;
       case Instruction::Select:
         I = SelectInst::Create(Ops[0], Ops[1], Ops[2], "constexpr", InsertBB);
@@ -2940,7 +2950,7 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
       if (!BB)
         return error("Invalid bbentry record");
 
-      BB->setName(StringRef(ValueName.data(), ValueName.size()));
+      BB->setName(ValueName.str());
       ValueName.clear();
       break;
     }
@@ -3321,9 +3331,10 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     case bitc::CST_CODE_CE_INBOUNDS_GEP: // [ty, n x operands]
-    case bitc::CST_CODE_CE_GEP: // [ty, n x operands]
+    case bitc::CST_CODE_CE_GEP_OLD:      // [ty, n x operands]
     case bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD: // [ty, flags, n x
                                                        // operands]
+    case bitc::CST_CODE_CE_GEP:                // [ty, flags, n x operands]
     case bitc::CST_CODE_CE_GEP_WITH_INRANGE: { // [ty, flags, start, end, n x
                                                // operands]
       if (Record.size() < 2)
@@ -3331,27 +3342,29 @@ Error BitcodeReader::parseConstants() {
       unsigned OpNum = 0;
       Type *PointeeType = nullptr;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD ||
-          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE || Record.size() % 2)
+          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE ||
+          BitCode == bitc::CST_CODE_CE_GEP || Record.size() % 2)
         PointeeType = getTypeByID(Record[OpNum++]);
 
-      bool InBounds = false;
+      uint64_t Flags = 0;
       std::optional<ConstantRange> InRange;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD) {
         uint64_t Op = Record[OpNum++];
-        InBounds = Op & 1;
+        Flags = Op & 1; // inbounds
         unsigned InRangeIndex = Op >> 1;
         // "Upgrade" inrange by dropping it. The feature is too niche to
         // bother.
         (void)InRangeIndex;
       } else if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE) {
-        uint64_t Op = Record[OpNum++];
-        InBounds = Op & 1;
+        Flags = Record[OpNum++];
         Expected<ConstantRange> MaybeInRange = readConstantRange(Record, OpNum);
         if (!MaybeInRange)
           return MaybeInRange.takeError();
         InRange = MaybeInRange.get();
+      } else if (BitCode == bitc::CST_CODE_CE_GEP) {
+        Flags = Record[OpNum++];
       } else if (BitCode == bitc::CST_CODE_CE_INBOUNDS_GEP)
-        InBounds = true;
+        Flags = (1 << bitc::GEP_INBOUNDS);
 
       SmallVector<unsigned, 16> Elts;
       unsigned BaseTypeID = Record[OpNum];
@@ -3384,7 +3397,8 @@ Error BitcodeReader::parseConstants() {
 
       V = BitcodeConstant::create(
           Alloc, CurTy,
-          {Instruction::GetElementPtr, InBounds, PointeeType, InRange}, Elts);
+          {Instruction::GetElementPtr, uint8_t(Flags), PointeeType, InRange},
+          Elts);
       break;
     }
     case bitc::CST_CODE_CE_SELECT: {  // CE_SELECT: [opval#, opval#, opval#]
@@ -5062,14 +5076,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned TyID;
       Type *Ty;
-      bool InBounds;
+      GEPNoWrapFlags NW;
 
       if (BitCode == bitc::FUNC_CODE_INST_GEP) {
-        InBounds = Record[OpNum++];
+        NW = toGEPNoWrapFlags(Record[OpNum++]);
         TyID = Record[OpNum++];
         Ty = getTypeByID(TyID);
       } else {
-        InBounds = BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD;
+        if (BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD)
+          NW = GEPNoWrapFlags::inBounds();
         TyID = InvalidTypeID;
         Ty = nullptr;
       }
@@ -5096,7 +5111,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         GEPIdx.push_back(Op);
       }
 
-      I = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
+      auto *GEP = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
+      I = GEP;
 
       ResTypeID = TyID;
       if (cast<GEPOperator>(I)->getNumIndices() != 0) {
@@ -5122,8 +5138,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         ResTypeID = getVirtualTypeID(I->getType(), ResTypeID);
 
       InstructionList.push_back(I);
-      if (InBounds)
-        cast<GetElementPtrInst>(I)->setIsInBounds(true);
+      GEP->setNoWrapFlags(NW);
       break;
     }
 

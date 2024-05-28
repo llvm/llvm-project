@@ -260,7 +260,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override;
-  bool usesRela(const MCTargetOptions *, const MCSectionELF &Sec) const;
+  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
@@ -944,14 +944,14 @@ void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
 }
 
 template <class uint>
-static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &os) {
+static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
   uint OffsetMask = 8, Offset = 0, Addend = 0;
   uint32_t Symidx = 0, Type = 0;
   // hdr & 4 indicates 3 flag bits in delta offset and flags members.
-  for (size_t i = 0, e = Relocs.size(); i != e; ++i)
-    OffsetMask |= Relocs[i].Offset;
+  for (const ELFRelocationEntry &Entry : Relocs)
+    OffsetMask |= Entry.Offset;
   const int Shift = llvm::countr_zero(OffsetMask);
-  encodeULEB128(Relocs.size() * 8 + ELF::CREL_HDR_ADDEND + Shift, os);
+  encodeULEB128(Relocs.size() * 8 + ELF::CREL_HDR_ADDEND + Shift, OS);
   for (const ELFRelocationEntry &Entry : Relocs) {
     // The delta offset and flags member may be larger than uint64_t. Special
     // case the first byte (3 flag bits and 4 offset bits). Other ULEB128 bytes
@@ -962,22 +962,22 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &os) {
     uint8_t B = (DeltaOffset << 3) + (Symidx != CurSymidx) +
                 (Type != Entry.Type ? 2 : 0) + (Addend != Entry.Addend ? 4 : 0);
     if (DeltaOffset < 0x10) {
-      os << char(B);
+      OS << char(B);
     } else {
-      os << char(B | 0x80);
-      encodeULEB128(DeltaOffset >> 4, os);
+      OS << char(B | 0x80);
+      encodeULEB128(DeltaOffset >> 4, OS);
     }
     // Delta symidx/type/addend members (SLEB128).
     if (B & 1) {
-      encodeSLEB128(static_cast<int32_t>(CurSymidx - Symidx), os);
+      encodeSLEB128(static_cast<int32_t>(CurSymidx - Symidx), OS);
       Symidx = CurSymidx;
     }
     if (B & 2) {
-      encodeSLEB128(static_cast<int32_t>(Entry.Type - Type), os);
+      encodeSLEB128(static_cast<int32_t>(Entry.Type - Type), OS);
       Type = Entry.Type;
     }
     if (B & 4) {
-      encodeSLEB128(std::make_signed_t<uint>(Entry.Addend - Addend), os);
+      encodeSLEB128(std::make_signed_t<uint>(Entry.Addend - Addend), OS);
       Addend = Entry.Addend;
     }
   }

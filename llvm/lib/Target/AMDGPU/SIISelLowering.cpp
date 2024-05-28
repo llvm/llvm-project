@@ -957,6 +957,11 @@ const GCNSubtarget *SITargetLowering::getSubtarget() const {
   return Subtarget;
 }
 
+ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
+  return RCRegs;
+}
+
 //===----------------------------------------------------------------------===//
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
@@ -1233,13 +1238,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags |= MachineMemOperand::MOLoad |
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
       switch (IntrID) {
       default:
+        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
         // XXX - Should this be volatile without known ordering?
         Info.flags |= MachineMemOperand::MOVolatile;
         break;
@@ -2976,12 +2981,20 @@ SDValue SITargetLowering::LowerFormalArguments(
                                    DL, Elts);
           }
 
-          SDValue CMemVT;
-          if (VT.isScalarInteger() && VT.bitsLT(NewArg.getSimpleValueType()))
-            CMemVT = DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewArg);
-          else
-            CMemVT = DAG.getBitcast(MemVT, NewArg);
-          NewArg = convertArgType(DAG, VT, MemVT, DL, CMemVT,
+          // If the argument was preloaded to multiple consecutive 32-bit
+          // registers because of misalignment between addressable SGPR tuples
+          // and the argument size, we can still assume that because of kernarg
+          // segment alignment restrictions that NewArg's size is the same as
+          // MemVT and just do a bitcast. If MemVT is less than 32-bits we add a
+          // truncate since we cannot preload to less than a single SGPR and the
+          // MemVT may be smaller.
+          EVT MemVTInt =
+              EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+          if (MemVT.bitsLT(NewArg.getSimpleValueType()))
+            NewArg = DAG.getNode(ISD::TRUNCATE, DL, MemVTInt, NewArg);
+
+          NewArg = DAG.getBitcast(MemVT, NewArg);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, NewArg,
                                   Ins[i].Flags.isSExt(), &Ins[i]);
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
@@ -5949,16 +5962,10 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
   assert(M->getNumValues() == 2 || M->getNumValues() == 3);
   bool IsTFE = M->getNumValues() == 3;
 
-  unsigned Opc;
-  if (IsFormat) {
-    Opc = IsTFE ? AMDGPUISD::BUFFER_LOAD_FORMAT_TFE
-                : AMDGPUISD::BUFFER_LOAD_FORMAT;
-  } else {
-    // TODO: Support non-format TFE loads.
-    if (IsTFE)
-      return SDValue();
-    Opc = AMDGPUISD::BUFFER_LOAD;
-  }
+  unsigned Opc = IsFormat ? (IsTFE ? AMDGPUISD::BUFFER_LOAD_FORMAT_TFE
+                                   : AMDGPUISD::BUFFER_LOAD_FORMAT)
+                 : IsTFE  ? AMDGPUISD::BUFFER_LOAD_TFE
+                          : AMDGPUISD::BUFFER_LOAD;
 
   if (IsD16) {
     return adjustLoadValueType(AMDGPUISD::BUFFER_LOAD_FORMAT_D16, M, DAG, Ops);
@@ -5966,7 +5973,8 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 
   // Handle BUFFER_LOAD_BYTE/UBYTE/SHORT/USHORT overloaded intrinsics
   if (!IsD16 && !LoadVT.isVector() && EltType.getSizeInBits() < 32)
-    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M->getMemOperand());
+    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M->getMemOperand(),
+                                      IsTFE);
 
   if (isTypeLegal(LoadVT)) {
     return getMemIntrinsicNode(Opc, DL, M->getVTList(), Ops, IntVT,
@@ -7580,8 +7588,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
                           ? (ReqRetNumElts + 1) / 2
                           : ReqRetNumElts;
 
-  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    DMaskPop : (DMaskPop + 1) / 2;
+  int MaskPopDwords = (!IsD16 || Unpacked) ? DMaskPop : (DMaskPop + 1) / 2;
 
   MVT DataDwordVT = NumDataDwords == 1 ?
     MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
@@ -10160,11 +10167,30 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
 }
 
 // Handle 8 bit and 16 bit buffer loads
-SDValue
-SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT,
-                                             SDLoc DL, ArrayRef<SDValue> Ops,
-                                             MachineMemOperand *MMO) const {
+SDValue SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG,
+                                                     EVT LoadVT, SDLoc DL,
+                                                     ArrayRef<SDValue> Ops,
+                                                     MachineMemOperand *MMO,
+                                                     bool IsTFE) const {
   EVT IntVT = LoadVT.changeTypeToInteger();
+
+  if (IsTFE) {
+    unsigned Opc = (LoadVT.getScalarType() == MVT::i8)
+                       ? AMDGPUISD::BUFFER_LOAD_UBYTE_TFE
+                       : AMDGPUISD::BUFFER_LOAD_USHORT_TFE;
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *OpMMO = MF.getMachineMemOperand(MMO, 0, 8);
+    SDVTList VTs = DAG.getVTList(MVT::v2i32, MVT::Other);
+    SDValue Op = getMemIntrinsicNode(Opc, DL, VTs, Ops, MVT::v2i32, OpMMO, DAG);
+    SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                                 DAG.getConstant(1, DL, MVT::i32));
+    SDValue Data = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                               DAG.getConstant(0, DL, MVT::i32));
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Data);
+    SDValue Value = DAG.getNode(ISD::BITCAST, DL, LoadVT, Trunc);
+    return DAG.getMergeValues({Value, Status, SDValue(Op.getNode(), 1)}, DL);
+  }
+
   unsigned Opc = (LoadVT.getScalarType() == MVT::i8) ?
          AMDGPUISD::BUFFER_LOAD_UBYTE : AMDGPUISD::BUFFER_LOAD_USHORT;
 
@@ -12066,11 +12092,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
     auto VecIdx = IdxOp->getZExtValue();
     auto ScalarSize = Op.getScalarValueSizeInBits();
-    if (ScalarSize != 32) {
+    if (ScalarSize < 32)
       Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
-    }
-
-    return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
+    return calculateSrcByte(ScalarSize >= 32 ? Op : Op.getOperand(0),
                             StartingIndex, Index);
   }
 
@@ -13189,6 +13213,33 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   return SDValue();
 }
 
+/// \return true if the subtarget supports minimum3 and maximum3 with the given
+/// base min/max opcode \p Opc for type \p VT.
+static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
+                             EVT VT) {
+  switch (Opc) {
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXNUM_IEEE:
+  case AMDGPUISD::FMIN_LEGACY:
+  case AMDGPUISD::FMAX_LEGACY:
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return (VT == MVT::f32 || VT == MVT::f16) && Subtarget.hasIEEEMinMax3();
+  case ISD::SMAX:
+  case ISD::SMIN:
+  case ISD::UMAX:
+  case ISD::UMIN:
+    return (VT == MVT::i32) || (VT == MVT::i16 && Subtarget.hasMin3Max3_16());
+  default:
+    return false;
+  }
+
+  llvm_unreachable("not a min/max opcode");
+}
+
 SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -13201,10 +13252,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // Only do this if the inner op has one use since this will just increases
   // register pressure for no benefit.
 
-  if (Opc != AMDGPUISD::FMIN_LEGACY && Opc != AMDGPUISD::FMAX_LEGACY &&
-      !VT.isVector() &&
-      (VT == MVT::i32 || VT == MVT::f32 ||
-       ((VT == MVT::f16 || VT == MVT::i16) && Subtarget->hasMin3Max3_16()))) {
+  if (supportsMin3Max3(*Subtarget, Opc, VT)) {
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {

@@ -394,23 +394,26 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
 }
 
 template <class ELFT>
-uint64_t ELFFile<ELFT>::crelHeader(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, true, 8); // endian/class is irrelevant
-  DataExtractor::Cursor Cur(0);
-  uint64_t Hdr = Data.getULEB128(Cur);
-  // In case of an error, return 0 and postpone error reporting to decodeCrel.
-  consumeError(Cur.takeError());
+Expected<uint64_t>
+ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
+  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  Error Err = Error::success();
+  uint64_t Hdr = 0;
+  Hdr = Data.getULEB128(&Hdr, &Err);
+  if (Err)
+    return Err;
   return Hdr;
 }
 
 template <class ELFT>
 Expected<typename ELFFile<ELFT>::RelsOrRelas>
 ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, true, 8); // endian/class is irrelevant
+  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
   DataExtractor::Cursor Cur(0);
   const uint64_t Hdr = Data.getULEB128(Cur);
-  const size_t Count = Hdr / 8, FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2,
-               Shift = Hdr % ELF::CREL_HDR_ADDEND;
+  const size_t Count = Hdr / 8;
+  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
+  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
   std::vector<Elf_Rel> Rels;
   std::vector<Elf_Rela> Relas;
   if (Hdr & ELF::CREL_HDR_ADDEND)

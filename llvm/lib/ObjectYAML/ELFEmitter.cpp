@@ -1295,7 +1295,8 @@ void ELFState<ELFT>::writeSectionContent(
       OffsetMask |= Rel.Offset;
   const int Shift = llvm::countr_zero(OffsetMask);
   if (IsCrel)
-    CBA.writeULEB128(Section.Relocations->size() * 8 + 4 + Shift);
+    CBA.writeULEB128(Section.Relocations->size() * 8 + ELF::CREL_HDR_ADDEND +
+                     Shift);
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
     uint32_t CurSymidx =

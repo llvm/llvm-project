@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck -match-full-lines %s
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-delicm>)" -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-delicm>' -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-delicm>' -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Check that PHI mapping works even in presence of a memset whose'
 ; zero value is used.
