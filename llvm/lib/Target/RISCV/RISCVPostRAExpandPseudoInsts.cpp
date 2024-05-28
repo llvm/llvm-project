@@ -44,7 +44,7 @@ private:
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool expandLIaddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVPostRAExpandPseudo::ID = 0;
@@ -77,7 +77,7 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoMovImm:
     return expandMovImm(MBB, MBBI);
   case RISCV::PseudoMovAddr:
-    return expandLIaddr(MBB, MBBI);
+    return expandMovAddr(MBB, MBBI);
   default:
     return false;
   }
@@ -104,7 +104,7 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVPostRAExpandPseudo::expandLIaddr(MachineBasicBlock &MBB,
+bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
