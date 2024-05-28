@@ -584,7 +584,7 @@ void MachineOutliner::findCandidates(
   LLVM_DEBUG(dbgs() << "*** Discarding overlapping candidates *** \n");
   LLVM_DEBUG(
       dbgs() << "Searching for overlaps in all repeated sequences...\n");
-  for (const SuffixTree::RepeatedSubstring &RS : ST) {
+  for (SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
     unsigned StringLen = RS.Length;
     LLVM_DEBUG(dbgs() << "  Sequence length: " << StringLen << "\n");
@@ -595,9 +595,8 @@ void MachineOutliner::findCandidates(
 #endif
     // Sort the start indices so that we can efficiently check if candidates
     // overlap with each other in MachineOutliner::findCandidates().
-    SmallVector<unsigned> SortedStartIndices(RS.StartIndices);
-    llvm::sort(SortedStartIndices);
-    for (const unsigned &StartIdx : SortedStartIndices) {
+    llvm::sort(RS.StartIndices);
+    for (const unsigned &StartIdx : RS.StartIndices) {
       // Trick: Discard some candidates that would be incompatible with the
       // ones we've already found for this sequence. This will save us some
       // work in candidate selection.
