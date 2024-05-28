@@ -33,7 +33,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_global_variable_fpga_decorations",
-         SPIRV::Extension::Extension::SPV_INTEL_global_variable_fpga_decorations},
+         SPIRV::Extension::Extension::
+             SPV_INTEL_global_variable_fpga_decorations},
         {"SPV_INTEL_global_variable_host_access",
          SPIRV::Extension::Extension::SPV_INTEL_global_variable_host_access},
         {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
