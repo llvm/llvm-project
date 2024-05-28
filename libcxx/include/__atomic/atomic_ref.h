@@ -335,7 +335,6 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
 };
 
-
 template <class _Tp>
 struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   using __base = __atomic_ref_base<_Tp*>;
