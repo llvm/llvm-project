@@ -426,8 +426,8 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
-          Callback) const;
+      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
