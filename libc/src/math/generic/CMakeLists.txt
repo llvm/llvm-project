@@ -2969,6 +2969,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf128.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
