@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   restart:
+    if: github.repository_owner == 'llvm'
     name: "Restart Job"
     permissions:
       statuses: read
