@@ -11,14 +11,14 @@
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
 
+#if FLT_RADIX != 2
+#error FLT_RADIX!=2, unimplemented.
+#endif
+
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float128, scalbnf128, (float128 x, int n)) {
-#if FLT_RADIX != 2
-#error FLT_RADIX!=2, unimplemented.
-#else
   return fputil::ldexp(x, n);
-#endif
 }
 
 } // namespace LIBC_NAMESPACE
