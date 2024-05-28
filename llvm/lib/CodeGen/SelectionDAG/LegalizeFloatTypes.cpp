@@ -1338,7 +1338,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     report_fatal_error("Do not know how to expand the result of this "
                        "operator!");
-
+    // clang-format off
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
@@ -1408,9 +1408,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FSUB:
   case ISD::FSUB:       ExpandFloatRes_FSUB(N, Lo, Hi); break;
   case ISD::STRICT_FTAN:
-  case ISD::FTAN:
-    ExpandFloatRes_FTAN(N, Lo, Hi);
-    break;
+  case ISD::FTAN:       ExpandFloatRes_FTAN(N, Lo, Hi); break;
   case ISD::STRICT_FTRUNC:
   case ISD::FTRUNC:     ExpandFloatRes_FTRUNC(N, Lo, Hi); break;
   case ISD::LOAD:       ExpandFloatRes_LOAD(N, Lo, Hi); break;
@@ -1420,6 +1418,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP: ExpandFloatRes_XINT_TO_FP(N, Lo, Hi); break;
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
+    // clang-format on
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.

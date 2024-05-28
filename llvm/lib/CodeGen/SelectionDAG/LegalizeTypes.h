@@ -636,6 +636,7 @@ private:
                             SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
                              SDValue &Lo, SDValue &Hi);
+  // clang-format off
   void ExpandFloatRes_FABS      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMINNUM   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMAXNUM   (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -668,10 +669,11 @@ private:
   void ExpandFloatRes_FSIN      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FSQRT     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FSUB      (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandFloatRes_FTAN(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FTAN      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FTRUNC    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_LOAD      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  // clang-format on
 
   // Float Operand Expansion.
   bool ExpandFloatOperand(SDNode *N, unsigned OpNo);

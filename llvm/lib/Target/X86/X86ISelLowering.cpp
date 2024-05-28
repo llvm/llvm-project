@@ -654,6 +654,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // non-optsize case.
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
+    // clang-format off
     for (auto VT : { MVT::f32, MVT::f64 }) {
       // Use ANDPD to simulate FABS.
       setOperationAction(ISD::FABS, VT, Custom);
@@ -672,8 +673,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FTAN, VT, Expand);
+      setOperationAction(ISD::FTAN   , VT, Expand);
     }
+    // clang-format on
 
     // Half type will be promoted by default.
     setF16Action(MVT::f16, Promote);
@@ -745,10 +747,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
 
     // We don't support sin/cos/fmod
+    // clang-format off
     setOperationAction(ISD::FSIN   , MVT::f32, Expand);
     setOperationAction(ISD::FCOS   , MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-    setOperationAction(ISD::FTAN, MVT::f32, Expand);
+    setOperationAction(ISD::FTAN   , MVT::f32, Expand);
+    // clang-format on
 
     if (UseX87) {
       // Always expand sin/cos functions even though x87 has an instruction.
