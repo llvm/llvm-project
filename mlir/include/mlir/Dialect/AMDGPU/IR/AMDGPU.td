@@ -214,7 +214,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
       AttrSizedOperandSegments,
       AllTypesMatch<["src", "cmp", "value"]>,
       AllElementTypesMatch<["value", "memref"]>]>,
-    Arguments<(ins AnyTypeOf<[I32, I64, F32, F64]>:$src,
+    Arguments<(ins AnyType:$src,
                    AnyType:$cmp,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
