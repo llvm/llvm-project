@@ -6,11 +6,11 @@
 // CHECK:   scf.for
 // CHECK:     arith.addi
 //
-// CHECK: func @foo[[SUFFIX:.+]](%{{.+}}, %{{.+}}, %{{.+}})
+// CHECK: func @foo[[$SUFFIX:.+]](%{{.+}}, %{{.+}}, %{{.+}})
 // CHECK:   scf.for
 // CHECK:     arith.addi
 //
-// CHECK-LABEL @loop_outline_op
+// CHECK-LABEL: @loop_outline_op
 func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   // CHECK: scf.for
   // CHECK-NOT: scf.for
@@ -23,7 +23,7 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   }
   // CHECK: scf.execute_region
   // CHECK-NOT: scf.for
-  // CHECK:   func.call @foo[[SUFFIX]]
+  // CHECK:   func.call @foo[[$SUFFIX]]
   scf.for %j = %arg0 to %arg1 step %arg2 {
     arith.addi %j, %j : index
   }

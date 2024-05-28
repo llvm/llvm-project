@@ -623,3 +623,9 @@ namespace FuncPtrParam {
     *a; // both-warning {{expression result unused}}
   }
 }
+
+namespace {
+  void f() noexcept;
+  void (&r)() = f;
+  void (&cond3)() = r;
+}

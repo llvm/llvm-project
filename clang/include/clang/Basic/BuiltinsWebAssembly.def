@@ -193,6 +193,8 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4, "V4fV8UsV8UsV4f"
 // Half-Precision (fp16)
 TARGET_BUILTIN(__builtin_wasm_loadf16_f32, "fh*", "nU", "half-precision")
 TARGET_BUILTIN(__builtin_wasm_storef16_f32, "vfh*", "n", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_splat_f16x8, "V8hf", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_f16x8, "fV8hi", "nc", "half-precision")
 
 // Reference Types builtins
 // Some builtins are custom type-checked - see 't' as part of the third argument,

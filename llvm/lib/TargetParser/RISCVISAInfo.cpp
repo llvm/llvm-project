@@ -880,7 +880,7 @@ void RISCVISAInfo::updateImplication() {
   // implied
   if (!HasE && !HasI) {
     auto Version = findDefaultVersion("i");
-    addExtension("i", Version.value());
+    addExtension("i", *Version);
   }
 
   if (HasE && HasI)
@@ -906,7 +906,7 @@ void RISCVISAInfo::updateImplication() {
                     if (Exts.count(ImpliedExt))
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
-                    addExtension(ImpliedExt, Version.value());
+                    addExtension(ImpliedExt, *Version);
                     WorkList.insert(ImpliedExt);
                   });
   }
@@ -915,7 +915,7 @@ void RISCVISAInfo::updateImplication() {
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
       !Exts.count("zcf")) {
     auto Version = findDefaultVersion("zcf");
-    addExtension("zcf", Version.value());
+    addExtension("zcf", *Version);
   }
 }
 
@@ -942,7 +942,7 @@ void RISCVISAInfo::updateCombination() {
           });
       if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
-        addExtension(CombineExt, Version.value());
+        addExtension(CombineExt, *Version);
         MadeChange = true;
       }
     }

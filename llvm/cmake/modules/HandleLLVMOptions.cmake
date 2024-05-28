@@ -817,7 +817,10 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   append("-Wimplicit-fallthrough" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+  set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 0)
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 1)
     append("-Wcovered-switch-default" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
@@ -853,7 +856,9 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  endif()
   append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't
