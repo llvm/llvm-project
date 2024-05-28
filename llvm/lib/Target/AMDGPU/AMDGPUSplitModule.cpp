@@ -340,7 +340,7 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
         // TODO: Print an ORE as well ?
         addAllIndirectCallDependencies(M, Fns);
         HadIndirectCall = true;
-        return;
+        continue;
       }
 
       if (Callee->isDeclaration())
