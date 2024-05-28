@@ -509,6 +509,10 @@ def UnixAPIMisuseChecker : Checker<"API">,
   HelpText<"Check calls to various UNIX/Posix functions">,
   Documentation<HasDocumentation>;
 
+def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
+  HelpText<"Check for calls to blocking functions inside a critical section">,
+  Documentation<HasDocumentation>;
+
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
   HelpText<"The base of several malloc() related checkers. On it's own it "
            "emits no reports, but adds valuable information to the analysis "
@@ -617,10 +621,6 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasDocumentation>;
-
-def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
-  HelpText<"Check for calls to blocking functions inside a critical section">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
