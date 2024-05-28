@@ -18,14 +18,27 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir {
+// TODO: This is a temporary solution to know AArch64 ABI Kind
+//       This should be removed once we have a proper ABI info query
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+  AAPCSSoft,
+};
 
 class LoweringPrepareCXXABI {
 public:
   static LoweringPrepareCXXABI *createItaniumABI();
+  static LoweringPrepareCXXABI *createAArch64ABI(AArch64ABIKind k);
 
+  virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder,
+                                 mlir::cir::VAArgOp op,
+                                 const cir::CIRDataLayout &datalayout) = 0;
   virtual ~LoweringPrepareCXXABI() {}
 
   virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,

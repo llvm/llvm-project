@@ -21,6 +21,15 @@ struct MissingFeatures {
   // C++ ABI support
   static bool cxxABI() { return false; }
   static bool setCallingConv() { return false; }
+  static bool handleBigEndian() { return false; }
+  static bool handleAArch64Indirect() { return false; }
+  static bool classifyArgumentTypeForAArch64() { return false; }
+  static bool supportgetCoerceToTypeForAArch64() { return false; }
+  static bool supportTySizeQueryForAArch64() { return false; }
+  static bool supportTyAlignQueryForAArch64() { return false; }
+  static bool supportisHomogeneousAggregateQueryForAArch64() { return false; }
+  static bool supportisEndianQueryForAArch64() { return false; }
+  static bool supportisAggregateTypeForABIAArch64() { return false; }
 
   // Address space related
   static bool addressSpace() { return false; }
