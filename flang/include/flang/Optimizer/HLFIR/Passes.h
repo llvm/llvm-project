@@ -20,10 +20,6 @@
 
 namespace hlfir {
 #define GEN_PASS_DECL
-#include "flang/Optimizer/HLFIR/Passes.h.inc"
-
-std::unique_ptr<mlir::Pass> createConvertHLFIRtoFIRPass();
-
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
