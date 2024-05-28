@@ -335,12 +335,8 @@ public:
 
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
-  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
-      CompilerTypeToDIE;
-
-  virtual CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() {
-    return m_forward_decl_compiler_type_to_die;
-  }
+  virtual llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+  GetForwardDeclCompilerTypeToDIE();
 
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
@@ -539,7 +535,8 @@ protected:
   DIEToVariableSP m_die_to_variable_sp;
   // A map from CompilerType to the struct/class/union/enum DIE (might be a
   // declaration or a definition) that is used to construct it.
-  CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
+  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
+      m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;

@@ -2413,6 +2413,52 @@ mlir::LogicalResult fir::ReboxOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReboxAssumedRankOp
+//===----------------------------------------------------------------------===//
+
+static bool areCompatibleAssumedRankElementType(mlir::Type inputEleTy,
+                                                mlir::Type outEleTy) {
+  if (inputEleTy == outEleTy)
+    return true;
+  // Output is unlimited polymorphic -> output dynamic type is the same as input
+  // type.
+  if (mlir::isa<mlir::NoneType>(outEleTy))
+    return true;
+  // Output/Input are derived types. Assuming input extends output type, output
+  // dynamic type is the output static type, unless output is polymorphic.
+  if (mlir::isa<fir::RecordType>(inputEleTy) &&
+      mlir::isa<fir::RecordType>(outEleTy))
+    return true;
+  if (areCompatibleCharacterTypes(inputEleTy, outEleTy))
+    return true;
+  return false;
+}
+
+mlir::LogicalResult fir::ReboxAssumedRankOp::verify() {
+  mlir::Type inputType = getBox().getType();
+  if (!mlir::isa<fir::BaseBoxType>(inputType) && !fir::isBoxAddress(inputType))
+    return emitOpError("input must be a box or box address");
+  mlir::Type inputEleTy =
+      mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(inputType))
+          .unwrapInnerType();
+  mlir::Type outEleTy =
+      mlir::cast<fir::BaseBoxType>(getType()).unwrapInnerType();
+  if (!areCompatibleAssumedRankElementType(inputEleTy, outEleTy))
+    return emitOpError("input and output element types are incompatible");
+  return mlir::success();
+}
+
+void fir::ReboxAssumedRankOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::Value inputBox = getBox();
+  if (fir::isBoxAddress(inputBox.getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // ResultOp
 //===----------------------------------------------------------------------===//
 
@@ -3897,169 +3943,6 @@ mlir::LogicalResult fir::DeclareOp::verify() {
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
 }
-
-llvm::SmallVector<mlir::Region *> fir::CUDAKernelOp::getLoopRegions() {
-  return {&getRegion()};
-}
-
-mlir::ParseResult parseCUFKernelValues(
-    mlir::OpAsmParser &parser,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &values,
-    llvm::SmallVectorImpl<mlir::Type> &types) {
-  if (mlir::succeeded(parser.parseOptionalStar()))
-    return mlir::success();
-
-  if (mlir::succeeded(parser.parseOptionalLParen())) {
-    if (mlir::failed(parser.parseCommaSeparatedList(
-            mlir::AsmParser::Delimiter::None, [&]() {
-              if (parser.parseOperand(values.emplace_back()))
-                return mlir::failure();
-              return mlir::success();
-            })))
-      return mlir::failure();
-    auto builder = parser.getBuilder();
-    for (size_t i = 0; i < values.size(); i++) {
-      types.emplace_back(builder.getI32Type());
-    }
-    if (parser.parseRParen())
-      return mlir::failure();
-  } else {
-    if (parser.parseOperand(values.emplace_back()))
-      return mlir::failure();
-    auto builder = parser.getBuilder();
-    types.emplace_back(builder.getI32Type());
-    return mlir::success();
-  }
-  return mlir::success();
-}
-
-void printCUFKernelValues(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                          mlir::ValueRange values, mlir::TypeRange types) {
-  if (values.empty())
-    p << "*";
-
-  if (values.size() > 1)
-    p << "(";
-  llvm::interleaveComma(values, p, [&p](mlir::Value v) { p << v; });
-  if (values.size() > 1)
-    p << ")";
-}
-
-mlir::ParseResult parseCUFKernelLoopControl(
-    mlir::OpAsmParser &parser, mlir::Region &region,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &lowerbound,
-    llvm::SmallVectorImpl<mlir::Type> &lowerboundType,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &upperbound,
-    llvm::SmallVectorImpl<mlir::Type> &upperboundType,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &step,
-    llvm::SmallVectorImpl<mlir::Type> &stepType) {
-
-  llvm::SmallVector<mlir::OpAsmParser::Argument> inductionVars;
-  if (parser.parseLParen() ||
-      parser.parseArgumentList(inductionVars,
-                               mlir::OpAsmParser::Delimiter::None,
-                               /*allowType=*/true) ||
-      parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
-      parser.parseOperandList(lowerbound, inductionVars.size(),
-                              mlir::OpAsmParser::Delimiter::None) ||
-      parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
-      parser.parseKeyword("to") || parser.parseLParen() ||
-      parser.parseOperandList(upperbound, inductionVars.size(),
-                              mlir::OpAsmParser::Delimiter::None) ||
-      parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
-      parser.parseKeyword("step") || parser.parseLParen() ||
-      parser.parseOperandList(step, inductionVars.size(),
-                              mlir::OpAsmParser::Delimiter::None) ||
-      parser.parseColonTypeList(stepType) || parser.parseRParen())
-    return mlir::failure();
-  return parser.parseRegion(region, inductionVars);
-}
-
-void printCUFKernelLoopControl(
-    mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::Region &region,
-    mlir::ValueRange lowerbound, mlir::TypeRange lowerboundType,
-    mlir::ValueRange upperbound, mlir::TypeRange upperboundType,
-    mlir::ValueRange steps, mlir::TypeRange stepType) {
-  mlir::ValueRange regionArgs = region.front().getArguments();
-  if (!regionArgs.empty()) {
-    p << "(";
-    llvm::interleaveComma(
-        regionArgs, p, [&p](mlir::Value v) { p << v << " : " << v.getType(); });
-    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
-      << upperbound << " : " << upperboundType << ") "
-      << " step (" << steps << " : " << stepType << ") ";
-  }
-  p.printRegion(region, /*printEntryBlockArgs=*/false);
-}
-
-mlir::LogicalResult fir::CUDAKernelOp::verify() {
-  if (getLowerbound().size() != getUpperbound().size() ||
-      getLowerbound().size() != getStep().size())
-    return emitOpError(
-        "expect same number of values in lowerbound, upperbound and step");
-
-  return mlir::success();
-}
-
-mlir::LogicalResult fir::CUDAAllocateOp::verify() {
-  if (getPinned() && getStream())
-    return emitOpError("pinned and stream cannot appears at the same time");
-  if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
-    return emitOpError(
-        "expect box to be a reference to a class or box type value");
-  if (getSource() &&
-      !mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getSource().getType())))
-    return emitOpError(
-        "expect source to be a reference to/or a class or box type value");
-  if (getErrmsg() &&
-      !mlir::isa<fir::BoxType>(fir::unwrapRefType(getErrmsg().getType())))
-    return emitOpError(
-        "expect errmsg to be a reference to/or a box type value");
-  if (getErrmsg() && !getHasStat())
-    return emitOpError("expect stat attribute when errmsg is provided");
-  return mlir::success();
-}
-
-mlir::LogicalResult fir::CUDADeallocateOp::verify() {
-  if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
-    return emitOpError(
-        "expect box to be a reference to class or box type value");
-  if (getErrmsg() &&
-      !mlir::isa<fir::BoxType>(fir::unwrapRefType(getErrmsg().getType())))
-    return emitOpError(
-        "expect errmsg to be a reference to/or a box type value");
-  if (getErrmsg() && !getHasStat())
-    return emitOpError("expect stat attribute when errmsg is provided");
-  return mlir::success();
-}
-
-void fir::CUDAAllocOp::build(
-    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
-    llvm::StringRef uniqName, llvm::StringRef bindcName,
-    fir::CUDADataAttributeAttr cudaAttr, mlir::ValueRange typeparams,
-    mlir::ValueRange shape, llvm::ArrayRef<mlir::NamedAttribute> attributes) {
-  mlir::StringAttr nameAttr =
-      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
-  mlir::StringAttr bindcAttr =
-      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
-  build(builder, result, wrapAllocaResultType(inType),
-        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        cudaAttr);
-  result.addAttributes(attributes);
-}
-
-template <typename Op>
-static mlir::LogicalResult checkCudaAttr(Op op) {
-  if (op.getCudaAttr() == fir::CUDADataAttribute::Device ||
-      op.getCudaAttr() == fir::CUDADataAttribute::Managed ||
-      op.getCudaAttr() == fir::CUDADataAttribute::Unified)
-    return mlir::success();
-  return op.emitOpError("expect device, managed or unified cuda attribute");
-}
-
-mlir::LogicalResult fir::CUDAAllocOp::verify() { return checkCudaAttr(*this); }
-
-mlir::LogicalResult fir::CUDAFreeOp::verify() { return checkCudaAttr(*this); }
 
 //===----------------------------------------------------------------------===//
 // FIROpsDialect

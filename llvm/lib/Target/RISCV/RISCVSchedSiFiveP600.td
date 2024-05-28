@@ -56,7 +56,6 @@ def SiFiveP600Model : SchedMachineModel {
   let MicroOpBufferSize = 160; // Max micro-ops that can be buffered.
   let LoadLatency = 4;        // Cycles for loads to access the cache.
   let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
-  let PostRAScheduler = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
                              HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,
@@ -669,7 +668,7 @@ foreach mx = SchedMxList in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVISlideI",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideI",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
   }
   let Latency = 1, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVISlide1X", [SiFiveP600VEXQ0], mx, IsWorstCase>;
@@ -679,7 +678,8 @@ foreach mx = SchedMxList in {
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 2, ReleaseAtCycles = [1] in {
-    defm "" : LMULWriteResMX<"WriteVISlideX", [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SiFiveP600VEXQ0], mx, IsWorstCase>;
   }
 }
 
@@ -688,7 +688,8 @@ foreach mx = ["M8", "M4", "M2"] in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = !add(4, LMulLat), ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVISlideX", [SiFiveP600VEXQ1], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SiFiveP600VEXQ1], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SiFiveP600VEXQ1], mx, IsWorstCase>;
   }
 }
 
@@ -714,6 +715,7 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
     defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
     let Latency = 3, ReleaseAtCycles = [1] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
     }
   }
@@ -734,6 +736,7 @@ foreach mx = ["M2", "M4", "M8"] in {
     defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
     let Latency = 6, ReleaseAtCycles = [LMulLat] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SiFiveP600VEXQ1], mx, sew, IsWorstCase>;
     }
   }
@@ -1069,6 +1072,8 @@ defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_data", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;

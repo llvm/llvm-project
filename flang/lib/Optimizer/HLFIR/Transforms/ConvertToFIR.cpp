@@ -320,16 +320,16 @@ public:
     mlir::Location loc = declareOp->getLoc();
     mlir::Value memref = declareOp.getMemref();
     fir::FortranVariableFlagsAttr fortranAttrs;
-    fir::CUDADataAttributeAttr cudaAttr;
+    cuf::DataAttributeAttr dataAttr;
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    if (auto attr = declareOp.getCudaAttr())
-      cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
+    if (auto attr = declareOp.getDataAttr())
+      dataAttr = cuf::DataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName(), fortranAttrs, cudaAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
@@ -789,7 +789,3 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
-  return std::make_unique<ConvertHLFIRtoFIR>();
-}

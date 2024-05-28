@@ -65,13 +65,13 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
-      build($_builder, $_state, type, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, type, lhs, rhs);
     }]>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
-      build($_builder, $_state, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, lhs, rhs);
     }]>
   ];
 

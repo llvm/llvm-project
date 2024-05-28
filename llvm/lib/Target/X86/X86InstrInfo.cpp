@@ -3121,7 +3121,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
   if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
-        X86::isCFCMOVCC(Opcode)))
+        X86::isCFCMOVCC(Opcode) || X86::isCCMPCC(Opcode) ||
+        X86::isCTESTCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3155,6 +3156,69 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
 X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
   return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                          : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
+  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
+}
+
+int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
+  // CCMP/CTEST has two conditional operands:
+  // - SCC: source conditonal code (same as CMOV)
+  // - DCF: destination conditional flags, which has 4 valid bits
+  //
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  //
+  // If SCC(source conditional code) evaluates to false, CCMP/CTEST will updates
+  // the conditional flags by as follows:
+  //
+  // OF = DCF.OF
+  // SF = DCF.SF
+  // ZF = DCF.ZF
+  // CF = DCF.CF
+  // PF = DCF.CF
+  // AF = 0 (Auxiliary Carry Flag)
+  //
+  // Otherwise, the CMP or TEST is executed and it updates the
+  // CSPAZO flags normally.
+  //
+  // NOTE:
+  // If SCC = P, then SCC evaluates to true regardless of the CSPAZO value.
+  // If SCC = NP, then SCC evaluates to false regardless of the CSPAZO value.
+
+  enum { CF = 1, ZF = 2, SF = 4, OF = 8, PF = CF };
+
+  switch (CC) {
+  default:
+    llvm_unreachable("Illegal condition code!");
+  case X86::COND_NO:
+  case X86::COND_NE:
+  case X86::COND_GE:
+  case X86::COND_G:
+  case X86::COND_AE:
+  case X86::COND_A:
+  case X86::COND_NS:
+  case X86::COND_NP:
+    return 0;
+  case X86::COND_O:
+    return OF;
+  case X86::COND_B:
+  case X86::COND_BE:
+    return CF;
+    break;
+  case X86::COND_E:
+  case X86::COND_LE:
+    return ZF;
+  case X86::COND_S:
+  case X86::COND_L:
+    return SF;
+  case X86::COND_P:
+    return PF;
+  }
 }
 
 /// Return the inverse of the specified condition,

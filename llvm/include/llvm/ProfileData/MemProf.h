@@ -426,7 +426,7 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
       const;
 
   // Returns the GUID for the function name after canonicalization. For
@@ -784,6 +784,12 @@ template <typename MapTy> struct FrameIdConverter {
   FrameIdConverter() = delete;
   FrameIdConverter(MapTy &Map) : Map(Map) {}
 
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of FrameIdConverter gets an error in LastUnmappedId
+  // while the original instance doesn't.
+  FrameIdConverter(const FrameIdConverter &) = delete;
+  FrameIdConverter &operator=(const FrameIdConverter &) = delete;
+
   Frame operator()(FrameId Id) {
     auto Iter = Map.find(Id);
     if (Iter == Map.end()) {
@@ -798,11 +804,18 @@ template <typename MapTy> struct FrameIdConverter {
 template <typename MapTy> struct CallStackIdConverter {
   std::optional<CallStackId> LastUnmappedId;
   MapTy &Map;
-  std::function<Frame(FrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(FrameId)> FrameIdToFrame;
 
   CallStackIdConverter() = delete;
-  CallStackIdConverter(MapTy &Map, std::function<Frame(FrameId)> FrameIdToFrame)
+  CallStackIdConverter(MapTy &Map,
+                       llvm::function_ref<Frame(FrameId)> FrameIdToFrame)
       : Map(Map), FrameIdToFrame(FrameIdToFrame) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of CallStackIdConverter gets an error in
+  // LastUnmappedId while the original instance doesn't.
+  CallStackIdConverter(const CallStackIdConverter &) = delete;
+  CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
 
   llvm::SmallVector<Frame> operator()(CallStackId CSId) {
     llvm::SmallVector<Frame> Frames;
@@ -818,6 +831,20 @@ template <typename MapTy> struct CallStackIdConverter {
     }
     return Frames;
   }
+};
+
+struct IndexedMemProfData {
+  // A map to hold memprof data per function. The lower 64 bits obtained from
+  // the md5 hash of the function name is used to index into the map.
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> RecordData;
+
+  // A map to hold frame id to frame mappings. The mappings are used to
+  // convert IndexedMemProfRecord to MemProfRecords with frame information
+  // inline.
+  llvm::MapVector<FrameId, Frame> FrameData;
+
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
 };
 
 // Verify that each CallStackId is computed with hashCallStack.  This function

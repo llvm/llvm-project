@@ -885,18 +885,6 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
       Table->setNoStrip();
       MIB.addImm(0);
     }
-    // See if we must truncate the function pointer.
-    // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
-    // as 64-bit for uniformity with other pointer types.
-    // See also: WebAssemblyISelLowering.cpp: LowerCallResults
-    if (Subtarget->hasAddr64()) {
-      auto Wrap = BuildMI(*FuncInfo.MBB, std::prev(FuncInfo.InsertPt), MIMD,
-                          TII.get(WebAssembly::I32_WRAP_I64));
-      Register Reg32 = createResultReg(&WebAssembly::I32RegClass);
-      Wrap.addReg(Reg32, RegState::Define);
-      Wrap.addReg(CalleeReg);
-      CalleeReg = Reg32;
-    }
   }
 
   for (unsigned ArgReg : Args)

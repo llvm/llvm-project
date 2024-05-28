@@ -635,7 +635,7 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
 // Exception handling intrinsics.
 //
 
-def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
+def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
@@ -1073,6 +1073,12 @@ def LLVM_vector_interleave2
                        "getVectorElementType($res.getType())">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
+
+def LLVM_vector_deinterleave2
+    : LLVM_OneResultIntrOp<"vector.deinterleave2",
+        /*overloadedResults=*/[], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)>;
 
 //
 // LLVM Vector Predication operations.

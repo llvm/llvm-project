@@ -8647,8 +8647,28 @@ ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
 const SCEV *
 ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(const Loop *L,
                                                    ScalarEvolution *SE) {
-  if (!SymbolicMax)
-    SymbolicMax = SE->computeSymbolicMaxBackedgeTakenCount(L);
+  if (!SymbolicMax) {
+    // Form an expression for the maximum exit count possible for this loop. We
+    // merge the max and exact information to approximate a version of
+    // getConstantMaxBackedgeTakenCount which isn't restricted to just
+    // constants.
+    SmallVector<const SCEV *, 4> ExitCounts;
+
+    for (const auto &ENT : ExitNotTaken) {
+      const SCEV *ExitCount = ENT.SymbolicMaxNotTaken;
+      if (!isa<SCEVCouldNotCompute>(ExitCount)) {
+        assert(SE->DT.dominates(ENT.ExitingBlock, L->getLoopLatch()) &&
+               "We should only have known counts for exiting blocks that "
+               "dominate latch!");
+        ExitCounts.push_back(ExitCount);
+      }
+    }
+    if (ExitCounts.empty())
+      SymbolicMax = SE->getCouldNotCompute();
+    else
+      SymbolicMax =
+          SE->getUMinFromMismatchedTypes(ExitCounts, /*Sequential*/ true);
+  }
   return SymbolicMax;
 }
 
@@ -9198,8 +9218,25 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     // Since the loop is finite, an invariant RHS cannot include the boundary
     // value, otherwise it would loop forever.
     if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
-        !isLoopInvariant(RHS, L))
-      break;
+        !isLoopInvariant(RHS, L)) {
+      // Otherwise, perform the addition in a wider type, to avoid overflow.
+      // If the LHS is an addrec with the appropriate nowrap flag, the
+      // extension will be sunk into it and the exit count can be analyzed.
+      auto *OldType = dyn_cast<IntegerType>(LHS->getType());
+      if (!OldType)
+        break;
+      // Prefer doubling the bitwidth over adding a single bit to make it more
+      // likely that we use a legal type.
+      auto *NewType =
+          Type::getIntNTy(OldType->getContext(), OldType->getBitWidth() * 2);
+      if (ICmpInst::isSigned(Pred)) {
+        LHS = getSignExtendExpr(LHS, NewType);
+        RHS = getSignExtendExpr(RHS, NewType);
+      } else {
+        LHS = getZeroExtendExpr(LHS, NewType);
+        RHS = getZeroExtendExpr(RHS, NewType);
+      }
+    }
     RHS = getAddExpr(getOne(RHS->getType()), RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_SLT:
@@ -9540,7 +9577,8 @@ static Constant *EvaluateExpression(Value *V, const Loop *L,
     Operands[i] = C;
   }
 
-  return ConstantFoldInstOperands(I, Operands, DL, TLI);
+  return ConstantFoldInstOperands(I, Operands, DL, TLI,
+                                  /*AllowNonDeterministic=*/false);
 }
 
 
@@ -10031,7 +10069,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
     Constant *C = nullptr;
     const DataLayout &DL = getDataLayout();
-    C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
+    C = ConstantFoldInstOperands(I, Operands, DL, &TLI,
+                                 /*AllowNonDeterministic=*/false);
     if (!C)
       return V;
     return getSCEV(C);
@@ -14732,7 +14771,9 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N) {
     return;
   }
 
-  Preds.push_back(N);
+  // Only add predicate if it is not already implied by this union predicate.
+  if (!implies(N))
+    Preds.push_back(N);
 }
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
@@ -14941,30 +14982,6 @@ bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
            MatchURemWithDivisor(getNegativeSCEV(Mul->getOperand(1))) ||
            MatchURemWithDivisor(getNegativeSCEV(Mul->getOperand(0)));
   return false;
-}
-
-const SCEV *
-ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
-  SmallVector<BasicBlock*, 16> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-
-  // Form an expression for the maximum exit count possible for this loop. We
-  // merge the max and exact information to approximate a version of
-  // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
-  SmallVector<const SCEV*, 4> ExitCounts;
-  for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount =
-        getExitCount(L, ExitingBB, ScalarEvolution::SymbolicMaximum);
-    if (!isa<SCEVCouldNotCompute>(ExitCount)) {
-      assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
-             "We should only have known counts for exiting blocks that "
-             "dominate latch!");
-      ExitCounts.push_back(ExitCount);
-    }
-  }
-  if (ExitCounts.empty())
-    return getCouldNotCompute();
-  return getUMinFromMismatchedTypes(ExitCounts, /*Sequential*/ true);
 }
 
 /// A rewriter to replace SCEV expressions in Map with the corresponding entry

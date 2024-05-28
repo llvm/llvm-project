@@ -72,7 +72,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   bool HasVectorCSR =
-      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
+      Subtarget.hasVInstructions();
 
   switch (Subtarget.getTargetABI()) {
   default:

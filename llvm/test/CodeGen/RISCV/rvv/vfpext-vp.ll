@@ -112,8 +112,8 @@ define <vscale x 32 x float> @vfpext_nxv32f16_nxv32f32(<vscale x 32 x half> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    ret
