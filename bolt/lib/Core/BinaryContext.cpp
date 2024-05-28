@@ -142,7 +142,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
-      Logger(Logger) {
+      Logger(Logger), InitialDynoStats(isAArch64()) {
   Relocation::Arch = this->TheTriple->getArch();
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
@@ -2217,8 +2217,8 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   return DE.getUnsigned(&ValueOffset, Size);
 }
 
-ErrorOr<uint64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
-                                                         size_t Size) const {
+ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
+                                                        size_t Size) const {
   const ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return std::make_error_code(std::errc::bad_address);

@@ -38,6 +38,13 @@ multiclass RELAXED_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             asmstr_s, simdop, HasRelaxedSIMD>;
 }
 
+multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
+                            list<dag> pattern_r, string asmstr_r = "",
+                            string asmstr_s = "", bits<32> simdop = -1> {
+  defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
+                            asmstr_s, simdop, HasHalfPrecision>;
+}
+
 
 defm "" : ARGUMENT<V128, v16i8>;
 defm "" : ARGUMENT<V128, v8i16>;
@@ -45,6 +52,7 @@ defm "" : ARGUMENT<V128, v4i32>;
 defm "" : ARGUMENT<V128, v2i64>;
 defm "" : ARGUMENT<V128, v4f32>;
 defm "" : ARGUMENT<V128, v2f64>;
+defm "" : ARGUMENT<V128, v8f16>;
 
 // Constrained immediate argument types. Allow any value from the minimum signed
 // value to the maximum unsigned value for the lane size.
@@ -591,6 +599,14 @@ defm "" : Splat<I64x2, 18>;
 defm "" : Splat<F32x4, 19>;
 defm "" : Splat<F64x2, 20>;
 
+// Half values are not fully supported so an intrinsic is used instead of a
+// regular Splat pattern as above.
+defm SPLAT_F16x8 :
+  HALF_PRECISION_I<(outs V128:$dst), (ins F32:$x),
+                   (outs), (ins),
+                   [(set (v8f16 V128:$dst), (int_wasm_splat_f16x8 F32:$x))],
+                   "f16x8.splat\t$dst, $x", "f16x8.splat", 0x120>;
+
 // scalar_to_vector leaves high lanes undefined, so can be a splat
 foreach vec = AllVecs in
 def : Pat<(vec.vt (scalar_to_vector (vec.lane_vt vec.lane_rc:$x))),
@@ -643,6 +659,14 @@ def : Pat<
 def : Pat<
   (and (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx)), (i32 0xffff)),
   (EXTRACT_LANE_I16x8_u $vec, imm:$idx)>;
+
+defm EXTRACT_LANE_F16x8 :
+  HALF_PRECISION_I<(outs F32:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
+                   (outs), (ins vec_i8imm_op:$idx),
+                   [(set (f32 F32:$dst), (int_wasm_extract_lane_f16x8
+                    (v8f16 V128:$vec), (i32 LaneIdx16:$idx)))],
+                   "f16x8.extract_lane\t$dst, $vec, $idx",
+                   "f16x8.extract_lane\t$idx", 0x121>;
 
 // Replace lane value: replace_lane
 multiclass ReplaceLane<Vec vec, bits<32> simdop> {

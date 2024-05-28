@@ -2858,6 +2858,16 @@ The check corresponds to CERT rule
     return putenv(env); // putenv function should not be called with stack-allocated string
   }
 
+There is one case where the checker can report a false positive. This is when
+the stack-allocated array is used at `putenv` in a function or code branch that
+does not return (calls `fork` or `exec` like function).
+
+Another special case is if the `putenv` is called from function `main`. Here
+the stack is deallocated at the end of the program and it should be no problem
+to use the stack-allocated string (a multi-threaded program may require more
+attention). The checker does not warn for cases when stack space of `main` is
+used at the `putenv` call.
+
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)

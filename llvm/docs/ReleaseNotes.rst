@@ -51,6 +51,7 @@ Changes to the LLVM IR
 ----------------------
 
 * Added Memory Model Relaxation Annotations (MMRAs).
+* Added ``nusw`` and ``nuw`` flags to ``getelementptr`` instruction.
 * Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
@@ -61,6 +62,10 @@ Changes to LLVM infrastructure
 
 Changes to building LLVM
 ------------------------
+
+- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+  terminfo and now always uses the ``TERM`` environment variable for color
+  support autodetection.
 
 Changes to TableGen
 -------------------
@@ -130,6 +135,7 @@ Changes to the RISC-V Backend
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
+* Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -139,6 +145,9 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+- Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
+  while assembly encoding/decoding supports are kept.
 
 Changes to the OCaml bindings
 -----------------------------

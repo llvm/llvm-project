@@ -5153,10 +5153,14 @@ public:
     return ExprEvalContexts.back();
   };
 
-  const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
+  ExpressionEvaluationContextRecord &parentEvaluationContext() {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts[ExprEvalContexts.size() - 2];
+  };
+
+  const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
+    return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
   bool isBoundsAttrContext() const {
@@ -6289,10 +6293,9 @@ public:
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
     if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InLifetimeExtendingContext) {
+        parentEvaluationContext().InLifetimeExtendingContext) {
       auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      auto &PrevRecord = parentEvaluationContext();
       LastRecord.InLifetimeExtendingContext =
           PrevRecord.InLifetimeExtendingContext;
     }
@@ -11403,7 +11406,8 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
-  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
+  QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                  Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
