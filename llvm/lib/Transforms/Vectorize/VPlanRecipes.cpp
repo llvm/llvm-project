@@ -186,6 +186,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
 }
 
+bool VPLiveOut::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+
+  return vputils::isUniformAfterVectorization(getOperand(0)) ||
+         isa<VPWidenPointerInductionRecipe>(Op);
+}
+
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);

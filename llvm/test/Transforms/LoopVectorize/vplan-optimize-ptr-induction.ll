@@ -21,26 +21,22 @@ define ptr @foo(ptr %y, float %alpha, i32 %N) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x float> [[BROADCAST_SPLATINSERT]], <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[Y]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 1, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[DOTSPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 1 x i64> [[DOTSPLAT]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 1 x i64> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = mul <vscale x 1 x i64> [[TMP8]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 1 x i64> [[VECTOR_GEP]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 1 x i64> [[DOTSPLAT]], [[VECTOR_GEP]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 0
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[Y]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x float>, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <vscale x 1 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <vscale x 1 x float> [[TMP13]], ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

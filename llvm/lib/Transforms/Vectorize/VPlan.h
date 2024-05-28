@@ -693,6 +693,8 @@ public:
     return true;
   }
 
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+
   PHINode *getPhi() const { return Phi; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
