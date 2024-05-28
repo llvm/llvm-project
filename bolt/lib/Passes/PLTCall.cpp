@@ -48,8 +48,8 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
     return Error::success();
 
   uint64_t NumCallsOptimized = 0;
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &Function = BFI.second;
     if (!shouldOptimize(Function))
       continue;
 
@@ -61,23 +61,21 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
       if (opts::PLT == OT_HOT && !BB.getKnownExecutionCount())
         continue;
 
-      for (auto It = BB.begin(); It != BB.end(); It++) {
-        if (!BC.MIB->isCall(*It))
+      for (auto II = BB.begin(); II != BB.end(); II++) {
+        if (!BC.MIB->isCall(*II))
           continue;
-        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(*It);
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(*II);
         if (!CallSymbol)
           continue;
         const BinaryFunction *CalleeBF = BC.getFunctionForSymbol(CallSymbol);
         if (!CalleeBF || !CalleeBF->isPLTFunction())
           continue;
-        if (BC.MIB->convertCallToIndirectCall(BB, It, CalleeBF->getPLTSymbol(),
-                                              BC.Ctx.get())) {
-          assert(BC.MIB->isCall(*It) &&
-                 "Iterator must point to the optimized call");
-
-          BC.MIB->addAnnotation(*It, "PLTCall", true);
-          ++NumCallsOptimized;
-        }
+        const InstructionListType NewCode = BC.MIB->createIndirectPltCall(
+            *II, CalleeBF->getPLTSymbol(), BC.Ctx.get());
+        II = BB.replaceInstruction(II, NewCode);
+        std::advance(II, NewCode.size() - 1);
+        BC.MIB->addAnnotation(*II, "PLTCall", true);
+        ++NumCallsOptimized;
       }
     }
   }
