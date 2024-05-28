@@ -221,6 +221,10 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   return true;
 }
 
+unsigned AArch64TargetInfo::getBitIntLegalWidth(unsigned Width) const {
+  return getBitIntWidth(Width);
+}
+
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {

@@ -229,6 +229,10 @@ public:
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
   }
+
+  unsigned getBitIntLegalWidth(unsigned Width) const override;
+
+  bool isBitIntSignExtended(bool IsSigned) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

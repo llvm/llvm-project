@@ -159,9 +159,9 @@ void pass_large_BitInt(_BitInt(127) e) {
 
 // TODO: for now, ExtInt is only noundef if it is sign/zero-extended
 // CHECK-INTEL: [[DEF]] noundef signext i3 @{{.*}}ret_BitInt{{.*}}()
-// CHECK-AARCH: [[DEF]] i3 @{{.*}}ret_BitInt{{.*}}()
+// CHECK-AARCH: [[DEF]] noundef i3 @{{.*}}ret_BitInt{{.*}}()
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef signext %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef %
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i64 %{{.*}}, i64 %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i127 %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i127 noundef %
 } // namespace check_exotic

@@ -114,6 +114,10 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
+  if (T->isBitIntType())
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  CGM.getTarget().getBitIntLegalWidth(
+                                      T->getAs<BitIntType>()->getNumBits()));
   // Else, don't map it.
   return R;
 }
