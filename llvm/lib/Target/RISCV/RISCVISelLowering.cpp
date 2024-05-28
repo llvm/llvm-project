@@ -13704,6 +13704,44 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Combine vXi32 (mul (and (lshr X, 15), 0x10001), 0xffff) ->
+// (bitcast (sra (v2Xi16 (bitcast X)), 15))
+// Same for other equivalent types with other equivalent constants.
+static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Do this for legal vectors unless they are i1 or i8 vectors.
+  if (!VT.isVector() || !TLI.isTypeLegal(VT) || VT.getScalarSizeInBits() < 16)
+    return SDValue();
+
+  if (N->getOperand(0).getOpcode() != ISD::AND ||
+      N->getOperand(0).getOperand(0).getOpcode() != ISD::SRL)
+    return SDValue();
+
+  SDValue And = N->getOperand(0);
+  SDValue Srl = And.getOperand(0);
+
+  APInt V1, V2, V3;
+  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), V1) ||
+      !ISD::isConstantSplatVector(And.getOperand(1).getNode(), V2) ||
+      !ISD::isConstantSplatVector(Srl.getOperand(1).getNode(), V3))
+    return SDValue();
+
+  unsigned HalfSize = VT.getScalarSizeInBits() / 2;
+  if (!V1.isMask(HalfSize) || V2 != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return SDValue();
+
+  EVT HalfVT = EVT::getVectorVT(*DAG.getContext(),
+                                EVT::getIntegerVT(*DAG.getContext(), HalfSize),
+                                VT.getVectorElementCount() * 2);
+  SDLoc DL(N);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, HalfVT, Srl.getOperand(0));
+  SDValue Sra = DAG.getNode(ISD::SRA, DL, HalfVT, Cast,
+                            DAG.getConstant(HalfSize - 1, DL, HalfVT));
+  return DAG.getNode(ISD::BITCAST, DL, VT, Sra);
+}
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
@@ -13746,6 +13784,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+
+  if (SDValue V = combineVectorMulToSraBitcast(N, DAG))
     return V;
 
   return SDValue();
