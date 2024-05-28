@@ -181,6 +181,14 @@ static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
     B.SetInsertPoint(I);
 }
 
+static void setInsertPointAfterDef(IRBuilder<> &B, Instruction *I) {
+  B.SetCurrentDebugLocation(I->getDebugLoc());
+  if (I->getType()->isVoidTy())
+    B.SetInsertPoint(I->getNextNode());
+  else
+    B.SetInsertPoint(*I->getInsertionPointAfterDef());
+}
+
 static bool requireAssignType(Instruction *I) {
   IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(I);
   if (Intr) {
@@ -560,6 +568,7 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
 
   while (!Worklist.empty()) {
     Instruction *I = Worklist.front();
+    bool BPrepared = false;
     Worklist.pop();
 
     for (auto &Op : I->operands()) {
@@ -567,7 +576,10 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
       if (!AggrUndef || !Op->getType()->isAggregateType())
         continue;
 
-      B.SetInsertPoint(I);
+      if (!BPrepared) {
+        setInsertPointSkippingPhis(B, I);
+        BPrepared = true;
+      }
       auto *IntrUndef = B.CreateIntrinsic(Intrinsic::spv_undef, {}, {});
       Worklist.push(IntrUndef);
       I->replaceUsesOfWith(Op, IntrUndef);
@@ -584,6 +596,7 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
 
   while (!Worklist.empty()) {
     auto *I = Worklist.front();
+    bool IsPhi = isa<PHINode>(I), BPrepared = false;
     assert(I);
     bool KeepInst = false;
     for (const auto &Op : I->operands()) {
@@ -615,7 +628,11 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
         else
           for (auto &COp : AggrConst->operands())
             Args.push_back(COp);
-        B.SetInsertPoint(I);
+        if (!BPrepared) {
+          IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
+                : B.SetInsertPoint(I);
+          BPrepared = true;
+        }
         auto *CI =
             B.CreateIntrinsic(Intrinsic::spv_const_composite, {ResTy}, {Args});
         Worklist.push(CI);
@@ -1111,8 +1128,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
       isa<BitCastInst>(I))
     return;
 
-  setInsertPointSkippingPhis(B, I->getNextNode());
-
+  setInsertPointAfterDef(B, I);
   Type *ElemTy = deduceElementType(I);
   Constant *EltTyConst = UndefValue::get(ElemTy);
   unsigned AddressSpace = getPointerAddressSpace(I->getType());
@@ -1127,7 +1143,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   reportFatalOnTokenType(I);
   Type *Ty = I->getType();
   if (!Ty->isVoidTy() && !isPointerTy(Ty) && requireAssignType(I)) {
-    setInsertPointSkippingPhis(B, I->getNextNode());
+    setInsertPointAfterDef(B, I);
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       if (II->getIntrinsicID() == Intrinsic::spv_const_composite ||
@@ -1149,7 +1165,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       if (isa<UndefValue>(Op) && Op->getType()->isAggregateType())
         buildIntrWithMD(Intrinsic::spv_assign_type, {B.getInt32Ty()}, Op,
                         UndefValue::get(B.getInt32Ty()), {}, B);
-      else if (!isa<Instruction>(Op)) // TODO: This case could be removed
+      else if (!isa<Instruction>(Op))
         buildIntrWithMD(Intrinsic::spv_assign_type, {Op->getType()}, Op, Op, {},
                         B);
     }
@@ -1159,7 +1175,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
                                                  IRBuilder<> &B) {
   if (MDNode *MD = I->getMetadata("spirv.Decorations")) {
-    B.SetInsertPoint(I->getNextNode());
+    setInsertPointAfterDef(B, I);
     B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
@@ -1170,7 +1186,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   auto *II = dyn_cast<IntrinsicInst>(I);
   if (II && II->getIntrinsicID() == Intrinsic::spv_const_composite &&
       TrackConstants) {
-    B.SetInsertPoint(I->getNextNode());
+    setInsertPointAfterDef(B, I);
     auto t = AggrConsts.find(I);
     assert(t != AggrConsts.end());
     auto *NewOp =
@@ -1179,6 +1195,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     I->replaceAllUsesWith(NewOp);
     NewOp->setArgOperand(0, I);
   }
+  bool IsPhi = isa<PHINode>(I), BPrepared = false;
   for (const auto &Op : I->operands()) {
     if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
         isa<PHINode>(I) || isa<SwitchInst>(I))
@@ -1188,7 +1205,11 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
                  (II->paramHasAttr(OpNo, Attribute::ImmArg))))
         continue;
-      B.SetInsertPoint(I);
+      if (!BPrepared) {
+        IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
+              : B.SetInsertPoint(I);
+        BPrepared = true;
+      }
       Value *OpTyVal = Op;
       if (Op->getType()->isTargetExtTy())
         OpTyVal = Constant::getNullValue(
@@ -1201,7 +1222,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
   if (I->hasName()) {
     reportFatalOnTokenType(I);
-    setInsertPointSkippingPhis(B, I->getNextNode());
+    setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};
     addStringImm(I->getName(), B, Args);
     B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
@@ -1345,7 +1366,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto *I : Worklist) {
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
-      B.SetInsertPoint(I->getNextNode());
+      setInsertPointAfterDef(B, I);
     // Visitors return either the original/newly created instruction for further
     // processing, nullptr otherwise.
     I = visit(*I);
