@@ -33,6 +33,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
@@ -72,19 +73,6 @@ namespace AttributeLangSupport {
 //===----------------------------------------------------------------------===//
 //  Helper functions
 //===----------------------------------------------------------------------===//
-
-/// isFunctionOrMethod - Return true if the given decl has function
-/// type (function or function-typed variable) or an Objective-C
-/// method.
-bool Sema::isFunctionOrMethod(const Decl *D) {
-  return (D->getFunctionType() != nullptr) || isa<ObjCMethodDecl>(D);
-}
-
-/// Return true if the given decl has function type (function or
-/// function-typed variable) or an Objective-C method or a block.
-bool Sema::isFunctionOrMethodOrBlock(const Decl *D) {
-  return isFunctionOrMethod(D) || isa<BlockDecl>(D);
-}
 
 /// Return true if the given decl has a declarator that should have
 /// been processed by Sema::GetTypeForDeclarator.
@@ -267,7 +255,7 @@ template <typename AttrInfo>
 static bool checkFunctionOrMethodParameterIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
     const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false) {
-  assert(S.isFunctionOrMethodOrBlock(D));
+  assert(isFunctionOrMethodOrBlock(D));
 
   // In C++ the implicit 'this' function parameter also counts.
   // Parameters are counted from one.
@@ -803,7 +791,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 2))
     return;
 
-  assert(S.isFunctionOrMethod(D) && hasFunctionProto(D));
+  assert(isFunctionOrMethod(D) && hasFunctionProto(D));
 
   QualType RetTy = getFunctionOrMethodResultType(D);
   if (!RetTy->isPointerType()) {
@@ -2253,7 +2241,7 @@ static void handleAnalyzerNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // The checking path for 'noreturn' and 'analyzer_noreturn' are different
   // because 'analyzer_noreturn' does not impact the type.
-  if (!S.isFunctionOrMethodOrBlock(D)) {
+  if (!isFunctionOrMethodOrBlock(D)) {
     ValueDecl *VD = dyn_cast<ValueDecl>(D);
     if (!VD || (!VD->getType()->isBlockPointerType() &&
                 !VD->getType()->isFunctionPointerType())) {
@@ -7560,7 +7548,7 @@ static void handleARMInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleMSP430InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // MSP430 'interrupt' attribute is applied to
   // a function with no parameters and void return type.
-  if (!S.isFunctionOrMethod(D)) {
+  if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
     return;
@@ -7633,7 +7621,7 @@ static void handleMipsInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // e) The attribute itself must either have no argument or one of the
   //    valid interrupt types, see [MipsInterruptDocs].
 
-  if (!S.isFunctionOrMethod(D)) {
+  if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
     return;
@@ -7706,7 +7694,7 @@ static void handleAnyX86InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // c) Must take 1 or 2 arguments.
   // d) The 1st argument must be a pointer.
   // e) The 2nd argument (if any) must be an unsigned integer.
-  if (!S.isFunctionOrMethod(D) || !hasFunctionProto(D) || isInstanceMethod(D) ||
+  if (!isFunctionOrMethod(D) || !hasFunctionProto(D) || isInstanceMethod(D) ||
       CXXMethodDecl::isStaticOverloadedOperator(
           cast<NamedDecl>(D)->getDeclName().getCXXOverloadedOperator())) {
     S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
@@ -7765,7 +7753,7 @@ static void handleAnyX86InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleAVRInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!S.isFunctionOrMethod(D)) {
+  if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;
@@ -7778,7 +7766,7 @@ static void handleAVRInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleAVRSignalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!S.isFunctionOrMethod(D)) {
+  if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;

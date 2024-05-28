@@ -17,6 +17,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -316,7 +317,7 @@ void SemaWasm::handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL) {
 
 void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
-  if (!SemaRef.isFunctionOrMethod(D)) {
+  if (!isFunctionOrMethod(D)) {
     Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;
