@@ -23,7 +23,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaOpenMP.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
