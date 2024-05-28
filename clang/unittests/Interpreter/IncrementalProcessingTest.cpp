@@ -56,6 +56,14 @@ const Function *getGlobalInit(llvm::Module *M) {
   return nullptr;
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
 #ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 TEST(IncrementalProcessing, DISABLED_EmitCXXGlobalInitFunc) {
 #else
