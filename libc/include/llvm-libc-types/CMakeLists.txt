@@ -119,6 +119,7 @@ add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
 add_header(struct_epoll_event HDR struct_epoll_event.h)
 add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(float16 HDR float16.h)
 add_header(
   float128
   HDR

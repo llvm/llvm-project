@@ -24,7 +24,14 @@ private:
   }
 
 public:
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_FLOAT16) && defined(LIBC_TYPES_HAS_FLOAT128)
+  LIBC_INLINE_VAR static constexpr bool value =
+      __is_unqualified_any_of<T, float, double, long double, float16,
+                              float128>();
+#elif defined(LIBC_TYPES_HAS_FLOAT16)
+  LIBC_INLINE_VAR static constexpr bool value =
+      __is_unqualified_any_of<T, float, double, long double, float16>();
+#elif defined(LIBC_TYPES_HAS_FLOAT128)
   LIBC_INLINE_VAR static constexpr bool value =
       __is_unqualified_any_of<T, float, double, long double, float128>();
 #else

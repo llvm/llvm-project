@@ -378,6 +378,7 @@ def StdC : StandardSpec<"stdc"> {
       [
           NamedType<"float_t">,
           NamedType<"double_t">,
+          Float16Type,
           NamedType<"float128">,
       ],
       [], // Enumerations
@@ -395,6 +396,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fabsf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,

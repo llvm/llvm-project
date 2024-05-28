@@ -93,6 +93,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fabsf128_test
   SUITE
     libc-math-smoke-tests
