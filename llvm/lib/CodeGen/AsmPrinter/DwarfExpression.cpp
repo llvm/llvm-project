@@ -822,37 +822,6 @@ static bool isUnsigned(const ConstantInt *CI) {
   return (CI->getIntegerType()->getSignBit() & CI->getSExtValue()) == 0;
 }
 
-size_t DwarfExpression::Node::getChildrenCount() const {
-  using R = size_t;
-  return std::visit(
-      makeVisitor(
-          [](DIOp::Arg) -> R { return 0; },
-          [](DIOp::Constant) -> R { return 0; },
-          [](DIOp::PushLane) -> R { return 0; },
-          [](DIOp::Referrer) -> R { return 0; },
-          [](DIOp::TypeObject) -> R { return 0; },
-          [](DIOp::AddrOf) -> R { return 1; },
-          [](DIOp::Convert) -> R { return 1; },
-          [](DIOp::Deref) -> R { return 1; },
-          [](DIOp::Extend) -> R { return 1; },
-          [](DIOp::Read) -> R { return 1; },
-          [](DIOp::Reinterpret) -> R { return 1; },
-          [](DIOp::Add) -> R { return 2; },
-          [](DIOp::BitOffset) -> R { return 2; },
-          [](DIOp::ByteOffset) -> R { return 2; },
-          [](DIOp::Div) -> R { return 2; }, [](DIOp::Mul) -> R { return 2; },
-          [](DIOp::Shl) -> R { return 2; }, [](DIOp::Shr) -> R { return 2; },
-          [](DIOp::Sub) -> R { return 2; }, [](DIOp::Select) -> R { return 3; },
-          [](DIOp::Composite) -> R {
-            llvm_unreachable(
-                "DIOp::Composite is not supported in DwarfExpression");
-          },
-          [](DIOp::Fragment) -> R {
-            llvm_unreachable("should have dropped fragments by now");
-          }),
-      Element);
-}
-
 void DwarfExpression::buildAST(DIExpression::NewElementsRef Elements) {
   std::stack<std::unique_ptr<Node>> Operands;
 
@@ -861,7 +830,7 @@ void DwarfExpression::buildAST(DIExpression::NewElementsRef Elements) {
       continue;
     std::unique_ptr<DwarfExpression::Node> OpNode =
         std::make_unique<DwarfExpression::Node>(Op);
-    size_t OpChildrenCount = OpNode->getChildrenCount();
+    size_t OpChildrenCount = DIOp::getNumInputs(OpNode->getElement());
     if (OpChildrenCount == 0) {
       Operands.push(std::move(OpNode));
     } else {
@@ -1157,38 +1126,6 @@ void DwarfExpression::readToValue(DwarfExpression::Node *OpNode) {
   readToValue(OpNode->getResultType());
 }
 
-size_t DwarfExprAST::Node::getChildrenCount() const {
-  using R = size_t;
-  return std::visit(
-      makeVisitor(
-          [](DIOp::Arg) -> R { return 0; },
-          [](DIOp::Constant) -> R { return 0; },
-          [](DIOp::PushLane) -> R { return 0; },
-          [](DIOp::Referrer) -> R { return 0; },
-          [](DIOp::TypeObject) -> R { return 0; },
-          [](DIOp::AddrOf) -> R { return 1; },
-          [](DIOp::Convert) -> R { return 1; },
-          [](DIOp::Deref) -> R { return 1; },
-          [](DIOp::Extend) -> R { return 1; },
-          [](DIOp::Read) -> R { return 1; },
-          [](DIOp::Reinterpret) -> R { return 1; },
-          [](DIOp::Add) -> R { return 2; },
-          [](DIOp::BitOffset) -> R { return 2; },
-          [](DIOp::ByteOffset) -> R { return 2; },
-          [](DIOp::Div) -> R { return 2; }, [](DIOp::Mul) -> R { return 2; },
-          [](DIOp::Shl) -> R { return 2; }, [](DIOp::Shr) -> R { return 2; },
-          [](DIOp::Sub) -> R { return 2; }, [](DIOp::Select) -> R { return 3; },
-          [](DIOp::Composite) -> R {
-            // FIXME(KZHURAVL): Handle DIOp::Composite.
-            llvm_unreachable("DIOp::Composite is not handled in "
-                             "DwarfExprAST::Node::getChildrenCount");
-          },
-          [](DIOp::Fragment) -> R {
-            llvm_unreachable("should have dropped fragments by now");
-          }),
-      Element);
-}
-
 void DwarfExprAST::buildDIExprAST() {
   std::stack<std::unique_ptr<DwarfExprAST::Node>> Operands;
 
@@ -1201,7 +1138,7 @@ void DwarfExprAST::buildDIExprAST() {
       continue;
     std::unique_ptr<DwarfExprAST::Node> OpNode =
         std::make_unique<DwarfExprAST::Node>(Op);
-    size_t OpChildrenCount = OpNode->getChildrenCount();
+    size_t OpChildrenCount = DIOp::getNumInputs(OpNode->getElement());
     if (OpChildrenCount == 0) {
       Operands.push(std::move(OpNode));
     } else {

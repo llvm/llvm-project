@@ -2879,6 +2879,9 @@ DEFINE_BC_ID(Fragment, 22u)
 
 unsigned getBitcodeID(const Variant &V);
 
+/// Get the number of stack elements this operation consumes.
+unsigned getNumInputs(Variant V);
+
 // The sizeof of `Op` is the size of the largest union variant, which
 // should essentially be defined as a packed struct equivalent to:
 //

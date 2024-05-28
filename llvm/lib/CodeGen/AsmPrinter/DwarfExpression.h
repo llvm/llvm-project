@@ -344,10 +344,10 @@ public:
     bool &isLowered() { return IsLowered; }
     Type *getResultType() { return ResultType; }
 
-    void setIsLowered(bool IL = true) { IsLowered = IL; }
+    void setIsLowered(bool IL = true) {
+      IsLowered = IL;
+    }
     void setResultType(Type *RT) { ResultType = RT; }
-
-    size_t getChildrenCount() const;
   };
 
   // An `std::optional<const TargetRegisterInfo&>` where `nullptr` represents
@@ -562,11 +562,7 @@ public:
     void setIsLowered(bool IL = true) {
       IsLowered = IL;
     }
-    void setResultType(Type *RT) {
-      ResultType = RT;
-    }
-
-    size_t getChildrenCount() const;
+    void setResultType(Type *RT) { ResultType = RT; }
   };
 
   const AsmPrinter &AP;

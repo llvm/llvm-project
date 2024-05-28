@@ -2043,8 +2043,90 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   return DIExpression::append(Expr, NewOps);
 }
 
+template <class... OpTypes> static bool isDIOpVariantOneOf(DIOp::Variant Op) {
+  return (std::holds_alternative<OpTypes>(Op) || ...);
+}
+
+/// Skip past *It and any inputs that it consumes.
+template <class RIter>
+static void skipNewDIExpressionInputs(RIter &It, RIter Last) {
+  if (It == Last)
+    return;
+
+  unsigned NumInputs = DIOp::getNumInputs(*It++);
+  for (unsigned I = 0; I < NumInputs; ++I)
+    skipNewDIExpressionInputs(It, Last);
+}
+
+/// Check whether the expression described by [It, Last) can be safely
+/// fragmented. For example, we have to reject an expression that produces an
+/// implicit location description using DIOpAdd since we can't handle carry over
+/// between fragments. This is analogous to what createFragmentExpression() is
+/// doing below.
+///
+/// RIter is a reverse iterator over a DIOp-based DIExpression, so the
+/// operations that produce the stack inputs follow the operations that consume
+/// them.
+template <class RIter>
+static bool canFragmentNewDIExpression(RIter &It, RIter Last) {
+  if (It == Last)
+    return false;
+
+  DIOp::Variant Op = *It++;
+
+  // FIXME: The Deref could technically be a problem if it's input is an AddrOf.
+  if (isDIOpVariantOneOf<DIOp::Arg, DIOp::Constant, DIOp::TypeObject,
+                         DIOp::Deref, DIOp::Fragment, DIOp::PushLane>(Op))
+    return true;
+
+  if (isDIOpVariantOneOf<DIOp::Add, DIOp::Sub, DIOp::Mul, DIOp::Div, DIOp::Shl,
+                         DIOp::Shr>(Op))
+    return false;
+
+  if (isDIOpVariantOneOf<DIOp::BitOffset, DIOp::ByteOffset>(Op)) {
+    // Skip the offset expression and drill into the base.
+    skipNewDIExpressionInputs(It, Last);
+    return canFragmentNewDIExpression(It, Last);
+  }
+
+  if (isDIOpVariantOneOf<DIOp::Reinterpret, DIOp::Convert, DIOp::Read>(Op))
+    return canFragmentNewDIExpression(It, Last);
+
+  // FIXME: Missing DIOpComposite, DIOpExtend, DIOpSelect.
+  return false;
+}
+
+static std::optional<DIExpression *>
+createNewFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
+                            unsigned SizeInBits) {
+  auto NewElems = Expr->getNewElementsRef();
+  assert(NewElems && "expected DIOp expression");
+
+  auto Iter = NewElems->rbegin(), End = NewElems->rend();
+  if (!canFragmentNewDIExpression(Iter, End))
+    return std::nullopt;
+
+  DIExprBuilder ExprBuilder(Expr->getContext());
+  for (DIOp::Variant Op : *NewElems) {
+    if (auto *Frag = std::get_if<DIOp::Fragment>(&Op)) {
+      assert((OffsetInBits + SizeInBits <= Frag->getBitSize()) &&
+             "new fragment outside of original fragment");
+      OffsetInBits += Frag->getBitOffset();
+    } else {
+      ExprBuilder.append(Op);
+    }
+  }
+
+  ExprBuilder.append<DIOp::Fragment>(OffsetInBits, SizeInBits);
+  return ExprBuilder.intoExpression();
+}
+
 std::optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
+
+  if (Expr->holdsNewElements())
+    return createNewFragmentExpression(Expr, OffsetInBits, SizeInBits);
+
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,
   // assuming that it'll be used as an implicit location value.
@@ -2300,6 +2382,35 @@ StringRef DIOp::getAsmName(const Variant &V) {
 
 unsigned DIOp::getBitcodeID(const Variant &V) {
   return std::visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
+}
+
+unsigned DIOp::getNumInputs(Variant V) {
+  // clang-format off
+  using R = unsigned;
+  return std::visit(makeVisitor(
+      [](DIOp::Arg) -> R { return 0; },
+      [](DIOp::Constant) -> R { return 0; },
+      [](DIOp::PushLane) -> R { return 0; },
+      [](DIOp::Referrer) -> R { return 0; },
+      [](DIOp::TypeObject) -> R { return 0; },
+      [](DIOp::AddrOf) -> R { return 1; },
+      [](DIOp::Convert) -> R { return 1; },
+      [](DIOp::Deref) -> R { return 1; },
+      [](DIOp::Extend) -> R { return 1; },
+      [](DIOp::Read) -> R { return 1; },
+      [](DIOp::Reinterpret) -> R { return 1; },
+      [](DIOp::Add) -> R { return 2; },
+      [](DIOp::BitOffset) -> R { return 2; },
+      [](DIOp::ByteOffset) -> R { return 2; },
+      [](DIOp::Div) -> R { return 2; },
+      [](DIOp::Mul) -> R { return 2; },
+      [](DIOp::Shl) -> R { return 2; },
+      [](DIOp::Shr) -> R { return 2; },
+      [](DIOp::Sub) -> R { return 2; },
+      [](DIOp::Select) -> R { return 3; },
+      [](DIOp::Composite C) -> R { return C.getCount(); },
+      [](DIOp::Fragment) -> R { return 0; }), V);
+  // clang-format on
 }
 
 namespace llvm {

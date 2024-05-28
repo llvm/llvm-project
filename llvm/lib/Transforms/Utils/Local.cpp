@@ -1686,6 +1686,41 @@ static void insertDbgValueOrDbgVariableRecordAfter(
   }
 }
 
+// \p In is an expression that takes a pointer argument. Attempt to create an
+// equivalent expression that takes a value by replacing the type field to the
+// DIOpArg and adding a DIOpAddrOf after it.
+static DIExpression *tryRemoveNewDIExpressionIndirection(DIExpression *In,
+                                                         Type *ArgType) {
+  if (!In->holdsNewElements())
+    return In;
+
+  auto Elements = In->getNewElementsRef();
+  DIExprBuilder ExprBuilder(In->getContext());
+  unsigned NumReplacedArgs = 0;
+  for (auto Iter = Elements->begin(), End = Elements->end(); Iter != End;
+       ++Iter) {
+    auto *Arg = std::get_if<DIOp::Arg>(&*Iter);
+    if (!Arg) {
+      ExprBuilder.append(*Iter);
+      continue;
+    }
+
+    ++NumReplacedArgs;
+    ExprBuilder.append<DIOp::Arg>(Arg->getIndex(), ArgType);
+    auto *PointerTy = dyn_cast<PointerType>(Arg->getResultType());
+    if (!PointerTy)
+      return nullptr;
+
+    auto Next = std::next(Iter);
+    if (Next == Elements->end() || !std::holds_alternative<DIOp::Deref>(*Next))
+      ExprBuilder.append<DIOp::AddrOf>(PointerTy->getAddressSpace());
+    else
+      Iter = Next;
+  }
+
+  return NumReplacedArgs == 1 ? ExprBuilder.intoExpression() : nullptr;
+}
+
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
@@ -1695,6 +1730,10 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   assert(DIVar && "Missing variable");
   auto *DIExpr = DII->getExpression();
   Value *DV = SI->getValueOperand();
+
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, DV->getType());
+  if (!DIExpr)
+    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DII);
 
@@ -1713,6 +1752,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   bool CanConvert =
       DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
                             valueCoversEntireFragment(DV->getType(), DII));
+
+  // There are no such limitations on new DIExpressions.
+  if (DIExpr->holdsNewElements())
+    CanConvert = true;
+
   if (CanConvert) {
     insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
                                       SI->getIterator());
@@ -1739,7 +1783,12 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   auto *DIExpr = DII->getExpression();
   assert(DIVar && "Missing variable");
 
-  if (!valueCoversEntireFragment(LI->getType(), DII)) {
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, LI->getType());
+  if (!DIExpr)
+    return;
+
+  if (!DIExpr->holdsNewElements() &&
+      !valueCoversEntireFragment(LI->getType(), DII)) {
     // FIXME: If only referring to a part of the variable described by the
     // dbg.declare, then we want to insert a dbg.value for the corresponding
     // fragment.
@@ -1768,6 +1817,10 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, DV->getType());
+  if (!DIExpr)
+    return;
+
   // If the alloca describes the variable itself, i.e. the expression in the
   // dbg.declare doesn't start with a dereference, we can perform the
   // conversion if the value covers the entire fragment of DII.
@@ -1783,6 +1836,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   bool CanConvert =
       DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
                             valueCoversEntireFragment(DV->getType(), DVR));
+
+  // There are no such limitations on new DIExpressions.
+  if (DIExpr->holdsNewElements())
+    CanConvert = true;
+
   if (CanConvert) {
     insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
                                       SI->getIterator());
@@ -1813,10 +1871,15 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   auto *DIExpr = DII->getExpression();
   assert(DIVar && "Missing variable");
 
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, APN->getType());
+  if (!DIExpr)
+    return;
+
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
     return;
 
-  if (!valueCoversEntireFragment(APN->getType(), DII)) {
+  if (!DIExpr->holdsNewElements() &&
+      !valueCoversEntireFragment(APN->getType(), DII)) {
     // FIXME: If only referring to a part of the variable described by the
     // dbg.declare, then we want to insert a dbg.value for the corresponding
     // fragment.
@@ -1845,7 +1908,8 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   auto *DIExpr = DVR->getExpression();
   assert(DIVar && "Missing variable");
 
-  if (!valueCoversEntireFragment(LI->getType(), DVR)) {
+  if (!DIExpr->holdsNewElements() &&
+      !valueCoversEntireFragment(LI->getType(), DVR)) {
     // FIXME: If only referring to a part of the variable described by the
     // dbg.declare, then we want to insert a DbgVariableRecord for the
     // corresponding fragment.
@@ -1853,6 +1917,10 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
                       << *DVR << '\n');
     return;
   }
+
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, LI->getType());
+  if (!DIExpr)
+    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
@@ -1885,10 +1953,15 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
   auto *DIExpr = DVR->getExpression();
   assert(DIVar && "Missing variable");
 
+  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, APN->getType());
+  if (!DIExpr)
+    return;
+
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
     return;
 
-  if (!valueCoversEntireFragment(APN->getType(), DVR)) {
+  if (!DIExpr->holdsNewElements() &&
+      !valueCoversEntireFragment(APN->getType(), DVR)) {
     // FIXME: If only referring to a part of the variable described by the
     // dbg.declare, then we want to insert a DbgVariableRecord for the
     // corresponding fragment.
@@ -1971,11 +2044,20 @@ bool llvm::LowerDbgDeclare(Function &F) {
           // the variable by dereferencing the alloca.
           if (!CI->isLifetimeStartOrEnd()) {
             DebugLoc NewLoc = getDebugValueLoc(DDI);
-            auto *DerefExpr =
-                DIExpression::append(DDI->getExpression(), dwarf::DW_OP_deref);
-            insertDbgValueOrDbgVariableRecord(DIB, AI, DDI->getVariable(),
-                                              DerefExpr, NewLoc,
-                                              CI->getIterator());
+            if (DDI->getExpression()->holdsNewElements()) {
+              // In DIOp-based DIExpressions it's okay for a dbg.value to
+              // produce a memory location descriptor, so there isn't any need
+              // to change the expression.
+              insertDbgValueOrDbgVariableRecord(DIB, AI, DDI->getVariable(),
+                                                DDI->getExpression(), NewLoc,
+                                                CI->getIterator());
+            } else {
+              auto *DerefExpr = DIExpression::append(DDI->getExpression(),
+                                                     dwarf::DW_OP_deref);
+              insertDbgValueOrDbgVariableRecord(DIB, AI, DDI->getVariable(),
+                                                DerefExpr, NewLoc,
+                                                CI->getIterator());
+            }
           }
         } else if (BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
           if (BI->getType()->isPointerTy())
