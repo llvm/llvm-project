@@ -2151,6 +2151,11 @@ let TargetGuard = "sme2" in {
   def SVFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x4",  [IsStreaming], []>;
 }
 
+let TargetGuard = "sme2,b16b16"in {
+  def SVBFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "b",      MergeNone, "aarch64_sve_bfclamp_single_x2",  [IsStreaming], []>;
+  def SVBFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "b",      MergeNone, "aarch64_sve_bfclamp_single_x4",  [IsStreaming], []>;
+}
+
 let TargetGuard = "sme2" in {
 // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
