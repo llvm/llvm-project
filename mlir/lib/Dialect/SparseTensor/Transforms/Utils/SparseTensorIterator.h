@@ -128,6 +128,10 @@ public:
   Value getBoundLo() const { return bound.first; }
   Value getBoundHi() const { return bound.second; }
 
+  // Extract an iterator to iterate over the sparse iteration space.
+  std::unique_ptr<SparseIterator> extractIterator(OpBuilder &b,
+                                                  Location l) const;
+
 private:
   SmallVector<std::unique_ptr<SparseTensorLevel>> lvls;
   std::pair<Value, Value> bound;
@@ -187,6 +191,15 @@ public:
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
+
+  // Reconstructs a iteration space directly from the provided ValueRange.
+  static std::unique_ptr<SparseIterator>
+  fromValues(IteratorType dstTp, ValueRange values, unsigned tid) {
+    llvm_unreachable("Not implemented");
+  }
+
+  // The inverse operation of `fromValues`.
+  SmallVector<Value> toValues() const { llvm_unreachable("Not implemented"); }
 
   //
   // Iterator properties.
@@ -341,10 +354,14 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &b,
                                                          unsigned tid,
                                                          Level lvl);
 
-/// Helper function to create a TensorLevel object from given `tensor`.
+/// Helper function to create a TensorLevel object from given ValueRange.
 std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
                                                          ValueRange buffers,
                                                          unsigned tid, Level l);
+std::unique_ptr<SparseIterator>
+makeSimpleIterator(OpBuilder &b, Location l,
+                   const SparseIterationSpace &iterSpace);
+
 /// Helper function to create a simple SparseIterator object that iterate
 /// over the SparseTensorLevel.
 std::unique_ptr<SparseIterator> makeSimpleIterator(
