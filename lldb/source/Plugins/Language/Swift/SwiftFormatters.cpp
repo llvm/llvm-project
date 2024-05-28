@@ -135,20 +135,25 @@ static bool makeStringGutsSummary(
   static ConstString g__storage("_storage");
   static ConstString g__value("_value");
 
+  auto error = [&](std::string message) {
+    stream << "<cannot decode string: " << message << ">";
+    return true;
+  };
+
   ProcessSP process(valobj.GetProcessSP());
   if (!process)
-    return false;
+    return error("no live process");
 
   auto ptrSize = process->GetAddressByteSize();
 
   auto object_sp = valobj.GetChildMemberWithName(g__object, true);
   if (!object_sp)
-    return false;
+    return error("unexpected layout");
 
   // We retrieve String contents by first extracting the
   // platform-independent 128-bit raw value representation from
   // _StringObject, then interpreting that.
-  Status error;
+  Status status;
   uint64_t raw0;
   uint64_t raw1;
 
@@ -160,12 +165,12 @@ static bool makeStringGutsSummary(
     auto countAndFlagsBits = object_sp->GetChildAtNamePath(
       {g__countAndFlagsBits, g__value});
     if (!countAndFlagsBits)
-      return false;
+      return error("unexpected layout");
     raw0 = countAndFlagsBits->GetValueAsUnsigned(0);
 
     auto object = object_sp->GetChildMemberWithName(g__object, true);
     if (!object)
-      return false;
+      return error("unexpected layout (object)");
     raw1 = object->GetValueAsUnsigned(0);
   } else if (ptrSize == 4) {
     // On 32-bit platforms, we emulate what `_StringObject.rawBits`
@@ -179,23 +184,23 @@ static bool makeStringGutsSummary(
 
     auto count_sp = object_sp->GetChildAtNamePath({g__count, g__value});
     if (!count_sp)
-      return false;
+      return error("unexpected layout (count)");
     uint64_t count = count_sp->GetValueAsUnsigned(0);
 
     auto discriminator_sp =
         object_sp->GetChildAtNamePath({g__discriminator, g__value});
     if (!discriminator_sp)
-      return false;
+      return error("unexpected layout (discriminator)");
     uint64_t discriminator = discriminator_sp->GetValueAsUnsigned(0) & 0xff;
 
     auto flags_sp = object_sp->GetChildAtNamePath({g__flags, g__value});
     if (!flags_sp)
-      return false;
+      return error("unexpected layout (flags)");
     uint64_t flags = flags_sp->GetValueAsUnsigned(0) & 0xffff;
 
     auto variant_sp = object_sp->GetChildMemberWithName(g__variant, true);
     if (!variant_sp)
-      return false;
+      return error("unexpected layout (variant)");
 
     llvm::StringRef variantCase = variant_sp->GetValueAsCString();
 
@@ -208,18 +213,18 @@ static bool makeStringGutsSummary(
       static ConstString g_bridged("bridged");
       auto anyobject_sp = variant_sp->GetChildMemberWithName(g_bridged, true);
       if (!anyobject_sp)
-        return false;
+        return error("unexpected layout (bridged)");
       payload_sp = anyobject_sp->GetChildAtIndex(0, true); // "instance"
     } else {
-      // Unknown variant.
-      return false;
+      return error("unknown variant");
     }
     if (!payload_sp)
-      return false;
+      return error("no payload");
+
     uint64_t pointerBits = payload_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
     if (pointerBits == LLDB_INVALID_ADDRESS)
-      return false;
+      return error("invalid payload");
 
     if ((discriminator & 0xB0) == 0xA0) {
       raw0 = count | (pointerBits << 32);
@@ -229,8 +234,7 @@ static bool makeStringGutsSummary(
       raw1 = pointerBits | (discriminator << 56);
     }
   } else {
-    lldbassert(false && "Unsupported pointer bit-width");
-    return false;
+    return error("unsupported pointer size");
   }
 
   // Copied from StringObject.swift
@@ -306,7 +310,7 @@ static bool makeStringGutsSummary(
     uint64_t count = (raw1 >> 56) & 0b1111;
     uint64_t maxCount = (ptrSize == 8 ? 15 : 10);
     if (count > maxCount)
-      return false;
+      return error("count > maxCount");
 
     uint64_t rawBuffer[2] = {raw0, raw1};
     auto *buffer = (uint8_t *)&rawBuffer;
@@ -326,10 +330,16 @@ static bool makeStringGutsSummary(
   uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
   uint16_t flags = raw0 >> 48;
   lldb::addr_t objectAddress = (raw1 & 0x0FFFFFFFFFFFFFFF);
+  // Catch a zero-initialized string.
+  if (!objectAddress) {
+    stream << "<uninitialized>";
+    return true;
+  }
+
   if ((flags & 0x1000) != 0) { // Tail-allocated / biased address
     // Tail-allocation is only for natively stored or literals.
     if ((discriminator & 0b0111'0000) != 0)
-      return false;
+      return error("unexpected discriminator");
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
     auto address = objectAddress + bias;
     applySlice(address, count, slice);
@@ -344,9 +354,9 @@ static bool makeStringGutsSummary(
       return false;
     uint64_t startOffset = (ptrSize == 8 ? 24 : 12);
     auto address = objectAddress + startOffset;
-    lldb::addr_t start = process->ReadPointerFromMemory(address, error);
-    if (error.Fail())
-      return false;
+    lldb::addr_t start = process->ReadPointerFromMemory(address, status);
+    if (status.Fail())
+      return error(status.AsCString());
 
     applySlice(address, count, slice);
     return readStringFromAddress(
@@ -355,13 +365,13 @@ static bool makeStringGutsSummary(
 
   // Native/shared strings should already have been handled.
   if ((discriminator & 0b0111'0000) == 0)
-    return false;
+    return error("unexpected discriminator");
 
   if ((discriminator & 0b1110'0000) == 0b0100'0000) { // 010xxxxx: Bridged
     TypeSystemClangSP clang_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ts_sp)
-      return false;
+      return error("no Clang type system");
 
     CompilerType id_type = clang_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
 
@@ -371,7 +381,7 @@ static bool makeStringGutsSummary(
     auto nsstring = ValueObject::CreateValueObjectFromData(
         "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
     if (!nsstring || nsstring->GetError().Fail())
-      return false;
+      return error("could not create NSString value object");
 
     return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
   }
@@ -379,11 +389,11 @@ static bool makeStringGutsSummary(
   if ((discriminator & 0b1111'1000) == 0b0001'1000) { // 0001xxxx: Foreign
     // Not currently generated: Foreign non-bridged strings are not currently
     // used in Swift.
-    return false;
+    return error("unexpected discriminator");
   }
 
   // Invalid discriminator.
-  return false;
+  return error("invalid discriminator");
 }
 
 bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
