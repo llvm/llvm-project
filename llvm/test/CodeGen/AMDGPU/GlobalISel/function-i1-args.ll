@@ -6,7 +6,7 @@ define void @void_func_i1(i1 %arg0) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    SI_RETURN
@@ -15,7 +15,7 @@ define void @void_func_i1(i1 %arg0) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:   liveins: $sgpr0
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    SI_RETURN
@@ -57,7 +57,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[CONST:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX9-NEXT:    [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s1)
@@ -69,7 +69,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[CONST:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX11-NEXT:    [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s1)
@@ -116,7 +116,7 @@ define void @void_func_i1_signext(i1 signext %arg0) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[CONST:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX9-NEXT:    [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s1)
@@ -128,7 +128,7 @@ define void @void_func_i1_signext(i1 signext %arg0) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[CONST:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
 ; GFX11-NEXT:    [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s1)
@@ -175,8 +175,8 @@ define void @void_func_a2i1([2 x i1] %arg0) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    [[CONST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
@@ -188,8 +188,8 @@ define void @void_func_a2i1([2 x i1] %arg0) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0, $sgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    [[CONST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
@@ -318,8 +318,8 @@ define void @void_func_i1_i1(i1 %arg0, i1 %arg1) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -329,8 +329,8 @@ define void @void_func_i1_i1(i1 %arg0, i1 %arg1) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0, $sgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -382,19 +382,19 @@ define void @exhaust_sgprs_by_i1_args(
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr14_sgpr15, $sgpr16_sgpr17, $sgpr18_sgpr19, $sgpr20_sgpr21, $sgpr22_sgpr23, $sgpr24_sgpr25, $sgpr26_sgpr27, $sgpr28_sgpr29
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY1:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr8_sgpr9
-; GFX9-NEXT:    [[COPY3:%[0-9]+]]:sreg_64(s1) = COPY $sgpr10_sgpr11
-; GFX9-NEXT:    [[COPY4:%[0-9]+]]:sreg_64(s1) = COPY $sgpr12_sgpr13
-; GFX9-NEXT:    [[COPY5:%[0-9]+]]:sreg_64(s1) = COPY $sgpr14_sgpr15
-; GFX9-NEXT:    [[COPY6:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
-; GFX9-NEXT:    [[COPY7:%[0-9]+]]:sreg_64(s1) = COPY $sgpr18_sgpr19
-; GFX9-NEXT:    [[COPY8:%[0-9]+]]:sreg_64(s1) = COPY $sgpr20_sgpr21
-; GFX9-NEXT:    [[COPY9:%[0-9]+]]:sreg_64(s1) = COPY $sgpr22_sgpr23
-; GFX9-NEXT:    [[COPY10:%[0-9]+]]:sreg_64(s1) = COPY $sgpr24_sgpr25
-; GFX9-NEXT:    [[COPY11:%[0-9]+]]:sreg_64(s1) = COPY $sgpr26_sgpr27
-; GFX9-NEXT:    [[COPY12:%[0-9]+]]:sreg_64(s1) = COPY $sgpr28_sgpr29
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY1:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr8_sgpr9
+; GFX9-NEXT:    [[COPY3:%[0-9]+]]:_(s1) = COPY $sgpr10_sgpr11
+; GFX9-NEXT:    [[COPY4:%[0-9]+]]:_(s1) = COPY $sgpr12_sgpr13
+; GFX9-NEXT:    [[COPY5:%[0-9]+]]:_(s1) = COPY $sgpr14_sgpr15
+; GFX9-NEXT:    [[COPY6:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
+; GFX9-NEXT:    [[COPY7:%[0-9]+]]:_(s1) = COPY $sgpr18_sgpr19
+; GFX9-NEXT:    [[COPY8:%[0-9]+]]:_(s1) = COPY $sgpr20_sgpr21
+; GFX9-NEXT:    [[COPY9:%[0-9]+]]:_(s1) = COPY $sgpr22_sgpr23
+; GFX9-NEXT:    [[COPY10:%[0-9]+]]:_(s1) = COPY $sgpr24_sgpr25
+; GFX9-NEXT:    [[COPY11:%[0-9]+]]:_(s1) = COPY $sgpr26_sgpr27
+; GFX9-NEXT:    [[COPY12:%[0-9]+]]:_(s1) = COPY $sgpr28_sgpr29
 ; GFX9-NEXT:    [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr0
 ; GFX9-NEXT:    [[TRUNC13:%[0-9]+]]:_(s1) = G_TRUNC [[COPY13]](s32)
 ; GFX9-NEXT:    [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -446,36 +446,36 @@ define void @exhaust_sgprs_by_i1_args(
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
-; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
-; GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr2
-; GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(s1) = COPY $sgpr3
-; GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY $sgpr4
-; GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY $sgpr5
-; GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY $sgpr6
-; GFX11-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY $sgpr7
-; GFX11-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY $sgpr8
-; GFX11-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY $sgpr9
-; GFX11-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY $sgpr10
-; GFX11-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY $sgpr11
-; GFX11-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY $sgpr12
-; GFX11-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY $sgpr13
-; GFX11-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY $sgpr14
-; GFX11-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY $sgpr15
-; GFX11-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY $sgpr16
-; GFX11-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY $sgpr17
-; GFX11-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY $sgpr18
-; GFX11-NEXT:   [[COPY19:%[0-9]+]]:sreg_32(s1) = COPY $sgpr19
-; GFX11-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s1) = COPY $sgpr20
-; GFX11-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY $sgpr21
-; GFX11-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY $sgpr22
-; GFX11-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY $sgpr23
-; GFX11-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY $sgpr24
-; GFX11-NEXT:   [[COPY25:%[0-9]+]]:sreg_32(s1) = COPY $sgpr25
-; GFX11-NEXT:   [[COPY26:%[0-9]+]]:sreg_32(s1) = COPY $sgpr26
-; GFX11-NEXT:   [[COPY27:%[0-9]+]]:sreg_32(s1) = COPY $sgpr27
-; GFX11-NEXT:   [[COPY28:%[0-9]+]]:sreg_32(s1) = COPY $sgpr28
-; GFX11-NEXT:   [[COPY29:%[0-9]+]]:sreg_32(s1) = COPY $sgpr29
+; GFX11-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
+; GFX11-NEXT:   [[COPY1:%[0-9]+]]:_(s1) = COPY $sgpr1
+; GFX11-NEXT:   [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr2
+; GFX11-NEXT:   [[COPY3:%[0-9]+]]:_(s1) = COPY $sgpr3
+; GFX11-NEXT:   [[COPY4:%[0-9]+]]:_(s1) = COPY $sgpr4
+; GFX11-NEXT:   [[COPY5:%[0-9]+]]:_(s1) = COPY $sgpr5
+; GFX11-NEXT:   [[COPY6:%[0-9]+]]:_(s1) = COPY $sgpr6
+; GFX11-NEXT:   [[COPY7:%[0-9]+]]:_(s1) = COPY $sgpr7
+; GFX11-NEXT:   [[COPY8:%[0-9]+]]:_(s1) = COPY $sgpr8
+; GFX11-NEXT:   [[COPY9:%[0-9]+]]:_(s1) = COPY $sgpr9
+; GFX11-NEXT:   [[COPY10:%[0-9]+]]:_(s1) = COPY $sgpr10
+; GFX11-NEXT:   [[COPY11:%[0-9]+]]:_(s1) = COPY $sgpr11
+; GFX11-NEXT:   [[COPY12:%[0-9]+]]:_(s1) = COPY $sgpr12
+; GFX11-NEXT:   [[COPY13:%[0-9]+]]:_(s1) = COPY $sgpr13
+; GFX11-NEXT:   [[COPY14:%[0-9]+]]:_(s1) = COPY $sgpr14
+; GFX11-NEXT:   [[COPY15:%[0-9]+]]:_(s1) = COPY $sgpr15
+; GFX11-NEXT:   [[COPY16:%[0-9]+]]:_(s1) = COPY $sgpr16
+; GFX11-NEXT:   [[COPY17:%[0-9]+]]:_(s1) = COPY $sgpr17
+; GFX11-NEXT:   [[COPY18:%[0-9]+]]:_(s1) = COPY $sgpr18
+; GFX11-NEXT:   [[COPY19:%[0-9]+]]:_(s1) = COPY $sgpr19
+; GFX11-NEXT:   [[COPY20:%[0-9]+]]:_(s1) = COPY $sgpr20
+; GFX11-NEXT:   [[COPY21:%[0-9]+]]:_(s1) = COPY $sgpr21
+; GFX11-NEXT:   [[COPY22:%[0-9]+]]:_(s1) = COPY $sgpr22
+; GFX11-NEXT:   [[COPY23:%[0-9]+]]:_(s1) = COPY $sgpr23
+; GFX11-NEXT:   [[COPY24:%[0-9]+]]:_(s1) = COPY $sgpr24
+; GFX11-NEXT:   [[COPY25:%[0-9]+]]:_(s1) = COPY $sgpr25
+; GFX11-NEXT:   [[COPY26:%[0-9]+]]:_(s1) = COPY $sgpr26
+; GFX11-NEXT:   [[COPY27:%[0-9]+]]:_(s1) = COPY $sgpr27
+; GFX11-NEXT:   [[COPY28:%[0-9]+]]:_(s1) = COPY $sgpr28
+; GFX11-NEXT:   [[COPY29:%[0-9]+]]:_(s1) = COPY $sgpr29
 ; GFX11-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr0
 ; GFX11-NEXT:   [[TRUNC30:%[0-9]+]]:_(s1) = G_TRUNC [[COPY30]](s32)
 ; GFX11-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -532,19 +532,19 @@ define void @void_func_a48i1([48 x i1] %arg0) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr14_sgpr15, $sgpr16_sgpr17, $sgpr18_sgpr19, $sgpr20_sgpr21, $sgpr22_sgpr23, $sgpr24_sgpr25, $sgpr26_sgpr27, $sgpr28_sgpr29
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY1:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr8_sgpr9
-; GFX9-NEXT:    [[COPY3:%[0-9]+]]:sreg_64(s1) = COPY $sgpr10_sgpr11
-; GFX9-NEXT:    [[COPY4:%[0-9]+]]:sreg_64(s1) = COPY $sgpr12_sgpr13
-; GFX9-NEXT:    [[COPY5:%[0-9]+]]:sreg_64(s1) = COPY $sgpr14_sgpr15
-; GFX9-NEXT:    [[COPY6:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
-; GFX9-NEXT:    [[COPY7:%[0-9]+]]:sreg_64(s1) = COPY $sgpr18_sgpr19
-; GFX9-NEXT:    [[COPY8:%[0-9]+]]:sreg_64(s1) = COPY $sgpr20_sgpr21
-; GFX9-NEXT:    [[COPY9:%[0-9]+]]:sreg_64(s1) = COPY $sgpr22_sgpr23
-; GFX9-NEXT:    [[COPY10:%[0-9]+]]:sreg_64(s1) = COPY $sgpr24_sgpr25
-; GFX9-NEXT:    [[COPY11:%[0-9]+]]:sreg_64(s1) = COPY $sgpr26_sgpr27
-; GFX9-NEXT:    [[COPY12:%[0-9]+]]:sreg_64(s1) = COPY $sgpr28_sgpr29
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY1:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr8_sgpr9
+; GFX9-NEXT:    [[COPY3:%[0-9]+]]:_(s1) = COPY $sgpr10_sgpr11
+; GFX9-NEXT:    [[COPY4:%[0-9]+]]:_(s1) = COPY $sgpr12_sgpr13
+; GFX9-NEXT:    [[COPY5:%[0-9]+]]:_(s1) = COPY $sgpr14_sgpr15
+; GFX9-NEXT:    [[COPY6:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
+; GFX9-NEXT:    [[COPY7:%[0-9]+]]:_(s1) = COPY $sgpr18_sgpr19
+; GFX9-NEXT:    [[COPY8:%[0-9]+]]:_(s1) = COPY $sgpr20_sgpr21
+; GFX9-NEXT:    [[COPY9:%[0-9]+]]:_(s1) = COPY $sgpr22_sgpr23
+; GFX9-NEXT:    [[COPY10:%[0-9]+]]:_(s1) = COPY $sgpr24_sgpr25
+; GFX9-NEXT:    [[COPY11:%[0-9]+]]:_(s1) = COPY $sgpr26_sgpr27
+; GFX9-NEXT:    [[COPY12:%[0-9]+]]:_(s1) = COPY $sgpr28_sgpr29
 ; GFX9-NEXT:    [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr0
 ; GFX9-NEXT:    [[TRUNC13:%[0-9]+]]:_(s1) = G_TRUNC [[COPY13]](s32)
 ; GFX9-NEXT:    [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -640,36 +640,36 @@ define void @void_func_a64i1([64 x i1] %arg0) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
-; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
-; GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr2
-; GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(s1) = COPY $sgpr3
-; GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY $sgpr4
-; GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY $sgpr5
-; GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY $sgpr6
-; GFX11-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY $sgpr7
-; GFX11-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY $sgpr8
-; GFX11-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY $sgpr9
-; GFX11-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY $sgpr10
-; GFX11-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY $sgpr11
-; GFX11-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY $sgpr12
-; GFX11-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY $sgpr13
-; GFX11-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY $sgpr14
-; GFX11-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY $sgpr15
-; GFX11-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY $sgpr16
-; GFX11-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY $sgpr17
-; GFX11-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY $sgpr18
-; GFX11-NEXT:   [[COPY19:%[0-9]+]]:sreg_32(s1) = COPY $sgpr19
-; GFX11-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s1) = COPY $sgpr20
-; GFX11-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY $sgpr21
-; GFX11-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY $sgpr22
-; GFX11-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY $sgpr23
-; GFX11-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY $sgpr24
-; GFX11-NEXT:   [[COPY25:%[0-9]+]]:sreg_32(s1) = COPY $sgpr25
-; GFX11-NEXT:   [[COPY26:%[0-9]+]]:sreg_32(s1) = COPY $sgpr26
-; GFX11-NEXT:   [[COPY27:%[0-9]+]]:sreg_32(s1) = COPY $sgpr27
-; GFX11-NEXT:   [[COPY28:%[0-9]+]]:sreg_32(s1) = COPY $sgpr28
-; GFX11-NEXT:   [[COPY29:%[0-9]+]]:sreg_32(s1) = COPY $sgpr29
+; GFX11-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
+; GFX11-NEXT:   [[COPY1:%[0-9]+]]:_(s1) = COPY $sgpr1
+; GFX11-NEXT:   [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr2
+; GFX11-NEXT:   [[COPY3:%[0-9]+]]:_(s1) = COPY $sgpr3
+; GFX11-NEXT:   [[COPY4:%[0-9]+]]:_(s1) = COPY $sgpr4
+; GFX11-NEXT:   [[COPY5:%[0-9]+]]:_(s1) = COPY $sgpr5
+; GFX11-NEXT:   [[COPY6:%[0-9]+]]:_(s1) = COPY $sgpr6
+; GFX11-NEXT:   [[COPY7:%[0-9]+]]:_(s1) = COPY $sgpr7
+; GFX11-NEXT:   [[COPY8:%[0-9]+]]:_(s1) = COPY $sgpr8
+; GFX11-NEXT:   [[COPY9:%[0-9]+]]:_(s1) = COPY $sgpr9
+; GFX11-NEXT:   [[COPY10:%[0-9]+]]:_(s1) = COPY $sgpr10
+; GFX11-NEXT:   [[COPY11:%[0-9]+]]:_(s1) = COPY $sgpr11
+; GFX11-NEXT:   [[COPY12:%[0-9]+]]:_(s1) = COPY $sgpr12
+; GFX11-NEXT:   [[COPY13:%[0-9]+]]:_(s1) = COPY $sgpr13
+; GFX11-NEXT:   [[COPY14:%[0-9]+]]:_(s1) = COPY $sgpr14
+; GFX11-NEXT:   [[COPY15:%[0-9]+]]:_(s1) = COPY $sgpr15
+; GFX11-NEXT:   [[COPY16:%[0-9]+]]:_(s1) = COPY $sgpr16
+; GFX11-NEXT:   [[COPY17:%[0-9]+]]:_(s1) = COPY $sgpr17
+; GFX11-NEXT:   [[COPY18:%[0-9]+]]:_(s1) = COPY $sgpr18
+; GFX11-NEXT:   [[COPY19:%[0-9]+]]:_(s1) = COPY $sgpr19
+; GFX11-NEXT:   [[COPY20:%[0-9]+]]:_(s1) = COPY $sgpr20
+; GFX11-NEXT:   [[COPY21:%[0-9]+]]:_(s1) = COPY $sgpr21
+; GFX11-NEXT:   [[COPY22:%[0-9]+]]:_(s1) = COPY $sgpr22
+; GFX11-NEXT:   [[COPY23:%[0-9]+]]:_(s1) = COPY $sgpr23
+; GFX11-NEXT:   [[COPY24:%[0-9]+]]:_(s1) = COPY $sgpr24
+; GFX11-NEXT:   [[COPY25:%[0-9]+]]:_(s1) = COPY $sgpr25
+; GFX11-NEXT:   [[COPY26:%[0-9]+]]:_(s1) = COPY $sgpr26
+; GFX11-NEXT:   [[COPY27:%[0-9]+]]:_(s1) = COPY $sgpr27
+; GFX11-NEXT:   [[COPY28:%[0-9]+]]:_(s1) = COPY $sgpr28
+; GFX11-NEXT:   [[COPY29:%[0-9]+]]:_(s1) = COPY $sgpr29
 ; GFX11-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr0
 ; GFX11-NEXT:   [[TRUNC30:%[0-9]+]]:_(s1) = G_TRUNC [[COPY30]](s32)
 ; GFX11-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -763,7 +763,7 @@ define void @void_func_i1_i1_inreg(i1 %arg0, i1 inreg %arg1) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr6, $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr6
 ; GFX9-NEXT:    [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -775,7 +775,7 @@ define void @void_func_i1_i1_inreg(i1 %arg0, i1 inreg %arg1) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0, $sgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr1
 ; GFX11-NEXT:    [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -794,7 +794,7 @@ define void @void_func_i1_inreg_i1(i1 inreg %arg0, i1 %arg1) {
 ; GFX9-NEXT: {{  $}}
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr4
 ; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -806,7 +806,7 @@ define void @void_func_i1_inreg_i1(i1 inreg %arg0, i1 %arg1) {
 ; GFX11-NEXT: {{  $}}
 ; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
 ; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -821,7 +821,7 @@ define void @void_func_zeroext_i1_i1_inreg(i1 zeroext %arg0, i1 inreg %arg1) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr6, $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr6
 ; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -833,7 +833,7 @@ define void @void_func_zeroext_i1_i1_inreg(i1 zeroext %arg0, i1 inreg %arg1) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0, $sgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr1
 ; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -852,7 +852,7 @@ define void @void_func_i1_inreg_zeroext_i1(i1 inreg %arg0, i1 zeroext %arg1) {
 ; GFX9-NEXT: {{  $}}
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr4
 ; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -864,7 +864,7 @@ define void @void_func_i1_inreg_zeroext_i1(i1 inreg %arg0, i1 zeroext %arg1) {
 ; GFX11-NEXT: {{  $}}
 ; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
 ; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -879,7 +879,7 @@ define void @void_func_signext_i1_i1_inreg(i1 signext %arg0, i1 inreg %arg1) {
 ; GFX9: bb.1 (%ir-block.0):
 ; GFX9-NEXT:    liveins: $sgpr6, $sgpr4_sgpr5
 ; GFX9-NEXT: {{  $}}
-; GFX9-NEXT:    [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr6
 ; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -891,7 +891,7 @@ define void @void_func_signext_i1_i1_inreg(i1 signext %arg0, i1 inreg %arg1) {
 ; GFX11: bb.1 (%ir-block.0):
 ; GFX11-NEXT:    liveins: $sgpr0, $sgpr1
 ; GFX11-NEXT: {{  $}}
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr1
 ; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
@@ -910,7 +910,7 @@ define void @void_func_i1_inreg_signext_i1(i1 inreg %arg0, i1 signext %arg1) {
 ; GFX9-NEXT: {{  $}}
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr4
 ; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX9-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -922,7 +922,7 @@ define void @void_func_i1_inreg_signext_i1(i1 inreg %arg0, i1 signext %arg1) {
 ; GFX11-NEXT: {{  $}}
 ; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
 ; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
 ; GFX11-NEXT:    G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)

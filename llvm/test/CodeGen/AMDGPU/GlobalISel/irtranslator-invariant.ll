@@ -24,7 +24,7 @@ define i32 @load_select_const_i32_gv(i1 %cond) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @const_gv0
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @const_gv1
   ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(p1) = G_SELECT [[COPY]](s1), [[GV]], [[GV1]]

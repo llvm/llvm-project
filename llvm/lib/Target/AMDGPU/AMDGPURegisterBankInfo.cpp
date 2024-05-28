@@ -3741,6 +3741,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (!DstBank)
       DstBank = SrcBank;
 
+    // For i1 function arguments, the call of getRegBank() currently gives
+    // incorrect result. We set both src and dst banks to VCCRegBank.
+    if (!MI.getOperand(1).getReg().isVirtual() &&
+        MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(1)) {
+      DstBank = SrcBank = &AMDGPU::VCCRegBank;
+    }
+
     // For i1 return value, the dst reg is an SReg but we need to set the reg
     // bank to VCCRegBank.
     if (!MI.getOperand(0).getReg().isVirtual() &&

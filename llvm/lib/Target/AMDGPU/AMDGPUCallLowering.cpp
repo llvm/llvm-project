@@ -129,10 +129,6 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
 
     if (VA.getLocVT() == MVT::i1) {
       MIRBuilder.buildCopy(ValVReg, PhysReg);
-      MRI.setRegClass(ValVReg, MIRBuilder.getMF()
-                                   .getSubtarget<GCNSubtarget>()
-                                   .getRegisterInfo()
-                                   ->getBoolRC());
       return;
     }
 

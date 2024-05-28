@@ -28,7 +28,7 @@ define void @test_call_i1_func_void() {
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-NEXT:    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
 ; GFX9-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @i1_func_void, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    SI_RETURN
@@ -39,7 +39,7 @@ define void @test_call_i1_func_void() {
 ; GFX11-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
 ; GFX11-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i1_func_void
 ; GFX11-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @i1_func_void, csr_amdgpu, implicit-def $sgpr0
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    SI_RETURN
@@ -75,7 +75,7 @@ define void @test_call_zeroext_i1_func_void() {
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-NEXT:    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
 ; GFX9-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @zeroext_i1_func_void, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    SI_RETURN
@@ -86,7 +86,7 @@ define void @test_call_zeroext_i1_func_void() {
 ; GFX11-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
 ; GFX11-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @zeroext_i1_func_void
 ; GFX11-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @zeroext_i1_func_void, csr_amdgpu, implicit-def $sgpr0
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    SI_RETURN
@@ -122,7 +122,7 @@ define void @test_call_signext_i1_func_void() {
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-NEXT:    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
 ; GFX9-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @signext_i1_func_void, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
 ; GFX9-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    SI_RETURN
@@ -133,7 +133,7 @@ define void @test_call_signext_i1_func_void() {
 ; GFX11-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
 ; GFX11-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @signext_i1_func_void
 ; GFX11-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @signext_i1_func_void, csr_amdgpu, implicit-def $sgpr0
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
 ; GFX11-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    SI_RETURN
@@ -334,8 +334,8 @@ define void @test_call_a2i1_func_void() {
 ; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-NEXT:    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
 ; GFX9-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @a2i1_func_void, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $sgpr4_sgpr5, implicit-def $sgpr6_sgpr7
-; GFX9-NEXT:    [[COPY2:%[0-9]+]]:sreg_64(s1) = COPY $sgpr4_sgpr5
-; GFX9-NEXT:    [[COPY3:%[0-9]+]]:sreg_64(s1) = COPY $sgpr6_sgpr7
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr4_sgpr5
+; GFX9-NEXT:    [[COPY3:%[0-9]+]]:_(s1) = COPY $sgpr6_sgpr7
 ; GFX9-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX9-NEXT:    G_STORE [[COPY2]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX9-NEXT:    [[CONST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
@@ -349,8 +349,8 @@ define void @test_call_a2i1_func_void() {
 ; GFX11-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
 ; GFX11-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a2i1_func_void
 ; GFX11-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @a2i1_func_void, csr_amdgpu, implicit-def $sgpr0, implicit-def $sgpr1
-; GFX11-NEXT:    [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
-; GFX11-NEXT:    [[COPY2:%[0-9]+]]:sreg_32(s1) = COPY $sgpr1
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
+; GFX11-NEXT:    [[COPY2:%[0-9]+]]:_(s1) = COPY $sgpr1
 ; GFX11-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
 ; GFX11-NEXT:    G_STORE [[COPY]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) undef`, addrspace 1)
 ; GFX11-NEXT:    [[CONST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1

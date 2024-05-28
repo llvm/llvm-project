@@ -37,7 +37,7 @@ define void @void_func_i1(i1 %arg0) #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16_sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -46,7 +46,7 @@ define void @void_func_i1(i1 %arg0) #0 {
   ; GFX11: bb.1 (%ir-block.0):
   ; GFX11-NEXT:   liveins: $sgpr0
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32(s1) = COPY $sgpr0
+  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr0
   ; GFX11-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; GFX11-NEXT:   G_STORE [[COPY]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
   ; GFX11-NEXT:   SI_RETURN
@@ -59,7 +59,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16_sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s1)
@@ -77,7 +77,7 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16_sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s1)
@@ -96,7 +96,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr16_sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -1993,7 +1993,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
-  ; CHECK-NEXT:   [[COPY31:%[0-9]+]]:sreg_64(s1) = COPY $sgpr16_sgpr17
+  ; CHECK-NEXT:   [[COPY31:%[0-9]+]]:_(s1) = COPY $sgpr16_sgpr17
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s16) from %fixed-stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s16)
