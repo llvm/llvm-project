@@ -14,9 +14,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float128, scalbnf128, (float128 x, int n)) {
-#if !defined(FLT_RADIX)
-#error FLT_RADIX undefined.
-#elif FLT_RADIX != 2
+#if FLT_RADIX != 2
 #error FLT_RADIX!=2, unimplemented.
 #else
   return fputil::ldexp(x, n);

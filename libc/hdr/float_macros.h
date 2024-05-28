@@ -9,11 +9,17 @@
 #ifndef LLVM_LIBC_HDR_FLOAT_MACROS_H
 #define LLVM_LIBC_HDR_FLOAT_MACROS_H
 
-#ifndef LIBC_FULL_BUILD
-// Overlay mode
-#include <float.h>
-#endif // !LLVM_LIBC_FULL_BUILD
+#ifdef LIBC_FULL_BUILD
 
 #include "include/llvm-libc-macros/float-macros.h"
+
+#else // Overlay mode
+
+#include <float.h>
+
+// Filling missing macros if any.
+#include "include/llvm-libc-macros/float-macros.h"
+
+#endif // LLVM_LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_FLOAT_MACROS_H
