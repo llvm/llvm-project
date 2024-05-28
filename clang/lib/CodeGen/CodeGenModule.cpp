@@ -2048,8 +2048,8 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       TheModule.getDataLayout().getProgramAddressSpace());
 
   // Get the type of a ctor entry, { i32, program void ()*, global i8* }.
-  llvm::StructType *CtorStructTy = llvm::StructType::get(
-      Int32Ty, CtorPFTy, GlobalsInt8PtrTy);
+  llvm::StructType *CtorStructTy =
+      llvm::StructType::get(Int32Ty, CtorPFTy, GlobalsInt8PtrTy);
 
   // Construct the constructor and destructor arrays.
   ConstantInitBuilder builder(*this);
@@ -2068,7 +2068,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   auto list =
     ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
                                 /*constant*/ false,
-                                llvm::GlobalValue::AppendingLinkage);
+                                llvm::GlobalValue::AppendingLinkage, );
 
   // The LTO linker doesn't seem to like it when we set an alignment
   // on appending variables.  Take it off as a workaround.
@@ -2926,15 +2926,14 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   SmallVector<llvm::Constant*, 8> UsedArray;
   UsedArray.resize(List.size());
   for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            cast<llvm::Constant>(&*List[i]), CGM.GlobalsInt8PtrTy);
+    UsedArray[i] = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        cast<llvm::Constant>(&*List[i]), CGM.GlobalsInt8PtrTy);
   }
 
   if (UsedArray.empty())
     return;
-  llvm::ArrayType *ATy = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy,
-                                              UsedArray.size());
+  llvm::ArrayType *ATy =
+      llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, UsedArray.size());
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
