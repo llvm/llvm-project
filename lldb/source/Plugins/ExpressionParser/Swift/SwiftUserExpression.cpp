@@ -24,6 +24,7 @@
 #endif
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
@@ -65,6 +66,8 @@ SwiftUserExpression::SwiftUserExpression(
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
       m_persistent_variable_delegate(*this) {
+  if (auto target = exe_scope.CalculateTarget())
+    m_debugger_id = target->GetDebugger().GetID();
   m_runs_in_playground_or_repl =
       options.GetREPLEnabled() || options.GetPlaygroundTransformEnabled();
 }
@@ -72,24 +75,40 @@ SwiftUserExpression::SwiftUserExpression(
 SwiftUserExpression::~SwiftUserExpression() {}
 
 void SwiftUserExpression::WillStartExecuting() {
-  if (auto process = m_jit_process_wp.lock()) {
+  if (auto process = m_jit_process_wp.lock())
     if (auto *swift_runtime = SwiftLanguageRuntime::Get(process))
       swift_runtime->WillStartExecutingUserExpression(
           m_runs_in_playground_or_repl);
     else
-      llvm_unreachable("Can't execute a swift expression without a runtime");
-  } else
-    llvm_unreachable("Can't execute an expression without a process");
+      Debugger::ReportError(
+          "Can't execute a swift expression without a runtime",
+          m_debugger_id);
+  else
+    Debugger::ReportError("Can't execute an expression without a process",
+                          m_debugger_id);
 }
 
 void SwiftUserExpression::DidFinishExecuting() {
-  if (auto process = m_jit_process_wp.lock()) {
-    if (auto *swift_runtime = SwiftLanguageRuntime::Get(process))
-      swift_runtime->DidFinishExecutingUserExpression(
-          m_runs_in_playground_or_repl);
-    else
-      llvm_unreachable("Can't execute a swift expression without a runtime");
+  auto process = m_jit_process_wp.lock();
+  if (!process) {
+    Debugger::ReportError("Could not finish a expression without a process",
+                          m_debugger_id);
+    return;
   }
+  if (!process->IsValid()) {
+    // This will cause SwiftLanguageRuntime::Get(process) tp fail.
+    Debugger::ReportError("Could not finish swift expression because the "
+                          "process is being torn down",
+                          m_debugger_id);
+    return;
+  }
+  auto *swift_runtime = SwiftLanguageRuntime::Get(process);
+  if (!swift_runtime) {
+    Debugger::ReportError("Could not finish swift expression without a runtime",
+                          m_debugger_id);
+    return;
+  }
+  swift_runtime->DidFinishExecutingUserExpression(m_runs_in_playground_or_repl);
 }
 
 /// Determine whether we have a Swift language symbol context. This handles
