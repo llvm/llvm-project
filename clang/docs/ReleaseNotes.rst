@@ -803,6 +803,7 @@ Bug Fixes to C++ Support
   with the same parameters not to be diagnosed. (Fixes #GH93456).
 - Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
 - Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1444,10 +1444,10 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   //   category are defined within such member functions as they are within
   //   an implicit object member function).
   DeclContext *DC = getFunctionLevelDeclContext();
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
-      Method && Method->isExplicitObjectMemberFunction()) {
+  const auto *Method = dyn_cast<CXXMethodDecl>(DC);
+  if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
