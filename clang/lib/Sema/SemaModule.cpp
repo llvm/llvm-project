@@ -161,7 +161,7 @@ static void makeTransitiveImportsVisible(
 Sema::DeclGroupPtrTy
 Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   // We start in the global module;
-  const Module *GlobalModule = PushGlobalModuleFragment(ModuleLoc);
+  Module *GlobalModule = PushGlobalModuleFragment(ModuleLoc);
 
   // All declarations created from now on are owned by the global module.
   auto *TU = Context.getTranslationUnitDecl();
@@ -1009,7 +1009,7 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   return D;
 }
 
-const Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc) {
+Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc) {
   // We shouldn't create new global module fragment if there is already
   // one.
   if (!TheGlobalModuleFragment) {
@@ -1035,7 +1035,7 @@ void Sema::PopGlobalModuleFragment() {
   ModuleScopes.pop_back();
 }
 
-const Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
+Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
   if (!TheImplicitGlobalModuleFragment) {
     ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
     TheImplicitGlobalModuleFragment =

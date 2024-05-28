@@ -817,11 +817,11 @@ public:
            "owned local decl but no local module storage");
     return reinterpret_cast<Module *const *>(this)[-1];
   }
-  void setLocalOwningModule(const Module *M) {
+  void setLocalOwningModule(Module *M) {
     assert(!isFromASTFile() && hasOwningModule() &&
            hasLocalOwningModuleStorage() &&
            "should not have a cached owning module");
-    reinterpret_cast<const Module **>(this)[-1] = M;
+    reinterpret_cast<Module **>(this)[-1] = M;
   }
 
   /// Is this declaration owned by some module?

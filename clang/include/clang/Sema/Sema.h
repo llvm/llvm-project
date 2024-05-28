@@ -7833,12 +7833,12 @@ private:
   bool isCurrentModulePurview() const;
 
   /// Enter the scope of the explicit global module fragment.
-  const Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
+  Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of the explicit global module fragment.
   void PopGlobalModuleFragment();
 
   /// Enter the scope of an implicit global module fragment.
-  const Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
+  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of an implicit global module fragment.
   void PopImplicitGlobalModuleFragment();
 
