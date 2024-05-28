@@ -1880,7 +1880,8 @@ public:
                            const SDNode *N2);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                 ArrayRef<SDValue> Ops);
+                                 ArrayRef<SDValue> Ops,
+                                 SDNodeFlags Flags = SDNodeFlags());
 
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
