@@ -61,6 +61,9 @@ TEST(IncrementalProcessing, DISABLED_EmitCXXGlobalInitFunc) {
 #else
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
 #endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgv);
