@@ -1789,6 +1789,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       IdentityLeafs.insert(FrontV);
       continue;
     }
+    // Look for constants, for the moment only supporting constant splats.
+    if (auto *C = dyn_cast<Constant>(FrontV);
+        C && C->getSplatValue() &&
+        all_of(drop_begin(Item), [Item](InstLane &IL) {
+          Value *FrontV = Item.front().first;
+          Value *V = IL.first;
+          return !V || V == FrontV;
+        })) {
+      SplatLeafs.insert(FrontV);
+      continue;
+    }
     // Look for a splat value.
     if (all_of(drop_begin(Item), [Item](InstLane &IL) {
           auto [FrontV, FrontLane] = Item.front();
