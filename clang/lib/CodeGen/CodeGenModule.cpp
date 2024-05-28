@@ -2047,9 +2047,9 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   llvm::Type *CtorPFTy = llvm::PointerType::get(CtorFTy,
       TheModule.getDataLayout().getProgramAddressSpace());
 
-  // Get the type of a ctor entry, { i32, void ()*, i8* }.
+  // Get the type of a ctor entry, { i32, program void ()*, global i8* }.
   llvm::StructType *CtorStructTy = llvm::StructType::get(
-      Int32Ty, CtorPFTy, VoidPtrTy);
+      Int32Ty, CtorPFTy, GlobalsInt8PtrTy);
 
   // Construct the constructor and destructor arrays.
   ConstantInitBuilder builder(*this);
@@ -2061,7 +2061,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     if (I.AssociatedData)
       ctor.add(I.AssociatedData);
     else
-      ctor.addNullPointer(VoidPtrTy);
+      ctor.addNullPointer(GlobalsInt8PtrTy);
     ctor.finishAndAddTo(ctors);
   }
 
@@ -2928,12 +2928,13 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   for (unsigned i = 0, e = List.size(); i != e; ++i) {
     UsedArray[i] =
         llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
+            cast<llvm::Constant>(&*List[i]), CGM.GlobalsInt8PtrTy);
   }
 
   if (UsedArray.empty())
     return;
-  llvm::ArrayType *ATy = llvm::ArrayType::get(CGM.Int8PtrTy, UsedArray.size());
+  llvm::ArrayType *ATy = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy,
+                                              UsedArray.size());
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,

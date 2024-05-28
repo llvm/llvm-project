@@ -21,8 +21,8 @@ S A;
 
 #endif
 //.
-// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_amdgcn_target_global_constructor.cpp, ptr null }]
-// CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__dtor_A, ptr null }]
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr addrspace(1) }] [{ i32, ptr, ptr addrspace(1) } { i32 65535, ptr @_GLOBAL__sub_I_amdgcn_target_global_constructor.cpp, ptr addrspace(1) null }]
+// CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr addrspace(1) }] [{ i32, ptr, ptr addrspace(1) } { i32 65535, ptr @__dtor_A, ptr addrspace(1) null }]
 //.
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
