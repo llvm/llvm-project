@@ -2574,9 +2574,8 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-LABEL: vp_ctlz_nxv1i9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v9, 23, v0.t
@@ -2593,9 +2592,8 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv1i9:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    li a1, 511
-; CHECK-ZVBB-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8, v0.t
 ; CHECK-ZVBB-NEXT:    li a0, 7
 ; CHECK-ZVBB-NEXT:    vsub.vx v8, v8, a0, v0.t
@@ -2607,9 +2605,8 @@ define <vscale x 1 x i9> @vp_ctlz_zero_undef_nxv1i9(<vscale x 1 x i9> %va, <vsca
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv1i9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v9, 23, v0.t
@@ -2624,9 +2621,8 @@ define <vscale x 1 x i9> @vp_ctlz_zero_undef_nxv1i9(<vscale x 1 x i9> %va, <vsca
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv1i9:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    li a1, 511
-; CHECK-ZVBB-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8, v0.t
 ; CHECK-ZVBB-NEXT:    li a0, 7
 ; CHECK-ZVBB-NEXT:    vsub.vx v8, v8, a0, v0.t
