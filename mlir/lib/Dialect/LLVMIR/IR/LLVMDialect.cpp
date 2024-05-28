@@ -2556,6 +2556,26 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// UndefOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a undef operation to a dedicated undef attribute.
+OpFoldResult LLVM::UndefOp::fold(FoldAdaptor) {
+  // TODO: Should fold into ub::*?
+  return mlir::LLVM::UndefAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a poison operation to a dedicated poison attribute.
+OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
+  // TODO: Should fold to ub::PoisonAttr?
+  return mlir::LLVM::PoisonAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -2566,6 +2586,13 @@ LogicalResult LLVM::ZeroOp::verify() {
              << "target extension type does not support zero-initializer";
 
   return success();
+}
+
+OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
+  OpFoldResult result = Builder(getContext()).getZeroAttr(getType());
+  if (result)
+    return result;
+  return TypeAttr::get(getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3276,6 +3303,11 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
   if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
     if (isa<LLVM::LLVMPointerType>(type))
       return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  // If this was folded from an llvm.mlir.zero operation, it should be
+  // materialized as such. However, prefer to use llvm.mlir.constant for
+  // compatible types.
+  if (isZeroAttribute(value) && !LLVM::ConstantOp::isBuildableWith(value, type))
+    return builder.create<LLVM::ZeroOp>(loc, type);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

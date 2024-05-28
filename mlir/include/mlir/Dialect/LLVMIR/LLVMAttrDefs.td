@@ -1037,4 +1037,18 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
   let genVerifyDecl = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef"> {
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison"> {
+}
+
 #endif // LLVMIR_ATTRDEFS
