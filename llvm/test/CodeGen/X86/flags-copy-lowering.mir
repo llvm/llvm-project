@@ -1,102 +1,10 @@
 # RUN: llc -run-pass x86-flags-copy-lowering -verify-machineinstrs -o - %s | FileCheck %s
-#
 # Lower various interesting copy patterns of EFLAGS without using LAHF/SAHF.
 
---- |
-  target triple = "x86_64-unknown-unknown"
-
-  declare void @foo()
-
-  define i32 @test_branch(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i32 0
-  }
-
-  define i32 @test_branch_fallthrough(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i32 0
-  }
-
-  define void @test_setcc(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_cmov(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_adc(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_sbb(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_rcl(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_rcr(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_setb_c(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define i64 @test_branch_with_livein_and_kill(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i64 0
-  }
-
-  define i64 @test_branch_with_interleaved_livein_and_kill(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i64 0
-  }
-
-  define i64 @test_mid_cycle_copies(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i64 0
-  }
-
-  define i32 @test_existing_setcc(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i32 0
-  }
-
-  define i32 @test_existing_setcc_memory(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret i32 0
-  }
 ...
 ---
 name:            test_branch
 # CHECK-LABEL: name: test_branch
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -111,9 +19,7 @@ body:             |
   ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     JCC_1 %bb.1, 7, implicit $eflags
@@ -150,9 +56,6 @@ body:             |
 ---
 name:            test_branch_fallthrough
 # CHECK-LABEL: name: test_branch_fallthrough
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -167,9 +70,7 @@ body:             |
   ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     JCC_1 %bb.2, 7, implicit $eflags
@@ -206,9 +107,6 @@ body:             |
 ---
 name:            test_setcc
 # CHECK-LABEL: name: test_setcc
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -224,9 +122,7 @@ body:             |
   ; CHECK-NEXT: %[[NE_REG:[^:]*]]:gr8 = SETCCr 5, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     %3:gr8 = SETCCr 7, implicit $eflags
@@ -249,9 +145,6 @@ body:             |
 ---
 name:            test_cmov
 # CHECK-LABEL: name: test_cmov
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -266,9 +159,7 @@ body:             |
   ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     %3:gr64 = CMOV64rr %0, %1, 7, implicit $eflags
@@ -295,9 +186,6 @@ body:             |
 ---
 name:            test_adc
 # CHECK-LABEL: name: test_adc
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -310,9 +198,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = ADC64ri32 %2:gr64, 42, implicit-def $eflags, implicit $eflags
@@ -329,9 +215,6 @@ body:             |
 ---
 name:            test_sbb
 # CHECK-LABEL: name: test_sbb
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -344,9 +227,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = SBB64ri32 %2:gr64, 42, implicit-def $eflags, implicit killed $eflags
@@ -363,9 +244,6 @@ body:             |
 ---
 name:            test_rcl
 # CHECK-LABEL: name: test_rcl
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -378,9 +256,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = RCL64r1 %2:gr64, implicit-def $eflags, implicit $eflags
@@ -397,9 +273,6 @@ body:             |
 ---
 name:            test_rcr
 # CHECK-LABEL: name: test_rcr
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -412,9 +285,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = RCR64r1 %2:gr64, implicit-def $eflags, implicit $eflags
@@ -431,9 +302,6 @@ body:             |
 ---
 name:            test_setb_c
 # CHECK-LABEL: name: test_setb_c
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -446,9 +314,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr32 = SETB_C32r implicit-def $eflags, implicit $eflags
@@ -472,9 +338,6 @@ body:             |
 ---
 name:            test_branch_with_livein_and_kill
 # CHECK-LABEL: name: test_branch_with_livein_and_kill
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -491,9 +354,7 @@ body:             |
   ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     JCC_1 %bb.1, 7, implicit $eflags
@@ -545,9 +406,6 @@ body:             |
 ---
 name:            test_branch_with_interleaved_livein_and_kill
 # CHECK-LABEL: name: test_branch_with_interleaved_livein_and_kill
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.5
@@ -566,9 +424,7 @@ body:             |
   ; CHECK-NEXT: %[[O_REG:[^:]*]]:gr8 = SETCCr 0, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     JCC_1 %bb.1, 7, implicit $eflags
@@ -684,9 +540,6 @@ body:             |
 # the futility of the actual branches.
 name:            test_mid_cycle_copies
 # CHECK-LABEL: name: test_mid_cycle_copies
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1
@@ -838,9 +691,6 @@ body:             |
 ---
 name:            test_existing_setcc
 # CHECK-LABEL: name: test_existing_setcc
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -857,9 +707,7 @@ body:             |
   ; CHECK-NEXT: %[[AE_REG:[^:]*]]:gr8 = SETCCr 3, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %4
     JCC_1 %bb.1, 7, implicit $eflags
@@ -896,9 +744,6 @@ body:             |
 ---
 name:            test_existing_setcc_memory
 # CHECK-LABEL: name: test_existing_setcc_memory
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -918,9 +763,7 @@ body:             |
   ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     JCC_1 %bb.1, 4, implicit $eflags

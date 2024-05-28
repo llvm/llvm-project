@@ -1,53 +1,10 @@
 # RUN: llc -run-pass x86-flags-copy-lowering -mattr=+ndd -verify-machineinstrs -o - %s | FileCheck %s
 # Lower various interesting copy patterns of EFLAGS without using LAHF/SAHF.
 
---- |
-  target triple = "x86_64-unknown-unknown"
-
-  declare void @foo()
-
-  define void @test_adc(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_sbb(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_rcl(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_rcr(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_cmov(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_cfcmov(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
 ...
 ---
 name:            test_adc
 # CHECK-LABEL: name: test_adc
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -60,9 +17,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = ADC64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit $eflags
@@ -79,9 +34,6 @@ body:             |
 ---
 name:            test_sbb
 # CHECK-LABEL: name: test_sbb
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -94,9 +46,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = SBB64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit killed $eflags
@@ -113,9 +63,6 @@ body:             |
 ---
 name:            test_rcl
 # CHECK-LABEL: name: test_rcl
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -128,9 +75,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = RCL64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
@@ -147,9 +92,6 @@ body:             |
 ---
 name:            test_rcr
 # CHECK-LABEL: name: test_rcr
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -162,9 +104,7 @@ body:             |
   ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %3
     %4:gr64 = RCR64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
@@ -181,9 +121,6 @@ body:             |
 ---
 name:            test_cmov
 # CHECK-LABEL: name: test_cmov
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -198,9 +135,7 @@ body:             |
   ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     %3:gr64 = CMOV64rr_ND %0, %1, 7, implicit $eflags
@@ -226,9 +161,6 @@ body:             |
 ---
 name:            test_cfcmov
 # CHECK-LABEL: name: test_cfcmov
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -243,9 +175,7 @@ body:             |
   ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NOT:  COPY{{( killed)?}} $eflags
 
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    INLINEASM &nop, 1, 12, implicit-def dead $eflags
 
     $eflags = COPY %2
     %3:gr64 = CFCMOV64rr %1, 7, implicit $eflags
