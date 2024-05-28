@@ -242,7 +242,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
       // case. Assert assert in debug builds so we catch other weird cases.
       assert(false && "forward declaration without definition");
       LLDB_LOG(GetLog(LLDBLog::Types),
-               "forward declaration without definition: {0}", name)
+               "forward declaration without definition: {0}", name);
       return ast_ctx.getObjCIdType();
     }
 
