@@ -104,7 +104,7 @@ define void @vec_aggr_ops() {
 
 define void @other_ops(i8 %x) {
 ; CHECK-LABEL: @other_ops(
-; CHECK-NEXT:    call void (...) @use(i1 poison, i1 poison, i8 poison, i8 poison, ptr poison, ptr poison, ptr poison)
+; CHECK-NEXT:    call void (...) @use(i1 poison, i1 poison, i8 poison, i8 poison, ptr poison, ptr undef, ptr undef)
 ; CHECK-NEXT:    ret void
 ;
   %i1 = icmp eq i8 poison, 1
