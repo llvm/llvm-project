@@ -61,8 +61,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_PARALLEL_COMPILE_JOBS=24
-
+      -D LLVM_PARALLEL_COMPILE_JOBS=16 \
+      -D LLVM_PARALLEL_LINK_JOBS=4
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
