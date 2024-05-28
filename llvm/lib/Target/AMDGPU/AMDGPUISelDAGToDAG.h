@@ -143,6 +143,8 @@ private:
   bool isFlatScratchBaseLegal(SDValue Addr) const;
   bool isFlatScratchBaseLegalSV(SDValue Addr) const;
   bool isFlatScratchBaseLegalSVImm(SDValue Addr) const;
+  bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
+                                   bool IsBuffer, int64_t ImmOffset = 0) const;
 
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,

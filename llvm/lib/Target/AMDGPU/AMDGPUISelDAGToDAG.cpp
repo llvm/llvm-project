@@ -1980,6 +1980,23 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   return true;
 }
 
+// For unbuffered smem loads, it is illegal for the Immediate Offset to be
+// negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+// Handle the case where the Immediate Offset + SOffset is negative.
+bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
+                                                     bool Imm32Only,
+                                                     bool IsBuffer,
+                                                     int64_t ImmOffset) const {
+  if (AMDGPU::hasSMRDSignedImmOffset(*Subtarget) && !IsBuffer & !Imm32Only &&
+      ImmOffset < 0) {
+    KnownBits SKnown = CurDAG->computeKnownBits(*SOffset);
+    if (ImmOffset + SKnown.getMinValue().getSExtValue() < 0)
+      return false;
+  }
+
+  return true;
+}
+
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
 // not null) offset. If Imm32Only is true, match only 32-bit immediate
 // offsets available on CI.
@@ -1995,28 +2012,21 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   if (!C) {
     if (!SOffset)
       return false;
-    bool Changed = false;
+
     if (ByteOffsetNode.getValueType().isScalarInteger() &&
         ByteOffsetNode.getValueType().getSizeInBits() == 32) {
       *SOffset = ByteOffsetNode;
-      Changed = true;
-    } else if (ByteOffsetNode.getOpcode() == ISD::ZERO_EXTEND) {
+      return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
+                                         ImmOffset);
+    }
+    if (ByteOffsetNode.getOpcode() == ISD::ZERO_EXTEND) {
       if (ByteOffsetNode.getOperand(0).getValueType().getSizeInBits() == 32) {
         *SOffset = ByteOffsetNode.getOperand(0);
-        Changed = true;
+        return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
+                                           ImmOffset);
       }
     }
-    // For unbuffered smem loads, it is illegal for the Immediate Offset to be
-    // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
-    // Handle the case where the Immediate Offset + SOffset is negative.
-    if (AMDGPU::hasSMRDSignedImmOffset(*Subtarget) && Changed &&
-        !IsBuffer & !Imm32Only && ImmOffset < 0) {
-      KnownBits SKnown = CurDAG->computeKnownBits(*SOffset);
-      if (ImmOffset + SKnown.getMinValue().getSExtValue() < 0)
-        return false;
-    }
-
-    return Changed;
+    return false;
   }
 
   SDLoc SL(ByteOffsetNode);
