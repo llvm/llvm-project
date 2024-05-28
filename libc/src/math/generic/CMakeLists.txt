@@ -2933,6 +2933,7 @@ add_entrypoint_object(
   HDRS
     ../scalbn.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2945,6 +2946,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2957,6 +2959,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnl.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3

@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 
 #if FLT_RADIX != 2
-#error FLT_RADIX!=2, unimplemented.
+#error "FLT_RADIX != 2 is not supported."
 #endif
 
 namespace LIBC_NAMESPACE {
