@@ -36,14 +36,6 @@ using namespace clang;
 
 namespace {
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
 // Incremental processing produces several modules, all using the same "main
 // file". Make sure CodeGen can cope with that, e.g. for static initializers.
 const char TestProgram1[] = "extern \"C\" int funcForProg1() { return 17; }\n"
