@@ -314,11 +314,24 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
-  auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
+  auto getMetadataOrNull = [&](Attribute attr) -> llvm::Metadata * {
     if (!attr)
       return nullptr;
-    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
-        llvm::Type::getInt64Ty(llvmCtx), attr.getInt()));
+
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr)) {
+      return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
+    } else if (auto exprAttr = llvm::dyn_cast<LLVM::DIExpressionAttr>(attr)) {
+      return translateExpression(exprAttr);
+    } else if (auto localVar =
+                   llvm::dyn_cast<LLVM::DILocalVariableAttr>(attr)) {
+      return translate(localVar);
+    } else if (auto globalVar =
+                   llvm::dyn_cast<LLVM::DIGlobalVariableAttr>(attr)) {
+      return translate(globalVar);
+    } else {
+      llvm_unreachable("Unexpected Attribute value");
+    }
   };
   return llvm::DISubrange::get(llvmCtx, getMetadataOrNull(attr.getCount()),
                                getMetadataOrNull(attr.getLowerBound()),

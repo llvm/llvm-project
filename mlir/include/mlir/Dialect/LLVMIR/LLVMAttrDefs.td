@@ -625,10 +625,10 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
 def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
                                     "DINodeAttr"> {
   let parameters = (ins
-    OptionalParameter<"IntegerAttr">:$count,
-    OptionalParameter<"IntegerAttr">:$lowerBound,
-    OptionalParameter<"IntegerAttr">:$upperBound,
-    OptionalParameter<"IntegerAttr">:$stride
+    OptionalParameter<"::mlir::Attribute">:$count,
+    OptionalParameter<"::mlir::Attribute">:$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    OptionalParameter<"::mlir::Attribute">:$stride
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
