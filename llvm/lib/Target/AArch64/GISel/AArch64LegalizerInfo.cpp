@@ -346,6 +346,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         {nxv2s64, p0, nxv2s64, 8},
     });
 
+    // TODO: Add nxv2p0. Consider bitcastIf.
+    //       See #92130
+    //       https://github.com/llvm/llvm-project/pull/92130#discussion_r1616888461
     StoreActions.legalForTypesWithMemDesc({
         // 128 bit base sizes
         {nxv16s8, p0, nxv16s8, 8},
