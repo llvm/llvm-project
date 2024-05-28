@@ -5662,6 +5662,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":config",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -5893,7 +5894,6 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
-        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
