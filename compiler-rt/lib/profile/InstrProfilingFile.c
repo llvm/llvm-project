@@ -505,14 +505,6 @@ static FILE *getFileObject(const char *OutputName) {
   return fopen(OutputName, "ab");
 }
 
-/* Get file object and merge if applicable */
-static FILE *getMergeFileObject(const char *OutputName, int *MergeDone) {
-  VPMergeHook = &lprofMergeValueProfData;
-  if (doMerging())
-    return openFileForMerging(OutputName, MergeDone);
-  return getFileObject(OutputName);
-}
-
 static void closeFileObject(FILE *OutputFile) {
   if (OutputFile == getProfileFile()) {
     fflush(OutputFile);
@@ -526,8 +518,15 @@ static void closeFileObject(FILE *OutputFile) {
 
 /* Write profile data to file \c OutputName.  */
 static int writeFile(const char *OutputName) {
-  int RetVal, MergeDone = 0;
-  FILE *OutputFile = getMergeFileObject(OutputName, &MergeDone);
+  int RetVal;
+  FILE *OutputFile;
+
+  int MergeDone = 0;
+  VPMergeHook = &lprofMergeValueProfData;
+  if (doMerging())
+    OutputFile = openFileForMerging(OutputName, &MergeDone);
+  else
+    OutputFile = getFileObject(OutputName);
 
   if (!OutputFile)
     return -1;
@@ -565,16 +564,10 @@ static int writeOrderFile(const char *OutputName) {
 
 #define LPROF_INIT_ONCE_ENV "__LLVM_PROFILE_RT_INIT_ONCE"
 
-static void forceTruncateFile(const char *Filename) {
-  FILE *File = fopen(Filename, "w");
-  if (!File)
-    return;
-  fclose(File);
-}
-
 static void truncateCurrentFile(void) {
   const char *Filename;
   char *FilenameBuf;
+  FILE *File;
   int Length;
 
   Length = getCurFilenameLength();
@@ -604,7 +597,10 @@ static void truncateCurrentFile(void) {
     return;
 
   /* Truncate the file.  Later we'll reopen and append. */
-  forceTruncateFile(Filename);
+  File = fopen(Filename, "w");
+  if (!File)
+    return;
+  fclose(File);
 }
 
 /* Write a partial profile to \p Filename, which is required to be backed by
@@ -1287,7 +1283,7 @@ int __llvm_write_custom_profile(const char *Target,
                                 const char *CountersBegin,
                                 const char *CountersEnd, const char *NamesBegin,
                                 const char *NamesEnd) {
-  int ReturnValue = 0, FilenameLength, TargetLength, MergeDone;
+  int ReturnValue = 0, FilenameLength, TargetLength;
   char *FilenameBuf, *TargetFilename;
   const char *Filename;
 
@@ -1340,12 +1336,9 @@ int __llvm_write_custom_profile(const char *Target,
     return -1;
   }
 
-  /* Clean old target file */
-  forceTruncateFile(TargetFilename);
-
-  /* Open target-specific PGO file */
-  MergeDone = 0;
-  FILE *OutputFile = getMergeFileObject(TargetFilename, &MergeDone);
+  /* Open and truncate target-specific PGO file */
+  FILE *OutputFile = fopen(TargetFilename, "w");
+  setProfileFile(OutputFile);
 
   if (!OutputFile) {
     PROF_ERR("Failed to open file : %s\n", TargetFilename);
@@ -1356,14 +1349,15 @@ int __llvm_write_custom_profile(const char *Target,
 
   FreeHook = &free;
   setupIOBuffer();
+
+  /* Write custom data */
   ProfDataWriter fileWriter;
   initFileWriter(&fileWriter, OutputFile);
 
   /* Write custom data to the file */
-  ReturnValue = lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd,
-                                   CountersBegin, CountersEnd, NULL, NULL,
-                                   lprofGetVPDataReader(), NamesBegin, NamesEnd,
-                                   NULL, NULL, NULL, NULL, MergeDone);
+  ReturnValue = lprofWriteDataImpl(
+      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
+      lprofGetVPDataReader(), NULL, NULL, NULL, NULL, NamesBegin, NamesEnd, 0);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

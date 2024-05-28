@@ -33,20 +33,17 @@ int main() {
 // LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-PGO: Counters: 4
-// LLVM-PGO: Function count: 20
-// LLVM-PGO: Block counts: [10, 20, 10]
+// LLVM-PGO: Block counts: [20, 10, 20, 10]
 
 // LLVM-PGO-LABEL: test1:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-PGO: Counters: 1
-// LLVM-PGO: Function count: 1
-// LLVM-PGO: Block counts: []
+// LLVM-PGO: Block counts: [1]
 
 // LLVM-PGO-LABEL: test2:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-PGO: Counters: 1
-// LLVM-PGO: Function count: 1
-// LLVM-PGO: Block counts: []
+// LLVM-PGO: Block counts: [1]
 
 // CLANG-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
