@@ -7507,9 +7507,8 @@ LoopVectorizationPlanner::executePlan(
   LLVM_DEBUG(BestVPlan.dump());
 
   // Perform the actual loop transformation.
-  VPTransformState State(BestVF, BestUF, LI,
-                         EnableVPlanNativePath ? nullptr : DT, ILV.Builder,
-                         &ILV, &BestVPlan, OrigLoop->getHeader()->getContext());
+  VPTransformState State(BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+                         OrigLoop->getHeader()->getContext());
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
@@ -8132,8 +8131,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
 static VPWidenIntOrFpInductionRecipe *
 createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
                             VPValue *Start, const InductionDescriptor &IndDesc,
-                            VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
-                            VFRange &Range) {
+                            VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop) {
   assert(IndDesc.getStartValue() ==
          Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()));
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
@@ -8155,7 +8153,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
   // produces its scalar and vector values.
   if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi))
     return createWidenInductionRecipes(Phi, Phi, Operands[0], *II, Plan,
-                                       *PSE.getSE(), *OrigLoop, Range);
+                                       *PSE.getSE(), *OrigLoop);
 
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
@@ -8195,7 +8193,7 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
     const InductionDescriptor &II = *Legal->getIntOrFpInductionDescriptor(Phi);
     VPValue *Start = Plan.getOrAddLiveIn(II.getStartValue());
     return createWidenInductionRecipes(Phi, I, Start, II, Plan, *PSE.getSE(),
-                                       *OrigLoop, Range);
+                                       *OrigLoop);
   }
   return nullptr;
 }
@@ -8536,8 +8534,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
       // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL())
-        VPlanTransforms::addExplicitVectorLength(*Plan);
+      // Discard the plan if it is not EVL-compatible
+      if (CM.foldTailWithEVL() &&
+          !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
+        break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -10369,16 +10369,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
         RemoveRedundantDbgInstrs(&BB);
     }
 
-    // We currently do not preserve dominator analyses with outer loop
-    // vectorization. Until this is addressed, mark these analyses as preserved
-    // only for non-VPlan-native path.
-    // TODO: Preserve Dominator analysis for VPlan-native path.
-    if (!EnableVPlanNativePath) {
-      PA.preserve<DominatorTreeAnalysis>();
-      PA.preserve<ScalarEvolutionAnalysis>();
-    }
-
     PA.preserve<LoopAnalysis>();
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<ScalarEvolutionAnalysis>();
 
     if (Result.MadeCFGChange) {
       // Making CFG changes likely means a loop got vectorized. Indicate that

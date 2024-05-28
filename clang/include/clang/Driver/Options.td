@@ -2981,6 +2981,10 @@ def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
+def fms_define_stdc : Flag<["-"], "fms-define-stdc">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Define '__STDC__' to '1' in MSVC Compatibility mode">,
+  MarshallingInfoFlag<LangOpts<"MSVCEnableStdcMacro">>;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">,
@@ -8306,6 +8310,9 @@ def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_X : CLFlag<"X">,
   HelpText<"Do not add %INCLUDE% to include search path">, Alias<nostdlibinc>;
+def _SLASH_Zc___STDC__ : CLFlag<"Zc:__STDC__">,
+  HelpText<"Define __STDC__">,
+  Alias<fms_define_stdc>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
   HelpText<"Enable C++14 sized global deallocation functions">,
   Alias<fsized_deallocation>;
