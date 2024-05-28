@@ -1627,20 +1627,19 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
 }
 
 namespace IndexedInstrProf {
+// A C++14 compatible version of the offsetof macro.
+template <typename T1, typename T2>
+inline size_t constexpr offsetOf(T1 T2::*Member) {
+  constexpr T2 Object{};
+  return size_t(&(Object.*Member)) - size_t(&Object);
+}
+
 // Read a uint64_t from the specified buffer offset, and swap the bytes in
 // native endianness if necessary.
 static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
   using namespace ::support;
   return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
                                                                      Offset);
-}
-
-// Read a uint64_t from the specified `Buffer`, and points `Buffer` to the
-// address of previous uint64_t.
-static inline uint64_t read_and_decrement(const unsigned char *&Buffer) {
-  uint64_t Val = read(Buffer, 0);
-  Buffer -= sizeof(uint64_t);
-  return Val;
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1650,17 +1649,16 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
                 "of fields to read.");
   Header H;
 
-  H.Magic = read(Buffer, 0);
+  H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
   if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, 8);
+  H.Version = read(Buffer, offsetOf(&Header::Version));
   if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  const unsigned char *NextHeader = Buffer + H.size() - sizeof(uint64_t);
   switch (GET_VERSION(H.Version)) {
     // When a new field is added in the header add a case statement here to
     // populate it.
@@ -1669,22 +1667,23 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
   case 12ull:
-    H.VTableNamesOffset = read_and_decrement(NextHeader);
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
     [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    H.TemporalProfTracesOffset = read_and_decrement(NextHeader);
+    H.TemporalProfTracesOffset =
+        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
     [[fallthrough]];
   case 9ull:
-    H.BinaryIdOffset = read_and_decrement(NextHeader);
+    H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
     [[fallthrough]];
   case 8ull:
-    H.MemProfOffset = read_and_decrement(NextHeader);
+    H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
     [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
-    H.HashOffset = read_and_decrement(NextHeader);
-    H.HashType = read_and_decrement(NextHeader);
+    H.HashType = read(Buffer, offsetOf(&Header::HashType));
+    H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
   }
 
   return H;
@@ -1700,17 +1699,19 @@ size_t Header::size() const {
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
   case 12ull:
-    return 72;
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    return 64;
+    return offsetOf(&Header::TemporalProfTracesOffset) +
+           sizeof(Header::TemporalProfTracesOffset);
   case 9ull:
-    return 56;
+    return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
   case 8ull:
-    return 48;
+    return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
   default: // Version7 (when the backwards compatible header was introduced).
-    return 40;
+    return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
   }
 }
 
