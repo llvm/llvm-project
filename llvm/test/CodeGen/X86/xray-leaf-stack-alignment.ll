@@ -1,5 +1,8 @@
 ; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
 
+;; Verify that custom event calls are done with proper stack alignment,
+;; even in leaf functions.
+
 @leaf_func.event_id = internal constant i32 1, align 4
 
 define void @leaf_func() "xray-instruction-threshold"="999" "frame-pointer"="none" nounwind {
