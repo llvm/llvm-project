@@ -628,6 +628,19 @@ bool CallLowering::determineAndHandleAssignments(
                            ThisReturnRegs);
 }
 
+bool CallLowering::determineAndHandleAssignments(
+    ValueHandler &Handler, ValueAssigner &Assigner,
+    SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
+    CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
+    ArrayRef<Register> ThisReturnRegs) const {
+
+  if (!determineAssignments(Assigner, Args, CCInfo))
+    return false;
+
+  return handleAssignments(Handler, Args, CCInfo, ArgLocs, MIRBuilder,
+                           ThisReturnRegs);
+}
+
 static unsigned extendOpFromFlags(llvm::ISD::ArgFlagsTy Flags) {
   if (Flags.isSExt())
     return TargetOpcode::G_SEXT;

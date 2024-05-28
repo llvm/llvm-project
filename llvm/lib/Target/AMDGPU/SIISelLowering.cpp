@@ -16039,9 +16039,7 @@ static bool isCopyFromRegForI1Return(const SDNode *N) {
     N3 = N3->getOperand(0).getNode();
   } while (N3->getOpcode() == ISD::CopyFromReg);
 
-  if (N3->getOpcode() != ISD::CALLSEQ_END)
-    return false;
-  return true;
+  return N3->getOpcode() == ISD::CALLSEQ_END;
 }
 
 bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,

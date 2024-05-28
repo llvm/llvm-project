@@ -317,35 +317,6 @@ bool AMDGPUCallLowering::canLowerReturn(MachineFunction &MF,
   return checkReturn(CCInfo, Outs, TLI.CCAssignFnForReturn(CallConv, IsVarArg));
 }
 
-/// Replace CallLowering::determineAndHandleAssignments() because we need to
-/// reserve ScratchRSrcReg when necessary.
-/// TODO: Investigate if reserving ScratchRSrcReg can be moved to calling conv
-/// functions. If so, then this function is not needed anymore -- we can just
-/// use CallLowering::determineAndHandleAssignments() as before.
-bool AMDGPUCallLowering::determineAndHandleAssignmentsLocal(
-    ValueHandler &Handler, ValueAssigner &Assigner,
-    SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
-    CallingConv::ID CallConv, bool IsVarArg) const {
-
-  MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = MF.getFunction();
-
-  SmallVector<CCValAssign, 16> ArgLocs;
-
-  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, F.getContext());
-
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.enableFlatScratch()) {
-    SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
-  }
-
-  if (!determineAssignments(Assigner, Args, CCInfo))
-    return false;
-
-  return handleAssignments(Handler, Args, CCInfo, ArgLocs, MIRBuilder);
-}
-
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p B's insertion point is correct.
 bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
@@ -409,8 +380,16 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
   OutgoingValueAssigner Assigner(AssignFn);
   AMDGPUOutgoingValueHandler RetHandler(B, *MRI, Ret);
 
-  return determineAndHandleAssignmentsLocal(RetHandler, Assigner, SplitRetInfos,
-                                            B, CC, F.isVarArg());
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CC, F.isVarArg(), MF, ArgLocs, F.getContext());
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.enableFlatScratch()) {
+    SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  }
+  return determineAndHandleAssignments(RetHandler, Assigner, SplitRetInfos, B,
+                                       CCInfo, ArgLocs);
 }
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
@@ -1575,9 +1554,17 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                                       Info.IsVarArg);
     IncomingValueAssigner Assigner(RetAssignFn);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB);
-    if (!determineAndHandleAssignmentsLocal(Handler, Assigner, InArgs,
-                                            MIRBuilder, Info.CallConv,
-                                            Info.IsVarArg))
+
+    SmallVector<CCValAssign, 16> ArgLocs;
+    CCState CCInfo(Info.CallConv, Info.IsVarArg, MF, ArgLocs, F.getContext());
+
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    if (!ST.enableFlatScratch()) {
+      SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+      CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    }
+    if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
+                                       CCInfo, ArgLocs))
       return false;
   }
 

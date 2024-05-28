@@ -37,13 +37,6 @@ class AMDGPUCallLowering final : public CallLowering {
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
 
-  bool determineAndHandleAssignmentsLocal(ValueHandler &Handler,
-                                          ValueAssigner &Assigner,
-                                          SmallVectorImpl<ArgInfo> &Args,
-                                          MachineIRBuilder &MIRBuilder,
-                                          CallingConv::ID CallConv,
-                                          bool IsVarArg) const;
-
 public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 

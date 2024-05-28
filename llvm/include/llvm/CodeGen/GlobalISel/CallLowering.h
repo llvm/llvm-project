@@ -407,6 +407,12 @@ protected:
       CallingConv::ID CallConv, bool IsVarArg,
       ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
 
+  bool determineAndHandleAssignments(
+      ValueHandler &Handler, ValueAssigner &Assigner,
+      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
+      CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
+      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
