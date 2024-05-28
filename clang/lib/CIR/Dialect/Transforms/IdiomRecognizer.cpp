@@ -104,7 +104,7 @@ bool IdiomRecognizerPass::raiseStdFind(CallOp call) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(call.getOperation());
   auto findOp = builder.create<mlir::cir::StdFindOp>(
-      call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+      call.getLoc(), call.getResult().getType(), call.getCalleeAttr(),
       call.getOperand(0), call.getOperand(1), call.getOperand(2));
 
   call.replaceAllUsesWith(findOp);
@@ -140,7 +140,7 @@ bool IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
   if (!callExprAttr)
     return false;
 
-  if (!isIteratorLikeType(call.getResult(0).getType()))
+  if (!isIteratorLikeType(call.getResult().getType()))
     return false;
 
   // First argument is the container "this" pointer.
@@ -154,13 +154,13 @@ bool IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
     if (opts.emitRemarkFoundCalls())
       emitRemark(call.getLoc()) << "found call to begin() iterator";
     iterOp = builder.create<mlir::cir::IterBeginOp>(
-        call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+        call.getLoc(), call.getResult().getType(), call.getCalleeAttr(),
         call.getOperand(0));
   } else if (callExprAttr.isIteratorEndCall()) {
     if (opts.emitRemarkFoundCalls())
       emitRemark(call.getLoc()) << "found call to end() iterator";
     iterOp = builder.create<mlir::cir::IterEndOp>(
-        call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+        call.getLoc(), call.getResult().getType(), call.getCalleeAttr(),
         call.getOperand(0));
   } else {
     return false;

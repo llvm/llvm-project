@@ -1265,7 +1265,7 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
   if (auto callOp = dyn_cast<CallOp>(dataSrcOp)) {
     // iter = vector<T>::begin()
     getPmap()[addr].clear();
-    getPmap()[addr].insert(State::getLocalValue(callOp.getResult(0)));
+    getPmap()[addr].insert(State::getLocalValue(callOp.getResult()));
   }
 
   if (auto loadOp = dyn_cast<LoadOp>(dataSrcOp)) {
