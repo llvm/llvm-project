@@ -65,7 +65,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT nxv8s16 = LLT::scalable_vector(8, s16);
   const LLT nxv4s32 = LLT::scalable_vector(4, s32);
   const LLT nxv2s64 = LLT::scalable_vector(2, s64);
-  const LLT nxv2p0 = LLT::scalable_vector(2, p0);
 
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
@@ -345,7 +344,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         {nxv8s16, p0, nxv8s16, 8},
         {nxv4s32, p0, nxv4s32, 8},
         {nxv2s64, p0, nxv2s64, 8},
-        {nxv2p0, p0, nxv2p0, 8},
     });
 
     StoreActions.legalForTypesWithMemDesc({
@@ -354,7 +352,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         {nxv8s16, p0, nxv8s16, 8},
         {nxv4s32, p0, nxv4s32, 8},
         {nxv2s64, p0, nxv2s64, 8},
-        {nxv2p0, p0, nxv2p0, 8},
     });
   }
 
