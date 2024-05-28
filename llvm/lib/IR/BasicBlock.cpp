@@ -445,12 +445,8 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
 }
 
 void BasicBlock::dropAllReferences() {
-  // bool debug_on = (this->getName() == "target.task.alloca");
-  for (Instruction &I : *this) {
-    LLVM_DEBUG(dbgs() << "Dropping all references in I = " << I << "\n");
+  for (Instruction &I : *this)
     I.dropAllReferences();
-    LLVM_DEBUG(dbgs() << "After Dropping all references in I = " << I << "\n");
-  }
 }
 
 const BasicBlock *BasicBlock::getSinglePredecessor() const {

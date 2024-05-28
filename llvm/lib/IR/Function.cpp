@@ -72,7 +72,6 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#define DEBUG_TYPE "pranav"
 
 using namespace llvm;
 using ProfileCount = Function::ProfileCount;
@@ -551,15 +550,10 @@ void Function::stealArgumentListFrom(Function &Src) {
 
 void Function::deleteBodyImpl(bool ShouldDrop) {
   setIsMaterializable(false);
-  bool OldDebugFlag = DebugFlag;
-  if (this->getName() == "_QQmain..omp_par.1") {
-    DebugFlag = true;
-  }
-  for (BasicBlock &BB : *this) {
-    LLVM_DEBUG(dbgs() << "Dropping all references in " << BB << "\n");
+
+  for (BasicBlock &BB : *this)
     BB.dropAllReferences();
-    LLVM_DEBUG(dbgs() << "After Dropping all references in " << BB << "\n");
-  }
+
   // Delete all basic blocks. They are now unused, except possibly by
   // blockaddresses, but BasicBlock's destructor takes care of those.
   while (!BasicBlocks.empty())
@@ -579,7 +573,6 @@ void Function::deleteBodyImpl(bool ShouldDrop) {
     }
     setValueSubclassData(getSubclassDataFromValue() & ~0xe);
   }
-  DebugFlag = OldDebugFlag;
   // Metadata is stored in a side-table.
   clearMetadata();
 }

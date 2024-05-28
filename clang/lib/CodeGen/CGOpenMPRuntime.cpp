@@ -1320,18 +1320,10 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
     HasCancel = TD->hasCancel();
 
   CodeGenFunction CGF(CGM, true);
-  // llvm::errs() << "LLVMDEBUG::Before CGInfo\n";
-  // CGF.Builder.GetInsertBlock()->getParent()->getParent()->dump();
   CGOpenMPTaskOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen,
                                         InnermostKind, HasCancel, Action);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  // llvm::errs() << "LLVMDEBUG::Before GenerateCapturedStmt\n";
-  // CGF.Builder.GetInsertBlock()->getParent()->getParent()->dump();
   llvm::Function *Res = CGF.GenerateCapturedStmtFunction(*CS);
-  llvm::errs() << "LLVMDEBUG::After GenerateCapturedStmt\n";
-  llvm::errs() << "LLVMDEBUG::CapturedStmt is \n";
-  CS->dump();
-  CGF.Builder.GetInsertBlock()->getParent()->getParent()->dump();
   if (!Tied)
     NumberOfParts = Action.getNumberOfParts();
   return Res;
@@ -3715,15 +3707,6 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       KmpTaskTWithPrivatesQTy, KmpTaskTQTy, SharedsPtrTy, TaskFunction,
       TaskPrivatesMap);
 
-  llvm::errs() << "LLVMDEBUG::Proxy task function is \n";
-  TaskEntry->dump();
-  llvm::errs() << "LLVMDEBUG::CGF.Builder.GetInsertBlock() after emitting "
-                  "proxy task function is \n";
-  CGF.Builder.GetInsertBlock()->dump();
-  llvm::errs() << "LLVMDEBUG::SharedsTy is \n";
-  CharUnits cu = C.getTypeSizeInChars(SharedsTy);
-  llvm::errs() << "LLVMDEBUG::sizeof(SharedsTy) = \n";
-  llvm::errs() << cu.getQuantity() << "\n";
   // build call kmp_task_t * __kmpc_omp_task_alloc(ident_t *, kmp_int32 gtid,
   // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
   // kmp_routine_entry_t *task_entry);
@@ -9566,15 +9549,9 @@ static void emitTargetCallKernelLaunch(
   emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
   bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
                    llvm::codegenoptions::NoDebugInfo;
-  llvm::errs() << "LLVMDEBUG::After emitOffloadingArrays in "
-                  "CGOpenMPRuntime.cpp::emitTargetCallKernelLaunch\n";
-  OMPBuilder.Builder.GetInsertBlock()->dump();
   OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
                                           EmitDebug,
                                           /*ForEndCall=*/false);
-  llvm::errs() << "LLVMDEBUG::After emitOffloadingArraysArgument in "
-                  "CGOpenMPRuntime.cpp::emitTargetCallKernelLaunch\n";
-  OMPBuilder.Builder.GetInsertBlock()->dump();
 
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
   InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,

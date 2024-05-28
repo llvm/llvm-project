@@ -5395,9 +5395,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
     SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
     bool HasNoWait) {
 
-  LLVM_DEBUG(dbgs() << "emitTargetTask:OMPBuilder.Builder = " << &this->Builder
-                    << ", Builder = " << &Builder << "\n");
-
   BasicBlock *TargetTaskBodyBB =
       splitBB(Builder, /*CreateBranch=*/true, "target.task.body");
   BasicBlock *TargetTaskAllocaBB =
