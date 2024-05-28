@@ -173,15 +173,38 @@ namespace {
     }
   };
 
-  struct PredicatedMI {
-    MachineInstr *MI = nullptr;
-    SetVector<MachineInstr*> Predicates;
+  class VPTBlock {
+    SmallVector<MachineInstr *, 4> Insts;
 
   public:
-    PredicatedMI(MachineInstr *I, SetVector<MachineInstr *> &Preds) : MI(I) {
-      assert(I && "Instruction must not be null!");
-      Predicates.insert(Preds.begin(), Preds.end());
+    VPTBlock(MachineInstr *MI) { Insts.push_back(MI); }
+
+    // Have we found an instruction within the block which defines the vpr? If
+    // so, not all the instructions in the block will have the same predicate.
+    bool hasUniformPredicate() { return getDivergent() == nullptr; }
+
+    // If it exists, return the first internal instruction which modifies the
+    // VPR.
+    MachineInstr *getDivergent() {
+      SmallVectorImpl<MachineInstr *> &Insts = getInsts();
+      for (unsigned i = 1; i < Insts.size(); ++i) {
+        MachineInstr *Next = Insts[i];
+        if (isVectorPredicate(Next))
+          return Next; // Found an instruction altering the vpr.
+      }
+      return nullptr;
     }
+
+    void insert(MachineInstr *MI) {
+      Insts.push_back(MI);
+      // VPT/VPST + 4 predicated instructions.
+      assert(Insts.size() <= 5 && "Too many instructions in VPT block!");
+    }
+
+    bool containsVCTP() const { return llvm::any_of(Insts, isVCTP); }
+
+    unsigned size() const { return Insts.size(); }
+    SmallVectorImpl<MachineInstr *> &getInsts() { return Insts; }
   };
 
   // Represent the current state of the VPR and hold all instances which
@@ -192,77 +215,47 @@ namespace {
   class VPTState {
     friend struct LowOverheadLoop;
 
-    SmallVector<MachineInstr *, 4> Insts;
+    SmallVector<VPTBlock, 4> Blocks;
+    SetVector<MachineInstr *> CurrentPredicates;
+    std::map<MachineInstr *, SetVector<MachineInstr *>> PredicatedInsts;
 
-    static SmallVector<VPTState, 4> Blocks;
-    static SetVector<MachineInstr *> CurrentPredicates;
-    static std::map<MachineInstr *,
-      std::unique_ptr<PredicatedMI>> PredicatedInsts;
-
-    static void CreateVPTBlock(MachineInstr *MI) {
+    void CreateVPTBlock(MachineInstr *MI) {
       assert((CurrentPredicates.size() || MI->getParent()->isLiveIn(ARM::VPR))
              && "Can't begin VPT without predicate");
       Blocks.emplace_back(MI);
       // The execution of MI is predicated upon the current set of instructions
       // that are AND'ed together to form the VPR predicate value. In the case
       // that MI is a VPT, CurrentPredicates will also just be MI.
-      PredicatedInsts.emplace(
-        MI, std::make_unique<PredicatedMI>(MI, CurrentPredicates));
+      PredicatedInsts[MI] = CurrentPredicates;
     }
 
-    static void reset() {
-      Blocks.clear();
-      PredicatedInsts.clear();
-      CurrentPredicates.clear();
-    }
-
-    static void addInst(MachineInstr *MI) {
+    void addInst(MachineInstr *MI) {
       Blocks.back().insert(MI);
-      PredicatedInsts.emplace(
-        MI, std::make_unique<PredicatedMI>(MI, CurrentPredicates));
+      PredicatedInsts[MI] = CurrentPredicates;
     }
 
-    static void addPredicate(MachineInstr *MI) {
+    void addPredicate(MachineInstr *MI) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Adding VPT Predicate: " << *MI);
       CurrentPredicates.insert(MI);
     }
 
-    static void resetPredicate(MachineInstr *MI) {
+    void resetPredicate(MachineInstr *MI) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Resetting VPT Predicate: " << *MI);
       CurrentPredicates.clear();
       CurrentPredicates.insert(MI);
     }
 
   public:
-    // Have we found an instruction within the block which defines the vpr? If
-    // so, not all the instructions in the block will have the same predicate.
-    static bool hasUniformPredicate(VPTState &Block) {
-      return getDivergent(Block) == nullptr;
-    }
-
-    // If it exists, return the first internal instruction which modifies the
-    // VPR.
-    static MachineInstr *getDivergent(VPTState &Block) {
-      SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
-      for (unsigned i = 1; i < Insts.size(); ++i) {
-        MachineInstr *Next = Insts[i];
-        if (isVectorPredicate(Next))
-          return Next; // Found an instruction altering the vpr.
-      }
-      return nullptr;
-    }
-
     // Return whether the given instruction is predicated upon a VCTP.
-    static bool isPredicatedOnVCTP(MachineInstr *MI, bool Exclusive = false) {
-      SetVector<MachineInstr *> &Predicates = PredicatedInsts[MI]->Predicates;
+    bool isPredicatedOnVCTP(MachineInstr *MI, bool Exclusive = false) {
+      SetVector<MachineInstr *> &Predicates = PredicatedInsts[MI];
       if (Exclusive && Predicates.size() != 1)
         return false;
       return llvm::any_of(Predicates, isVCTP);
     }
 
     // Is the VPST, controlling the block entry, predicated upon a VCTP.
-    static bool isEntryPredicatedOnVCTP(VPTState &Block,
-                                        bool Exclusive = false) {
+    bool isEntryPredicatedOnVCTP(VPTBlock &Block, bool Exclusive = false) {
       SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
       return isPredicatedOnVCTP(Insts.front(), Exclusive);
     }
@@ -270,8 +263,7 @@ namespace {
     // If this block begins with a VPT, we can check whether it's using
     // at least one predicated input(s), as well as possible loop invariant
     // which would result in it being implicitly predicated.
-    static bool hasImplicitlyValidVPT(VPTState &Block,
-                                      ReachingDefAnalysis &RDA) {
+    bool hasImplicitlyValidVPT(VPTBlock &Block, ReachingDefAnalysis &RDA) {
       SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
       MachineInstr *VPT = Insts.front();
       assert(isVPTOpcode(VPT->getOpcode()) &&
@@ -308,7 +300,7 @@ namespace {
              (IsOperandPredicated(VPT, 2) || IsOperandInvariant(VPT, 2));
     }
 
-    static bool isValid(ReachingDefAnalysis &RDA) {
+    bool isValid(ReachingDefAnalysis &RDA) {
       // All predication within the loop should be based on vctp. If the block
       // isn't predicated on entry, check whether the vctp is within the block
       // and that all other instructions are then predicated on it.
@@ -344,21 +336,6 @@ namespace {
       }
       return true;
     }
-
-    VPTState(MachineInstr *MI) { Insts.push_back(MI); }
-
-    void insert(MachineInstr *MI) {
-      Insts.push_back(MI);
-      // VPT/VPST + 4 predicated instructions.
-      assert(Insts.size() <= 5 && "Too many instructions in VPT block!");
-    }
-
-    bool containsVCTP() const {
-      return llvm::any_of(Insts, isVCTP);
-    }
-
-    unsigned size() const { return Insts.size(); }
-    SmallVectorImpl<MachineInstr *> &getInsts() { return Insts; }
   };
 
   struct LowOverheadLoop {
@@ -383,6 +360,7 @@ namespace {
     SmallPtrSet<MachineInstr *, 4> VMOVCopies;
     bool Revert = false;
     bool CannotTailPredicate = false;
+    VPTState VPTstate;
 
     LowOverheadLoop(MachineLoop &ML, MachineLoopInfo &MLI,
                     ReachingDefAnalysis &RDA, const TargetRegisterInfo &TRI,
@@ -394,7 +372,6 @@ namespace {
         Preheader = MBB;
       else if (auto *MBB = MLI.findLoopPreheader(&ML, true, true))
         Preheader = MBB;
-      VPTState::reset();
     }
 
     // If this is an MVE instruction, check that we know how to use tail
@@ -434,9 +411,7 @@ namespace {
       return Start && Dec && End;
     }
 
-    SmallVectorImpl<VPTState> &getVPTBlocks() {
-      return VPTState::Blocks;
-    }
+    SmallVectorImpl<VPTBlock> &getVPTBlocks() { return VPTstate.Blocks; }
 
     // Return the operand for the loop start instruction. This will be the loop
     // iteration count, or the number of elements if we're tail predicating.
@@ -529,11 +504,6 @@ namespace {
 
 char ARMLowOverheadLoops::ID = 0;
 
-SmallVector<VPTState, 4> VPTState::Blocks;
-SetVector<MachineInstr *> VPTState::CurrentPredicates;
-std::map<MachineInstr *,
-         std::unique_ptr<PredicatedMI>> VPTState::PredicatedInsts;
-
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
@@ -622,7 +592,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     return false;
   }
 
-  if (!VPTState::isValid(RDA)) {
+  if (!VPTstate.isValid(RDA)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Invalid VPT state.\n");
     return false;
   }
@@ -1250,7 +1220,7 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr *MI) {
       continue;
 
     if (ARM::isVpred(Op.value().OperandType)) {
-      VPTState::addInst(MI);
+      VPTstate.addInst(MI);
       IsUse = true;
     } else if (MI->getOpcode() != ARM::MVE_VPST) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Found instruction using vpr: " << *MI);
@@ -1287,15 +1257,15 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr *MI) {
     // Clear the existing predicate when we're not in VPT Active state,
     // otherwise we add to it.
     if (!isVectorPredicated(MI))
-      VPTState::resetPredicate(MI);
+      VPTstate.resetPredicate(MI);
     else
-      VPTState::addPredicate(MI);
+      VPTstate.addPredicate(MI);
   }
 
   // Finally once the predicate has been modified, we can start a new VPT
   // block if necessary.
   if (isVPTOpcode(MI->getOpcode()))
-    VPTState::CreateVPTBlock(MI);
+    VPTstate.CreateVPTBlock(MI);
 
   return true;
 }
@@ -1328,7 +1298,6 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
-
   bool Changed = false;
 
   // Process inner loops first.
@@ -1611,9 +1580,9 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
       TheVCMP = nullptr;
     };
 
-    if (VPTState::isEntryPredicatedOnVCTP(Block, /*exclusive*/ true)) {
+    if (LoLoop.VPTstate.isEntryPredicatedOnVCTP(Block, /*exclusive*/ true)) {
       MachineInstr *VPST = Insts.front();
-      if (VPTState::hasUniformPredicate(Block)) {
+      if (Block.hasUniformPredicate()) {
         // A vpt block starting with VPST, is only predicated upon vctp and has no
         // internal vpr defs:
         // - Remove vpst.
@@ -1629,7 +1598,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         //   we come across the divergent vpr def.
         // - Insert a new vpst to predicate the instruction(s) that following
         //   the divergent vpr def.
-        MachineInstr *Divergent = VPTState::getDivergent(Block);
+        MachineInstr *Divergent = Block.getDivergent();
         MachineBasicBlock *MBB = Divergent->getParent();
         auto DivergentNext = ++MachineBasicBlock::iterator(Divergent);
         while (DivergentNext != MBB->end() && DivergentNext->isDebugInstr())
