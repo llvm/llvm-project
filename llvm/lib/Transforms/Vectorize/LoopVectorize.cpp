@@ -7507,9 +7507,8 @@ LoopVectorizationPlanner::executePlan(
   LLVM_DEBUG(BestVPlan.dump());
 
   // Perform the actual loop transformation.
-  VPTransformState State(BestVF, BestUF, LI,
-                         EnableVPlanNativePath ? nullptr : DT, ILV.Builder,
-                         &ILV, &BestVPlan, OrigLoop->getHeader()->getContext());
+  VPTransformState State(BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+                         OrigLoop->getHeader()->getContext());
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
@@ -10370,16 +10369,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
         RemoveRedundantDbgInstrs(&BB);
     }
 
-    // We currently do not preserve dominator analyses with outer loop
-    // vectorization. Until this is addressed, mark these analyses as preserved
-    // only for non-VPlan-native path.
-    // TODO: Preserve Dominator analysis for VPlan-native path.
-    if (!EnableVPlanNativePath) {
-      PA.preserve<DominatorTreeAnalysis>();
-      PA.preserve<ScalarEvolutionAnalysis>();
-    }
-
     PA.preserve<LoopAnalysis>();
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<ScalarEvolutionAnalysis>();
 
     if (Result.MadeCFGChange) {
       // Making CFG changes likely means a loop got vectorized. Indicate that
