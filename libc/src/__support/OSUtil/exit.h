@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_EXIT_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_EXIT_H
 
 namespace LIBC_NAMESPACE {
+namespace internal {
 
-[[noreturn]] void quick_exit(int status);
+[[noreturn]] void exit(int status);
+
+}
 
 }
 

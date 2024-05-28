@@ -11,6 +11,8 @@
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
+namespace internal {
+
 
 // mark as no_stack_protector for x86 since TLS can be torn down before calling
 // quick_exit so that the stack protector canary cannot be loaded.
@@ -18,11 +20,14 @@ namespace LIBC_NAMESPACE {
 __attribute__((no_stack_protector))
 #endif
 __attribute__((noreturn)) void
-quick_exit(int status) {
+exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
   }
+}
+
+
 }
 
 } // namespace LIBC_NAMESPACE
