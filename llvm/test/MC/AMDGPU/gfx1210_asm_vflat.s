@@ -858,3 +858,371 @@ tensor_stop
 tensor_stop th:TH_STORE_BYPASS scope:SCOPE_SYS
 // GFX1210: tensor_stop th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x1b,0xee,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_add_f32 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_add_f32 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x15,0xec,0x00,0x00,0x10,0x81,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_add_f32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_add_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x15,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_add_f64 v[0:1], v3, v[2:3], s[2:3] scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_add_f64 v[0:1], v3, v[2:3], s[2:3] scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x15,0xec,0x00,0x00,0x10,0x81,0x03,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_add_f64 v3, v[2:3], s[2:3]
+// GFX1210: flat_atomic_add_f64 v3, v[2:3], s[2:3]  ; encoding: [0x02,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x03,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_add_u32 v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_add_u32 v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0d,0xec,0x00,0x00,0x10,0x81,0x01,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_add_u32 v2, v3, s[2:3] offset:-64
+// GFX1210: flat_atomic_add_u32 v2, v3, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_add_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_add_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0xc0,0x10,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_add_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_add_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x10,0xec,0x00,0x00,0x10,0x81,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_and_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_and_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0f,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_and_b32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_and_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_and_b64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_and_b64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x40,0x12,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_and_b64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_and_b64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x12,0xec,0x00,0x00,0x10,0x81,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_cmpswap_b32 v0, v2, v[2:3], s[2:3] scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_cmpswap_b32 v0, v2, v[2:3], s[2:3] scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0d,0xec,0x00,0x00,0x10,0x81,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_cmpswap_b32 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_cmpswap_b32 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x00,0x0d,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_cmpswap_b64 v[0:1], v2, v[2:5], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_cmpswap_b64 v[0:1], v2, v[2:5], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x10,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_cmpswap_b64 v2, v[2:5], s[2:3]
+// GFX1210: flat_atomic_cmpswap_b64 v2, v[2:5], s[2:3] ; encoding: [0x02,0x80,0x10,0xec,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_cond_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_cond_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x14,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_cond_sub_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_cond_sub_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_dec_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_dec_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x10,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_dec_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_dec_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x10,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_dec_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_dec_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x40,0x13,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_dec_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_dec_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x13,0xec,0x00,0x00,0x10,0x81,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_inc_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_inc_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0f,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_inc_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_inc_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_inc_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_inc_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x00,0x13,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_inc_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_inc_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x13,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_max_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_max_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x14,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_num_f32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_max_num_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_max_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0e,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_i32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_max_i32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_i64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_max_i64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0xc0,0x11,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_max_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x11,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_max_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_max_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0e,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_max_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_max_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x00,0x12,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_max_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_max_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x12,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_min_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_min_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x14,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_num_f32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_min_num_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_min_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0e,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_i32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_min_i32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_i64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_min_i64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x40,0x11,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_min_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x11,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_min_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_min_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0e,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_min_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_min_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x80,0x11,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_min_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_min_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x11,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_or_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_or_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0f,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_or_b32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_or_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_or_b64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_or_b64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x80,0x12,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_or_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_or_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x12,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_sub_clamp_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_sub_clamp_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0d,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_sub_clamp_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_sub_clamp_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0d,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_sub_u32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_sub_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_sub_u64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_sub_u64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x00,0x11,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_sub_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_sub_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x11,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_swap_b32 v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_swap_b32 v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0c,0xec,0x00,0x00,0x10,0x81,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_swap_b32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_swap_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0c,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_swap_b64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_swap_b64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0x40,0x10,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_swap_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_swap_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x10,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_xor_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_xor_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0f,0xec,0x00,0x00,0x10,0x81,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_xor_b32 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_xor_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_xor_b64 v2, v[2:3], s[2:3] offset:64
+// GFX1210: flat_atomic_xor_b64 v2, v[2:3], s[2:3] offset:64 ; encoding: [0x02,0xc0,0x12,0xec,0x00,0x00,0x00,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_xor_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_xor_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x12,0xec,0x00,0x00,0x10,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_atomic_pk_add_f16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_pk_add_f16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x16,0xec,0x00,0x00,0x10,0x81,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_pk_add_f16 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_pk_add_f16 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x16,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_pk_add_bf16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1210: flat_atomic_pk_add_bf16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x16,0xec,0x00,0x00,0x10,0x81,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_atomic_pk_add_bf16 v2, v3, s[2:3] offset:64
+// GFX1210: flat_atomic_pk_add_bf16 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x16,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+flat_load_b128 v[2:5], v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_b128 v[2:5], v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0xc0,0x05,0xec,0x02,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_b32 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_b32 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x05,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_b64 v[2:3], v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_b64 v[2:3], v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x05,0xec,0x02,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_b96 v[2:4], v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_b96 v[2:4], v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x80,0x05,0xec,0x02,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_b16 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_b16 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x08,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_hi_b16 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_hi_b16 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0xc0,0x08,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_hi_i8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_hi_i8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x80,0x08,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_hi_u8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_hi_u8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x08,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_i8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_i8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0xc0,0x07,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_d16_u8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_d16_u8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x80,0x07,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_i16 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_i16 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0xc0,0x04,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_i8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_i8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x04,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_u16 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_u16 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x80,0x04,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_u8 v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_u8 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x04,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_load_dword v1, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_load_b32 v1, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x05,0xec,0x01,0x00,0x00,0x80,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b128 v2, v[2:5], s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b128 v2, v[2:5], s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x07,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b16 v2, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b16 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x06,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b32 v2, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b32 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x80,0x06,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b64 v2, v[2:3], s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b64 v2, v[2:3], s[2:3] offset:64 scale_offset ; encoding: [0x02,0xc0,0x06,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b8 v2, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b8 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x06,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_b96 v2, v[2:4], s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_b96 v2, v[2:4], s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x07,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_d16_hi_b16 v2, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_d16_hi_b16 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x40,0x09,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset
+// GFX1210: flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x09,0xec,0x00,0x00,0x00,0x81,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_prefetch_b8 v3, s[2:3]
+// GFX1210: flat_prefetch_b8 v3, s[2:3]             ; encoding: [0x02,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
