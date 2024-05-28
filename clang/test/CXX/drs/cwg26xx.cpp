@@ -261,7 +261,7 @@ namespace cwg2692 { // cwg2692: 19
 
     (&A::f)();    // expected-error {{no matching function for call to 'f'}}
                   // expected-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
-                  // expected-note@#cwg2692-2 {{candidate function not viable: requires at most 1 argument, but 0 were provided}}
+                  // expected-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
   }
 
 }

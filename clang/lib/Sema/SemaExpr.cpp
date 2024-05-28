@@ -5819,9 +5819,8 @@ static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
 
   Fn = Fn->IgnoreParens();
   auto *UO = dyn_cast<UnaryOperator>(Fn);
-  if (!UO)
+  if (!UO || UO->getOpcode() != clang::UO_AddrOf)
     return false;
-  assert(cast<UnaryOperator>(Fn)->getOpcode() == UO_AddrOf);
   if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens())) {
     return DRE->hasQualifier();
   }

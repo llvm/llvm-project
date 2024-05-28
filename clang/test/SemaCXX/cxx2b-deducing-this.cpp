@@ -914,8 +914,6 @@ struct C {
     (&(C::c))();        // expected-error {{cannot create a non-constant pointer to member function}}
     (&C::c)(C{});
     (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
-                        // expected-note@#second {{candidate function}}
-
     (&C::c)();
   }
 };
