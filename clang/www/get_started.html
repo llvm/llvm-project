@@ -67,15 +67,13 @@ follows:</p>
   <li>Build LLVM and Clang:
   <ul>
     <li><tt>cd llvm-project</tt></li>
-    <li><tt>mkdir build</tt> (in-tree build is not supported)</li>
-    <li><tt>cd build</tt></li>
     <li>This builds both LLVM and Clang in release mode. Alternatively, if
         you need a debug build, switch Release to Debug. See
         <a href="https://llvm.org/docs/CMake.html#frequently-used-cmake-variables">frequently used cmake variables</a>
         for more options.
     </li>
-    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" ../llvm</tt></li>
-    <li><tt>make</tt></li>
+    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" -S ./llvm -B ./build</tt></li>
+    <li><tt>cmake --build ./build</tt></li>
     <li>Note: For subsequent Clang development, you can just run
         <tt>make clang</tt>.</li>
     <li>CMake allows you to generate project files for several IDEs: Xcode,
@@ -156,11 +154,9 @@ Visual Studio:</p>
   <li>Run CMake to generate the Visual Studio solution and project files:
   <ul>
     <li><tt>cd llvm-project</tt></li>
-    <li><tt>mkdir build</tt> (for building without polluting the source dir)</li>
-    <li><tt>cd build</tt></li>
     <li>
       If you are using Visual Studio 2019:
-      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 16 2019" -A x64 -Thost=x64 ..\llvm</tt><br/>
+      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 16 2019" -A x64 -Thost=x64 -S .\llvm -B .\build</tt><br/>
       <tt>-Thost=x64</tt> is required, since the 32-bit linker will run out of memory.
     </li>
     <li>To generate x86 binaries instead of x64, pass <tt>-A Win32</tt>.</li>
@@ -170,7 +166,7 @@ Visual Studio:</p>
        <tt>build</tt> directory.
   </ul>
   </li>
-  <li>Build Clang:
+  <li>Build Clang (from Visual Studio's GUI):
   <ul>
     <li>Open LLVM.sln in Visual Studio.</li>
     <li>Build the "clang" project for just the compiler driver and front end, or
@@ -182,6 +178,10 @@ Visual Studio:</p>
   <li>See <a href="hacking.html#testingWindows">
      Hacking on clang - Testing using Visual Studio on Windows</a> for information
      on running regression tests on Windows.</li>
+  <li>Build Clang (from command-line using `cmake`)</li>
+  <ul>
+  <li><tt>cmake --build .\build</tt></li>
+  </ul>
 </ol>
 
 <h3 id="buildWindowsNinja">Using Ninja alongside Visual Studio</h3>
