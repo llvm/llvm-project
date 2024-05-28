@@ -739,8 +739,7 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || port == invalid_port) &&
-      wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || port == invalid_port) && wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -754,8 +753,7 @@ void request_attach(const llvm::json::Object &request) {
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
     if (core_file.empty()) {
-      if ((pid != LLDB_INVALID_PROCESS_ID) &&
-          (port != invalid_port)) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) && (port != invalid_port)) {
         // If both pid and port numbers are specified.
         error.SetErrorString("The user can't specify both pid and port");
       } else if (port != invalid_port) {
