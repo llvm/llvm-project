@@ -2375,9 +2375,7 @@ define <2 x half> @v_fminimum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c
 ; GFX950-LABEL: v_fminimum3_v2f16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v2, v0, v0
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v2, v0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> %b)
   %max1 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %c, <2 x half> %max0)
@@ -2426,9 +2424,7 @@ define <2 x half> @v_fminimum3_v2f16_commute(<2 x half> %a, <2 x half> %b, <2 x 
 ; GFX950-LABEL: v_fminimum3_v2f16_commute:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v2, v2
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> %b)
   %max1 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %max0, <2 x half> %c)
@@ -2485,9 +2481,7 @@ define <2 x half> @v_fminimum3_v2f16__fabs_all(<2 x half> %a, <2 x half> %b, <2 
 ; GFX950-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX950-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
 ; GFX950-NEXT:    v_and_b32_e32 v2, 0x7fff7fff, v2
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v2, v2
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
   %b.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %b)
@@ -2539,9 +2533,7 @@ define <2 x half> @v_fminimum3_v2f16__fneg_all(<2 x half> %a, <2 x half> %b, <2 
 ; GFX950-LABEL: v_fminimum3_v2f16__fneg_all:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1 neg_lo:[1,1,1] neg_hi:[1,1,1]
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v2, v2 neg_lo:[0,1,1] neg_hi:[0,1,1]
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2 neg_lo:[1,1,1] neg_hi:[1,1,1]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg <2 x half> %a
   %b.fneg = fneg <2 x half> %b
@@ -2593,9 +2585,7 @@ define <2 x half> @v_fminimum3_v2f16__inlineimm1(<2 x half> %a, <2 x half> %c) {
 ; GFX950-LABEL: v_fminimum3_v2f16__inlineimm1:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, 2.0, 2.0 op_sel_hi:[1,0,0]
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, 2.0, v1 op_sel_hi:[1,0,1]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> <half 2.0, half 2.0>)
   %max1 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %max0, <2 x half> %c)
@@ -2644,9 +2634,7 @@ define <2 x half> @v_fminimum3_v2f16__inlineimm2(<2 x half> %a, <2 x half> %b) {
 ; GFX950-LABEL: v_fminimum3_v2f16__inlineimm2:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, 4.0, 4.0 op_sel_hi:[1,0,0]
+; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, 4.0 op_sel_hi:[1,1,0]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> %b)
   %max1 = call <2 x half> @llvm.minimum.v2f16(<2 x half> %max0, <2 x half> <half 4.0, half 4.0>)
