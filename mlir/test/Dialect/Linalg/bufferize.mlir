@@ -1,4 +1,4 @@
-// RUN: mlir-opt -linalg-bufferize -canonicalize -cse -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --one-shot-bufferize="dialect-filter=linalg,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -canonicalize -cse -split-input-file %s | FileCheck %s
 
 #map0 = affine_map<(d0) -> (d0)>
 
