@@ -177,8 +177,8 @@ static uint8_t readOpcode(WasmObjectFile::ReadContext &Ctx) {
 
 static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx,
                                   uint32_t Code) {
-  // only directly encoded FUNCREF/EXTERNREF are supported
-  // (not ref null func or ref null extern)
+  // only directly encoded FUNCREF/EXTERNREF/EXNREF are supported
+  // (not ref null func, ref null extern, or ref null exn)
   switch (Code) {
   case wasm::WASM_TYPE_I32:
   case wasm::WASM_TYPE_I64:
