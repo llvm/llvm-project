@@ -802,6 +802,7 @@ Bug Fixes to C++ Support
 - Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
   with the same parameters not to be diagnosed. (Fixes #GH93456).
 - Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
