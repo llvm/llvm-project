@@ -473,11 +473,7 @@ public:
   /// that are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPBlockBase objects. They are used for concrete
   /// type identification.
-  using VPBlockTy = enum {
-    VPBasicBlockSC,
-    VPRegionBlockSC,
-    VPIRBasicBlockSC
-  };
+  using VPBlockTy = enum { VPBasicBlockSC, VPRegionBlockSC, VPIRBasicBlockSC };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
