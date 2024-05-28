@@ -1421,13 +1421,21 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      true:
       #define A   \
         int aaaa; \
         int b;    \
         int dddddddddd;
 
-      false:
+  * ``ENAS_LeftWithLastLine`` (in configuration: ``LeftWithLastLine``)
+    Align escaped newlines as far left as possible, using the last line of
+    the preprocessor directive as the reference if it's the longest.
+
+    .. code-block:: c++
+
+      #define A         \
+        int aaaa;       \
+        int b;          \
+        int dddddddddd;
 
   * ``ENAS_Right`` (in configuration: ``Right``)
     Align escaped newlines in the right-most column.
