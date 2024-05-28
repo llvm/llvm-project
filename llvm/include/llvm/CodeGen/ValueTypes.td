@@ -280,11 +280,12 @@ def untyped   : ValueType<8,    193> { // Produces an untyped value
 }
 def funcref   : ValueType<0,    194>;  // WebAssembly's funcref type
 def externref : ValueType<0,    195>;  // WebAssembly's externref type
-def x86amx    : ValueType<8192, 196>;  // X86 AMX value
-def i64x8     : ValueType<512,  197>;  // 8 Consecutive GPRs (AArch64)
+def exnref    : ValueType<0,    196>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 197>;  // X86 AMX value
+def i64x8     : ValueType<512,  198>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  198>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 199>; // SPIR-V's builtin type
+              : ValueType<16,  199>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
 
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249> { // Metadata

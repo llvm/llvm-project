@@ -175,6 +175,8 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
     return WebAssembly::COPY_FUNCREF;
   case WebAssembly::EXTERNREFRegClassID:
     return WebAssembly::COPY_EXTERNREF;
+  case WebAssembly::EXNREFRegClassID:
+    return WebAssembly::COPY_EXNREF;
   default:
     llvm_unreachable("Unexpected register class");
   }
