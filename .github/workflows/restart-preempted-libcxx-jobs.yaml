@@ -12,7 +12,7 @@ name: Restart Preempted Libc++ Workflow
 on:
   workflow_run:
     workflows:
-      - "Build and Test libc\+\+"
+      - Build and Test libc\+\+
     types:
       - failure
       - canceled
