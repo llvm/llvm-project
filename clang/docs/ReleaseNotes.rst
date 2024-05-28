@@ -541,6 +541,9 @@ Improvements to Clang's diagnostics
 - Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
   Fixes #GH20456.
 
+- Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
+  Fixes #GH93369.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -629,8 +632,13 @@ Bug Fixes in This Version
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
 
+- Correctly reject declarations where a statement is required in C.
+  Fixes #GH92775
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -799,6 +807,9 @@ Bug Fixes to C++ Support
   packs. (#GH93076)
 - Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
   with the same parameters not to be diagnosed. (Fixes #GH93456).
+- Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -961,9 +972,10 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
-- Handles Java ``switch`` expressions.
+- Handles Java switch expressions.
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
+- Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 
 libclang
 --------

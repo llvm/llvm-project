@@ -484,3 +484,38 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
+
+// -----
+
+#file = #llvm.di_file<"test.f90" in "">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95,
+  file = #file, producer = "", isOptimized = false, emissionKind = Full>
+#i32 = #llvm.di_basic_type<
+  tag = DW_TAG_base_type, name = "integer",
+  sizeInBits = 32, encoding = DW_ATE_signed
+>
+#null = #llvm.di_null_type
+#alloc = #llvm.di_expression<[DW_OP_lit0, DW_OP_ne]>
+#assoc = #llvm.di_expression<[DW_OP_lit0, DW_OP_eq]>
+#rank = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>
+#datal = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_deref]>
+#array = #llvm.di_composite_type<tag = DW_TAG_array_type,
+  baseType = #i32,
+  dataLocation = #datal, rank = #rank,
+  allocated = #alloc, associated = #assoc,
+  elements = #llvm.di_subrange<lowerBound = 1, count = 5>
+>
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #array>
+#sp0 = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #cu, name = "fn_with_composite", file = #file,
+  subprogramFlags = "Definition|Optimized", type = #spType0
+>
+llvm.func @fn_with_composite() {
+  llvm.return
+}loc(fused<#sp0>["foo.mlir":1:1])
+// CHECK-LABEL: define void @fn_with_composite()
+// CHECK: !DICompositeType(
+// CHECK-SAME: dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+// CHECK-SAME: associated: !DIExpression(DW_OP_lit0, DW_OP_eq)
+// CHECK-SAME: allocated: !DIExpression(DW_OP_lit0, DW_OP_ne)
+// CHECK-SAME: rank: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
