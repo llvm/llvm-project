@@ -4608,14 +4608,15 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     context_.SayAt(expr.source,
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
-    if (isProcedureCall_ || !IsProcedure(*argExpr)) {
+    if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
       ActualArgument arg{std::move(*argExpr)};
       SetArgSourceLocation(arg, expr.source);
       return std::move(arg);
     }
     context_.SayAt(expr.source,
-        IsFunction(*argExpr) ? "Function call must have argument list"_err_en_US
-                             : "Subroutine name is not allowed here"_err_en_US);
+        IsFunctionDesignator(*argExpr)
+            ? "Function call must have argument list"_err_en_US
+            : "Subroutine name is not allowed here"_err_en_US);
   }
   return std::nullopt;
 }

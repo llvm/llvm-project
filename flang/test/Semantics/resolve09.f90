@@ -153,3 +153,10 @@ subroutine s10
   !ERROR: Actual argument for 'a=' may not be a procedure
   print *, abs(a10)
 end
+
+subroutine s11
+  real, pointer :: p(:)
+  !ERROR: Actual argument for 'a=' may not be NULL()
+  print *, rank(null())
+  print *, rank(null(mold=p)) ! ok
+end
