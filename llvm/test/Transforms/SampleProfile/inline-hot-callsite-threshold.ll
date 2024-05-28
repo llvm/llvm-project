@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-hot-callsite-threshold.prof -S -pass-remarks=sample-profile -hot-callsite-threshold=100 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-hot-callsite-threshold.prof -S -pass-remarks=sample-profile -sample-profile-hot-inline-threshold=100 2>&1 | FileCheck %s
 
 ; CHECK: remark: a.cc:6:12: 'bar' inlined into 'foo' to match profiling context with (cost={{.*}}, threshold=100)
 ; CHECK:     define dso_local noundef i32 @foo(i32 noundef %0)
@@ -8,7 +8,7 @@
 
 ; Manually lower cost threshold for hot function inlining, so that the function
 ; is not inlined even profile indicates it as hot.
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-hot-callsite-threshold.prof -S -pass-remarks=sample-profile -hot-callsite-threshold=1 2>&1 | FileCheck %s --check-prefix=COST
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-hot-callsite-threshold.prof -S -pass-remarks=sample-profile -sample-profile-hot-inline-threshold=1 2>&1 | FileCheck %s --check-prefix=COST
 
 ; COST-NOT:  remark
 ; COST: define dso_local noundef i32 @foo(i32 noundef %0)

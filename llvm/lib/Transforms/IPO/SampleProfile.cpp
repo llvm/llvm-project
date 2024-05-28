@@ -1395,8 +1395,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // even if the function is hot based on sample profile data. This is to
   // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(),
-                           Params.HotCallSiteThreshold.value_or(INT_MAX));
+    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
