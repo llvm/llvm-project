@@ -583,6 +583,9 @@ module std_private_fwd_bit_reference [system] {
 }
 module std_private_config            [system] {
   textual header "__config"
+  textual header "__configuration/abi.h"
+  textual header "__configuration/compiler.h"
+  textual header "__configuration/platform.h"
   export *
 }
 module std_private_hash_table        [system] {

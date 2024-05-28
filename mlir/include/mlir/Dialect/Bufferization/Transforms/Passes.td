@@ -350,6 +350,11 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
+def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
+  let summary = "Bufferize the `bufferization` dialect";
+  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
+}
+
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
   let summary = "Remove MemRef return values that are equivalent to a bbArg";
   let description = [{
