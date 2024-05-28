@@ -856,14 +856,13 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
+add_custom_target(cxx-test-depends
+  COMMENT "Build dependencies required to run the libc++ test suite.")
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
