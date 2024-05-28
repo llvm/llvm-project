@@ -18,7 +18,11 @@
 #endif // FLT_EVAL_METHOD
 
 #ifndef FLT_ROUNDS
+#if __has_builtin(__builtin_flt_rounds)
+#define FLT_ROUNDS __builtin_flt_rounds()
+#else
 #define FLT_ROUNDS 1
+#endif
 #endif // FLT_ROUNDS
 
 #ifndef FLT_DECIMAL_DIG
