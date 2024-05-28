@@ -3659,6 +3659,7 @@ private:
   struct OpenACCDirectiveParseInfo {
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
+    SourceLocation DirLoc;
     SourceLocation EndLoc;
     SmallVector<OpenACCClause *> Clauses;
     // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
