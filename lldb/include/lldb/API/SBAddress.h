@@ -86,6 +86,7 @@ public:
   lldb::SBLineEntry GetLineEntry();
 
 protected:
+  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
