@@ -402,8 +402,8 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     }
     if (arrDim && arrDim != shapeTyRank)
       return emitOpError("rank of dimension mismatched");
-    // TODO: support slicing with changing the numbder of dimensions,
-    // e.g. when array_coord represents an element access to array(:,1,:)
+    // TODO: support slicing with changing the number of dimensions,
+    // e.g. when array_coor represents an element access to array(:,1,:)
     // slice: the shape is 3D and the number of indices is 2 in this case.
     if (shapeTyRank != getIndices().size())
       return emitOpError("number of indices do not match dim rank");
