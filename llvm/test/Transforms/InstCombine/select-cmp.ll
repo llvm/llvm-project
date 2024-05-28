@@ -347,9 +347,8 @@ define i1 @icmp_no_common(i1 %c, i8 %x, i8 %y, i8 %z) {
 
 define i1 @test_select_inverse_eq(i64 %x, i1 %y) {
 ; CHECK-LABEL: @test_select_inverse_eq(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[Y:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp ne i64 %x, 0
@@ -360,9 +359,8 @@ define i1 @test_select_inverse_eq(i64 %x, i1 %y) {
 
 define i1 @test_select_inverse_signed(i64 %x, i1 %y) {
 ; CHECK-LABEL: @test_select_inverse_signed(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[Y:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp sgt i64 %x, -1
@@ -373,9 +371,8 @@ define i1 @test_select_inverse_signed(i64 %x, i1 %y) {
 
 define i1 @test_select_inverse_unsigned(i64 %x, i1 %y) {
 ; CHECK-LABEL: @test_select_inverse_unsigned(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[X:%.*]], 11
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[Y:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X:%.*]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp ult i64 %x, 11
@@ -386,9 +383,8 @@ define i1 @test_select_inverse_unsigned(i64 %x, i1 %y) {
 
 define i1 @test_select_inverse_eq_ptr(ptr %x, i1 %y) {
 ; CHECK-LABEL: @test_select_inverse_eq_ptr(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr [[X]], null
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[Y:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr [[X:%.*]], null
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp eq ptr %x, null
@@ -412,9 +408,8 @@ define i1 @test_select_inverse_fail(i64 %x, i1 %y) {
 
 define <2 x i1> @test_select_inverse_vec(<2 x i64> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @test_select_inverse_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i64> [[X]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> [[CMP1]], <2 x i1> [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = xor <2 x i1> [[CMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %cmp1 = icmp ne <2 x i64> %x, zeroinitializer

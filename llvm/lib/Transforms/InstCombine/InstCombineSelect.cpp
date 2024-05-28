@@ -3502,6 +3502,34 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
   return false;
 }
 
+/// Return true iff:
+/// 1. X is poison implies Y is poison.
+/// 2. X is true implies Y is false.
+/// 3. X is false implies Y is true.
+/// Otherwise, return false.
+static bool isKnownInversion(Value *X, Value *Y) {
+  // Handle X = icmp pred V, C1, Y = icmp pred V, C2.
+  Value *V;
+  Constant *C1, *C2;
+  ICmpInst::Predicate Pred1, Pred2;
+  if (!match(X, m_ICmp(Pred1, m_Value(V), m_Constant(C1))) ||
+      !match(Y, m_ICmp(Pred2, m_Specific(V), m_Constant(C2))))
+    return false;
+
+  if (C1 == C2)
+    return Pred1 == ICmpInst::getInversePredicate(Pred2);
+
+  // Try to infer the relationship from constant ranges.
+  const APInt *RHSC1, *RHSC2;
+  if (!match(C1, m_APInt(RHSC1)) || !match(C2, m_APInt(RHSC2)))
+    return false;
+
+  const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
+  const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
+
+  return CR1.inverse() == CR2;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3995,6 +4023,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return I;
     }
   }
+
+  // select Cond, !X, X -> xor Cond, X
+  // Note: We don't fold select Cond, Y, X -> X (iff X->Y & !X->!Y) here as
+  // it indicates that these two patterns should be canonicalized.
+  if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
+    return BinaryOperator::CreateXor(CondVal, FalseVal);
 
   return nullptr;
 }
