@@ -443,56 +443,14 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRWrapperBlock::execute(VPTransformState *State) {
-  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
-    BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
-
-    assert(PredBB && "Predecessor basic-block not found building successor.");
-    auto *PredBBTerminator = PredBB->getTerminator();
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
-
-    auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
-    if (TermBr) {
-      // Set each forward successor here when it is created, excluding
-      // backedges. A backward successor is set when the branch is created.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(!TermBr->getSuccessor(idx) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, WrappedBlock);
-    }
-  }
-
-  assert(getHierarchicalSuccessors().size() == 0 &&
+  assert(getHierarchicalPredecessors().empty() &&
+         "VPIRWrapperBlock cannot have predecessors at the moment");
+  assert(getHierarchicalSuccessors().empty() &&
          "VPIRWrapperBlock cannot have successors");
-  State->CFG.VPBB2IRBB[this] = getWrappedBlock();
-  State->CFG.PrevVPBB = this;
 
-  auto *Term = cast<BranchInst>(getWrappedBlock()->getTerminator());
-  State->Builder.SetInsertPoint(Term);
-
-  for (VPRecipeBase &Recipe : *this)
-    Recipe.execute(*State);
-
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *getWrappedBlock());
+  State->Builder.SetInsertPoint(getWrappedBlock()->getTerminator());
+  executeRecipes(State, getWrappedBlock());
 }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-
-void VPIRWrapperBlock::print(raw_ostream &O, const Twine &Indent,
-                             VPSlotTracker &SlotTracker) const {
-  O << Indent << "ir-bb<" << getName() << ">:\n";
-
-  auto RecipeIndent = Indent + "  ";
-  for (const VPRecipeBase &Recipe : *this) {
-    Recipe.print(O, RecipeIndent, SlotTracker);
-    O << '\n';
-  }
-  assert(getSuccessors().empty() &&
-         "Wrapper blocks should not have successors");
-  printSuccessors(O, Indent);
-}
-#endif
 
 void VPBasicBlock::execute(VPTransformState *State) {
   bool Replica = State->Instance && !State->Instance->isFirstIteration();
@@ -551,16 +509,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << NewBB->getName() << '\n');
-
-  State->CFG.VPBB2IRBB[this] = NewBB;
-  State->CFG.PrevVPBB = this;
-
-  for (VPRecipeBase &Recipe : Recipes)
-    Recipe.execute(*State);
-
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  executeRecipes(State, NewBB);
 }
 
 void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
@@ -571,6 +520,19 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
       R.setOperand(I, NewValue);
   }
+}
+
+void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+                    << " in BB:" << BB->getName() << '\n');
+
+  State->CFG.VPBB2IRBB[this] = BB;
+  State->CFG.PrevVPBB = this;
+
+  for (VPRecipeBase &Recipe : Recipes)
+    Recipe.execute(*State);
+
+  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
