@@ -279,11 +279,10 @@ public:
       m_canonical_path += m_spelled_path.back();
     }
 
-    bool has_separator = llvm::find_if(request_str, [](char c) {
-                           return llvm::sys::path::is_separator(c);
-                         }) != request_str.end();
-    m_file_name =
-        has_separator ? llvm::sys::path::get_separator() : request_str;
+    if (llvm::find_if(request_str, [](char c) {
+          return llvm::sys::path::is_separator(c);
+        }) == request_str.end())
+      m_file_name = request_str;
   }
 
   lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
