@@ -981,7 +981,7 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 |            |                                                                                                   |
 |------------|---------------------------------------------------------------------------------------------------|
 | `C`        | Current work directory. The type shall be `CHARACTER` and of default kind.       |
-| `STATUS`   | (Optional) status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind that greater or equal to 4. |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
 
 #### Usage and Info
 
