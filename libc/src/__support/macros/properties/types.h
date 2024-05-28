@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "include/llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
+#include "hdr/float_macros.h"                      // LDBL_MANT_DIG
 #include "include/llvm-libc-types/float128.h"      // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
