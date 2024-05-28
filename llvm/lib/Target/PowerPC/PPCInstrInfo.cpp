@@ -5238,13 +5238,13 @@ const unsigned MAX_BINOP_DEPTH = 1;
 // This function will promote the instruction which defines the register `Reg`
 // in the parameter from a 32-bit to a 64-bit instruction if needed. The logic
 // used to check whether an instruction needs to be promoted or not is similar
-// to the logic used to check whether or not a defined register is sign or zero extended
-// within the function PPCInstrInfo::isSignOrZeroExtended. Additionally, the
-// `PromoteInstr32To64ForElimEXTSW` function is recursive. 
+// to the logic used to check whether or not a defined register is sign or zero
+// extended within the function PPCInstrInfo::isSignOrZeroExtended.
+// Additionally, the `PromoteInstr32To64ForElimEXTSW` function is recursive.
 // BinOpDepth does not count all of the recursions. The parameter BinOpDepth is
-// incremented  only when `PromoteInstr32To64ForEmliEXTSW` calls itself more
+// incremented  only when `PromoteInstr32To64ForElimEXTSW` calls itself more
 // than once. This is done to prevent exponential recursion.
-void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
+void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
                                                   unsigned BinOpDepth,
                                                   LiveVariables *LV) const {
@@ -5282,12 +5282,12 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
         assert(MI->getOperand(I).isReg() && "Operand must be register");
         Register SrcReg = MI->getOperand(I).getReg();
-        PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
+        PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
       }
     }
     break;
   case PPC::COPY: {
-    // Refer to the logic of the `case PPC::COPY` statement in the function
+    // Refers to the logic of the `case PPC::COPY` statement in the function
     // PPCInstrInfo::isSignOrZeroExtended().
 
     Register SrcReg = MI->getOperand(1).getReg();
@@ -5295,17 +5295,19 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     // are sign- or zero-extended.
     const MachineFunction *MF = MI->getMF();
     if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
-      // If this is a copy from another register, we recursively promote source.
-      PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      // If this is a copy from another register, we recursively promote the
+      // source.
+      PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
 
-    // From here on everything is SVR4ABI. COPY will be eliminated in other
-    // pass, we do not need promote COPY pseduo opcode.
+    // From here on everything is SVR4ABI. COPY will be eliminated in the other
+    // pass, we do not need promote the COPY pseudo opcode.
 
     if (SrcReg != PPC::X3)
-      // If this is a copy from another register, we recursively promote source.
-      PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      // If this is a copy from another register, we recursively promote the
+      // source.
+      PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
     return;
   }
   case PPC::ORI:
@@ -5325,7 +5327,7 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
   case PPC::ORIS8:
   case PPC::XORIS8: {
     Register SrcReg = MI->getOperand(1).getReg();
-    PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
+    PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
     break;
   }
   case PPC::AND:
@@ -5334,9 +5336,9 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
   case PPC::AND8: {
     if (BinOpDepth < MAX_BINOP_DEPTH) {
       Register SrcReg1 = MI->getOperand(1).getReg();
-      PromoteInstr32To64ForEmliEXTSW(SrcReg1, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth, LV);
       Register SrcReg2 = MI->getOperand(2).getReg();
-      PromoteInstr32To64ForEmliEXTSW(SrcReg2, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth, LV);
     }
     break;
   }

@@ -1058,7 +1058,7 @@ bool PPCMIPeephole::simplifyCode() {
           // chain used to deduce sign extension to eliminate the 'extsw' will
           // need to be promoted to 64-bit pseudo instructions when the 'extsw'
           // is eliminated.
-          TII->PromoteInstr32To64ForEmliEXTSW(NarrowReg, MRI, 0, LV);
+          TII->PromoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
