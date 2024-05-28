@@ -179,6 +179,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   }
 
   const BinaryContext &BC = A.getBinaryContext();
+
   auto BBI = OrderB.begin();
   for (const BinaryBasicBlock *BB : OrderA) {
     const BinaryBasicBlock *OtherBB = *BBI;
@@ -194,7 +195,6 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     auto SuccBBI = OtherBB->succ_begin();
     for (const BinaryBasicBlock *SuccBB : BB->successors()) {
       const BinaryBasicBlock *SuccOtherBB = *SuccBBI;
-
       if (SuccBB->getLayoutIndex() != SuccOtherBB->getLayoutIndex())
         return false;
       ++SuccBBI;
