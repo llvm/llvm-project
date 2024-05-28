@@ -24,6 +24,7 @@
 #include <__system_error/errc.h>
 #include <__system_error/error_category.h>
 #include <__system_error/error_code.h>
+#include <__system_error/error_condition.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
