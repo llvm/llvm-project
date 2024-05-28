@@ -13706,7 +13706,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
 // Combine vXi32 (mul (and (lshr X, 15), 0x10001), 0xffff) ->
 // (bitcast (sra (v2Xi16 (bitcast X)), 15))
-// Same for other equivalent types with other equivalen6t constants.
+// Same for other equivalent types with other equivalent constants.
 static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
