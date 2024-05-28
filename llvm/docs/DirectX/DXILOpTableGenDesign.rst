@@ -18,11 +18,10 @@ DXIL Operations are represented in one of the following `two ways
 
 #. Using LLVM instructions
 #. Using LLVM External functions. These are represented in LLVM IR as follows:
+   * "Standard" LLVM intrinsics (e.g., ``llvm.sin.*``) and
+   * HLSL intrinsics (defined as LLVM intrinsics in ``llvm/include/llvm/IR/IntrinsicsDirectX.td``, e.g., ``llvm.dx.*``)
 
-  * "Standard" LLVM intrinsics (e.g., ``llvm.sin.*``) and
-  * HLSL intrinsics (defined as LLVM intrinsics in ``llvm/include/llvm/IR/IntrinsicsDirectX.td``, e.g., ``llvm.dx.*``)
-
-  These are  collectively referred to as `LLVM Intrinsics` in this note.
+   These are  collectively referred to as `LLVM Intrinsics` in this note.
 
 Following is the complete list of properties of DXIL Ops with the corresponding field name
 as used in ``hctdb.py``, if one exists. A DXIL Op is represented by a set of associated properties
@@ -42,14 +41,12 @@ as used in ``hctdb.py``, if one exists. A DXIL Op is represented by a set of ass
 9. List of shader stages the operation is applicable to (``shader_stages``); empty if applicable to all stages.
 10. Memory access attributes of the operation (``fn_attr``).
 11. Boolean attributes of operation to indicate if it
-
-   * is some kind of a derivative (``is_derivative``)
-   * requires gradient calculation (``is_gradient``)
-   * is a sampler feedback (``is_feedback``)
-   * requires in-wave, cross-lane functionality (``is_wave``)
-   * requires that all of its inputs are uniform across the wave (``requires_uniform_inputs``).
-   * is a barrier operation (``is_barrier``).
-
+    * is some kind of a derivative (``is_derivative``)
+    * requires gradient calculation (``is_gradient``)
+    * is a sampler feedback (``is_feedback``)
+    * requires in-wave, cross-lane functionality (``is_wave``)
+    * requires that all of its inputs are uniform across the wave (``requires_uniform_inputs``).
+    * is a barrier operation (``is_barrier``).
 12. A string that documents the operation (``doc``)
 
 Motivation
