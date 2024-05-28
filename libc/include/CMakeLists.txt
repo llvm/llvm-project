@@ -114,6 +114,7 @@ add_gen_header(
     .llvm-libc-macros.math_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
+    .llvm-libc-types.float16
     .llvm-libc-types.float128
 )
 
