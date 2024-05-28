@@ -912,6 +912,10 @@ public:
     return getBackedgeTakenCount(L, SymbolicMaximum);
   }
 
+  /// Similar to getSymbolicMaxBackedgeTakenCount, except it will add a set of
+  /// SCEV predicates to Predicates that are required to be true in order for
+  /// the answer to be correct. Predicates can be checked with run-time
+  /// checks and can be used to perform loop versioning.
   const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
       const Loop *L, SmallVector<const SCEVPredicate *, 4> &Predicates);
 
