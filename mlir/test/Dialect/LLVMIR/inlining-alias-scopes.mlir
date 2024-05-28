@@ -417,7 +417,7 @@ llvm.func @region(%arg0: !llvm.ptr {llvm.noalias}, %c: i1) {
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @bar
+// CHECK-LABEL: llvm.func @noalias_with_region
 // CHECK: llvm.load
 // CHECK-SAME: alias_scopes = [#[[$ARG_SCOPE]]]
 // CHECK: llvm.call
