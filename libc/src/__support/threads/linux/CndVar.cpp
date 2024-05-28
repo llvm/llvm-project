@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/CndVar.h"
+#include "src/__support/CPP/mutex.h"
 #include "src/__support/OSUtil/syscall.h"           // syscall_impl
 #include "src/__support/threads/linux/futex_word.h" // FutexWordType
-#include "src/__support/threads/mutex.h"            // Mutex, MutexLock
+#include "src/__support/threads/mutex.h"            // Mutex
 
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -27,7 +28,7 @@ int CndVar::wait(Mutex *m) {
 
   CndWaiter waiter;
   {
-    MutexLock ml(&qmtx);
+    cpp::lock_guard ml(qmtx);
     CndWaiter *old_back = nullptr;
     if (waitq_front == nullptr) {
       waitq_front = waitq_back = &waiter;
@@ -83,7 +84,7 @@ void CndVar::notify_one() {
 }
 
 void CndVar::broadcast() {
-  MutexLock ml(&qmtx);
+  cpp::lock_guard ml(qmtx);
   uint32_t dummy_futex_word;
   CndWaiter *waiter = waitq_front;
   waitq_front = waitq_back = nullptr;
