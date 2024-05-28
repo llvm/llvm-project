@@ -70,7 +70,7 @@ struct OverflowTracking {
   // Note: AllKnownNegative can be true in a case where one of the operands
   // is negative, but one the operators is not NSW. AllKnownNegative should
   // not be used independently of HasNSW
-  OverflowTracking(void)
+  OverflowTracking()
       : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
 };
 
