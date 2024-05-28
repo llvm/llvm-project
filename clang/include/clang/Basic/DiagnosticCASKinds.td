@@ -19,7 +19,7 @@ def err_cas_filesystem_cannot_set_working_directory : Error<
   "CAS filesystem cannot set working directory to '%0' specified by"
   " -fcas-fs-working-directory">, DefaultFatal;
 def err_cas_depscan_daemon_connection: Error<
-  "Failed to establish connection with depscan daemon: %0">, DefaultFatal;
+  "failed to establish connection with depscan daemon: %0">, DefaultFatal;
 def err_cas_depscan_failed: Error<
   "CAS-based dependency scan failed: %0">, DefaultFatal;
 def err_cas_store: Error<"failed to store to CAS: %0">, DefaultFatal;
