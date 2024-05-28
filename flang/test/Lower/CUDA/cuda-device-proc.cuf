@@ -27,7 +27,7 @@ end
 ! CHECK: %{{.*}} = fir.call @__syncthreads_or(%{{.*}}) fastmath<contract> : (!fir.ref<i32>) -> i32
 
 ! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads"}
-! CHECK: func.func private @__syncwrap(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwrap"}
+! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp"}
 ! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence"}
 ! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block"}
 ! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system"}
