@@ -187,6 +187,9 @@ private:
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
 
+  mutable DenseMap<MCPhysReg, std::vector<MCPhysReg>> RegAliasesCache;
+  ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
+
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
   class DiffListIterator
@@ -263,6 +266,7 @@ public:
   friend class MCRegUnitIterator;
   friend class MCRegUnitMaskIterator;
   friend class MCRegUnitRootIterator;
+  friend class MCRegAliasIterator;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -726,60 +730,122 @@ public:
 /// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
 /// set, Reg itself is included in the list.  This iterator does not guarantee
 /// any ordering or that entries are unique.
+///
+/// This iterator can work in two modes: cached and uncached.
+///
+/// In Uncached mode, this uses RegUnit/RegUnitRoot/SuperReg iterators to
+/// find all aliases. This is very expensive if the target (such as AMDGPU)
+/// has a lot of register and register aliases. It can also cause us
+/// to iterate the same register many times over.
+///
+/// In cached mode, the iterator requests MCRegisterInfo for a cache.
+/// MCRegisterInfo then returns a cached list of sorted, uniqued
+/// aliases for that register. This allows the iterator to be faster
+/// past the first request, but also to iterate much less in some
+/// cases, giving a slight speedup to any code that's using it.
 class MCRegAliasIterator {
 private:
   MCRegister Reg;
   const MCRegisterInfo *MCRI;
-  bool IncludeSelf;
+  bool IncludeSelf : 1;
+  bool IsCached : 1;
 
-  MCRegUnitIterator RI;
-  MCRegUnitRootIterator RRI;
-  MCSuperRegIterator SI;
+  /// TODO: Should we dynamically allocate this? If we don't make caching
+  /// specific for each target, we probably should in order to keep the size of
+  /// this object under control. RegAliasIterator is currently 80 bytes.
+  struct UncachedData {
+    MCRegUnitIterator RI;
+    MCRegUnitRootIterator RRI;
+    MCSuperRegIterator SI;
+  };
+
+  struct CachedData {
+    ArrayRef<MCPhysReg> Aliases;
+    // Index into Aliases. The actual index is (Idx - IncludeSelf) because, when
+    // IncludeSelf is used, we use zero to represent self.
+    unsigned Idx;
+  };
+
+  union {
+    UncachedData Iters;
+    CachedData Cache;
+  };
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf)
-    : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
+                     bool IncludeSelf, bool UseCache = true)
+      : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
+
+    IsCached = UseCache;
+    if (IsCached) {
+      Cache.Aliases = MCRI->getCachedAliasesOf(Reg);
+      Cache.Idx = 0;
+      return;
+    }
+
     // Initialize the iterators.
-    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
-      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
-        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
-          if (!(!IncludeSelf && Reg == *SI))
+    for (Iters.RI = MCRegUnitIterator(Reg, MCRI); Iters.RI.isValid();
+         ++Iters.RI) {
+      for (Iters.RRI = MCRegUnitRootIterator(*Iters.RI, MCRI);
+           Iters.RRI.isValid(); ++Iters.RRI) {
+        for (Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
+             Iters.SI.isValid(); ++Iters.SI) {
+          if (!(!IncludeSelf && Reg == *Iters.SI))
             return;
         }
       }
     }
   }
 
-  bool isValid() const { return RI.isValid(); }
+  bool isValid() const {
+    return IsCached ? (Cache.Idx < (Cache.Aliases.size() + IncludeSelf))
+                    : Iters.RI.isValid();
+  }
 
   MCRegister operator*() const {
-    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *SI;
+    if (IsCached) {
+      if (IncludeSelf && (Cache.Idx == 0))
+        return Reg;
+      return Cache.Aliases[Cache.Idx - IncludeSelf];
+    }
+
+    assert(Iters.SI.isValid() && "Cannot dereference an invalid iterator.");
+    return *Iters.SI;
   }
 
   void advance() {
-    // Assuming SI is valid.
-    ++SI;
-    if (SI.isValid()) return;
-
-    ++RRI;
-    if (RRI.isValid()) {
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
+    if (IsCached) {
+      ++Cache.Idx;
       return;
     }
 
-    ++RI;
-    if (RI.isValid()) {
-      RRI = MCRegUnitRootIterator(*RI, MCRI);
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
+    // Assuming SI is valid.
+    ++Iters.SI;
+    if (Iters.SI.isValid())
+      return;
+
+    ++Iters.RRI;
+    if (Iters.RRI.isValid()) {
+      Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
+      return;
+    }
+
+    ++Iters.RI;
+    if (Iters.RI.isValid()) {
+      Iters.RRI = MCRegUnitRootIterator(*Iters.RI, MCRI);
+      Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
     }
   }
 
   MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    do advance();
-    while (!IncludeSelf && isValid() && *SI == Reg);
+    if (IsCached)
+      advance();
+    else {
+      do
+        advance();
+      while (!IncludeSelf && isValid() && *Iters.SI == Reg);
+    }
     return *this;
   }
 };

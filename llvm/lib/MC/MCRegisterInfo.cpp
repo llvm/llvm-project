@@ -20,6 +20,26 @@
 
 using namespace llvm;
 
+ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
+  if (auto It = RegAliasesCache.find(R); It != RegAliasesCache.end())
+    return It->second;
+
+  // TODO: Should we have a DenseSet instead & then convert it
+  // to vector? Or even a BitVector that's then converted to a normal
+  // MCPhysReg vector?
+  auto &Aliases = RegAliasesCache[R];
+  for (MCRegAliasIterator It(R, this, /*IncludeSelf=*/false,
+                             /*UseCache=*/false);
+       It.isValid(); ++It) {
+    Aliases.push_back(*It);
+  }
+
+  llvm::sort(Aliases);
+  Aliases.erase(unique(Aliases), Aliases.end());
+  Aliases.shrink_to_fit();
+  return Aliases;
+}
+
 MCRegister
 MCRegisterInfo::getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
                                     const MCRegisterClass *RC) const {
