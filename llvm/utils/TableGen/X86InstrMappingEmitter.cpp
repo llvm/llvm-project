@@ -277,8 +277,22 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     if (Pos == std::string::npos)
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3)))
+    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+#ifndef NDEBUG
+      auto ClobberEFLAGS = [](const Record *R) {
+        return llvm::any_of(
+            R->getValueAsListOfDefs("Defs"),
+            [](const Record *Def) { return Def->getName() == "EFLAGS"; });
+      };
+      if (ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should not be clobbered by " +
+                           Rec->getName());
+      if (!ClobberEFLAGS(NewRec))
+        report_fatal_error("EFLAGS should be clobbered by " +
+                           NewRec->getName());
+#endif
       Table.push_back(std::pair(&Target.getInstruction(NewRec), Inst));
+    }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
 }
