@@ -471,7 +471,7 @@ using RepeatedValue = std::pair<Value*, APInt>;
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
-                              bool &HasNUW) {
+                              reassociate::OverflowTracking &Flags) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -512,6 +512,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, APInt>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
+  const DataLayout DL = I->getModule()->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -520,8 +521,10 @@ static bool LinearizeExprTree(Instruction *I,
     std::pair<Instruction*, APInt> P = Worklist.pop_back_val();
     I = P.first; // We examine the operands of this binary operator.
 
-    if (isa<OverflowingBinaryOperator>(I))
-      HasNUW &= I->hasNoUnsignedWrap();
+    if (isa<OverflowingBinaryOperator>(I)) {
+      Flags.HasNUW &= I->hasNoUnsignedWrap();
+      Flags.HasNSW &= I->hasNoSignedWrap();
+    }
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
@@ -648,6 +651,8 @@ static bool LinearizeExprTree(Instruction *I,
     // Ensure the leaf is only output once.
     It->second = 0;
     Ops.push_back(std::make_pair(V, Weight));
+    if (Opcode == Instruction::Add && Flags.AllKnownNonNegative && Flags.HasNSW)
+      Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
   }
 
   // For nilpotent operations or addition there may be no operands, for example
@@ -666,7 +671,7 @@ static bool LinearizeExprTree(Instruction *I,
 /// linearized and optimized, emit them in-order.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
                                       SmallVectorImpl<ValueEntry> &Ops,
-                                      bool HasNUW) {
+                                      OverflowTracking Flags) {
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
   // Since our optimizations should never increase the number of operations, the
@@ -834,8 +839,12 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           // Note that it doesn't hold for mul if one of the operands is zero.
           // TODO: We can preserve NUW flag if we prove that all mul operands
           // are non-zero.
-          if (HasNUW && ExpressionChangedStart->getOpcode() == Instruction::Add)
-            ExpressionChangedStart->setHasNoUnsignedWrap();
+          if (ExpressionChangedStart->getOpcode() == Instruction::Add) {
+            if (Flags.HasNUW)
+              ExpressionChangedStart->setHasNoUnsignedWrap();
+            if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
+              ExpressionChangedStart->setHasNoSignedWrap();
+          }
         }
       }
 
@@ -1192,8 +1201,8 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     return nullptr;
 
   SmallVector<RepeatedValue, 8> Tree;
-  bool HasNUW = true;
-  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, HasNUW);
+  OverflowTracking Flags;
+  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
   for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
@@ -1235,7 +1244,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
 
   if (!FoundFactor) {
     // Make sure to restore the operands to the expression tree.
-    RewriteExprTree(BO, Factors, HasNUW);
+    RewriteExprTree(BO, Factors, Flags);
     return nullptr;
   }
 
@@ -1247,7 +1256,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     RedoInsts.insert(BO);
     V = Factors[0].Op;
   } else {
-    RewriteExprTree(BO, Factors, HasNUW);
+    RewriteExprTree(BO, Factors, Flags);
     V = BO;
   }
 
@@ -2373,8 +2382,8 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // First, walk the expression tree, linearizing the tree, collecting the
   // operand information.
   SmallVector<RepeatedValue, 8> Tree;
-  bool HasNUW = true;
-  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, HasNUW);
+  OverflowTracking Flags;
+  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
   for (const RepeatedValue &E : Tree)
@@ -2567,7 +2576,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
              dbgs() << '\n');
   // Now that we ordered and optimized the expressions, splat them back into
   // the expression tree, removing any unneeded nodes.
-  RewriteExprTree(I, Ops, HasNUW);
+  RewriteExprTree(I, Ops, Flags);
 }
 
 void
