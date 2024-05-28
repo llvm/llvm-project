@@ -5894,99 +5894,17 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIExpressionBody:
-///   ::= (0, 7, -1)
-bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
-  if (parseToken(lltok::lparen, "expected '(' here"))
-    return true;
-
-  SmallVector<uint64_t, 8> Elements;
-  if (Lex.getKind() != lltok::rparen)
-    do {
-      if (Lex.getKind() == lltok::DwarfOp) {
-        if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
-          Lex.Lex();
-          Elements.push_back(Op);
-          continue;
-        }
-        return tokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
-      }
-
-      if (Lex.getKind() == lltok::DwarfAttEncoding) {
-        if (unsigned Op = dwarf::getAttributeEncoding(Lex.getStrVal())) {
-          Lex.Lex();
-          Elements.push_back(Op);
-          continue;
-        }
-        return tokError(Twine("invalid DWARF attribute encoding '") +
-                        Lex.getStrVal() + "'");
-      }
-
-      if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
-        return tokError("expected unsigned integer");
-
-      auto &U = Lex.getAPSIntVal();
-      if (U.ugt(UINT64_MAX))
-        return tokError("element too large, limit is " + Twine(UINT64_MAX));
-      Elements.push_back(U.getZExtValue());
-      Lex.Lex();
-    } while (EatIfPresent(lltok::comma));
-
-  if (parseToken(lltok::rparen, "expected ')' here"))
-    return true;
-
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
-  return false;
-}
-
-/// parseDIExpression:
-///   ::= !DIExpression(0, 7, -1)
-bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  assert(Lex.getStrVal() == "DIExpression" && "Expected '!DIExpression'");
-  Lex.Lex();
-
-  return parseDIExpressionBody(Result, IsDistinct);
-}
-
-/// ParseDIArgList:
-///   ::= !DIArgList(i32 7, i64 %0)
-bool LLParser::parseDIArgList(Metadata *&MD, PerFunctionState *PFS) {
-  assert(PFS && "Expected valid function state");
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
-
-  if (parseToken(lltok::lparen, "expected '(' here"))
-    return true;
-
-  SmallVector<ValueAsMetadata *, 4> Args;
-  if (Lex.getKind() != lltok::rparen)
-    do {
-      Metadata *MD;
-      if (parseValueAsMetadata(MD, "expected value-as-metadata operand", PFS))
-        return true;
-      Args.push_back(dyn_cast<ValueAsMetadata>(MD));
-    } while (EatIfPresent(lltok::comma));
-
-  if (parseToken(lltok::rparen, "expected ')' here"))
-    return true;
-
-  MD = DIArgList::get(Context, Args);
-  return false;
-}
-
-bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
-  if (IsDistinct)
-    return Lex.Error("'distinct' not allowed for !DIExpr");
-
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
-
-  if (parseToken(lltok::lparen, "expected '(' here"))
-    return true;
-
+// Common parser for both DIExpr and DIOp-based ("NewElements") DIExpression.
+// Begins parsing assuming the name and open parenthesis has been parsed
+// already, and populates Result with the appropriate metadata based on
+// IsDIExpr.
+//
+// An empty DIExpr is permitted (although currently has no use), but an empty
+// DIOp-based DIExpression is not as at least one DIOp token is required to
+// disambiguate with an empty "OldElements" DIExpression.
+bool LLParser::parseDIOpExpression(MDNode *&Result, bool IsDIExpr) {
   DIExprBuilder Builder(Context);
-  if (Lex.getKind() != lltok::rparen)
+  if (!IsDIExpr || Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() != lltok::DIOp)
         return tokError("expected DIOp");
@@ -6075,6 +5993,15 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
         if (parseFirstClassType(Ty))
           return true;
         Builder.append<DIOp::PushLane>(Ty);
+      } else if (Name == DIOp::Fragment::getAsmName()) {
+        uint32_t BitOffset, BitSize;
+        if (parseUInt32(BitOffset))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseUInt32(BitSize))
+          return true;
+        Builder.append<DIOp::Fragment>(BitOffset, BitSize);
       }
 #define HANDLE_OP0(NAME)                                                       \
   else if (Name == DIOp::NAME::getAsmName()) {                                 \
@@ -6092,8 +6019,108 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = Builder.intoExpr();
+  if (IsDIExpr)
+    Result = Builder.intoExpr();
+  else
+    Result = Builder.intoExpression();
   return false;
+}
+
+/// parseDIExpressionBody:
+///   ::= (0, 7, -1)
+bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  if (Lex.getKind() == lltok::DIOp)
+    return parseDIOpExpression(Result, /*IsDIExpr=*/false);
+
+  SmallVector<uint64_t, 8> Elements;
+  if (Lex.getKind() != lltok::rparen)
+    do {
+      if (Lex.getKind() == lltok::DwarfOp) {
+        if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
+          Lex.Lex();
+          Elements.push_back(Op);
+          continue;
+        }
+        return tokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
+      }
+
+      if (Lex.getKind() == lltok::DwarfAttEncoding) {
+        if (unsigned Op = dwarf::getAttributeEncoding(Lex.getStrVal())) {
+          Lex.Lex();
+          Elements.push_back(Op);
+          continue;
+        }
+        return tokError(Twine("invalid DWARF attribute encoding '") +
+                        Lex.getStrVal() + "'");
+      }
+
+      if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
+        return tokError("expected unsigned integer");
+
+      auto &U = Lex.getAPSIntVal();
+      if (U.ugt(UINT64_MAX))
+        return tokError("element too large, limit is " + Twine(UINT64_MAX));
+      Elements.push_back(U.getZExtValue());
+      Lex.Lex();
+    } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  return false;
+}
+
+/// parseDIExpression:
+///   ::= !DIExpression(0, 7, -1)
+bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert(Lex.getStrVal() == "DIExpression" && "Expected '!DIExpression'");
+  Lex.Lex();
+
+  return parseDIExpressionBody(Result, IsDistinct);
+}
+
+/// ParseDIArgList:
+///   ::= !DIArgList(i32 7, i64 %0)
+bool LLParser::parseDIArgList(Metadata *&MD, PerFunctionState *PFS) {
+  assert(PFS && "Expected valid function state");
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  SmallVector<ValueAsMetadata *, 4> Args;
+  if (Lex.getKind() != lltok::rparen)
+    do {
+      Metadata *MD;
+      if (parseValueAsMetadata(MD, "expected value-as-metadata operand", PFS))
+        return true;
+      Args.push_back(dyn_cast<ValueAsMetadata>(MD));
+    } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  MD = DIArgList::get(Context, Args);
+  return false;
+}
+
+bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
+  if (IsDistinct)
+    return Lex.Error("'distinct' not allowed for !DIExpr");
+
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  return parseDIOpExpression(Result, /*IsDIExpr=*/true);
 }
 
 bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {

@@ -524,6 +524,11 @@ bool DwarfExpression::addExpression(
     }
 
     switch (OpNum) {
+    case dwarf::DW_OP_LLVM_poisoned:
+      emitOp(dwarf::DW_OP_LLVM_user);
+      emitOp(dwarf::DW_OP_LLVM_USER_undefined);
+      LocationKind = Unknown;
+      return true;
     case dwarf::DW_OP_LLVM_arg:
       if (!InsertArg(Op->getArg(0), ExprCursor)) {
         LocationKind = Unknown;
@@ -818,6 +823,9 @@ size_t DwarfExprAST::Node::getChildrenCount() const {
             // FIXME(KZHURAVL): Handle DIOp::Composite.
             llvm_unreachable("DIOp::Composite is not handled in "
                              "DwarfExprAST::Node::getChildrenCount");
+          },
+          [](DIOp::Fragment) -> R {
+            llvm_unreachable("should have dropped fragments by now");
           }),
       Element);
 }
@@ -826,6 +834,12 @@ void DwarfExprAST::buildDIExprAST() {
   std::stack<std::unique_ptr<DwarfExprAST::Node>> Operands;
 
   for (const auto &Op : Lifetime.getLocation()->builder()) {
+    // DIOp::Fragment is not a true operation, and like DW_OP_LLVM_fragment
+    // it can be ignored when interpreting the expression semantically. Just
+    // drop it here during the first walk of the expression and assert it
+    // is not present later.
+    if (std::holds_alternative<DIOp::Fragment>(Op))
+      continue;
     std::unique_ptr<DwarfExprAST::Node> OpNode =
         std::make_unique<DwarfExprAST::Node>(Op);
     size_t OpChildrenCount = OpNode->getChildrenCount();
@@ -1093,6 +1107,12 @@ std::optional<OpResult> DwarfExprAST::traverse(DIOp::BitOffset BitOffset,
 
   emitDwarfOp(dwarf::DW_OP_LLVM_bit_offset);
   return OpResult{BitOffset.getResultType(), ValueKind::LocationDesc};
+}
+
+std::optional<OpResult> DwarfExprAST::traverse(DIOp::Fragment Fragment,
+                                               ChildrenT Children) {
+  llvm_unreachable("should have dropped fragments by now");
+  return std::nullopt;
 }
 
 void DwarfExprAST::readToValue(Type *Ty) {

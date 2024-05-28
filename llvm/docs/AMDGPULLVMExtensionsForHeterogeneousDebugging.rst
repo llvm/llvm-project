@@ -1183,6 +1183,18 @@ model.
 If ``T`` is not an integral type or the source language is not implemented using
 a SIMD or SIMT execution model, then the expression is not well-formed.
 
+``DIOpFragment``
+^^^^^^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpFragment(O:unsigned, S:unsigned)
+   { -> }
+
+An operation with no effect, used only as a means to encode the "fragment"
+position of the debug intrinsic or metadata which refers to the expression in
+terms of an bit offset ``O`` and bit size ``S``.
+
 Intrinsics
 ----------
 

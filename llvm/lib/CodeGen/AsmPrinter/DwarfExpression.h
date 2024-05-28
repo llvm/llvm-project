@@ -522,6 +522,8 @@ public:
   std::optional<OpResult> traverse(DIOp::ByteOffset ByteOffset,
                                    ChildrenT Children);
 
+  std::optional<OpResult> traverse(DIOp::Fragment Fragment, ChildrenT Children);
+
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
   void emitSigned(int64_t SignedValue);
   void emitUnsigned(uint64_t UnsignedValue);

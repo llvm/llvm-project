@@ -2273,52 +2273,57 @@ void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
   Record.push_back(Version);
   for (auto &Op : N->builder()) {
     Record.push_back(DIOp::getBitcodeID(Op));
-    std::visit(makeVisitor(
+    std::visit(
+        makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"
 #undef HANDLE_OP0
-              [&](DIOp::Referrer Referrer) {
-                Record.push_back(VE.getTypeID(Referrer.getResultType()));
-              },
-              [&](DIOp::Arg Arg) {
-                Record.push_back(VE.getTypeID(Arg.getResultType()));
-                Record.push_back(Arg.getIndex());
-              },
-              [&](DIOp::TypeObject TypeObject) {
-                Record.push_back(VE.getTypeID(TypeObject.getResultType()));
-              },
-              [&](DIOp::Constant Constant) {
-                Record.push_back(
-                    VE.getTypeID(Constant.getLiteralValue()->getType()));
-                Record.push_back(VE.getValueID(Constant.getLiteralValue()));
-              },
-              [&](DIOp::Convert Convert) {
-                Record.push_back(VE.getTypeID(Convert.getResultType()));
-              },
-              [&](DIOp::Reinterpret Reinterpret) {
-                Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
-              },
-              [&](DIOp::BitOffset BitOffset) {
-                Record.push_back(VE.getTypeID(BitOffset.getResultType()));
-              },
-              [&](DIOp::ByteOffset ByteOffset) {
-                Record.push_back(VE.getTypeID(ByteOffset.getResultType()));
-              },
-              [&](DIOp::Composite Composite) {
-                Record.push_back(VE.getTypeID(Composite.getResultType()));
-                Record.push_back(Composite.getCount());
-              },
-              [&](DIOp::Extend Extend) { Record.push_back(Extend.getCount()); },
-              [&](DIOp::AddrOf AddrOf) {
-                Record.push_back(AddrOf.getAddressSpace());
-              },
-              [&](DIOp::Deref Deref) {
-                Record.push_back(VE.getTypeID(Deref.getResultType()));
-              },
-              [&](DIOp::PushLane PushLane) {
-                Record.push_back(VE.getTypeID(PushLane.getResultType()));
-              }),
-          Op);
+            [&](DIOp::Referrer Referrer) {
+              Record.push_back(VE.getTypeID(Referrer.getResultType()));
+            },
+            [&](DIOp::Arg Arg) {
+              Record.push_back(VE.getTypeID(Arg.getResultType()));
+              Record.push_back(Arg.getIndex());
+            },
+            [&](DIOp::TypeObject TypeObject) {
+              Record.push_back(VE.getTypeID(TypeObject.getResultType()));
+            },
+            [&](DIOp::Constant Constant) {
+              Record.push_back(
+                  VE.getTypeID(Constant.getLiteralValue()->getType()));
+              Record.push_back(VE.getValueID(Constant.getLiteralValue()));
+            },
+            [&](DIOp::Convert Convert) {
+              Record.push_back(VE.getTypeID(Convert.getResultType()));
+            },
+            [&](DIOp::Reinterpret Reinterpret) {
+              Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
+            },
+            [&](DIOp::BitOffset BitOffset) {
+              Record.push_back(VE.getTypeID(BitOffset.getResultType()));
+            },
+            [&](DIOp::ByteOffset ByteOffset) {
+              Record.push_back(VE.getTypeID(ByteOffset.getResultType()));
+            },
+            [&](DIOp::Composite Composite) {
+              Record.push_back(VE.getTypeID(Composite.getResultType()));
+              Record.push_back(Composite.getCount());
+            },
+            [&](DIOp::Extend Extend) { Record.push_back(Extend.getCount()); },
+            [&](DIOp::AddrOf AddrOf) {
+              Record.push_back(AddrOf.getAddressSpace());
+            },
+            [&](DIOp::Deref Deref) {
+              Record.push_back(VE.getTypeID(Deref.getResultType()));
+            },
+            [&](DIOp::PushLane PushLane) {
+              Record.push_back(VE.getTypeID(PushLane.getResultType()));
+            },
+            [&](DIOp::Fragment Fragment) {
+              Record.push_back(Fragment.getBitOffset());
+              Record.push_back(Fragment.getBitSize());
+            }),
+        Op);
   }
   Stream.EmitRecord(bitc::METADATA_EXPR, Record, Abbrev);
   Record.clear();

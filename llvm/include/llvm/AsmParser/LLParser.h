@@ -596,6 +596,8 @@ namespace llvm {
     bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false);
     bool parseDIExpressionBody(MDNode *&Result, bool IsDistinct);
 
+    bool parseDIOpExpression(MDNode *&Result, bool IsDIExpr);
+
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);
 #include "llvm/IR/Metadata.def"

@@ -192,7 +192,8 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
               [&](DIOp::Composite C) { incorporateType(C.getResultType()); },
               [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
               [&](DIOp::Deref D) { incorporateType(D.getResultType()); },
-              [&](DIOp::PushLane P) { incorporateType(P.getResultType()); }),
+              [&](DIOp::PushLane P) { incorporateType(P.getResultType()); },
+              [&](DIOp::Fragment) {}),
           Op);
     return;
   }

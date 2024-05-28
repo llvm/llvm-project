@@ -117,6 +117,8 @@ SEPARATOR
 HANDLE_OP0(Shl)
 SEPARATOR
 HANDLE_OP1(PushLane, Type *, ResultType)
+SEPARATOR
+HANDLE_OP2(Fragment, uint32_t, BitOffset, uint32_t, BitSize)
 
 #undef SEPARATOR
 #undef HANDLE_OP2

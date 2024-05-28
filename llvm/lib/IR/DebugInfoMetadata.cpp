@@ -1378,7 +1378,19 @@ DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 }
 
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
-                                    ArrayRef<uint64_t> Elements,
+                                    std::nullopt_t Elements,
+                                    StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIExpression, (OldElementsRef{}));
+  DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (OldElementsRef{}));
+}
+DIExpression *DIExpression::getImpl(LLVMContext &Context,
+                                    OldElementsRef Elements,
+                                    StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
+  DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
+}
+DIExpression *DIExpression::getImpl(LLVMContext &Context, bool /*ignored*/,
+                                    NewElementsRef Elements,
                                     StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
@@ -1438,6 +1450,11 @@ unsigned DIExpression::ExprOperand::getSize() const {
 }
 
 bool DIExpression::isValid() const {
+  if (auto NewElementsRef = getNewElementsRef()) {
+    if (NewElementsRef->empty())
+      return false;
+    return true;
+  }
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
     if (I->get() + I->getSize() > E->get())
@@ -1493,6 +1510,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_extract_bits_sext:
     case dwarf::DW_OP_LLVM_extract_bits_zext:
+    case dwarf::DW_OP_LLVM_poisoned:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
@@ -1633,6 +1651,9 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
 
 std::optional<const DIExpression *>
 DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  if (Expr->holdsNewElements())
+    return std::nullopt;
+
   if (!Expr)
     return std::nullopt;
 
@@ -1691,6 +1712,14 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
       DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
       return Info;
     }
+  return std::nullopt;
+}
+
+std::optional<DIExpression::FragmentInfo>
+DIExpression::getFragmentInfo(NewElementsRef E) {
+  for (auto Op : E)
+    if (auto *Fragment = std::get_if<DIOp::Fragment>(&Op))
+      return {{Fragment->getBitSize(), Fragment->getBitOffset()}};
   return std::nullopt;
 }
 
@@ -2291,10 +2320,14 @@ namespace DIOp {
 
 DIExprBuilder::DIExprBuilder(LLVMContext &C) : C(C) {}
 DIExprBuilder::DIExprBuilder(LLVMContext &C,
-                         std::initializer_list<DIOp::Variant> IL)
+                             std::initializer_list<DIOp::Variant> IL)
     : C(C), Elements(IL) {}
+DIExprBuilder::DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V)
+    : C(C), Elements(V) {}
 DIExprBuilder::DIExprBuilder(const DIExpr &E)
     : C(E.getContext()), Elements(E.Elements) {}
+DIExprBuilder::DIExprBuilder(const DIExpression &E)
+    : C(E.getContext()), Elements(*E.getNewElementsRef()) {}
 
 DIExprBuilder &DIExprBuilder::append(DIOp::Variant O) {
   Elements.push_back(O);
@@ -2319,6 +2352,14 @@ DIExpr *DIExprBuilder::intoExpr() {
   StateIsUnspecified = true;
 #endif
   return DIExpr::get(C, std::move(Elements));
+}
+
+DIExpression *DIExprBuilder::intoExpression() {
+#ifndef NDEBUG
+  assert(!StateIsUnspecified);
+  StateIsUnspecified = true;
+#endif
+  return DIExpression::get(C, false, std::move(Elements));
 }
 
 DIExprBuilder &DIExprBuilder::removeReferrerIndirection(Type *PointeeType) {

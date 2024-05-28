@@ -726,6 +726,10 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
 }
 
 bool MachineInstr::isEquivalentDbgInstr(const MachineInstr &Other) const {
+  // FIXME: Actually consider expression equality
+  if (getDebugExpression()->holdsNewElements() ||
+      Other.getDebugExpression()->holdsNewElements())
+    return false;
   if (!isDebugValueLike() || !Other.isDebugValueLike())
     return false;
   if (getDebugLoc() != Other.getDebugLoc())

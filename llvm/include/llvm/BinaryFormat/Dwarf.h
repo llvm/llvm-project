@@ -147,6 +147,7 @@ enum LocationAtom {
   DW_OP_LLVM_arg = 0x1005,               ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_sext = 0x1006, ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_zext = 0x1007, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_poisoned = 0x1008,          ///< Only used in LLVM metadata.
 };
 
 enum LlvmUserLocationAtom {
@@ -159,6 +160,17 @@ inline std::optional<LlvmUserLocationAtom> getUserOp(uint8_t Op) {
 #define HANDLE_HETEROGENEOUS_OP(NAME)                                          \
   case DW_OP_LLVM_##NAME:                                                      \
     return DW_OP_LLVM_USER_##NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    return std::nullopt;
+  }
+}
+
+inline std::optional<LocationAtom> getNonUserOp(uint8_t UserOp) {
+  switch (UserOp) {
+#define HANDLE_HETEROGENEOUS_OP(NAME)                                          \
+  case DW_OP_LLVM_USER_##NAME:                                                 \
+    return DW_OP_LLVM_##NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
   default:
     return std::nullopt;
