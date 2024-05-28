@@ -102,9 +102,9 @@ using CT = C<int>;
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'type-parameter-0-2' depth 0 index 3 V
 // CHECK: | `-TemplateArgument {{.*}} expr
 // CHECK: |   `-IntegerLiteral {{.*}} 'int' 0
-// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>'
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (A, Y<template-parameter-0-1>, type-parameter-0-2) -> C<A>'
 // CHECK: | |-ParmVarDecl {{.*}} 'A'
-// CHECK: | |-ParmVarDecl {{.*}} 'Y<>'
+// CHECK: | |-ParmVarDecl {{.*}} 'Y<template-parameter-0-1>'
 // CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-2'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int, Y<B>, int) -> C<int>'
 // CHECK:  |-TemplateArgument type 'int'
@@ -114,12 +114,12 @@ using CT = C<int>;
 // CHECK:  |-ParmVarDecl {{.*}} 'int'
 // CHECK:  |-ParmVarDecl {{.*}} 'Y<B>'
 // CHECK:  `-ParmVarDecl {{.*}} 'int'
-// CHECK: FunctionProtoType {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>' dependent trailing_return cdecl
+// CHECK: FunctionProtoType {{.*}} 'auto (A, Y<template-parameter-0-1>, type-parameter-0-2) -> C<A>' dependent trailing_return cdecl
 // CHECK: |-InjectedClassNameType {{.*}} 'C<A>' dependent
 // CHECK: |-TemplateTypeParmType {{.*}} 'A' dependent depth 0 index 0
 // CHECK: | `-TemplateTypeParm {{.*}} 'A'
-// CHECK: |-ElaboratedType {{.*}} 'Y<>' sugar dependent
-// CHECK: | `-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
+// CHECK: |-ElaboratedType {{.*}} 'Y<template-parameter-0-1>' sugar dependent
+// CHECK: | `-TemplateSpecializationType {{.*}} 'Y<template-parameter-0-1>' dependent Y
 // CHECK: |   `-TemplateArgument template
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
 
@@ -299,3 +299,34 @@ using AFoo = Foo<G<U>>;
 // CHECK-NEXT:   `-ParmVarDecl {{.*}} 'G<int>'
 
 AFoo aa(G<int>{});
+
+namespace TTP {
+  template<typename> struct A {};
+
+  template<class T> struct B {
+    template<template <class> typename TT> B(TT<T>);
+  };
+
+  B b(A<int>{});
+} // namespace TTP
+
+// CHECK-LABEL: Dumping TTP::<deduction guide for B>:
+// CHECK-NEXT:  FunctionTemplateDecl 0x{{.+}} <{{.+}}:[[# @LINE - 7]]:5, col:51>
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 T{{$}}
+// CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 1 TT{{$}}
+// CHECK-NEXT:  | `-TemplateTypeParmDecl {{.+}} class depth 1 index 0{{$}}
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} 'auto (<T>) -> B<T>'{{$}}
+// CHECK-NEXT:  | `-ParmVarDecl {{.+}} '<T>'{{$}}
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} 'auto (A<int>) -> TTP::B<int>'
+// CHECK-NEXT:    |-TemplateArgument type 'int'
+// CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'{{$}}
+// CHECK-NEXT:    |-TemplateArgument template A
+// CHECK-NEXT:    `-ParmVarDecl {{.+}} 'A<int>':'TTP::A<int>'{{$}}
+// CHECK-NEXT:  FunctionProtoType {{.+}} 'auto (<T>) -> B<T>' dependent trailing_return cdecl{{$}}
+// CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'B<T>' dependent{{$}}
+// CHECK-NEXT:  | `-CXXRecord {{.+}} 'B'{{$}}
+// CHECK-NEXT:  `-ElaboratedType {{.+}} '<T>' sugar dependent{{$}}
+// CHECK-NEXT:    `-TemplateSpecializationType {{.+}} '<T>' dependent {{$}}
+// CHECK-NEXT:      `-TemplateArgument type 'T'{{$}}
+// CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
+// CHECK-NEXT:          `-TemplateTypeParm {{.+}} 'T'{{$}}

@@ -345,6 +345,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_v4i32_S:
   case WebAssembly::ARGUMENT_v2i64:
   case WebAssembly::ARGUMENT_v2i64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
   case WebAssembly::ARGUMENT_v4f32:
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:

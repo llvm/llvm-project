@@ -177,6 +177,7 @@ class SemaOpenMP;
 class SemaPseudoObject;
 class SemaRISCV;
 class SemaSYCL;
+class SemaX86;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -1037,6 +1038,11 @@ public:
     return *SYCLPtr;
   }
 
+  SemaX86 &X86() {
+    assert(X86Ptr);
+    return *X86Ptr;
+  }
+
   /// Source of additional semantic information.
   IntrusiveRefCntPtr<ExternalSemaSource> ExternalSource;
 
@@ -1076,6 +1082,7 @@ private:
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
+  std::unique_ptr<SemaX86> X86Ptr;
 
   ///@}
 
@@ -2122,16 +2129,6 @@ private:
                            CallExpr *TheCall);
   bool CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSystemZBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
-                                         ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
-                                            ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -5115,6 +5112,13 @@ public:
              Context == ExpressionEvaluationContext::UnevaluatedList;
     }
 
+    bool isPotentiallyEvaluated() const {
+      return Context == ExpressionEvaluationContext::PotentiallyEvaluated ||
+             Context ==
+                 ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed ||
+             Context == ExpressionEvaluationContext::ConstantEvaluated;
+    }
+
     bool isConstantEvaluated() const {
       return Context == ExpressionEvaluationContext::ConstantEvaluated ||
              Context == ExpressionEvaluationContext::ImmediateFunctionContext;
@@ -5147,6 +5151,16 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
+  };
+
+  ExpressionEvaluationContextRecord &parentEvaluationContext() {
+    assert(ExprEvalContexts.size() >= 2 &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts[ExprEvalContexts.size() - 2];
+  };
+
+  const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
+    return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
   bool isBoundsAttrContext() const {
@@ -6279,10 +6293,9 @@ public:
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
     if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InLifetimeExtendingContext) {
+        parentEvaluationContext().InLifetimeExtendingContext) {
       auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      auto &PrevRecord = parentEvaluationContext();
       LastRecord.InLifetimeExtendingContext =
           PrevRecord.InLifetimeExtendingContext;
     }
@@ -7071,7 +7084,9 @@ public:
       StorageClass SC, ArrayRef<ParmVarDecl *> Params,
       bool HasExplicitResultType);
 
-  void DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method);
+  /// Returns true if the explicit object parameter was invalid.
+  bool DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method,
+                                                      SourceLocation CallLoc);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
@@ -11391,7 +11406,8 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
-  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
+  QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                  Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);

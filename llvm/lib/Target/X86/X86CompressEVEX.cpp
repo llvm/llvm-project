@@ -50,27 +50,15 @@
 
 using namespace llvm;
 
-// Including the generated EVEX compression tables.
-struct X86CompressEVEXTableEntry {
-  uint16_t OldOpc;
-  uint16_t NewOpc;
-
-  bool operator<(const X86CompressEVEXTableEntry &RHS) const {
-    return OldOpc < RHS.OldOpc;
-  }
-
-  friend bool operator<(const X86CompressEVEXTableEntry &TE, unsigned Opc) {
-    return TE.OldOpc < Opc;
-  }
-};
-#include "X86GenCompressEVEXTables.inc"
-
 #define COMP_EVEX_DESC "Compressing EVEX instrs when possible"
 #define COMP_EVEX_NAME "x86-compress-evex"
 
 #define DEBUG_TYPE COMP_EVEX_NAME
 
 namespace {
+// Including the generated EVEX compression tables.
+#define GET_X86_COMPRESS_EVEX_TABLE
+#include "X86GenInstrMapping.inc"
 
 class CompressEVEXPass : public MachineFunctionPass {
 public:
@@ -234,7 +222,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   if (IsNDLike && !isRedundantNewDataDest(MI, ST))
     return false;
 
-  ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
+  ArrayRef<X86TableEntry> Table = ArrayRef(X86CompressEVEXTable);
 
   Opc = MI.getOpcode();
   const auto *I = llvm::lower_bound(Table, Opc);
