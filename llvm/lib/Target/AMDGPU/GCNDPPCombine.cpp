@@ -538,17 +538,16 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     return false;
   }
 
-  if (MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
-      MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp) {
-    auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
-    assert(DppCtrl && DppCtrl->isImm());
-    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, MovMI.getOpcode(),
-                                         DppCtrl->getImm())) {
-      LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
-                           " control value\n");
-      // Let it split, then control may become legal.
-      return false;
-    }
+  auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
+  assert(DppCtrl && DppCtrl->isImm());
+  unsigned DppCtrlVal = DppCtrl->getImm();
+  if ((MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
+       MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp) &&
+      !AMDGPU::isLegalDPALU_DPPControl(*ST, MovMI.getOpcode(), DppCtrlVal)) {
+    LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
+                         " control value\n");
+    // Let it split, then control may become legal.
+    return false;
   }
 
   auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
@@ -699,6 +698,13 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
           dbgs()
           << "  " << OrigMI
           << "  failed: DPP register is used more than once per instruction\n");
+      break;
+    }
+
+    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, MovMI.getOpcode(), DppCtrlVal) &&
+        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *ST)) {
+      LLVM_DEBUG(dbgs() << "  " << OrigMI
+                        << "  failed: not valid 64-bit DPP control value\n");
       break;
     }
 

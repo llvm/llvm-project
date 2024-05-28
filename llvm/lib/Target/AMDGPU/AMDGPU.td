@@ -143,6 +143,24 @@ def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
   "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
 >;
 
+def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
+  "HasMinimum3Maximum3F32",
+  "true",
+  "Has v_minimum3_f32 and v_maximum3_f32 instructions"
+>;
+
+def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
+  "HasMinimum3Maximum3F16",
+  "true",
+  "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -430,7 +448,10 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
-   FeatureF16BF16ToFP6BF6ConversionScaleInsts]
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3PKF16
+   ]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -859,6 +880,13 @@ def FeatureAtomicBufferGlobalPkAddF16Insts : SubtargetFeature<"atomic-buffer-glo
  [FeatureFlatGlobalInsts]
 >;
 
+def FeatureAtomicBufferPkAddBF16Inst : SubtargetFeature<"atomic-buffer-pk-add-bf16-inst",
+ "HasAtomicBufferPkAddBF16Inst",
+ "true",
+ "Has buffer_atomic_pk_add_f16 instruction",
+ [FeatureFlatGlobalInsts]
+>;
+
 def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf16-inst",
  "HasAtomicGlobalPkAddBF16Inst",
  "true",
@@ -1057,6 +1085,12 @@ def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
   "Always apply VALU throttle to VALU sequences"
 >;
 
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1219,6 +1253,14 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "Target Requires Code Object V6"
 >;
 
+// Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
+// restoring the callee-saved registers.
+def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
+  "UseBlockVGPROpsForCSR",
+  "true",
+  "Use block load/store for VGPR callee saved registers"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1345,7 +1387,9 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -1366,7 +1410,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureConsumePowerInst
+   FeatureConsumePowerInst, FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -1583,7 +1627,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
    FeatureDot12Insts,
-   FeatureDot13Insts
+   FeatureDot13Insts,
+   FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1777,6 +1822,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureAtomicFlatPkAdd16Insts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
@@ -1817,6 +1863,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureAtomicFlatPkAdd16Insts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeaturePackedTID,
@@ -1838,7 +1885,9 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
-   FeatureMaxHardClauseLength63
+   FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
+   FeatureMinimum3Maximum3PKF16,
 ]>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -1865,6 +1914,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFlatPkAdd16Insts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeaturePackedTID,
@@ -1885,7 +1935,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMLMathInsts,
-   FeatureVGPRIndexingRegisters
+   FeatureVGPRIndexingRegisters,
+   FeatureMinimum3Maximum3PKF16
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2228,6 +2279,19 @@ def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
+def HasMinimum3Maximum3F32 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F32)>;
+
+def HasMinimum3Maximum3F16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
+
+
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
@@ -2387,6 +2451,10 @@ def HasPkMinimumMaximum3F16Insts :
   Predicate<"Subtarget->hasPkMinimumMaximum3F16Insts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
 
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -2532,6 +2600,9 @@ def HasAtomicBufferGlobalPkAddF16Insts
 def HasAtomicGlobalPkAddBF16Inst
   : Predicate<"Subtarget->hasAtomicGlobalPkAddBF16Inst()">,
   AssemblerPredicate<(all_of FeatureAtomicGlobalPkAddBF16Inst)>;
+def HasAtomicBufferPkAddBF16Inst
+  : Predicate<"Subtarget->hasAtomicBufferPkAddBF16Inst()">,
+  AssemblerPredicate<(all_of FeatureAtomicBufferPkAddBF16Inst)>;
 def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
@@ -2589,6 +2660,9 @@ def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
 
 def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
   AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

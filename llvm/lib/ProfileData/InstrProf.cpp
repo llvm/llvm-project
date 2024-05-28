@@ -1002,46 +1002,60 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
-std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
-    ArrayRef<TemporalProfTraceTy> Traces) {
+void TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+    bool RemoveOutlierUNs) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
-  // Collect all function IDs ordered by their smallest timestamp. This will be
-  // used as the initial FunctionNode order.
-  SetVector<IDT> FunctionIds;
-  size_t LargestTraceSize = 0;
-  for (auto &Trace : Traces)
-    LargestTraceSize =
-        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
-  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
-    for (auto &Trace : Traces)
-      if (Timestamp < Trace.FunctionNameRefs.size())
-        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
-
-  const int N = Log2_64(LargestTraceSize) + 1;
-
+  UtilityNodeT MaxUN = 0;
+  DenseMap<IDT, size_t> IdToFirstTimestamp;
+  DenseMap<IDT, UtilityNodeT> IdToFirstUN;
+  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
-  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
-  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
-    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
-    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
-        auto FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
-        FuncGroups[FunctionId].push_back(GroupId);
+  for (auto &Trace : Traces) {
+    size_t CutoffTimestamp = 1;
+    for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
+         Timestamp++) {
+      IDT Id = Trace.FunctionNameRefs[Timestamp];
+      auto [It, WasInserted] = IdToFirstTimestamp.try_emplace(Id, Timestamp);
+      if (!WasInserted)
+        It->getSecond() = std::min<size_t>(It->getSecond(), Timestamp);
+      if (Timestamp >= CutoffTimestamp) {
+        ++MaxUN;
+        CutoffTimestamp = 2 * Timestamp;
       }
+      IdToFirstUN.try_emplace(Id, MaxUN);
     }
+    for (auto &[Id, FirstUN] : IdToFirstUN)
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+        IdToUNs[Id].push_back(UN);
+    ++MaxUN;
+    IdToFirstUN.clear();
   }
 
-  std::vector<BPFunctionNode> Nodes;
-  for (auto Id : FunctionIds) {
-    auto &UNs = FuncGroups[Id];
-    llvm::sort(UNs);
-    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
-    Nodes.emplace_back(Id, UNs);
+  if (RemoveOutlierUNs) {
+    DenseMap<UtilityNodeT, unsigned> UNFrequency;
+    for (auto &[Id, UNs] : IdToUNs)
+      for (auto &UN : UNs)
+        ++UNFrequency[UN];
+    // Filter out utility nodes that are too infrequent or too prevalent to make
+    // BalancedPartitioning more effective.
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+      });
   }
-  return Nodes;
+
+  for (auto &[Id, UNs] : IdToUNs)
+    Nodes.emplace_back(Id, UNs);
+
+  // Since BalancedPartitioning is sensitive to the initial order, we explicitly
+  // order nodes by their earliest timestamp.
+  llvm::sort(Nodes, [&](auto &L, auto &R) {
+    return std::make_pair(IdToFirstTimestamp[L.Id], L.Id) <
+           std::make_pair(IdToFirstTimestamp[R.Id], R.Id);
+  });
 }
 
 #define INSTR_PROF_COMMON_API_IMPL
@@ -1620,13 +1634,12 @@ inline size_t constexpr offsetOf(T1 T2::*Member) {
   return size_t(&(Object.*Member)) - size_t(&Object);
 }
 
+// Read a uint64_t from the specified buffer offset, and swap the bytes in
+// native endianness if necessary.
 static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
-}
-
-uint64_t Header::formatVersion() const {
-  using namespace support;
-  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
+  using namespace ::support;
+  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
+                                                                     Offset);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1638,18 +1651,15 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
-  if (Magic != IndexedInstrProf::Magic)
+  if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
   H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.formatVersion()) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.formatVersion())) {
+  switch (GET_VERSION(H.Version)) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
@@ -1680,7 +1690,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 }
 
 size_t Header::size() const {
-  switch (GET_VERSION(formatVersion())) {
+  switch (GET_VERSION(Version)) {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.

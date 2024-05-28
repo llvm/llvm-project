@@ -556,16 +556,16 @@ buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], 0 offset:8388607
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], -1 offset:8388607
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], 0.5 offset:8388607
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], -4.0 offset:8388607
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:8388607 glc
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

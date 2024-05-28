@@ -4150,7 +4150,7 @@ llvm::GlobalValue::LinkageTypes getMultiversionLinkage(CodeGenModule &CGM,
 }
 
 static FunctionDecl *createDefaultTargetVersionFrom(const FunctionDecl *FD) {
-  DeclContext *DeclCtx = FD->getASTContext().getTranslationUnitDecl();
+  auto *DeclCtx = const_cast<DeclContext *>(FD->getDeclContext());
   TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
   StorageClass SC = FD->getStorageClass();
   DeclarationName Name = FD->getNameInfo().getName();

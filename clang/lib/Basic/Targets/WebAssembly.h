@@ -91,6 +91,9 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
+  bool useFP16ConversionIntrinsics() const override {
+    return !HasHalfPrecision;
+  }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,

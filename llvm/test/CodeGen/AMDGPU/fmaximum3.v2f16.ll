@@ -7,6 +7,7 @@ define <2 x half> @fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) 
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_pk_maximum3_f16 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -21,6 +22,7 @@ define <2 x half> @fmaximum3_v2f16_vss(<2 x half> %a, <2 x half> inreg %b, <2 x 
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_pk_maximum3_f16 v0, v0, s0, s1
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -35,6 +37,7 @@ define <3 x half> @fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c) 
 ; GFX1210-SDAG:       ; %bb.0: ; %entry
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v0, v0, v2, v4
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v1, v1, v3, v5
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
@@ -44,6 +47,7 @@ define <3 x half> @fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c) 
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_maximum_f16 v1, v1, v3
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v0, v2, v4
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -61,6 +65,7 @@ define <4 x half> @fmaximum3_v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) 
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_pk_maximum3_f16 v0, v0, v2, v4
 ; GFX1210-NEXT:    v_pk_maximum3_f16 v1, v1, v3, v5
 ; GFX1210-NEXT:    s_wait_alu 0xfffe

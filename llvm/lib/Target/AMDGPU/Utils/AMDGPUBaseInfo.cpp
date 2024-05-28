@@ -11,6 +11,7 @@
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
@@ -127,6 +128,11 @@ unsigned getStorecntBitWidth(unsigned VersionMajor) {
 /// \returns Kmcnt bit width.
 unsigned getKmcntBitWidth(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 5 : 0;
+}
+
+/// \returns Xcnt bit width.
+unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
 }
 
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
@@ -1379,39 +1385,37 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
 }
 } // end namespace IsaInfo
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
                                const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  memset(&Header, 0, sizeof(Header));
-
-  Header.amd_kernel_code_version_major = 1;
-  Header.amd_kernel_code_version_minor = 2;
-  Header.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
-  Header.amd_machine_version_major = Version.Major;
-  Header.amd_machine_version_minor = Version.Minor;
-  Header.amd_machine_version_stepping = Version.Stepping;
-  Header.kernel_code_entry_byte_offset = sizeof(Header);
-  Header.wavefront_size = 6;
+  KernelCode.amd_kernel_code_version_major = 1;
+  KernelCode.amd_kernel_code_version_minor = 2;
+  KernelCode.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
+  KernelCode.amd_machine_version_major = Version.Major;
+  KernelCode.amd_machine_version_minor = Version.Minor;
+  KernelCode.amd_machine_version_stepping = Version.Stepping;
+  KernelCode.kernel_code_entry_byte_offset = sizeof(amd_kernel_code_t);
+  if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
+    KernelCode.wavefront_size = 5;
+    KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  } else {
+    KernelCode.wavefront_size = 6;
+  }
 
   // If the code object does not support indirect functions, then the value must
   // be 0xffffffff.
-  Header.call_convention = -1;
+  KernelCode.call_convention = -1;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
-  Header.kernarg_segment_alignment = 4;
-  Header.group_segment_alignment = 4;
-  Header.private_segment_alignment = 4;
+  KernelCode.kernarg_segment_alignment = 4;
+  KernelCode.group_segment_alignment = 4;
+  KernelCode.private_segment_alignment = 4;
 
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
-      Header.wavefront_size = 5;
-      Header.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-    }
-    Header.compute_pgm_resource_registers |=
-      S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-      S_00B848_MEM_ORDERED(1);
+    KernelCode.compute_pgm_resource_registers |=
+        S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
+        S_00B848_MEM_ORDERED(1);
   }
 }
 
@@ -1569,6 +1573,10 @@ unsigned getDscntBitMask(const IsaVersion &Version) {
 
 unsigned getKmcntBitMask(const IsaVersion &Version) {
   return (1 << getKmcntBitWidth(Version.Major)) - 1;
+}
+
+unsigned getXcntBitMask(const IsaVersion &Version) {
+  return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
 }
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
@@ -3357,17 +3365,24 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   return false;
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
   switch (OpDesc.getOpcode()) {
+  case AMDGPU::V_MUL_LO_U32_e64:
   case AMDGPU::V_MUL_LO_U32_e64_dpp:
   case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_U32_e64:
   case AMDGPU::V_MUL_HI_U32_e64_dpp:
   case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_I32_e64:
   case AMDGPU::V_MUL_HI_I32_e64_dpp:
   case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx12:
+  case AMDGPU::V_MAD_U32_e64:
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
-    return true;
+    return ST.hasFeature(AMDGPU::FeatureGFX12_10Insts);
   default:
     return hasAny64BitVGPROperands(OpDesc);
   }

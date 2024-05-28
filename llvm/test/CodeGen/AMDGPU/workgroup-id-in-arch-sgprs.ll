@@ -135,8 +135,8 @@ define amdgpu_kernel void @workgroup_id_xyz(ptr addrspace(1) %ptrx, ptr addrspac
 ;
 ; GFX1210-LABEL: workgroup_id_xyz:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x10
 ; GFX1210-NEXT:    s_and_b32 s2, ttmp7, 0xffff
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, 0

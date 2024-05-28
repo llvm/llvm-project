@@ -411,6 +411,7 @@ define amdgpu_ps float @mad_i32_vvv_multiuse(i32 %a, i32 %b, i32 %c) {
 ; GFX1210-NEXT:    v_add_nc_u32_e32 v0, v1, v2
 ; GFX1210-NEXT:    flat_store_b32 v[0:1], v1
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c

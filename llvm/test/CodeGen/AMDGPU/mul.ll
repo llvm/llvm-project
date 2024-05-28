@@ -509,11 +509,12 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ;
 ; GFX1210-LABEL: s_trunc_i64_mul_to_i32:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mul_i32 s0, s0, s6
 ; GFX1210-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -695,8 +696,8 @@ define amdgpu_kernel void @v_trunc_i64_mul_to_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX1210-LABEL: v_trunc_i64_mul_to_i32:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1703,9 +1704,10 @@ define amdgpu_kernel void @s_mul_i32(ptr addrspace(1) %out, [8 x i32], i32 %a, [
 ;
 ; GFX1210-LABEL: s_mul_i32:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x2
+; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x4c
 ; GFX1210-NEXT:    s_load_b32 s3, s[0:1], 0x70
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_mul_i32 s2, s2, s3
@@ -2018,9 +2020,10 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ;
 ; GFX1210-LABEL: s_mul_i1:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x2
+; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x4c
 ; GFX1210-NEXT:    s_load_b32 s3, s[0:1], 0x70
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mul_lo_u16 v0, s2, s3
@@ -2421,10 +2424,11 @@ define amdgpu_kernel void @s_mul_i64(ptr addrspace(1) %out, i64 %a, i64 %b) noun
 ;
 ; GFX1210-LABEL: s_mul_i64:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mul_u64 s[0:1], s[6:7], s[0:1]
 ; GFX1210-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -2642,8 +2646,8 @@ define amdgpu_kernel void @v_mul_i64(ptr addrspace(1) %out, ptr addrspace(1) %ap
 ;
 ; GFX1210-LABEL: v_mul_i64:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2949,6 +2953,7 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1210-NEXT:    s_mov_b32 s4, -1
 ; GFX1210-NEXT:    ; implicit-def: $sgpr5
 ; GFX1210-NEXT:  .LBB15_3: ; %Flow
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
@@ -3688,9 +3693,10 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; GFX1210-LABEL: s_mul_i128:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_clause 0x2
+; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x7c
 ; GFX1210-NEXT:    s_load_b128 s[8:11], s[0:1], 0x4c
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_mov_b64 s[12:13], 0xffffffff
 ; GFX1210-NEXT:    s_mov_b32 s3, 0
@@ -4259,6 +4265,7 @@ define i32 @mul_pow2_plus_1(i32 %val) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_lshl_add_u32 v0, v0, 3, v0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]

@@ -341,3 +341,54 @@ v_cvt_scalef32_2xpk16_bf6_f32 v[20:25], v[10:25], v[10:25], v6 div:2
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
 v_cvt_scalef32_2xpk16_bf6_f32 v[20:25], v[10:25], v[10:25], v6 clamp div:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:4095 glc
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:4095 slc
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:4095 dlc
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:4095 glc slc dlc
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_maximum3_f16 v0, v1, v2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_minimum3_f16 v0, v1, v2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_maximum_f16 v0, v1, v2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_minimum_f16 v0, v1, v2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_maximum_f32 v0, v1, v2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_minimum_f32 v0, v1, v2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_maximum3_f32 v0, s1, s2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_maximum3_f32 v0, v3, s1, s2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_maximum3_f32 v0, s1, v3, s2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_minimum3_f32 v0, s1, s2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: literal operands are not supported
+v_minimum3_f32 v0, v1, v2, 0xdeadbeef
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_pk_minimum3_f16 v0, s1, s2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_pk_maximum3_f16 v0, s1, s2, v3

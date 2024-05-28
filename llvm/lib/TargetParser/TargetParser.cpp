@@ -351,6 +351,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["fp8-conversion-insts"] = true;
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:
@@ -365,6 +366,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
@@ -464,6 +466,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["ashr-pk-insts"] = true;
       Features["dot12-insts"] = true;
       Features["dot13-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:

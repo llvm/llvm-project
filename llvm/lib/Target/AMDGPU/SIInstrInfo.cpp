@@ -2034,50 +2034,57 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
                                                     MachineInstr &MI,
                                                     const DebugLoc &DL) const {
   MachineFunction *MF = MBB.getParent();
-  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
-  MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
-  MF->push_back(HaltLoop);
-
   constexpr unsigned DoorbellIDMask = 0x3ff;
   constexpr unsigned ECQueueWaveAbort = 0x400;
 
+  MachineBasicBlock *TrapBB = &MBB;
+  MachineBasicBlock *ContBB = &MBB;
+  MachineBasicBlock *HaltLoopBB = MF->CreateMachineBasicBlock();
+
+  if (!MBB.succ_empty() || std::next(MI.getIterator()) != MBB.end()) {
+    ContBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
+    TrapBB = MF->CreateMachineBasicBlock();
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);
+    MF->push_back(TrapBB);
+    MBB.addSuccessor(TrapBB);
+  }
+
   // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
   // will be a nop.
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_TRAP))
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_TRAP))
       .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   Register DoorbellReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG_RTN_B32), DoorbellReg)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG_RTN_B32),
+          DoorbellReg)
       .addImm(AMDGPU::SendMsg::ID_RTN_GET_DOORBELL);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
       .addUse(AMDGPU::M0);
   Register DoorbellRegMasked =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
       .addUse(DoorbellReg)
       .addImm(DoorbellIDMask);
   Register SetWaveAbortBit =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
       .addUse(DoorbellRegMasked)
       .addImm(ECQueueWaveAbort);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(SetWaveAbortBit);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG))
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG))
       .addImm(AMDGPU::SendMsg::ID_INTERRUPT);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(AMDGPU::TTMP2);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoopBB);
+  TrapBB->addSuccessor(HaltLoopBB);
 
-  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
-  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_BRANCH))
-      .addMBB(HaltLoop);
+  BuildMI(*HaltLoopBB, HaltLoopBB->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
+  BuildMI(*HaltLoopBB, HaltLoopBB->end(), DL, get(AMDGPU::S_BRANCH))
+      .addMBB(HaltLoopBB);
+  MF->push_back(HaltLoopBB);
+  HaltLoopBB->addSuccessor(HaltLoopBB);
 
-  if (SplitBB != &MBB)
-    MBB.removeSuccessor(SplitBB);
-  MBB.addSuccessor(HaltLoop);
-  HaltLoop->addSuccessor(HaltLoop);
-
-  return SplitBB;
+  return ContBB;
 }
 
 unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
@@ -5304,7 +5311,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (Opcode != AMDGPU::V_MOV_B64_DPP_PSEUDO &&
         !AMDGPU::isLegalDPALU_DPPControl(ST, Opcode, DC) &&
-        AMDGPU::isDPALU_DPP(Desc)) {
+        AMDGPU::isDPALU_DPP(Desc, ST)) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "DP ALU dpp only support row_newbcast";
       return false;
@@ -5684,6 +5691,16 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   }
   return adjustAllocatableRegClass(ST, RI, MF.getRegInfo(), TID, RegClass,
                                    IsAllocatable);
+}
+
+const TargetRegisterClass *
+SIInstrInfo::getRegClassForBlockOp(const TargetRegisterInfo *TRI,
+                                   const MachineFunction &MF) const {
+  const MCInstrDesc &ScratchStoreBlockOp =
+      get(AMDGPU::SCRATCH_STORE_BLOCK_SADDR);
+  int VDataIdx = AMDGPU::getNamedOperandIdx(ScratchStoreBlockOp.getOpcode(),
+                                            AMDGPU::OpName::vdata);
+  return getRegClass(ScratchStoreBlockOp, VDataIdx, TRI, MF);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,

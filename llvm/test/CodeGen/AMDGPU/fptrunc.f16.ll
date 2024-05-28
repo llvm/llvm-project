@@ -162,6 +162,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
@@ -379,6 +380,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, s[2:3]
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -604,6 +606,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -851,6 +854,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -1070,6 +1074,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_xor_b32 s2, s2, 0x80000000
@@ -1281,6 +1286,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset0_b32 s2, 31
@@ -1492,6 +1498,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset1_b32 s2, 31
@@ -1708,6 +1715,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
@@ -1925,6 +1933,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset0_b32 s2, 31
@@ -2153,6 +2162,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX1210-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2

@@ -173,6 +173,7 @@ protected:
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
+  bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
@@ -190,6 +191,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -249,8 +251,11 @@ protected:
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
   bool HasConsumePowerInst = false;
-
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -889,6 +894,10 @@ public:
     return HasAtomicGlobalPkAddBF16Inst;
   }
 
+  bool hasAtomicBufferPkAddBF16Inst() const {
+    return HasAtomicBufferPkAddBF16Inst;
+  }
+
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
@@ -1256,6 +1265,8 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
@@ -1332,12 +1343,28 @@ public:
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1210.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
+
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
+
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
+  }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
@@ -1409,6 +1436,9 @@ public:
   // \returns true if the target has IEEE fminimum/fmaximum instructions
   bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
 
+  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
+  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
+
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
 
@@ -1447,6 +1477,9 @@ public:
 
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
   bool hasCvtPkF16Inst() const { return GFX12_10Insts && !GFX13Insts; }
+
+  // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
+  bool hasSGetShaderCyclesInst() const { return GFX12_10Insts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also

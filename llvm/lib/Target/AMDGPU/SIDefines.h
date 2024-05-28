@@ -465,6 +465,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1210
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -1174,7 +1175,7 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 #define   C_00B84C_LDS_SIZE                                           0xFF007FFF
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
-#define   C_00B84C_EXCP_EN
+#define   C_00B84C_EXCP_EN                                            0x80FFFFFF
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0

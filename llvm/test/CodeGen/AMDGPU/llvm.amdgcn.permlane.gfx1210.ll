@@ -5,8 +5,8 @@
 define amdgpu_kernel void @v_permlane_bcast_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1210-LABEL: v_permlane_bcast_b32_vss:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
@@ -97,8 +97,8 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vvv(ptr addrspace(1) %out, i32 %
 define amdgpu_kernel void @v_permlane_down_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1210-LABEL: v_permlane_down_b32_vss:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
@@ -189,8 +189,8 @@ define amdgpu_kernel void @v_permlane_down_b32_vvv(ptr addrspace(1) %out, i32 %s
 define amdgpu_kernel void @v_permlane_up_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1210-LABEL: v_permlane_up_b32_vss:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
@@ -281,8 +281,8 @@ define amdgpu_kernel void @v_permlane_up_b32_vvv(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlane_xor_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1210-LABEL: v_permlane_xor_b32_vss:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6

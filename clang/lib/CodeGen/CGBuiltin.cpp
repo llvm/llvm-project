@@ -57,6 +57,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -18340,6 +18341,29 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
+void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
+                                                     const CallExpr *E) {
+  constexpr const char *Tag = "amdgpu-as";
+
+  LLVMContext &Ctx = Inst->getContext();
+  SmallVector<MMRAMetadata::TagT, 3> MMRAs;
+  for (unsigned K = 2; K < E->getNumArgs(); ++K) {
+    llvm::Value *V = EmitScalarExpr(E->getArg(K));
+    StringRef AS;
+    if (llvm::getConstantStringInfo(V, AS)) {
+      MMRAs.push_back({Tag, AS});
+      // TODO: Delete the resulting unused constant?
+      continue;
+    }
+    CGM.Error(E->getExprLoc(),
+              "expected an address space name as a string literal");
+  }
+
+  llvm::sort(MMRAs);
+  MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
+  Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -19388,7 +19412,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_fence: {
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
                             EmitScalarExpr(E->getArg(1)), AO, SSID);
-    return Builder.CreateFence(AO, SSID);
+    FenceInst *Fence = Builder.CreateFence(AO, SSID);
+    if (E->getNumArgs() > 2)
+      AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
+    return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
@@ -21623,6 +21650,17 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Addr = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_storef16_f32);
     return Builder.CreateCall(Callee, {Val, Addr});
+  }
+  case WebAssembly::BI__builtin_wasm_splat_f16x8: {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_splat_f16x8);
+    return Builder.CreateCall(Callee, {Val});
+  }
+  case WebAssembly::BI__builtin_wasm_extract_lane_f16x8: {
+    Value *Vector = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_extract_lane_f16x8);
+    return Builder.CreateCall(Callee, {Vector, Index});
   }
   case WebAssembly::BI__builtin_wasm_table_get: {
     assert(E->getArg(0)->getType()->isArrayType());
