@@ -44,6 +44,16 @@
 #include "test_iterators.h"
 
 namespace {
+
+// __debug_less will perform an additional comparison in an assertion
+static constexpr unsigned std_less_comparison_count_multiplier() noexcept {
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+  return 2;
+#else
+  return 1;
+#endif
+}
+
 struct [[nodiscard]] OperationCounts {
   std::size_t comparisons{};
   struct PerInput {
@@ -58,15 +68,8 @@ struct [[nodiscard]] OperationCounts {
   std::array<PerInput, 2> in;
 
   [[nodiscard]] constexpr bool isNotBetterThan(const OperationCounts& expect) {
-    // __debug_less will perform an additional comparison in an assertion
-    constexpr unsigned comparison_multiplier =
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-        2;
-#else
-        1;
-#endif
-    return comparisons >= comparison_multiplier * expect.comparisons && in[0].isNotBetterThan(expect.in[0]) &&
-           in[1].isNotBetterThan(expect.in[1]);
+    return std_less_comparison_count_multiplier() * comparisons >= expect.comparisons &&
+           in[0].isNotBetterThan(expect.in[0]) && in[1].isNotBetterThan(expect.in[1]);
   }
 };
 
@@ -303,7 +306,7 @@ constexpr bool testComplexityBasic() {
   std::array<int, 5> r2{2, 4, 6, 8, 10};
   std::array<int, 0> expected{};
 
-  const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
+  const std::size_t maxOperation = std_less_comparison_count_multiplier() * (2 * (r1.size() + r2.size()) - 1);
 
   // std::set_intersection
   {
