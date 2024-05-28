@@ -1742,6 +1742,10 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
   if (auto *BI = dyn_cast<BinaryOperator>(I))
     return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(), Ops[0],
                                Ops[1]);
+  if (auto *CI = dyn_cast<CmpInst>(I))
+    return Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
+  if (auto *SI = dyn_cast<SelectInst>(I))
+    return Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
   if (II)
     return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
   assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
@@ -1821,6 +1825,12 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           if (V->getValueID() != FrontV->getValueID())
             return false;
+          if (auto *CI = dyn_cast<CmpInst>(V))
+            if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
+              return false;
+          if (auto *SI = dyn_cast<SelectInst>(V))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()))
+              return false;
           if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
             return false;
           auto *II = dyn_cast<IntrinsicInst>(V);
@@ -1832,12 +1842,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
     // Check the operator is one that we support. We exclude div/rem in case
     // they hit UB from poison lanes.
-    if (isa<BinaryOperator>(FrontV) &&
-        !cast<BinaryOperator>(FrontV)->isIntDivRem()) {
+    if ((isa<BinaryOperator>(FrontV) &&
+         !cast<BinaryOperator>(FrontV)->isIntDivRem()) ||
+        isa<CmpInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
     } else if (isa<UnaryOperator>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+    } else if (isa<SelectInst>(FrontV)) {
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
     } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                II && isTriviallyVectorizable(II->getIntrinsicID())) {
       for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {

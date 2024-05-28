@@ -419,19 +419,8 @@ define <8 x i8> @extrause_shuffle(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i8> @icmpsel(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: @icmpsel(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i8> [[B:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[CB:%.*]] = shufflevector <8 x i8> [[C:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CT:%.*]] = shufflevector <8 x i8> [[C]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[DB:%.*]] = shufflevector <8 x i8> [[D:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[DT:%.*]] = shufflevector <8 x i8> [[D]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[ABT1:%.*]] = icmp slt <4 x i8> [[AT]], [[BT]]
-; CHECK-NEXT:    [[ABB1:%.*]] = icmp slt <4 x i8> [[AB]], [[BB]]
-; CHECK-NEXT:    [[ABT:%.*]] = select <4 x i1> [[ABT1]], <4 x i8> [[CT]], <4 x i8> [[DT]]
-; CHECK-NEXT:    [[ABB:%.*]] = select <4 x i1> [[ABB1]], <4 x i8> [[CB]], <4 x i8> [[DB]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <8 x i1> [[TMP1]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]]
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -485,19 +474,8 @@ define <8 x i8> @icmpsel_diffentcond(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x
 
 define <8 x i8> @fcmpsel(<8 x half> %a, <8 x half> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: @fcmpsel(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[CB:%.*]] = shufflevector <8 x i8> [[C:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CT:%.*]] = shufflevector <8 x i8> [[C]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[DB:%.*]] = shufflevector <8 x i8> [[D:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[DT:%.*]] = shufflevector <8 x i8> [[D]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[ABT1:%.*]] = fcmp olt <4 x half> [[AT]], [[BT]]
-; CHECK-NEXT:    [[ABB1:%.*]] = fcmp olt <4 x half> [[AB]], [[BB]]
-; CHECK-NEXT:    [[ABT:%.*]] = select <4 x i1> [[ABT1]], <4 x i8> [[CT]], <4 x i8> [[DT]]
-; CHECK-NEXT:    [[ABB:%.*]] = select <4 x i1> [[ABB1]], <4 x i8> [[CB]], <4 x i8> [[DB]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt <8 x half> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <8 x i1> [[TMP1]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]]
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
