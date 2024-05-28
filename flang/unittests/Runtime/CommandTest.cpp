@@ -344,7 +344,8 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
-  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor(
+      "cmdmsg will not modify the remaining buffer XXXXXXXXXXXXXXXXXXXXX")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
@@ -354,7 +355,8 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
 #endif
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      "Invalid command line: check for exitstat and console printoutXXXX");
 }
 
 TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
