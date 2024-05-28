@@ -1852,9 +1852,12 @@ let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
       let Uses = [TENSORcnt];
       let Defs = [TENSORcnt];
     }
+} // End SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1
+
+let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1
+} // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
 let SubtargetPredicate = Has1024AddressableVGPRs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {

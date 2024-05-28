@@ -190,6 +190,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -1339,7 +1340,7 @@ public:
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1210.
-  bool hasWaitXCnt() const { return GFX12_10Insts; }
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
