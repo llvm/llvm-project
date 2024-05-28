@@ -480,24 +480,25 @@ def Vector_ShuffleOp :
   let hasCanonicalizer = 1;
 }
 
-def Vector_InterleaveOp :
-  Vector_Op<"interleave", [Pure,
-    AllTypesMatch<["lhs", "rhs"]>,
-    TypesMatchWith<
+def ResultIsDoubleSourceVectorType : TypesMatchWith<
     "type of 'result' is double the width of the inputs",
     "lhs", "result",
     [{
       [&]() -> ::mlir::VectorType {
-        auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+        auto vectorType = ::llvm::cast<::mlir::VectorType>($_self);
         ::mlir::VectorType::Builder builder(vectorType);
         if (vectorType.getRank() == 0) {
-          static constexpr int64_t v2xty_shape[] = { 2 };
-          return builder.setShape(v2xty_shape);
+          static constexpr int64_t v2xTyShape[] = {2};
+          return builder.setShape(v2xTyShape);
         }
         auto lastDim = vectorType.getRank() - 1;
         return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
       }()
-    }]>]> {
+    }]>;
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
+    ResultIsDoubleSourceVectorType]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -513,16 +514,16 @@ def Vector_InterleaveOp :
 
     Example:
     ```mlir
-    %0 = vector.interleave %a, %b
-               : vector<[4]xi32>     ; yields vector<[8]xi32>
-    %1 = vector.interleave %c, %d
-               : vector<8xi8>        ; yields vector<16xi8>
-    %2 = vector.interleave %e, %f
-               : vector<f16>         ; yields vector<2xf16>
-    %3 = vector.interleave %g, %h
-               : vector<2x4x[2]xf64> ; yields vector<2x4x[4]xf64>
-    %4 = vector.interleave %i, %j
-               : vector<6x3xf32>     ; yields vector<6x6xf32>
+    %a = arith.constant dense<[0, 1]> : vector<2xi32>
+    %b = arith.constant dense<[2, 3]> : vector<2xi32>
+    // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
+
+    // Examples showing allowed input and result types.
+    %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
+    %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
+    %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
+    %4 = vector.interleave %i, %j : vector<2x4x[2]xf64> -> vector<2x4x[4]xf64>
     ```
   }];
 
@@ -530,7 +531,7 @@ def Vector_InterleaveOp :
   let results = (outs AnyVector:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs  attr-dict `:` type($lhs)
+    $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
   }];
 
   let extraClassDeclaration = [{
