@@ -362,8 +362,9 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
     }
   }
   if (!attrs.test(Attr::Value) &&
-      !common::AreCompatibleCUDADataAttrs(
-          cudaDataAttr, actual.cudaDataAttr, ignoreTKR)) {
+      !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
+          ignoreTKR,
+          /*allowUnifiedMatchingRule=*/false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
     }
@@ -1332,16 +1333,21 @@ bool Procedure::IsCompatibleWith(const Procedure &actual,
   return false;
 }
 
-int Procedure::FindPassIndex(std::optional<parser::CharBlock> name) const {
+std::optional<int> Procedure::FindPassIndex(
+    std::optional<parser::CharBlock> name) const {
   int argCount{static_cast<int>(dummyArguments.size())};
-  int index{0};
   if (name) {
-    while (index < argCount && *name != dummyArguments[index].name.c_str()) {
-      ++index;
+    for (int index{0}; index < argCount; ++index) {
+      if (*name == dummyArguments[index].name.c_str()) {
+        return index;
+      }
     }
+    return std::nullopt;
+  } else if (argCount > 0) {
+    return 0;
+  } else {
+    return std::nullopt;
   }
-  CHECK(index < argCount);
-  return index;
 }
 
 bool Procedure::CanOverride(
@@ -1754,8 +1760,9 @@ bool DistinguishUtils::Distinguishable(
   } else if (y.attrs.test(Attr::Allocatable) && x.attrs.test(Attr::Pointer) &&
       x.intent != common::Intent::In) {
     return true;
-  } else if (!common::AreCompatibleCUDADataAttrs(
-                 x.cudaDataAttr, y.cudaDataAttr, x.ignoreTKR | y.ignoreTKR)) {
+  } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
+                 x.ignoreTKR | y.ignoreTKR,
+                 /*allowUnifiedMatchingRule=*/false)) {
     return true;
   } else if (features_.IsEnabled(
                  common::LanguageFeature::DistinguishableSpecifics) &&

@@ -1057,7 +1057,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
+static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1086,7 +1086,7 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
 
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
-  RISCVISAInfo::OrderedExtensionMap exts;
+  RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;

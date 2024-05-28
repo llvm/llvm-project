@@ -432,7 +432,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      [C++] Whether __STDC__ is predefined and if so, what its value is,
   //      are implementation-defined.
   // (Removed in C++20.)
-  if (!LangOpts.MSVCCompat && !LangOpts.TraditionalCPP)
+  if ((!LangOpts.MSVCCompat || LangOpts.MSVCEnableStdcMacro) &&
+      !LangOpts.TraditionalCPP)
     Builder.defineMacro("__STDC__");
   //   -- __STDC_HOSTED__
   //      The integer literal 1 if the implementation is a hosted
@@ -703,7 +704,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "201606L");
+    Builder.defineMacro("__cpp_structured_bindings", "202403L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -1006,6 +1007,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else if (LangOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
+  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+    Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)
     Builder.defineMacro("__DEPRECATED");

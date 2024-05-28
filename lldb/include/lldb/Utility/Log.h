@@ -112,6 +112,23 @@ private:
   static char ID;
 };
 
+/// A T-style log handler that multiplexes messages to two log handlers.
+class TeeLogHandler : public LogHandler {
+public:
+  TeeLogHandler(std::shared_ptr<LogHandler> first_log_handler,
+                std::shared_ptr<LogHandler> second_log_handler);
+
+  void Emit(llvm::StringRef message) override;
+
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
+private:
+  std::shared_ptr<LogHandler> m_first_log_handler;
+  std::shared_ptr<LogHandler> m_second_log_handler;
+  static char ID;
+};
+
 class Log final {
 public:
   /// The underlying type of all log channel enums. Declare them as:

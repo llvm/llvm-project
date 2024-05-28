@@ -496,7 +496,7 @@ private:
   // the type of index, and returns a TypeDesc describing that type. It does not
   // modify cur_pos.
   LIBC_INLINE TypeDesc get_type_desc(size_t index) {
-    // index mode is assumed, and the indicies start at 1, so an index
+    // index mode is assumed, and the indices start at 1, so an index
     // of 0 is invalid.
     size_t local_pos = 0;
 

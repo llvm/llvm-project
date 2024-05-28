@@ -18,6 +18,7 @@
 
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -30,18 +31,19 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#error "Missing preprocessor definitions for endianness detection."
+#endif
+
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define LITTLEENDIAN_CPU
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BIGENDIAN_CPU
+#endif
+
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
-
-// The ELF ID should be defined at compile-time by the build system.
-#ifndef TARGET_ELF_ID
-#define TARGET_ELF_ID EM_NONE
-#endif
-
-// The target triple should be defined at compile-time by the build system.
-#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
-#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
-#endif
 
 namespace llvm {
 namespace omp {
@@ -383,10 +385,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef OMPT_SUPPORT
-    ompt::connectLibrary();
-#endif
-
 #ifdef USES_DYNAMIC_FFI
     if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
       return std::move(Err);
@@ -410,7 +408,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// Get the ELF code to recognize the compatible binary images.
-  uint16_t getMagicElfBits() const override { return ELF::TARGET_ELF_ID; }
+  uint16_t getMagicElfBits() const override {
+    return utils::elf::getTargetMachine();
+  }
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -421,11 +421,29 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
-    return llvm::Triple(LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE).getArch();
+#if defined(__x86_64__)
+    return llvm::Triple::x86_64;
+#elif defined(__s390x__)
+    return llvm::Triple::systemz;
+#elif defined(__aarch64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::aarch64;
+#else
+    return llvm::Triple::aarch64_be;
+#endif
+#elif defined(__powerpc64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::ppc64le;
+#else
+    return llvm::Triple::ppc64;
+#endif
+#else
+    return llvm::Triple::UnknownArch;
+#endif
   }
-};
 
-GenericPluginTy *PluginTy::createPlugin() { return new GenELF64PluginTy(); }
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
+};
 
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
@@ -440,3 +458,9 @@ static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_host() {
+  return new llvm::omp::target::plugin::GenELF64PluginTy();
+}
+}

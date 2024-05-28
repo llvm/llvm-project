@@ -60,8 +60,8 @@ public:
     // For each code point in the `from` string, convert naively to the `to`
     // string code point. Conversion is done blindly on size only, not value.
     auto getCharBits = [&](mlir::Type t) {
-      auto chrTy = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t))
-                       .cast<fir::CharacterType>();
+      auto chrTy = mlir::cast<fir::CharacterType>(
+          fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t)));
       return kindMap.getCharacterBitsize(chrTy.getFKind());
     };
     auto fromBits = getCharBits(conv.getFrom().getType());

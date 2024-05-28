@@ -5,11 +5,11 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm -emit-module-interface -o %t/a.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=a=%t/a.pcm %t/c.cpp -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=a=%t/a.pcm %t/c.cpp -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
 
 // Test again with reduced BMI
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm -emit-reduced-module-interface -o %t/a.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=a=%t/a.pcm %t/c.cpp -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=a=%t/a.pcm %t/c.cpp -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
 
 //--- a.cppm
 export module a;

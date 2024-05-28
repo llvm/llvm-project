@@ -443,3 +443,88 @@ func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
 func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
   return
 }
+
+// -----
+
+#CSR_ExpType = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  explicitVal = 1 : i32,
+  implicitVal = 0.0 : f32
+}>
+
+// expected-error@+1 {{explicit value type mismatch between encoding and tensor element type: 'i32' != 'f32'}}
+func.func private @sparse_csr(tensor<?x?xf32, #CSR_ExpType>)
+
+// -----
+
+#CSR_ImpType = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  explicitVal = 1 : i32,
+  implicitVal = 0.0 : f32
+}>
+
+// expected-error@+1 {{implicit value type mismatch between encoding and tensor element type: 'f32' != 'i32'}}
+func.func private @sparse_csr(tensor<?x?xi32, #CSR_ImpType>)
+
+// -----
+
+// expected-error@+1 {{expected a numeric value for explicitVal}}
+#CSR_ExpType = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  explicitVal = "str"
+}>
+func.func private @sparse_csr(tensor<?x?xi32, #CSR_ExpType>)
+
+// -----
+
+// expected-error@+1 {{expected a numeric value for implicitVal}}
+#CSR_ImpType = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  implicitVal = "str"
+}>
+func.func private @sparse_csr(tensor<?x?xi32, #CSR_ImpType>)
+
+// -----
+
+#CSR_ImpVal = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  implicitVal = 1 : i32
+}>
+
+// expected-error@+1 {{implicit value must be zero}}
+func.func private @sparse_csr(tensor<?x?xi32, #CSR_ImpVal>)
+
+// -----
+
+#CSR_ImpVal = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 32,
+  crdWidth = 32,
+  implicitVal = 1.0 : f32
+}>
+
+// expected-error@+1 {{implicit value must be zero}}
+func.func private @sparse_csr(tensor<?x?xf32, #CSR_ImpVal>)
+
+// -----
+
+#CSR_OnlyOnes = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 64,
+  crdWidth = 64,
+  explicitVal = #complex.number<:f32 1.0, 0.0>,
+  implicitVal = #complex.number<:f32 1.0, 0.0>
+}>
+
+// expected-error@+1 {{implicit value must be zero}}
+func.func private @sparse_csr(tensor<?x?xcomplex<f32>, #CSR_OnlyOnes>)

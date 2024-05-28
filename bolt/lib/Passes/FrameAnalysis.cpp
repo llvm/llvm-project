@@ -561,11 +561,6 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
     NamedRegionTimer T1("clearspt", "clear spt", "FA", "FA breakdown",
                         opts::TimeFA);
     clearSPTMap();
-
-    // Clean up memory allocated for annotation values
-    if (!opts::NoThreads)
-      for (MCPlusBuilder::AllocatorIdTy Id : SPTAllocatorsId)
-        BC.MIB->freeValuesAllocator(Id);
   }
 }
 

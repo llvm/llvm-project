@@ -480,7 +480,7 @@ public:
   }
   void removeCVRQualifiers(unsigned mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeCVRQualifiers() {
     removeCVRQualifiers(CVRMask);
@@ -609,7 +609,7 @@ public:
   }
   void removeFastQualifiers(unsigned mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
@@ -2378,6 +2378,10 @@ public:
   /// 'riscv_rvv_vector_bits' type attribute as VectorType.
   QualType getRVVEltType(const ASTContext &Ctx) const;
 
+  /// Returns the representative type for the element of a sizeless vector
+  /// builtin type.
+  QualType getSizelessVectorEltType(const ASTContext &Ctx) const;
+
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
 
@@ -2511,6 +2515,7 @@ public:
   bool isRecordType() const;
   bool isClassType() const;
   bool isStructureType() const;
+  bool isStructureTypeWithFlexibleArrayMember() const;
   bool isObjCBoxableRecordType() const;
   bool isInterfaceType() const;
   bool isStructureOrClassType() const;
@@ -2519,6 +2524,7 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
@@ -7725,6 +7731,10 @@ inline bool Type::isExtVectorBoolType() const {
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
 }
 
+inline bool Type::isSubscriptableVectorType() const {
+  return isVectorType() || isSveVLSBuiltinType();
+}
+
 inline bool Type::isMatrixType() const {
   return isa<MatrixType>(CanonicalType);
 }
@@ -8040,7 +8050,10 @@ inline bool Type::isUndeducedType() const {
 /// Determines whether this is a type for which one can define
 /// an overloaded operator.
 inline bool Type::isOverloadableType() const {
-  return isDependentType() || isRecordType() || isEnumeralType();
+  if (!CanonicalType->isDependentType())
+    return isRecordType() || isEnumeralType();
+  return !isArrayType() && !isFunctionType() && !isAnyPointerType() &&
+         !isMemberPointerType();
 }
 
 /// Determines whether this type is written as a typedef-name.

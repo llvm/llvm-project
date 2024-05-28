@@ -19,6 +19,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -63,39 +64,85 @@ resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
                                 memref::ExpandShapeOp expandShapeOp,
                                 ValueRange indices,
                                 SmallVectorImpl<Value> &sourceIndices) {
-  // The below implementation uses computeSuffixProduct method, which only
-  // allows int64_t values (i.e., static shape). Bail out if it has dynamic
-  // shapes.
-  if (!expandShapeOp.getResultType().hasStaticShape())
+  // Record the rewriter context for constructing ops later.
+  MLIRContext *ctx = rewriter.getContext();
+
+  // Capture expand_shape's input dimensions as `SmallVector<OpFoldResult>`.
+  // This is done for the purpose of inferring the output shape via
+  // `inferExpandOutputShape` which will in turn be used for suffix product
+  // calculation later.
+  SmallVector<OpFoldResult> srcShape;
+  MemRefType srcType = expandShapeOp.getSrcType();
+
+  for (int64_t i = 0, e = srcType.getRank(); i < e; ++i) {
+    if (srcType.isDynamicDim(i)) {
+      srcShape.push_back(
+          rewriter.create<memref::DimOp>(loc, expandShapeOp.getSrc(), i)
+              .getResult());
+    } else {
+      srcShape.push_back(rewriter.getIndexAttr(srcType.getShape()[i]));
+    }
+  }
+
+  auto outputShape = inferExpandShapeOutputShape(
+      rewriter, loc, expandShapeOp.getResultType(),
+      expandShapeOp.getReassociationIndices(), srcShape);
+  if (!outputShape.has_value())
     return failure();
 
-  MLIRContext *ctx = rewriter.getContext();
+  // Traverse all reassociation groups to determine the appropriate indices
+  // corresponding to each one of them post op folding.
   for (ArrayRef<int64_t> groups : expandShapeOp.getReassociationIndices()) {
     assert(!groups.empty() && "association indices groups cannot be empty");
+    // Flag to indicate the presence of dynamic dimensions in current
+    // reassociation group.
     int64_t groupSize = groups.size();
 
-    // Construct the expression for the index value w.r.t to expand shape op
-    // source corresponding the indices wrt to expand shape op result.
-    SmallVector<int64_t> sizes(groupSize);
-    for (int64_t i = 0; i < groupSize; ++i)
-      sizes[i] = expandShapeOp.getResultType().getDimSize(groups[i]);
-    SmallVector<int64_t> suffixProduct = computeSuffixProduct(sizes);
-    SmallVector<AffineExpr> dims(groupSize);
-    bindDimsList(ctx, MutableArrayRef{dims});
-    AffineExpr srcIndexExpr = linearize(ctx, dims, suffixProduct);
+    // Group output dimensions utilized in this reassociation group for suffix
+    // product calculation.
+    SmallVector<OpFoldResult> sizesVal(groupSize);
+    for (int64_t i = 0; i < groupSize; ++i) {
+      sizesVal[i] = (*outputShape)[groups[i]];
+    }
 
-    /// Apply permutation and create AffineApplyOp.
+    // Calculate suffix product of relevant output dimension sizes.
+    SmallVector<OpFoldResult> suffixProduct =
+        memref::computeSuffixProductIRBlock(loc, rewriter, sizesVal);
+
+    // Create affine expression variables for dimensions and symbols in the
+    // newly constructed affine map.
+    SmallVector<AffineExpr> dims(groupSize), symbols(groupSize);
+    bindDimsList<AffineExpr>(ctx, dims);
+    bindSymbolsList<AffineExpr>(ctx, symbols);
+
+    // Linearize binded dimensions and symbols to construct the resultant
+    // affine expression for this indice.
+    AffineExpr srcIndexExpr = linearize(ctx, dims, symbols);
+
+    // Record the load index corresponding to each dimension in the
+    // reassociation group. These are later supplied as operands to the affine
+    // map used for calulating relevant index post op folding.
     SmallVector<OpFoldResult> dynamicIndices(groupSize);
     for (int64_t i = 0; i < groupSize; i++)
       dynamicIndices[i] = indices[groups[i]];
 
-    // Creating maximally folded and composd affine.apply composes better with
-    // other transformations without interleaving canonicalization passes.
+    // Supply suffix product results followed by load op indices as operands
+    // to the map.
+    SmallVector<OpFoldResult> mapOperands;
+    llvm::append_range(mapOperands, suffixProduct);
+    llvm::append_range(mapOperands, dynamicIndices);
+
+    // Creating maximally folded and composed affine.apply composes better
+    // with other transformations without interleaving canonicalization
+    // passes.
     OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
         rewriter, loc,
         AffineMap::get(/*numDims=*/groupSize,
-                       /*numSymbols=*/0, srcIndexExpr),
-        dynamicIndices);
+                       /*numSymbols=*/groupSize, /*expression=*/srcIndexExpr),
+        mapOperands);
+
+    // Push index value in the op post folding corresponding to this
+    // reassociation group.
     sourceIndices.push_back(
         getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
   }
@@ -315,7 +362,7 @@ public:
 
 /// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
 /// is folds subview on src and dst memref of the copy.
-class NvgpuAsyncCopyOpSubViewOpFolder final
+class NVGPUAsyncCopyOpSubViewOpFolder final
     : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
 public:
   using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
@@ -647,7 +694,7 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
   return success();
 }
 
-LogicalResult NvgpuAsyncCopyOpSubViewOpFolder::matchAndRewrite(
+LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
     nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
 
   LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
@@ -722,7 +769,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                LoadOpOfCollapseShapeOpFolder<memref::LoadOp>,
                StoreOpOfCollapseShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfCollapseShapeOpFolder<memref::StoreOp>,
-               SubViewOfSubViewFolder, NvgpuAsyncCopyOpSubViewOpFolder>(
+               SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
       patterns.getContext());
 }
 

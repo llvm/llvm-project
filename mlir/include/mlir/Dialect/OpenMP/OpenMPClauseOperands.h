@@ -177,8 +177,8 @@ struct ProcBindClauseOps {
 
 struct ReductionClauseOps {
   llvm::SmallVector<Value> reductionVars;
+  llvm::SmallVector<bool> reduceVarByRef;
   llvm::SmallVector<Attribute> reductionDeclSymbols;
-  UnitAttr reductionByRefAttr;
 };
 
 struct SafelenClauseOps {

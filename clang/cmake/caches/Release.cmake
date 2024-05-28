@@ -82,6 +82,7 @@ set(LLVM_ENABLE_PROJECTS ${STAGE1_PROJECTS} CACHE STRING "")
 # stage2-instrumented and Final Stage Config:
 # Options that need to be set in both the instrumented stage (if we are doing
 # a pgo build) and the final stage.
+set_instrument_and_final_stage_var(CMAKE_POSITION_INDEPENDENT_CODE "ON" STRING)
 set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" STRING)
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)

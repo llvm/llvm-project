@@ -9,7 +9,7 @@ module m
   !ERROR: VALUE attribute may apply only to a dummy data object
   subroutine C863(notData,assumedSize,coarray,coarrayComponent,assumedRank,assumedLen)
     external :: notData
-    !ERROR: VALUE attribute may apply only to a dummy argument
+    !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
     real, value :: notADummy
     value :: notData
     !ERROR: VALUE attribute may not apply to an assumed-size array

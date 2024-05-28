@@ -119,6 +119,7 @@ all_tests = set()
 
 # LLDB library directory.
 lldb_libs_dir = None
+lldb_obj_root = None
 
 libcxx_include_dir = None
 libcxx_include_target_dir = None

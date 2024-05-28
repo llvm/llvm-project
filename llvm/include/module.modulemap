@@ -345,6 +345,11 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 // Build the module with the tablegen-generated files needed by the
 // TargetParser module before building the TargetParser module itself.
 module TargetParserGen {
+  module AArch64TargetParserDef {
+    header "llvm/TargetParser/AArch64TargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
   module RISCVTargetParserDef {
     header "llvm/TargetParser/RISCVTargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"

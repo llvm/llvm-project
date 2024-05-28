@@ -206,6 +206,15 @@ def WCharAPI : PublicAPI<"wchar.h"> {
   ];
 }
 
+def UCharAPI : PublicAPI<"uchar.h"> {
+  let Types = [
+    "mbstate_t",
+    "char8_t",
+    "char16_t",
+    "char32_t",
+  ];
+}
+
 def SysRandomAPI : PublicAPI<"sys/random.h"> {
   let Types = ["size_t", "ssize_t"];
 }

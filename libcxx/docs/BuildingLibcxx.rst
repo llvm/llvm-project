@@ -208,7 +208,7 @@ libc++ specific options
 
 .. option:: LIBCXX_INSTALL_MODULES:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Toggle the installation of the experimental libc++ module sources.
 

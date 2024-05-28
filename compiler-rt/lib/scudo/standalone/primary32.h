@@ -88,6 +88,10 @@ public:
       Sci->MinRegionIndex = NumRegions;
       Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
+
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 

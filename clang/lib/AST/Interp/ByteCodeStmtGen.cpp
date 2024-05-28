@@ -292,8 +292,9 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
   case Stmt::GotoStmtClass:
-  case Stmt::LabelStmtClass:
     return this->emitInvalid(S);
+  case Stmt::LabelStmtClass:
+    return this->visitStmt(cast<LabelStmt>(S)->getSubStmt());
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);
@@ -332,7 +333,8 @@ bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
-    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl>(D))
+    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
+            FunctionDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);
@@ -685,26 +687,29 @@ bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
 
-  for (const Attr *A : S->getAttrs()) {
-    auto *AA = dyn_cast<CXXAssumeAttr>(A);
-    if (!AA)
-      continue;
+  if (this->Ctx.getLangOpts().CXXAssumptions &&
+      !this->Ctx.getLangOpts().MSVCCompat) {
+    for (const Attr *A : S->getAttrs()) {
+      auto *AA = dyn_cast<CXXAssumeAttr>(A);
+      if (!AA)
+        continue;
 
-    assert(isa<NullStmt>(S->getSubStmt()));
+      assert(isa<NullStmt>(S->getSubStmt()));
 
-    const Expr *Assumption = AA->getAssumption();
-    if (Assumption->isValueDependent())
-      return false;
+      const Expr *Assumption = AA->getAssumption();
+      if (Assumption->isValueDependent())
+        return false;
 
-    if (Assumption->HasSideEffects(this->Ctx.getASTContext()))
-      continue;
+      if (Assumption->HasSideEffects(this->Ctx.getASTContext()))
+        continue;
 
-    // Evaluate assumption.
-    if (!this->visitBool(Assumption))
-      return false;
+      // Evaluate assumption.
+      if (!this->visitBool(Assumption))
+        return false;
 
-    if (!this->emitAssume(Assumption))
-      return false;
+      if (!this->emitAssume(Assumption))
+        return false;
+    }
   }
 
   // Ignore other attributes.

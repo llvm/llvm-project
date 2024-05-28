@@ -111,7 +111,7 @@ constexpr void test() {
 
     std::same_as<std::vector<T>> decltype(auto) imags{
         arr | std::views::elements<1> | std::ranges::to<std::vector<T>>()};
-    assert(reals.size() == 2);
+    assert(imags.size() == 2);
     assert(imags[0] == T{28});
     assert(imags[1] == T{94});
   }

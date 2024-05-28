@@ -3124,6 +3124,7 @@ TEST_F(FormatTest, FormatsLabels) {
                "    g();\n"
                "  }\n"
                "}");
+
   FormatStyle Style = getLLVMStyle();
   Style.IndentGotoLabels = false;
   verifyFormat("void f() {\n"
@@ -3163,6 +3164,13 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
+
+  Style.ColumnLimit = 15;
+  verifyFormat("#define FOO   \\\n"
+               "label:        \\\n"
+               "  break;",
+               Style);
+
   // The opening brace may either be on the same unwrapped line as the colon or
   // on a separate one. The formatter should recognize both.
   Style = getLLVMStyle();
@@ -6627,6 +6635,26 @@ TEST_F(FormatTest, EscapedNewlines) {
                "private:         \\\r\n"
                "  int x(int a);",
                AlignLeft);
+
+  constexpr StringRef Code{"#define A   \\\n"
+                           "  int a123; \\\n"
+                           "  int a;    \\\n"
+                           "  int a1234;"};
+  verifyFormat(Code, AlignLeft);
+
+  constexpr StringRef Code2{"#define A    \\\n"
+                            "  int a123;  \\\n"
+                            "  int a;     \\\n"
+                            "  int a1234;"};
+  auto LastLine = getLLVMStyle();
+  LastLine.AlignEscapedNewlines = FormatStyle::ENAS_LeftWithLastLine;
+  verifyFormat(Code2, LastLine);
+
+  LastLine.ColumnLimit = 13;
+  verifyFormat(Code, LastLine);
+
+  LastLine.ColumnLimit = 0;
+  verifyFormat(Code2, LastLine);
 
   FormatStyle DontAlign = getLLVMStyle();
   DontAlign.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
@@ -10537,6 +10565,17 @@ TEST_F(FormatTest, KeepStringLabelValuePairsOnALine) {
       "string v = StrCat(\"aaaaaaaaaaaaaaaaaaaaaaaaaaa: \",\n"
       "                  SomeFunction(aaaaaaaaaaaa, aaaaaaaa.aaaaaaa),\n"
       "                  bbbbbbbbbbbbbbbbbbbbbbb);");
+}
+
+TEST_F(FormatTest, WrapBeforeInsertionOperatorbetweenStringLiterals) {
+  verifyFormat("QStringList() << \"foo\" << \"bar\";");
+
+  verifyNoChange("QStringList() << \"foo\"\n"
+                 "              << \"bar\";");
+
+  verifyFormat("log_error(log, \"foo\" << \"bar\");",
+               "log_error(log, \"foo\"\n"
+               "                   << \"bar\");");
 }
 
 TEST_F(FormatTest, UnderstandsEquals) {
@@ -17321,12 +17360,14 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
+  verifyFormat("xor = foo;");
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);
   verifyFormat("a or_eq 8;", Spaces);
+  verifyFormat("xor= foo;", Spaces);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
@@ -24507,16 +24548,25 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyFormat("int a compl(5);");
   verifyFormat("int a not(5);");
 
-  /* FIXME handle alternate tokens
-   * https://en.cppreference.com/w/cpp/language/operator_alternative
-  // alternative tokens
-  verifyFormat("compl foo();");     //  ~foo();
-  verifyFormat("foo() <%%>;");      // foo();
-  verifyFormat("void foo() <%%>;"); // void foo(){}
-  verifyFormat("int a <:1:>;");     // int a[1];[
+  verifyFormat("compl foo();");     // ~foo();
+  verifyFormat("foo() <%%>");       // foo() {}
+  verifyFormat("void foo() <%%>");  // void foo() {}
+  verifyFormat("int a<:1:>;");      // int a[1];
   verifyFormat("%:define ABC abc"); // #define ABC abc
   verifyFormat("%:%:");             // ##
-  */
+
+  verifyFormat("a = v(not;);\n"
+               "b = v(not+);\n"
+               "c = v(not x);\n"
+               "d = v(not 1);\n"
+               "e = v(not 123.f);");
+
+  verifyNoChange("#define ASSEMBLER_INSTRUCTION_LIST(V)  \\\n"
+                 "  V(and)                               \\\n"
+                 "  V(not)                               \\\n"
+                 "  V(not!)                              \\\n"
+                 "  V(other)",
+                 getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, STLWhileNotDefineChed) {
@@ -27195,8 +27245,14 @@ TEST_F(FormatTest, RemoveParentheses) {
                "if ((({ a; })))\n"
                "  b;",
                Style);
+  verifyFormat("static_assert((std::is_constructible_v<T, Args &&> && ...));",
+               "static_assert(((std::is_constructible_v<T, Args &&> && ...)));",
+               Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
+  verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);
@@ -27204,6 +27260,9 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("return (... && std::is_convertible_v<TArgsLocal, TArgs>);",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
   verifyFormat("inline decltype(auto) f() {\n"
                "  if (a) {\n"
                "    return (a);\n"
@@ -27352,6 +27411,45 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   auto Style = getLLVMStyle();
   Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
+}
+
+TEST_F(FormatTest, AlignUTFCommentsAndStringLiterals) {
+  verifyFormat(
+      "int rus;      // А теперь комментарии, например, на русском, 2-байта\n"
+      "int long_rus; // Верхний коммент еще не превысил границу в 80, однако\n"
+      "              // уже отодвинут. Перенос, при этом, отрабатывает верно");
+
+  auto Style = getLLVMStyle();
+  Style.ColumnLimit = 15;
+  verifyNoChange("#define test  \\\n"
+                 "  /* 测试 */  \\\n"
+                 "  \"aa\"        \\\n"
+                 "  \"bb\"",
+                 Style);
+
+  Style.ColumnLimit = 25;
+  verifyFormat("struct foo {\n"
+               "  int iiiiii; ///< iiiiii\n"
+               "  int b;      ///< ыыы\n"
+               "  int c;      ///< ыыыы\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 35;
+  verifyFormat("#define SENSOR_DESC_1             \\\n"
+               "  \"{\"                             \\\n"
+               "  \"unit_of_measurement: \\\"°C\\\",\"  \\\n"
+               "  \"}\"",
+               Style);
+
+  Style.ColumnLimit = 80;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  verifyFormat("Languages languages = {\n"
+               "    Language{{'e', 'n'}, U\"Test English\" },\n"
+               "    Language{{'l', 'v'}, U\"Test Latviešu\"},\n"
+               "    Language{{'r', 'u'}, U\"Test Русский\" },\n"
+               "};",
+               Style);
 }
 
 } // namespace

@@ -1,6 +1,6 @@
 // REQUIRES: nvptx-registered-target
 //
-// RUN: not %clang_cc1 -fsyntax-only -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
+// RUN: not %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
 // RUN:   sm_86 -target-feature +ptx72 -fcuda-is-device -x cuda -emit-llvm -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK_ERROR %s
 

@@ -28,14 +28,7 @@ public:
   typedef I (*RoundToIntegerFunc)(F);
 
 private:
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
-  using StorageType = typename FPBits::StorageType;
-
-  const F zero = FPBits::zero(Sign::POS).get_val();
-  const F neg_zero = FPBits::zero(Sign::NEG).get_val();
-  const F inf = FPBits::inf(Sign::POS).get_val();
-  const F neg_inf = FPBits::inf(Sign::NEG).get_val();
-  const F nan = FPBits::quiet_nan().get_val();
+  DECLARE_SPECIAL_CONSTANTS(F)
 
   static constexpr StorageType MAX_SUBNORMAL =
       FPBits::max_subnormal().uintval();
@@ -52,12 +45,13 @@ private:
 
     ASSERT_EQ(func(input), expected);
 
+    // TODO: Handle the !expectError case. It used to expect
+    // 0 for errno and exceptions, but this doesn't hold for
+    // all math functions using RoundToInteger test:
+    // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
-    } else {
-      ASSERT_FP_EXCEPTION(0);
-      ASSERT_MATH_ERRNO(0);
     }
   }
 
@@ -81,7 +75,7 @@ public:
     // libc/CMakeLists.txt is not forwarded to C++.
 #if LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
     // Result is not well-defined, we always returns INTEGER_MAX
-    test_one_input(func, nan, INTEGER_MAX, true);
+    test_one_input(func, aNaN, INTEGER_MAX, true);
 #endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 

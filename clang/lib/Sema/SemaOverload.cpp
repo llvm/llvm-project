@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DependenceFlags.h"
@@ -33,6 +34,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1086,7 +1088,7 @@ namespace {
       assert(E->hasPlaceholderType(BuiltinType::ARCUnbridgedCast));
       Entry entry = { &E, E };
       Entries.push_back(entry);
-      E = S.stripARCUnbridgedCast(E);
+      E = S.ObjC().stripARCUnbridgedCast(E);
     }
 
     void restore() {
@@ -1303,6 +1305,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if (New->isMSVCRTEntryPoint())
     return false;
 
+  NamedDecl *OldDecl = Old;
+  NamedDecl *NewDecl = New;
   FunctionTemplateDecl *OldTemplate = Old->getDescribedFunctionTemplate();
   FunctionTemplateDecl *NewTemplate = New->getDescribedFunctionTemplate();
 
@@ -1347,6 +1351,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // references to non-instantiated entities during constraint substitution.
   // GH78101.
   if (NewTemplate) {
+    OldDecl = OldTemplate;
+    NewDecl = NewTemplate;
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
     //   signature, its return type and its template parameter list. The names
@@ -1476,7 +1482,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   }
 
   if (OldMethod && NewMethod && !OldMethod->isStatic() &&
-      !OldMethod->isStatic()) {
+      !NewMethod->isStatic()) {
     bool HaveCorrespondingObjectParameters = [&](const CXXMethodDecl *Old,
                                                  const CXXMethodDecl *New) {
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
@@ -1506,13 +1512,14 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     }
   }
 
-  if (!UseOverrideRules) {
+  if (!UseOverrideRules &&
+      New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
     Expr *NewRC = New->getTrailingRequiresClause(),
          *OldRC = Old->getTrailingRequiresClause();
     if ((NewRC != nullptr) != (OldRC != nullptr))
       return true;
-
-    if (NewRC && !SemaRef.AreConstraintExpressionsEqual(Old, OldRC, New, NewRC))
+    if (NewRC &&
+        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
       return true;
   }
 
@@ -1773,8 +1780,8 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     = getLangOpts().ObjCAutoRefCount &&
       (Action == AA_Passing || Action == AA_Sending);
   if (getLangOpts().ObjC)
-    CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
-                                      From->getType(), From);
+    ObjC().CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
+                                             From->getType(), From);
   ImplicitConversionSequence ICS = ::TryImplicitConversion(
       *this, From, ToType,
       /*SuppressUserConversions=*/false,
@@ -2267,7 +2274,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   } else if (S.IsBlockPointerConversion(FromType, ToType, FromType)) {
     SCS.Second = ICK_Block_Pointer_Conversion;
   } else if (AllowObjCWritebackConversion &&
-             S.isObjCWritebackConversion(FromType, ToType, FromType)) {
+             S.ObjC().isObjCWritebackConversion(FromType, ToType, FromType)) {
     SCS.Second = ICK_Writeback_Conversion;
   } else if (S.IsPointerConversion(From, FromType, ToType, InOverloadResolution,
                                    FromType, IncompatibleObjC)) {
@@ -2587,7 +2594,8 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
 
   // In HLSL an rvalue of integral type can be promoted to an rvalue of a larger
   // integral type.
-  if (Context.getLangOpts().HLSL)
+  if (Context.getLangOpts().HLSL && FromType->isIntegerType() &&
+      ToType->isIntegerType())
     return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
 
   return false;
@@ -2614,6 +2622,13 @@ bool Sema::IsFloatingPointPromotion(QualType FromType, QualType ToType) {
           (ToBuiltin->getKind() == BuiltinType::LongDouble ||
            ToBuiltin->getKind() == BuiltinType::Float128 ||
            ToBuiltin->getKind() == BuiltinType::Ibm128))
+        return true;
+
+      // In HLSL, `half` promotes to `float` or `double`, regardless of whether
+      // or not native half types are enabled.
+      if (getLangOpts().HLSL && FromBuiltin->getKind() == BuiltinType::Half &&
+          (ToBuiltin->getKind() == BuiltinType::Float ||
+           ToBuiltin->getKind() == BuiltinType::Double))
         return true;
 
       // Half can be promoted to float.
@@ -3045,73 +3060,6 @@ bool Sema::isObjCPointerConversion(QualType FromType, QualType ToType,
   }
 
   return false;
-}
-
-/// Determine whether this is an Objective-C writeback conversion,
-/// used for parameter passing when performing automatic reference counting.
-///
-/// \param FromType The type we're converting form.
-///
-/// \param ToType The type we're converting to.
-///
-/// \param ConvertedType The type that will be produced after applying
-/// this conversion.
-bool Sema::isObjCWritebackConversion(QualType FromType, QualType ToType,
-                                     QualType &ConvertedType) {
-  if (!getLangOpts().ObjCAutoRefCount ||
-      Context.hasSameUnqualifiedType(FromType, ToType))
-    return false;
-
-  // Parameter must be a pointer to __autoreleasing (with no other qualifiers).
-  QualType ToPointee;
-  if (const PointerType *ToPointer = ToType->getAs<PointerType>())
-    ToPointee = ToPointer->getPointeeType();
-  else
-    return false;
-
-  Qualifiers ToQuals = ToPointee.getQualifiers();
-  if (!ToPointee->isObjCLifetimeType() ||
-      ToQuals.getObjCLifetime() != Qualifiers::OCL_Autoreleasing ||
-      !ToQuals.withoutObjCLifetime().empty())
-    return false;
-
-  // Argument must be a pointer to __strong to __weak.
-  QualType FromPointee;
-  if (const PointerType *FromPointer = FromType->getAs<PointerType>())
-    FromPointee = FromPointer->getPointeeType();
-  else
-    return false;
-
-  Qualifiers FromQuals = FromPointee.getQualifiers();
-  if (!FromPointee->isObjCLifetimeType() ||
-      (FromQuals.getObjCLifetime() != Qualifiers::OCL_Strong &&
-       FromQuals.getObjCLifetime() != Qualifiers::OCL_Weak))
-    return false;
-
-  // Make sure that we have compatible qualifiers.
-  FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
-    return false;
-
-  // Remove qualifiers from the pointee type we're converting from; they
-  // aren't used in the compatibility check belong, and we'll be adding back
-  // qualifiers (with __autoreleasing) if the compatibility check succeeds.
-  FromPointee = FromPointee.getUnqualifiedType();
-
-  // The unqualified form of the pointee types must be compatible.
-  ToPointee = ToPointee.getUnqualifiedType();
-  bool IncompatibleObjC;
-  if (Context.typesAreCompatible(FromPointee, ToPointee))
-    FromPointee = ToPointee;
-  else if (!isObjCPointerConversion(FromPointee, ToPointee, FromPointee,
-                                    IncompatibleObjC))
-    return false;
-
-  /// Construct the type we're converting to, which is a pointer to
-  /// __autoreleasing pointee.
-  FromPointee = Context.getQualifiedType(FromPointee, FromQuals);
-  ConvertedType = Context.getPointerType(FromPointee);
-  return true;
 }
 
 bool Sema::IsBlockPointerConversion(QualType FromType, QualType ToType,
@@ -4393,6 +4341,24 @@ getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
   return FixedEnumPromotion::ToPromotedUnderlyingType;
 }
 
+static ImplicitConversionSequence::CompareKind
+HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
+  assert(LHS->isVectorType() == RHS->isVectorType() &&
+         "Either both elements should be vectors or neither should.");
+  if (const auto *VT = LHS->getAs<VectorType>())
+    LHS = VT->getElementType();
+
+  if (const auto *VT = RHS->getAs<VectorType>())
+    RHS = VT->getElementType();
+
+  const auto L = LHS->getAs<BuiltinType>()->getKind();
+  const auto R = RHS->getAs<BuiltinType>()->getKind();
+  if (L == R)
+    return ImplicitConversionSequence::Indistinguishable;
+  return L < R ? ImplicitConversionSequence::Better
+               : ImplicitConversionSequence::Worse;
+}
+
 /// CompareStandardConversionSequences - Compare two standard
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
@@ -4632,6 +4598,21 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
       return SCS1IsCompatibleRVVVectorConversion
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
+  }
+
+  if (S.getLangOpts().HLSL) {
+    // On a promotion we prefer the lower rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Promotion &&
+         SCS2.Second == ICK_Floating_Promotion) ||
+        (SCS1.Element == ICK_Floating_Promotion &&
+         SCS2.Element == ICK_Floating_Promotion))
+      return HLSLCompareFloatingRank(SCS1.getToType(2), SCS2.getToType(2));
+    // On a conversion we prefer the higher rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Conversion &&
+         SCS2.Second == ICK_Floating_Conversion) ||
+        (SCS1.Element == ICK_Floating_Conversion &&
+         SCS2.Element == ICK_Floating_Conversion))
+      return HLSLCompareFloatingRank(SCS2.getToType(2), SCS1.getToType(2));
   }
 
   return ImplicitConversionSequence::Indistinguishable;
@@ -6492,17 +6473,20 @@ ExprResult Sema::InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
       Obj->getExprLoc(), Obj);
 }
 
-static void PrepareExplicitObjectArgument(Sema &S, CXXMethodDecl *Method,
+static bool PrepareExplicitObjectArgument(Sema &S, CXXMethodDecl *Method,
                                           Expr *Object, MultiExprArg &Args,
                                           SmallVectorImpl<Expr *> &NewArgs) {
   assert(Method->isExplicitObjectMemberFunction() &&
          "Method is not an explicit member function");
   assert(NewArgs.empty() && "NewArgs should be empty");
+
   NewArgs.reserve(Args.size() + 1);
   Expr *This = GetExplicitObjectExpr(S, Object, Method);
   NewArgs.push_back(This);
   NewArgs.append(Args.begin(), Args.end());
   Args = NewArgs;
+  return S.DiagnoseInvalidExplicitObjectParameterInLambda(
+      Method, Object->getBeginLoc());
 }
 
 /// Determine whether the provided type is an integral type, or an enumeration
@@ -7195,7 +7179,7 @@ Sema::SelectBestMethod(Selector Sel, MultiExprArg Args, bool IsInstance,
       // a consumed argument.
       if (argExpr->hasPlaceholderType(BuiltinType::ARCUnbridgedCast) &&
           !param->hasAttr<CFConsumedAttr>())
-        argExpr = stripARCUnbridgedCast(argExpr);
+        argExpr = ObjC().stripARCUnbridgedCast(argExpr);
 
       // If the parameter is __unknown_anytype, move on to the next method.
       if (param->getType() == Context.UnknownAnyTy) {
@@ -10654,29 +10638,10 @@ bool clang::isBetterOverloadCandidate(
   //   -— F1 and F2 are non-template functions with the same
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
-      sameFunctionParameterTypeLists(S, Cand1, Cand2)) {
-    FunctionDecl *Function1 = Cand1.Function;
-    FunctionDecl *Function2 = Cand2.Function;
-    if (FunctionDecl *MF = Function1->getInstantiatedFromMemberFunction())
-      Function1 = MF;
-    if (FunctionDecl *MF = Function2->getInstantiatedFromMemberFunction())
-      Function2 = MF;
-
-    const Expr *RC1 = Function1->getTrailingRequiresClause();
-    const Expr *RC2 = Function2->getTrailingRequiresClause();
-    if (RC1 && RC2) {
-      bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-      if (S.IsAtLeastAsConstrained(Function1, RC1, Function2, RC2,
-                                   AtLeastAsConstrained1) ||
-          S.IsAtLeastAsConstrained(Function2, RC2, Function1, RC1,
-                                   AtLeastAsConstrained2))
-        return false;
-      if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
-        return AtLeastAsConstrained1;
-    } else if (RC1 || RC2) {
-      return RC1 != nullptr;
-    }
-  }
+      sameFunctionParameterTypeLists(S, Cand1, Cand2) &&
+      S.getMoreConstrainedFunction(Cand1.Function, Cand2.Function) ==
+          Cand1.Function)
+    return true;
 
   //   -- F1 is a constructor for a class D, F2 is a constructor for a base
   //      class B of D, and for all arguments the corresponding parameters of
@@ -11337,8 +11302,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   Expr *FromExpr = Conv.Bad.FromExpr;
   QualType FromTy = Conv.Bad.getFromType();
   QualType ToTy = Conv.Bad.getToType();
-  SourceRange ToParamRange =
-      !isObjectArgument ? Fn->getParamDecl(I)->getSourceRange() : SourceRange();
+  SourceRange ToParamRange;
+
+  // FIXME: In presence of parameter packs we can't determine parameter range
+  // reliably, as we don't have access to instantiation.
+  bool HasParamPack =
+      llvm::any_of(Fn->parameters().take_front(I), [](const ParmVarDecl *Parm) {
+        return Parm->isParameterPack();
+      });
+  if (!isObjectArgument && !HasParamPack)
+    ToParamRange = Fn->getParamDecl(I)->getSourceRange();
 
   if (FromTy == S.Context.OverloadTy) {
     assert(FromExpr && "overload set argument came from implicit argument?");
@@ -13344,25 +13317,6 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
            static_cast<int>(CUDA().IdentifyPreference(Caller, FD2));
   };
 
-  auto CheckMoreConstrained = [&](FunctionDecl *FD1,
-                                  FunctionDecl *FD2) -> std::optional<bool> {
-    if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
-      FD1 = MF;
-    if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
-      FD2 = MF;
-    SmallVector<const Expr *, 1> AC1, AC2;
-    FD1->getAssociatedConstraints(AC1);
-    FD2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (IsAtLeastAsConstrained(FD1, AC1, FD2, AC2, AtLeastAsConstrained1))
-      return std::nullopt;
-    if (IsAtLeastAsConstrained(FD2, AC2, FD1, AC1, AtLeastAsConstrained2))
-      return std::nullopt;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return std::nullopt;
-    return AtLeastAsConstrained1;
-  };
-
   // Don't use the AddressOfResolver because we're specifically looking for
   // cases where we have one overload candidate that lacks
   // enable_if/pass_object_size/...
@@ -13399,15 +13353,14 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       }
       // FD has the same CUDA prefernece than Result. Continue check
       // constraints.
-      std::optional<bool> MoreConstrainedThanPrevious =
-          CheckMoreConstrained(FD, Result);
-      if (!MoreConstrainedThanPrevious) {
-        IsResultAmbiguous = true;
-        AmbiguousDecls.push_back(FD);
+      FunctionDecl *MoreConstrained = getMoreConstrainedFunction(FD, Result);
+      if (MoreConstrained != FD) {
+        if (!MoreConstrained) {
+          IsResultAmbiguous = true;
+          AmbiguousDecls.push_back(FD);
+        }
         continue;
       }
-      if (!*MoreConstrainedThanPrevious)
-        continue;
       // FD is more constrained - replace Result with it.
     }
     FoundBetter();
@@ -13426,7 +13379,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       // constraints.
       if (getLangOpts().CUDA && CheckCUDAPreference(Skipped, Result) != 0)
         continue;
-      if (!CheckMoreConstrained(Skipped, Result))
+      if (!getMoreConstrainedFunction(Skipped, Result))
         return nullptr;
     }
     Pair = DAP;
@@ -14410,7 +14363,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -15671,8 +15624,10 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   CallExpr *TheCall = nullptr;
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
-    PrepareExplicitObjectArgument(*this, Method, MemExpr->getBase(), Args,
-                                  NewArgs);
+    if (PrepareExplicitObjectArgument(*this, Method, MemExpr->getBase(), Args,
+                                      NewArgs))
+      return ExprError();
+
     // Build the actual expression node.
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
@@ -15986,9 +15941,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
-    // FIXME: we should do that during the definition of the lambda when we can.
-    DiagnoseInvalidExplicitObjectParameterInLambda(Method);
-    PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
+    IsError |= PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
   } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
         Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);

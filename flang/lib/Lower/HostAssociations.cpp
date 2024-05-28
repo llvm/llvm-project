@@ -219,7 +219,7 @@ public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
     fir::KindTy kind =
-        converter.genType(sym).cast<fir::CharacterType>().getFKind();
+        mlir::cast<fir::CharacterType>(converter.genType(sym)).getFKind();
     return fir::BoxCharType::get(&converter.getMLIRContext(), kind);
   }
 
@@ -293,7 +293,7 @@ public:
     mlir::Location loc = args.loc;
     mlir::Value box = args.valueInTuple;
     if (Fortran::semantics::IsOptional(sym)) {
-      auto boxTy = box.getType().cast<fir::BaseBoxType>();
+      auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
       auto eleTy = boxTy.getEleTy();
       if (!fir::isa_ref_type(eleTy))
         eleTy = builder.getRefType(eleTy);
@@ -381,8 +381,8 @@ public:
                             const Fortran::semantics::Symbol &sym) {
     mlir::Type type = converter.genType(sym);
     bool isPolymorphic = Fortran::semantics::IsPolymorphic(sym);
-    assert((type.isa<fir::SequenceType>() ||
-            (isPolymorphic && type.isa<fir::ClassType>())) &&
+    assert((mlir::isa<fir::SequenceType>(type) ||
+            (isPolymorphic && mlir::isa<fir::ClassType>(type))) &&
            "must be a sequence type");
     if (isPolymorphic)
       return type;
@@ -459,7 +459,7 @@ public:
       // (absent boxes are null descriptor addresses, not descriptors containing
       // a null base address).
       if (Fortran::semantics::IsOptional(sym)) {
-        auto boxTy = box.getType().cast<fir::BaseBoxType>();
+        auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
         auto eleTy = boxTy.getEleTy();
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
@@ -527,7 +527,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
 // `t` should be the result of getArgumentType, which has a type of
 // `!fir.ref<tuple<...>>`.
 static mlir::TupleType unwrapTupleTy(mlir::Type t) {
-  return fir::dyn_cast_ptrEleTy(t).cast<mlir::TupleType>();
+  return mlir::cast<mlir::TupleType>(fir::dyn_cast_ptrEleTy(t));
 }
 
 static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -535,7 +535,7 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value offset) {
   // fir.ref<fir.ref> and fir.ptr<fir.ref> are forbidden. Use
   // fir.llvm_ptr if needed.
-  auto ty = varTy.isa<fir::ReferenceType>()
+  auto ty = mlir::isa<fir::ReferenceType>(varTy)
                 ? mlir::Type(fir::LLVMPointerType::get(varTy))
                 : mlir::Type(builder.getRefType(varTy));
   return builder.create<fir::CoordinateOp>(loc, ty, tupleArg, offset);
