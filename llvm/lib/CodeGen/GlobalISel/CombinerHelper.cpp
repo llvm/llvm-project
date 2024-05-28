@@ -1,3 +1,4 @@
+
 //===-- lib/CodeGen/GlobalISel/GICombinerHelper.cpp -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -265,13 +266,14 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     }
   }
 
-  Observer.changingInstr(*OrigDef);
-  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
-  Observer.changedInstr(*OrigDef);
-
   // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(DstOp, OrigOp); };
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Observer.changingInstr(*OrigDef);
+      cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+      Observer.changedInstr(*OrigDef);
+      B.buildCopy(DstOp, OrigOp);
+    };
     return true;
   }
 
@@ -279,6 +281,9 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
 
   MatchInfo = [=](MachineIRBuilder &B) mutable {
+    Observer.changingInstr(*OrigDef);
+    cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+    Observer.changedInstr(*OrigDef);
     B.setInsertPt(*OrigDef->getParent(), OrigDef->getIterator());
     auto Freeze = B.buildFreeze(MaybePoisonOperandRegTy, MaybePoisonOperandReg);
     replaceRegOpWith(
