@@ -1,7 +1,8 @@
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
-## Create a dylib with a fake base class to link against
+############ Test merging multiple categories into a single category ############
+## Create a dylib with a fake base class to link against in when merging between categories
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_fakedylib.o a64_fakedylib.s
 # RUN: %lld -arch arm64 a64_fakedylib.o -o a64_fakedylib.dylib -dylib
 
@@ -13,6 +14,15 @@
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_merge.dylib | FileCheck %s --check-prefixes=MERGE_CATS
+
+############ Test merging multiple categories into the base class ############
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_minimal.o merge_base_class_minimal.s
+# RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_yes_merge.dylib -objc_category_merging merge_base_class_minimal.o merge_cat_minimal.o
+# RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_no_merge.dylib merge_base_class_minimal.o merge_cat_minimal.o
+
+# RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_no_merge.dylib  | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
+# RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE
+
 
 #### Check merge categories enabled ###
 # Check that the original categories are not there
@@ -44,6 +54,28 @@ NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
 NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 
 
+#### Check merge cateogires into base class is disabled ####
+NO_MERGE_INTO_BASE: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
+NO_MERGE_INTO_BASE: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
+
+#### Check merge cateogires into base class is enabled and categories are merged into base class ####
+YES_MERGE_INTO_BASE-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
+YES_MERGE_INTO_BASE-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
+
+YES_MERGE_INTO_BASE: _OBJC_CLASS_$_MyBaseClass
+YES_MERGE_INTO_BASE-NEXT: _OBJC_METACLASS_$_MyBaseClass
+YES_MERGE_INTO_BASE: baseMethods
+YES_MERGE_INTO_BASE-NEXT: entsize 24
+YES_MERGE_INTO_BASE-NEXT: count 3
+YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat01_InstanceMethod
+YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
+YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat02_InstanceMethod
+YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
+YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: name {{.*}} baseInstanceMethod
+YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
+YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass baseInstanceMethod]
 
 #--- a64_fakedylib.s
 
@@ -156,3 +188,94 @@ L_OBJC_IMAGE_INFO:
 
 .addrsig
 .addrsig_sym __OBJC_$_CATEGORY_MyBaseClass_$_Category01
+
+#--- merge_base_class_minimal.s
+; clang -c merge_base_class_minimal.mm -O3 -target arm64-apple-macos -arch arm64 -S -o merge_base_class_minimal.s
+;  ================== Generated from ObjC: ==================
+; __attribute__((objc_root_class))
+; @interface MyBaseClass
+; - (void)baseInstanceMethod;
+; @end
+;
+; @implementation MyBaseClass
+; - (void)baseInstanceMethod {}
+; @end
+;  ================== Generated from ObjC  ==================
+	.section	__TEXT,__text,regular,pure_instructions
+	.build_version macos, 11, 0
+	.p2align	2
+"-[MyBaseClass baseInstanceMethod]":
+	.cfi_startproc
+; %bb.0:
+	ret
+	.cfi_endproc
+	.section	__DATA,__objc_data
+	.globl	_OBJC_CLASS_$_MyBaseClass
+	.p2align	3, 0x0
+_OBJC_CLASS_$_MyBaseClass:
+	.quad	_OBJC_METACLASS_$_MyBaseClass
+	.quad	0
+	.quad	0
+	.quad	0
+	.quad	__OBJC_CLASS_RO_$_MyBaseClass
+	.globl	_OBJC_METACLASS_$_MyBaseClass
+	.p2align	3, 0x0
+_OBJC_METACLASS_$_MyBaseClass:
+	.quad	_OBJC_METACLASS_$_MyBaseClass
+	.quad	_OBJC_CLASS_$_MyBaseClass
+	.quad	0
+	.quad	0
+	.quad	__OBJC_METACLASS_RO_$_MyBaseClass
+	.section	__TEXT,__objc_classname,cstring_literals
+l_OBJC_CLASS_NAME_:
+	.asciz	"MyBaseClass"
+	.section	__DATA,__objc_const
+	.p2align	3, 0x0
+__OBJC_METACLASS_RO_$_MyBaseClass:
+	.long	3
+	.long	40
+	.long	40
+	.space	4
+	.quad	0
+	.quad	l_OBJC_CLASS_NAME_
+	.quad	0
+	.quad	0
+	.quad	0
+	.quad	0
+	.quad	0
+	.section	__TEXT,__objc_methname,cstring_literals
+l_OBJC_METH_VAR_NAME_:
+	.asciz	"baseInstanceMethod"
+	.section	__TEXT,__objc_methtype,cstring_literals
+l_OBJC_METH_VAR_TYPE_:
+	.asciz	"v16@0:8"
+	.section	__DATA,__objc_const
+	.p2align	3, 0x0
+__OBJC_$_INSTANCE_METHODS_MyBaseClass:
+	.long	24
+	.long	1
+	.quad	l_OBJC_METH_VAR_NAME_
+	.quad	l_OBJC_METH_VAR_TYPE_
+	.quad	"-[MyBaseClass baseInstanceMethod]"
+	.p2align	3, 0x0
+__OBJC_CLASS_RO_$_MyBaseClass:
+	.long	2
+	.long	0
+	.long	0
+	.space	4
+	.quad	0
+	.quad	l_OBJC_CLASS_NAME_
+	.quad	__OBJC_$_INSTANCE_METHODS_MyBaseClass
+	.quad	0
+	.quad	0
+	.quad	0
+	.quad	0
+	.section	__DATA,__objc_classlist,regular,no_dead_strip
+	.p2align	3, 0x0
+l_OBJC_LABEL_CLASS_$:
+	.quad	_OBJC_CLASS_$_MyBaseClass
+	.section	__DATA,__objc_imageinfo,regular,no_dead_strip
+L_OBJC_IMAGE_INFO:
+	.long	0
+	.long	64
+.subsections_via_symbols
