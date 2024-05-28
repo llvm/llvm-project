@@ -147,10 +147,10 @@ static ArcherFlags *archer_flags;
 
 #ifndef TsanHappensBefore
 
-template <typename... Args> static void __tsan_func(Args...) {}
+template <typename... Args> static void __ompt_tsan_func(Args...) {}
 
 #define DECLARE_TSAN_FUNCTION(name, ...)                                       \
-  static void (*name)(__VA_ARGS__) = __tsan_func<__VA_ARGS__>;
+  static void (*name)(__VA_ARGS__) = __ompt_tsan_func<__VA_ARGS__>;
 
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
@@ -167,6 +167,7 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
 
+// RunningOnValgrind is used to detect absence of TSan and must intentionally be a nullptr.
 static int (*RunningOnValgrind)(void);
 }
 
