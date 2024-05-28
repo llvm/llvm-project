@@ -5032,6 +5032,14 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
         continue;
     }
 
+    // If we're writing C++ named modules, don't emit declarations which are
+    // not from modules by default. They may be built in declarations (be
+    // handled above) or implcit declarations (see the implementation of
+    // `Sema::Initialize()` for example).
+    if (isWritingStdCXXNamedModules() && !D->getOwningModule() &&
+        D->isImplicit())
+      continue;
+
     GetDeclRef(D);
   }
 
@@ -6192,8 +6200,9 @@ bool ASTWriter::wasDeclEmitted(const Decl *D) const {
     return true;
 
   bool Emitted = DeclIDs.contains(D);
-  assert((Emitted || GeneratingReducedBMI) &&
-         "The declaration can only be omitted in reduced BMI.");
+  assert((Emitted || (!D->getOwningModule() && isWritingStdCXXNamedModules()) ||
+          GeneratingReducedBMI) &&
+         "The declaration within modules can only be omitted in reduced BMI.");
   return Emitted;
 }
 
