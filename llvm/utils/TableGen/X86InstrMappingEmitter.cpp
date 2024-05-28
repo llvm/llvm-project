@@ -1,4 +1,4 @@
-//==- utils/TableGen/X86CompressEVEXTablesEmitter.cpp - X86 backend-*- C++ -*-//
+//========- utils/TableGen/X86InstrMappingEmitter.cpp - X86 backend-*- C++ -*-//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This tablegen backend is responsible for emitting the X86 backend EVEX
-/// compression tables.
+/// This tablegen backend is responsible for emitting the X86 backend
+/// instruction mapping.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,7 @@ const std::set<StringRef> NoCompressSet = {
 #include "X86ManualCompressEVEXTables.def"
 };
 
-class X86CompressEVEXTablesEmitter {
+class X86InstrMappingEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
 
@@ -49,28 +49,58 @@ class X86CompressEVEXTablesEmitter {
   typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
       PredicateInstMap;
 
-  std::vector<Entry> Table;
   // Hold all compressed instructions that need to check predicate
   PredicateInstMap PredicateInsts;
 
 public:
-  X86CompressEVEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86InstrMappingEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Output X86 EVEX compression tables.
   void run(raw_ostream &OS);
 
 private:
-  // Prints the given table as a C++ array of type X86CompressEVEXTableEntry
-  void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
-  // Prints function which checks target feature for compressed instructions.
-  void printCheckPredicate(const PredicateInstMap &PredicateInsts,
-                           raw_ostream &OS);
+  void emitCompressEVEXTable(ArrayRef<const CodeGenInstruction *> Insts,
+                             raw_ostream &OS);
+  void emitNFTransformTable(ArrayRef<const CodeGenInstruction *> Insts,
+                            raw_ostream &OS);
+
+  // Prints the definition of class X86TableEntry.
+  void printClassDef(raw_ostream &OS);
+  // Prints the given table as a C++ array of type X86TableEntry under the guard
+  // \p Macro.
+  void printTable(const std::vector<Entry> &Table, StringRef Name,
+                  StringRef Macro, raw_ostream &OS);
 };
 
-void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
-                                              raw_ostream &OS) {
+void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
+  OS << "struct X86TableEntry {\n"
+        "  uint16_t OldOpc;\n"
+        "  uint16_t NewOpc;\n"
+        "  bool operator<(const X86TableEntry &RHS) const {\n"
+        "    return OldOpc < RHS.OldOpc;\n"
+        "  }"
+        "  friend bool operator<(const X86TableEntry &TE, unsigned Opc) {\n"
+        "    return TE.OldOpc < Opc;\n"
+        "  }\n"
+        "};";
 
-  OS << "static const X86CompressEVEXTableEntry X86CompressEVEXTable[] = {\n";
+  OS << "\n\n";
+}
+
+static void printMacroBegin(StringRef Macro, raw_ostream &OS) {
+  OS << "\n#ifdef " << Macro << "\n";
+}
+
+static void printMacroEnd(StringRef Macro, raw_ostream &OS) {
+  OS << "#endif // " << Macro << "\n\n";
+}
+
+void X86InstrMappingEmitter::printTable(const std::vector<Entry> &Table,
+                                        StringRef Name, StringRef Macro,
+                                        raw_ostream &OS) {
+  printMacroBegin(Macro, OS);
+
+  OS << "static const X86TableEntry " << Name << "[] = {\n";
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
@@ -78,23 +108,8 @@ void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
 
   OS << "};\n\n";
-}
 
-void X86CompressEVEXTablesEmitter::printCheckPredicate(
-    const PredicateInstMap &PredicateInsts, raw_ostream &OS) {
-
-  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget "
-        "*Subtarget) {\n"
-     << "  switch (Opc) {\n"
-     << "  default: return true;\n";
-  for (const auto &[Key, Val] : PredicateInsts) {
-    for (const auto &Inst : Val)
-      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
-    OS << "    return " << Key << ";\n";
-  }
-
-  OS << "  }\n";
-  OS << "}\n\n";
+  printMacroEnd(Macro, OS);
 }
 
 static uint8_t byteFromBitsInit(const BitsInit *B) {
@@ -150,18 +165,19 @@ public:
   }
 };
 
-void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
-  emitSourceFileHeader("X86 EVEX compression tables", OS);
+static bool isInteresting(const Record *Rec) {
+  // _REV instruction should not appear before encoding optimization
+  return Rec->isSubClassOf("X86Inst") &&
+         !Rec->getValueAsBit("isAsmParserOnly") &&
+         !Rec->getName().ends_with("_REV");
+}
 
-  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
-
-  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+void X86InstrMappingEmitter::emitCompressEVEXTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+  for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
-    // _REV instruction should not appear before encoding optimization
-    if (!Rec->isSubClassOf("X86Inst") ||
-        Rec->getValueAsBit("isAsmParserOnly") || Name.ends_with("_REV"))
+    if (!isInteresting(Rec))
       continue;
 
     // Promoted legacy instruction is in EVEX space, and has REX2-encoding
@@ -188,6 +204,7 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       PreCompressionInsts.push_back(Inst);
   }
 
+  std::vector<Entry> Table;
   for (const CodeGenInstruction *Inst : PreCompressionInsts) {
     const Record *Rec = Inst->TheDef;
     uint8_t Opcode = byteFromBitsInit(Rec->getValueAsBitsInit("Opcode"));
@@ -229,10 +246,53 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);
   }
 
-  printTable(Table, OS);
-  printCheckPredicate(PredicateInsts, OS);
+  StringRef Macro = "GET_X86_COMPRESS_EVEX_TABLE";
+  printTable(Table, "X86CompressEVEXTable", Macro, OS);
+
+  // Prints function which checks target feature for compressed instructions.
+  printMacroBegin(Macro, OS);
+  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget "
+        "*Subtarget) {\n"
+     << "  switch (Opc) {\n"
+     << "  default: return true;\n";
+  for (const auto &[Key, Val] : PredicateInsts) {
+    for (const auto &Inst : Val)
+      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+    OS << "    return " << Key << ";\n";
+  }
+  OS << "  }\n";
+  OS << "}\n\n";
+  printMacroEnd(Macro, OS);
+}
+
+void X86InstrMappingEmitter::emitNFTransformTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+  std::vector<Entry> Table;
+  for (const CodeGenInstruction *Inst : Insts) {
+    const Record *Rec = Inst->TheDef;
+    if (!isInteresting(Rec))
+      continue;
+    std::string Name = Rec->getName().str();
+    auto Pos = Name.find("_NF");
+    if (Pos == std::string::npos)
+      continue;
+
+    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3)))
+      Table.push_back(std::pair(&Target.getInstruction(NewRec), Inst));
+  }
+  printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
+}
+
+void X86InstrMappingEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("X86 instruction mapping", OS);
+
+  ArrayRef<const CodeGenInstruction *> Insts =
+      Target.getInstructionsByEnumValue();
+  printClassDef(OS);
+  emitCompressEVEXTable(Insts, OS);
+  emitNFTransformTable(Insts, OS);
 }
 } // namespace
 
-static TableGen::Emitter::OptClass<X86CompressEVEXTablesEmitter>
-    X("gen-x86-compress-evex-tables", "Generate X86 EVEX compression tables");
+static TableGen::Emitter::OptClass<X86InstrMappingEmitter>
+    X("gen-x86-instr-mapping", "Generate X86 instruction mapping");
