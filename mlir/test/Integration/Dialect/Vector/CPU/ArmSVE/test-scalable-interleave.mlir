@@ -17,7 +17,7 @@ func.func @entry() {
   // CHECK: ( 1, 1, 1, 1
   // CHECK: ( 2, 2, 2, 2
 
-  %v3 = vector.interleave %v1, %v2 : vector<[4]xf32>
+  %v3 = vector.interleave %v1, %v2 : vector<[4]xf32> -> vector<[8]xf32>
   vector.print %v3 : vector<[8]xf32>
   // CHECK: ( 1, 2, 1, 2, 1, 2, 1, 2
 
