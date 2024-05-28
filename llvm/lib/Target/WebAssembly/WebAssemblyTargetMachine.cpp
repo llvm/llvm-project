@@ -385,8 +385,8 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
-using WebAssembly::WasmEnableSjLj;
 using WebAssembly::WasmEnableExnref;
+using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
