@@ -28,10 +28,12 @@ enum IndexedVersion : uint64_t {
   Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
+  // Version 3: Under development.
+  Version3 = 3,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
-constexpr uint64_t MaximumSupportedVersion = Version2;
+constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);

@@ -52,6 +52,7 @@ size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -95,6 +96,7 @@ size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -149,6 +151,7 @@ void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
     serializeV0(*this, Schema, OS);
     return;
   case Version2:
+  case Version3:
     serializeV2(*this, Schema, OS);
     return;
   }
@@ -239,6 +242,7 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
   case Version1:
     return deserializeV0(Schema, Ptr);
   case Version2:
+  case Version3:
     return deserializeV2(Schema, Ptr);
   }
   llvm_unreachable("unsupported MemProf version");

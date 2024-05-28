@@ -1212,7 +1212,8 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
+  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2 ||
+      FirstWord == memprof::Version3) {
     // Everything is good.  We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
   } else if (FirstWord >= 24) {
@@ -1559,6 +1560,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
            "MemProfCallStackTable must not be available");
     return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
+  case memprof::Version3:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
