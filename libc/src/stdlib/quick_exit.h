@@ -1,4 +1,4 @@
-//===----- Baremetal implementation of a quick exit function ----*- C++ -*-===//
+//===-- Implementation header for quick_exit --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/quick_exit.h"
+#ifndef LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
+#define LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
 
-// This is intended to be provided by the vendor.
-extern "C" [[noreturn]] void __llvm_libc_quick_exit(int status);
+#include <stdlib.h>
 
 namespace LIBC_NAMESPACE {
 
-[[noreturn]] void quick_exit(int status) { __llvm_libc_quick_exit(status); }
+[[noreturn]] void quick_exit(int status);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
+

@@ -43,6 +43,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  quick_exit
+  SRCS
+    quick_exit.cpp
+  HDRS
+    quick_exit.h
+  DEPENDS
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getenv
   SRCS
     getenv.cpp
