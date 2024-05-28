@@ -3575,7 +3575,7 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
+  HelpText<"Force behavior as if the user specified pragma omp requires unified_shared_memory.">,
   MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption]>,
