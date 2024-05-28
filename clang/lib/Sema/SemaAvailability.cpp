@@ -20,6 +20,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
@@ -153,6 +154,58 @@ static bool ShouldDiagnoseAvailabilityInContext(
     if (MacroName == "CF_OPTIONS" || MacroName == "OBJC_OPTIONS" ||
         MacroName == "SWIFT_OPTIONS" || MacroName == "NS_OPTIONS") {
       return false;
+    }
+  }
+
+  if (S.getLangOpts().CUDA || S.getLangOpts().HIP) {
+    // In CUDA/HIP, do not diagnose uses of unavailable host or device function
+    // overloads when they occur in the context of a Decl with an explicitly
+    // given opposite target.
+    // We encounter this if the OffendingDecl is used outside of a function
+    // body, e.g., in template arguments for a function's return or parameter
+    // types. In this case, overloads of the called function are resolved as if
+    // in a host-device context, i.e., the device overload is chosen in the
+    // device compilation phase and the host overload in the host compilation
+    // phase. As code is only generated for the variant with matching targets,
+    // an availabiliy diagnostic for the variant with non-matching targets would
+    // be spurious.
+
+    if (auto *OffendingFunDecl = llvm::dyn_cast<FunctionDecl>(OffendingDecl)) {
+      Decl *ActualCtx = Ctx;
+      if (auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(Ctx)) {
+        // Attributes of template Decls are only on the templated Decl
+        ActualCtx = FTD->getTemplatedDecl();
+      }
+      if (auto *CtxFun = llvm::dyn_cast<FunctionDecl>(ActualCtx)) {
+        auto TargetIs = [&S](const FunctionDecl *FD, CUDAFunctionTarget FT) {
+          return S.CUDA().IdentifyTarget(FD, /* IgnoreImplicitHDAttr */ true) ==
+                 FT;
+        };
+
+        bool CtxIsHost = TargetIs(CtxFun, CUDAFunctionTarget::Host);
+        bool CtxIsDevice = TargetIs(CtxFun, CUDAFunctionTarget::Device);
+
+        bool OffendingDeclIsHost =
+            TargetIs(OffendingFunDecl, CUDAFunctionTarget::Host);
+        bool OffendingDeclIsDevice =
+            TargetIs(OffendingFunDecl, CUDAFunctionTarget::Device);
+
+        // There is a way to call a device function from host code (and vice
+        // versa, analogously) that passes semantic analysis: As constexprs,
+        // when there is no host overload. In this case, a diagnostic is
+        // necessary. Characteristic for this situation is that the device
+        // function will also be used in a host context during host compilation.
+        // Therefore, only suppress diagnostics if a host function is used in a
+        // device context during host compilation or a device function is used
+        // in a host context during device compilation.
+        bool CompilingForDevice = S.getLangOpts().CUDAIsDevice;
+        bool CompilingForHost = !CompilingForDevice;
+
+        if ((OffendingDeclIsHost && CtxIsDevice && CompilingForHost) ||
+            (OffendingDeclIsDevice && CtxIsHost && CompilingForDevice)) {
+          return false;
+        }
+      }
     }
   }
 
