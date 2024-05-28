@@ -391,9 +391,8 @@ struct BoxIsArrayOpConversion : public fir::FIROpConversion<fir::BoxIsArrayOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxisarray.getLoc();
     TypePair boxTyPair = getBoxTypePair(boxisarray.getVal().getType());
-    auto rank = getValueFromBox(loc, boxTyPair, a, rewriter.getI32Type(),
-                                rewriter, kRankPosInBox);
-    auto c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
+    mlir::Value c0 = genConstantIndex(loc, rank.getType(), rewriter, 0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         boxisarray, mlir::LLVM::ICmpPredicate::ne, rank, c0);
     return mlir::success();
@@ -430,8 +429,8 @@ struct BoxRankOpConversion : public fir::FIROpConversion<fir::BoxRankOp> {
     auto loc = boxrank.getLoc();
     mlir::Type ty = convertType(boxrank.getType());
     TypePair boxTyPair = getBoxTypePair(boxrank.getVal().getType());
-    auto result =
-        getValueFromBox(loc, boxTyPair, a, ty, rewriter, kRankPosInBox);
+    mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
+    mlir::Value result = integerCast(loc, rewriter, ty, rank);
     rewriter.replaceOp(boxrank, result);
     return mlir::success();
   }

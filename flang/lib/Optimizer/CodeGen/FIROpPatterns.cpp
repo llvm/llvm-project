@@ -179,6 +179,14 @@ mlir::Value ConvertFIRToLLVMPattern::getElementSizeFromBox(
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kElemLenPosInBox);
 }
 
+/// Read base address from a fir.box. Returned address has type ty.
+mlir::Value ConvertFIRToLLVMPattern::getRankFromBox(
+    mlir::Location loc, TypePair boxTy, mlir::Value box,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kRankPosInBox});
+  return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kRankPosInBox);
+}
+
 // Get the element type given an LLVM type that is of the form
 // (array|struct|vector)+ and the provided indexes.
 mlir::Type ConvertFIRToLLVMPattern::getBoxEleTy(
