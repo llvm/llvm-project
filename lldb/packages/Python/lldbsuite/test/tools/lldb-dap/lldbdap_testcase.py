@@ -3,6 +3,8 @@ import time
 
 import dap_server
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatformutil
+import lldbgdbserverutils
 
 
 class DAPTestCaseBase(TestBase):
@@ -487,3 +489,21 @@ class DAPTestCaseBase(TestBase):
             launchCommands=launchCommands,
             expectFailure=expectFailure,
         )
+
+    def getBuiltinServerToolWithPortArg(self, port):
+        # Tries to find simulation/lldb-server/gdbserver tool and
+        # configure the server arguments to attach with given port numeber.
+        server_tool = None
+        if lldbplatformutil.getPlatform() == "linux":
+            server_tool = lldbgdbserverutils.get_lldb_server_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "lldb-server not found.")
+            server_tool += " g localhost:" + str(port) + " "
+        elif lldbplatformutil.getPlatform() == "macosx":
+            server_tool = lldbgdbserverutils.get_debugserver_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "debugserver not found.")
+            server_tool += " --listen localhost:" + str(port) + " "
+        return server_tool

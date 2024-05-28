@@ -1637,15 +1637,6 @@ class Base(unittest.TestCase):
 
         return os.environ["CC"]
 
-    def getBuiltinServerTool(self, server_tool):
-        # Tries to find simulation/lldb-server/gdbserver tool at the same folder as the lldb.
-        lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
-        path = shutil.which(server_tool, path=lldb_dir)
-        if path is not None:
-            return path
-
-        return ""
-
     def yaml2obj(self, yaml_path, obj_path, max_size=None):
         """
         Create an object file at the given path from a yaml file.

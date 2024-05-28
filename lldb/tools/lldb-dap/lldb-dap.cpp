@@ -672,11 +672,12 @@ void request_attach(const llvm::json::Object &request) {
   lldb::SBError error;
   FillResponse(request, response);
   lldb::SBAttachInfo attach_info;
+  const int invalid_port = 0;
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
-  const auto port = GetUnsigned(arguments, "port", LLDB_INVALID_PORT_NUMBER);
-  llvm::StringRef hostname = GetString(arguments, "hostname");
+  const auto port = GetUnsigned(arguments, "port", invalid_port);
+  llvm::StringRef hostname = GetString(arguments, "hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -738,7 +739,7 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) &&
+  if ((pid == LLDB_INVALID_PROCESS_ID || port == invalid_port) &&
       wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
@@ -754,10 +755,10 @@ void request_attach(const llvm::json::Object &request) {
     g_dap.debugger.SetAsync(false);
     if (core_file.empty()) {
       if ((pid != LLDB_INVALID_PROCESS_ID) &&
-          (port != LLDB_INVALID_PORT_NUMBER)) {
+          (port != invalid_port)) {
         // If both pid and port numbers are specified.
         error.SetErrorString("The user can't specify both pid and port");
-      } else if (port != LLDB_INVALID_PORT_NUMBER) {
+      } else if (port != invalid_port) {
         // If port is specified and pid is not.
         lldb::SBListener listener = g_dap.debugger.GetListener();
 

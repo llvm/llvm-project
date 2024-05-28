@@ -17,24 +17,19 @@ import tempfile
 import threading
 import time
 import sys
+import socket
 
 
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
-    def runTargetProgramOnPort(self, port=None, program=None):
-        server_tool = None
-        if lldbplatformutil.getPlatform() == "linux":
-            server_tool = lldbgdbserverutils.get_lldb_server_exe()
-            if server_tool is None:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-                self.assertIsNotNone(server_tool, "lldb-server not found.")
-            server_tool += " g localhost:" + port + " "
-        elif lldbplatformutil.getPlatform() == "macosx":
-            server_tool = lldbgdbserverutils.get_debugserver_exe()
-            if server_tool is None:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-                self.assertIsNotNone(server_tool, "debugserver not found.")
-            server_tool += " --listen localhost:" + port + " "
+    def get_free_port(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('', 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
 
+    def runTargetProgramOnPort(self, port=None, program=None):
+        server_tool = self.getBuiltinServerToolWithPortArg(port)
         self.process = subprocess.Popen(
             [server_tool + program],
             shell=True,
@@ -60,7 +55,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             self.continue_to_exit()
 
     @skipIfWindows
-    @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfNetBSD
     @skipIfRemote
     def test_by_port(self):
         """
@@ -69,15 +64,15 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        port = "2345"
+        port = self.get_free_port()
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         pid = self.process.pid
-        response = self.attach(program=program, port=int(port), sourceInitFile=True)
+        response = self.attach(program=program, port=port, sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.kill()
 
     @skipIfWindows
-    @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfNetBSD
     @skipIfRemote
     def test_by_port_and_pid(self):
         """
@@ -86,12 +81,13 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        port = "2345"
+        port = self.get_free_port()
         self.process = self.runTargetProgramOnPort(port=port, program=program)
+        pid = self.process.pid
         response = self.attach(
             program=program,
-            pid=1234,
-            port=int(port),
+            pid=pid,
+            port=port,
             sourceInitFile=True,
             expectFailure=True,
         )
@@ -102,7 +98,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.process.kill()
 
     @skipIfWindows
-    @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfNetBSD
     @skipIfRemote
     def test_by_invalid_port(self):
         """
@@ -111,10 +107,10 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        port = "0"
+        port = 0
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         response = self.attach(
-            program=program, port=int(port), sourceInitFile=True, expectFailure=True
+            program=program, port=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
@@ -124,7 +120,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.process.kill()
 
     @skipIfWindows
-    @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfNetBSD
     @skipIfRemote
     def test_by_illegal_port(self):
         """
@@ -133,10 +129,10 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        port = "65536"
+        port = 65536
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         response = self.attach(
-            program=program, port=int(port), sourceInitFile=True, expectFailure=True
+            program=program, port=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
