@@ -11186,17 +11186,19 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   return SDValue();
 }
 
-// FIXME: This should be checking for no signed zeros on individual operands, as
-// well as no nans.
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
-                                         SDValue RHS,
+                                         SDValue RHS, const SDNodeFlags Flags,
                                          const TargetLowering &TLI) {
-  const TargetOptions &Options = DAG.getTarget().Options;
   EVT VT = LHS.getValueType();
+  if (!VT.isFloatingPoint())
+    return false;
 
-  return Options.NoSignedZerosFPMath && VT.isFloatingPoint() &&
+  const TargetOptions &Options = DAG.getTarget().Options;
+
+  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
-         DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS);
+         (Flags.hasNoNaNs() ||
+          (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
 }
 
 static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
@@ -11674,7 +11676,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // select (fcmp gt x, y), x, y -> fmaxnum x, y
     //
     // This is OK if we don't care what happens if either operand is a NaN.
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2, TLI))
+    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, TLI))
       if (SDValue FMinMax =
               combineMinNumMaxNum(DL, VT, Cond0, Cond1, N1, N2, CC))
         return FMinMax;
@@ -12267,7 +12269,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // This is OK if we don't care about what happens if either operand is a
     // NaN.
     //
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, TLI)) {
+    if (N0.hasOneUse() &&
+        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(), TLI)) {
       if (SDValue FMinMax = combineMinNumMaxNum(DL, VT, LHS, RHS, N1, N2, CC))
         return FMinMax;
     }
