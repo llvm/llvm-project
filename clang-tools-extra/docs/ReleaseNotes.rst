@@ -391,7 +391,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-redundant-member-init
   <clang-tidy/checks/readability/redundant-member-init>` check to avoid
-  false-positives when type of the member does not match type of the
+  false-positives when type of the member does not match the type of the
   initializer.
 
 - Improved :doc:`readability-static-accessed-through-instance
