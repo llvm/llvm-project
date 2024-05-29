@@ -730,7 +730,8 @@ static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  tensor::PackOp packOp,
                                  PatternRewriter &rewriter) {
-  // Cannot propagate shape expansion if there is outer dimensions permutation.
+  // Outer dimensions permutation is not supported currently.
+  // TODO: Handle outer_dims_perm variants.
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
   if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
     return rewriter.notifyMatchFailure(
@@ -771,6 +772,7 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   // Project the shape expansion to new packed shape.
   // The pack.outer_dims_perm is restricted to identity so, the permutation can
   // be omitted for simplicity.
+  // TODO: Account for outer dimensions permutation.
   RankedTensorType newPackType = tensor::PackOp::inferPackedType(
       expandOp.getSrcType(), packOp.getStaticInnerTiles(),
       projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
