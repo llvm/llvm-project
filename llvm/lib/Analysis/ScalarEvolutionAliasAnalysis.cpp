@@ -64,8 +64,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // Firstly, try to convert the two pointers into ptrtoint expressions to
     // handle two pointers with different pointer bases.
     // Either both pointers are used with ptrtoint or neither, so we can't end
-    // up with a ptr + int mix (not entirely sure whether it's possible for just
-    // one of the conversions to fail).
+    // up with a ptr + int mix.
     const SCEV *AInt =
         SE.getPtrToIntExpr(AS, SE.getEffectiveSCEVType(AS->getType()));
     const SCEV *BInt =
