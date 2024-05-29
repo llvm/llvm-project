@@ -317,7 +317,7 @@ void SemaWasm::handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL) {
 
 void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
-  if (!isFunctionOrMethod(D)) {
+  if (!isFuncOrMethodForAttrSubject(D)) {
     Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;

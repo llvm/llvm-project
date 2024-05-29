@@ -19,17 +19,17 @@
 
 namespace clang {
 
-/// isFunctionOrMethod - Return true if the given decl has function
+/// isFuncOrMethodForAttrSubject - Return true if the given decl has function
 /// type (function or function-typed variable) or an Objective-C
 /// method.
-inline bool isFunctionOrMethod(const Decl *D) {
+inline bool isFuncOrMethodForAttrSubject(const Decl *D) {
   return (D->getFunctionType() != nullptr) || llvm::isa<ObjCMethodDecl>(D);
 }
 
 /// Return true if the given decl has function type (function or
 /// function-typed variable) or an Objective-C method or a block.
-inline bool isFunctionOrMethodOrBlock(const Decl *D) {
-  return isFunctionOrMethod(D) || llvm::isa<BlockDecl>(D);
+inline bool isFunctionOrMethodOrBlockForAttrSubject(const Decl *D) {
+  return isFuncOrMethodForAttrSubject(D) || llvm::isa<BlockDecl>(D);
 }
 
 } // namespace clang
