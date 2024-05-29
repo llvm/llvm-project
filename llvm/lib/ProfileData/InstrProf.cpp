@@ -1640,8 +1640,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+  H.Version = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   if (H.getIndexedProfileVersion() >
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
@@ -1651,22 +1650,21 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
                 "or when indexed profile version gets bumped.");
 
   Buffer += sizeof(uint64_t); // Skip Header.Unused field.
-  H.HashType =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
-  H.HashOffset =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+  H.HashType = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  H.HashOffset = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   if (H.getIndexedProfileVersion() >= 8)
     H.MemProfOffset =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   if (H.getIndexedProfileVersion() >= 9)
     H.BinaryIdOffset =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  // Version 11 is handled by this condition.
   if (H.getIndexedProfileVersion() >= 10)
     H.TemporalProfTracesOffset =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   if (H.getIndexedProfileVersion() >= 12)
     H.VTableNamesOffset =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Buffer);
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   return H;
 }
 
