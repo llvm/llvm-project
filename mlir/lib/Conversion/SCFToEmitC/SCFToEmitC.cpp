@@ -79,7 +79,7 @@ static SmallVector<Value> createVariablesForResults(T op,
 static SmallVector<Value> readValues(SmallVector<Value> &variables,
                                      PatternRewriter &rewriter, Location loc) {
   Value zero;
-  if (variables.size() > 0)
+  if (!variables.empty())
     zero = rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
   SmallVector<Value> values;
   SmallVector<Value> indices = {zero};
@@ -94,7 +94,7 @@ static SmallVector<Value> readValues(SmallVector<Value> &variables,
 static void assignValues(ValueRange values, SmallVector<Value> &variables,
                          PatternRewriter &rewriter, Location loc) {
   Value zero;
-  if (variables.size() > 0)
+  if (!variables.empty())
     zero = rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
   for (auto [value, var] : llvm::zip(values, variables)) {
     SmallVector<Value> indices = {zero};
