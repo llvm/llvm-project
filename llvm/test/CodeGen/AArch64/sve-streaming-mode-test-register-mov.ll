@@ -43,7 +43,8 @@ define <2 x i64> @fixed_vec_zero_constant() {
 ;
 ; NONEON-NOSVE-LABEL: fixed_vec_zero_constant:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    movi v0.2d, #0000000000000000
+; NONEON-NOSVE-NEXT:    adrp x8, .LCPI2_0
+; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
 ; NONEON-NOSVE-NEXT:    ret
   ret <2 x i64> zeroinitializer
 }
@@ -57,7 +58,8 @@ define <2 x double> @fixed_vec_fp_zero_constant() {
 ;
 ; NONEON-NOSVE-LABEL: fixed_vec_fp_zero_constant:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    movi v0.2d, #0000000000000000
+; NONEON-NOSVE-NEXT:    adrp x8, .LCPI3_0
+; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
 ; NONEON-NOSVE-NEXT:    ret
   ret <2 x double> <double 0.0, double 0.0>
 }
