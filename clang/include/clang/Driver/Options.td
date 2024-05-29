@@ -4345,6 +4345,10 @@ defm strict_dwarf : BoolOption<"g", "strict-dwarf",
           "the specified version, avoiding features from later versions.">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
+defm omit_unreferenced_methods : BoolGOption<"omit-unreferenced-methods",
+  CodeGenOpts<"DebugOmitUnreferencedMethods">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [CC1Option]>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
 defm column_info : BoolOption<"g", "column-info",
   CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
