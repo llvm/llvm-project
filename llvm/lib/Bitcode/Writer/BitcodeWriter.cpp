@@ -5093,7 +5093,7 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO()) {
     // If this is darwin or another generic macho target, reserve space for the
     // header. Note that the header is computed *after* the output is known, so
-    // we currently expliclty use a buffer, write to it, and then subsequently
+    // we currently explicilty use a buffer, write to it, and then subsequently
     // flush to Out.
     SmallVector<char, 256 * 1024> Buffer;
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);

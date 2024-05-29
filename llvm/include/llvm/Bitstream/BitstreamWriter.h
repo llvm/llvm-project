@@ -32,7 +32,9 @@ class BitstreamWriter {
   /// Owned buffer, used to init Buffer if the provided stream doesn't happen to
   /// be a buffer itself.
   SmallVector<char, 0> OwnBuffer;
-  /// Internal buffer. The writer backpatches, so it is efficient to buffer.
+  /// Internal buffer for unflushed bytes (unless there is no stream to flush
+  /// to, case in which these are "the bytes"). The writer backpatches, so it is
+  /// efficient to buffer.
   SmallVectorImpl<char> &Buffer;
 
   /// FS - The file stream that Buffer flushes to. If FS is a raw_fd_stream, the
@@ -216,6 +218,9 @@ public:
       return;
     }
 
+    // If we don't have a raw_fd_stream, GetNumOfFlushedBytes() should have
+    // returned 0, and we shouldn't be here.
+    assert(fdStream() != nullptr);
     // If the byte offset to backpatch is flushed, use seek to backfill data.
     // First, save the file position to restore later.
     uint64_t CurPos = fdStream()->tell();
