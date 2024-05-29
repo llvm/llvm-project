@@ -494,7 +494,7 @@ class MIMG_NoSampler_nsa_gfx11<mimgopc op, string opcode,
 class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
                              RegisterClass DataRC, int num_addrs,
                              string dns="">
-  : VIMAGE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
+  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
                                 CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe),
