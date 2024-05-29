@@ -662,6 +662,30 @@ def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
                                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                        SDNPVariadic]>;
 
+def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                   SDTCisVT<1, i32>,
+                                                   SDTCisVT<2, i64>,
+                                                   SDTCisVT<3, i64>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
+def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
+                             SDTypeProfile<0, 5, [SDTCisPtrTy<0>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i64>,
+                                                  SDTCisVT<4, i64>]>,
+                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
+                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                       SDTCisPtrTy<1>,
+                                                       SDTCisVT<2, i32>,
+                                                       SDTCisVT<3, i64>,
+                                                       SDTCisVT<4, i64>]>,
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                  SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -1564,30 +1588,6 @@ let Predicates = [HasComplxNum, HasNEON] in {
                          (v4f32 (bitconvert (v2i64 (AArch64duplane64 (v2i64 V128:$Rm), VectorIndexD:$idx))))>;
 }
 
-def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
-                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
-                                                   SDTCisVT<1, i32>,
-                                                   SDTCisVT<2, i64>,
-                                                   SDTCisVT<3, i64>]>,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-
-def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
-                             SDTypeProfile<0, 5, [SDTCisPtrTy<0>,
-                                                  SDTCisVT<2, i32>,
-                                                  SDTCisVT<3, i64>,
-                                                  SDTCisVT<4, i64>]>,
-                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
-
-def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
-                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
-                                                       SDTCisPtrTy<1>,
-                                                       SDTCisVT<2, i32>,
-                                                       SDTCisVT<3, i64>,
-                                                       SDTCisVT<4, i64>]>,
-                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                  SDNPVariadic]>;
-
 // v8.3a Pointer Authentication
 // These instructions inhabit part of the hint space and so can be used for
 // armv8 targets. Keeping the old HINT mnemonic when compiling without PA is
@@ -1716,9 +1716,12 @@ let Predicates = [HasPAuth] in {
     def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
   }
 
-  // BLRA pseudo, generalized version of BLRAA/BLRAB/Z.
-  // This directly manipulates x16/x17, which are the only registers the OS
-  // guarantees are safe to use for sensitive operations.
+  // BLRA pseudo, a generalized version of BLRAA/BLRAB/Z.
+  // This directly manipulates x16/x17 to materialize the discriminator.
+  // x16/x17 are generally used as the safe registers for sensitive ptrauth
+  // operations (such as raw address manipulation or discriminator
+  // materialization here), in part because they're handled in a safer way by
+  // the kernel, notably on Darwin.
   def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
                                  GPR64noip:$AddrDisc),
                     [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,

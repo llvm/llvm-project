@@ -1550,7 +1550,6 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned InstsEmitted = 0;
-
   unsigned BrTarget = MI->getOperand(0).getReg();
 
   auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();

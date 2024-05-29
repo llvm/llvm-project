@@ -2642,18 +2642,18 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
     }
   }
 
-  std::optional<CallLowering::PointerAuthInfo> PAI;
+  std::optional<CallLowering::PtrAuthInfo> PAI;
   if (CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
     // Functions should never be ptrauth-called directly.
     assert(!CB.getCalledFunction() && "invalid direct ptrauth call");
 
     auto PAB = CB.getOperandBundle("ptrauth");
-    Value *Key = PAB->Inputs[0];
-    Value *Discriminator = PAB->Inputs[1];
+    const Value *Key = PAB->Inputs[0];
+    const Value *Discriminator = PAB->Inputs[1];
 
     Register DiscReg = getOrCreateVReg(*Discriminator);
-    PAI = CallLowering::PointerAuthInfo{DiscReg,
-                                        cast<ConstantInt>(Key)->getZExtValue()};
+    PAI = CallLowering::PtrAuthInfo{cast<ConstantInt>(Key)->getZExtValue(),
+                                    DiscReg};
   }
 
   Register ConvergenceCtrlToken = 0;

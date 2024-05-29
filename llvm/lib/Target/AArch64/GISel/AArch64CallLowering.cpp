@@ -1015,7 +1015,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall,
-                              std::optional<CallLowering::PointerAuthInfo> &PAI,
+                              std::optional<CallLowering::PtrAuthInfo> &PAI,
                               MachineRegisterInfo &MRI) {
   const AArch64FunctionInfo *FuncInfo = CallerF.getInfo<AArch64FunctionInfo>();
 

@@ -349,7 +349,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
   // If the constant discriminator (either the blend RHS, or the entire
   // discriminator value) isn't a 16-bit constant, bail out, and let the
   // discriminator be computed separately.
-  auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
+  const auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
   if (!ConstDiscN || !isUInt<16>(ConstDiscN->getZExtValue()))
     return std::make_tuple(DAG->getTargetConstant(0, DL, MVT::i64), Disc);
 
