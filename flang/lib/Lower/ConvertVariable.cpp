@@ -41,8 +41,14 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+
+static llvm::cl::opt<bool> allowAssumedRank(
+    "allow-assumed-rank",
+    llvm::cl::desc("Enable assumed rank lowering - experimental"),
+    llvm::cl::init(false));
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -1885,7 +1891,8 @@ void Fortran::lower::mapSymbolAttributes(
     return;
   }
 
-  if (Fortran::evaluate::IsAssumedRank(sym))
+  const bool isAssumedRank = Fortran::evaluate::IsAssumedRank(sym);
+  if (isAssumedRank && !allowAssumedRank)
     TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
   Fortran::lower::BoxAnalyzer ba;
@@ -1894,6 +1901,8 @@ void Fortran::lower::mapSymbolAttributes(
   // First deal with pointers and allocatables, because their handling here
   // is the same regardless of their rank.
   if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+    if (isAssumedRank)
+      TODO(loc, "assumed-rank pointer or allocatable");
     // Get address of fir.box describing the entity.
     // global
     mlir::Value boxAlloc = preAlloc;
@@ -1942,7 +1951,7 @@ void Fortran::lower::mapSymbolAttributes(
         if (mlir::Value len =
                 lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
           explicitParams.push_back(len);
-        if (sym.Rank() == 0) {
+        if (!isAssumedRank && sym.Rank() == 0) {
           // Do not keep scalar characters as fir.box (even when optional).
           // Lowering and FIR is not meant to deal with scalar characters as
           // fir.box outside of calls.
@@ -1987,9 +1996,11 @@ void Fortran::lower::mapSymbolAttributes(
         }
       }
       // TODO: derived type length parameters.
-      lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
-      lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents, symMap,
-                           stmtCtx);
+      if (!isAssumedRank) {
+        lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
+        lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents,
+                             symMap, stmtCtx);
+      }
       genBoxDeclare(converter, symMap, sym, dummyArg, lbounds, explicitParams,
                     explicitExtents, replace);
       return;
@@ -2021,6 +2032,11 @@ void Fortran::lower::mapSymbolAttributes(
     if (isUnusedEntryDummy) {
       assert(!Fortran::semantics::IsAllocatableOrPointer(sym) &&
              "handled above");
+      // Need to add support for allocatable assumed-rank to use
+      // logic below, or to simplify it and add codegen for fir.zero
+      // !fir.box<> instead.
+      if (isAssumedRank)
+        TODO(loc, "assumed rank in ENTRY");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
       mlir::Type ty = converter.genType(var);
@@ -2041,6 +2057,13 @@ void Fortran::lower::mapSymbolAttributes(
     }
     return false;
   };
+
+  if (isAssumedRank) {
+    assert(isUnusedEntryDummy && "assumed rank must be pointers/allocatables "
+                                 "or descriptor dummy arguments");
+    genUnusedEntryPointBox();
+    return;
+  }
 
   // Helper to generate scalars for the symbol properties.
   auto genValue = [&](const Fortran::lower::SomeExpr &expr) {
