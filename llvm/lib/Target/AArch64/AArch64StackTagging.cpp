@@ -496,9 +496,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
     Value *SlotPtr = memtag::getAndroidSlotPtr(IRB, StackMteSlot);
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
-    Value *TaggedFP = IRB.CreateOr(
-        memtag::getFP(IRB),
-        IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask));
+    Value *FP = memtag::getFP(IRB);
+    Value *Tag = IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask);
+    Value *TaggedFP = IRB.CreateOr(FP, Tag);
     Value *PC = memtag::getPC(TargetTriple, IRB);
     Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
     IRB.CreateStore(PC, RecordPtr);

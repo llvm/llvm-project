@@ -35,8 +35,8 @@ entry:
 ; INSTR:  [[TLS_SLOT:%.*]] = getelementptr i8, ptr [[TLS]], i32 -24
 ; INSTR:  [[TLS_VALUE:%.*]] = load i64, ptr %1, align 8
 ; INSTR:  [[FP:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
-; INSTR:  [[FP_INT:%.*]] = ptrtoint ptr %3 to i64
-; INSTR:  [[BASE_INT:%.*]] = ptrtoint ptr %basetag to i64
+; INSTR:  [[FP_INT:%.*]] = ptrtoint ptr [[FP]] to i64
+; INSTR:  [[BASE_INT:%.*]] = ptrtoint ptr [[BASE]] to i64
 ; INSTR:  [[BASE_TAG:%.*]] = and i64 [[BASE_INT]], 1080863910568919040
 ; INSTR:  [[TAGGED_FP:%.*]] = or i64 [[FP_INT]], [[BASE_TAG]]
 ; INSTR:  [[PC:%.*]] = call i64 @llvm.read_register.i64(metadata !0)
