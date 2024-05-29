@@ -80,6 +80,7 @@ static_library("Support") {
     "ExponentialBackoff.cpp",
     "ExtensibleRTTI.cpp",
     "FileCollector.cpp",
+    "FileDescriptor.cpp",
     "FileOutputBuffer.cpp",
     "FileUtilities.cpp",
     "FloatingPointMode.cpp",
