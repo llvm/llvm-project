@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
-
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "llvm/Support/Debug.h"
-
 namespace mlir::vector {
 
 FailureOr<ConstantOrScalableBound::BoundSize>

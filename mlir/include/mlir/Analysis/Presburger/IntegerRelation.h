@@ -454,20 +454,6 @@ public:
     addLocalFloorDiv(getMPIntVec(dividend), MPInt(divisor));
   }
 
-  /// Adds a new local variable as the mod of an affine function of other
-  /// variables. The coefficients of the operands of the mod are provided in
-  /// `lhs` and `rhs` respectively. Three constraints are added to provide a
-  /// conservative bound for the mod:
-  ///  1. rhs > 0 (assumption/precondition)
-  ///  2. lhs % rhs < rhs
-  ///  3. lhs % rhs >= 0
-  /// We ensure the rhs is positive so we can assume the result is positive.
-  void addLocalModConservativeBounds(ArrayRef<MPInt> lhs, ArrayRef<MPInt> rhs);
-  void addLocalModConservativeBounds(ArrayRef<int64_t> lhs,
-                                     ArrayRef<int64_t> rhs) {
-    addLocalModConservativeBounds(getMPIntVec(lhs), getMPIntVec(rhs));
-  }
-
   /// Projects out (aka eliminates) `num` variables starting at position
   /// `pos`. The resulting constraint system is the shadow along the dimensions
   /// that still exist. This method may not always be integer exact.

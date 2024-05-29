@@ -36,25 +36,20 @@ using namespace presburger;
 namespace {
 
 // See comments for SimpleAffineExprFlattener.
-// An AffineExprFlattener extends a SimpleAffineExprFlattener by recording
-// constraint information associated with mod's, floordiv's, and ceildiv's
-// in FlatLinearConstraints 'localVarCst'.
-struct AffineExprFlattener : public SimpleAffineExprFlattener {
-public:
+// An AffineExprFlattenerWithLocalVars extends a SimpleAffineExprFlattener by
+// recording constraint information associated with mod's, floordiv's, and
+// ceildiv's in FlatLinearConstraints 'localVarCst'.
+struct AffineExprFlattenerWithLocalVars : public SimpleAffineExprFlattener {
+  using SimpleAffineExprFlattener::SimpleAffineExprFlattener;
+
   // Constraints connecting newly introduced local variables (for mod's and
   // div's) to existing (dimensional and symbolic) ones. These are always
   // inequalities.
   IntegerPolyhedron localVarCst;
 
-  AffineExprFlattener(unsigned nDims, unsigned nSymbols,
-                      bool addConservativeSemiAffineBounds = false)
+  AffineExprFlattenerWithLocalVars(unsigned nDims, unsigned nSymbols)
       : SimpleAffineExprFlattener(nDims, nSymbols),
-        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)),
-        addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {}
-
-  bool hasUnhandledSemiAffineExpressions() const {
-    return unhandledSemiAffineExpressions;
-  }
+        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)) {};
 
 private:
   // Add a local variable (needed to flatten a mod, floordiv, ceildiv expr).
@@ -70,30 +65,71 @@ private:
     localVarCst.addLocalFloorDiv(dividend, divisor);
   }
 
-  // Add a local identifier (needed to flatten a mod, floordiv, ceildiv, mul
-  // expr) when the rhs is a symbolic expression. The local identifier added
-  // may be a floordiv, ceildiv, mul or mod of a pure affine/semi-affine
-  // function of other identifiers, coefficients of which are specified in the
-  // lhs of the mod, floordiv, ceildiv or mul expression and with respect to a
-  // symbolic rhs expression. `localExpr` is the simplified tree expression
-  // (AffineExpr) corresponding to the quantifier.
-  void addLocalIdSemiAffine(AffineExpr localExpr, ArrayRef<int64_t> lhs,
-                            ArrayRef<int64_t> rhs) override {
-    SimpleAffineExprFlattener::addLocalIdSemiAffine(localExpr, lhs, rhs);
-    if (!addConservativeSemiAffineBounds) {
-      unhandledSemiAffineExpressions = true;
-      return;
-    }
-    if (localExpr.getKind() == AffineExprKind::Mod) {
-      localVarCst.addLocalModConservativeBounds(lhs, rhs);
-      return;
-    }
-    // TODO: Support other semi-affine expressions.
-    unhandledSemiAffineExpressions = true;
-  }
+  // Semi-affine expressions are not supported by all flatteners.
+  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
+                                     ArrayRef<int64_t> rhs,
+                                     AffineExpr localExpr) override = 0;
+};
 
-  bool addConservativeSemiAffineBounds = false;
-  bool unhandledSemiAffineExpressions = false;
+// An AffineExprFlattener is an AffineExprFlattenerWithLocalVars that explicitly
+// disallows semi-affine expressions. Flattening will fail if a semi-affine
+// expression is encountered.
+struct AffineExprFlattener : public AffineExprFlattenerWithLocalVars {
+  using AffineExprFlattenerWithLocalVars::AffineExprFlattenerWithLocalVars;
+
+  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
+                                     ArrayRef<int64_t> rhs,
+                                     AffineExpr localExpr) override {
+    // AffineExprFlattener does not support semi-affine expressions.
+    return failure();
+  }
+};
+
+// A SemiAffineExprFlattener is an AffineExprFlattenerWithLocalVars that adds
+// conservative bounds for semi-affine expressions (given assumptions hold). If
+// the assumptions required to add the semi-affine bounds are found not to hold
+// the final constraints set will be empty/inconsistent. If the assumptions are
+// never contradicted the final bounds still only will be correct if the
+// assumptions hold.
+struct SemiAffineExprFlattener : public AffineExprFlattenerWithLocalVars {
+  using AffineExprFlattenerWithLocalVars::AffineExprFlattenerWithLocalVars;
+
+  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
+                                     ArrayRef<int64_t> rhs,
+                                     AffineExpr localExpr) override {
+    auto result =
+        SimpleAffineExprFlattener::addLocalIdSemiAffine(lhs, rhs, localExpr);
+    assert(succeeded(result) &&
+           "unexpected failure in SimpleAffineExprFlattener");
+    (void)result;
+
+    if (localExpr.getKind() == AffineExprKind::Mod) {
+      localVarCst.appendVar(VarKind::Local);
+      // Add a conservative bound for `mod` assuming the rhs is > 0.
+
+      // Note: If the rhs is later found to be < 0 the following two constraints
+      // will contradict each other (and lead to the final constraints set
+      // becoming empty). If the sign of the rhs is never specified the bound
+      // will assume it is positive.
+
+      // Upper bound: rhs - (lhs % rhs) - 1 >= 0 i.e. lhs % rhs < rhs
+      // This only holds if the rhs is > 0.
+      SmallVector<int64_t, 8> resultUpperBound(rhs);
+      resultUpperBound.insert(resultUpperBound.end() - 1, -1);
+      --resultUpperBound.back();
+      localVarCst.addInequality(resultUpperBound);
+
+      // Lower bound: lhs % rhs >= 0 (always holds)
+      SmallVector<int64_t, 8> resultLowerBound(rhs.size());
+      resultLowerBound.insert(resultLowerBound.end() - 1, 1);
+      localVarCst.addInequality(resultLowerBound);
+
+      return success();
+    }
+
+    // TODO: Support other semi-affine expressions.
+    return failure();
+  }
 };
 
 } // namespace
@@ -114,27 +150,34 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
     return success();
   }
 
-  AffineExprFlattener flattener(numDims, numSymbols,
-                                addConservativeSemiAffineBounds);
-  // Use the same flattener to simplify each expression successively. This way
-  // local variables / expressions are shared.
-  for (auto expr : exprs) {
-    auto flattenResult = flattener.walkPostOrder(expr);
-    if (failed(flattenResult))
-      return failure();
-    if (flattener.hasUnhandledSemiAffineExpressions())
-      return failure();
+  auto flattenExprs =
+      [&](AffineExprFlattenerWithLocalVars &flattener) -> LogicalResult {
+    // Use the same flattener to simplify each expression successively. This way
+    // local variables / expressions are shared.
+    for (auto expr : exprs) {
+      auto flattenResult = flattener.walkPostOrder(expr);
+      if (failed(flattenResult))
+        return failure();
+    }
+
+    assert(flattener.operandExprStack.size() == exprs.size());
+    flattenedExprs->clear();
+    flattenedExprs->assign(flattener.operandExprStack.begin(),
+                           flattener.operandExprStack.end());
+
+    if (localVarCst)
+      localVarCst->clearAndCopyFrom(flattener.localVarCst);
+
+    return success();
+  };
+
+  if (addConservativeSemiAffineBounds) {
+    SemiAffineExprFlattener flattener(numDims, numSymbols);
+    return flattenExprs(flattener);
   }
 
-  assert(flattener.operandExprStack.size() == exprs.size());
-  flattenedExprs->clear();
-  flattenedExprs->assign(flattener.operandExprStack.begin(),
-                         flattener.operandExprStack.end());
-
-  if (localVarCst)
-    localVarCst->clearAndCopyFrom(flattener.localVarCst);
-
-  return success();
+  AffineExprFlattener flattener(numDims, numSymbols);
+  return flattenExprs(flattener);
 }
 
 // Flattens 'expr' into 'flattenedExpr'. Returns failure if 'expr' was unable to
