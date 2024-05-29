@@ -474,16 +474,11 @@ bool TargetRegisterInfo::isCalleeSavedPhysReg(
 }
 
 bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  return !MF.getFunction().hasFnAttribute("no-realign-stack");
+  return MF.getFrameInfo().isStackRealignable();
 }
 
 bool TargetRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const Function &F = MF.getFunction();
-  return F.hasFnAttribute("stackrealign") ||
-         (MFI.getMaxAlign() > TFI->getStackAlign()) ||
-         F.hasFnAttribute(Attribute::StackAlignment);
+  return MF.getFrameInfo().shouldRealignStack();
 }
 
 bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
