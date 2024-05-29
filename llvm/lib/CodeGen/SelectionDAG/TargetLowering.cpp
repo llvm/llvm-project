@@ -8428,6 +8428,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   EVT VT = N->getValueType(0);
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   bool IsMax = Opc == ISD::FMAXIMUM;
+  SDNodeFlags Flags = N->getFlags();
 
   if (VT.isVector() &&
       isOperationLegalOrCustomOrPromote(Opc, VT.getScalarType()))
@@ -8444,15 +8445,15 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   bool MinMaxMustRespectOrderedZero = false;
 
   if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
-    MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS);
+    MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS, Flags);
     MinMaxMustRespectOrderedZero = true;
   } else if (isOperationLegalOrCustom(CompOpc, VT)) {
-    MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS);
+    MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);
   } else {
     // NaN (if exists) will be propagated later, so orderness doesn't matter.
     SDValue Compare =
         DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
-    MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS);
+    MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS, Flags);
   }
 
   // Propagate any NaN of both operands
@@ -8461,7 +8462,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     ConstantFP *FPNaN = ConstantFP::get(
         *DAG.getContext(), APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT)));
     MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
-                           DAG.getConstantFP(*FPNaN, DL, VT), MinMax);
+                           DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
   }
 
   // fminimum/fmaximum requires -0.0 less than +0.0
@@ -8473,11 +8474,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
         DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
     SDValue LCmp = DAG.getSelect(
         DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax);
+        MinMax, Flags);
     SDValue RCmp = DAG.getSelect(
         DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax);
+        LCmp, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
   }
 
   return MinMax;
