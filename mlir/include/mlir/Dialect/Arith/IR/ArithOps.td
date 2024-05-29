@@ -83,12 +83,25 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
                           attr-dict `:` type($result) }];
 }
 
+// Checks that tensor input and outputs have identical shapes. This is stricker
+// than the verification done in `SameOperandsAndResultShape` that allows for
+// tensor dimensions to be 'compatible' (e.g., dynamic dimensions being
+// compatible with static ones).
+def SameInputOutputTensorDims : PredOpTrait<
+    "input and output have the same tensor dimensions",
+    AllMatchSameOperatorPred<["in", "out"],
+      "(::llvm::isa<::mlir::TensorType>($_self.getType()) ?"
+      " ::llvm::cast<::mlir::TensorType>($_self.getType()).getShape() :"
+      " ::llvm::ArrayRef<int64_t>{})">>;
+
 // Base class for arithmetic cast operations. Requires a single operand and
-// result. If either is a shaped type, then the other must be of the same shape.
+// result. If either is a shaped type, then the other must be of the same
+// shape.  In the case of tensor types, this also includes the corresponding
+// operand/result dimensions being equal.
 class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
                    list<Trait> traits = []> :
     Arith_Op<mnemonic, traits # [Pure, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>]>,
+      SameInputOutputTensorDims, DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins From:$in)>,
     Results<(outs To:$out)> {
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
@@ -1231,7 +1244,7 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
 
 def Arith_TruncFOp :
     Arith_Op<"truncf",
-      [Pure, SameOperandsAndResultShape,
+      [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
