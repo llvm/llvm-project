@@ -4,6 +4,6 @@ LD_EXTRAS = hidden.o
 a.out: hidden.o
 
 hidden.o: hidden.c
-	$(CC) -g0 -c -o $@ $<
+	$(CC) -g0 -c -o $@ $(call path_wrapper,$<)
 
 include Makefile.rules

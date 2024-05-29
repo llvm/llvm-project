@@ -8,8 +8,8 @@ clean:
 	rm -f $(CORES) $(EXECS)
 
 %.core: %
-	sysctl -w proc.$$$$.corename=$@; ulimit -s 16; ! ./$<
+	sysctl -w proc.$$$$.corename=$@; ulimit -s 16; ! ./$(call path_wrapper,$<)
 %.$(ARCH): %.c
-	$(CC) -o $@ -g $<
+	$(CC) -o $@ -g $(call path_wrapper,$<)
 
 .PHONY: all clean

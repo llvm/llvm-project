@@ -4,6 +4,6 @@ LD_EXTRAS := -Wl,--build-id=none
 all: stripped.out
 
 stripped.out : a.out
-	$(OBJCOPY) --remove-section=.note.gnu.build-id --remove-section=.gnu_debuglink --strip-debug $< $@
+	$(OBJCOPY) --remove-section=.note.gnu.build-id --remove-section=.gnu_debuglink --strip-debug $(call path_wrapper,$<) $@
 
 include Makefile.rules

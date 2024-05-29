@@ -8,10 +8,10 @@ include Makefile.rules
 
 # We copy the source files to move them to test source mapping
 other-copy.c: other.c
-	cp -f $< $@
+	cp -f $(call path_wrapper,$<) $@
 
 main-copy.cpp: main.cpp
-	cp -f $< $@
+	cp -f $(call path_wrapper,$<) $@
 
 # The following shared library will be used to test breakpoints under dynamic loading
 libother:  other-copy.c

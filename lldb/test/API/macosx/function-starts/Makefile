@@ -5,4 +5,4 @@ MAKE_DSYM := NO
 include Makefile.rules
 
 main.o: main.cpp
-	$(CC) $(CFLAGS_NO_DEBUG) -c $< -o $@
+	$(CC) $(CFLAGS_NO_DEBUG) -c $(call path_wrapper,$<) -o $@

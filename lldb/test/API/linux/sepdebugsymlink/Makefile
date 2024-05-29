@@ -5,7 +5,7 @@ all: dirsymlink
 dirreal: a.out
 	$(RM) -r $@
 	mkdir $@
-	$(OBJCOPY) --only-keep-debug $< $@/stripped.debug
+	$(OBJCOPY) --only-keep-debug $(call path_wrapper,$<) $@/stripped.debug
 	$(OBJCOPY) --strip-all --add-gnu-debuglink=$@/stripped.debug $< $@/stripped.out
 
 dirsymlink: dirreal
