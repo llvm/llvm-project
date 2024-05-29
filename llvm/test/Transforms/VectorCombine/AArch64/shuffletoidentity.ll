@@ -570,19 +570,10 @@ define <8 x i16> @not_bitcast2(<4 x i32> %x, <8 x i16> %y) {
 
 define void @exttrunc(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-LABEL: @exttrunc(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i32> [[B:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[AB1:%.*]] = zext <4 x i32> [[AB]] to <4 x i64>
-; CHECK-NEXT:    [[AT1:%.*]] = zext <4 x i32> [[AT]] to <4 x i64>
-; CHECK-NEXT:    [[BB1:%.*]] = sext <4 x i32> [[BB]] to <4 x i64>
-; CHECK-NEXT:    [[BT1:%.*]] = sext <4 x i32> [[BT]] to <4 x i64>
-; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i64> [[AB1]], [[BB1]]
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i64> [[AT1]], [[BT1]]
-; CHECK-NEXT:    [[ABB1:%.*]] = trunc <4 x i64> [[ABB]] to <4 x i32>
-; CHECK-NEXT:    [[ABT1:%.*]] = trunc <4 x i64> [[ABT]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABB1]], <4 x i32> [[ABT1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i32> [[A:%.*]] to <8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i32> [[B:%.*]] to <8 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = trunc <8 x i64> [[TMP3]] to <8 x i32>
 ; CHECK-NEXT:    store <8 x i32> [[R]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
@@ -605,17 +596,9 @@ define void @exttrunc(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 
 define void @zext(<8 x i16> %a, <8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: @zext(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[AB1:%.*]] = zext <4 x i16> [[AB]] to <4 x i32>
-; CHECK-NEXT:    [[AT1:%.*]] = zext <4 x i16> [[AT]] to <4 x i32>
-; CHECK-NEXT:    [[BB1:%.*]] = zext <4 x i16> [[BB]] to <4 x i32>
-; CHECK-NEXT:    [[BT1:%.*]] = zext <4 x i16> [[BT]] to <4 x i32>
-; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i32> [[AB1]], [[BB1]]
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i32> [[AT1]], [[BT1]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABB]], <4 x i32> [[ABT]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <8 x i32> [[R]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
@@ -636,17 +619,9 @@ define void @zext(<8 x i16> %a, <8 x i16> %b, ptr %p) {
 
 define void @sext(<8 x i16> %a, <8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: @sext(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[AB1:%.*]] = sext <4 x i16> [[AB]] to <4 x i32>
-; CHECK-NEXT:    [[AT1:%.*]] = sext <4 x i16> [[AT]] to <4 x i32>
-; CHECK-NEXT:    [[BB1:%.*]] = sext <4 x i16> [[BB]] to <4 x i32>
-; CHECK-NEXT:    [[BT1:%.*]] = sext <4 x i16> [[BT]] to <4 x i32>
-; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i32> [[AB1]], [[BB1]]
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i32> [[AT1]], [[BT1]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABB]], <4 x i32> [[ABT]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i16> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <8 x i32> [[R]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
@@ -705,11 +680,7 @@ define void @zext_types(<8 x i16> %a, <8 x i32> %b, ptr %p) {
 
 define void @trunc(<8 x i64> %a, <8 x i64> %b, ptr %p) {
 ; CHECK-LABEL: @trunc(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i64> [[A:%.*]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i64> [[A]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[ABB1:%.*]] = trunc <4 x i64> [[AB]] to <4 x i32>
-; CHECK-NEXT:    [[ABT1:%.*]] = trunc <4 x i64> [[AT]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABB1]], <4 x i32> [[ABT1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = trunc <8 x i64> [[A:%.*]] to <8 x i32>
 ; CHECK-NEXT:    store <8 x i32> [[R]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
