@@ -151,17 +151,6 @@ entry:
   ret double %result
 }
 
-; Verify that tan(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: ftan
-; CHECK: call double @llvm.experimental.constrained.tan
-define double @ftan() #0 {
-entry:
-  %result = call double @llvm.experimental.constrained.tan.f64(double 42.0,
-                                               metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict") #0
-  ret double %result
-}
-
 ; Verify that exp(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f10
 ; CHECK: call double @llvm.experimental.constrained.exp
