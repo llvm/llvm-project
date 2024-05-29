@@ -182,8 +182,9 @@ public:
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+                   const DenseMap<Value *, const SCEV *> &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits)
-      : PSE(PSE), InnermostLoop(L),
+      : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
@@ -198,7 +199,6 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, const SCEV *> &Strides,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
                        &UnderlyingObjects);
 
@@ -278,6 +278,10 @@ private:
   PredicatedScalarEvolution &PSE;
   const Loop *InnermostLoop;
 
+  /// Reference to map of pointer values to
+  /// their stride symbols, if they have a symbolic stride.
+  const DenseMap<Value *, const SCEV *> &SymbolicStrides;
+
   /// Maps access locations (ptr, read/write) to program order.
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
 
@@ -336,7 +340,7 @@ private:
   /// Otherwise, this function returns true signaling a possible dependence.
   Dependence::DepType
   isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-              unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+              unsigned BIdx,
               const DenseMap<Value *, SmallVector<const Value *, 16>>
                   &UnderlyingObjects);
 

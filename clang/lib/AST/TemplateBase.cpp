@@ -221,8 +221,13 @@ static const ValueDecl *getAsSimpleValueDeclRef(const ASTContext &Ctx,
 
   // We model class non-type template parameters as their template parameter
   // object declaration.
-  if (V.isStruct() || V.isUnion())
+  if (V.isStruct() || V.isUnion()) {
+    // Dependent types are not supposed to be described as
+    // TemplateParamObjectDecls.
+    if (T->isDependentType() || T->isInstantiationDependentType())
+      return nullptr;
     return Ctx.getTemplateParamObjectDecl(T, V);
+  }
 
   // Pointers and references with an empty path use the special 'Declaration'
   // representation.
@@ -547,7 +552,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
       const auto *TTP = cast<TemplateTemplateParmDecl>(TD);
       Out << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
     } else {
-      TN.print(Out, Policy, TemplateName::Qualified::Fully);
+      TN.print(Out, Policy);
     }
     break;
   }
