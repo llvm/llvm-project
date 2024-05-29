@@ -23,6 +23,9 @@ class ValueType<int size, int value> {
   bit isFP = false;
   bit isVector = false;
   bit isScalable = false;
+  // Indicates this VT should be included in the
+  // [FIRST_VALUETYPE,LAST_VALUETYPE] range.
+  bit isNormalValueType = true;
 }
 
 class VTAny<int value> : ValueType<0, value> {
@@ -287,6 +290,7 @@ def aarch64svcount
               : ValueType<16,  199>;  // AArch64 predicate-as-counter
 def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
 
+let isNormalValueType = false in {
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249> { // Metadata
   let LLVMName = "Metadata";
@@ -315,6 +319,8 @@ def iPTR       : ValueType<0, 254>;
 // Pseudo valuetype to represent "any type of any size".
 // Should only be used in TableGen.
 def Any        : VTAny<255>;
+
+} // isNormalValueType = false
 
 } // end defset ValueTypes
 
