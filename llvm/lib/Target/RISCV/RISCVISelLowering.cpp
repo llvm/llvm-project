@@ -5960,7 +5960,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    130 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5986,7 +5986,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    130 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -16183,6 +16183,66 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
 }
 
+// Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is maximum
+// value for the truncated type.
+static SDValue combineTruncToVnclipu(SDNode *N, SelectionDAG &DAG,
+                                     const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL);
+
+  MVT VT = N->getSimpleValueType(0);
+
+  SDValue Mask = N->getOperand(1);
+  SDValue VL = N->getOperand(2);
+
+  SDValue Src = N->getOperand(0);
+
+  // Src must be a UMIN or UMIN_VL.
+  if (Src.getOpcode() != ISD::UMIN &&
+      !(Src.getOpcode() == RISCVISD::UMIN_VL && Src.getOperand(2).isUndef() &&
+        Src.getOperand(3) == Mask && Src.getOperand(4) == VL))
+    return SDValue();
+
+  auto IsSplat = [&VL](SDValue Op, APInt &SplatVal) {
+    // Peek through conversion between fixed and scalable vectors.
+    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
+        isNullConstant(Op.getOperand(2)) &&
+        Op.getOperand(1).getValueType().isFixedLengthVector() &&
+        Op.getOperand(1).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op.getOperand(1).getOperand(0).getValueType() == Op.getValueType() &&
+        isNullConstant(Op.getOperand(1).getOperand(1)))
+      Op = Op.getOperand(1).getOperand(0);
+
+    if (ISD::isConstantSplatVector(Op.getNode(), SplatVal))
+      return true;
+
+    if (Op.getOpcode() == RISCVISD::VMV_V_X_VL && Op.getOperand(0).isUndef() &&
+        Op.getOperand(2) == VL) {
+      if (auto *Op1 = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+        SplatVal =
+            Op1->getAPIntValue().sextOrTrunc(Op.getScalarValueSizeInBits());
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  APInt C;
+  if (!IsSplat(Src.getOperand(1), C))
+    return SDValue();
+
+  if (!C.isMask(VT.getScalarSizeInBits()))
+    return SDValue();
+
+  SDLoc DL(N);
+  // Rounding mode here is arbitrary since we aren't shifting out any bits.
+  return DAG.getNode(
+      RISCVISD::VNCLIPU_VL, DL, VT,
+      {Src.getOperand(0), DAG.getConstant(0, DL, VT), DAG.getUNDEF(VT), Mask,
+       DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
+       VL});
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -16400,7 +16460,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     return SDValue();
   case RISCVISD::TRUNCATE_VECTOR_VL:
-    return combineTruncOfSraSext(N, DAG);
+    if (SDValue V = combineTruncOfSraSext(N, DAG))
+      return V;
+    return combineTruncToVnclipu(N, DAG, Subtarget);
   case ISD::TRUNCATE:
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
@@ -20019,6 +20081,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)
   NODE_NAME_CASE(USUBSAT_VL)
+  NODE_NAME_CASE(VNCLIP_VL)
+  NODE_NAME_CASE(VNCLIPU_VL)
   NODE_NAME_CASE(FADD_VL)
   NODE_NAME_CASE(FSUB_VL)
   NODE_NAME_CASE(FMUL_VL)
