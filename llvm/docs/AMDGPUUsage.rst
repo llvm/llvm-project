@@ -1988,6 +1988,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
+     *reserved*                                 0x058      Reserved.
      ========================================== ========== =============================
 
 Sections

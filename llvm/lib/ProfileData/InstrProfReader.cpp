@@ -1328,7 +1328,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   // The MemProfOffset field in the header is only valid when the format
   // version is higher than 8 (when it was introduced).
-  if (GET_VERSION(Header->Version) >= 8 &&
+  if (Header->getIndexedProfileVersion() >= 8 &&
       Header->Version & VARIANT_MASK_MEMPROF) {
     if (Error E = MemProfReader.deserialize(Start, Header->MemProfOffset))
       return E;
@@ -1336,7 +1336,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   // BinaryIdOffset field in the header is only valid when the format version
   // is higher than 9 (when it was introduced).
-  if (GET_VERSION(Header->Version) >= 9) {
+  if (Header->getIndexedProfileVersion() >= 9) {
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
     BinaryIdsSize =
@@ -1350,7 +1350,7 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
-  if (GET_VERSION(Header->Version) >= 12) {
+  if (Header->getIndexedProfileVersion() >= 12) {
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
     CompressedVTableNamesLen =
@@ -1363,7 +1363,7 @@ Error IndexedInstrProfReader::readHeader() {
       return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
-  if (GET_VERSION(Header->Version) >= 10 &&
+  if (Header->getIndexedProfileVersion() >= 10 &&
       Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
     const unsigned char *Ptr = Start + Header->TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
