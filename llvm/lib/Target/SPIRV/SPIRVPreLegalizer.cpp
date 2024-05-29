@@ -40,6 +40,7 @@ public:
 
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                    const SPIRVSubtarget &STI,
                     DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
@@ -82,8 +83,17 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (Const->getType()->isTargetExtTy()) {
             // remember association so that we can restore it when assign types
             MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
-            if (SrcMI && SrcMI->getOpcode() == TargetOpcode::G_CONSTANT)
+            if (SrcMI && (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT ||
+                          SrcMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
               TargetExtConstTypes[SrcMI] = Const->getType();
+            if (Const->isNullValue()) {
+              MachineIRBuilder MIB(MF);
+              SPIRVType *ExtType =
+                  GR->getOrCreateSPIRVType(Const->getType(), MIB);
+              SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
+              SrcMI->addOperand(MachineOperand::CreateReg(
+                  GR->getSPIRVTypeID(ExtType), false));
+            }
           }
         } else {
           RegsAlreadyAddedToDT[&MI] = Reg;
@@ -394,6 +404,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     for (auto MII = std::prev(MBB->end()), Begin = MBB->begin();
          !ReachedBegin;) {
       MachineInstr &MI = *MII;
+      unsigned MIOp = MI.getOpcode();
 
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
         Register Reg = MI.getOperand(1).getReg();
@@ -419,9 +430,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
-      } else if (MI.getOpcode() == TargetOpcode::G_CONSTANT ||
-                 MI.getOpcode() == TargetOpcode::G_FCONSTANT ||
-                 MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+      } else if (MIOp == TargetOpcode::G_CONSTANT ||
+                 MIOp == TargetOpcode::G_FCONSTANT ||
+                 MIOp == TargetOpcode::G_BUILD_VECTOR) {
         // %rc = G_CONSTANT ty Val
         // ===>
         // %cty = OpType* ty
@@ -435,15 +446,15 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             continue;
         }
         Type *Ty = nullptr;
-        if (MI.getOpcode() == TargetOpcode::G_CONSTANT) {
+        if (MIOp == TargetOpcode::G_CONSTANT) {
           auto TargetExtIt = TargetExtConstTypes.find(&MI);
           Ty = TargetExtIt == TargetExtConstTypes.end()
                    ? MI.getOperand(1).getCImm()->getType()
                    : TargetExtIt->second;
-        } else if (MI.getOpcode() == TargetOpcode::G_FCONSTANT) {
+        } else if (MIOp == TargetOpcode::G_FCONSTANT) {
           Ty = MI.getOperand(1).getFPImm()->getType();
         } else {
-          assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+          assert(MIOp == TargetOpcode::G_BUILD_VECTOR);
           Type *ElemTy = nullptr;
           MachineInstr *ElemMI = MRI.getVRegDef(MI.getOperand(1).getReg());
           assert(ElemMI);
@@ -459,7 +470,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           Ty = VectorType::get(ElemTy, NumElts, false);
         }
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
-      } else if (MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+      } else if (MIOp == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
       }
 
@@ -802,7 +813,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
   // a registry of target extension constants
   DenseMap<MachineInstr *, Type *> TargetExtConstTypes;
-  addConstantsToTrack(MF, GR, TargetExtConstTypes);
+  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes);
   foldConstantsIntoIntrinsics(MF);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
