@@ -23,15 +23,14 @@ OpenACCComputeConstruct::CreateEmpty(const ASTContext &C, unsigned NumClauses) {
   return Inst;
 }
 
-OpenACCComputeConstruct *
-OpenACCComputeConstruct::Create(const ASTContext &C, OpenACCDirectiveKind K,
-                                SourceLocation BeginLoc, SourceLocation EndLoc,
-                                ArrayRef<const OpenACCClause *> Clauses,
-                                Stmt *StructuredBlock) {
+OpenACCComputeConstruct *OpenACCComputeConstruct::Create(
+    const ASTContext &C, OpenACCDirectiveKind K, SourceLocation BeginLoc,
+    SourceLocation DirLoc, SourceLocation EndLoc,
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *StructuredBlock) {
   void *Mem = C.Allocate(
       OpenACCComputeConstruct::totalSizeToAlloc<const OpenACCClause *>(
           Clauses.size()));
-  auto *Inst = new (Mem)
-      OpenACCComputeConstruct(K, BeginLoc, EndLoc, Clauses, StructuredBlock);
+  auto *Inst = new (Mem) OpenACCComputeConstruct(K, BeginLoc, DirLoc, EndLoc,
+                                                 Clauses, StructuredBlock);
   return Inst;
 }
