@@ -205,11 +205,10 @@ public:
 
       Expr *InitExpr = Init->getInit();
 
-      // Ensure that any result objects within `InitExpr` (e.g. temporaries)
-      // are also propagated to the prvalues that initialize them.
+      // Also collect declarations referenced in `InitExpr`.
       TraverseStmt(InitExpr);
 
-      // If this is a `CXXDefaultInitExpr`, also propagate any result objects
+      // If this is a `CXXDefaultInitExpr`, also collect declarations referenced
       // within the default expression.
       if (auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(InitExpr))
         TraverseStmt(DefaultInit->getExpr());
