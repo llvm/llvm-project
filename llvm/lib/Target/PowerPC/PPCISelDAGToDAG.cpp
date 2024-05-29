@@ -6096,7 +6096,11 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                    EVT OperandTy) {
       SDValue GA = TocEntry->getOperand(0);
       SDValue TocBase = TocEntry->getOperand(1);
-      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+      SDNode *MN = nullptr;
+      if (OpCode == PPC::ADDItoc || OpCode == PPC::ADDItoc8)
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, TocBase, GA);
+      else
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
       transferMemOperands(TocEntry, MN);
       ReplaceNode(TocEntry, MN);
     };
