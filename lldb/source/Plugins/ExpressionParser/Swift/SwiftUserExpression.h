@@ -194,6 +194,7 @@ private:
   PersistentVariableDelegate m_persistent_variable_delegate;
   std::unique_ptr<SwiftExpressionParser> m_parser;
   std::optional<SwiftLanguageRuntime::GenericSignature> m_generic_signature;
+  std::optional<lldb::user_id_t> m_debugger_id;
   Status m_err;
   bool m_runs_in_playground_or_repl;
   bool m_needs_object_ptr = false;
