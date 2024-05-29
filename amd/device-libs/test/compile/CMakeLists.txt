@@ -101,3 +101,9 @@ foreach(gpu gfx600 gfx700 gfx803)
   add_isa_test(native_log ${gpu})
   add_isa_test(native_exp ${gpu})
 endforeach()
+
+foreach(gpu gfx803 gfx900 gfx90a gfx1030 gfx1100 gfx1200)
+  add_isa_test(atomic_work_item_fence ${gpu}
+    FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/atomic_work_item_fence.cl
+    COMPILE_FLAGS -emit-llvm)
+endforeach()
