@@ -69,6 +69,7 @@ extern "C" int __ulock_wait(
     uint32_t operation, void* addr, uint64_t value, uint32_t timeout); /* timeout is specified in microseconds */
 extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value);
 
+// https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/sys/ulock.h#L82
 #  define UL_COMPARE_AND_WAIT64 5
 #  define ULF_WAKE_ALL 0x00000100
 
