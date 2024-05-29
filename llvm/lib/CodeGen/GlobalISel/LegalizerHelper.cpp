@@ -8003,15 +8003,16 @@ LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
     MachineInstrBuilder Tmp;
     for (unsigned I = 0, J = Size - 1; I < Size; ++I, --J) {
       MachineInstrBuilder Tmp2;
-      if (I < J)
-        Tmp2 =
-            MIRBuilder.buildShl(Ty, Src, MIRBuilder.buildConstant(Ty, J - I));
-      else
-        Tmp2 =
-            MIRBuilder.buildLShr(Ty, Src, MIRBuilder.buildConstant(Ty, I - J));
+      if (I < J) {
+        auto ShAmt = MIRBuilder.buildConstant(Ty, J - I);
+        Tmp2 = MIRBuilder.buildShl(Ty, Src, ShAmt);
+      } else {
+        auto ShAmt = MIRBuilder.buildConstant(Ty, I - J);
+        Tmp2 = MIRBuilder.buildLShr(Ty, Src, ShAmt);
+      }
 
-      Tmp2 =
-          MIRBuilder.buildAnd(Ty, Tmp2, MIRBuilder.buildConstant(Ty, 1U << J));
+      auto Mask = MIRBuilder.buildConstant(Ty, 1U << J);
+      Tmp2 = MIRBuilder.buildAnd(Ty, Tmp2, Mask);
       if (I == 0)
         Tmp = Tmp2;
       else
