@@ -1402,6 +1402,8 @@ unsigned DIExpression::ExprOperand::getSize() const {
     return 2;
 
   switch (Op) {
+  case dwarf::DW_OP_LLVM_extract_bits:
+    return 4;
   case dwarf::DW_OP_LLVM_convert:
   case dwarf::DW_OP_LLVM_fragment:
   case dwarf::DW_OP_bregx:
@@ -1474,6 +1476,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
+    case dwarf::DW_OP_LLVM_extract_bits:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:

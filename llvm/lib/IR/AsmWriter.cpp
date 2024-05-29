@@ -2468,6 +2468,10 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       if (Op.getOp() == dwarf::DW_OP_LLVM_convert) {
         Out << FS << Op.getArg(0);
         Out << FS << dwarf::AttributeEncodingString(Op.getArg(1));
+      } else if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits) {
+        Out << FS << Op.getArg(0);
+        Out << FS << Op.getArg(1);
+        Out << FS << dwarf::AttributeEncodingString(Op.getArg(2));
       } else {
         for (unsigned A = 0, AE = Op.getNumArgs(); A != AE; ++A)
           Out << FS << Op.getArg(A);

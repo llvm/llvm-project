@@ -6312,6 +6312,13 @@ The current supported opcode vocabulary is limited:
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
   that references a base type constructed from the supplied values.
+- ``DW_OP_LLVM_extract_bits, 16, 8, DW_ATE_signed`` specifies the offset, size,
+  and encoding (``16``, ``8``, and ``DW_ATE_signed`` here, respectively) of bits
+  that are to be extracted from the value at the top of the expression stack.
+  If the top of the expression stack is a memory location then these bits are
+  extracted from the value pointed to by that memory location. Maps into a
+  ``DW_OP_shl`` followed by ``DW_OP_shr`` or ``DW_OP_shra`` (depending on
+  encoding).
 - ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the
   given tag offset in an implementation-defined manner.
