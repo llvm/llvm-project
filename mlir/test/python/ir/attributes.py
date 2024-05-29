@@ -546,7 +546,7 @@ def testDictAttr():
         else:
             assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
-        # CHECK: "empty: {}"
+        # CHECK: empty: {}
         print("empty: ", DictAttr.get())
 
 
