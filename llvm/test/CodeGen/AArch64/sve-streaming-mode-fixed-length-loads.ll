@@ -15,9 +15,18 @@ define <4 x i8> @load_v4i8(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: load_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldr s0, [x0]
-; NONEON-NOSVE-NEXT:    ushll v0.8h, v0.8b, #0
-; NONEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldrb w8, [x0, #3]
+; NONEON-NOSVE-NEXT:    strh w8, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldrb w8, [x0, #2]
+; NONEON-NOSVE-NEXT:    strh w8, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldrb w8, [x0, #1]
+; NONEON-NOSVE-NEXT:    strh w8, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldrb w8, [x0]
+; NONEON-NOSVE-NEXT:    strh w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %load = load <4 x i8>, ptr %a
   ret <4 x i8> %load
@@ -75,11 +84,14 @@ define <2 x i16> @load_v2i16(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: load_v2i16:
 ; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldrh w8, [x0, #2]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [x0]
-; NONEON-NOSVE-NEXT:    fmov s0, w8
-; NONEON-NOSVE-NEXT:    add x8, x0, #2
-; NONEON-NOSVE-NEXT:    ld1 { v0.h }[2], [x8]
-; NONEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NONEON-NOSVE-NEXT:    str w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %load = load <2 x i16>, ptr %a
   ret <2 x i16> %load
@@ -93,7 +105,12 @@ define <2 x half> @load_v2f16(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: load_v2f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldr s0, [x0]
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr w8, [x0]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %load = load <2 x half>, ptr %a
   ret <2 x half> %load
