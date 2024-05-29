@@ -3417,8 +3417,8 @@ define amdgpu_gs void @wqm_init_exec() {
 ;
 ; GFX10-W32-LABEL: wqm_init_exec:
 ; GFX10-W32:       ; %bb.0: ; %bb
-; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, -1
+; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
