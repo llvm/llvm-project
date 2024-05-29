@@ -24,13 +24,13 @@ ld s0, 248(a5)
 sd s0, 64(a5)
 
 # CHECK-BYTES: 227d
-# CHEACK-ALIAS: addiw tp, tp, 31
+# CHECK-ALIAS: addiw tp, tp, 31
 # CHECK-INST: c.addiw  tp, 31
 # CHECK: # encoding: [0x7d,0x22]
 addiw tp, tp, 31
 
 # CHECK-BYTES: 9c1d
-# CHEACK-ALIAS: subw s0, s0, a5
+# CHECK-ALIAS: subw s0, s0, a5
 # CHECK-INST: c.subw s0, a5
 # CHECK: # encoding:  [0x1d,0x9c]
 subw s0, s0, a5

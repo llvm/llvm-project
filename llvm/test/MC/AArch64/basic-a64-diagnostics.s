@@ -87,9 +87,9 @@
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-NEXT:         add w4, w5, #-4097
 // CHECK-ERROR-NEXT:                     ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
-// CHECK-ERROR-AARCH64-NEXT:         add w5, w6, #0x1000
-// CHECK-ERROR-AARCH64-NEXT:                     ^
+// CHECK-ERROR-ARM64-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
+// CHECK-ERROR-ARM64-NEXT:         add w5, w6, #0x1000
+// CHECK-ERROR-ARM64-NEXT:                     ^
 // CHECK-ERROR-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-NEXT:         add w4, w5, #-4096, lsl #12
 // CHECK-ERROR-NEXT:                     ^
@@ -145,9 +145,9 @@
 
 // Out of range immediate
         adds w0, w5, #0x10000
-// CHECK-ERROR-AARCH64: error: expected compatible register, symbol or integer in range [0, 4095]
-// CHECK-ERROR-AARCH64-NEXT:         adds w0, w5, #0x10000
-// CHECK-ERROR-AARCH64-NEXT:                      ^
+// CHECK-ERROR-ARM64: error: expected compatible register, symbol or integer in range [0, 4095]
+// CHECK-ERROR-ARM64-NEXT:         adds w0, w5, #0x10000
+// CHECK-ERROR-ARM64-NEXT:                      ^
 
 // Wn|WSP should be in second place
         adds w4, wzr, #0x123
@@ -846,15 +846,15 @@
         sxtb x3, x2
         sxth xzr, xzr
         sxtw x3, x5
-// CHECK-ERROR-AARCH64: error: invalid operand for instruction
-// CHECK-ERROR-AARCH64-NEXT:         sxtb x3, x2
-// CHECK-ERROR-AARCH64-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-AARCH64-NEXT:         sxth xzr, xzr
-// CHECK-ERROR-AARCH64-NEXT:                   ^
-// CHECK-ERROR-AARCH64-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-AARCH64-NEXT:         sxtw x3, x5
-// CHECK-ERROR-AARCH64-NEXT:                  ^
+// CHECK-ERROR-ARM64: error: invalid operand for instruction
+// CHECK-ERROR-ARM64-NEXT:         sxtb x3, x2
+// CHECK-ERROR-ARM64-NEXT:                  ^
+// CHECK-ERROR-ARM64-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-ARM64-NEXT:         sxth xzr, xzr
+// CHECK-ERROR-ARM64-NEXT:                   ^
+// CHECK-ERROR-ARM64-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-ARM64-NEXT:         sxtw x3, x5
+// CHECK-ERROR-ARM64-NEXT:                  ^
 
         uxtb x3, x12
         uxth x5, x9
@@ -867,9 +867,9 @@
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         uxth x5, x9
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: invalid instruction
-// CHECK-ERROR-AARCH64-NEXT:         uxtw x3, x5
-// CHECK-ERROR-AARCH64-NEXT:         ^
+// CHECK-ERROR-ARM64-NEXT: error: invalid instruction
+// CHECK-ERROR-ARM64-NEXT:         uxtw x3, x5
+// CHECK-ERROR-ARM64-NEXT:         ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         uxtb x2, sp
 // CHECK-ERROR-NEXT:                  ^
@@ -906,7 +906,7 @@
         sbfiz x3, x5, #12, #53
         sbfiz sp, x3, #7, #6
         sbfiz w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         sbfiz w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                           ^
@@ -940,7 +940,7 @@
         sbfx x3, x5, #12, #53
         sbfx sp, x3, #7, #6
         sbfx w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         sbfx w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                          ^
@@ -974,7 +974,7 @@
         bfi x3, x5, #12, #53
         bfi sp, x3, #7, #6
         bfi w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         bfi w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                         ^
@@ -1008,7 +1008,7 @@
         bfxil x3, x5, #12, #53
         bfxil sp, x3, #7, #6
         bfxil w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         bfxil w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                           ^
@@ -1042,7 +1042,7 @@
         ubfiz x3, x5, #12, #53
         ubfiz sp, x3, #7, #6
         ubfiz w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         ubfiz w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                           ^
@@ -1076,7 +1076,7 @@
         ubfx x3, x5, #12, #53
         ubfx sp, x3, #7, #6
         ubfx w3, wsp, #10, #8
-// CHECK-ERROR-AARCH64: error: expected integer in range [<lsb>, 31]
+// CHECK-ERROR-ARM64: error: expected integer in range [<lsb>, 31]
 // CHECK-ERROR-ARM64: error: expected integer in range [1, 32]
 // CHECK-ERROR-NEXT:         ubfx w1, w2, #0, #0
 // CHECK-ERROR-NEXT:                      ^
@@ -1553,7 +1553,7 @@ cbz w1, lsl
 //------------------------------------------------------------------------------
 
         fcmp s3, d2
-// CHECK-ERROR-AARCH64: error: expected floating-point constant #0.0
+// CHECK-ERROR-ARM64: error: expected floating-point constant #0.0
 // CHECK-ERROR-ARM64: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         fcmp s3, d2
 // CHECK-ERROR-NEXT:                  ^
@@ -1847,11 +1847,11 @@ cbz w1, lsl
 // CHECK-ERROR: error: expected lane specifier '[1]'
 // CHECK-ERROR-NEXT:         fmov x3, v0.d[0]
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-AARCH64-NEXT: error: lane number incompatible with layout
+// CHECK-ERROR-ARM64-NEXT: error: lane number incompatible with layout
 // CHECK-ERROR-ARM64-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT: fmov v29.1d[1], x2
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-AARCH64-NEXT: error: lane number incompatible with layout
+// CHECK-ERROR-ARM64-NEXT: error: lane number incompatible with layout
 // CHECK-ERROR-ARM64-NEXT: error: expected lane specifier '[1]'
 // CHECK-ERROR-NEXT: fmov x7, v0.d[2]
 // CHECK-ERROR-NEXT:               ^
@@ -1898,7 +1898,7 @@ cbz w1, lsl
 
        stxrb w2, w3, [x4, #20]
        stlxrh w10, w11, [w2]
-// CHECK-ERROR-AARCH64: error: expected '#0'
+// CHECK-ERROR-ARM64: error: expected '#0'
 // CHECK-ERROR-ARM64: error: index must be absent or #0
 // CHECK-ERROR-NEXT:         stxrb w2, w3, [x4, #20]
 // CHECK-ERROR-NEXT:                       ^
@@ -2000,13 +2000,13 @@ cbz w1, lsl
 
         ldr x3, [x4, #25], #0
         ldr x4, [x9, #0], #4
-// CHECK-ERROR-AARCH64: error: invalid operand for instruction
+// CHECK-ERROR-ARM64: error: invalid operand for instruction
 // CHECK-ERROR-ARM64: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr x3, [x4, #25], #0
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected label or encodable integer pc offset
-// CHECK-ERROR-AARCH64-NEXT:         ldr x4, [x9, #0], #4
-// CHECK-ERROR-AARCH64-NEXT:                           ^
+// CHECK-ERROR-ARM64-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-ARM64-NEXT:         ldr x4, [x9, #0], #4
+// CHECK-ERROR-ARM64-NEXT:                           ^
 
         strb w1, [x19], #256
         strb w9, [sp], #-257
@@ -2438,15 +2438,15 @@ cbz w1, lsl
         ldr w0, [x0, #2]
         ldrsh w2, [x0, #123]
         str q0, [x0, #8]
-// CHECK-ERROR-AARCH64: error: too few operands for instruction
-// CHECK-ERROR-AARCH64-NEXT:         ldr w0, [x0, #2]
-// CHECK-ERROR-AARCH64-NEXT:                 ^
-// CHECK-ERROR-AARCH64-NEXT: error: too few operands for instruction
-// CHECK-ERROR-AARCH64-NEXT:         ldrsh w2, [x0, #123]
-// CHECK-ERROR-AARCH64-NEXT:                   ^
-// CHECK-ERROR-AARCH64-NEXT: error: too few operands for instruction
-// CHECK-ERROR-AARCH64-NEXT:         str q0, [x0, #8]
-// CHECK-ERROR-AARCH64-NEXT:                 ^
+// CHECK-ERROR-ARM64: error: too few operands for instruction
+// CHECK-ERROR-ARM64-NEXT:         ldr w0, [x0, #2]
+// CHECK-ERROR-ARM64-NEXT:                 ^
+// CHECK-ERROR-ARM64-NEXT: error: too few operands for instruction
+// CHECK-ERROR-ARM64-NEXT:         ldrsh w2, [x0, #123]
+// CHECK-ERROR-ARM64-NEXT:                   ^
+// CHECK-ERROR-ARM64-NEXT: error: too few operands for instruction
+// CHECK-ERROR-ARM64-NEXT:         str q0, [x0, #8]
+// CHECK-ERROR-ARM64-NEXT:                 ^
 
 //// 32-bit addresses
         ldr w0, [w20]
@@ -2466,12 +2466,12 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT: strb w0, [wsp]
 // CHECK-ERROR-NEXT:           ^
-// CHECK-ERROR-AARCH64: error: invalid operand for instruction
-// CHECK-ERROR-AARCH64-NEXT:         strh w31, [x23, #1]
-// CHECK-ERROR-AARCH64-NEXT:              ^
-// CHECK-ERROR-AARCH64-NEXT: error: too few operands for instruction
-// CHECK-ERROR-AARCH64-NEXT:         str x5, [x22, #12]
-// CHECK-ERROR-AARCH64-NEXT:                 ^
+// CHECK-ERROR-ARM64: error: invalid operand for instruction
+// CHECK-ERROR-ARM64-NEXT:         strh w31, [x23, #1]
+// CHECK-ERROR-ARM64-NEXT:              ^
+// CHECK-ERROR-ARM64-NEXT: error: too few operands for instruction
+// CHECK-ERROR-ARM64-NEXT:         str x5, [x22, #12]
+// CHECK-ERROR-ARM64-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w7, [x12, #16384]
 // CHECK-ERROR-NEXT:                 ^
@@ -2481,18 +2481,18 @@ cbz w1, lsl
         prfm #32, [sp, #8]
         prfm pldl1strm, [w3, #8]
         prfm wibble, [sp]
-// CHECK-ERROR-AARCH64: error: Invalid immediate for instruction
+// CHECK-ERROR-ARM64: error: Invalid immediate for instruction
 // CHECK-ERROR-ARM64: error: prefetch operand out of range, [0,31] expected
 // CHECK-ERROR-NEXT:        prfm #-1, [sp]
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-AARCH64-NEXT: error: Invalid immediate for instruction
+// CHECK-ERROR-ARM64-NEXT: error: Invalid immediate for instruction
 // CHECK-ERROR-ARM64-NEXT: error: prefetch operand out of range, [0,31] expected
 // CHECK-ERROR-NEXT:        prfm #32, [sp, #8]
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        prfm pldl1strm, [w3, #8]
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-AARCH64-NEXT: error: operand specifier not recognised
+// CHECK-ERROR-ARM64-NEXT: error: operand specifier not recognised
 // CHECK-ERROR-ARM64-NEXT: error: prefetch hint expected
 // CHECK-ERROR-NEXT:        prfm wibble, [sp]
 // CHECK-ERROR-NEXT:             ^
@@ -2600,11 +2600,11 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT: error: expected integer shift amount
 // CHECK-ERROR-NEXT:         ldr q5, [sp, x2, lsl #-1]
 // CHECK-ERROR-NEXT:                               ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected 'lsl' or 'sxtw' with optional shift of #0 or #4
+// CHECK-ERROR-ARM64-NEXT: error: expected 'lsl' or 'sxtw' with optional shift of #0 or #4
 // CHECK-ERROR-ARM64-NEXT: error: expected 'uxtw' or 'sxtw' with optional shift of #0 or #4
 // CHECK-ERROR-NEXT:         ldr q10, [x20, w4, uxtw #2]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected 'lsl' or 'sxtw' with optional shift of #0 or #4
+// CHECK-ERROR-ARM64-NEXT: error: expected 'lsl' or 'sxtw' with optional shift of #0 or #4
 // CHECK-ERROR-ARM64-NEXT: error: expected 'uxtw' or 'sxtw' with optional shift of #0 or #4
 // CHECK-ERROR-NEXT:         str q21, [x20, w4, uxtw #5]
 // CHECK-ERROR-NEXT:                  ^
@@ -3189,11 +3189,11 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
 // CHECK-ERROR-NEXT:         movz w4, #65536
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
+// CHECK-ERROR-ARM64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
 // CHECK-ERROR-ARM64-NEXT: error: expected 'lsl' with optional integer 0 or 16
 // CHECK-ERROR-NEXT:         movn w1, #2, lsl #1
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: only 'lsl #+N' valid after immediate
+// CHECK-ERROR-ARM64-NEXT: error: only 'lsl #+N' valid after immediate
 // CHECK-ERROR-ARM64-NEXT: error: expected integer shift amount
 // CHECK-ERROR-NEXT:         movk w3, #0, lsl #-1
 // CHECK-ERROR-NEXT:                           ^
@@ -3203,11 +3203,11 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
 // CHECK-ERROR-NEXT:         movz x3, #-1
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
+// CHECK-ERROR-ARM64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
 // CHECK-ERROR-ARM64-NEXT: error: expected 'lsl' with optional integer 0 or 16
 // CHECK-ERROR-NEXT:         movk w3, #1, lsl #32
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-AARCH64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
+// CHECK-ERROR-ARM64-NEXT: error: expected relocated symbol or integer in range [0, 65535]
 // CHECK-ERROR-ARM64-NEXT: error: expected 'lsl' with optional integer 0, 16, 32 or 48
 // CHECK-ERROR-NEXT:         movn x2, #12, lsl #64
 // CHECK-ERROR-NEXT:                  ^
@@ -3429,7 +3429,7 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT: error: specified {{IC|ic}} op does not use a register
 // CHECK-ERROR-NEXT:         ic ialluis, x2
 // CHECK-ERROR-NEXT:                     ^
-// CHECK-ERROR-AARCH64-NEXT: error: operand specifier not recognised
+// CHECK-ERROR-ARM64-NEXT: error: operand specifier not recognised
 // CHECK-ERROR-ARM64-NEXT: error: invalid operand for IC instruction
 // CHECK-ERROR-NEXT:         ic allu, x7
 // CHECK-ERROR-NEXT:            ^

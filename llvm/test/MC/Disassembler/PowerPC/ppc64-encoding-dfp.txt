@@ -156,7 +156,7 @@
 # CHECK: dcffixq. 12, 8
 0xfd 0x80 0x46 0x45
 
-# CHECK : dcffixqq 18, 20
+# CHECK: dcffixqq 18, 20
 0xfe 0x40 0xa7 0xc4
 
 # CHECK: dctfix 8, 4

@@ -738,8 +738,8 @@
 # CHECK-LE: vpopcntw 2, 3                   # encoding: [0x83,0x1f,0x40,0x10]
             vpopcntw 2, 3
         
-# BCHECK-BE: vpopcntd 2, 3                   # encoding: [0x10,0x40,0x1f,0xC3]
-# BCHECK-LE: vpopcntd 2, 3                   # encoding: [0xC3,0x1f,0x40,0x10]
+# CHECK-BE: vpopcntd 2, 3                   # encoding: [0x10,0x40,0x1f,0xC3]
+# CHECK-LE: vpopcntd 2, 3                   # encoding: [0xC3,0x1f,0x40,0x10]
 #            vpopcntd 2, 3
         
 # Vector status and control register instructions

@@ -8,4 +8,4 @@ tbx z0.b, z1.b, z2.b
 
 // Verify +sme flags imply +bf16
 bfdot z0.s, z1.h, z2.h
-// CHECK-INST: bfdot z0.s, z1.h, z2.h
+// CHECK: bfdot z0.s, z1.h, z2.h
