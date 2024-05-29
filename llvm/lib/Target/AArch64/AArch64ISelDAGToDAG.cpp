@@ -5738,6 +5738,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FCLAMP_VG2_2Z2Z_D}))
         SelectClamp(Node, 2, Op);
       return;
+    case Intrinsic::aarch64_sve_bfclamp_single_x2:
+      SelectClamp(Node, 2, AArch64::BFCLAMP_VG2_2ZZZ_H);
+      return;
     case Intrinsic::aarch64_sve_sclamp_single_x4:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
@@ -5758,6 +5761,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {0, AArch64::FCLAMP_VG4_4Z4Z_H, AArch64::FCLAMP_VG4_4Z4Z_S,
                AArch64::FCLAMP_VG4_4Z4Z_D}))
         SelectClamp(Node, 4, Op);
+      return;
+    case Intrinsic::aarch64_sve_bfclamp_single_x4:
+      SelectClamp(Node, 4, AArch64::BFCLAMP_VG4_4ZZZ_H);
       return;
     case Intrinsic::aarch64_sve_add_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
