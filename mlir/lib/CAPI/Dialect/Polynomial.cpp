@@ -14,3 +14,19 @@ using namespace mlir;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(polynomial, polynomial,
                                       polynomial::PolynomialDialect)
+
+MlirIntMonomial mlirPolynomialGetIntMonomial(int64_t coeff, uint64_t expo) {
+  return wrap(new mlir::polynomial::IntMonomial(coeff, expo));
+}
+
+int64_t mlirPolynomialIntMonomialGetCoefficient(MlirIntMonomial intMonomial) {
+  return unwrap(intMonomial)
+      ->getCoefficient()
+      .getLimitedValue(/*Limit = UINT64_MAX*/);
+}
+
+uint64_t mlirPolynomialIntMonomialGetExponent(MlirIntMonomial intMonomial) {
+  return unwrap(intMonomial)
+      ->getExponent(/*Limit = UINT64_MAX*/)
+      .getLimitedValue();
+}
