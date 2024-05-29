@@ -1746,6 +1746,9 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     return Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
   if (auto *SI = dyn_cast<SelectInst>(I))
     return Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
+  if (auto *CI = dyn_cast<CastInst>(I))
+    return Builder.CreateCast((Instruction::CastOps)CI->getOpcode(), Ops[0],
+                              DstTy);
   if (II)
     return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
   assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
@@ -1847,7 +1850,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         isa<CmpInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
-    } else if (isa<UnaryOperator>(FrontV)) {
+    } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
     } else if (isa<SelectInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
