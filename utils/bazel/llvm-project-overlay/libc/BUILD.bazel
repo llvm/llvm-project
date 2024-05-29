@@ -127,6 +127,11 @@ libc_support_library(
     hdrs = ["hdr/time_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_float_macros",
+    hdrs = ["hdr/float_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -189,7 +194,7 @@ libc_support_library(
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
-        ":llvm_libc_macros_float_macros",
+        ":hdr_float_macros",
         ":llvm_libc_types_float128",
     ],
 )
