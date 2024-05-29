@@ -1129,7 +1129,8 @@ uint32_t RuntimeDyldELF::getMatchingLoRelocation(uint32_t RelType,
 bool RuntimeDyldELF::resolveAArch64ShortBranch(
     unsigned SectionID, relocation_iterator RelI,
     const RelocationValueRef &Value) {
-  uint64_t Address;
+  uint64_t TargetOffset;
+  unsigned TargetSectionID;
   if (Value.SymbolName) {
     auto Loc = GlobalSymbolTable.find(Value.SymbolName);
 
@@ -1138,23 +1139,32 @@ bool RuntimeDyldELF::resolveAArch64ShortBranch(
       return false;
 
     const auto &SymInfo = Loc->second;
-    Address =
-        uint64_t(Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
-            SymInfo.getOffset()));
+
+    TargetSectionID = SymInfo.getSectionID();
+    TargetOffset = SymInfo.getOffset();
   } else {
-    Address = uint64_t(Sections[Value.SectionID].getLoadAddress());
+    TargetSectionID = Value.SectionID;
+    TargetOffset = 0;
   }
-  uint64_t Offset = RelI->getOffset();
-  uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);
+
+  // We don't actually know the load addresses at this point, so if the
+  // branch is cross-section, we don't know exactly how far away it is.
+  if (TargetSectionID != SectionID)
+    return false;
+
+  uint64_t SourceOffset = RelI->getOffset();
 
   // R_AARCH64_CALL26 requires immediate to be in range -2^27 <= imm < 2^27
   // If distance between source and target is out of range then we should
   // create thunk.
-  if (!isInt<28>(Address + Value.Addend - SourceAddress))
+  if (!isInt<28>(TargetOffset + Value.Addend - SourceOffset))
     return false;
 
-  resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
-                    Value.Addend);
+  RelocationEntry RE(SectionID, SourceOffset, RelI->getType(), Value.Addend);
+  if (Value.SymbolName)
+    addRelocationForSymbol(RE, Value.SymbolName);
+  else
+    addRelocationForSection(RE, Value.SectionID);
 
   return true;
 }
