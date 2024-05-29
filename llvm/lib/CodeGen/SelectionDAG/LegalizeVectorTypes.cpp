@@ -1174,8 +1174,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FADD: case ISD::VP_FADD:
   case ISD::FSUB: case ISD::VP_FSUB:
   case ISD::FMUL: case ISD::VP_FMUL:
-  case ISD::FMINNUM: case ISD::VP_FMINNUM:
-  case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::VP_FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
