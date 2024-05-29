@@ -442,10 +442,12 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
       AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 1,
       &AST.Idents.get("element_count", tok::TokenKind::identifier), AST.IntTy,
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
-  Expr *LiteralExpr =
-      IntegerLiteral::Create(AST, llvm::APInt(AST.getIntWidth(AST.IntTy), 4),
-                             AST.IntTy, SourceLocation());
-  SizeParam->setDefaultArgument(LiteralExpr);
+  llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
+  TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
+                           /*IsDefaulted=*/true);
+  SizeParam->setDefaultArgument(
+      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
+                                                  SourceLocation(), SizeParam));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
