@@ -273,7 +273,6 @@ def FeatureSVE2BitPerm : Extension<"sve2-bitperm", "SVE2BitPerm",
   "Enable bit permutation SVE2 instructions (FEAT_SVE_BitPerm)", [FeatureSVE2],
   "FEAT_SVE_BITPERM", "+sve2,+sve,+sve2-bitperm,+fullfp16,+fp-armv8,+neon", 400>;
 
-let FMVDependencies = "+sve2p1,+sve2,+sve,+fullfp16,+fp-armv8,+neon" in
 def FeatureSVE2p1: Extension<"sve2p1", "SVE2p1",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
@@ -649,11 +648,9 @@ def FeatureSME2 : Extension<"sme2", "SME2",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME],
   "FEAT_SME2", "+sme2,+sme,+bf16", 580>;
 
-let FMVDependencies = "+sme2,+sme-f16f16" in
 def FeatureSMEF16F16 : Extension<"sme-f16f16", "SMEF16F16",
   "Enable SME non-widening Float16 instructions (FEAT_SME_F16F16)", [FeatureSME2]>;
 
-let FMVDependencies = "+sme2p1,+sme2,+sme,+bf16" in
 def FeatureSME2p1 : Extension<"sme2p1", "SME2p1",
   "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
 
@@ -669,7 +666,6 @@ def FeatureFP8 : Extension<"fp8", "FP8",
 def FeatureFP8FMA : Extension<"fp8fma", "FP8FMA",
   "Enable fp8 multiply-add instructions (FEAT_FP8FMA)", [FeatureFP8]>;
 
-let FMVDependencies = "+sme2" in
 def FeatureSSVE_FP8FMA : Extension<"ssve-fp8fma", "SSVE_FP8FMA",
   "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2, FeatureFP8]>;
 
@@ -679,22 +675,18 @@ def FeatureFP8DOT4: Extension<"fp8dot4", "FP8DOT4",
 def FeatureFP8DOT2: Extension<"fp8dot2", "FP8DOT2",
    "Enable fp8 2-way dot instructions (FEAT_FP8DOT2)", [FeatureFP8DOT4]>;
 
-let FMVDependencies = "+sme2" in
 def FeatureSSVE_FP8DOT4 : Extension<"ssve-fp8dot4", "SSVE_FP8DOT4",
   "Enable SVE2 fp8 4-way dot product instructions (FEAT_SSVE_FP8DOT4)", [FeatureSSVE_FP8FMA]>;
 
-let FMVDependencies = "+sme2" in
 def FeatureSSVE_FP8DOT2 : Extension<"ssve-fp8dot2", "SSVE_FP8DOT2",
   "Enable SVE2 fp8 2-way dot product instructions (FEAT_SSVE_FP8DOT2)", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : Extension<"sme-lutv2", "SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions (FEAT_SME_LUTv2)">;
 
-let FMVDependencies = "+sme2,+fp8" in
 def FeatureSMEF8F32 : Extension<"sme-f8f32", "SMEF8F32",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions (FEAT_SME_F8F32)", [FeatureSME2, FeatureFP8]>;
 
-let FMVDependencies = "+fp8,+sme2" in
 def FeatureSMEF8F16 : Extension<"sme-f8f16", "SMEF8F16",
   "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSMEF8F32]>;
 
