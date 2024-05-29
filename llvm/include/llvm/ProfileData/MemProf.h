@@ -932,6 +932,18 @@ struct IndexedMemProfData {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
 };
 
+struct FrameStat {
+  // The number of occurrences of a given FrameId.
+  uint64_t Count = 0;
+  // The sum of indexes where a given FrameId shows up.
+  uint64_t PositionSum = 0;
+};
+
+// Compute a histogram of Frames in call stacks.
+llvm::DenseMap<FrameId, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+                          &MemProfCallStackData);
+
 // Construct a radix tree of call stacks.
 //
 // A set of call stacks might look like:
@@ -1027,9 +1039,11 @@ public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-                 &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+  void
+  build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+            &&MemProfCallStackData,
+        const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
+        llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram);
 
   const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
 
