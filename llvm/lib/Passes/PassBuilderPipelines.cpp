@@ -1070,9 +1070,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(CoroEarlyPass());
 
     FunctionPassManager EarlyFPM;
-    if (Phase != ThinOrFullLTOPhase::FullLTOPostLink) {
-      EarlyFPM.addPass(EntryExitInstrumenterPass(/*PostInlining=*/false));
-    }
+    EarlyFPM.addPass(EntryExitInstrumenterPass(/*PostInlining=*/false));
     // Lower llvm.expect to metadata before attempting transforms.
     // Compare/branch metadata may alter the behavior of passes like
     // SimplifyCFG.
