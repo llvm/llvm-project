@@ -970,6 +970,18 @@ func.func @extract_rank(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
 // CHECK:         %[[RANK:.*]] = llvm.sext %[[RAW_RANK]] : i8 to i32
 // CHECK:         llvm.return %[[RANK]] : i32
 
+func.func @extract_rank2(%arg0: !fir.ref<!fir.box<!fir.array<*:f64>>>) -> i32 {
+  %0 = fir.box_rank %arg0 : (!fir.ref<!fir.box<!fir.array<*:f64>>>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @extract_rank2(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr) -> i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[RAW_RANK:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
+// CHECK:         %[[RANK:.*]] = llvm.sext %[[RAW_RANK]] : i8 to i32
+// CHECK:         llvm.return %[[RANK]] : i32
+
 // -----
 
 // Test `fir.box_addr` conversion.
