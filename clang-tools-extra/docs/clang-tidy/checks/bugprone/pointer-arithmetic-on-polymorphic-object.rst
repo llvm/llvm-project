@@ -6,7 +6,8 @@ bugprone-pointer-arithmetic-on-polymorphic-object
 Finds pointer arithmetic performed on classes that declare a virtual function.
 
 Pointer arithmetic on polymorphic objects where the pointer's static type is 
-different from its dynamic type is undefined behavior.
+different from its dynamic type is undefined behavior, as the two types can
+have different sizes.
 Finding pointers where the static type contains a virtual member function is a
 good heuristic, as the pointer is likely to point to a different, derived class.
 
